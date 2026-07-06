@@ -1,69 +1,56 @@
 # CLAUDE.md - dustinedwards.info
-## Read this at the start of every session.
 
----
-
-## BEHAVIOR
-Think before coding. Simplicity first. Surgical changes. Goal-driven execution.
-Turn vague tasks into verifiable goals tied to real output before starting.
-
-## AUTONOMY
-Proceed without confirmation on clear tasks. Make decisions and continue.
-Do not pause to check in mid-task. Stop only on an unresolvable error or a genuine
-ambiguity where two readings produce meaningfully different code. Ask about scope
-before starting, never during.
-
-## HOOKS (deterministic enforcement)
-CLAUDE.md rules are guidance. Hooks in .claude/settings.json are deterministic.
-Do not modify .claude/settings.json without explicit instruction.
-Active hooks: em dash check after every edit (PostToolUse); tsc --noEmit before
-session end (Stop); done-notification (Notification).
-
-## PROJECT
 Personal site for Dr. Dustin Edwards, Professor of Virology, Tarleton State University.
-Next.js App Router + TypeScript. Repo: github.com/DrDustinEdwards/dustinedwards-info
-Deploy: Vercel, auto on push to main. Node 24.x.
-Preview domain: next.dustinedwards.info. Apex dustinedwards.info stays on HostGator
-until cutover. Supabase is wired (lib/supabase.ts) but unused so far.
+React Router (framework mode) running natively on Cloudflare Workers.
+
+## STACK
+React Router 8 (SSR) + Vite + @cloudflare/vite-plugin. No OpenNext.
+Drizzle ORM on D1. Better Auth (Google, single admin) with sessions in KV.
+R2 for media. Node 24.14.1 (.nvmrc).
+
+## BINDINGS
+Configured in wrangler.jsonc, read off the request context.
+  DB      D1 database "dustinedwards"
+  APP_KV  KV namespace (Better Auth session store)
+  MEDIA   R2 bucket "dustinedwards-media"
+Routes reach bindings with getEnv(context) from app/lib/context.ts. Never import
+bindings globally.
 
 ## STRUCTURE
-  content/site.ts      - all editable copy (start here for content changes)
-  content/posts/*.md   - writing / lab-notes vault (read by lib/posts.ts)
-  components/          - section + chrome components
-  app/globals.css      - design tokens and all styling
-  lib/                 - supabase client, posts reader, metadata builder
+  app/routes/            route modules (home, admin, login, api.*, sitemap, robots, llms)
+  app/db/schema.ts       posts + settings (Drizzle)
+  app/db/auth-schema.ts  Better Auth tables
+  app/db/index.ts        getDb, publiclyVisible, public read helpers
+  app/lib/auth.server.ts Better Auth factory (createAuth)
+  app/lib/context.ts     getEnv(context)
+  app/lib/seo.ts         JSON-LD builders
+  drizzle/0001_init.sql  hand-written migration (FTS5 + triggers)
+  workers/app.ts         Worker entry, sets the request context
 
 ## COMMANDS
-  npm run dev                 - local at http://localhost:3000
-  npm run build               - production build
-  npx tsc --noEmit            - run before every push
+  npm run dev                              local dev
+  npm run build                            production build
+  npx tsc -b                               typecheck (tsc --noEmit is a no-op here)
+  wrangler d1 migrations apply dustinedwards [--local|--remote]
+  wrangler deploy
 
 ## ABSOLUTE RULES
-1. No em dashes. Not one. Grep before pushing:
-   grep -rn " - " app components content --include="*.ts" --include="*.tsx"
-   (looking for the em dash character, not the hyphen above)
-2. No cheesy copy. Banned: explore, discover, dive into, journey, compelling,
-   must-read, "it's worth noting", importantly, furthermore. No exclamation marks
-   on empty states.
-3. No emoji in UI or copy.
-4. No icon libraries. Inline SVG only.
-5. Theming uses data-mode (light/dark), persisted to localStorage key 'mode'.
-   Never data-theme.
-6. Design tokens only. No hardcoded colors in components. Use the vocabulary in
-   globals.css: --bg-base, --text-primary/secondary/tertiary, --brand-ui,
-   --brand-text, --border-subtle/default/interactive/focus.
-7. All text sizing in rem, never px.
-8. Focus rings stay visible (:focus-visible). Color is never the only signal.
-9. All editable copy lives in content/site.ts. Do not hardcode strings in components.
-10. Metadata comes from lib/metadata.ts builders. No hardcoded metadata strings.
-11. Fonts: Fraunces (display), Source Serif 4 (body), DM Sans (UI), DM Mono
-    (technical). Loaded via <link> in app/layout.tsx.
+1. No em dashes. Not one. Anywhere: code, copy, comments. A PostToolUse hook rejects
+   them. Use a hyphen, a colon, or split the sentence.
+2. Keep the worker lean. No heavy dependencies, no icon libraries, inline SVG only.
+   Client bundles stay small; auth code loads only on admin and login routes.
+3. Secrets never reach the client bundle. Read them only in .server modules and in
+   loaders/actions. Google keys, BETTER_AUTH_SECRET, and ADMIN_EMAIL are wrangler
+   secrets, not committed and not imported into client code.
+4. Every public read goes through publiclyVisible(). It hides drafts and future
+   publish_at rows. Do not query posts for public output without it.
+5. Migrations are hand-written in drizzle/. drizzle-kit is intentionally not a
+   dependency (esbuild advisory). Add a new numbered file, never edit an applied one.
+6. Do not modify .claude/settings.json without explicit instruction.
 
-## GIT WORKFLOW
-Small focused commits, one concern each. Message says what it does, not why.
-  Good: "Add publications section"
-  Bad:  "Improve the site structure"
-If the build fails, read the error, fix the specific file, push immediately.
+## SECRETS (set with wrangler secret put, never commit)
+  GOOGLE_CLIENT_ID  GOOGLE_CLIENT_SECRET  BETTER_AUTH_SECRET  BETTER_AUTH_URL  ADMIN_EMAIL
 
-## CONTEXT WINDOW
-Fresh session per task. /clear between unrelated tasks. Wrap up around 60% usage.
+## GIT
+Small focused commits, one concern each. Message says what it does. Typecheck and
+build before pushing. Auto-deploys to Cloudflare are not wired yet; deploy is manual.

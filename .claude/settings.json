@@ -1,37 +1,33 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": ["Bash(git:*)", "Bash(gh:*)", "Bash(npm:*)", "Bash(npx tsc:*)"]
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(wrangler:*)",
+      "Bash(npx wrangler:*)"
+    ]
   },
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); if [ -n \"$file\" ] && echo \"$file\" | grep -qE '\\.(tsx|ts)$'; then if grep -q ' \u2014 ' \"$file\" 2>/dev/null; then echo \"ERROR: em dash found in $file, remove it before continuing\"; exit 1; fi; fi"
+            "command": "node .claude/hooks/no-em-dash.mjs"
           }
         ]
       }
     ],
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$(git rev-parse --show-toplevel)\" && npx tsc --noEmit 2>&1 | tail -20; exit ${PIPESTATUS[0]}"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "idle_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "osascript -e 'display notification \"Claude Code is done\" with title \"dustinedwards.info\"' 2>/dev/null || notify-send 'dustinedwards.info' 'Claude Code is done' 2>/dev/null || true"
+            "command": "npx tsc -b"
           }
         ]
       }

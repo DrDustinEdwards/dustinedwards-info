@@ -1,0 +1,120 @@
+@import "tailwindcss" source(".");
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* Design tokens. Light by default, dark via prefers-color-scheme. */
+:root {
+  --bg: #ffffff;
+  --fg: #171320;
+  --muted: #6b6577;
+  --brand: #4f2d7f;
+  --brand-fg: #ffffff;
+  --border: #e7e4ee;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0d15;
+    --fg: #f4f2f8;
+    --muted: #a29bb2;
+    --brand: #b79ce4;
+    --brand-fg: #17121f;
+    --border: #262232;
+    color-scheme: dark;
+  }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+}
+
+/* Public hero */
+.hero {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.hero-inner {
+  max-width: 40rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hero-name {
+  margin: 0;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--brand);
+}
+
+.hero-role {
+  margin: 0.5rem 0 0;
+  font-size: 1.25rem;
+  color: var(--fg);
+}
+
+/* Auth gate (login + admin) */
+.gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 22rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.gate-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.btn-brand,
+.btn-ghost {
+  margin-top: 1.25rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn-brand {
+  background: var(--brand);
+  color: var(--brand-fg);
+  border: 1px solid var(--brand);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
