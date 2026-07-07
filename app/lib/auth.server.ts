@@ -1,3 +1,4 @@
+import { createContext } from "react-router";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
@@ -14,9 +15,12 @@ import * as authSchema from "~/db/auth-schema";
  * the user.create.before hook rejects any sign-in whose email is not ADMIN_EMAIL.
  */
 export function createAuth(env: Env) {
+  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
+
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: env.BETTER_AUTH_URL ? [env.BETTER_AUTH_URL] : [],
     database: drizzleAdapter(getDb(env), {
       provider: "sqlite",
       schema: {
@@ -48,7 +52,7 @@ export function createAuth(env: Env) {
       user: {
         create: {
           before: async (user) => {
-            if (user.email !== env.ADMIN_EMAIL) {
+            if (!adminEmail || user.email?.toLowerCase() !== adminEmail) {
               throw new APIError("FORBIDDEN", {
                 message: "This site allows a single administrator.",
               });
@@ -62,3 +66,33 @@ export function createAuth(env: Env) {
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+
+export type AdminSession = NonNullable<
+  Awaited<ReturnType<Auth["api"]["getSession"]>>
+>;
+
+/**
+ * Resolve the current session and confirm it belongs to the single admin.
+ * Returns null otherwise. Used by the admin middleware (one gate for the whole
+ * /admin subtree) and by the login screen to bounce a signed-in admin home.
+ */
+export async function getAdminSession(
+  env: Env,
+  request: Request,
+): Promise<AdminSession | null> {
+  const session = await createAuth(env).api.getSession({
+    headers: request.headers,
+  });
+  if (!session) return null;
+  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
+  if (!adminEmail || session.user.email?.toLowerCase() !== adminEmail) {
+    return null;
+  }
+  return session;
+}
+
+/**
+ * Set by the admin middleware after the gate passes, so loaders under /admin
+ * read the session without a second KV round trip.
+ */
+export const adminSessionContext = createContext<AdminSession>();

@@ -10,8 +10,14 @@ export default [
   // Auth
   route("login", "routes/login.tsx"),
 
-  // Private
-  route("admin", "routes/admin.tsx"),
+  // Private: the admin layout gates every child via middleware.
+  route("admin", "routes/admin.tsx", [
+    index("routes/admin._index.tsx"),
+    route("sites", "routes/admin.sites.tsx"),
+    route("content", "routes/admin.content.tsx"),
+    route("tools", "routes/admin.tools.tsx"),
+    route("logout", "routes/admin.logout.tsx"),
+  ]),
 
   // API
   route("api/health", "routes/api.health.ts"),

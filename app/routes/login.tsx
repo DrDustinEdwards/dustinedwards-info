@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { redirect } from "react-router";
 
 import { authClient } from "~/lib/auth-client";
-import { createAuth } from "~/lib/auth.server";
+import { getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/login";
 
@@ -9,15 +10,14 @@ export function meta() {
   return [{ title: "Sign in" }, { name: "robots", content: "noindex" }];
 }
 
+// A signed-in admin has no business here; bounce to the cockpit.
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const session = await createAuth(getEnv(context)).api.getSession({
-    headers: request.headers,
-  });
-  if (session) throw redirect("/admin");
+  if (await getAdminSession(getEnv(context), request)) throw redirect("/admin");
   return null;
 }
 
 export default function Login() {
+  const [busy, setBusy] = useState(false);
   return (
     <main className="gate">
       <div className="gate-card">
@@ -26,14 +26,16 @@ export default function Login() {
         <button
           type="button"
           className="btn-brand"
-          onClick={() =>
-            authClient.signIn.social({
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void authClient.signIn.social({
               provider: "google",
               callbackURL: "/admin",
-            })
-          }
+            });
+          }}
         >
-          Continue with Google
+          {busy ? "Redirecting..." : "Continue with Google"}
         </button>
       </div>
     </main>
