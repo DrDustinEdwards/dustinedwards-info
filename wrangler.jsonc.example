@@ -1,0 +1,38 @@
+/**
+ * Wrangler configuration template for dustinedwards.info
+ * Copy to wrangler.jsonc and fill in the real resource ids. The real file is
+ * gitignored; secrets are set with `wrangler secret put`, never here.
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dustinedwards",
+	"compatibility_date": "2026-07-06",
+	"main": "./workers/app.ts",
+	"compatibility_flags": ["nodejs_compat"],
+	"keep_vars": true,
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "dustinedwards",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "APP_KV",
+			"id": "00000000000000000000000000000000"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "dustinedwards-media"
+		}
+	]
+}
