@@ -11,13 +11,22 @@
     ]
   },
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/no-em-dash.mjs"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-em-dash.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/scoped-git-add.sh\""
           }
         ]
       }
