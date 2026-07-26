@@ -6,8 +6,6 @@
  * dimensions are the real output of scripts/resize-phage-photos.mjs and differ
  * by year, so they are recorded per photo to keep layout shift at zero.
  *
- * TODO: The 2024 roster is pending and must come from course records. The list
- * on the old site was a duplicate of 2022 and cannot be used.
  * TODO: "Matthew Bristerpostma" (2018) is likely "Brister-Postma", pending
  * confirmation.
  */
@@ -55,9 +53,23 @@ export const PHAGE_YEARS: PhageYear[] = [
       height: 720,
       alt: "The 2024 Tarleton State University phage discovery research group.",
     },
-    // Empty because the old site's 2024 list was a copy of the 2022 roster, not
-    // because the cohort was empty. Needs the real names from course records.
-    researchers: [],
+    researchers: [
+      "Gustave Allen",
+      "Fathya Bashir",
+      "Grace Bransom",
+      "Kendall Brown",
+      "Mattisyn Brown",
+      "Evelyn Chacon",
+      "Priscilla Doucette",
+      "Shannon Dycus",
+      "Levi Jackson",
+      "Mia Lombardo",
+      "Hannah McNab",
+      "Morgan Miller",
+      "Cole Moore",
+      "Brittney Moser",
+      "Elizabeth Ronck",
+    ],
   },
   {
     year: 2023,
