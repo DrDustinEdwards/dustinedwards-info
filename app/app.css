@@ -42,9 +42,9 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Public hero. Leaves room for the footer within the first viewport. */
+/* Public hero. Leaves room for the header and footer within the first viewport. */
 .hero {
-  min-height: calc(100dvh - 4rem);
+  min-height: calc(100dvh - 8rem);
   display: grid;
   place-items: center;
   padding: 2rem;
@@ -125,6 +125,105 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+
+/* Public header */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header-brand {
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.site-header-link {
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-header-link:hover {
+  color: var(--fg);
+}
+
+.site-header-link[aria-current="page"] {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* Public content page */
+.page {
+  padding: 2rem;
+}
+
+.page-inner {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.page-title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--brand);
+}
+
+.page-intro {
+  margin: 1rem 0 0;
+  max-width: 40rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+/* Phage Hunters, one block per cohort year */
+.phage-year {
+  margin-top: 3rem;
+}
+
+.phage-year-heading {
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.phage-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.phage-year p.muted {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+/* Roster. The 14rem column width collapses this to one column on narrow
+   viewports without a media query. */
+.roster {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  columns: 3 14rem;
+  gap: 1.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.roster li {
+  break-inside: avoid;
 }
 
 /* Public footer */

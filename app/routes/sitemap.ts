@@ -3,7 +3,7 @@ import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/sitemap";
 
 // Static, always-present URLs.
-const STATIC_PATHS = ["/"];
+const STATIC_PATHS = ["/", "/phage-hunters"];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;

@@ -1,4 +1,5 @@
 import { SiteFooter } from "~/components/site-footer";
+import { SiteHeader } from "~/components/site-header";
 import { personJsonLd, SITE, webSiteJsonLd } from "~/lib/seo";
 import type { Route } from "./+types/home";
 
@@ -19,6 +20,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
+      <SiteHeader />
       <main className="hero">
         <div className="hero-inner">
           <p className="eyebrow">{SITE.affiliation}</p>
