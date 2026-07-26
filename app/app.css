@@ -169,6 +169,12 @@ body {
   margin: 0 auto;
 }
 
+/* Opt-in wider column for pages built around a two-up layout. Phage Hunters
+   uses it so each half lands near 550px, a clean 2x for the 1080px photos. */
+.page-inner-wide {
+  max-width: 72rem;
+}
+
 .page-title {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3rem);
@@ -179,7 +185,8 @@ body {
 
 .page-intro {
   margin: 1rem 0 0;
-  max-width: 40rem;
+  /* Prose keeps its own measure and does not stretch to a wide container. */
+  max-width: 42rem;
   font-size: 1.0625rem;
   line-height: 1.6;
 }
@@ -197,6 +204,10 @@ body {
   font-weight: 600;
 }
 
+.phage-figure {
+  margin: 0;
+}
+
 .phage-photo {
   display: block;
   width: 100%;
@@ -210,20 +221,82 @@ body {
   font-size: 0.9375rem;
 }
 
-/* Roster. The 14rem column width collapses this to one column on narrow
-   viewports without a media query. */
+/* Roster. Single list; the column count is the only thing the breakpoint
+   changes. break-inside keeps a name from splitting across the column gap. */
 .roster {
   margin: 1rem 0 0;
   padding: 0;
   list-style: none;
-  columns: 3 14rem;
-  gap: 1.5rem;
+  columns: 1;
+  column-gap: 2rem;
   font-size: 0.9375rem;
   line-height: 1.7;
 }
 
 .roster li {
   break-inside: avoid;
+}
+
+/* Two-up from 60rem. The breakpoint is about how much room a half needs to hold
+   a photo beside a two-column roster, not about the container width, so it is
+   deliberately independent of .page-inner-wide. Between 48rem and 60rem the page
+   stacks at the wider container width. Below it nothing here applies, so the
+   section is plain block flow in source order: heading, photo, roster. Placement
+   is by explicit modifier class, and source order never changes, so no `order`
+   is used and the reading order always matches the DOM. The figure spans both
+   rows and starts at the top, so a tall roster does not stretch the image. */
+@media (min-width: 60rem) {
+  .phage-year {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Row 2 takes the slack. The figure spans both rows, so with `auto auto`
+       a short roster lets grid stretch row 1 and the heading rule drifts away
+       from the year. */
+    grid-template-rows: auto 1fr;
+    column-gap: 2rem;
+  }
+
+  .phage-figure {
+    align-self: start;
+    grid-row: 1 / span 2;
+  }
+
+  /* Keep both boxes tight to their content, so the heading rule stays under the
+     year and multicol balances on the names rather than a stretched box. */
+  .phage-year-heading,
+  .phage-year-roster {
+    align-self: start;
+  }
+
+  .phage-year-roster-left .phage-year-heading,
+  .phage-year-roster-left .phage-year-roster {
+    grid-column: 1;
+  }
+
+  .phage-year-roster-left .phage-figure {
+    grid-column: 2;
+  }
+
+  .phage-year-photo-left .phage-year-heading,
+  .phage-year-photo-left .phage-year-roster {
+    grid-column: 2;
+  }
+
+  .phage-year-photo-left .phage-figure {
+    grid-column: 1;
+  }
+
+  .phage-year-heading {
+    grid-row: 1;
+  }
+
+  .phage-year-roster {
+    grid-row: 2;
+  }
+
+  .roster {
+    columns: 2;
+  }
 }
 
 /* Public footer */

@@ -23,7 +23,7 @@ export default function PhageHunters({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       <main className="page">
-        <div className="page-inner">
+        <div className="page-inner page-inner-wide">
           <h1 className="page-title">Phage Hunters</h1>
           <p className="page-intro">
             Each year a cohort of Tarleton State University students joins the
@@ -36,31 +36,37 @@ export default function PhageHunters({ loaderData }: Route.ComponentProps) {
           {PHAGE_YEARS.map((entry, index) => (
             <section
               key={entry.year}
-              className="phage-year"
+              // Which side the photo takes is set here from the index, not by a
+              // nth-child rule, so adding a year cannot silently reflow the page.
+              className={`phage-year ${
+                index % 2 === 0 ? "phage-year-roster-left" : "phage-year-photo-left"
+              }`}
               aria-labelledby={`year-${entry.year}`}
             >
               <h2 id={`year-${entry.year}`} className="phage-year-heading">
                 {entry.year}
               </h2>
               {entry.photo ? (
-                <img
-                  className="phage-photo"
-                  src={entry.photo.src}
-                  width={entry.photo.width}
-                  height={entry.photo.height}
-                  alt={entry.photo.alt}
-                  loading={index === 0 ? "eager" : "lazy"}
-                  decoding="async"
-                />
+                <figure className="phage-figure">
+                  <img
+                    className="phage-photo"
+                    src={entry.photo.src}
+                    width={entry.photo.width}
+                    height={entry.photo.height}
+                    alt={entry.photo.alt}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                  />
+                </figure>
               ) : null}
               {entry.researchers.length > 0 ? (
-                <ul className="roster">
+                <ul className="roster phage-year-roster">
                   {entry.researchers.map((name) => (
                     <li key={name}>{name}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="muted">Roster to be added.</p>
+                <p className="muted phage-year-roster">Roster to be added.</p>
               )}
             </section>
           ))}
