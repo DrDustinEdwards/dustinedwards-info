@@ -9,6 +9,7 @@ import {
   type PublicationType,
   type TopicId,
 } from "~/data/publications";
+import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import { publicationsJsonLd, PUBLICATIONS_DESCRIPTION, SITE } from "~/lib/seo";
 import type { Route } from "./+types/publications";
@@ -81,7 +82,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-export function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams;
 
@@ -144,8 +145,13 @@ export function loader({ request }: Route.LoaderArgs) {
   const selectedCount = SHOWCASE.filter((p) => p.selected).length;
   const filtered = topics.length > 0 || q !== "" || selectedOnly;
 
+  // KV read only. A cold or stale entry refreshes after the response, so the
+  // page never waits on OpenAlex.
+  const citations = await getCitationCounts(context, items.map((p) => p.doi));
+
   return {
     origin: url.origin,
+    citations,
     items,
     chips,
     topics,
@@ -243,7 +249,7 @@ function citation(p: Publication) {
   return [p.journal, String(p.year), p.volume, p.pages].filter(Boolean).join(", ");
 }
 
-function Entry({ p }: { p: Publication }) {
+function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   return (
     <article className="pub-entry">
       {/* Display only. The stored title stays plain for search and JSON-LD. */}
@@ -253,6 +259,16 @@ function Entry({ p }: { p: Publication }) {
         {citation(p)}
         {p.type !== "article" ? <span className="pub-type">{p.type}</span> : null}
         {p.isOpenAccess ? <span className="pub-badge">Open access</span> : null}
+        {/* Only at 1 or more. A zero is not rendered as though it were a
+            real count, and the source is always named. */}
+        {cited && cited.count >= 1 ? (
+          <span
+            className="pub-cited"
+            title={`OpenAlex, retrieved ${cited.fetchedAt}`}
+          >
+            Cited by {cited.count} (OpenAlex)
+          </span>
+        ) : null}
       </p>
       <p className="pub-links">
         {p.access === "self-hosted" && p.pdfPath ? (
@@ -290,6 +306,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
     selectedHref,
     filtered,
     total,
+    citations,
   } = loaderData;
 
   const groupByYear = sort !== "title";
@@ -398,7 +415,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
                   </h2>
                 ) : null}
                 {group.items.map((p) => (
-                  <Entry key={p.id} p={p} />
+                  <Entry key={p.id} p={p} cited={citations[p.doi]} />
                 ))}
               </section>
             ))
