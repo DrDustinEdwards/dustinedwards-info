@@ -68,7 +68,7 @@ const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   bacteriophages: {
     title: "Bacteriophages",
     description:
-      "Complete genomes of Microbacterium, Mycobacterium and Arthrobacter bacteriophages sequenced through course-based undergraduate research at Tarleton.",
+      "Complete genomes of Microbacterium, Mycobacterium and Arthrobacter bacteriophages, plus a study of how healthcare providers view phage therapy.",
   },
   "science-education": {
     title: "Science education",
