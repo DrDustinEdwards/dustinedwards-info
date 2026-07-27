@@ -175,3 +175,45 @@ export function publicationsJsonLd(
 
 export const PUBLICATIONS_DESCRIPTION =
   "Peer-reviewed work by Dr. Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
+
+export const RESEARCH_DESCRIPTION =
+  "Four lines of research by Dr. Dustin Edwards: human and simian retroviruses, avian retroviruses, bacteriophage genomes, and course-based research.";
+
+/** The four research areas, in the order the page presents them. */
+const RESEARCH_AREAS = [
+  "Human and simian retroviruses",
+  "Avian retroviruses",
+  "Bacteriophage genomics",
+  "Course-based undergraduate research",
+] as const;
+
+/**
+ * schema.org CollectionPage for the research overview, one item per area.
+ *
+ * Mirrors phageHuntersJsonLd rather than inventing a second shape, and
+ * references the Person node by `@id` so the owner is not described twice
+ * with two slightly different sets of properties.
+ */
+export function researchJsonLd(origin: string) {
+  return [
+    personNode(origin),
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Research",
+      description: RESEARCH_DESCRIPTION,
+      url: `${origin}/research`,
+      isPartOf: { "@type": "WebSite", name: SITE.name, url: origin },
+      author: { "@id": personId(origin) },
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: RESEARCH_AREAS.length,
+        itemListElement: RESEARCH_AREAS.map((name, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          item: { "@type": "CreativeWork", name },
+        })),
+      },
+    },
+  ];
+}

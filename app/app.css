@@ -401,12 +401,22 @@ body {
   color: var(--brand);
 }
 
-.pub-year-heading {
+/* Both are a bordered section break on a text page, so the research headings
+   share this rule rather than duplicating its declarations. */
+.pub-year-heading,
+.research-heading {
   margin: 2rem 0 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
   font-size: 1.25rem;
   font-weight: 600;
+}
+
+/* The research headings are full questions rather than a year, so they need a
+   looser line box than a four-character heading does. */
+.research-heading {
+  margin-top: 3rem;
+  line-height: 1.3;
 }
 
 .pub-entry {
