@@ -40,6 +40,11 @@ try {
     "bootstrap-config: created wrangler.jsonc from wrangler.jsonc.example. It carries placeholder resource ids, so fill them in before deploying or running against real resources.",
   );
 } catch (err) {
-  if (err.code === "EEXIST") process.exit(0);
+  // Narrowed rather than asserted: under checkJs a catch binding is `unknown`,
+  // and COPYFILE_EXCL failing with EEXIST is the expected path when the config
+  // already exists.
+  if (err instanceof Error && /** @type {NodeJS.ErrnoException} */ (err).code === "EEXIST") {
+    process.exit(0);
+  }
   throw err;
 }
