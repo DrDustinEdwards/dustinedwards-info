@@ -89,10 +89,10 @@ export function loader({ request }: Route.LoaderArgs) {
   const sortParam = params.get("sort");
   const sort: SortKey =
     SORTS.some((s) => s.value === sortParam) ? (sortParam as SortKey) : "year-desc";
-  // Accepts "1" or "true". Any other value is absent rather than truthy, so a
-  // stray ?selected=banana shows the full list instead of an empty page.
-  // Generated links always emit the canonical "1".
-  const selectedParam = params.get("selected");
+  // Accepts "1" or "true", any casing. Any other value is absent rather than
+  // truthy, so a stray ?selected=banana shows the full list instead of an
+  // empty page. Generated links always emit the canonical "1".
+  const selectedParam = (params.get("selected") ?? "").toLowerCase();
   const selectedOnly = selectedParam === "1" || selectedParam === "true";
 
   // Everything except the topic filter. Chip counts run against this, so a
