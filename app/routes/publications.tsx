@@ -111,10 +111,25 @@ function sortItems(items: Publication[], sort: SortKey) {
 }
 
 /**
- * Head metadata. og:url is always the canonical target, never the requested
- * URL, so a shared filtered link points social previews at the page that is
- * actually indexed. No og:image: the only images in the repo are the phage
- * cohort photos, and a group photo would misrepresent a publications list.
+ * Head metadata.
+ *
+ * ARCHIVED. Every variant of this route emits noindex, and rel=canonical is
+ * dropped while archived, because a canonical and a noindex are conflicting
+ * signals to a crawler. og:url still carries the canonical target so a shared
+ * link previews against the bare page.
+ *
+ * noindex is served rather than a robots.txt Disallow on purpose. A Disallow
+ * stops the crawl, which means the noindex is never read and an already
+ * indexed URL stays indexed. The page has to stay crawlable in order to leave
+ * the index.
+ *
+ * The loader still computes `noindex` for the zero-results case. It is unused
+ * while archived and is the seam to restore: swapping the unconditional robots
+ * entry back for `...(loaderData?.noindex ? [...] : [])` and re-adding the
+ * canonical link un-archives the route.
+ *
+ * No og:image: the only images in the repo are the phage cohort photos, and a
+ * group photo would misrepresent a publications list.
  */
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData?.pageTitle ?? `Publications, ${SITE.name}`;
@@ -124,12 +139,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [
     { title },
     { name: "description", content: description },
-    ...(canonical
-      ? [{ tagName: "link", rel: "canonical", href: canonical } as const]
-      : []),
-    ...(loaderData?.noindex
-      ? [{ name: "robots", content: "noindex, follow" }]
-      : []),
+    { name: "robots", content: "noindex, follow" },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
@@ -207,6 +217,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // including the default, any selected, and any unrecognised param. Those
   // views are re-orderings or subsets of the index, not distinct content, and
   // the URL space is unbounded because q is free text.
+  //
+  // While the route is archived, meta() emits no canonical link. This value
+  // still feeds og:url, and it is the seam to restore on un-archive.
   const KNOWN_PARAMS = new Set(["topic", "q", "sort", "selected"]);
   const hasUnknownParam = [...params.keys()].some((k) => !KNOWN_PARAMS.has(k));
   const soleTopic: TopicId | null =
@@ -229,7 +242,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? TOPIC_META[soleTopic].description
     : PUBLICATIONS_DESCRIPTION;
   // An empty page is worse than no page. Covers ?selected=1 while nothing is
-  // marked selected, and any query that matches nothing.
+  // marked selected, and any query that matches nothing. Unused while the
+  // route is archived, since meta() emits noindex unconditionally.
   const noindex = items.length === 0;
 
   // KV read only. A cold or stale entry refreshes after the response, so the
