@@ -80,3 +80,37 @@ export function phageHuntersJsonLd(
 
 export const PHAGE_HUNTERS_DESCRIPTION =
   "Year-by-year rosters and group photos of the SEA-PHAGES phage discovery research cohort at Tarleton State University, 2017 to 2025.";
+
+/**
+ * schema.org ScholarlyArticle per publication, emitted as one array.
+ *
+ * Built from the filtered list, so the structured data always describes what
+ * the page actually renders.
+ */
+export function publicationsJsonLd(
+  origin: string,
+  items: {
+    title: string;
+    authors: string[];
+    year: number;
+    journal: string | null;
+    doi: string;
+    pdfPath: string | null;
+  }[],
+) {
+  return items.map((p) => ({
+    "@context": "https://schema.org",
+    "@type": "ScholarlyArticle",
+    headline: p.title,
+    author: p.authors.map((name) => ({ "@type": "Person", name })),
+    datePublished: String(p.year),
+    ...(p.journal
+      ? { isPartOf: { "@type": "Periodical", name: p.journal } }
+      : {}),
+    sameAs: `https://doi.org/${p.doi}`,
+    ...(p.pdfPath ? { url: origin + p.pdfPath } : {}),
+  }));
+}
+
+export const PUBLICATIONS_DESCRIPTION =
+  "Peer-reviewed publications of Dr. Dustin Edwards on human and simian retroviruses, avian retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
