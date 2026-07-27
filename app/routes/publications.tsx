@@ -58,22 +58,22 @@ const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   "human-simian-retroviruses": {
     title: "Human and simian retroviruses",
     description:
-      "How the HTLV-1 accessory proteins p12, p8 and p30 support infection and persistence, covering palmitoylation and virological synapse transmission, Tax-driven transcription, innate immune evasion, and the auxiliary proteins of simian T-cell lymphotropic virus type 3.",
+      "How the HTLV-1 accessory proteins p12, p8 and p30 support infection and persistence, plus the auxiliary proteins of simian T-lymphotropic virus type 3.",
   },
   "avian-retroviruses": {
     title: "Avian retroviruses",
     description:
-      "Molecular surveillance and genome sequencing of reticuloendotheliosis virus in wild birds, from Rio Grande wild turkeys across Texas to Muscovy ducks and chickens in Brazil, and a proviral genome recovered from an endangered Attwater's prairie chicken.",
+      "Molecular surveillance and genome sequencing of reticuloendotheliosis virus in wild turkeys, ducks, and an endangered Attwater's prairie chicken.",
   },
   bacteriophages: {
     title: "Bacteriophages",
     description:
-      "Complete genomes of bacteriophages isolated by undergraduate researchers from Texas soil on Microbacterium foliorum, Mycobacterium smegmatis and Arthrobacter globiformis, alongside a study of how healthcare providers view phage therapy as an alternative to antibiotics.",
+      "Complete genomes of Microbacterium, Mycobacterium and Arthrobacter bacteriophages sequenced through course-based undergraduate research at Tarleton.",
   },
   "science-education": {
     title: "Science education",
     description:
-      "Course-based undergraduate research as a way to teach science: models of classroom assessment, the professional identity of faculty who teach it, the inclusive Research Education Community, and rubrics for authentic scientific writing and communication.",
+      "Course-based undergraduate research as a way to teach science: classroom assessment, faculty identity, the iREC model, and scientific writing rubrics.",
   },
 };
 
