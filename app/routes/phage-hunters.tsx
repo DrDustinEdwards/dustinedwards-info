@@ -26,11 +26,13 @@ export default function PhageHunters({ loaderData }: Route.ComponentProps) {
         <div className="page-inner page-inner-wide">
           <h1 className="page-title">Phage Hunters</h1>
           <p className="page-intro">
-            Each year a cohort of Tarleton State University students joins the
-            SEA-PHAGES program, isolating bacteriophages from local soil on the
-            host <i>Microbacterium foliorum</i> NRRL B-24224. They purify what
-            they find, image it, and sequence the genomes worth sequencing. The
-            groups below are those cohorts, newest first.
+            Cohorts of Tarleton State University students in the SEA-PHAGES
+            program isolate bacteriophages from soil and surfaces across north
+            and central Texas, and work samples from elsewhere in Texas,
+            out-of-state archival isolates, and partner-lab genomes when they
+            advance the work. They purify what they find, image it, and sequence
+            the genomes worth sequencing. The groups below are those cohorts,
+            newest first.
           </p>
 
           {PHAGE_YEARS.map((entry, index) => (
