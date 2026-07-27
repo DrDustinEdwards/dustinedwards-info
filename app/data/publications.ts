@@ -132,7 +132,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: false,
     license: null,
     selected: false,
-    abstract: null,
+    abstract: "Objective: The purpose of this study was to examine the factors associated with vaccine compliance and the effectiveness of short-term video interventions on COVID-19 vaccine perceptions among students attending a state university located in rural Texas. Participants: A total of 298 students participated in an online survey. Methods: Students completed the COVID-19 Vaccine Acceptance Scale (COVID-VAC) and Perceptions of Vaccines Scale before and after watching one of three videos (neutral, educational, or disease effects). Results: Differences in vaccination status were observed for ethnicity and political leanings ( p p > 0.05). Conclusions: Short-term video interventions were ineffective in altering vaccine perceptions and improving acceptance of the COVID-19 vaccine in our study population. Impact of the type and duration of educational videos should be explored by future studies to combat vaccine hesitancy in future population-based studies.",
   },
   {
     id: "edwards-2025-godfather",
@@ -252,7 +252,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: false,
     license: null,
     selected: false,
-    abstract: null,
+    abstract: "This resources provides a framework for students to write a Microbiology Resource Announcement, collaboratively.",
   },
   {
     id: "edwards-2023-mraaronian",
@@ -420,7 +420,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: false,
     license: null,
     selected: false,
-    abstract: null,
+    abstract: "Reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV) are avian retroviruses that can cause neoplastic disease and present with similar pathologies. Lymphoproliferative disease virus has been reported in the Eastern US and states bordering Texas, USA, but has not been previously detected within the state. In a prior study, we detected REV in native Rio Grande Wild Turkeys (Meleagris gallopavo intermedia) and an Eastern Wild Turkey (Meleagris gallopavo silvestris) originating from West Virginia. Given LPDV detection in states bordering Texas and our finding of an REV-positive Eastern Wild Turkey imported from a LPDV endemic region, we sought to determine LPDV prevalence in Texas and continue surveillance for REV. During 2018-20, dried blood spots from 373 individual Rio Grande Wild Turkeys from 20 different counties were tested for the presence of proviral REV or LPDV DNA. In affected counties, approximately 4% of individuals were infected with REV (7/197) or LPDV (10/273) and one bird was coinfected with both viruses. Phylogenetic analysis indicated a close relationship of the LPDV isolates to variants from other Southern and Central states. This study provides molecular evidence of LPDV in Texas, and continued surveillance is necessary to determine the potential effects of the virus on reproductive success, coinfections, and overall health of Wild Turkey populations.",
   },
   {
     id: "edwards-2022-prairie-chicken",
@@ -540,7 +540,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: false,
     license: null,
     selected: false,
-    abstract: null,
+    abstract: "Prior to submitting genomic DNA for sequencing, SEA students perform a restriction endonuclease digest with several enzymes, which provides a fast and cost-effective way of quickly screening isolated phages. The pattern of bands on the gel should be unique except for very closely related or identical phages, which is useful when trying to identify novel bacteriophages to send for sequencing and ultimately for annotation. Students often struggle with understanding what restriction enzymes are, how they work, and why this is an important step in phage characterization. The ‘Restriction Enzyme Digests’ set of teaching resources provides four active learning exercises that introduce students to restriction enzymes, demonstrate how they work, and why they are a useful tool in the lab and for bacteriophage identification.",
   },
   {
     id: "edwards-2020-muscovy-ducks",
@@ -564,7 +564,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: true,
     license: "other-oa",
     selected: false,
-    abstract: null,
+    abstract: "Reticuloendotheliosis viruses (REVs) are known to cause immunosuppressive and oncogenic disease that affects numerous avian species. Reticuloendotheliosis viruses are present worldwide and recently have been reported in South America with cases of infected commercial flocks in Argentina. We surveyed for the presence of REV in birds from a state in the northern region of Brazil using real-time PCR. We report here the presence of REV in Brazil, detected in Muscovy Ducks ( Cairina moschata ), Wild Turkeys ( Meleagris gallopavo ), and chickens ( Gallus gallus ) at a relatively high prevalence (16.8%). Phylogenetic analysis indicated a close relationship of these strains to variants in the US. This study provides evidence of REV in the Amazon biome and provides a baseline for future surveillance of the virus in the region and throughout Brazil.",
   },
   {
     id: "edwards-2019-finny",
@@ -636,7 +636,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: false,
     license: null,
     selected: false,
-    abstract: null,
+    abstract: "Reticuloendotheliosis virus (REV) is an immunosuppressive and sometimes oncogenic avian retrovirus that establishes lifelong infection in a wide range of avian species. REV-infected wild birds roaming near at-risk captive flocks, such as is the case for the highly endangered Attwater's Prairie Chicken (APC; Tympanuchus cupido attwateri ), could act as a reservoir for viral transmission. In wild birds, prevalence rates of REV are low and appearance of associated disease is uncommon. During 2016-17, nearly half of all captive adult APC mortality at Fossil Rim Wildlife Center captive breeding facility in Glen Rose, Texas, US was attributed to REV infection. The unusually high REV prevalence rate prompted us to survey for this virus in wild galliforms throughout the region. From 2016-17, 393 blood samples collected from two subspecies of Wild Turkeys ( Meleagris gallopavo ) were tested for REV proviral DNA through amplification of the viral 3' long terminal repeat and segments of the viral pol gene. In REV-affected counties, 5% (5/98) of native Rio Grande Wild Turkeys ( Meleagris gallopavo intermedia ) were identified as REV-positive. In addition, we detected REV in one of 62 Eastern Wild Turkeys ( Meleagris gallopavo silvestris ) that had been imported during conservation efforts. To better determine protective measures, continued surveillance, including collection and genetic analysis of REV-infected samples, is necessary to identify sources of REV outbreaks in captive APC flocks.",
   },
   {
     id: "edwards-2018-arlo",
@@ -732,7 +732,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: true,
     license: "cc-by",
     selected: false,
-    abstract: null,
+    abstract: "HTLV-1 orf-I is linked to immune evasion, viral replication and persistence. Examining the orf-I sequence of 160 HTLV-1-infected individuals; we found polymorphism of orf-I that alters the relative amounts of p12 and its cleavage product p8. Three groups were identified on the basis of p12 and p8 expression: predominantly p12, predominantly p8 and balanced expression of p12 and p8. We found a significant association between balanced expression of p12 and p8 with high viral DNA loads, a correlate of disease development. To determine the individual roles of p12 and p8 in viral persistence, we constructed infectious molecular clones expressing p12 and p8 (D26), predominantly p12 (G29S) or predominantly p8 (N26). As we previously showed, cells expressing N26 had a higher level of virus transmission in vitro. However, when inoculated into Rhesus macaques, cells producing N26 virus caused only a partial seroconversion in 3 of 4 animals and only 1 of those animals was HTLV-1 DNA positive by PCR. None of the animals exposed to G29S virus seroconverted or had detectable viral DNA. In contrast, 3 of 4 animals exposed to D26 virus seroconverted and were HTLV-1 positive by PCR. In vitro studies in THP-1 cells suggested that expression of p8 was sufficient for productive infection of monocytes. Since orf-I plays a role in T-cell activation and recognition; we compared the CTL response elicited by CD4+ T-cells infected with the different HTLV-1 clones. Although supernatant p19 levels and viral DNA loads for all four infected lines were similar, a significant difference in Tax-specific HLA.A2-restricted killing was observed. Cells infected with Orf-I-knockout virus (12KO), G29S or N26 were killed by CTLs, whereas cells infected with D26 virus were resistant to CTL killing. These results indicate that efficient viral persistence and spread require the combined functions of p12 and p8.",
   },
   {
     id: "edwards-2014-p30-tlr3",
@@ -828,7 +828,7 @@ export const PUBLICATIONS: Publication[] = [
     isOpenAccess: true,
     license: "cc-by",
     selected: false,
-    abstract: null,
+    abstract: "Background: It is estimated that 15 to 20 million people are infected with the human T-cell lymphotropic virus type 1 (HTLV-1). At present, there are more than 2,000 unique HTLV-1 isolate sequences published. A central database to aggregate sequence information from a range of epidemiological aspects including HTLV-1 infections, pathogenesis, origins, and evolutionary dynamics would be useful to scientists and physicians worldwide. Described here, we have developed a database that collects and annotates sequence data and can be accessed through a user-friendly search interface. The HTLV-1 Molecular Epidemiology Database website is available at http://htlv1db.bahia.fiocruz.br/. Methodology/principal findings: All data was obtained from publications available at GenBank or through contact with the authors. The database was developed using Apache Webserver 2.1.6 and SGBD MySQL. The webpage interfaces were developed in HTML and sever-side scripting written in PHP. The HTLV-1 Molecular Epidemiology Database is hosted on the Gonçalo Moniz/FIOCRUZ Research Center server. There are currently 2,457 registered sequences with 2,024 (82.37%) of those sequences representing unique isolates. Of these sequences, 803 (39.67%) contain information about clinical status (TSP/HAM, 17.19%; ATL, 7.41%; asymptomatic, 12.89%; other diseases, 2.17%; and no information, 60.32%). Further, 7.26% of sequences contain information on patient gender while 5.23% of sequences provide the age of the patient. Conclusions/significance: The HTLV-1 Molecular Epidemiology Database retrieves and stores annotated HTLV-1 proviral sequences from clinical, epidemiological, and geographical studies. The collected sequences and related information are now accessible on a publically available and user-friendly website. This open-access database will support clinical research and vaccine development related to viral genotype.",
   },
   {
     id: "edwards-2011-geranylgeranyl",
