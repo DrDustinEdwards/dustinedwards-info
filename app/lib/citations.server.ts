@@ -24,9 +24,15 @@ export type CitationEntry = {
   count: number;
   /** ISO date the value was retrieved. */
   fetchedAt: string;
+  /** OpenAlex work URL, taken from the response. Never constructed. */
+  url: string | null;
 };
 
-const key = (doi: string) => `citations:${doi.trim().toLowerCase()}`;
+/**
+ * v2 adds `url`. The prefix bump forces a cold refresh rather than leaving a
+ * seven day window where some counts link and others do not.
+ */
+const key = (doi: string) => `citations:v2:${doi.trim().toLowerCase()}`;
 
 async function readOne(kv: KVNamespace, doi: string): Promise<CitationEntry | null> {
   try {
@@ -49,11 +55,12 @@ async function fetchOne(doi: string): Promise<CitationEntry | null> {
       headers: { "user-agent": `dustinedwards.info (mailto:${EMAIL})` },
     });
     if (!res.ok) return null;
-    const body = (await res.json()) as { cited_by_count?: number };
+    const body = (await res.json()) as { cited_by_count?: number; id?: string };
     if (typeof body.cited_by_count !== "number") return null;
     return {
       count: body.cited_by_count,
       fetchedAt: new Date().toISOString().slice(0, 10),
+      url: typeof body.id === "string" ? body.id : null,
     };
   } catch {
     return null;

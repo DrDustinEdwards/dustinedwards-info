@@ -259,16 +259,6 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         {citation(p)}
         {p.type !== "article" ? <span className="pub-type">{p.type}</span> : null}
         {p.isOpenAccess ? <span className="pub-badge">Open access</span> : null}
-        {/* Only at 1 or more. A zero is not rendered as though it were a
-            real count, and the source is always named. */}
-        {cited && cited.count >= 1 ? (
-          <span
-            className="pub-cited"
-            title={`OpenAlex, retrieved ${cited.fetchedAt}`}
-          >
-            Cited by {cited.count} (OpenAlex)
-          </span>
-        ) : null}
       </p>
       <p className="pub-links">
         {p.access === "self-hosted" && p.pdfPath ? (
@@ -281,6 +271,20 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         ) : null}
         {p.preprintDoi ? (
           <a href={`https://doi.org/${p.preprintDoi}`}>Preprint</a>
+        ) : null}
+        {/* Last in the row. Only at 1 or more, so a zero is never rendered as
+            though it were a real count. It is a link rather than plain text
+            because it sits among the link pills, and the OpenAlex work page
+            carries the provenance that the title attribute cannot show on a
+            touch device. The URL comes from the response, never constructed. */}
+        {cited && cited.count >= 1 && cited.url ? (
+          <a
+            className="pub-cited"
+            href={cited.url}
+            title={`OpenAlex, retrieved ${cited.fetchedAt}`}
+          >
+            Cited by {cited.count}
+          </a>
         ) : null}
       </p>
       {p.abstract ? (
