@@ -10,6 +10,9 @@
 # Phage Hunters photo sources. Only the generated WebP is committed.
 /public/phage-hunters/*.jpg
 
+# Claude Code. settings.json is committed; the local override never is.
+.claude/settings.local.json
+
 # Cloudflare
 .mf
 .wrangler
