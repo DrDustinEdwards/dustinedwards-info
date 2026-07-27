@@ -200,10 +200,10 @@ export default function Research({ loaderData }: Route.ComponentProps) {
             could build?
           </h2>
           <p className="page-intro">
-            A single phage genome is a small result. Eleven of them, sequenced
-            by successive cohorts of undergraduates over eight years, are still
-            eleven small results. The argument for doing this is not that any
-            one genome matters. It is that the collection they join is something
+            A single phage genome is a small result. Eleven of them, reported
+            by successive student cohorts across nine years, are still eleven
+            small results. The argument for doing this is not that any one
+            genome matters. It is that the collection they join is something
             no individual lab could assemble, and that the properties worth
             knowing about a phage only exist once the collection is large enough
             to compare against.
