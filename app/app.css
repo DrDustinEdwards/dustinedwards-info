@@ -898,7 +898,8 @@ body {
   cursor: not-allowed;
 }
 
+/* Sits among the link pills and is a real link, so it inherits their colour
+   from .pub-links a. Only the wrap behaviour is its own. */
 .pub-cited {
-  color: var(--muted);
   white-space: nowrap;
 }
