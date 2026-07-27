@@ -30,7 +30,7 @@ export default function PhageHunters({ loaderData }: Route.ComponentProps) {
             program isolate bacteriophages from soil and surfaces across north
             and central Texas, and work samples from elsewhere in Texas,
             out-of-state archival isolates, and partner-lab genomes when they
-            advance the work. They purify what they find, image it, and sequence
+            advance the work. They purify what they find, image it, and pick out
             the genomes worth sequencing. The groups below are those cohorts,
             newest first.
           </p>
