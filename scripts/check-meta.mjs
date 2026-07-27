@@ -37,9 +37,14 @@ if (found.length !== 4) {
   throw new Error(`expected 4 topic descriptions, parsed ${found.length}`);
 }
 
-// The bare-page description, which the four topic views fall back to.
+// The per-page descriptions. PUBLICATIONS_DESCRIPTION is also the fallback the
+// four topic views use when no single topic is selected.
 const seo = readFileSync(join(ROOT, "app", "lib", "seo.ts"), "utf8");
-for (const name of ["PUBLICATIONS_DESCRIPTION", "PHAGE_HUNTERS_DESCRIPTION"]) {
+for (const name of [
+  "PUBLICATIONS_DESCRIPTION",
+  "PHAGE_HUNTERS_DESCRIPTION",
+  "RESEARCH_DESCRIPTION",
+]) {
   const m = seo.match(
     new RegExp(`export const ${name} =\\s*\\n?\\s*"((?:[^"\\\\]|\\\\.)*)";`),
   );

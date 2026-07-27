@@ -14,6 +14,9 @@ export function SiteHeader() {
         {SITE.name}
       </Link>
       <nav aria-label="Primary">
+        <NavLink to="/research" className="site-header-link">
+          Research
+        </NavLink>
         <NavLink to="/publications" className="site-header-link">
           Publications
         </NavLink>
