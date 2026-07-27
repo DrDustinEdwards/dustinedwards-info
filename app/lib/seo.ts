@@ -174,4 +174,4 @@ export function publicationsJsonLd(
 }
 
 export const PUBLICATIONS_DESCRIPTION =
-  "Peer-reviewed publications of Dr. Dustin Edwards on human and simian retroviruses, avian retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
+  "Peer-reviewed work by Dr. Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
