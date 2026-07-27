@@ -35,6 +35,12 @@ export default function PhageHunters({ loaderData }: Route.ComponentProps) {
             newest first.
           </p>
 
+          <p className="page-intro">
+            Tarleton undergraduates worked with students at Bluff Dale and
+            Tolar High Schools to annotate three archival phage genomes,
+            published as two genome announcements.
+          </p>
+
           {PHAGE_YEARS.map((entry, index) => (
             <section
               key={entry.year}
