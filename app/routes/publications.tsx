@@ -9,6 +9,7 @@ import {
   type PublicationType,
   type TopicId,
 } from "~/data/publications";
+import { italicizeOrganisms } from "~/lib/scientific-names";
 import { publicationsJsonLd, PUBLICATIONS_DESCRIPTION, SITE } from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
@@ -245,7 +246,8 @@ function citation(p: Publication) {
 function Entry({ p }: { p: Publication }) {
   return (
     <article className="pub-entry">
-      <h3 className="pub-title">{p.title}</h3>
+      {/* Display only. The stored title stays plain for search and JSON-LD. */}
+      <h3 className="pub-title">{italicizeOrganisms(p.title)}</h3>
       <AuthorList authors={p.authors} />
       <p className="pub-meta">
         {citation(p)}
@@ -268,7 +270,7 @@ function Entry({ p }: { p: Publication }) {
       {p.abstract ? (
         <details className="pub-abstract">
           <summary>Abstract</summary>
-          <p>{p.abstract}</p>
+          <p>{italicizeOrganisms(p.abstract)}</p>
         </details>
       ) : null}
     </article>
