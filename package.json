@@ -14,7 +14,8 @@
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview",
     "cf-typegen": "wrangler types",
-    "postinstall": "wrangler types"
+    "bootstrap:config": "node scripts/bootstrap-config.mjs",
+    "postinstall": "node scripts/bootstrap-config.mjs && wrangler types"
   },
   "dependencies": {
     "better-auth": "^1.6.23",
