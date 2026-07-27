@@ -6,6 +6,7 @@ import {
   PUBLICATIONS,
   TOPICS,
   type Publication,
+  type PublicationType,
   type TopicId,
 } from "~/data/publications";
 import { publicationsJsonLd, PUBLICATIONS_DESCRIPTION, SITE } from "~/lib/seo";
@@ -20,6 +21,21 @@ const SORTS = [
 type SortKey = (typeof SORTS)[number]["value"];
 
 const TOPIC_IDS = new Set<string>(TOPICS.map((t) => t.id));
+
+/**
+ * Types this page shows. The data file is also the source for the CV, which
+ * does list conference abstracts, so those records stay in the file and are
+ * excluded here instead of being deleted. An abstract is the meeting version
+ * of a paper already listed, so showing both would repeat the same work.
+ */
+const SHOWCASE_TYPES = new Set<PublicationType>([
+  "article",
+  "review",
+  "chapter",
+  "teaching-resource",
+]);
+
+const SHOWCASE = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
 
 /**
  * Fold the dash family to a plain hyphen and flatten case and runs of space.
@@ -78,7 +94,7 @@ export function loader({ request }: Route.LoaderArgs) {
   // Everything except the topic filter. Chip counts run against this, so a
   // count only ever promises results that a click would actually return.
   const needle = fold(q);
-  const base = PUBLICATIONS.filter(
+  const base = SHOWCASE.filter(
     (p) =>
       (!selectedOnly || p.selected) && (!needle || haystack(p).includes(needle)),
   );
@@ -120,7 +136,7 @@ export function loader({ request }: Route.LoaderArgs) {
     };
   });
 
-  const selectedCount = PUBLICATIONS.filter((p) => p.selected).length;
+  const selectedCount = SHOWCASE.filter((p) => p.selected).length;
   const filtered = topics.length > 0 || q !== "" || selectedOnly;
 
   return {
@@ -142,9 +158,9 @@ export function loader({ request }: Route.LoaderArgs) {
       return s ? `/publications?${s}` : "/publications";
     })(),
     filtered,
-    total: PUBLICATIONS.length,
+    total: SHOWCASE.length,
     description: filtered
-      ? `${items.length} of ${PUBLICATIONS.length} publications by ${SITE.name}.`
+      ? `${items.length} of ${SHOWCASE.length} publications by ${SITE.name}.`
       : PUBLICATIONS_DESCRIPTION,
   };
 }
@@ -161,39 +177,58 @@ function AuthorName({ name }: { name: string }) {
   return isSiteOwner(name) ? <strong className="pub-author-me">{name}</strong> : <>{name}</>;
 }
 
+function Names({ names }: { names: string[] }) {
+  return (
+    <>
+      {names.map((name, i) => (
+        <span key={name + i}>
+          {i > 0 ? ", " : ""}
+          <AuthorName name={name} />
+        </span>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Author list, collapsed to a summary that always includes the site owner.
+ *
+ * Author order varies across the corpus: he is first on some papers, last on
+ * every phage announcement, and 14th of 108 on a community teaching resource.
+ * A plain "first three" collapse would hide his name on most of the page, so
+ * when he falls outside the first three the summary shows the first two, an
+ * ellipsis, then his entry. details, not a button, so it expands without
+ * scripting.
+ */
 function AuthorList({ authors }: { authors: string[] }) {
   if (authors.length === 0) return null;
   if (authors.length <= 3) {
     return (
       <p className="pub-authors">
-        {authors.map((name, i) => (
-          <span key={name + i}>
-            {i > 0 ? ", " : ""}
-            <AuthorName name={name} />
-          </span>
-        ))}
+        <Names names={authors} />
       </p>
     );
   }
-  // details, not a button, so the list expands without scripting.
+
+  const ownerIndex = authors.findIndex(isSiteOwner);
+  const pulled = ownerIndex >= 3;
+  const lead = authors.slice(0, pulled ? 2 : 3);
+  const shown = lead.length + (pulled ? 1 : 0);
+
   return (
     <details className="pub-authors pub-authors-more">
       <summary>
-        {authors.slice(0, 3).map((name, i) => (
-          <span key={name + i}>
-            {i > 0 ? ", " : ""}
-            <AuthorName name={name} />
-          </span>
-        ))}
-        <span className="muted"> and {authors.length - 3} more</span>
+        <Names names={lead} />
+        {pulled ? (
+          <>
+            <span className="muted">, ... </span>
+            <AuthorName name={authors[ownerIndex]} />
+          </>
+        ) : null}
+        <span className="muted"> and {authors.length - shown} more</span>
       </summary>
       <p className="pub-authors-full">
-        {authors.map((name, i) => (
-          <span key={name + i}>
-            {i > 0 ? ", " : ""}
-            <AuthorName name={name} />
-          </span>
-        ))}
+        <Names names={authors} />
       </p>
     </details>
   );
