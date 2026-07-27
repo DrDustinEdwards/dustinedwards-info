@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { RESEARCH_DESCRIPTION, researchJsonLd, SITE } from "~/lib/seo";
@@ -117,6 +119,11 @@ export default function Research({ loaderData }: Route.ComponentProps) {
             exist, both healthy carriers and patients. Something is keeping
             those infections going that has not been identified.
           </p>
+          <p className="page-intro muted">
+            <Link to="/publications?topic=human-simian-retroviruses">
+              Publications on human and simian retroviruses
+            </Link>
+          </p>
 
           <h2 className="research-heading">
             When a captive breeding program keeps losing birds to a virus, where
@@ -193,6 +200,11 @@ export default function Research({ loaderData }: Route.ComponentProps) {
             wild and captive isolates as the next step, and no such paper
             followed. The source of the outbreak was not identified. The
             published record on both viruses ends in 2022.
+          </p>
+          <p className="page-intro muted">
+            <Link to="/publications?topic=avian-retroviruses">
+              Publications on avian retroviruses
+            </Link>
           </p>
 
           <h2 className="research-heading">
@@ -280,6 +292,11 @@ export default function Research({ loaderData }: Route.ComponentProps) {
             the announcements above was tested against anything, and none of
             that work is therapy research.
           </p>
+          <p className="page-intro muted">
+            <Link to="/publications?topic=bacteriophages">
+              Publications on bacteriophages
+            </Link>
+          </p>
 
           <h2 className="research-heading">
             What does it take to change how science is taught at a hundred
@@ -361,6 +378,11 @@ export default function Research({ loaderData }: Route.ComponentProps) {
             messages shifted vaccine perceptions. They did not. It is a negative
             result, reported as one, on work led by colleagues rather than by
             us.
+          </p>
+          <p className="page-intro muted">
+            <Link to="/publications?topic=science-education">
+              Publications on science education
+            </Link>
           </p>
         </div>
         <script
