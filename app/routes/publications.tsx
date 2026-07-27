@@ -11,7 +11,12 @@ import {
 } from "~/data/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { italicizeOrganisms } from "~/lib/scientific-names";
-import { publicationsJsonLd, PUBLICATIONS_DESCRIPTION, SITE } from "~/lib/seo";
+import {
+  isSiteOwner,
+  publicationsJsonLd,
+  PUBLICATIONS_DESCRIPTION,
+  SITE,
+} from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
 const SORTS = [
@@ -38,6 +43,39 @@ const SHOWCASE_TYPES = new Set<PublicationType>([
 ]);
 
 const SHOWCASE = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
+
+/**
+ * Head metadata for the four single-topic views, which are the only filtered
+ * URLs that self-canonical.
+ *
+ * Descriptions are written, not templated. A generated line like "Publications
+ * in {topic}" or "N of 33 publications" is the same thin metadata with a
+ * variable in it, which is what the audit found and what this replaces. Each
+ * sentence describes the actual work, so the four pages differ in content and
+ * not just in a number.
+ */
+const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
+  "human-simian-retroviruses": {
+    title: "Human and simian retroviruses",
+    description:
+      "How the HTLV-1 accessory proteins p12, p8 and p30 support infection and persistence, covering palmitoylation and virological synapse transmission, Tax-driven transcription, innate immune evasion, and the auxiliary proteins of simian T-cell lymphotropic virus type 3.",
+  },
+  "avian-retroviruses": {
+    title: "Avian retroviruses",
+    description:
+      "Molecular surveillance and genome sequencing of reticuloendotheliosis virus in wild birds, from Rio Grande wild turkeys across Texas to Muscovy ducks and chickens in Brazil, and a proviral genome recovered from an endangered Attwater's prairie chicken.",
+  },
+  bacteriophages: {
+    title: "Bacteriophages",
+    description:
+      "Complete genomes of bacteriophages isolated by undergraduate researchers from Texas soil on Microbacterium foliorum, Mycobacterium smegmatis and Arthrobacter globiformis, alongside a study of how healthcare providers view phage therapy as an alternative to antibiotics.",
+  },
+  "science-education": {
+    title: "Science education",
+    description:
+      "Course-based undergraduate research as a way to teach science: models of classroom assessment, the professional identity of faculty who teach it, the inclusive Research Education Community, and rubrics for authentic scientific writing and communication.",
+  },
+};
 
 /**
  * Fold the dash family to a plain hyphen and flatten case and runs of space.
@@ -72,13 +110,31 @@ function sortItems(items: Publication[], sort: SortKey) {
   });
 }
 
+/**
+ * Head metadata. og:url is always the canonical target, never the requested
+ * URL, so a shared filtered link points social previews at the page that is
+ * actually indexed. No og:image: the only images in the repo are the phage
+ * cohort photos, and a group photo would misrepresent a publications list.
+ */
 export function meta({ loaderData }: Route.MetaArgs) {
+  const title = loaderData?.pageTitle ?? `Publications, ${SITE.name}`;
+  const description = loaderData?.pageDescription ?? PUBLICATIONS_DESCRIPTION;
+  const canonical = loaderData?.canonical;
+
   return [
-    { title: `Publications, ${SITE.name}` },
-    {
-      name: "description",
-      content: loaderData?.description ?? PUBLICATIONS_DESCRIPTION,
-    },
+    { title },
+    { name: "description", content: description },
+    ...(canonical
+      ? [{ tagName: "link", rel: "canonical", href: canonical } as const]
+      : []),
+    ...(loaderData?.noindex
+      ? [{ name: "robots", content: "noindex, follow" }]
+      : []),
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    ...(canonical ? [{ property: "og:url", content: canonical }] : []),
+    { name: "twitter:card", content: "summary" },
   ];
 }
 
@@ -145,6 +201,37 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const selectedCount = SHOWCASE.filter((p) => p.selected).length;
   const filtered = topics.length > 0 || q !== "" || selectedOnly;
 
+  // Canonical policy. Exactly the four bare single-topic URLs self-canonical
+  // and carry their own written title and description. Everything else
+  // canonicals to the bare page: multi-topic combinations, any q, any sort
+  // including the default, any selected, and any unrecognised param. Those
+  // views are re-orderings or subsets of the index, not distinct content, and
+  // the URL space is unbounded because q is free text.
+  const KNOWN_PARAMS = new Set(["topic", "q", "sort", "selected"]);
+  const hasUnknownParam = [...params.keys()].some((k) => !KNOWN_PARAMS.has(k));
+  const soleTopic: TopicId | null =
+    topics.length === 1 &&
+    // An unrecognised topic value alongside a good one must not self-canonical.
+    params.getAll("topic").length === 1 &&
+    !params.has("q") &&
+    !params.has("sort") &&
+    !params.has("selected") &&
+    !hasUnknownParam
+      ? topics[0]
+      : null;
+
+  const canonical =
+    url.origin + (soleTopic ? `/publications?topic=${soleTopic}` : "/publications");
+  const pageTitle = soleTopic
+    ? `${TOPIC_META[soleTopic].title}, ${SITE.name}`
+    : `Publications, ${SITE.name}`;
+  const pageDescription = soleTopic
+    ? TOPIC_META[soleTopic].description
+    : PUBLICATIONS_DESCRIPTION;
+  // An empty page is worse than no page. Covers ?selected=1 while nothing is
+  // marked selected, and any query that matches nothing.
+  const noindex = items.length === 0;
+
   // KV read only. A cold or stale entry refreshes after the response, so the
   // page never waits on OpenAlex.
   const citations = await getCitationCounts(context, items.map((p) => p.doi));
@@ -170,18 +257,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     })(),
     filtered,
     total: SHOWCASE.length,
-    description: filtered
-      ? `${items.length} of ${SHOWCASE.length} publications by ${SITE.name}.`
-      : PUBLICATIONS_DESCRIPTION,
+    canonical,
+    pageTitle,
+    pageDescription,
+    noindex,
   };
-}
-
-/** Dustin is last author on some papers, so match on surname plus initial. */
-function isSiteOwner(name: string) {
-  const parts = name.trim().split(/\s+/);
-  const surname = parts[parts.length - 1] ?? "";
-  const given = parts[0] ?? "";
-  return surname.toLowerCase() === "edwards" && given.toUpperCase().startsWith("D");
 }
 
 function AuthorName({ name }: { name: string }) {
