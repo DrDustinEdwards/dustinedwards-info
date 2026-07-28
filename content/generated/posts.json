@@ -1,6 +1,37 @@
 {
   "posts": [
     {
+      "slug": "restore-probe",
+      "title": "Restore probe",
+      "description": "Throwaway post used to verify version history restore.",
+      "date": "2026-07-28",
+      "publishAt": "2026-07-28T00:00:00.000Z",
+      "draft": true,
+      "tags": [
+        "testing"
+      ],
+      "cover": null,
+      "featured": false,
+      "series": null,
+      "part": null,
+      "furtherReading": [],
+      "ogTitle": null,
+      "ogDescription": null,
+      "updated": null,
+      "readingTimeMinutes": 1,
+      "toc": [
+        {
+          "depth": 2,
+          "id": "version-one",
+          "text": "Version one"
+        }
+      ],
+      "markdown": "\n## Version one\n\nThis is the ORIGINAL body. Restoring should bring this text back.\n",
+      "html": "<h2 id=\"version-one\">Version one<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#version-one\">#</a></h2>\n<p>This is the ORIGINAL body. Restoring should bring this text back.</p>",
+      "sourcePath": "content/posts/restore-probe.md",
+      "related": []
+    },
+    {
       "slug": "where-should-a-blog-store-its-words",
       "title": "Where should a blog store its words?",
       "description": "Two content models for a Cloudflare-native blog, one database, and the four arguments that settled it.",
