@@ -27,7 +27,7 @@ Under B, a post's HTML is fully determined by the repo at build time. That opens
 
 ## 3. The backup asymmetry.
 
-Here is the argument that mattered most and shows up in no comparison article. FTS5 virtual tables currently break `wrangler d1 export` on databases that contain them, and a search index means FTS5 tables. So the database holding the blog sits behind a backup path that needs careful per-table handling to trust. Under option A, D1 is the only copy of every word I have written. Under option B, D1 is a cache of record, and git is the archive. If every backup I have fails simultaneously, option B loses nothing. Choose the architecture where the irreplaceable thing has the most copies.
+Here is the argument that mattered most and shows up in no comparison article. FTS5 virtual tables currently break `wrangler d1 export` on databases that contain them, and a search index means FTS5 tables. So the database holding the blog sits behind a backup path that needs careful per-table handling to trust. Under option A, D1 is the only copy of every word I have written. Under option B, D1 is a cache of record, and git is the archive. If every backup I have fails simultaneously, option B loses nothing. Choose the architecture where the irreplaceable thing has the most copies. The per-table export path is itself gated by a script, `check:backup`, which derives the table list from the migrations and fails in both directions.
 
 ## 4. Agents can operate files with governance. They can only mutate rows.
 
