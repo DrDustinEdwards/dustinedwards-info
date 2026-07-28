@@ -1,0 +1,78 @@
+/**
+ * Renders content/posts/*.md into the committed artifact at
+ * content/generated/posts.json.
+ *
+ * `npm run build:content` regenerates it. `npm run check:content` fails when the
+ * committed copy differs from a fresh generation, so the artifact cannot drift
+ * from its source without someone noticing.
+ */
+
+import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { ContentError, renderPost } from "./lib/content.mjs";
+
+export const CONTENT_DIR = path.join("content", "posts");
+export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
+
+/**
+ * Renders every post and returns the artifact exactly as it should sit on disk.
+ * Sorted by slug so the output depends on content alone, never on the order the
+ * filesystem happened to hand back.
+ *
+ * @returns {Promise<string>}
+ */
+export async function buildArtifact() {
+  /** @type {string[]} */
+  let entries;
+  try {
+    entries = await readdir(CONTENT_DIR);
+  } catch {
+    throw new Error(
+      `${CONTENT_DIR} does not exist. Create it and add at least one markdown post.`,
+    );
+  }
+
+  const files = entries.filter((name) => name.endsWith(".md")).sort();
+
+  const posts = [];
+  for (const name of files) {
+    const file = path.join(CONTENT_DIR, name);
+    const raw = await readFile(file, "utf8");
+    posts.push(await renderPost(file, raw));
+  }
+
+  posts.sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+
+  const slugs = new Set();
+  for (const post of posts) {
+    if (slugs.has(post.slug)) {
+      throw new Error(`duplicate slug "${post.slug}" across content/posts`);
+    }
+    slugs.add(post.slug);
+  }
+
+  return `${JSON.stringify({ posts }, null, 2)}\n`;
+}
+
+async function main() {
+  const artifact = await buildArtifact();
+  await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
+  await writeFile(ARTIFACT_PATH, artifact, "utf8");
+  const { posts } = JSON.parse(artifact);
+  console.log(`build:content wrote ${ARTIFACT_PATH} (${posts.length} posts)`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((/** @type {unknown} */ error) => {
+    if (error instanceof ContentError) {
+      console.error(`build:content failed. ${error.message}`);
+    } else {
+      console.error(
+        `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    process.exit(1);
+  });
+}

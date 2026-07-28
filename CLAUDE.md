@@ -24,8 +24,22 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run dev`
 - `npm run build`
 - `npx tsc -b` typecheck (`tsc --noEmit` is a no-op here)
+- `npm run build:content` regenerate `content/generated/posts.json` from `content/posts/`
+- `npm run check:content` gate; fails when the committed artifact differs from a fresh generation
+- `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `wrangler deploy` (auto-deploy is not wired; deploy is manual)
+
+## Blog content
+
+Markdown files in `content/posts/` are the source of truth. The generator emits
+`content/generated/posts.json` (committed, gated) carrying both the source
+markdown and the rendered HTML, and `sync:content` writes both into D1. D1 owns
+every read. Ruling and grounds: dustinedwards/decisions.md, 2026-07-27.
+
+Editing a post means editing the markdown, running `build:content`, committing
+the artifact alongside it, then `sync:content`. Never hand-edit the artifact and
+never write prose straight into a D1 row: both defeat the gate.
 
 ## Hard rules
 
@@ -34,4 +48,11 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 3. Keep the worker lean. No heavy dependencies. Client bundles stay small; auth code loads only on admin and login routes. This is the repo's bundle-leanness rule, and it is why inline SVG is preferred here over an icon library.
 4. Secrets are wrangler secrets, read only in `.server` modules and in loaders/actions: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET, BETTER_AUTH_URL, ADMIN_EMAIL.
 5. Do not modify `.claude/settings.json` without explicit instruction. Two PreToolUse hooks block on exit 2: `no-em-dash.sh` on Write and Edit, and `scoped-git-add.sh` on Bash. A Stop hook runs `npx tsc -b`. That enforcement is deliberate. PreToolUse plus exit 2 is the only blocking combination; the older PostToolUse `.mjs` registration could not block a write and was retired in d36dbf2.
-6. `public/publications/` and `public/phage-hunters/` hold 31 PDFs and 9 photos from retired content. They are orphaned on purpose, reachable by direct URL and linked from nowhere, kept for citation integrity in other people's published work. Do not delete them as hygiene, and never write a redirect or gone rule that matches `/publications/*` or `/phage-hunters/*` as a prefix.
+6. `wrangler d1 export` does NOT work on this database: it fails outright on the
+   `posts_fts` virtual table (measured 2026-07-27). Back up per table instead,
+   `--no-schema --table <name>`, never the FTS table or its shadow tables.
+   Related: `COUNT(*)` on `posts_fts` reads through to `posts` and so can never
+   detect index drift. Count `posts_fts_docsize` instead. Never run
+   `DELETE FROM posts_fts`; it corrupts the index, and the repair is
+   `INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`.
+7. `public/publications/` and `public/phage-hunters/` hold 31 PDFs and 9 photos from retired content. They are orphaned on purpose, reachable by direct URL and linked from nowhere, kept for citation integrity in other people's published work. Do not delete them as hygiene, and never write a redirect or gone rule that matches `/publications/*` or `/phage-hunters/*` as a prefix.
