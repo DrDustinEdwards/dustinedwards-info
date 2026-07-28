@@ -209,7 +209,7 @@ export function PostEditor({
         </label>
 
         <div className="editor-actions">
-          <button type="submit" name="intent" value="save" disabled={busy}>
+          <button type="submit" name="intent" value="save" className="btn" disabled={busy}>
             {busy ? "Saving" : isNew ? "Create post" : "Save post"}
           </button>
           <button

@@ -10,7 +10,19 @@ declare global {
     BETTER_AUTH_SECRET: string;
     BETTER_AUTH_URL: string;
     ADMIN_EMAIL: string;
+    /** Fine-grained PAT, Contents read/write. Used only by the admin editor. */
+    GITHUB_TOKEN: string;
   }
+}
+
+/**
+ * The Cloudflare Vite plugin resolves a `.wasm` import to an already-compiled
+ * WebAssembly module. Declared as `unknown` because the Worker tsconfig does not
+ * carry DOM's WebAssembly value declarations, and nothing here needs the shape.
+ */
+declare module "*.wasm" {
+  const wasmModule: unknown;
+  export default wasmModule;
 }
 
 export {};

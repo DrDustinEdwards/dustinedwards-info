@@ -165,6 +165,29 @@ export function readingTimeMinutes(markdownText) {
 /** @type {any} */
 let highlighterPromise = null;
 
+/**
+ * How the oniguruma WASM gets loaded. Injected, because the two callers cannot
+ * load it the same way.
+ *
+ * Node reads it from disk, which `import("shiki/wasm")` does. A Worker cannot:
+ * `WebAssembly.instantiate()` on bytes throws "Wasm code generation disallowed
+ * by embedder", measured 2026-07-28 on a real save. Workers only accept a WASM
+ * module that was imported statically, so the Worker passes an instantiator
+ * closing over that module instead.
+ *
+ * The ENGINE is identical either way. Only the loading differs, so both callers
+ * still produce byte-identical HTML, which is the whole point.
+ *
+ * @type {any}
+ */
+let wasmLoader = () => import("shiki/wasm");
+
+/** @param {any} loader */
+export function setWasmLoader(loader) {
+  wasmLoader = loader;
+  highlighterPromise = null;
+}
+
 /** Built once per isolate. Creating it is the expensive part, not using it. */
 function getHighlighter() {
   if (!highlighterPromise) {
@@ -192,7 +215,7 @@ async function buildHighlighter() {
       // and makes the editor's rows disagree with the build's for no reason.
       // Oniguruma was deterministic over the same test. The WASM binary is the
       // price of a gate that means something.
-    engine: await createOnigurumaEngine(import("shiki/wasm")),
+    engine: await createOnigurumaEngine(await wasmLoader()),
   });
 }
 
