@@ -21,6 +21,8 @@ import {
   findWideDashes,
   renderPost,
 } from "~/lib/content/pipeline.mjs";
+// Side-effect import: installs the Worker WASM loader before anything renders.
+import "~/lib/content/wasm.server";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { commitFiles, getHead, readFile, GitHubError } from "./github.server";
 
