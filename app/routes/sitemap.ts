@@ -2,9 +2,8 @@ import { listPublicPosts } from "~/db";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/sitemap";
 
-// Static, always-present URLs. /publications is archived: it still serves at
-// its URL but is noindex, so it is deliberately absent here.
-const STATIC_PATHS = ["/", "/phage-hunters", "/research"];
+// Static, always-present URLs.
+const STATIC_PATHS = ["/"];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;

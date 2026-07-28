@@ -8,9 +8,6 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "build:publications": "node scripts/build-publications.mjs",
-    "check:publications": "node scripts/build-publications.mjs --check",
-    "check:meta": "node scripts/check-meta.mjs",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview",
@@ -33,7 +30,6 @@
     "@types/node": "^22.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "sharp": "^0.35.3",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
