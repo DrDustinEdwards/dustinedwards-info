@@ -195,6 +195,25 @@ export async function getBlogPost(env: Env, slug: string) {
   };
 }
 
+/** Every visible post with its markdown body, newest first, for llms-full.txt. */
+export async function listBlogPostsFullText(env: Env) {
+  const db = getDb(env);
+  const rows = await db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      body: posts.body,
+      publishAt: posts.publishAt,
+    })
+    .from(posts)
+    .where(isBlogPost())
+    .orderBy(desc(posts.publishAt));
+
+  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+}
+
 /** Raw markdown for the .md twin route. */
 export async function getBlogPostMarkdown(env: Env, slug: string) {
   const rows = await getDb(env)

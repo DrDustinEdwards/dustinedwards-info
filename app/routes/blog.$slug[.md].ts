@@ -1,6 +1,6 @@
 import { getBlogPostMarkdown } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL } from "~/lib/seo";
+import { markdownResponse } from "~/lib/markdown-twin";
 import type { Route } from "./+types/blog.$slug[.md]";
 
 /**
@@ -20,10 +20,5 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     });
   }
 
-  return new Response(post.body, {
-    headers: {
-      "content-type": "text/markdown; charset=utf-8",
-      "cache-control": PUBLIC_CACHE_CONTROL,
-    },
-  });
+  return markdownResponse(params.slug, post.body);
 }

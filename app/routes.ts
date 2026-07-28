@@ -11,6 +11,7 @@ export default [
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
   route("llms.txt", "routes/llms.ts"),
+  route("llms-full.txt", "routes/llms-full[.txt].ts"),
 
   // Auth
   route("login", "routes/login.tsx"),
