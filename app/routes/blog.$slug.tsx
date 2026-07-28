@@ -2,23 +2,43 @@ import { Link, data } from "react-router";
 
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { getBlogPost } from "~/db";
+import { getBlogPost, getBlogPostMarkdown } from "~/db";
 import { getEnv } from "~/lib/context";
+import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   PUBLIC_CACHE_CONTROL,
   SITE,
+  SITE_ORIGIN,
   articleJsonLd,
   breadcrumbJsonLd,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
+/**
+ * Content negotiation runs as middleware rather than in the loader.
+ *
+ * A document route's loader cannot return a raw Response: React Router hands it
+ * to the component as `loaderData`, which 500s on the first property read.
+ * Measured 2026-07-28, not assumed. Middleware is the layer that is allowed to
+ * short-circuit with a Response, which is the same mechanism the /admin gate
+ * uses.
+ */
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ request, params, context }, next) => {
+    if (!prefersMarkdown(request)) return next();
+
+    // Same visibility gate as the HTML route, so a draft is not readable here.
+    const post = await getBlogPostMarkdown(getEnv(context), params.slug);
+    if (!post) return next();
+    return markdownResponse(params.slug, post.body);
+  },
+];
+
+export async function loader({ params, context }: Route.LoaderArgs) {
   const post = await getBlogPost(getEnv(context), params.slug);
   if (!post) {
     throw data("Not found", { status: 404 });
   }
-
-  const origin = new URL(request.url).origin;
 
   /** @see drizzle/0003_post_toc.sql */
   let toc: Array<{ depth: number; id: string; text: string }> = [];
@@ -31,8 +51,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     }
   }
 
-  return {
-    origin,
+  return data(
+    {
     toc,
     post: {
       slug: post.slug,
@@ -47,22 +67,31 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       tags: post.tags,
       previous: post.previous,
       next: post.next,
+      },
     },
-  };
+    { headers: { Link: linkToMarkdown(post.slug) } },
+  );
 }
 
-export function headers() {
-  return { "Cache-Control": PUBLIC_CACHE_CONTROL };
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers({
+    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    // The response body depends on Accept, so caches must key on it.
+    Vary: "Accept",
+  });
+  const link = loaderHeaders.get("Link");
+  if (link) headers.set("Link", link);
+  return headers;
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
-  const { post, origin } = loaderData;
-  const canonical = `${origin}/blog/${post.slug}`;
+  const { post } = loaderData;
+  const canonical = `${SITE_ORIGIN}/blog/${post.slug}`;
   const description = post.description ?? SITE.description;
-  const image = post.coverImage ? `${origin}${post.coverImage}` : undefined;
+  const image = post.coverImage ? `${SITE_ORIGIN}${post.coverImage}` : undefined;
 
   return [
     { title: `${post.title} | ${SITE.name}` },
@@ -99,7 +128,7 @@ function formatDate(value: string | Date | null) {
 }
 
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
-  const { post, origin, toc } = loaderData;
+  const { post, toc } = loaderData;
 
   return (
     <>
@@ -109,7 +138,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([
-              articleJsonLd(origin, {
+              articleJsonLd(SITE_ORIGIN, {
                 slug: post.slug,
                 title: post.title,
                 description: post.description,
@@ -118,7 +147,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                 coverImage: post.coverImage,
                 tags: post.tags,
               }),
-              breadcrumbJsonLd(origin, [
+              breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Blog", "/blog"],
                 [post.title, `/blog/${post.slug}`],
