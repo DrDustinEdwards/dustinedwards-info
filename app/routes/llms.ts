@@ -42,6 +42,26 @@ For programmatic use prefer the JSON form. It is keyword search over an FTS5
 index: deterministic, the same query returning the same results, with no model
 in the path and no per-request cost.
 
+## Search over MCP
+
+The same corpus is exposed as a Model Context Protocol endpoint, so an agent can
+search this site as a tool without scraping it:
+
+  https://2795d719-a4de-4558-9322-8fced66a48e6.search.ai.cloudflare.com/mcp
+
+It needs no authentication and provides one tool, "search". Results carry the
+same section-grained keys the rest of the site uses: blog/<slug>.md is a whole
+post and blog/<slug>__<anchor>.md is one heading within it, which maps back to
+/blog/<slug>#<anchor>.
+
+This is semantic retrieval and it is not the same thing as the JSON endpoint
+above. It finds passages that answer a question phrased in a sentence, and it
+misses short exact tokens that the keyword index finds immediately. Neither
+covers the other, so for a known term use the JSON search and for a question use
+this.
+
+Three ways in, then: a URL for people, JSON for programs, MCP for agents.
+
 ## Full text
 
 /llms-full.txt carries every published post in markdown in one document.

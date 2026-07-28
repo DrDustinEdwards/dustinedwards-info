@@ -43,5 +43,26 @@
 			"binding": "AI_SEARCH",
 			"instance_name": "dustinedwards"
 		}
+	],
+	// Both Ask guards: the exact per-IP burst limit (one instance per IP) and
+	// the exact daily spend ceiling (one instance, "global"). A Durable Object
+	// rather than the `ratelimit` binding or a KV counter because neither of
+	// those counts: measured across four runs, the binding refused 1, 2, 9 and
+	// then 0 of twelve concurrent requests against a limit of five. Removing
+	// this block DISABLES Ask rather than un-protecting it: an unprotected
+	// metered endpoint must not serve.
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ASK_BUDGET",
+				"class_name": "AskBudget"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["AskBudget"]
+		}
 	]
 }
