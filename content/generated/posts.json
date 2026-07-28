@@ -22,12 +22,12 @@
       "toc": [
         {
           "depth": 2,
-          "id": "version-two",
-          "text": "Version two"
+          "id": "version-one",
+          "text": "Version one"
         }
       ],
-      "markdown": "\n## Version two\n\nThis is the SECOND body. Restoring version one should replace this.\n",
-      "html": "<h2 id=\"version-two\">Version two<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#version-two\">#</a></h2>\n<p>This is the SECOND body. Restoring version one should replace this.</p>",
+      "markdown": "\n## Version one\n\nThis is the ORIGINAL body. Restoring should bring this text back.\n",
+      "html": "<h2 id=\"version-one\">Version one<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#version-one\">#</a></h2>\n<p>This is the ORIGINAL body. Restoring should bring this text back.</p>",
       "sourcePath": "content/posts/restore-probe.md",
       "related": []
     },
