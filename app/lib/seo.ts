@@ -1,3 +1,22 @@
+/**
+ * The canonical public origin. Every absolute URL the site emits (canonical,
+ * OG, JSON-LD, RSS, sitemap, robots) derives from this and never from
+ * `request.url`.
+ *
+ * Why a module constant rather than a wrangler var or a binding: prerendering
+ * runs in Node at build time, with no request and no Worker env, so anything
+ * read off the request context is unavailable there. Deriving from the request
+ * is also what baked `http://localhost:<port>` into the prerendered JSON-LD
+ * when prerendering was measured on 2026-07-27.
+ *
+ * A canonical URL should name the canonical origin regardless of which host
+ * served the response, so this being fixed is correct rather than a limitation.
+ *
+ * DNS cutover item: change this to https://dustinedwards.info at the same time
+ * as BETTER_AUTH_URL and the Google redirect URI.
+ */
+export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
+
 export const SITE = {
   name: "Dustin Edwards",
   role: "Professor",
