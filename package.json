@@ -16,7 +16,8 @@
     "check:content": "node scripts/check-content.mjs",
     "sync:content": "node scripts/sync-content.mjs",
     "bootstrap:config": "node scripts/bootstrap-config.mjs",
-    "postinstall": "node scripts/bootstrap-config.mjs && wrangler types"
+    "postinstall": "node scripts/bootstrap-config.mjs && wrangler types",
+    "build:og": "node scripts/build-og.mjs"
   },
   "dependencies": {
     "better-auth": "^1.6.23",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.43.0",
     "@react-router/dev": "8.3.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@shikijs/rehype": "^4.3.1",
     "@shikijs/transformers": "^4.3.1",
     "@tailwindcss/vite": "^4.2.2",
@@ -45,6 +47,7 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
+    "satori": "^0.29.0",
     "shiki": "^4.3.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
