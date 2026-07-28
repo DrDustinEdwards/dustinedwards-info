@@ -1,0 +1,18 @@
+# Content is byte-stable across platforms.
+#
+# `core.autocrlf=true` on Windows checks files out with CRLF while git stores LF.
+# For source and config that is harmless. For content it is not, for two reasons:
+#
+#   1. `check:content` compares the committed artifact against a fresh generation
+#      byte for byte. A CRLF checkout makes that comparison fail on every fresh
+#      Windows clone, which turns a real drift gate into noise.
+#   2. The generator embeds the markdown source inside the artifact and then into
+#      D1. A CRLF checkout would put CRLF into the stored post body and into the
+#      markdown served by /blog/:slug.md, so the same commit would produce
+#      different content depending on which machine ran the generator.
+#
+# Pinning these paths to LF makes the generator's output depend on the content
+# alone. Scoped deliberately: the rest of the tree keeps the default behaviour.
+
+content/posts/*.md      text eol=lf
+content/generated/*.json text eol=lf
