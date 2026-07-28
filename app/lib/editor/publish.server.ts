@@ -134,7 +134,7 @@ export async function validateAndRender(
  * Reads the committed artifact and returns its posts, so a save can splice one
  * entry without re-rendering every other post.
  */
-async function loadArtifact(env: PublishEnv) {
+export async function loadArtifact(env: PublishEnv) {
   const file = await readFile(env, ARTIFACT_PATH);
   if (!file) return [] as any[];
   try {

@@ -121,52 +121,115 @@ Three palette traps, all found in a browser and none visible to typecheck:
   enough.
 - Do not name a module-level variable `status`: it collides with `window.status`.
 
-## Ask mode (Layer 2): NOT BUILT, and why
+## Ask mode (Layer 2): BUILT and live, 2026-07-28
 
-Still blocked 2026-07-28, second attempt. There is no Ask code, no binding, and
-no dead branch waiting for one.
+Streamed AI answer with citations that deep-link to heading anchors. It sits
+strictly above classic search and is removable without touching it.
 
-**The blocker, now located exactly.** `wrangler ai-search create` calls
-`listTokens(config, accountId)` and refuses when the account has zero AI Search
-API tokens. It is NOT reading an environment variable, so there is nothing a
-session can export to satisfy it, and wrangler never mints the token itself:
-the interactive branch only loops on "Have you created a token?" while polling
-the same account endpoint. The token must be created in the dashboard, at
-`/ai/ai-search/tokens`. Read commands (`list`) work on ordinary OAuth, which is
-why the CLI looks authenticated right up until the first write.
+**The credential gate, recorded because it blocked two sessions.**
+`wrangler ai-search create` calls `listTokens(config, accountId)` and refuses
+when the account holds zero AI Search API tokens. It reads NO environment
+variable, so there is nothing a session can export, and wrangler never mints one
+itself: the interactive branch only loops on "Have you created a token?" while
+polling the same endpoint. Read commands work on ordinary OAuth, which is why
+the CLI looks authenticated right up until the first write. Mint at
+`/ai/ai-search/tokens` in the dashboard.
 
 **Data source: BUILT-IN STORAGE with uploaded markdown, not the crawler.**
-Decided 2026-07-28 against the earlier note in this file, which said
-`--type web-crawler --source https://<deployed-origin>`. Three grounds:
 
 1. The crawler indexes **a domain onboarded to this Cloudflare account**. The
-   apex still resolves to the legacy HostGator WordPress site, so a crawl would
-   index the OLD site, and `workers.dev` is not an onboarded zone. This is not a
-   preference, it is the DNS cutover blocking the crawler outright.
-2. **Citations must deep-link to heading anchors.** Records here are
-   section-grained; uploading one file per section record keeps that granularity
-   and keeps the anchor. A crawler indexes whole pages and loses it.
-3. Built-in storage indexes **immediately**. External sources (website, R2) run
-   on a sync schedule, 6 hours by default, and pause entirely after 31 days
-   without a query. Upload is a build step off the same gated artifact.
+   apex still resolves to the legacy WordPress site, so a crawl would index the
+   OLD site, and `workers.dev` is not an onboarded zone.
+2. **Citations must deep-link to heading anchors.** Records are section-grained;
+   one uploaded file per section record keeps the anchor. A crawler indexes
+   whole pages and loses it.
+3. Built-in storage indexes **immediately**. External sources sync on a schedule
+   (6 hours default) and pause after 31 days without a query.
 
-So the create command, when a token exists, is:
+Created with:
 
     npx wrangler ai-search create dustinedwards \
       --type builtin --hybrid-search --reranking
 
-Sync story: the Items API (`POST /accounts/{id}/ai-search/instances/{name}/items`,
-multipart) is a build step after `build:content`, uploading the section records
-the artifact already carries. 4 MB per file.
+Confirmed by reading the instance back rather than trusting the create output:
+`hybrid_search_enabled: true`, `reranking: true`,
+`index_method: {vector: true, keyword: true}`, `fusion_method: "rrf"`,
+`score_threshold: 0.4`, porter keyword tokenizer. AI Search fuses by reciprocal
+rank and stems with porter, which is what the classic layer chose independently.
 
-Binding, verified against current docs 2026-07-28: `ai_search` with
-`instance_name` for a single instance, or `ai_search_namespaces` with
-`namespace` for a whole namespace. Methods are `search()` and
-`chatCompletions()`; streaming is `stream: true`, which emits a `chunks` event
-carrying the sources before the completion deltas. `env.AI.autorag()` was
-retired in April 2026.
+**Sync story.** `Sync Ask corpus` on `/admin/posts` uploads every section record
+through the Items binding, then prunes items no longer in the corpus. Upload is
+an upsert keyed by filename, so it is idempotent; the prune exists because an
+upsert alone leaves a deleted post answerable forever. Content reaches the index
+in seconds, not on a schedule. It is a SEPARATE button from `Regenerate all`
+because D1 and the AI index must fail independently: the site's own search must
+never be held hostage to the AI index.
 
-Ask must never sit in the zero-JS path and no classic query may wait on it.
+**The key is the citation.** A chunk carries `item.key` and nothing else about
+where it came from, so the key has to round-trip to a URL. `app/lib/search/
+ask-keys.mjs` owns that mapping and BOTH the uploader and the client import it,
+exactly as both writers import `records.mjs`. Scheme is
+`blog/<slug>.md` and `blog/<slug>__<anchor>.md`. The separator is a DOUBLE
+underscore because a single one occurs naturally in headings on this blog
+(`posts_fts`), and the upload path fails closed if a URL contains it.
+
+**Measured 2026-07-28, on the real 7 record corpus.**
+
+- Time to first token, warm: 2149 ms, 3133 ms, 6489 ms. First call after idle
+  was 7441 ms. Chunks arrive ~100 ms before the first token, so sources render
+  before the answer starts.
+- All 7 item keys round-trip to URLs whose anchors exist on the live page.
+- Ask chunk 2.54 kB raw / 1.30 kB gzip, its own chunk. Blog bundle unchanged at
+  3.96 kB / 1.55 kB. Palette 6.26 kB to 7.00 kB for the Ask row.
+
+**The finding worth keeping: the two layers fail on OPPOSITE inputs.** Same
+corpus, same live site:
+
+    query                    classic   AI chunks
+    verdict                        1           0
+    enforcement                    1           0
+    "How do enforcement hooks reach files but not rows?"
+                                   0           1
+    "Why are deterministic pages provable?"
+                                   0           1
+    "What does option A still win?"
+                                   0           1
+
+Classic found 2 things AI retrieval missed; AI found 3 things classic missed.
+Single-token queries that name a heading almost verbatim can return zero chunks
+under a 0.4 score threshold, while long natural-language questions return zero
+rows under AND-by-default keyword matching. **Neither layer subsumes the other**,
+which is the empirical case for keeping classic first and Ask on top rather than
+replacing one with the other. Results also vary between runs: the instance has
+`cache: true` with a `close_enough` threshold, and `backup asymmetry` returned 0
+chunks on one run and 1 on another.
+
+**Removability is verified, not asserted.** With the `ai_search` block deleted
+from wrangler.jsonc and redeployed: `/search/ask` returns 404, the Ask mount is
+absent from the HTML, `askAvailable` is false in the JSON, and the classic
+payload is byte-identical (same 6 results, snippets, marks, anchors, facets and
+scores). That property is what the cost-review ruling depends on.
+
+**Rules this layer lives under.**
+- No classic query waits on Ask. `search.server.ts` does not import
+  `ask.server.ts`, and the loader only computes a boolean.
+- The zero-JS path never reaches it. The trigger is rendered after mount, so a
+  reader without script never sees a control that cannot work.
+- The answer is written with `textContent`, never as HTML. It is generated text
+  and the one thing known about it is that we did not write it.
+- Ask never fires on keystroke. It is a deliberate press, because every answer
+  bills Workers AI.
+
+**Still a dashboard toggle: the public and MCP endpoints.** There is no wrangler
+flag. Settings > Public Endpoint > enable, then enable MCP; the URL is then
+`https://<INSTANCE_ID>.search.ai.cloudflare.com/mcp`. **`llms.txt` deliberately
+does NOT advertise MCP until it is on**, because advertising an endpoint that
+does not exist is the same defect as advertising a skill directory that does not
+exist.
+
+**Cost.** Retrieval is free in open beta; generation is Workers AI and bills per
+answer today. `/search/ask` is public and unauthenticated with no rate limit, so
+it is a metered endpoint anyone can call. See the open item in core.md.
 
 ## Admin editor (second writer)
 
