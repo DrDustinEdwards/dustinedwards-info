@@ -18,6 +18,7 @@ import { imageSize } from "image-size";
 
 import { serializeArtifact } from "~/lib/content/artifact.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
+import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
 import {
   ContentError,
@@ -212,7 +213,31 @@ export async function savePost(
   // Only now, with the commit landed, does the database change.
   await syncPostToD1(env, record);
 
-  return { commitSha, record };
+  // The AI index is downstream of D1 and MUST NOT be able to fail a save.
+  // A post that is committed, rendered and searchable but briefly missing from
+  // Ask is a degraded enhancement; a save that fails after the commit landed
+  // would leave the repo and the database disagreeing about whether it
+  // happened. Same asymmetry as the OG card gap, and recorded next to it.
+  const askSync = await syncAskForPost(env, record);
+
+  return { commitSha, record, askSync };
+}
+
+/**
+ * Pushes one post into the Ask index, reporting failure instead of raising.
+ *
+ * Returns null when Ask is not configured, which is the ordinary state on a
+ * deployment with the binding removed.
+ */
+async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
+  if (!askAvailable(env)) return null;
+  try {
+    const result = await syncAskPost(env, record);
+    return { ok: true as const, ...result };
+  } catch (error) {
+    console.error("ask index sync failed after save", error);
+    return { ok: false as const, message: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 /** Deletes a post: the file, the artifact entry, and the rows, in that order. */
@@ -239,7 +264,19 @@ export async function deletePost(
 
   await deletePostFromD1(env, options.slug);
 
-  return { commitSha };
+  // Same asymmetry as the save path: the AI index is downstream and cannot fail
+  // the delete. A deleted post still answerable through Ask is the one failure
+  // that matters here, so it is reported rather than swallowed.
+  let askRemoved: number | null = null;
+  if (askAvailable(env)) {
+    try {
+      askRemoved = await removeAskPost(env, options.slug);
+    } catch (error) {
+      console.error("ask index removal failed after delete", error);
+    }
+  }
+
+  return { commitSha, askRemoved };
 }
 
 /**

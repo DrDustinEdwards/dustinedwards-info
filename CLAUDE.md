@@ -220,16 +220,90 @@ scores). That property is what the cost-review ruling depends on.
 - Ask never fires on keystroke. It is a deliberate press, because every answer
   bills Workers AI.
 
-**Still a dashboard toggle: the public and MCP endpoints.** There is no wrangler
-flag. Settings > Public Endpoint > enable, then enable MCP; the URL is then
-`https://<INSTANCE_ID>.search.ai.cloudflare.com/mcp`. **`llms.txt` deliberately
-does NOT advertise MCP until it is on**, because advertising an endpoint that
-does not exist is the same defect as advertising a skill directory that does not
-exist.
+### The index sync story
+
+**An editor save uploads that post's records itself.** `savePost` calls
+`syncAskPost` after the D1 sync, which uploads the post's section records and
+deletes any of ITS OWN keys that no longer exist. Incremental, not a full corpus
+sync: section decomposition is a pure function of one post's markdown, so a save
+never needs to touch another post. Lag is seconds, because built-in storage
+indexes on upload.
+
+**The AI index cannot fail a save.** It runs after the commit has landed and its
+failure is logged and reported, never thrown. A post that is committed, rendered
+and keyword-searchable but briefly missing from Ask is a degraded enhancement; a
+save that failed at that point would leave the repo and D1 disagreeing about
+whether it happened.
+
+Because a save then redirects, a failure has nowhere to be announced, so
+`/admin/posts` shows **Ask index drift** computed in both directions (records
+missing from the index, items the corpus does not know about) and today's budget
+use. `Sync Ask corpus` is the repair.
+
+**No credential is needed at runtime.** The AI Search API token was required
+only by `wrangler ai-search create`, a control-plane call. The Worker reaches
+the instance through the binding and there is no AI Search secret in
+`wrangler secret list`. Verified 2026-07-28.
+
+### Guards on /search/ask
+
+It is the only public endpoint on the site that costs money per request. Three
+gates, cheapest first, in `app/lib/search/ask-guard.server.ts`:
+
+1. **Per-IP burst limit**, exactly 5 per 60 second window.
+2. **Answer cache** in KV, keyed by a SHA-256 of the normalized question.
+3. **Daily ceiling**, exactly 200 answers, site-wide.
+
+Ordering is load-bearing: the ceiling sits AFTER the cache, so a cache hit costs
+nothing and consumes no budget. A refusal is a 429 with `Retry-After` and makes
+no AI call at all. Responses carry `x-ask-cache: hit|miss`, which is what makes
+the cache testable from outside rather than by reading the code.
+
+**Gates 1 and 3 are Durable Objects, and that is measured rather than
+preferred.** Both cheaper mechanisms were built first and both leaked:
+
+- The GA `ratelimit` binding refused **1, then 2, then 9, then 0** of twelve
+  concurrent requests against a limit of five. Cloudflare documents it as
+  "permissive, eventually consistent"; it sheds sustained load and does not
+  count.
+- A Durable Object using `storage.get` then `storage.put` allowed **8** through a
+  ceiling of 3, because a read and a write spanning `await` inside a DO is not
+  atomic.
+- The **synchronous SQLite** API inside a DO allowed exactly **3 of 14**, and
+  exactly **5 of 14** for the per-IP limit. This is why the class is registered
+  as `new_sqlite_classes`: the whole point is that `sql.exec` has no await.
+
+A fixed window still permits up to 2x across a boundary (measured: 10 of 12).
+That is the ordinary property of a fixed window, not a leak.
+
+Cache invalidation is **explicit on publish**, not keyed through a generation
+number: a generation would cost a second KV read on every request forever to
+handle an event that happens when Dustin publishes. `syncAskPost` and
+`syncAskCorpus` both drop every cached answer.
+
+**Removing the `durable_objects` block DISABLES Ask** rather than un-protecting
+it, and that is deliberate: an unprotected metered endpoint must not serve. This
+differs from removing `ai_search`, which removes the feature cleanly.
 
 **Cost.** Retrieval is free in open beta; generation is Workers AI and bills per
-answer today. `/search/ask` is public and unauthenticated with no rate limit, so
-it is a metered endpoint anyone can call. See the open item in core.md.
+answer today. The ceiling bounds the worst case at 200 answers a day.
+
+### The public and MCP endpoints
+
+Enabled in the dashboard, verified externally with no account auth 2026-07-28,
+and only then written into `llms.txt`. The MCP URL is
+`https://<INSTANCE_ID>.search.ai.cloudflare.com/mcp` and it exposes one tool,
+`search`, returning the same section-grained keys.
+
+It shows the same retrieval characteristic as Ask: `d1` engaged both vector and
+keyword and returned 6 chunks, while "What is the backup asymmetry?" returned 0
+under the 0.4 score threshold despite a section of that name. Advertised with
+that caveat stated rather than hidden.
+
+**Follow-up, not done:** the MCP tool description is still Cloudflare's default,
+"Finds exactly what you're looking for". An MCP client reads that to decide when
+to call the tool, so it should say what this site covers. Dashboard field,
+Settings > Public Endpoint > Tool Description.
 
 ## Admin editor (second writer)
 

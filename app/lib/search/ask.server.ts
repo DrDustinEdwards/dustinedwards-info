@@ -14,6 +14,7 @@
  * exactly as there is one markdown renderer.
  */
 
+import { invalidateAnswerCache } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
 import { recordsForPosts } from "./records.mjs";
 
@@ -111,9 +112,112 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
   });
 }
 
+/**
+ * Splits the upstream stream in two: one to the reader, one to an accumulator.
+ *
+ * The reader gets bytes as they arrive, unchanged, so caching costs
+ * time-to-first-token nothing. The second copy is parsed after the response has
+ * already been sent, inside `waitUntil`, and what it accumulates is what gets
+ * cached.
+ *
+ * Returns the stream to hand to the reader plus a promise of the parsed answer.
+ * The promise resolves to null when the generation produced nothing, which must
+ * not be cached.
+ */
+export function teeForCache(upstream: ReadableStream): {
+  toReader: ReadableStream;
+  captured: Promise<{ answer: string; chunks: unknown[] } | null>;
+} {
+  const [toReader, toCache] = upstream.tee();
+  return { toReader, captured: parseSseAnswer(toCache) };
+}
+
+/**
+ * Reads a full SSE completion into the pieces the cache needs.
+ *
+ * Same frame handling as the client, deliberately: if the two disagreed about
+ * what a frame means, a cached replay would not match what the reader saw the
+ * first time.
+ */
+async function parseSseAnswer(
+  stream: ReadableStream,
+): Promise<{ answer: string; chunks: unknown[] } | null> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let answer = "";
+  let chunks: unknown[] = [];
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        let eventName = "";
+        const dataLines: string[] = [];
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        const data = dataLines.join("\n");
+        if (!data || data === "[DONE]") continue;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          continue;
+        }
+        if (eventName === "chunks") {
+          if (Array.isArray(parsed)) chunks = parsed;
+          continue;
+        }
+        const delta = (parsed as { choices?: Array<{ delta?: { content?: string } }> })
+          ?.choices?.[0]?.delta?.content;
+        if (typeof delta === "string") answer += delta;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return answer.trim().length > 0 ? { answer, chunks } : null;
+}
+
+/**
+ * Rebuilds a cached answer as the same SSE shape the model produces.
+ *
+ * The client cannot tell a replay from a generation, which is the point: one
+ * parser, one rendering path, and no second code path that could drift. The
+ * whole answer arrives as a single delta rather than re-simulating typing,
+ * because pretending to think for two seconds over a cached string would be
+ * theatre.
+ */
+export function replayCachedAnswer(cached: {
+  answer: string;
+  chunks: unknown[];
+}): ReadableStream {
+  const encoder = new TextEncoder();
+  const frames = [
+    `event: chunks\ndata: ${JSON.stringify(cached.chunks)}\n\n`,
+    `data: ${JSON.stringify({ choices: [{ delta: { content: cached.answer } }] })}\n\n`,
+    `data: [DONE]\n\n`,
+  ];
+  return new ReadableStream({
+    start(controller) {
+      for (const frame of frames) controller.enqueue(encoder.encode(frame));
+      controller.close();
+    },
+  });
+}
+
 export interface CorpusSyncResult {
   uploaded: number;
   keys: string[];
+  /** Cached answers dropped because the corpus they were drawn from moved. */
+  cacheDropped: number;
 }
 
 /**
@@ -155,7 +259,118 @@ export async function syncAskCorpus(
     keys.push(key);
   }
 
-  return { uploaded: keys.length, keys };
+  // The corpus just changed, so every cached answer was written against content
+  // that may no longer be true. Dropping them here is what stops a stale answer
+  // outliving the post it was drawn from. It happens on publish, which is the
+  // moment the change occurs, rather than being checked on every read forever.
+  const dropped = await invalidateAnswerCache(env);
+
+  return { uploaded: keys.length, keys, cacheDropped: dropped };
+}
+
+/**
+ * Syncs ONE post's records into the index, and drops that post's stale items.
+ *
+ * This is what the editor's save path calls, and it is why Ask does not rot as
+ * the blog grows. A full corpus sync on every save is correct at seven records
+ * and absurd at seven hundred: it would re-upload every section of every post
+ * because one post changed. Section decomposition is a pure function of a
+ * single post's markdown, which is exactly the property the section-grained
+ * ruling records, so the incremental path is sound rather than a shortcut.
+ *
+ * Scoped prune: a save that removes or renames a heading leaves an item behind
+ * that still answers questions about a section the post no longer has. Only
+ * keys belonging to THIS post are considered, so a concurrent post is never
+ * touched.
+ */
+export async function syncAskPost(
+  env: Env,
+  post: Parameters<typeof recordsForPosts>[0][number],
+): Promise<{ uploaded: number; removed: number }> {
+  const records = recordsForPosts([post]);
+  const live = new Set<string>();
+
+  for (const record of records) {
+    if (record.url.includes(KEY_SEPARATOR)) {
+      throw new Error(
+        `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
+          `uploaded safely: ${record.url}`,
+      );
+    }
+    const key = keyForUrl(record.url);
+    await env.AI_SEARCH.items.upload(key, `# ${record.title}\n\n${record.body}\n`);
+    live.add(key);
+  }
+
+  // Everything this post owns: `blog/<slug>.md` and `blog/<slug>__<anchor>.md`.
+  // Matched on the exact document key or the section prefix, never on a bare
+  // `startsWith(slug)`, which would also sweep up a longer slug that happens to
+  // begin with this one.
+  const documentKey = keyForUrl(post.url ?? `/blog/${post.slug}`);
+  const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
+  let removed = 0;
+  const listed = await env.AI_SEARCH.items.list();
+  for (const item of listed.result ?? []) {
+    const ours = item.key === documentKey || item.key.startsWith(sectionPrefix);
+    if (ours && !live.has(item.key)) {
+      await env.AI_SEARCH.items.delete(item.id);
+      removed += 1;
+    }
+  }
+
+  await invalidateAnswerCache(env);
+  return { uploaded: records.length, removed };
+}
+
+export interface AskIndexStatus {
+  expected: number;
+  present: number;
+  missing: string[];
+  stale: string[];
+}
+
+/**
+ * Compares what the index holds against what the corpus says it should hold.
+ *
+ * This exists because the editor's Ask sync is deliberately allowed to fail
+ * without failing the save, and the save then redirects, so a failure has
+ * nowhere to be reported. Rather than build flash-message machinery to carry a
+ * warning that would be read once, drift is made permanently visible on
+ * /admin/posts. Silent drift in an index nobody looks at is how Ask would rot.
+ *
+ * Fails in BOTH directions, the same rule the backup gate follows: an item the
+ * corpus does not know about is as much a defect as a record the index lacks.
+ */
+export async function askIndexStatus(
+  env: Env,
+  posts: Parameters<typeof recordsForPosts>[0],
+): Promise<AskIndexStatus> {
+  const expected = new Set(recordsForPosts(posts).map((r) => keyForUrl(r.url)));
+  const listed = await env.AI_SEARCH.items.list();
+  const present = new Set((listed.result ?? []).map((item) => item.key));
+
+  return {
+    expected: expected.size,
+    present: present.size,
+    missing: [...expected].filter((k) => !present.has(k)).sort(),
+    stale: [...present].filter((k) => !expected.has(k)).sort(),
+  };
+}
+
+/** Removes every item belonging to one post. Used when a post is deleted. */
+export async function removeAskPost(env: Env, slug: string): Promise<number> {
+  const documentKey = `blog/${slug}.md`;
+  const sectionPrefix = `blog/${slug}${KEY_SEPARATOR}`;
+  let removed = 0;
+  const listed = await env.AI_SEARCH.items.list();
+  for (const item of listed.result ?? []) {
+    if (item.key === documentKey || item.key.startsWith(sectionPrefix)) {
+      await env.AI_SEARCH.items.delete(item.id);
+      removed += 1;
+    }
+  }
+  await invalidateAnswerCache(env);
+  return removed;
 }
 
 /**
