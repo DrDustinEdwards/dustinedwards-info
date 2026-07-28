@@ -29,7 +29,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { createHighlighterCore } from "shiki/core";
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
@@ -168,14 +168,32 @@ let highlighterPromise = null;
 /** Built once per isolate. Creating it is the expensive part, not using it. */
 function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighterCore({
-      themes: [githubLight, githubDark],
-      langs: [typescript, tsx, javascript, json, bash, sql, html, css, markdown],
-      // The JavaScript regex engine avoids shipping the oniguruma WASM binary.
-      engine: createJavaScriptRegexEngine(),
-    });
+    highlighterPromise = buildHighlighter();
   }
   return highlighterPromise;
+}
+
+async function buildHighlighter() {
+  return createHighlighterCore({
+    themes: [githubLight, githubDark],
+    langs: [typescript, tsx, javascript, json, bash, sql, html, css, markdown],
+      // Oniguruma, not the JavaScript regex engine.
+      //
+      // The JS engine avoids shipping a WASM binary, which is why it was chosen
+      // first, but it is NOT deterministic: measured 2026-07-28, eight renders
+      // of the same TypeScript snippet in one process produced two different
+      // outputs, and separate processes coloured the `=` operator #D73A49,
+      // #005CC5 and #24292E on different runs. Token boundaries were stable;
+      // only scope resolution moved.
+      //
+      // That is fatal here specifically. `check:content` compares the committed
+      // artifact against a fresh generation byte for byte, so a non-deterministic
+      // highlighter makes the gate fail at random on any post containing code,
+      // and makes the editor's rows disagree with the build's for no reason.
+      // Oniguruma was deterministic over the same test. The WASM binary is the
+      // price of a gate that means something.
+    engine: await createOnigurumaEngine(import("shiki/wasm")),
+  });
 }
 
 /**
