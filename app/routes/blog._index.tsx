@@ -129,6 +129,26 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           <p className="muted">Writing on building for the web, mostly on Cloudflare.</p>
         </header>
 
+        {/* Blog-scoped search is site search with type pinned, not a second
+            engine. The hidden field is what scopes it, so the same index, the
+            same parser and the same ranking serve both, and a reader can widen
+            to the whole site by removing one chip on the results page. A plain
+            GET form: it works with scripting off. */}
+        <form method="get" action="/search" role="search" className="blog-search">
+          <label className="sr-only" htmlFor="blog-search-input">
+            Search the blog
+          </label>
+          <input
+            type="search"
+            id="blog-search-input"
+            name="q"
+            placeholder="Search the blog"
+            autoComplete="off"
+          />
+          <input type="hidden" name="type" value="post" />
+          <button type="submit">Search</button>
+        </form>
+
         {tags.length > 0 && (
           <nav className="tag-chips" aria-label="Filter posts by tag">
             <Link

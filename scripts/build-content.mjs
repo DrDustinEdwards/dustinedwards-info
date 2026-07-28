@@ -12,6 +12,7 @@ import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { serializeArtifact } from "../app/lib/content/artifact.mjs";
 import { withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
@@ -55,7 +56,7 @@ export async function buildArtifact() {
     slugs.add(post.slug);
   }
 
-  return `${JSON.stringify({ posts: withRelated(posts) }, null, 2)}\n`;
+  return serializeArtifact(withRelated(posts));
 }
 
 /**
