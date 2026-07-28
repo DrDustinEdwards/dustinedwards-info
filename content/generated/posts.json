@@ -1,35 +1,6 @@
 {
   "posts": [
     {
-      "slug": "round-trip-probe",
-      "title": "Round trip probe, second edit",
-      "description": "Throwaway post created to verify the editor write path end to end.",
-      "date": "2026-07-28",
-      "publishAt": "2026-07-28T00:00:00.000Z",
-      "draft": false,
-      "tags": [
-        "testing",
-        "cloudflare"
-      ],
-      "cover": null,
-      "readingTimeMinutes": 1,
-      "toc": [
-        {
-          "depth": 2,
-          "id": "first-section",
-          "text": "First section"
-        },
-        {
-          "depth": 3,
-          "id": "a-nested-heading",
-          "text": "A nested heading"
-        }
-      ],
-      "markdown": "\n## First section\n\nThis post exists only to verify the editor write path end to end. It is created, edited and deleted by an automated round trip.\n\nIt exercises a fenced code block so shiki has something to highlight:\n\n```ts\nexport const probe: number = 1;\n```\n\n### A nested heading\n\nAnd a table, so remark-gfm is exercised too.\n\n| Check | Expected |\n| ----- | -------- |\n| commit | one, atomic |\n| rows | synced after |\n",
-      "html": "<h2 id=\"first-section\">First section<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#first-section\">#</a></h2>\n<p>This post exists only to verify the editor write path end to end. It is created, edited and deleted by an automated round trip.</p>\n<p>It exercises a fenced code block so shiki has something to highlight:</p>\n<pre class=\"shiki shiki-themes github-light github-dark\" style=\"--shiki-light:#24292e;--shiki-dark:#e1e4e8;--shiki-light-bg:#fff;--shiki-dark-bg:#24292e\" tabindex=\"0\"><code><span class=\"line\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">export</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> probe</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> number</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 1</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span></code></pre>\n<h3 id=\"a-nested-heading\">A nested heading<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#a-nested-heading\">#</a></h3>\n<p>And a table, so remark-gfm is exercised too.</p>\n<table>\n<thead>\n<tr>\n<th>Check</th>\n<th>Expected</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>commit</td>\n<td>one, atomic</td>\n</tr>\n<tr>\n<td>rows</td>\n<td>synced after</td>\n</tr>\n</tbody>\n</table>",
-      "sourcePath": "content/posts/round-trip-probe.md"
-    },
-    {
       "slug": "where-should-a-blog-store-its-words",
       "title": "Where should a blog store its words?",
       "description": "Two content models for a Cloudflare-native blog, one database, and the four arguments that settled it.",
