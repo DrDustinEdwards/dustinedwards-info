@@ -1,6 +1,49 @@
 {
   "posts": [
     {
+      "slug": "phase-three-verification-post",
+      "title": "Phase three verification post",
+      "description": "Throwaway post verifying line highlighting, footnotes and the reading enhancements.",
+      "date": "2026-07-28",
+      "publishAt": "2026-07-28T00:00:00.000Z",
+      "draft": true,
+      "tags": [
+        "cloudflare",
+        "testing"
+      ],
+      "cover": null,
+      "featured": false,
+      "series": null,
+      "part": null,
+      "furtherReading": [],
+      "ogTitle": null,
+      "ogDescription": null,
+      "updated": null,
+      "readingTimeMinutes": 1,
+      "toc": [
+        {
+          "depth": 2,
+          "id": "first-section",
+          "text": "First section"
+        },
+        {
+          "depth": 2,
+          "id": "second-section",
+          "text": "Second section"
+        }
+      ],
+      "markdown": "\n## First section\n\nProse with a footnote reference to check the hover preview.[^1]\n\n[^1]: The footnote body, which the preview bubble should show.\n\nA fenced block with line highlighting from the fence meta:\n\n```ts {2,4-5}\nconst one = 1;\nconst two = 2;\nconst three = 3;\nconst four = 4;\nconst five = 5;\n```\n\n## Second section\n\nA second heading so the table of contents and the scroll spy have something to track.\n",
+      "html": "<h2 id=\"first-section\">First section<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#first-section\">#</a></h2>\n<p>Prose with a footnote reference to check the hover preview.<sup><a href=\"#user-content-fn-1\" id=\"user-content-fnref-1\" data-footnote-ref aria-describedby=\"footnote-label\">1</a></sup></p>\n<p>A fenced block with line highlighting from the fence meta:</p>\n<pre class=\"shiki shiki-themes github-light github-dark\" style=\"--shiki-light:#24292e;--shiki-dark:#e1e4e8;--shiki-light-bg:#fff;--shiki-dark-bg:#24292e\" tabindex=\"0\" data-lang=\"ts\"><code><span class=\"line\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> one</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 1</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span>\n<span class=\"line highlighted\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> two</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 2</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span>\n<span class=\"line\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> three</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 3</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span>\n<span class=\"line highlighted\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> four</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 4</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span>\n<span class=\"line highlighted\"><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">const</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> five</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> =</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> 5</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">;</span></span></code></pre>\n<h2 id=\"second-section\">Second section<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#second-section\">#</a></h2>\n<p>A second heading so the table of contents and the scroll spy have something to track.</p>\n<section data-footnotes class=\"footnotes\"><h2 class=\"sr-only\" id=\"footnote-label\">Footnotes<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#footnote-label\">#</a></h2>\n<ol>\n<li id=\"user-content-fn-1\">\n<p>The footnote body, which the preview bubble should show. <a href=\"#user-content-fnref-1\" data-footnote-backref=\"\" aria-label=\"Back to reference 1\" class=\"data-footnote-backref\">↩</a></p>\n</li>\n</ol>\n</section>",
+      "sourcePath": "content/posts/phase-three-verification-post.md",
+      "related": [
+        {
+          "slug": "where-should-a-blog-store-its-words",
+          "title": "Where should a blog store its words?",
+          "shared": 1
+        }
+      ]
+    },
+    {
       "slug": "where-should-a-blog-store-its-words",
       "title": "Where should a blog store its words?",
       "description": "Two content models for a Cloudflare-native blog, one database, and the four arguments that settled it.",
