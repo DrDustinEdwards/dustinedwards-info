@@ -3,9 +3,6 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 export default [
   // Public
   index("routes/home.tsx"),
-  route("phage-hunters", "routes/phage-hunters.tsx"),
-  route("publications", "routes/publications.tsx"),
-  route("research", "routes/research.tsx"),
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
   route("llms.txt", "routes/llms.ts"),
