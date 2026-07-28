@@ -123,20 +123,50 @@ Three palette traps, all found in a browser and none visible to typecheck:
 
 ## Ask mode (Layer 2): NOT BUILT, and why
 
-`wrangler ai-search` exists and the product is in open beta, but creating an
-instance requires an AI Search API token minted in the dashboard. Tokens are not
-something an agent session creates. Nothing was half-built: there is no Ask code,
-no binding, and no dead branch waiting for one.
+Still blocked 2026-07-28, second attempt. There is no Ask code, no binding, and
+no dead branch waiting for one.
 
-When the token exists:
+**The blocker, now located exactly.** `wrangler ai-search create` calls
+`listTokens(config, accountId)` and refuses when the account has zero AI Search
+API tokens. It is NOT reading an environment variable, so there is nothing a
+session can export to satisfy it, and wrangler never mints the token itself:
+the interactive branch only loops on "Have you created a token?" while polling
+the same account endpoint. The token must be created in the dashboard, at
+`/ai/ai-search/tokens`. Read commands (`list`) work on ordinary OAuth, which is
+why the CLI looks authenticated right up until the first write.
+
+**Data source: BUILT-IN STORAGE with uploaded markdown, not the crawler.**
+Decided 2026-07-28 against the earlier note in this file, which said
+`--type web-crawler --source https://<deployed-origin>`. Three grounds:
+
+1. The crawler indexes **a domain onboarded to this Cloudflare account**. The
+   apex still resolves to the legacy HostGator WordPress site, so a crawl would
+   index the OLD site, and `workers.dev` is not an onboarded zone. This is not a
+   preference, it is the DNS cutover blocking the crawler outright.
+2. **Citations must deep-link to heading anchors.** Records here are
+   section-grained; uploading one file per section record keeps that granularity
+   and keeps the anchor. A crawler indexes whole pages and loses it.
+3. Built-in storage indexes **immediately**. External sources (website, R2) run
+   on a sync schedule, 6 hours by default, and pause entirely after 31 days
+   without a query. Upload is a build step off the same gated artifact.
+
+So the create command, when a token exists, is:
 
     npx wrangler ai-search create dustinedwards \
-      --type web-crawler --source https://<deployed-origin> \
-      --hybrid-search --reranking
+      --type builtin --hybrid-search --reranking
 
-Binding is `ai_search_namespaces` (`env.AI.autorag()` was retired in April 2026).
-Read the current API before writing any of it. Ask must never sit in the zero-JS
-path and no classic query may wait on it.
+Sync story: the Items API (`POST /accounts/{id}/ai-search/instances/{name}/items`,
+multipart) is a build step after `build:content`, uploading the section records
+the artifact already carries. 4 MB per file.
+
+Binding, verified against current docs 2026-07-28: `ai_search` with
+`instance_name` for a single instance, or `ai_search_namespaces` with
+`namespace` for a whole namespace. Methods are `search()` and
+`chatCompletions()`; streaming is `stream: true`, which emits a `chunks` event
+carrying the sources before the completion deltas. `env.AI.autorag()` was
+retired in April 2026.
+
+Ask must never sit in the zero-JS path and no classic query may wait on it.
 
 ## Admin editor (second writer)
 
