@@ -1,4 +1,4 @@
-import { Form, data, redirect } from "react-router";
+import { Form, Link, data, redirect } from "react-router";
 
 import { Panel } from "~/components/admin/panel";
 import { PostEditor } from "~/components/admin/post-editor";
@@ -72,6 +72,12 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         previewHtml={actionData?.kind === "preview" ? actionData.previewHtml : null}
         problem={actionData?.kind === "problem" ? actionData.problem : null}
       />
+
+      <p className="posts-toolbar">
+        <Link to={`/admin/posts/${loaderData.slug}/history`} className="btn-ghost">
+          Version history
+        </Link>
+      </p>
 
       <Form
         method="post"

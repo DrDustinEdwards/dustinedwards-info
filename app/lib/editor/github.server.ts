@@ -206,4 +206,59 @@ export async function commitFiles(
   return { commitSha: commit.sha };
 }
 
+export type PostCommit = {
+  sha: string;
+  message: string;
+  author: string;
+  date: string;
+};
+
+/**
+ * The commits that touched one path, newest first.
+ *
+ * Read only. Version history is a window onto history git already holds, so
+ * nothing here writes, and a restore goes back through the ordinary atomic save
+ * path rather than manipulating refs.
+ */
+export async function listCommitsForPath(
+  env: GhEnv,
+  path: string,
+  limit = 20,
+): Promise<PostCommit[]> {
+  const commits = await gh<
+    Array<{
+      sha: string;
+      commit: { message: string; author: { name: string; date: string } };
+    }>
+  >(
+    env,
+    `/repos/${OWNER}/${REPO}/commits?path=${encodeURIComponent(path)}` +
+      `&sha=${BRANCH}&per_page=${limit}`,
+  );
+
+  return commits.map((entry) => ({
+    sha: entry.sha,
+    message: entry.commit.message.split("\n")[0],
+    author: entry.commit.author.name,
+    date: entry.commit.author.date,
+  }));
+}
+
+/**
+ * The unified diff for one path at one commit.
+ *
+ * GitHub returns the patch per file on the commit object, so this asks for the
+ * commit and picks out the file rather than fetching two blobs and diffing them
+ * here. A commit that added the file has no `previous_filename` and still
+ * carries a patch.
+ */
+export async function getCommitPatch(env: GhEnv, sha: string, path: string) {
+  const commit = await gh<{
+    files?: Array<{ filename: string; patch?: string; status: string }>;
+  }>(env, `/repos/${OWNER}/${REPO}/commits/${sha}`);
+
+  const file = commit.files?.find((entry) => entry.filename === path);
+  return file ? { patch: file.patch ?? null, status: file.status } : null;
+}
+
 export const REPO_INFO = { owner: OWNER, repo: REPO, branch: BRANCH };

@@ -22,6 +22,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
+import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { ARTIFACT_PATH, lastCommitDate } from "./build-content.mjs";
 
 const DB_NAME = "dustinedwards";
@@ -64,6 +65,8 @@ function buildSql(posts) {
     // touched the file. Applied here rather than in the artifact because the
     // artifact is byte-compared and a git date would make it fail on every
     // content commit. Falls back to now when there is no history to read.
+    // A post with a cover never gets a generated card, so it stores none.
+    const ogImage = post.cover ? null : `/media/${ogImageKey(post)}`;
     const revised = post.updated ?? lastCommitDate(post.sourcePath);
     const updatedAt = revised
       ? Math.floor(Date.parse(`${revised}T00:00:00.000Z`) / 1000)
@@ -71,14 +74,14 @@ function buildSql(posts) {
     out.push(
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
-        `further_reading, og_title, og_description, related, updated_at) VALUES (` +
+        `further_reading, og_title, og_description, related, og_image, updated_at) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
         `${num(post.readingTimeMinutes)}, ${sql(post.sourcePath)}, ` +
         `${sql(JSON.stringify(post.toc))}, ${post.featured ? 1 : 0}, ${sql(post.series)}, ${num(post.part)}, ` +
         `${sql(JSON.stringify(post.furtherReading))}, ${sql(post.ogTitle)}, ${sql(post.ogDescription)}, ` +
-        `${sql(JSON.stringify(post.related))}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
+        `${sql(JSON.stringify(post.related))}, ${sql(ogImage)}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
@@ -87,7 +90,8 @@ function buildSql(posts) {
         `source_path = excluded.source_path, toc = excluded.toc, featured = excluded.featured, ` +
         `series = excluded.series, part = excluded.part, further_reading = excluded.further_reading, ` +
         `og_title = excluded.og_title, og_description = excluded.og_description, ` +
-        `related = excluded.related, updated_at = excluded.updated_at;`,
+        `related = excluded.related, og_image = excluded.og_image, ` +
+        `updated_at = excluded.updated_at;`,
     );
   }
 

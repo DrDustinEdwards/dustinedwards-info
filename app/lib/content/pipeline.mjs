@@ -224,6 +224,33 @@ export function setWasmLoader(loader) {
   highlighterPromise = null;
 }
 
+/**
+ * The R2 key for a post's generated social image.
+ *
+ * Deterministic from the content that appears on the card, so the key changes
+ * exactly when the card would look different and never otherwise. That is what
+ * makes generation idempotent and lets the object be served immutable.
+ *
+ * FNV-1a rather than a crypto hash: pure JS, identical in Node and in a Worker,
+ * no imports, and this is a cache-busting key rather than a security boundary.
+ *
+ * Only the KEY is deterministic. The PNG bytes are not, and are deliberately
+ * kept out of the gated artifact: font rasterisation is exactly the kind of
+ * thing that varies between runs, and the shiki engine incident showed what a
+ * byte-comparison gate does with a non-deterministic input.
+ *
+ * @param {{ slug: string, title: string, description: string }} post
+ */
+export function ogImageKey(post) {
+  const input = `${post.slug}\n${post.title}\n${post.description}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `og/${post.slug}-${hash.toString(16).padStart(8, "0")}.png`;
+}
+
 /** How many related posts each post carries. */
 const RELATED_LIMIT = 3;
 
