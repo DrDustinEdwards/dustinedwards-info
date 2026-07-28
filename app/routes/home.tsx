@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
-      <main className="hero">
+      <main className="hero" id="main">
         <div className="hero-inner">
           <p className="eyebrow">{SITE.affiliation}</p>
           <h1 className="hero-name">{SITE.name}</h1>

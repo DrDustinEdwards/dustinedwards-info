@@ -1,8 +1,9 @@
 import { Link, data } from "react-router";
 
+import { BlogEnhancements } from "~/components/blog-enhancements";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { getBlogPost, getBlogPostMarkdown } from "~/db";
+import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
 import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
@@ -51,9 +52,24 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     }
   }
 
+  /** JSON columns. A malformed one costs a section, never the page. */
+  const parseJson = (value: string | null, fallback: unknown) => {
+    if (!value) return fallback;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const seriesParts = post.series
+    ? await listSeriesParts(getEnv(context), post.series)
+    : [];
+
   return data(
     {
     toc,
+    seriesParts,
     post: {
       slug: post.slug,
       title: post.title,
@@ -67,6 +83,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       tags: post.tags,
       previous: post.previous,
       next: post.next,
+      series: post.series,
+      part: post.part,
+      ogTitle: post.ogTitle,
+      ogDescription: post.ogDescription,
+      related: parseJson(post.related, []) as Array<{
+        slug: string;
+        title: string;
+      }>,
+      furtherReading: parseJson(post.furtherReading, []) as Array<{
+        title: string;
+        url: string;
+      }>,
       },
     },
     { headers: { Link: linkToMarkdown(post.slug) } },
@@ -91,20 +119,25 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const { post } = loaderData;
   const canonical = `${SITE_ORIGIN}/blog/${post.slug}`;
   const description = post.description ?? SITE.description;
+  // Per-post social overrides. Absent means the page title and description are
+  // reused, which is the right default and keeps most posts free of extra
+  // frontmatter.
+  const socialTitle = post.ogTitle ?? post.title;
+  const socialDescription = post.ogDescription ?? description;
   const image = post.coverImage ? `${SITE_ORIGIN}${post.coverImage}` : undefined;
 
   return [
     { title: `${post.title} | ${SITE.name}` },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonical },
-    { property: "og:title", content: post.title },
-    { property: "og:description", content: description },
+    { property: "og:title", content: socialTitle },
+    { property: "og:description", content: socialDescription },
     { property: "og:type", content: "article" },
     { property: "og:url", content: canonical },
     ...(image ? [{ property: "og:image", content: image }] : []),
     { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
-    { name: "twitter:title", content: post.title },
-    { name: "twitter:description", content: description },
+    { name: "twitter:title", content: socialTitle },
+    { name: "twitter:description", content: socialDescription },
     // The markdown twin, advertised so an agent can fetch source rather than
     // scrape the rendered page.
     {
@@ -127,13 +160,29 @@ function formatDate(value: string | Date | null) {
   });
 }
 
+/**
+ * Shows a revision date only when it is meaningfully later than publication.
+ *
+ * The threshold is one day: a post synced the same day it was published has not
+ * been revised, it has just been deployed. Without this every post would carry
+ * an "Updated" line from the moment it shipped, which tells a reader nothing.
+ */
+const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
-  const { post, toc } = loaderData;
+  const { post, toc, seriesParts } = loaderData;
+
+  const published = post.publishAt ? new Date(post.publishAt).getTime() : null;
+  const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
+  const revisedLabel =
+    published !== null && revised !== null && revised - published > REVISED_THRESHOLD_MS
+      ? formatDate(post.updatedAt)
+      : null;
 
   return (
     <>
       <SiteHeader />
-      <main className="page">
+      <main className="page" id="main">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -166,6 +215,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                 </time>
               )}
               {post.readingTimeMinutes && <> · {post.readingTimeMinutes} min read</>}
+              {revisedLabel && <> · Updated {revisedLabel}</>}
             </p>
             {post.tags.length > 0 && (
               <p className="post-card-tags">
@@ -177,6 +227,25 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               </p>
             )}
           </header>
+
+          {post.series && seriesParts.length > 1 && (
+            <nav className="post-series" aria-labelledby="series-heading">
+              <h2 id="series-heading">
+                Part {post.part} of {seriesParts.length}: {post.series}
+              </h2>
+              <ol>
+                {seriesParts.map((entry) => (
+                  <li key={entry.slug} aria-current={entry.slug === post.slug ? "true" : undefined}>
+                    {entry.slug === post.slug ? (
+                      <span>{entry.title}</span>
+                    ) : (
+                      <Link to={`/blog/${entry.slug}`}>{entry.title}</Link>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
 
           {toc.length > 1 && (
             <nav className="post-toc" aria-labelledby="contents-heading">
@@ -200,7 +269,69 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             className="prose"
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
+
+          {post.furtherReading.length > 0 && (
+            <section className="further-reading" aria-labelledby="further-heading">
+              <h2 id="further-heading">Further reading</h2>
+              <ul>
+                {post.furtherReading.map((item) => (
+                  <li key={item.url}>
+                    <a href={item.url} rel="noopener noreferrer">
+                      {item.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/*
+            Agent actions. Every one is a plain link, so all three work with
+            scripting off: the first navigates to the markdown twin, the other
+            two open an assistant with the twin's URL in the prompt. The
+            enhancement script upgrades the first to a clipboard copy.
+          */}
+          <nav className="post-actions" aria-label="Use this post elsewhere">
+            <a
+              className="post-action"
+              href={`/blog/${post.slug}.md`}
+              data-copy-markdown={`${SITE_ORIGIN}/blog/${post.slug}.md`}
+            >
+              Copy as Markdown
+            </a>
+            <a
+              className="post-action"
+              href={`https://claude.ai/new?q=${encodeURIComponent(
+                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarise it.`,
+              )}`}
+              rel="noopener noreferrer"
+            >
+              Open in Claude
+            </a>
+            <a
+              className="post-action"
+              href={`https://chatgpt.com/?q=${encodeURIComponent(
+                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarise it.`,
+              )}`}
+              rel="noopener noreferrer"
+            >
+              Open in ChatGPT
+            </a>
+          </nav>
         </article>
+
+        {post.related.length > 0 && (
+          <section className="related-posts" aria-labelledby="related-heading">
+            <h2 id="related-heading">Related posts</h2>
+            <ul>
+              {post.related.map((item) => (
+                <li key={item.slug}>
+                  <Link to={`/blog/${item.slug}`}>{item.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <nav className="post-nav" aria-label="More posts">
           {post.previous && (
@@ -216,6 +347,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         </nav>
       </main>
       <SiteFooter />
+      <BlogEnhancements />
     </>
   );
 }

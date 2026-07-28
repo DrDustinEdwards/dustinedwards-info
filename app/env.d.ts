@@ -20,6 +20,12 @@ declare global {
  * WebAssembly module. Declared as `unknown` because the Worker tsconfig does not
  * carry DOM's WebAssembly value declarations, and nothing here needs the shape.
  */
+/** Vite resolves a `?url` import to the built asset's public path. */
+declare module "*?url" {
+  const url: string;
+  export default url;
+}
+
 declare module "*.wasm" {
   const wasmModule: unknown;
   export default wasmModule;
