@@ -72,6 +72,35 @@ Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write o
 this repo). Without it the editor still renders and previews, and saving reports
 that it is unavailable rather than half-working.
 
+## Social cards
+
+`npm run build:og -- --remote` renders a 1200x630 PNG per post with satori and
+uploads it to R2 at `og/<slug>-<hash>.png`, where the hash is FNV-1a over slug,
+title and description. The key changes exactly when the card would, so the
+object is served immutable and regeneration is idempotent.
+
+**Build time only, in Node.** Running satori in the Worker means workers-og
+(1.87 MB) on top of a Worker already at 3.46 MB plus a WASM binary, for code
+that would only ever run on the admin save path. **The gap:** a post created or
+retitled in the editor has no card until `build:og` runs and `sync:content`
+follows. The editor stores no card URL rather than one that would 404.
+
+Neither the key nor the image goes in the gated artifact. The key is
+deterministic, but whether the object exists is a fact about R2, and PNG bytes
+from font rasterisation are exactly the kind of input a byte-comparison gate
+must never be handed.
+
+Order matters: `build:content` then `build:og` then `sync:content`.
+Fonts live in `assets/fonts/` and are build assets, not public ones.
+
+## Version history
+
+`/admin/posts/:slug/history` lists commits for the post's file, shows a diff per
+commit, and restores by reading the file at an old commit and putting it back
+through `savePost`. That is the ordinary atomic path, so a restore is a NEW
+commit. Never force push, never rewrite, never a second write path. The gates
+run again on restored content, so an old commit cannot bypass a newer rule.
+
 ## Zero-JS rule (gate, not preference)
 
 Every public blog route must be fully functional with JavaScript disabled.
