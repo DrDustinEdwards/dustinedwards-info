@@ -1,10 +1,12 @@
 import { Form, Link } from "react-router";
 
+import { AskMount } from "~/components/ask-panel";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getEnv } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate";
 import { hasFilters } from "~/lib/search/query.mjs";
+import { askAvailable } from "~/lib/search/ask.server";
 import { search, zeroState, type SearchHit } from "~/lib/search/search.server";
 import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/search";
@@ -63,6 +65,11 @@ export const middleware: Route.MiddlewareFunction[] = [
           total: result.total,
           page: result.page,
           pageSize: result.pageSize,
+          // Whether Ask exists, as a fact about this deployment. The palette
+          // reads it off the response it already makes, so the Ask affordance
+          // costs no extra request and vanishes with the binding rather than
+          // needing a second switch to turn off.
+          askAvailable: askAvailable(getEnv(context)),
           truncated: result.truncated,
           tookMs: result.tookMs,
           facets: result.facets,
@@ -106,7 +113,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
-  return { params, result, suggestions };
+  // A boolean, computed from the binding's presence. NOT an AI call: the loader
+  // that renders classic results must never wait on the AI layer, so all the
+  // server does here is say whether the affordance exists.
+  return { params, result, suggestions, askAvailable: askAvailable(env) };
 }
 
 export function headers() {
@@ -213,7 +223,7 @@ function Result({ hit }: { hit: SearchHit }) {
 }
 
 export default function SearchPage({ loaderData }: Route.ComponentProps) {
-  const { params, result, suggestions } = loaderData;
+  const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
   const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
   // `isEmpty` means no matchable TEXT, which is not the same as no request. A
@@ -299,6 +309,15 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             ) : null}
           </ul>
         ) : null}
+
+        {/* Ask mode, search Layer 2.
+            Rendered ABOVE the results and after them in source order is not the
+            question: what matters is that the results below were produced by
+            the loader and are already on screen. This is an empty container and
+            a script tag. With scripting off it stays empty and the page is
+            byte-identical to the pre-Layer-2 page apart from these two inert
+            elements. With the binding absent it is not rendered at all. */}
+        {askAvailable && hasQuery ? <AskMount question={params.q ?? ""} /> : null}
 
         {hasQuery && result.total > 0 ? (
           <div className="search-body">

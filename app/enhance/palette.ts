@@ -39,6 +39,15 @@ interface Hit {
 }
 
 let dialog: HTMLDialogElement | null = null;
+/**
+ * Whether this deployment has Ask. Set from the search response, never assumed.
+ * Not named `status`: a module-level `status` collides with `window.status`.
+ */
+let askAvailable = false;
+/** Cancels an in-flight answer when the palette closes or the query changes. */
+let askHandle: { cancel(): void } | null = null;
+let askTrigger: HTMLButtonElement | null = null;
+let askContainer: HTMLDivElement | null = null;
 let input: HTMLInputElement | null = null;
 let listbox: HTMLUListElement | null = null;
 // Named statusLine, not status: `status` is a long-standing global on window,
@@ -106,6 +115,10 @@ function build() {
     </form>
     <p class="palette-status" role="status" aria-live="polite"></p>
     <ul id="palette-listbox" class="palette-listbox" role="listbox" aria-label="Search results"></ul>
+    <div class="palette-ask">
+      <button type="button" class="palette-ask-trigger" hidden>Ask AI about this</button>
+      <div class="palette-ask-container" hidden></div>
+    </div>
     <p class="palette-footer">
       <span><kbd>up</kbd><kbd>down</kbd> to move</span>
       <span><kbd>Enter</kbd> to open</span>
@@ -117,6 +130,14 @@ function build() {
   input = dialog.querySelector(".palette-input");
   listbox = dialog.querySelector(".palette-listbox");
   statusLine = dialog.querySelector(".palette-status");
+
+  askTrigger = dialog.querySelector(".palette-ask-trigger");
+  askContainer = dialog.querySelector(".palette-ask-container");
+
+  // Ask is a deliberate second action, never automatic. Results are already on
+  // screen when this is pressed, and an answer that generates on every
+  // keystroke would bill Workers AI for typing.
+  askTrigger?.addEventListener("click", () => void runAsk());
 
   dialog.querySelector(".palette-close")?.addEventListener("click", () => close());
 
@@ -266,15 +287,27 @@ async function run(query: string) {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) throw new Error(String(response.status));
-    const data = (await response.json()) as { results?: Hit[]; total?: number };
+    const data = (await response.json()) as {
+      results?: Hit[];
+      total?: number;
+      askAvailable?: boolean;
+    };
     // A slower earlier request must not overwrite a newer one.
     if (mine !== sequence) return;
+    // Ask's presence is the server's answer, carried on the response the
+    // palette already makes. Remove the binding and this goes false, so the
+    // affordance disappears without a second switch to remember.
+    askAvailable = data.askAvailable === true;
     hits = data.results ?? [];
     active = hits.length > 0 ? 0 : -1;
     if (statusLine) {
       statusLine.textContent =
         hits.length === 0 ? "No results" : `${data.total ?? hits.length} results`;
     }
+    // Offered only once classic results have rendered, and only when the server
+    // says Ask exists. Offered even on zero results, because a question the
+    // keyword index cannot match is exactly where an answer might help.
+    if (askTrigger) askTrigger.hidden = !askAvailable;
     render();
   } catch {
     if (mine !== sequence) return;
@@ -287,10 +320,40 @@ async function run(query: string) {
   }
 }
 
+/**
+ * Streams an answer into the palette.
+ *
+ * The streaming client is a separate dynamic import, so the palette chunk does
+ * not carry Ask's weight for readers who only ever search. Loaded on the first
+ * press and cached by the browser after that.
+ */
+async function runAsk() {
+  if (!askContainer || !input) return;
+  const question = input.value.trim();
+  if (!question) return;
+  askHandle?.cancel();
+  if (askTrigger) askTrigger.hidden = true;
+  const { ask } = await import("./ask");
+  askHandle = ask(askContainer, question);
+}
+
+/** Clears any answer and hides the Ask row. Called on close and on retype. */
+function resetAsk() {
+  askHandle?.cancel();
+  askHandle = null;
+  if (askContainer) {
+    askContainer.textContent = "";
+    askContainer.hidden = true;
+  }
+  if (askTrigger) askTrigger.hidden = true;
+}
+
 function onInput() {
   if (!input) return;
   const query = input.value.trim();
   clearTimeout(debounce);
+  // A new query makes any showing answer answer the wrong question.
+  resetAsk();
 
   if (query.length < MIN_QUERY) {
     sequence += 1;
@@ -385,6 +448,10 @@ function reset() {
   hits = [];
   active = -1;
   clearTimeout(debounce);
+  // Aborts an in-flight answer too. Without this a fetch still streaming when
+  // the palette closes goes on writing into a closed dialog, which is the same
+  // late-response trap the sequence number exists for on the search side.
+  resetAsk();
   if (listbox) listbox.innerHTML = "";
   if (statusLine) statusLine.textContent = "";
   if (input) {

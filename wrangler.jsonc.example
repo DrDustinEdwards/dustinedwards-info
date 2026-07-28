@@ -34,5 +34,14 @@
 			"binding": "MEDIA",
 			"bucket_name": "dustinedwards-media"
 		}
+	],
+	// Ask mode (search Layer 2). Remove this block and Ask disappears cleanly:
+	// classic search is D1 only and never waits on it. Instance binding rather
+	// than ai_search_namespaces because there is exactly one instance.
+	"ai_search": [
+		{
+			"binding": "AI_SEARCH",
+			"instance_name": "dustinedwards"
+		}
 	]
 }

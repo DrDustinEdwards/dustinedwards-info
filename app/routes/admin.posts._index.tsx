@@ -3,7 +3,8 @@ import { Form, Link } from "react-router";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
-import { regenerateAllFromArtifact } from "~/lib/editor/publish.server";
+import { loadArtifact, regenerateAllFromArtifact } from "~/lib/editor/publish.server";
+import { askAvailable, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin.posts._index";
 
 export function meta() {
@@ -16,15 +17,44 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
-  if (form.get("intent") !== "regenerate") return { message: null };
-  try {
-    const { synced } = await regenerateAllFromArtifact(getEnv(context));
-    return { message: `Re-synced ${synced} posts from the committed artifact.` };
-  } catch (error) {
-    return {
-      message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
-    };
+  const env = getEnv(context);
+  const intent = form.get("intent");
+
+  if (intent === "regenerate") {
+    try {
+      const { synced } = await regenerateAllFromArtifact(env);
+      return { message: `Re-synced ${synced} posts from the committed artifact.` };
+    } catch (error) {
+      return {
+        message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   }
+
+  // Ask mode's corpus. Separate from Regenerate because they fail
+  // independently: D1 is the site's search and must not be held hostage to the
+  // AI index, and the AI index must never be repaired by touching D1.
+  if (intent === "sync-ask") {
+    if (!askAvailable(env)) {
+      return { message: "Ask is not enabled: no AI Search binding." };
+    }
+    try {
+      const posts = await loadArtifact(env);
+      const { uploaded, keys } = await syncAskCorpus(env, posts);
+      const removed = await pruneAskCorpus(env, keys);
+      return {
+        message:
+          `Uploaded ${uploaded} search records to AI Search` +
+          (removed.length > 0 ? `, removed ${removed.length} stale item(s).` : "."),
+      };
+    } catch (error) {
+      return {
+        message: `Ask sync failed. ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  return { message: null };
 }
 
 export default function AdminPosts({ loaderData, actionData }: Route.ComponentProps) {
@@ -48,6 +78,17 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
             title="Re-sync every post from the committed artifact"
           >
             Regenerate all
+          </button>
+        </Form>
+        <Form method="post">
+          <button
+            type="submit"
+            name="intent"
+            value="sync-ask"
+            className="btn-ghost"
+            title="Upload every search record to the AI Search instance that powers Ask"
+          >
+            Sync Ask corpus
           </button>
         </Form>
       </div>

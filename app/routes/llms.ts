@@ -35,7 +35,12 @@ read as a date filter rather than as text.
 
 Results are section-grained: a hit carries the heading it was found under and a
 url with that anchor, so a citation can point at the passage rather than the
-page. Each result reports what it matched on (title, tag, or body).
+page. Each result reports what it matched on (title, tag, body, or filter, the
+last meaning the query was a bare year or tag with no text to match).
+
+For programmatic use prefer the JSON form. It is keyword search over an FTS5
+index: deterministic, the same query returning the same results, with no model
+in the path and no per-request cost.
 
 ## Full text
 
