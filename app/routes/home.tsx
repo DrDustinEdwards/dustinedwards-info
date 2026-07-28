@@ -5,7 +5,7 @@ import type { Route } from "./+types/home";
 
 export function meta() {
   return [
-    { title: `${SITE.name}, ${SITE.role}` },
+    { title: SITE.name },
     { name: "description", content: SITE.description },
   ];
 }
