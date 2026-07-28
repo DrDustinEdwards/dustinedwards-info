@@ -20,6 +20,7 @@ import {
   ContentError,
   findWideDashes,
   renderPost,
+  withRelated,
 } from "~/lib/content/pipeline.mjs";
 // Side-effect import: installs the Worker WASM loader before anything renders.
 import "~/lib/content/wasm.server";
@@ -143,10 +144,20 @@ async function loadArtifact(env: PublishEnv) {
   }
 }
 
+/**
+ * Orders the artifact and recomputes cross-post data.
+ *
+ * `withRelated` runs over the WHOLE list, not just the post being saved.
+ * Relatedness is a property of the corpus: adding or retagging one post changes
+ * the related list of every post it shares a tag with. Splicing one entry and
+ * leaving the rest would make the committed artifact disagree with the next
+ * build, which is precisely what the gate exists to catch.
+ */
 function sortBySlug(posts: any[]) {
-  return posts
+  const ordered = posts
     .slice()
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  return withRelated(ordered);
 }
 
 /** The head commit, recorded when the editor loads and echoed back on save. */
@@ -245,14 +256,20 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
     db
       .prepare(
         `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at,
-           cover_image, cover_alt, reading_time_minutes, source_path, toc, updated_at)
-         VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, unixepoch())
+           cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part,
+           further_reading, og_title, og_description, related, updated_at)
+         VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+           ?13, ?14, ?15, ?16, ?17, ?18, ?19, unixepoch())
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
            publish_at = excluded.publish_at, cover_image = excluded.cover_image,
            cover_alt = excluded.cover_alt, reading_time_minutes = excluded.reading_time_minutes,
-           source_path = excluded.source_path, toc = excluded.toc, updated_at = unixepoch()`,
+           source_path = excluded.source_path, toc = excluded.toc, featured = excluded.featured,
+           series = excluded.series, part = excluded.part,
+           further_reading = excluded.further_reading, og_title = excluded.og_title,
+           og_description = excluded.og_description, related = excluded.related,
+           updated_at = unixepoch()`,
       )
       .bind(
         record.slug,
@@ -267,6 +284,13 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         record.readingTimeMinutes,
         record.sourcePath,
         JSON.stringify(record.toc),
+        record.featured ? 1 : 0,
+        record.series,
+        record.part,
+        JSON.stringify(record.furtherReading),
+        record.ogTitle,
+        record.ogDescription,
+        JSON.stringify(record.related ?? []),
       ),
     ...record.tags.map((tag: string) =>
       db

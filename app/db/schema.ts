@@ -41,6 +41,15 @@ export const posts = sqliteTable(
     sourcePath: text("source_path"),
     /** JSON array of { depth, id, text }, written by the content generator. */
     toc: text("toc"),
+    featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+    series: text("series"),
+    part: integer("part"),
+    /** JSON array of { title, url }. */
+    furtherReading: text("further_reading"),
+    ogTitle: text("og_title"),
+    ogDescription: text("og_description"),
+    /** JSON array of { slug, title, shared }, computed over the whole corpus. */
+    related: text("related"),
   },
   (t) => [
     check("posts_kind_check", sql`${t.kind} in ('page', 'post')`),
