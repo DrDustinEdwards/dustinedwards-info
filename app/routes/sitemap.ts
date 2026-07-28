@@ -1,18 +1,34 @@
-import { listPublicPosts } from "~/db";
+import { listBlogPosts, listPublicPosts } from "~/db";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/sitemap";
 
 // Static, always-present URLs.
-const STATIC_PATHS = ["/"];
+const STATIC_PATHS = ["/", "/blog"];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const origin = new URL(request.url).origin;
-  const posts = await listPublicPosts(getEnv(context));
+  const env = getEnv(context);
+
+  const [rows, blog] = await Promise.all([
+    listPublicPosts(env),
+    // perPage is deliberately high: a sitemap lists everything rather than one
+    // page of results. Both reads apply publiclyVisible().
+    listBlogPosts(env, { perPage: 1000 }),
+  ]);
 
   const urls = [
     ...STATIC_PATHS.map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
-    ...posts.map((p) => ({
-      loc: `${origin}/${p.slug}`,
+    // Only `kind = 'page'` rows live at the root. Blog rows share this table and
+    // are listed under /blog below, so filtering here is what stops every post
+    // being emitted twice, once at a URL that does not exist.
+    ...rows
+      .filter((p) => p.kind === "page")
+      .map((p) => ({
+        loc: `${origin}/${p.slug}`,
+        lastmod: p.updatedAt,
+      })),
+    ...blog.posts.map((p) => ({
+      loc: `${origin}/blog/${p.slug}`,
       lastmod: p.updatedAt,
     })),
   ];
