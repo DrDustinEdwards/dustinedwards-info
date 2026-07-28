@@ -21,7 +21,7 @@ Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.
 Every post has a plain markdown twin at /blog/<slug>.md, which is the source
 the page was rendered from. Requesting /blog/<slug> with an
 Accept: text/markdown header returns the same markdown. The feed is at
-/blog/rss.xml.
+/blog/rss.xml and /blog/feed.json.
 
 ## Full text
 
