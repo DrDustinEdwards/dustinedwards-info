@@ -20,6 +20,7 @@ import {
   ContentError,
   findWideDashes,
   renderPost,
+  withRelated,
 } from "~/lib/content/pipeline.mjs";
 // Side-effect import: installs the Worker WASM loader before anything renders.
 import "~/lib/content/wasm.server";
@@ -143,10 +144,20 @@ async function loadArtifact(env: PublishEnv) {
   }
 }
 
+/**
+ * Orders the artifact and recomputes cross-post data.
+ *
+ * `withRelated` runs over the WHOLE list, not just the post being saved.
+ * Relatedness is a property of the corpus: adding or retagging one post changes
+ * the related list of every post it shares a tag with. Splicing one entry and
+ * leaving the rest would make the committed artifact disagree with the next
+ * build, which is precisely what the gate exists to catch.
+ */
 function sortBySlug(posts: any[]) {
-  return posts
+  const ordered = posts
     .slice()
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  return withRelated(ordered);
 }
 
 /** The head commit, recorded when the editor loads and echoed back on save. */
