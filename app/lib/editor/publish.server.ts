@@ -16,6 +16,9 @@
 
 import { imageSize } from "image-size";
 
+import { serializeArtifact } from "~/lib/content/artifact.mjs";
+import { recordsForPost } from "~/lib/search/records.mjs";
+
 import {
   ContentError,
   findWideDashes,
@@ -123,10 +126,9 @@ export async function validateAndRender(
   }
 }
 
-/** Serializes the artifact exactly as scripts/build-content.mjs does. */
-function serializeArtifact(posts: unknown[]) {
-  return `${JSON.stringify({ posts }, null, 2)}\n`;
-}
+// Serialization lives in app/lib/content/artifact.mjs so this path and
+// scripts/build-content.mjs cannot disagree about the artifact's shape. An
+// editor save that wrote a different shape would redden check:content on main.
 
 /**
  * Reads the committed artifact and returns its posts, so a save can splice one
@@ -311,9 +313,54 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         .bind(record.slug, tag),
     ),
     db.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`),
+    ...searchStatements(db, record),
   ];
 
   await db.batch(statements);
+}
+
+/**
+ * Statements that replace one post's search records.
+ *
+ * Records are derived per post, so a save only has to replace its own. That is
+ * what makes this safe to do incrementally where `related` is not: relatedness
+ * is a property of the whole corpus and has to be recomputed across it, whereas
+ * a post's sections depend on nothing but that post's own markdown.
+ *
+ * Derivation goes through the same app/lib/search/records.mjs the build script
+ * uses. There is one indexer, for the same reason there is one renderer.
+ */
+function searchStatements(db: D1Database, record: any) {
+  const records = recordsForPost(record);
+  return [
+    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${record.slug}`),
+    ...records.map((r) =>
+      db
+        .prepare(
+          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
+             doc_title, doc_url, anchor, ordinal, status, publish_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
+        )
+        .bind(
+          r.uid,
+          r.url,
+          r.type,
+          r.title,
+          r.body,
+          r.tags,
+          r.docTags,
+          r.docUid,
+          r.docTitle,
+          r.docUrl,
+          r.anchor,
+          r.ordinal,
+          r.status,
+          r.publishAt ? Math.floor(Date.parse(r.publishAt) / 1000) : null,
+        ),
+    ),
+    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+  ];
 }
 
 /** Removes a post's rows. Tag rows stay, matching the bulk sync's behaviour. */
@@ -324,6 +371,9 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
     ).bind(slug),
     env.DB.prepare(`DELETE FROM posts WHERE slug = ?1`).bind(slug),
     env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`),
+    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
 }
 
