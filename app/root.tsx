@@ -33,6 +33,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        {/* Keyboard and screen-reader users skip the header on every page. */}
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
         {children}
         <ScrollRestoration />
         <Scripts />

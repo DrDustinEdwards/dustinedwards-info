@@ -19,6 +19,7 @@
  */
 
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
+import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
 import { toString as hastToString } from "hast-util-to-string";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -115,6 +116,41 @@ export const frontmatterSchema = z.object({
       alt: z.string().min(1, "is required when cover is set"),
     })
     .optional(),
+  /** Marks a post for the featured slot on the index. */
+  featured: z.boolean().default(false),
+  /** Multi-part writing. Both fields travel together or neither does. */
+  series: z.string().min(1).optional(),
+  part: z.number().int().min(1, "must be 1 or greater").optional(),
+  /** Curated outbound links, rendered at the end of the post. */
+  further_reading: z
+    .array(
+      z.object({
+        title: z.string().min(1, "must not be empty"),
+        url: z.string().url("must be an absolute URL"),
+      }),
+    )
+    .default([]),
+  /** Social overrides. Absent means the title and description are used. */
+  og_title: z.string().min(1).optional(),
+  og_description: z.string().min(1).optional(),
+  /**
+   * Last meaningful revision, as a date.
+   *
+   * A date rather than a timestamp on purpose. The build derives it from the
+   * last git commit touching the file; the editor writes the current UTC date
+   * on save. Those are the same day, because the editor's commit is created in
+   * the same request, so the two callers agree and the byte-comparison gate
+   * stays green. A timestamp would not agree, since the editor cannot know the
+   * commit time it is about to create.
+   */
+  updated: isoDate.optional(),
+}).superRefine((value, ctx) => {
+  if (value.series && value.part === undefined) {
+    ctx.addIssue({ code: "custom", path: ["part"], message: "is required when series is set" });
+  }
+  if (value.part !== undefined && !value.series) {
+    ctx.addIssue({ code: "custom", path: ["series"], message: "is required when part is set" });
+  }
 });
 
 /**
@@ -186,6 +222,53 @@ let wasmLoader = () => import("shiki/wasm");
 export function setWasmLoader(loader) {
   wasmLoader = loader;
   highlighterPromise = null;
+}
+
+/** How many related posts each post carries. */
+const RELATED_LIMIT = 3;
+
+/**
+ * Fills in each post's `related` list from tag overlap, across the whole corpus.
+ *
+ * Must run over ALL posts, in both callers, for the same reason the renderer is
+ * shared: relatedness is a property of the set, not of one post. Adding a post
+ * changes the related list of every post it shares a tag with, so an editor save
+ * that spliced one entry and left the rest would make the committed artifact
+ * disagree with the next build. The editor therefore calls this after splicing,
+ * over the complete list.
+ *
+ * Ordering is fully determined: shared tags descending, then newest, then slug.
+ * No ties are left to array order, because array order is not stable input.
+ *
+ * @param {any[]} posts
+ */
+export function withRelated(posts) {
+  return posts.map((post) => {
+    const tags = new Set(post.tags);
+    const scored = posts
+      .filter((other) => other.slug !== post.slug && !other.draft)
+      .map((other) => ({
+        slug: other.slug,
+        title: other.title,
+        shared: other.tags.filter((/** @type {string} */ t) => tags.has(t)).length,
+        publishAt: other.publishAt,
+      }))
+      .filter((other) => other.shared > 0);
+
+    scored.sort(
+      (a, b) =>
+        b.shared - a.shared ||
+        (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) ||
+        (a.slug < b.slug ? -1 : 1),
+    );
+
+    return {
+      ...post,
+      related: scored
+        .slice(0, RELATED_LIMIT)
+        .map(({ slug, title, shared }) => ({ slug, title, shared })),
+    };
+  });
 }
 
 /** Built once per isolate. Creating it is the expensive part, not using it. */
@@ -362,6 +445,21 @@ export async function renderBody({ file, body, resolveImage }) {
       defaultColor: false,
       // An unlisted language renders as plain text rather than throwing.
       fallbackLanguage: "text",
+      transformers: [
+        // Line highlighting from fence meta, as in ```ts {2,5-7}. Done here so
+        // the marked lines are in the stored HTML rather than applied by client
+        // script: a reader with JavaScript off still sees which lines matter.
+        transformerMetaHighlight(),
+        {
+          // The language label and the copy button are rendered by the
+          // enhancement script from this attribute, so the label is data the
+          // pipeline already knows rather than something guessed in the browser.
+          name: "language-label",
+          pre(node) {
+            node.properties["data-lang"] = this.options.lang ?? "text";
+          },
+        },
+      ],
     })
     .use(rehypeStringify);
 
@@ -422,6 +520,13 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     draft: fm.draft,
     tags: fm.tags,
     cover,
+    featured: fm.featured,
+    series: fm.series ?? null,
+    part: fm.part ?? null,
+    furtherReading: fm.further_reading,
+    ogTitle: fm.og_title ?? null,
+    ogDescription: fm.og_description ?? null,
+    updated: fm.updated ?? null,
     readingTimeMinutes: readingTimeMinutes(parsed.content),
     toc,
     markdown: parsed.content,
