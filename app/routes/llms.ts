@@ -23,6 +23,20 @@ the page was rendered from. Requesting /blog/<slug> with an
 Accept: text/markdown header returns the same markdown. The feed is at
 /blog/rss.xml and /blog/feed.json.
 
+## Search
+
+/search?q=<query> searches the whole site and returns a normal HTML page.
+
+The same URL returns JSON when requested with Accept: application/json. It is
+the same query against the same index, not a separate API, and the response
+varies on Accept. Parameters: q, type, tag, year, page. Operators inside q:
+tag:<tag>, type:<type>, "quoted phrases", and a bare four-digit year, which is
+read as a date filter rather than as text.
+
+Results are section-grained: a hit carries the heading it was found under and a
+url with that anchor, so a citation can point at the passage rather than the
+page. Each result reports what it matched on (title, tag, or body).
+
 ## Full text
 
 /llms-full.txt carries every published post in markdown in one document.
