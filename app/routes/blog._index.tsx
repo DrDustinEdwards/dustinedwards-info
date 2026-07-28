@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
+import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
@@ -72,6 +73,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "application/rss+xml",
       title: `${SITE.name} blog`,
       href: `${SITE_ORIGIN}/blog/rss.xml`,
+    },
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "application/feed+json",
+      title: `${SITE.name} blog`,
+      href: `${SITE_ORIGIN}/blog/feed.json`,
     },
   ];
 }
@@ -223,6 +231,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
       </main>
       <SiteFooter />
       <BlogEnhancements />
+      <BlogSpeculation />
     </>
   );
 }

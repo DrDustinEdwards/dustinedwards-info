@@ -1509,3 +1509,18 @@ body {
     break-inside: avoid;
   }
 }
+
+/* Cross-document view transitions between blog pages.
+   Declarative, so it works on ordinary link navigation with no client script,
+   and is simply ignored by browsers that do not support it. */
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
