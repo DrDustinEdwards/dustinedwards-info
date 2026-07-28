@@ -1,7 +1,6 @@
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { personJsonLd, SITE, webSiteJsonLd } from "~/lib/seo";
-import type { Route } from "./+types/home";
+import { personJsonLd, SITE, SITE_ORIGIN, webSiteJsonLd } from "~/lib/seo";
 
 export function meta() {
   return [
@@ -10,13 +9,8 @@ export function meta() {
   ];
 }
 
-export function loader({ request }: Route.LoaderArgs) {
-  return { origin: new URL(request.url).origin };
-}
-
-export default function Home({ loaderData }: Route.ComponentProps) {
-  const { origin } = loaderData;
-  const jsonLd = [personJsonLd(origin), webSiteJsonLd(origin)];
+export default function Home() {
+  const jsonLd = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
 
   return (
     <>

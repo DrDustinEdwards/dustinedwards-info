@@ -195,6 +195,46 @@ export async function getBlogPost(env: Env, slug: string) {
   };
 }
 
+/**
+ * Every blog post for the admin list, drafts and future-dated included.
+ *
+ * The one read in this file that deliberately does NOT apply publiclyVisible().
+ * It is reachable only behind the admin middleware, and an editor that could not
+ * see drafts would be useless.
+ */
+export async function listAllPostsForAdmin(env: Env) {
+  return getDb(env)
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      status: posts.status,
+      publishAt: posts.publishAt,
+      updatedAt: posts.updatedAt,
+    })
+    .from(posts)
+    .where(eq(posts.kind, "post"))
+    .orderBy(desc(posts.publishAt));
+}
+
+/** Every visible post with its markdown body, newest first, for llms-full.txt. */
+export async function listBlogPostsFullText(env: Env) {
+  const db = getDb(env);
+  const rows = await db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      body: posts.body,
+      publishAt: posts.publishAt,
+    })
+    .from(posts)
+    .where(isBlogPost())
+    .orderBy(desc(posts.publishAt));
+
+  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+}
+
 /** Raw markdown for the .md twin route. */
 export async function getBlogPostMarkdown(env: Env, slug: string) {
   const rows = await getDb(env)

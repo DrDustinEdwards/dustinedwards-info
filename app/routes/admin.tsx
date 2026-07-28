@@ -31,6 +31,7 @@ const NAV = [
   { to: "/admin", label: "Overview", end: true },
   { to: "/admin/sites", label: "Sites" },
   { to: "/admin/content", label: "Content" },
+  { to: "/admin/posts", label: "Posts" },
   { to: "/admin/tools", label: "Tools" },
 ];
 

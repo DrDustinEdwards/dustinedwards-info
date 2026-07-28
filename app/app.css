@@ -946,3 +946,229 @@ body {
   color: var(--shiki-light);
   background-color: var(--shiki-light-bg);
 }
+
+/* Post editor (admin) ------------------------------------------------------ */
+
+.posts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.btn,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--brand);
+  border-radius: 0.375rem;
+  background: var(--brand);
+  color: var(--brand-fg);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-danger {
+  border-color: var(--error);
+  background: var(--error);
+}
+
+.posts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.posts-table th,
+.posts-table td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.posts-title {
+  display: block;
+  font-weight: 500;
+}
+
+.posts-slug {
+  display: block;
+  font-size: 0.8125rem;
+}
+
+.posts-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.editor {
+  display: grid;
+  gap: 2rem;
+}
+
+.editor-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.editor-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .editor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.field-hint {
+  font-size: 0.8125rem;
+}
+
+.count {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.count.over {
+  color: var(--warn);
+}
+
+.field input,
+.field textarea {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.field-draft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.field-draft input {
+  min-height: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.editor-body {
+  min-height: 26rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  tab-size: 2;
+  resize: vertical;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.editor-problem {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--error);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.editor-problem strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--error);
+}
+
+.editor-problem p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.editor-notice {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-size: 0.9375rem;
+}
+
+.editor-upload,
+.editor-preview,
+.editor-danger {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.editor-upload h2,
+.editor-preview h2,
+.editor-danger h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.editor-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.editor-upload-row input[type="text"],
+.editor-upload-row input:not([type]) {
+  flex: 1 1 14rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.editor-preview .prose {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.editor-danger p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
