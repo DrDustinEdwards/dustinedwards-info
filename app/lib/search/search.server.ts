@@ -12,6 +12,7 @@
 
 import {
   fuse,
+  hasFilters,
   parseQuery,
   toMatchExpression,
 } from "./query.mjs";
@@ -51,7 +52,11 @@ const MARK_END = String.fromCharCode(2);
 const MARK_START_SQL = "char(1)";
 const MARK_END_SQL = "char(2)";
 
-export type MatchReason = "title" | "tag" | "body";
+/**
+ * `filter` is not an index match. It is the label for a record returned by the
+ * browse path, where the query carried filters but no text to match on.
+ */
+export type MatchReason = "title" | "tag" | "body" | "filter";
 
 export interface SearchHit {
   uid: string;
@@ -123,6 +128,14 @@ function parseTags(docTags: string): string[] {
   return docTags.split("|").filter(Boolean);
 }
 
+/** Cuts at a word boundary so the browse snippet does not end mid-word. */
+function truncateWords(value: string, limit: number): string {
+  if (value.length <= limit) return value;
+  const cut = value.slice(0, limit);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${lastSpace > 0 ? cut.slice(0, lastSpace) : cut}…`;
+}
+
 /**
  * The visibility predicate, and the SQL twin of publiclyVisible() in
  * app/db/index.ts. Both must stay in step: a scheduled post that is hidden on
@@ -189,6 +202,39 @@ async function runIndex(
 }
 
 /**
+ * The browse path: filters with nothing to match on.
+ *
+ * `tag:cloudflare`, a bare `2026`, and a facet chip clicked from an empty box
+ * all parse correctly into filters and leave no text behind, so there is no
+ * MATCH expression to give fts5. Routing those to the index returns nothing,
+ * which makes the parser's best rule look like a bug to the one reader who used
+ * it. The filters are already SQL, so this runs them directly over search_docs.
+ *
+ * DOCUMENT RECORDS ONLY. Section records exist so that a text query can land on
+ * the heading that answers it; a filter has no such heading in mind, and
+ * returning all seven records of one post as seven results for `2026` would
+ * present the corpus as seven times its real size.
+ *
+ * Ordered by date, because with no relevance signal recency is the only
+ * defensible ordering, and a bare year or tag reads as browsing rather than
+ * searching.
+ */
+async function runBrowse(db: D1Database, filters: FilterSql): Promise<RawRow[]> {
+  const sql = `
+    SELECT d.uid, d.url, d.type, d.title, d.doc_title, d.doc_url, d.anchor,
+           d.doc_tags, d.publish_at,
+           substr(d.body, 1, 240) AS snippet
+    FROM search_docs d
+    WHERE d.anchor IS NULL
+      AND ${filters.clause}
+    ORDER BY d.publish_at DESC, d.id DESC
+    LIMIT ${CANDIDATE_LIMIT}
+  `;
+  const result = await db.prepare(sql).bind(...filters.params).all<RawRow>();
+  return result.results ?? [];
+}
+
+/**
  * Works out why a record matched, for the label shown on the result.
  *
  * Computed in app code from the parsed terms rather than asked of fts5, which
@@ -249,10 +295,44 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   };
 
   const match = toMatchExpression(parsed, options.prefix ?? false);
-  if (!match) return empty;
+  // Nothing to match AND nothing to filter by is a genuinely empty query.
+  if (!match && !hasFilters(parsed)) return empty;
 
   const filters = buildFilters(parsed, nowSeconds);
   const started = Date.now();
+
+  if (!match) {
+    const rows = await runBrowse(env.DB, filters);
+    const browseTook = Date.now() - started;
+    const browseHits: SearchHit[] = rows.map((item, index) => ({
+      uid: item.uid,
+      url: item.url,
+      type: item.type,
+      title: item.title,
+      docTitle: item.doc_title,
+      docUrl: item.doc_url,
+      anchor: item.anchor,
+      tags: parseTags(item.doc_tags),
+      publishAt: item.publish_at,
+      // No MATCH ran, so there is nothing to highlight. The snippet is the head
+      // of the body, escaped, with no <mark> in it. Marking anything here would
+      // claim a match that was never made.
+      snippet: renderSnippet(truncateWords(item.snippet, 200)),
+      why: ["filter"],
+      // Rank is the date order this came back in, not a relevance score.
+      score: rows.length - index,
+    }));
+    return {
+      parsed,
+      hits: browseHits.slice((page - 1) * pageSize, page * pageSize),
+      total: browseHits.length,
+      page,
+      pageSize,
+      facets: buildFacets(browseHits),
+      truncated: rows.length >= CANDIDATE_LIMIT,
+      tookMs: browseTook,
+    };
+  }
 
   // Both indexes are queried concurrently. They are independent reads and
   // waiting for one before starting the other would double the latency of the

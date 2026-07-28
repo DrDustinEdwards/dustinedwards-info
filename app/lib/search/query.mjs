@@ -115,6 +115,25 @@ export function parseQuery(input, options = {}) {
 }
 
 /**
+ * True when the query carries something to narrow by, independent of any text.
+ *
+ * This is the browse-path predicate. `tag:cloudflare`, a bare `2026`, and a
+ * facet chip clicked from an empty box all parse into filters and leave no text
+ * behind, so `toMatchExpression` correctly returns null and there is nothing to
+ * hand fts5. Without this, those queries fall through the index path and return
+ * nothing, which is how the parser's best rule ends up looking like a bug.
+ *
+ * Lives here rather than in search.server.ts so the pure gate can assert it.
+ * Found live on 2026-07-28: every filter-only query returned 0 on the deploy.
+ *
+ * @param {ParsedQuery} parsed
+ * @returns {boolean}
+ */
+export function hasFilters(parsed) {
+  return parsed.tags.length > 0 || parsed.types.length > 0 || parsed.year !== null;
+}
+
+/**
  * Quotes one token as an fts5 string literal.
  *
  * Everything a visitor types is quoted rather than filtered. fts5 has its own
