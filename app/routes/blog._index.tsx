@@ -4,7 +4,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL, SITE, breadcrumbJsonLd } from "~/lib/seo";
+import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN, breadcrumbJsonLd } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
 const PER_PAGE = 10;
@@ -27,7 +27,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ...listing,
     tags: tagList,
     activeTag: tag,
-    origin: url.origin,
   };
 }
 
@@ -41,8 +40,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     : `Blog | ${SITE.name}`;
   const description = "Writing on building for the web, mostly on Cloudflare.";
   const canonical = loaderData?.activeTag
-    ? `${loaderData.origin}/blog?tag=${encodeURIComponent(loaderData.activeTag)}`
-    : `${loaderData?.origin ?? ""}/blog`;
+    ? `${SITE_ORIGIN}/blog?tag=${encodeURIComponent(loaderData.activeTag)}`
+    : `${SITE_ORIGIN}/blog`;
 
   return [
     { title },
@@ -58,7 +57,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       rel: "alternate",
       type: "application/rss+xml",
       title: `${SITE.name} blog`,
-      href: `${loaderData?.origin ?? ""}/blog/rss.xml`,
+      href: `${SITE_ORIGIN}/blog/rss.xml`,
     },
   ];
 }
@@ -75,7 +74,7 @@ function formatDate(value: string | Date | null) {
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {
-  const { posts, tags, activeTag, page, pageCount, origin } = loaderData;
+  const { posts, tags, activeTag, page, pageCount } = loaderData;
 
   const pageHref = (n: number) => {
     const params = new URLSearchParams();
@@ -93,7 +92,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
-              breadcrumbJsonLd(origin, [
+              breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Blog", "/blog"],
               ]),
