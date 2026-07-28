@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
 import type { PostFields } from "~/lib/editor/frontmatter";
@@ -11,6 +11,25 @@ import type { PostFields } from "~/lib/editor/frontmatter";
 
 const TITLE_LIMIT = 70;
 const DESCRIPTION_LIMIT = 160;
+
+/** How long after the last keystroke a local draft is written. */
+const AUTOSAVE_DELAY_MS = 800;
+
+const draftKey = (slug: string, isNew: boolean) =>
+  `post-draft:${isNew ? "new" : slug}`;
+
+/** Serialises the form into a plain object, for local persistence only. */
+function readForm(form: HTMLFormElement) {
+  const data = new FormData(form);
+  /** @type Record<string, string> */
+  const out: Record<string, string> = {};
+  for (const [key, value] of data.entries()) {
+    if (typeof value === "string" && key !== "headSha" && key !== "isNew") {
+      out[key] = value;
+    }
+  }
+  return out;
+}
 
 export type EditorProblem = {
   message: string;
@@ -39,7 +58,80 @@ export function PostEditor({
   const [description, setDescription] = useState(fields.description);
   const [body, setBody] = useState(fields.body);
   const [dirty, setDirty] = useState(false);
+  const [autosavedAt, setAutosavedAt] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const autosaveTimer = useRef<number>(0);
+  const storageKey = draftKey(fields.slug, isNew);
+
+  /**
+   * Autosave, local only.
+   *
+   * This NEVER commits. The commit button is the only writer, per the editor
+   * ruling: nothing reaches the repository or the database except through the
+   * atomic save path. This is a crash net for the browser, nothing more.
+   */
+  const persist = useCallback(() => {
+    const form = formRef.current;
+    if (!form) return;
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({ at: new Date().toISOString(), fields: readForm(form) }),
+      );
+      setAutosavedAt(new Date().toLocaleTimeString());
+    } catch {
+      // Private mode, quota, or storage disabled. The editor still works; it
+      // just has no crash net, and saying so is better than pretending.
+      setAutosavedAt(null);
+    }
+  }, [storageKey]);
+
+  // Restore on return. Only offered when the stored draft actually differs from
+  // what the server handed back, so a clean reload does not nag.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    let stored: { at: string; fields: Record<string, string> } | null = null;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      stored = raw ? JSON.parse(raw) : null;
+    } catch {
+      stored = null;
+    }
+    if (!stored) return;
+
+    const current = readForm(form);
+    const differs = Object.keys(stored.fields).some(
+      (key) => stored.fields[key] !== current[key],
+    );
+    if (!differs) {
+      // The draft matches what is committed, so there is nothing to recover.
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+
+    for (const [key, value] of Object.entries(stored.fields)) {
+      const field = form.elements.namedItem(key);
+      if (field instanceof HTMLInputElement && field.type === "checkbox") {
+        field.checked = value === "on";
+      } else if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLTextAreaElement
+      ) {
+        field.value = value;
+      }
+    }
+    if (stored.fields.title !== undefined) setTitle(stored.fields.title);
+    if (stored.fields.slug !== undefined) setSlug(stored.fields.slug);
+    if (stored.fields.description !== undefined) {
+      setDescription(stored.fields.description);
+    }
+    if (stored.fields.body !== undefined) setBody(stored.fields.body);
+    setRestored(true);
+    setDirty(true);
+  }, [storageKey]);
 
   // Unsaved-changes guard. Only armed once something actually changed, so it
   // never nags on a page the author only looked at.
@@ -57,7 +149,12 @@ export function PostEditor({
       <Form
         method="post"
         className="editor-form"
-        onChange={() => setDirty(true)}
+        ref={formRef}
+        onChange={() => {
+          setDirty(true);
+          window.clearTimeout(autosaveTimer.current);
+          autosaveTimer.current = window.setTimeout(persist, AUTOSAVE_DELAY_MS);
+        }}
         onSubmit={() => setDirty(false)}
       >
         <input type="hidden" name="headSha" value={headSha} />
@@ -207,6 +304,16 @@ export function PostEditor({
             required
           />
         </label>
+
+        <p className="editor-autosave" role="status">
+          {restored
+            ? "Restored an unsaved local draft. Save to commit it."
+            : dirty
+              ? autosavedAt
+                ? `Unsaved changes. Draft kept locally at ${autosavedAt}.`
+                : "Unsaved changes. Local draft unavailable in this browser."
+              : "No unsaved changes."}
+        </p>
 
         <div className="editor-actions">
           <button type="submit" name="intent" value="save" className="btn" disabled={busy}>
