@@ -74,6 +74,51 @@ Two traps, both measured on this database:
 control characters, the snippet is HTML-escaped, and only then are they swapped
 for `<mark>`. Writing `<mark>` directly would render post prose as markup.
 
+## Search surfaces
+
+Three levels, each usable without the one above it.
+
+1. **`/search`, server rendered.** A GET form, facet chips as links, counts from
+   the same query that produced the list. Fully functional with scripting off.
+2. **JSON at the same URL** via `Accept: application/json`, `Vary: Accept`.
+   Same query, same index, not a second API. Negotiation runs in MIDDLEWARE,
+   never the loader: a document route's loader cannot return a raw Response, it
+   is handed to the component as `loaderData` and 500s on the first property
+   read. Same mechanism `/blog/:slug` uses for its markdown twin.
+   `app/lib/negotiate.ts` holds the one q-value parser both routes use.
+3. **The command palette**, `app/enhance/palette.ts`, its own chunk, site-wide
+   and separate from the blog bundle. 6.06 kB raw, 2.32 kB gzip. The blog
+   bundle is unchanged at 3.96 kB raw, 1.59 kB gzip.
+
+The header ships an `<a href="/search">`. The palette upgrades it in place; with
+no script it stays a link. Built on native `<dialog>.showModal()` for a real
+focus trap and focus return.
+
+Three palette traps, all found in a browser and none visible to typecheck:
+- `<input type="search">` has a NATIVE Escape-to-clear, so the first Escape
+  never reaches the dialog. Escape is handled explicitly in the keydown handler.
+- A fetch in flight when the palette closes resolves afterwards and repaints a
+  closed dialog. Closing bumps a sequence number; clearing the DOM alone is not
+  enough.
+- Do not name a module-level variable `status`: it collides with `window.status`.
+
+## Ask mode (Layer 2): NOT BUILT, and why
+
+`wrangler ai-search` exists and the product is in open beta, but creating an
+instance requires an AI Search API token minted in the dashboard. Tokens are not
+something an agent session creates. Nothing was half-built: there is no Ask code,
+no binding, and no dead branch waiting for one.
+
+When the token exists:
+
+    npx wrangler ai-search create dustinedwards \
+      --type web-crawler --source https://<deployed-origin> \
+      --hybrid-search --reranking
+
+Binding is `ai_search_namespaces` (`env.AI.autorag()` was retired in April 2026).
+Read the current API before writing any of it. Ask must never sit in the zero-JS
+path and no classic query may wait on it.
+
 ## Admin editor (second writer)
 
 `/admin/posts` is a second writer onto the same pipeline. It never writes rows
