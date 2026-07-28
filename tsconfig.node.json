@@ -1,6 +1,8 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["vite.config.ts", "scripts/**/*"],
+  // The shared markdown pipeline lives under app/ so the Worker can import it,
+  // but the build scripts import it too, so this project must list it as well.
+  "include": ["vite.config.ts", "scripts/**/*", "app/lib/content/**/*"],
   "compilerOptions": {
     "composite": true,
     "strict": true,
