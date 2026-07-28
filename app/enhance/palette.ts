@@ -128,12 +128,12 @@ function build() {
 
   // Native Escape fires `cancel`. Let it close, but reset state first so the
   // next open does not flash the previous results.
-  dialog.addEventListener("close", () => {
-    hits = [];
-    active = -1;
-    if (listbox) listbox.innerHTML = "";
-    if (input) input.setAttribute("aria-expanded", "false");
-  });
+  // Backstop for any close this code did not initiate. The reset also runs
+  // synchronously inside close(), because the `close` event proved unreliable
+  // to depend on: it was observed not firing at all for a programmatic
+  // dialog.close() on 2026-07-28, so a reset that only lived here would
+  // silently never run.
+  dialog.addEventListener("close", reset);
 
   input?.addEventListener("input", onInput);
   input?.addEventListener("keydown", onKeydown);
@@ -145,6 +145,9 @@ function optionId(i: number) {
 
 function render() {
   if (!listbox || !input) return;
+  // Belt and braces alongside the sequence bump in the close handler: never
+  // paint into a dialog that is not open.
+  if (dialog && !dialog.open) return;
 
   if (hits.length === 0) {
     listbox.innerHTML = "";
@@ -223,13 +226,19 @@ function syncSelection() {
 
 function renderRecent() {
   if (!listbox || !input) return;
+  // Recent searches are presentational buttons, not listbox options, so the
+  // combobox is NOT expanded while they are showing. Set before the early
+  // return: leaving a stale aria-expanded="true" over an empty listbox tells a
+  // screen reader there are options to arrow through when there are none.
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+
   const recent = readRecent();
   if (recent.length === 0) {
     listbox.innerHTML = "";
     if (statusLine) statusLine.textContent = "";
     return;
   }
-  input.setAttribute("aria-expanded", "false");
   listbox.innerHTML =
     `<li class="palette-group" role="presentation">Recent</li>` +
     recent
@@ -304,6 +313,20 @@ function open_() {
 }
 
 function onKeydown(event: KeyboardEvent) {
+  // Escape is handled here rather than left to the dialog, and it must come
+  // before every other branch.
+  //
+  // `<input type="search">` has a NATIVE Escape behaviour: the first press
+  // clears the field and stops there, so the keystroke never reaches the
+  // dialog and the palette stays open. A reader pressing Escape once and
+  // watching nothing close reasonably concludes the thing is broken. Measured
+  // in Chrome 2026-07-28.
+  if (event.key === "Escape") {
+    event.preventDefault();
+    close();
+    return;
+  }
+
   if (hits.length === 0 && event.key !== "Enter") return;
 
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -348,7 +371,32 @@ function openPalette() {
   renderRecent();
 }
 
+/**
+ * Drops every piece of open state.
+ *
+ * Bumping the sequence is the part that is not optional. Clearing the DOM alone
+ * loses a race: a fetch still in flight when the reader closes the palette
+ * resolves afterwards and repaints the listbox of a closed dialog, leaving
+ * stale options and aria-expanded="true" behind it. Observed 2026-07-28, with
+ * the response outliving the close by a few hundred milliseconds.
+ */
+function reset() {
+  sequence += 1;
+  hits = [];
+  active = -1;
+  clearTimeout(debounce);
+  if (listbox) listbox.innerHTML = "";
+  if (statusLine) statusLine.textContent = "";
+  if (input) {
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+  }
+}
+
 function close() {
+  // Reset BEFORE closing and synchronously, rather than trusting the dialog's
+  // `close` event to arrive. See the listener in build().
+  reset();
   dialog?.close();
 }
 
