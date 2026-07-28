@@ -1,5 +1,5 @@
 ---
-title: "Round trip probe, edited"
+title: "Round trip probe, second edit"
 slug: round-trip-probe
 description: "Throwaway post created to verify the editor write path end to end."
 date: 2026-07-28
