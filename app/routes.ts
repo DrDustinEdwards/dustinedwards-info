@@ -9,6 +9,7 @@ export default [
   route("blog/feed.json", "routes/blog.feed[.json].ts"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
+  route("search", "routes/search.tsx"),
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
   route("llms.txt", "routes/llms.ts"),
