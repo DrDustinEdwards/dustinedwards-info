@@ -4,6 +4,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getEnv } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate";
+import { hasFilters } from "~/lib/search/query.mjs";
 import { search, zeroState, type SearchHit } from "~/lib/search/search.server";
 import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/search";
@@ -100,9 +101,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const result = await search(env, { ...params, pageSize: PAGE_SIZE });
 
   // Only ask for suggestions when there is a query that found nothing. A blank
-  // /search is a search box, not a failure, and does not need consoling.
-  const suggestions =
-    !result.parsed.isEmpty && result.total === 0 ? await zeroState(env, result.parsed) : null;
+  // /search is a search box, not a failure, and does not need consoling. A
+  // filter that matched nothing (tag:typo) is a failure and does.
+  const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
+  const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
   return { params, result, suggestions };
 }
@@ -157,6 +159,8 @@ const WHY_LABEL: Record<string, string> = {
   title: "title",
   tag: "tag",
   body: "body",
+  // The browse path returned this on filters alone, with no text matched.
+  filter: "filter",
 };
 
 function Result({ hit }: { hit: SearchHit }) {
@@ -212,7 +216,10 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions } = loaderData;
   const { facets } = result;
   const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
-  const hasQuery = !result.parsed.isEmpty;
+  // `isEmpty` means no matchable TEXT, which is not the same as no request. A
+  // bare year or a tag chip clicked from an empty box is a real query answered
+  // by the browse path, and it still has a count and a result list to render.
+  const hasQuery = !result.parsed.isEmpty || hasFilters(result.parsed);
 
   return (
     <>
