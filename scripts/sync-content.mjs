@@ -22,7 +22,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
-import { ARTIFACT_PATH } from "./build-content.mjs";
+import { ARTIFACT_PATH, lastCommitDate } from "./build-content.mjs";
 
 const DB_NAME = "dustinedwards";
 
@@ -60,6 +60,14 @@ function buildSql(posts) {
   for (const post of posts) {
     const publishAt = Math.floor(Date.parse(post.publishAt) / 1000);
     const status = post.draft ? "draft" : "published";
+    // Revision date: explicit frontmatter wins, otherwise the last commit that
+    // touched the file. Applied here rather than in the artifact because the
+    // artifact is byte-compared and a git date would make it fail on every
+    // content commit. Falls back to now when there is no history to read.
+    const revised = post.updated ?? lastCommitDate(post.sourcePath);
+    const updatedAt = revised
+      ? Math.floor(Date.parse(`${revised}T00:00:00.000Z`) / 1000)
+      : null;
     out.push(
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, updated_at) VALUES (` +
@@ -67,13 +75,13 @@ function buildSql(posts) {
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
         `${num(post.readingTimeMinutes)}, ${sql(post.sourcePath)}, ` +
-        `${sql(JSON.stringify(post.toc))}, unixepoch()) ` +
+        `${sql(JSON.stringify(post.toc))}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
         `publish_at = excluded.publish_at, cover_image = excluded.cover_image, ` +
         `cover_alt = excluded.cover_alt, reading_time_minutes = excluded.reading_time_minutes, ` +
-        `source_path = excluded.source_path, toc = excluded.toc, updated_at = unixepoch();`,
+        `source_path = excluded.source_path, toc = excluded.toc, updated_at = excluded.updated_at;`,
     );
   }
 

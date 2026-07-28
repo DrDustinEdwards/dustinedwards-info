@@ -7,10 +7,12 @@
  * from its source without someone noticing.
  */
 
+import { execFileSync } from "node:child_process";
 import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
 export const CONTENT_DIR = path.join("content", "posts");
@@ -53,7 +55,35 @@ export async function buildArtifact() {
     slugs.add(post.slug);
   }
 
-  return `${JSON.stringify({ posts }, null, 2)}\n`;
+  return `${JSON.stringify({ posts: withRelated(posts) }, null, 2)}\n`;
+}
+
+/**
+ * The date of the last commit that touched a file, as YYYY-MM-DD.
+ *
+ * Deliberately NOT written into the gated artifact. The artifact is generated
+ * before the commit that contains it, so it would record the file's PREVIOUS
+ * commit date, and the next build would compute the new one. Every ordinary
+ * content commit from a clone would then leave `check:content` red. Git dates
+ * are applied at sync time instead, where nothing compares them byte for byte.
+ *
+ * Exported for `sync:content`.
+ *
+ * @param {string} file
+ * @returns {string | null}
+ */
+export function lastCommitDate(file) {
+  try {
+    const out = execFileSync(
+      "git",
+      ["log", "-1", "--format=%cd", "--date=format:%Y-%m-%d", "--", file],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trim();
+    return out || null;
+  } catch {
+    // No git, no history, or a shallow clone. Absence is the honest answer.
+    return null;
+  }
 }
 
 async function main() {
