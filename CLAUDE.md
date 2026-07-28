@@ -72,6 +72,36 @@ Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write o
 this repo). Without it the editor still renders and previews, and saving reports
 that it is unavailable rather than half-working.
 
+## Zero-JS rule (gate, not preference)
+
+Every public blog route must be fully functional with JavaScript disabled.
+All client JS is one chunk, `app/enhance/blog.ts`, loaded by dynamic import
+from `BlogEnhancements` and therefore only on blog routes. It is 3.87 kB raw,
+1.55 kB gzip. Everything in it upgrades markup that already works: the TOC is
+anchor links, footnotes are jump links, images are images, and Copy as Markdown
+is an anchor to the .md twin.
+
+Do not load it with a `?url` import. That copies the file verbatim as an asset
+and serves the browser raw TypeScript. Measured 2026-07-28.
+
+Line highlighting comes from fence meta (```ts {2,5-7}) and is applied in the
+PIPELINE, so it is in the stored HTML rather than painted on by script.
+
+## Revision dates
+
+`updated_at` is derived from the last git commit touching the post file, at
+SYNC time. Never put a git date in `content/generated/posts.json`: the artifact
+is generated before the commit that contains it, so it records the previous
+commit and the next build computes a different one, leaving `check:content` red
+after every ordinary content commit. Explicit `updated` frontmatter overrides.
+
+## Cross-post data
+
+`related` is computed over the whole corpus by `withRelated`, which BOTH callers
+run. Relatedness is a property of the set: adding or retagging one post changes
+the related list of every post sharing a tag, so an editor save that spliced one
+entry would make the artifact disagree with the next build.
+
 Markdown rendering lives in `app/lib/content/pipeline.mjs` so the Worker and the
 build scripts import the same module. There must never be a second renderer.
 Highlighting is `shiki/core` with the explicit `LANGUAGES` list, because the full
