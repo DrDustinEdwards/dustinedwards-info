@@ -2,7 +2,7 @@
   "posts": [
     {
       "slug": "round-trip-probe",
-      "title": "Round trip probe, edited",
+      "title": "Round trip probe, second edit",
       "description": "Throwaway post created to verify the editor write path end to end.",
       "date": "2026-07-28",
       "publishAt": "2026-07-28T00:00:00.000Z",
