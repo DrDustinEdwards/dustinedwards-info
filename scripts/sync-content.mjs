@@ -70,18 +70,24 @@ function buildSql(posts) {
       : null;
     out.push(
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
-        `cover_image, cover_alt, reading_time_minutes, source_path, toc, updated_at) VALUES (` +
+        `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
+        `further_reading, og_title, og_description, related, updated_at) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
         `${num(post.readingTimeMinutes)}, ${sql(post.sourcePath)}, ` +
-        `${sql(JSON.stringify(post.toc))}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
+        `${sql(JSON.stringify(post.toc))}, ${post.featured ? 1 : 0}, ${sql(post.series)}, ${num(post.part)}, ` +
+        `${sql(JSON.stringify(post.furtherReading))}, ${sql(post.ogTitle)}, ${sql(post.ogDescription)}, ` +
+        `${sql(JSON.stringify(post.related))}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
         `publish_at = excluded.publish_at, cover_image = excluded.cover_image, ` +
         `cover_alt = excluded.cover_alt, reading_time_minutes = excluded.reading_time_minutes, ` +
-        `source_path = excluded.source_path, toc = excluded.toc, updated_at = excluded.updated_at;`,
+        `source_path = excluded.source_path, toc = excluded.toc, featured = excluded.featured, ` +
+        `series = excluded.series, part = excluded.part, further_reading = excluded.further_reading, ` +
+        `og_title = excluded.og_title, og_description = excluded.og_description, ` +
+        `related = excluded.related, updated_at = excluded.updated_at;`,
     );
   }
 

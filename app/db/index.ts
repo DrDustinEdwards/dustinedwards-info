@@ -10,6 +10,7 @@ import {
   lt,
   lte,
   or,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -69,6 +70,9 @@ const postCard = {
   coverImage: posts.coverImage,
   coverAlt: posts.coverAlt,
   readingTimeMinutes: posts.readingTimeMinutes,
+  featured: posts.featured,
+  series: posts.series,
+  part: posts.part,
 };
 
 function isBlogPost() {
@@ -103,26 +107,38 @@ async function tagsForPosts(db: DB, postIds: number[]) {
  */
 export async function listBlogPosts(
   env: Env,
-  options: { tag?: string | null; page?: number; perPage?: number } = {},
+  options: {
+    tag?: string | null;
+    year?: string | null;
+    page?: number;
+    perPage?: number;
+  } = {},
 ) {
   const db = getDb(env);
   const perPage = options.perPage ?? 10;
   const page = Math.max(1, options.page ?? 1);
   const tag = options.tag?.trim() || null;
+  const year = options.year?.trim() || null;
 
-  const where = tag
-    ? and(
-        isBlogPost(),
-        inArray(
-          posts.id,
-          db
-            .select({ id: postTags.postId })
-            .from(postTags)
-            .innerJoin(tags, eq(tags.id, postTags.tagId))
-            .where(eq(tags.slug, tag)),
-        ),
-      )
-    : isBlogPost();
+  // Both filters are applied in the query, so the HTML that ships is already
+  // narrowed rather than hidden in the browser.
+  const clauses = [isBlogPost()];
+  if (tag) {
+    clauses.push(
+      inArray(
+        posts.id,
+        db
+          .select({ id: postTags.postId })
+          .from(postTags)
+          .innerJoin(tags, eq(tags.id, postTags.tagId))
+          .where(eq(tags.slug, tag)),
+      ),
+    );
+  }
+  if (year) {
+    clauses.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
+  }
+  const where = and(...clauses);
 
   const [{ total }] = await db.select({ total: count() }).from(posts).where(where);
 
@@ -143,6 +159,33 @@ export async function listBlogPosts(
     perPage,
     pageCount: Math.max(1, Math.ceil(total / perPage)),
   };
+}
+
+/**
+ * Publication years with a post count, newest first.
+ *
+ * Drives the archive route. Computed in SQL rather than by pulling every post
+ * and grouping in the loader, so the query cost does not grow with the corpus.
+ */
+export async function listBlogYears(env: Env) {
+  return getDb(env)
+    .select({
+      year: sql<string>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`.as("year"),
+      total: count(),
+    })
+    .from(posts)
+    .where(isBlogPost())
+    .groupBy(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`)
+    .orderBy(desc(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`));
+}
+
+/** Every part of a series, in order, for the part index on a post. */
+export async function listSeriesParts(env: Env, series: string) {
+  return getDb(env)
+    .select({ slug: posts.slug, title: posts.title, part: posts.part })
+    .from(posts)
+    .where(and(isBlogPost(), eq(posts.series, series)))
+    .orderBy(asc(posts.part));
 }
 
 /** Every tag that has at least one publicly visible post, with its count. */

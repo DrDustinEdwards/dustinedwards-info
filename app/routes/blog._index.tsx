@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 
+import { BlogEnhancements } from "~/components/blog-enhancements";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { listBlogPosts, listBlogTags } from "~/db";
+import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { getEnv } from "~/lib/context";
 import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN, breadcrumbJsonLd } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
@@ -16,17 +17,30 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Filter state lives in the URL and is applied in the query, so the HTML that
   // ships is already the filtered list rather than a client-side narrowing.
   const tag = url.searchParams.get("tag");
+  const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  const [listing, tagList] = await Promise.all([
-    listBlogPosts(env, { tag, page, perPage: PER_PAGE }),
+  const [listing, tagList, yearList] = await Promise.all([
+    listBlogPosts(env, { tag, year, page, perPage: PER_PAGE }),
     listBlogTags(env),
+    listBlogYears(env),
   ]);
+
+  // The featured post is surfaced only on the unfiltered first page. Inside a
+  // filter it would be noise, and repeating it above a list it already appears
+  // in reads as a duplicate.
+  const featured =
+    !tag && !year && page === 1
+      ? (listing.posts.find((post) => post.featured) ?? null)
+      : null;
 
   return {
     ...listing,
     tags: tagList,
+    years: yearList,
     activeTag: tag,
+    activeYear: year,
+    featured,
   };
 }
 
@@ -74,11 +88,13 @@ function formatDate(value: string | Date | null) {
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {
-  const { posts, tags, activeTag, page, pageCount } = loaderData;
+  const { posts, tags, years, activeTag, activeYear, featured, page, pageCount } =
+    loaderData;
 
   const pageHref = (n: number) => {
     const params = new URLSearchParams();
     if (activeTag) params.set("tag", activeTag);
+    if (activeYear) params.set("year", activeYear);
     if (n > 1) params.set("page", String(n));
     const qs = params.toString();
     return qs ? `/blog?${qs}` : "/blog";
@@ -87,7 +103,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main className="page">
+      <main className="page" id="main">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -127,6 +143,35 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </nav>
         )}
 
+        {years.length > 1 && (
+          <nav className="year-archive" aria-label="Filter posts by year">
+            <Link to="/blog" aria-current={activeYear ? undefined : "true"}>
+              All years
+            </Link>
+            {years.map((entry) => (
+              <Link
+                key={entry.year}
+                to={`/blog?year=${entry.year}`}
+                aria-current={activeYear === entry.year ? "true" : undefined}
+              >
+                {entry.year} <span className="tag-count">{entry.total}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        {featured && (
+          <section className="featured-post" aria-labelledby="featured-heading">
+            <p className="featured-label" id="featured-heading">
+              Featured
+            </p>
+            <h2 className="post-card-title">
+              <Link to={`/blog/${featured.slug}`}>{featured.title}</Link>
+            </h2>
+            {featured.description && <p>{featured.description}</p>}
+          </section>
+        )}
+
         {posts.length === 0 ? (
           <p className="muted">No posts here yet.</p>
         ) : (
@@ -146,6 +191,11 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
                     <> · {post.readingTimeMinutes} min read</>
                   )}
                 </p>
+                {post.series && (
+                  <p className="post-card-series">
+                    {post.series}, part {post.part}
+                  </p>
+                )}
                 {post.description && <p>{post.description}</p>}
                 {post.tags.length > 0 && (
                   <p className="post-card-tags">
@@ -172,6 +222,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         )}
       </main>
       <SiteFooter />
+      <BlogEnhancements />
     </>
   );
 }
