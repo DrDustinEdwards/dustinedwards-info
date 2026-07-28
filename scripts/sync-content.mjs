@@ -122,6 +122,40 @@ function buildSql(posts) {
 }
 
 /**
+ * Rewrites the search index from the artifact's records.
+ *
+ * search_docs is fully derived, so it is replaced outright rather than
+ * reconciled. Both FTS tables are then rebuilt, which is the documented bulk
+ * pattern for external-content fts5 and the one that does not depend on trigger
+ * ordering inside a batch. There are deliberately no triggers on search_docs.
+ *
+ * @param {any[]} records
+ */
+function buildSearchSql(records) {
+  /** @type {string[]} */
+  const out = [`DELETE FROM search_docs;`];
+
+  for (const record of records) {
+    const publishAt = record.publishAt
+      ? Math.floor(Date.parse(record.publishAt) / 1000)
+      : null;
+    out.push(
+      `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid, doc_title, ` +
+        `doc_url, anchor, ordinal, status, publish_at) VALUES (` +
+        `${sql(record.uid)}, ${sql(record.url)}, ${sql(record.type)}, ${sql(record.title)}, ` +
+        `${sql(record.body)}, ${sql(record.tags)}, ${sql(record.docTags)}, ${sql(record.docUid)}, ` +
+        `${sql(record.docTitle)}, ${sql(record.docUrl)}, ${sql(record.anchor)}, ` +
+        `${num(record.ordinal)}, ${sql(record.status)}, ${num(publishAt)});`,
+    );
+  }
+
+  out.push(`INSERT INTO search_identity (search_identity) VALUES ('rebuild');`);
+  out.push(`INSERT INTO search_prose (search_prose) VALUES ('rebuild');`);
+
+  return `${out.join("\n")}\n`;
+}
+
+/**
  * Runs wrangler through the shell as one command string. Passing an args array
  * alongside shell:true is deprecated, and npx needs a shell on Windows.
  *
@@ -140,7 +174,12 @@ async function main() {
   const target = process.argv.includes("--remote") ? "--remote" : "--local";
 
   const artifact = await readFile(ARTIFACT_PATH, "utf8");
-  const { posts } = JSON.parse(artifact);
+  const { posts, records } = JSON.parse(artifact);
+  if (!Array.isArray(records)) {
+    throw new Error(
+      `${ARTIFACT_PATH} carries no records array. Run npm run build:content first.`,
+    );
+  }
 
   // mkdir returns undefined when the directory already exists, so the path is
   // computed here rather than taken from its return value.
@@ -156,6 +195,19 @@ async function main() {
     throw new Error("wrangler d1 execute failed");
   }
 
+  // Search index second, as its own statement file. Kept separate from the post
+  // sync so a failure here names the search index rather than looking like a
+  // content failure, and so the posts path is unchanged by search work.
+  const searchPath = path.join(dir, "sync-search.sql");
+  await writeFile(searchPath, buildSearchSql(records), "utf8");
+
+  console.log(`sync:content applying ${records.length} search records`);
+  const indexed = wrangler(`d1 execute ${DB_NAME} ${target} --file "${searchPath}" --yes`);
+  if (indexed.status !== 0) {
+    console.error(indexed.stdout);
+    throw new Error("wrangler d1 execute failed for the search index");
+  }
+
   // The index is only useful if it actually mirrors the table. Assert it rather
   // than assume the rebuild worked.
   // Counts the FTS shadow table, not posts_fts itself. On an external-content
@@ -167,7 +219,10 @@ async function main() {
   const verify = wrangler(
     `d1 execute ${DB_NAME} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
-      '(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags;"',
+      '(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, ' +
+      '(SELECT COUNT(*) FROM search_docs) AS docs, ' +
+      '(SELECT COUNT(*) FROM search_identity_docsize) AS identity, ' +
+      '(SELECT COUNT(*) FROM search_prose_docsize) AS prose;"',
   );
   if (verify.status !== 0) {
     console.error(verify.stdout);
@@ -181,6 +236,9 @@ async function main() {
   console.log(
     `sync:content posts=${row.posts} posts_fts=${row.fts} tags=${row.tags} post_tags=${row.post_tags}`,
   );
+  console.log(
+    `sync:content search_docs=${row.docs} identity=${row.identity} prose=${row.prose}`,
+  );
 
   if (row.posts !== row.fts) {
     throw new Error(
@@ -190,7 +248,22 @@ async function main() {
   if (row.posts < posts.length) {
     throw new Error(`expected at least ${posts.length} posts in D1, found ${row.posts}`);
   }
-  console.log("sync:content ok. FTS row count matches posts.");
+  // Same trap as posts_fts: COUNT(*) on either search index reads through to
+  // search_docs and can never disagree with it. These count the docsize shadow
+  // tables, which hold one row per INDEXED document and go to zero on a failed
+  // rebuild, so they are the only counts here that can actually fail.
+  if (row.docs !== records.length) {
+    throw new Error(
+      `search_docs=${row.docs} but the artifact carries ${records.length} records.`,
+    );
+  }
+  if (row.identity !== row.docs || row.prose !== row.docs) {
+    throw new Error(
+      `search index drift: search_docs=${row.docs} but identity=${row.identity} and ` +
+        `prose=${row.prose}. A rebuild did not take.`,
+    );
+  }
+  console.log("sync:content ok. FTS and search index row counts match.");
 }
 
 main().catch((/** @type {unknown} */ error) => {

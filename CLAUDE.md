@@ -27,6 +27,8 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run build:content` regenerate `content/generated/posts.json` from `content/posts/`
 - `npm run check:content` gate; fails when the committed artifact differs from a fresh generation
 - `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
+- `npm run check:search` gate over the query parser and rank fusion (pure, no database)
+- `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `wrangler deploy` (auto-deploy is not wired; deploy is manual)
 
@@ -40,6 +42,37 @@ every read. Ruling and grounds: dustinedwards/decisions.md, 2026-07-27.
 Editing a post means editing the markdown, running `build:content`, committing
 the artifact alongside it, then `sync:content`. Never hand-edit the artifact and
 never write prose straight into a D1 row: both defeat the gate.
+
+## Search index
+
+Two FTS5 tables over one derived table, `search_docs`. `search_identity`
+(unicode61, no stemming) carries titles and tags for exact-token lookup;
+`search_prose` (porter) carries bodies for relevance. One table cannot serve
+both, because an fts5 tokenizer is set per TABLE, not per column. The two ranked
+lists are fused by RECIPROCAL RANK at k=60, never by raw bm25 score: scores from
+two tokenizers over two average document lengths are not comparable on value.
+
+**Records are section-grained.** One post yields a document record plus one per
+heading, so a hit deep-links to the heading that answers it. Derivation lives in
+`app/lib/search/records.mjs` and BOTH writers call it, exactly as both call
+`withRelated`. Records ride in the gated artifact, so `check:content` covers
+them. `app/lib/content/artifact.mjs` owns the artifact's shape so the build
+script and the editor cannot disagree about it.
+
+`posts_fts` and its three per-row triggers are untouched and still serve the
+editor. `search_docs` has NO triggers: it is rewritten wholesale and both
+indexes are then rebuilt.
+
+Two traps, both measured on this database:
+- `COUNT(*)` on either search index reads THROUGH to `search_docs` and can never
+  detect drift. Count `search_identity_docsize` / `search_prose_docsize`.
+  Verified: with the index emptied, `COUNT(*)` still read 7 while docsize read 0
+  and `MATCH` returned nothing.
+- Never `DELETE FROM` either index. The repair is `('rebuild')`.
+
+`snippet()` splices markers into text it does not escape, so the markers are
+control characters, the snippet is HTML-escaped, and only then are they swapped
+for `<mark>`. Writing `<mark>` directly would render post prose as markup.
 
 ## Admin editor (second writer)
 
