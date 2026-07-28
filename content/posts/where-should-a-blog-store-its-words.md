@@ -3,8 +3,8 @@ title: "Where should a blog store its words?"
 slug: where-should-a-blog-store-its-words
 description: "Two content models for a Cloudflare-native blog, one database, and the four arguments that settled it."
 date: 2026-07-27
-draft: false
 tags: [cloudflare, d1, content-model, architecture]
+draft: false
 ---
 
 I'm rebuilding my site as a fully Cloudflare-native stack: React Router in framework mode, a Worker in front, D1 for data, KV for cache, R2 for media. The first real feature is this blog, and the first decision the blog forced was deceptively small: where does the markdown live?
