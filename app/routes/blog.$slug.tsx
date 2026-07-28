@@ -80,6 +80,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       updatedAt: post.updatedAt,
       coverImage: post.coverImage,
       coverAlt: post.coverAlt,
+      ogImage: post.ogImage,
       readingTimeMinutes: post.readingTimeMinutes,
       tags: post.tags,
       previous: post.previous,
@@ -125,7 +126,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
   // frontmatter.
   const socialTitle = post.ogTitle ?? post.title;
   const socialDescription = post.ogDescription ?? description;
-  const image = post.coverImage ? `${SITE_ORIGIN}${post.coverImage}` : undefined;
+  // A per-post cover always wins. The generated card is the fallback, and it is
+  // absent rather than broken when build:og has not run for this post yet.
+  const socialImage = post.coverImage ?? post.ogImage ?? null;
+  const image = socialImage ? `${SITE_ORIGIN}${socialImage}` : undefined;
 
   return [
     { title: `${post.title} | ${SITE.name}` },

@@ -29,6 +29,7 @@ export default [
     route("posts", "routes/admin.posts._index.tsx"),
     route("posts/new", "routes/admin.posts.new.tsx"),
     route("posts/:slug/edit", "routes/admin.posts.$slug.edit.tsx"),
+    route("posts/:slug/history", "routes/admin.posts.$slug.history.tsx"),
   ]),
 
   // API

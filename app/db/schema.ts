@@ -50,6 +50,8 @@ export const posts = sqliteTable(
     ogDescription: text("og_description"),
     /** JSON array of { slug, title, shared }, computed over the whole corpus. */
     related: text("related"),
+    /** Generated social card path, set by sync after build:og uploads it. */
+    ogImage: text("og_image"),
   },
   (t) => [
     check("posts_kind_check", sql`${t.kind} in ('page', 'post')`),
