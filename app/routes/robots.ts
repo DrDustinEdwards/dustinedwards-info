@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/robots";
 
 // AI crawlers we explicitly welcome for training and search.
@@ -10,8 +11,8 @@ const AI_AGENTS = [
   "Google-Extended",
 ];
 
-export function loader({ request }: Route.LoaderArgs) {
-  const origin = new URL(request.url).origin;
+export function loader() {
+  const origin = SITE_ORIGIN;
 
   const block = (agent: string) =>
     `User-agent: ${agent}\nAllow: /\nDisallow: /admin\n`;

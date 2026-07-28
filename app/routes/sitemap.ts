@@ -1,12 +1,13 @@
 import { listBlogPosts, listPublicPosts } from "~/db";
 import { getEnv } from "~/lib/context";
+import { SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/sitemap";
 
 // Static, always-present URLs.
 const STATIC_PATHS = ["/", "/blog"];
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const origin = new URL(request.url).origin;
+export async function loader({ context }: Route.LoaderArgs) {
+  const origin = SITE_ORIGIN;
   const env = getEnv(context);
 
   const [rows, blog] = await Promise.all([

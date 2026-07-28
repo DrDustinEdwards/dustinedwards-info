@@ -11,6 +11,8 @@ export default [
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
   route("llms.txt", "routes/llms.ts"),
+  route("llms-full.txt", "routes/llms-full[.txt].ts"),
+  route("media/*", "routes/media.$.ts"),
 
   // Auth
   route("login", "routes/login.tsx"),
@@ -22,6 +24,10 @@ export default [
     route("content", "routes/admin.content.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
+    route("media", "routes/admin.media.ts"),
+    route("posts", "routes/admin.posts._index.tsx"),
+    route("posts/new", "routes/admin.posts.new.tsx"),
+    route("posts/:slug/edit", "routes/admin.posts.$slug.edit.tsx"),
   ]),
 
   // API

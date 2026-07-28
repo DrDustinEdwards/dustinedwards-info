@@ -1,6 +1,6 @@
 import { listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL, SITE } from "~/lib/seo";
+import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.rss[.xml]";
 
 /** XML text escaping. Applied to every interpolated value without exception. */
@@ -13,8 +13,8 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const origin = new URL(request.url).origin;
+export async function loader({ context }: Route.LoaderArgs) {
+  const origin = SITE_ORIGIN;
   // Reads through listBlogPosts, so publiclyVisible() applies to the feed on
   // exactly the same terms as the index.
   const { posts } = await listBlogPosts(getEnv(context), { perPage: 20 });

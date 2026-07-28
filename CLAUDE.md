@@ -41,6 +41,44 @@ Editing a post means editing the markdown, running `build:content`, committing
 the artifact alongside it, then `sync:content`. Never hand-edit the artifact and
 never write prose straight into a D1 row: both defeat the gate.
 
+## Admin editor (second writer)
+
+`/admin/posts` is a second writer onto the same pipeline. It never writes rows
+directly. The path is:
+
+    browser -> action -> gates -> GitHub commit -> generate -> D1
+
+1. **Gates, server side, before anything is written.** The same zod frontmatter
+   schema and a wide-dash check run inside the action. API commits bypass the
+   local PreToolUse hooks entirely, so without these the style and schema rules
+   would not reach anything written in the editor. A rejection names the field
+   or the line.
+2. **One commit per save, via the Git Data API.** A save changes both
+   `content/posts/<slug>.md` and the regenerated `content/generated/posts.json`
+   and they land together. The Contents API cannot do this (one file per call),
+   and splitting it into two commits leaves `check:content` red in between.
+3. **D1 is written only after the commit lands.** If GitHub is unreachable the
+   save fails whole. There is no D1-only write and no reconcile-later queue.
+4. **Conflict rule.** The editor records the head commit of `main` when it loads
+   and sends it back on save. If `main` moved, the save is refused with a
+   conflict and the author reloads. The editor never overwrites a change it did
+   not see, and the ref update is never forced.
+5. **Deleting** removes the file, its artifact entry, and its rows, in that order.
+
+`Regenerate all` on `/admin/posts` re-syncs D1 from the committed artifact. It is
+the recovery path when rows drift from what the repo says.
+
+Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write on
+this repo). Without it the editor still renders and previews, and saving reports
+that it is unavailable rather than half-working.
+
+Markdown rendering lives in `app/lib/content/pipeline.mjs` so the Worker and the
+build scripts import the same module. There must never be a second renderer.
+Highlighting is `shiki/core` with the explicit `LANGUAGES` list, because the full
+shiki bundle ships every grammar and took the Worker to 14 MB; a fenced block in
+an unlisted language renders as plain text in published output as well as
+preview.
+
 ## Hard rules
 
 1. Every public read goes through `publiclyVisible()`. It hides drafts and future publish_at rows. Do not query posts for public output without it.

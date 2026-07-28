@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["vite.config.ts", "scripts/**/*"],
+  // The shared markdown pipeline lives under app/ so the Worker can import it,
+  // but the build scripts import it too, so this project must list it as well.
+  // Named exactly, not globbed: app/lib/content also holds wasm.server.ts, which
+  // is Worker-only and whose .wasm import does not resolve in this project.
+  "include": ["vite.config.ts", "scripts/**/*", "app/lib/content/pipeline.mjs"],
   "compilerOptions": {
     "composite": true,
     "strict": true,
