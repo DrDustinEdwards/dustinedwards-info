@@ -94,6 +94,25 @@ The header ships an `<a href="/search">`. The palette upgrades it in place; with
 no script it stays a link. Built on native `<dialog>.showModal()` for a real
 focus trap and focus return.
 
+### Two query paths, not one
+
+A query carrying filters but no text (`2026`, `tag:cloudflare`, a facet chip
+clicked from an empty box) has nothing to give fts5, so `toMatchExpression`
+returns null. Those go to the BROWSE path: the same filter SQL run straight over
+`search_docs`, date ordered, **document records only**. Returning all seven
+records of one post for `2026` would present the corpus as seven times its size,
+and there is no heading a bare filter had in mind.
+
+`hasFilters()` in `query.mjs` is the dispatch predicate and lives there, not in
+`search.server.ts`, so `check:search` can assert it. The browse snippet is the
+head of the body with NO `<mark>` in it: nothing was matched, so highlighting
+anything would claim a match that never happened. The label is `filter`.
+
+Found on the live deploy 2026-07-28, not by typecheck: every filter-only query
+returned zero. The parser was correct the whole time. Note this also means
+`isEmpty` on a parsed query means "no matchable TEXT", which is not the same
+question as "did the reader ask for anything".
+
 Three palette traps, all found in a browser and none visible to typecheck:
 - `<input type="search">` has a NATIVE Escape-to-clear, so the first Escape
   never reaches the dialog. Escape is handled explicitly in the keydown handler.

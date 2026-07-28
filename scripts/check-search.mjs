@@ -16,7 +16,13 @@
  * silently make a search for port 8080 return nothing at all.
  */
 
-import { fuse, parseQuery, toMatchExpression, RRF_K } from "../app/lib/search/query.mjs";
+import {
+  fuse,
+  hasFilters,
+  parseQuery,
+  toMatchExpression,
+  RRF_K,
+} from "../app/lib/search/query.mjs";
 
 let checks = 0;
 /** @type {string[]} */
@@ -197,6 +203,49 @@ eq(
 {
   const fused = fuse([[{ uid: "x" }], []]);
   ok("fuse NEGATIVE: an empty list contributes nothing", fused.length === 1);
+}
+
+// -- Rule: the browse path, filters with nothing to match on -----------------
+//
+// Found live 2026-07-28. The parser was right and the query still returned
+// nothing: a bare year leaves no text, so toMatchExpression returns null and
+// the index path has nothing to run. These assertions pin the pair of facts a
+// caller has to act on, that there is no MATCH expression AND that there is
+// still a query to answer.
+{
+  const year = parseQuery("2026", OPTS);
+  ok("browse: a bare year leaves no MATCH expression", toMatchExpression(year, false) === null);
+  ok("browse: a bare year is still a query", hasFilters(year) === true);
+
+  const tag = parseQuery("tag:cloudflare", OPTS);
+  ok("browse: a bare tag leaves no MATCH expression", toMatchExpression(tag, false) === null);
+  ok("browse: a bare tag is still a query", hasFilters(tag) === true);
+
+  const type = parseQuery("type:post", OPTS);
+  ok("browse: a bare type is still a query", hasFilters(type) === true);
+
+  // The parameter form. ?tag=cloudflare with no q parses to nothing at all and
+  // the filter is pushed on afterwards, which is the path that renders the page.
+  const fromParam = parseQuery("", OPTS);
+  ok("browse NEGATIVE: an empty query is not a query", hasFilters(fromParam) === false);
+  fromParam.tags.push("cloudflare");
+  ok("browse: ?tag= with no q becomes a query", hasFilters(fromParam) === true);
+}
+// NEGATIVE: text alone must NOT take the browse path, or every ordinary search
+// would silently stop ranking and start listing by date.
+{
+  const text = parseQuery("d1", OPTS);
+  ok("browse NEGATIVE: plain text has no filters", hasFilters(text) === false);
+  ok("browse NEGATIVE: plain text does have a MATCH expression", toMatchExpression(text, false) !== null);
+
+  const both = parseQuery("d1 2026", OPTS);
+  ok("browse NEGATIVE: text plus a year still matches on the index", toMatchExpression(both, false) !== null);
+  ok("browse: text plus a year also carries the filter", hasFilters(both) === true);
+
+  // An out-of-range number is text, not a filter, so it must not reach browse.
+  const port = parseQuery("8080", OPTS);
+  ok("browse NEGATIVE: an out-of-range number is not a filter", hasFilters(port) === false);
+  ok("browse NEGATIVE: an out-of-range number is text to match", toMatchExpression(port, false) !== null);
 }
 
 // -- Report ------------------------------------------------------------------
