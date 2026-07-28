@@ -27,6 +27,8 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run build:content` regenerate `content/generated/posts.json` from `content/posts/`
 - `npm run check:content` gate; fails when the committed artifact differs from a fresh generation
 - `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
+- `npm run check:search` gate over the query parser and rank fusion (pure, no database)
+- `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `wrangler deploy` (auto-deploy is not wired; deploy is manual)
 
@@ -40,6 +42,82 @@ every read. Ruling and grounds: dustinedwards/decisions.md, 2026-07-27.
 Editing a post means editing the markdown, running `build:content`, committing
 the artifact alongside it, then `sync:content`. Never hand-edit the artifact and
 never write prose straight into a D1 row: both defeat the gate.
+
+## Search index
+
+Two FTS5 tables over one derived table, `search_docs`. `search_identity`
+(unicode61, no stemming) carries titles and tags for exact-token lookup;
+`search_prose` (porter) carries bodies for relevance. One table cannot serve
+both, because an fts5 tokenizer is set per TABLE, not per column. The two ranked
+lists are fused by RECIPROCAL RANK at k=60, never by raw bm25 score: scores from
+two tokenizers over two average document lengths are not comparable on value.
+
+**Records are section-grained.** One post yields a document record plus one per
+heading, so a hit deep-links to the heading that answers it. Derivation lives in
+`app/lib/search/records.mjs` and BOTH writers call it, exactly as both call
+`withRelated`. Records ride in the gated artifact, so `check:content` covers
+them. `app/lib/content/artifact.mjs` owns the artifact's shape so the build
+script and the editor cannot disagree about it.
+
+`posts_fts` and its three per-row triggers are untouched and still serve the
+editor. `search_docs` has NO triggers: it is rewritten wholesale and both
+indexes are then rebuilt.
+
+Two traps, both measured on this database:
+- `COUNT(*)` on either search index reads THROUGH to `search_docs` and can never
+  detect drift. Count `search_identity_docsize` / `search_prose_docsize`.
+  Verified: with the index emptied, `COUNT(*)` still read 7 while docsize read 0
+  and `MATCH` returned nothing.
+- Never `DELETE FROM` either index. The repair is `('rebuild')`.
+
+`snippet()` splices markers into text it does not escape, so the markers are
+control characters, the snippet is HTML-escaped, and only then are they swapped
+for `<mark>`. Writing `<mark>` directly would render post prose as markup.
+
+## Search surfaces
+
+Three levels, each usable without the one above it.
+
+1. **`/search`, server rendered.** A GET form, facet chips as links, counts from
+   the same query that produced the list. Fully functional with scripting off.
+2. **JSON at the same URL** via `Accept: application/json`, `Vary: Accept`.
+   Same query, same index, not a second API. Negotiation runs in MIDDLEWARE,
+   never the loader: a document route's loader cannot return a raw Response, it
+   is handed to the component as `loaderData` and 500s on the first property
+   read. Same mechanism `/blog/:slug` uses for its markdown twin.
+   `app/lib/negotiate.ts` holds the one q-value parser both routes use.
+3. **The command palette**, `app/enhance/palette.ts`, its own chunk, site-wide
+   and separate from the blog bundle. 6.06 kB raw, 2.32 kB gzip. The blog
+   bundle is unchanged at 3.96 kB raw, 1.59 kB gzip.
+
+The header ships an `<a href="/search">`. The palette upgrades it in place; with
+no script it stays a link. Built on native `<dialog>.showModal()` for a real
+focus trap and focus return.
+
+Three palette traps, all found in a browser and none visible to typecheck:
+- `<input type="search">` has a NATIVE Escape-to-clear, so the first Escape
+  never reaches the dialog. Escape is handled explicitly in the keydown handler.
+- A fetch in flight when the palette closes resolves afterwards and repaints a
+  closed dialog. Closing bumps a sequence number; clearing the DOM alone is not
+  enough.
+- Do not name a module-level variable `status`: it collides with `window.status`.
+
+## Ask mode (Layer 2): NOT BUILT, and why
+
+`wrangler ai-search` exists and the product is in open beta, but creating an
+instance requires an AI Search API token minted in the dashboard. Tokens are not
+something an agent session creates. Nothing was half-built: there is no Ask code,
+no binding, and no dead branch waiting for one.
+
+When the token exists:
+
+    npx wrangler ai-search create dustinedwards \
+      --type web-crawler --source https://<deployed-origin> \
+      --hybrid-search --reranking
+
+Binding is `ai_search_namespaces` (`env.AI.autorag()` was retired in April 2026).
+Read the current API before writing any of it. Ask must never sit in the zero-JS
+path and no classic query may wait on it.
 
 ## Admin editor (second writer)
 

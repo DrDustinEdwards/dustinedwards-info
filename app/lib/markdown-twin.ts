@@ -1,3 +1,4 @@
+import { prefersType } from "./negotiate";
 import { PUBLIC_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
 
 /**
@@ -20,44 +21,15 @@ export function linkToHtml(slug: string) {
 }
 
 /**
- * Parses an Accept header and reports whether the client asked for markdown in
- * preference to HTML.
+ * Whether the client asked for markdown in preference to HTML.
  *
- * Compares q-values rather than substring-matching, because a browser sends
- * `text/html,application/xhtml+xml,...` and must keep getting HTML, while an
- * agent sending `Accept: text/markdown` must get markdown. A client that lists
- * both with equal weight gets HTML, since that is the older behaviour and the
- * safer default for anything that guessed.
+ * The q-value parsing moved to app/lib/negotiate.ts when /search gained a JSON
+ * representation and needed the same comparison. One parser, two callers: a
+ * second copy would drift, and it would drift silently, because a browser that
+ * starts being served the wrong representation still renders something.
  */
 export function prefersMarkdown(request: Request) {
-  const accept = request.headers.get("accept");
-  if (!accept) return false;
-
-  let markdown = -1;
-  let html = -1;
-
-  for (const part of accept.split(",")) {
-    const [range, ...params] = part.trim().split(";");
-    const type = range.trim().toLowerCase();
-
-    let q = 1;
-    for (const param of params) {
-      const [key, value] = param.trim().split("=");
-      if (key?.trim().toLowerCase() === "q") {
-        const parsed = Number.parseFloat(value ?? "");
-        if (!Number.isNaN(parsed)) q = parsed;
-      }
-    }
-
-    if (type === "text/markdown") markdown = Math.max(markdown, q);
-    // `*/*` and `text/*` count as asking for HTML: they are what a client sends
-    // when it has no opinion, and HTML is the default representation.
-    if (type === "text/html" || type === "text/*" || type === "*/*") {
-      html = Math.max(html, q);
-    }
-  }
-
-  return markdown > 0 && markdown > html;
+  return prefersType(request, "text/markdown");
 }
 
 /** The markdown representation of a post, with its headers. */
