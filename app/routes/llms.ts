@@ -4,7 +4,7 @@ import type { Route } from "./+types/llms";
 
 const FALLBACK = `# dustinedwards.info
 
-Personal site of Dr. Dustin Edwards, Professor of Virology at Tarleton State University.
+Personal site of Dustin Edwards.
 `;
 
 export async function loader({ context }: Route.LoaderArgs) {
