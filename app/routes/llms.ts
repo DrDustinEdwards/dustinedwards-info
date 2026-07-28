@@ -2,6 +2,11 @@ import { getSetting } from "~/db";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/llms";
 
+/**
+ * Kept byte-identical to the `llms.txt` row in `settings`. The row is what the
+ * route actually serves; this is the fallback for a database that has not been
+ * seeded. If you change one, change the other.
+ */
 const FALLBACK = `# dustinedwards.info
 
 Personal site of Dustin Edwards.
@@ -9,6 +14,12 @@ Personal site of Dustin Edwards.
 ## About
 
 Writing, projects, and notes.
+
+## Blog
+
+Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.
+Every post has a plain markdown twin at /blog/<slug>.md, which is the source
+the page was rendered from. The feed is at /blog/rss.xml.
 
 ## Contact
 
