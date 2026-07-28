@@ -9,6 +9,9 @@ export default [
   route("blog/feed.json", "routes/blog.feed[.json].ts"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
+  // Ordered before /search so the Ask endpoint is not read as a search param
+  // variant, and kept a resource route so it can stream a raw Response.
+  route("search/ask", "routes/search.ask.ts"),
   route("search", "routes/search.tsx"),
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
