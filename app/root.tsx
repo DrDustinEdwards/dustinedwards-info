@@ -27,6 +27,14 @@ export function loader({ request }: Route.LoaderArgs) {
 }
 
 export const links: Route.LinksFunction = () => [
+  // Icons and the manifest live here rather than in the document head because
+  // `links` from every matched route are merged, so these ride on every page.
+  // `meta` is NOT merged, which is why the default social card is a constant in
+  // seo.ts that each public route names for itself.
+  { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "manifest", href: "/site.webmanifest" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",

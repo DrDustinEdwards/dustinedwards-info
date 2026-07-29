@@ -18,6 +18,16 @@
 export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 
 /**
+ * The default social card, for any page without one of its own.
+ *
+ * Derived from SITE_ORIGIN rather than written out, so it names workers.dev
+ * today and dustinedwards.info the moment the cutover changes the constant
+ * above. Hardcoding the apex would point every scraper at the legacy WordPress
+ * site until DNS moves, which is a broken card rather than a future-proof one.
+ */
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+
+/**
  * The site's identity, in one place, split by the job each string does.
  *
  * `role` and `affiliation` are STRUCTURED DATA: they are the jobTitle and

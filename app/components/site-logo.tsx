@@ -1,0 +1,69 @@
+/**
+ * The site mark, inline and in one place.
+ *
+ * Inline rather than an <img> because the theme is driven by a data-theme
+ * attribute, so a <picture> with prefers-color-scheme would ignore the manual
+ * toggle. The five purple paths take .site-logo-brand, which is var(--brand),
+ * and that token already resolves to #4f2d7f in light and #b7a5e0 in dark,
+ * including under SYSTEM mode where no attribute is present at all. That is the
+ * entire swap: no second file, no hidden element, no media query of its own.
+ *
+ * Nothing can flash, because the token is resolved during the first paint of
+ * the first byte, and nothing can shift, because there is one element that is
+ * never hidden.
+ *
+ * The four shipped SVGs (logo, logo-header, and their dark variants) differ in
+ * exactly two ways: the viewBox, and whether the purple paths carry #4F2D7F or
+ * #B7A5E0. Verified by diff with fills stripped, 2026-07-29. One path list plus
+ * a viewBox therefore reproduces all four.
+ *
+ * The warm three keep literal fills because they are IDENTICAL in both
+ * variants. Binding them to tokens would make the mark render differently from
+ * the ratified assets.
+ *
+ * GENERATED from public/logo.svg. Path data is verbatim and must never be
+ * hand-edited: the construction spec is Capsid dustinedwards/logo-spec.md, and
+ * a variant is a rebuild from those values.
+ */
+
+/** The eight paths, in the spec's paint order: ring, bowl, base, arc, tube, amber, pale, cap. */
+const MARK = (
+  <>
+    <path className="site-logo-brand" d="M 271.75 306.65 A 112.5 112.5 0 1 1 167.85 117.27 L 177.21 159.48 A 69.2 69.2 0 1 0 238.83 273.73 L 271.75 306.65 Z" />
+    <path className="site-logo-brand" d="M 212.00 273.20 L 290.80 273.20 A 39.4 39.4 0 0 1 212.00 273.20 Z" />
+    <path className="site-logo-brand" d="M 81.40 341.70 A 44.9 44.9 0 0 1 119.10 312.62 L 271.60 312.62 A 44.9 44.9 0 0 1 309.30 341.70 L 81.40 341.70 Z" />
+    <path fill="#CE7F44" d="M 173.37 117.10 A 111.6 111.6 0 0 1 288.36 170.46 L 306.63 201.48 L 275.44 219.85 L 257.17 188.83 A 75.4 75.4 0 0 0 193.75 151.72 Z" />
+    <path className="site-logo-brand" d="M 109.47 86.65 L 143.59 66.56 L 217.44 191.92 L 183.32 212.02 Z" />
+    <path fill="#E0A428" d="M 225.72 207.36 L 257.51 188.63 L 275.78 219.65 L 243.99 238.38 Z" />
+    <path fill="#E2BC6B" d="M 192.20 227.10 L 226.06 207.15 L 244.33 238.17 L 210.47 258.12 Z" />
+    <path className="site-logo-brand" d="M 134.88 51.38 L 100.42 71.68 L 80.12 37.21 L 114.58 16.91 Z" />
+  </>
+);
+
+/** The master mark, square. Used on the login card. */
+export function SiteLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 375 375" aria-hidden="true" focusable="false">
+      {MARK}
+    </svg>
+  );
+}
+
+/**
+ * The tight 36x50 crop, for the header. The viewBox and the intrinsic size are
+ * copied from logo-header.svg.
+ */
+export function SiteLogoHeader({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="78 15 232 328"
+      width="36"
+      height="50"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {MARK}
+    </svg>
+  );
+}
