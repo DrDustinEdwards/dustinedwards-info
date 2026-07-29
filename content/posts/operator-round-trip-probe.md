@@ -10,5 +10,5 @@ first_published: 2026-07-29
 
 ## What this is
 
-A throwaway post written through the operator API to verify the publish path.
+Edited by the operator after publication, to prove editing a live post is allowed.
 It is deleted at the end of the round trip.

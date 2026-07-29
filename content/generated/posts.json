@@ -26,8 +26,8 @@
           "text": "What this is"
         }
       ],
-      "markdown": "\n## What this is\n\nA throwaway post written through the operator API to verify the publish path.\nIt is deleted at the end of the round trip.\n",
-      "html": "<h2 id=\"what-this-is\">What this is<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-this-is\">#</a></h2>\n<p>A throwaway post written through the operator API to verify the publish path.\nIt is deleted at the end of the round trip.</p>",
+      "markdown": "\n## What this is\n\nEdited by the operator after publication, to prove editing a live post is allowed.\nIt is deleted at the end of the round trip.\n",
+      "html": "<h2 id=\"what-this-is\">What this is<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-this-is\">#</a></h2>\n<p>Edited by the operator after publication, to prove editing a live post is allowed.\nIt is deleted at the end of the round trip.</p>",
       "sourcePath": "content/posts/operator-round-trip-probe.md",
       "related": []
     },
@@ -113,7 +113,7 @@
       "url": "/blog/operator-round-trip-probe#what-this-is",
       "type": "post",
       "title": "What this is",
-      "body": "A throwaway post written through the operator API to verify the publish path. It is deleted at the end of the round trip.",
+      "body": "Edited by the operator after publication, to prove editing a live post is allowed. It is deleted at the end of the round trip.",
       "tags": "",
       "docTags": "|meta|",
       "docUid": "post:operator-round-trip-probe",
