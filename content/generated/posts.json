@@ -6,7 +6,7 @@
       "description": "A throwaway post created by the operator round trip. Safe to delete.",
       "date": "2026-07-29",
       "publishAt": "2026-07-29T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "meta"
       ],
@@ -105,7 +105,7 @@
       "docUrl": "/blog/operator-round-trip-probe",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-29T00:00:00.000Z"
     },
     {
@@ -121,7 +121,7 @@
       "docUrl": "/blog/operator-round-trip-probe",
       "anchor": "what-this-is",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-29T00:00:00.000Z"
     },
     {
