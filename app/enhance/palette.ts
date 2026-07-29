@@ -475,10 +475,16 @@ function close() {
  * because it is still an anchor.
  */
 function upgradeTriggers() {
+  // The hint is a SIBLING of the trigger, not a child, so it is found from the
+  // document rather than from inside the anchor. It used to live inside it,
+  // where the "/" rendered as a second run of link text pointing at /search and
+  // clicking it navigated. A keyboard hint is not a destination.
+  for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
+    hint.hidden = false;
+  }
+
   for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
     trigger.dataset.shortcutHint = "shown";
-    const kbd = trigger.querySelector("kbd");
-    if (kbd) kbd.hidden = false;
     trigger.addEventListener("click", (event) => {
       // Let a modified click do what the browser would do with a link.
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
