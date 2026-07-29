@@ -277,6 +277,44 @@
       ]
     },
     {
+      "slug": "feedback-slot-check",
+      "title": "Feedback slot check",
+      "description": "Throwaway post created to verify the editor feedback slot. Safe to delete.",
+      "date": "2026-07-28",
+      "publishAt": "2026-07-28T00:00:00.000Z",
+      "draft": true,
+      "tags": [
+        "cloudflare",
+        "testing"
+      ],
+      "cover": null,
+      "featured": false,
+      "series": null,
+      "part": null,
+      "furtherReading": [],
+      "ogTitle": null,
+      "ogDescription": null,
+      "updated": null,
+      "readingTimeMinutes": 1,
+      "toc": [
+        {
+          "depth": 2,
+          "id": "what-this-is",
+          "text": "What this is"
+        }
+      ],
+      "markdown": "\n## What this is\n\nA throwaway post used to verify the editor's feedback slot end to end. It is\ncreated as a draft, published once by hand, withdrawn, republished and then\ndeleted, so each of the four states can be observed rather than asserted.\n\nIf this is still here, it was left behind by mistake and can be deleted.\n",
+      "html": "<h2 id=\"what-this-is\">What this is<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-this-is\">#</a></h2>\n<p>A throwaway post used to verify the editor's feedback slot end to end. It is\ncreated as a draft, published once by hand, withdrawn, republished and then\ndeleted, so each of the four states can be observed rather than asserted.</p>\n<p>If this is still here, it was left behind by mistake and can be deleted.</p>",
+      "sourcePath": "content/posts/feedback-slot-check.md",
+      "related": [
+        {
+          "slug": "where-should-a-blog-store-its-words",
+          "title": "Where should a blog store its words?",
+          "shared": 1
+        }
+      ]
+    },
+    {
       "slug": "site-search-fts5-rank-fusion",
       "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
       "description": "Section-grained records, why tokenizers forced two indexes, reciprocal rank fusion over raw bm25, a flagship feature that returned zero for its own designed input, and what FTS5 does to your backups.",
@@ -917,6 +955,38 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "disclosures",
       "ordinal": 7,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:feedback-slot-check",
+      "url": "/blog/feedback-slot-check",
+      "type": "post",
+      "title": "Feedback slot check",
+      "body": "Throwaway post created to verify the editor feedback slot. Safe to delete.",
+      "tags": "cloudflare testing",
+      "docTags": "|cloudflare|testing|",
+      "docUid": "post:feedback-slot-check",
+      "docTitle": "Feedback slot check",
+      "docUrl": "/blog/feedback-slot-check",
+      "anchor": null,
+      "ordinal": 0,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:feedback-slot-check#what-this-is",
+      "url": "/blog/feedback-slot-check#what-this-is",
+      "type": "post",
+      "title": "What this is",
+      "body": "A throwaway post used to verify the editor's feedback slot end to end. It is created as a draft, published once by hand, withdrawn, republished and then deleted, so each of the four states can be observed rather than asserted. If this is still here, it was left behind by mistake and can be deleted.",
+      "tags": "",
+      "docTags": "|cloudflare|testing|",
+      "docUid": "post:feedback-slot-check",
+      "docTitle": "Feedback slot check",
+      "docUrl": "/blog/feedback-slot-check",
+      "anchor": "what-this-is",
+      "ordinal": 1,
       "status": "draft",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
