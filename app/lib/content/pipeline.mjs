@@ -144,6 +144,22 @@ export const frontmatterSchema = z.object({
    * commit time it is about to create.
    */
   updated: isoDate.optional(),
+  /**
+   * The date this post first went public. SERVER-OWNED: stamped once, by the
+   * save path, the first time a post is committed with draft:false, and never
+   * read from what a caller submitted.
+   *
+   * It exists because the operator publish policy needs a durable answer to
+   * "has this post ever been published", and current state cannot give one: a
+   * post sitting at draft:true is either brand new or previously published and
+   * withdrawn, and an agent may do the second but not the first.
+   *
+   * It is declared here so the format is validated, but renderPost deliberately
+   * does NOT copy it into the record. Keeping it out of the artifact means the
+   * gated file does not churn, and the file stays the only place it lives,
+   * which is the same place the policy reads it from.
+   */
+  first_published: isoDate.optional(),
 }).superRefine((value, ctx) => {
   if (value.series && value.part === undefined) {
     ctx.addIssue({ code: "custom", path: ["part"], message: "is required when series is set" });

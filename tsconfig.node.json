@@ -10,7 +10,10 @@
     "app/lib/content/pipeline.mjs",
     "app/lib/content/artifact.mjs",
     "app/lib/search/records.mjs",
-    "app/lib/search/query.mjs"
+    "app/lib/search/query.mjs",
+    // The operator publish policy: the Worker imports it and check:policy
+    // imports it, on the same principle as query.mjs and check:search.
+    "app/lib/editor/publish-policy.mjs"
   ],
   "compilerOptions": {
     "composite": true,

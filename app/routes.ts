@@ -41,5 +41,8 @@ export default [
 
   // API
   route("api/health", "routes/api.health.ts"),
+  // The operator publish path. Bearer token, not the Better Auth session, so it
+  // sits outside the /admin subtree the middleware gates.
+  route("api/operator", "routes/api.operator.ts"),
   route("api/auth/*", "routes/api.auth.$.ts"),
 ] satisfies RouteConfig;

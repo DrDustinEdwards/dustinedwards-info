@@ -159,6 +159,15 @@ export function PostEditor({
       >
         <input type="hidden" name="headSha" value={headSha} />
         <input type="hidden" name="isNew" value={isNew ? "1" : "0"} />
+        {/*
+          Server-owned, not editable, and carried through only so a browser save
+          PRESERVES it. serializePost writes exactly the keys it is handed, so a
+          value this form did not carry would be dropped on the next edit and a
+          published post would read as never published. Forging it here achieves
+          nothing: the save path overwrites it with the value from the committed
+          file before rendering. See app/lib/editor/publish-policy.ts.
+        */}
+        <input type="hidden" name="firstPublished" value={fields.firstPublished} />
 
         {!headSha ? (
           <div className="editor-problem" role="alert">
