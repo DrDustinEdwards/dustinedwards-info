@@ -1,11 +1,19 @@
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { personJsonLd, SITE, SITE_ORIGIN, webSiteJsonLd } from "~/lib/seo";
+import {
+  DEFAULT_OG_IMAGE,
+  personJsonLd,
+  SITE,
+  SITE_ORIGIN,
+  webSiteJsonLd,
+} from "~/lib/seo";
 
 export function meta() {
   return [
     { title: SITE.name },
     { name: "description", content: SITE.description },
+    { property: "og:image", content: DEFAULT_OG_IMAGE },
+    { name: "twitter:card", content: "summary_large_image" },
   ];
 }
 

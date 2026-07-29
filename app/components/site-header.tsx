@@ -1,6 +1,7 @@
 import { Link, NavLink, useRouteLoaderData } from "react-router";
 
 import { SearchTrigger } from "~/components/search-trigger";
+import { SiteLogoHeader } from "~/components/site-logo";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { SITE } from "~/lib/seo";
 
@@ -22,6 +23,10 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <Link to="/" className="site-header-brand">
+        {/* Decorative: the link's accessible name is the wordmark beside it, so
+            naming the mark too would make a screen reader say it twice. Inline
+            so the purple follows the theme token; see site-logo.tsx. */}
+        <SiteLogoHeader className="site-header-mark" />
         {SITE.name}
       </Link>
       <nav className="site-header-nav">

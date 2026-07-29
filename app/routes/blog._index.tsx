@@ -6,7 +6,13 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN, breadcrumbJsonLd } from "~/lib/seo";
+import {
+  DEFAULT_OG_IMAGE,
+  PUBLIC_CACHE_CONTROL,
+  SITE,
+  SITE_ORIGIN,
+  breadcrumbJsonLd,
+} from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
 const PER_PAGE = 10;
@@ -66,7 +72,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
     { property: "og:url", content: canonical },
-    { name: "twitter:card", content: "summary" },
+    { property: "og:image", content: DEFAULT_OG_IMAGE },
+    { name: "twitter:card", content: "summary_large_image" },
     {
       tagName: "link",
       rel: "alternate",

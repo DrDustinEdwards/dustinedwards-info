@@ -440,6 +440,13 @@ a:hover {
   border-radius: 0.75rem;
 }
 
+.gate-mark {
+  display: block;
+  width: 4rem;
+  height: auto;
+  margin: 0 0 1rem;
+}
+
 .gate-card h1 {
   margin: 0 0 0.5rem;
   font-size: 1.5rem;
@@ -501,6 +508,20 @@ a:hover {
   outline-offset: -4px;
 }
 
+/* The site mark. The five purple paths carry this class; the warm three keep
+   the literal fills the ratified SVGs give them, because those are identical in
+   the light and dark variants.
+
+   This one declaration IS the dark-mode variant. --brand is #4f2d7f light and
+   #b7a5e0 dark, and it is resolved by the same three selectors as every other
+   token, so a chosen theme, a light default and system mode all land on the
+   right mark with no media query of the mark's own. Nothing is hidden, so
+   nothing can shift; the token resolves in the first paint, so nothing flashes.
+   Shared by the header and the login card. */
+.site-logo-brand {
+  fill: var(--brand);
+}
+
 /* Public header */
 .site-header {
   display: flex;
@@ -513,9 +534,20 @@ a:hover {
 }
 
 .site-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
+}
+
+/* 2rem keeps the brand row inside the header's existing 4rem min-height, so
+   adding the mark moves nothing below it. Width follows the 36x50 ratio. */
+.site-header-mark {
+  display: block;
+  height: 2rem;
+  width: auto;
 }
 
 /* Public content page. Generic, kept for the blog. */
