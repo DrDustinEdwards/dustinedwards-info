@@ -13,7 +13,10 @@
  * does, so an operator sees what the editor sees.
  */
 
-import { publiclyVisible } from "~/db/index";
+import { count } from "drizzle-orm";
+
+import { getDb, publiclyVisible } from "~/db/index";
+import { posts as postsTable } from "~/db/schema";
 import {
   currentHead,
   deletePost,
@@ -252,22 +255,36 @@ async function deletePostTool(
  * and the whole design assumes they fail independently.
  */
 async function syncStatus(env: OperatorEnv) {
-  const posts = await loadArtifact(env);
-  const db = env.DB;
+  const artifactPosts = await loadArtifact(env);
 
-  const rows = await db.prepare("SELECT COUNT(*) AS n FROM posts").first<{ n: number }>();
-  const visible = await db
-    .prepare(`SELECT COUNT(*) AS n FROM posts WHERE ${publiclyVisible()}`)
-    .first<{ n: number }>();
-  const indexed = await db
+  // Counted through DRIZZLE, not by interpolating publiclyVisible() into a
+  // template string. It returns a Drizzle expression object, so interpolation
+  // stringifies it to "[object Object]" and D1 answers
+  //   no such column: object Object at offset 38
+  // on every call. That is how this shipped: locally the tool failed earlier,
+  // at the missing GITHUB_TOKEN, and never reached the query. Found by the live
+  // round trip, which is the only place it could have been found.
+  //
+  // Hard rule 1 is why the predicate is reused rather than rewritten in SQL:
+  // every public read composes publiclyVisible(), and a hand-copied WHERE
+  // clause here would be exactly the drift that rule exists to prevent.
+  const db = getDb(env);
+  const totalRow = await db.select({ n: count() }).from(postsTable).get();
+  const visibleRow = await db
+    .select({ n: count() })
+    .from(postsTable)
+    .where(publiclyVisible())
+    .get();
+
+  const indexed = await env.DB
     .prepare("SELECT COUNT(*) AS n FROM search_identity_docsize")
     .first<{ n: number }>();
 
   return {
     headSha: await currentHead(env),
-    artifactPosts: posts.length,
-    d1Posts: rows?.n ?? 0,
-    d1PubliclyVisible: visible?.n ?? 0,
+    artifactPosts: artifactPosts.length,
+    d1Posts: totalRow?.n ?? 0,
+    d1PubliclyVisible: visibleRow?.n ?? 0,
     // Counted on the docsize shadow table, never COUNT(*) on the index itself:
     // that reads THROUGH to search_docs and can never detect drift.
     searchIndexDocs: indexed?.n ?? 0,

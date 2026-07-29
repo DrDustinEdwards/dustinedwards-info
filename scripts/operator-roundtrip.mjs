@@ -187,7 +187,11 @@ if (PHASE === "a") {
       );
       console.log(`     message: ${String(c.commit?.message ?? "").split("\n")[0]}`);
     } else {
-      check("the commit is readable on GitHub", false, `github returned ${gh.status}`);
+      check(
+        "the commit is readable on GitHub",
+        false,
+        "gh api failed. This repo is PRIVATE, so an unauthenticated read 404s on a commit that exists.",
+      );
     }
   }
 
