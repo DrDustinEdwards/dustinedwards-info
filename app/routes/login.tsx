@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { redirect } from "react-router";
 
+import { SiteLogo } from "~/components/site-logo";
 import { authClient } from "~/lib/auth-client";
 import { getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
@@ -21,6 +22,8 @@ export default function Login() {
   return (
     <main className="gate">
       <div className="gate-card">
+        {/* Decorative: the heading below already names the page. */}
+        <SiteLogo className="gate-mark" />
         <h1>Admin sign in</h1>
         <p className="muted">Access is limited to the site owner.</p>
         <button
