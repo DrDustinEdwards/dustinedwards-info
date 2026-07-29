@@ -368,6 +368,56 @@ Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write o
 this repo). Without it the editor still renders and previews, and saving reports
 that it is unavailable rather than half-working.
 
+### The feedback slot (built 2026-07-29)
+
+**A first publication used to complete in silence.** A save redirected to
+`/admin/posts` and said nothing, so the one act the system reserves to the human
+looked exactly like nothing having happened. That is a design failure by this
+architecture's own logic, not a missing nicety.
+
+ONE slot, four states, `app/components/admin/post-editor.tsx`:
+
+    saved             success tint. "Saved. Commit <sha>."
+    published-first   success tint, heavier edge, larger heading, the live link.
+    republished       success tint, the live link.
+    unpublished       warning tint, the URL that now 404s.
+    failed            danger tint, the gate's own prose, same prominence.
+
+**The transition is named by `publish-policy.mjs`, not by the UI**, because only
+the policy module read the prior FILE, and current state cannot tell a first
+publication from a republication: a post at `draft: true` is either brand new or
+withdrawn. `decide()` returns `outcome` alongside the permission it was already
+computing, and `check:policy` asserts all four transitions with their negatives
+(a live post edited again is NOT a republication; a draft re-saved is NOT a
+second unpublish).
+
+**Success travels in the URL, failure does not.** A save is post/redirect/get,
+so the outcome crosses a navigation as `?saved=<outcome>&sha=<short>&at=<date>`,
+parsed server side in the loader. No flash cookie, no session store, renders in
+the first byte of HTML with scripting off, and a reload repeats the message
+instead of re-posting the form. A FAILURE cannot redirect, because that would
+throw away the body the author just typed, so it stays in the action result.
+`app/lib/editor/feedback.ts` owns both directions and treats the query string as
+untrusted: the shas and the date are pattern-matched, the slug is taken from the
+route rather than the query, and a first publication with no valid date degrades
+to the plain saved message rather than claiming a ceremony it cannot date.
+
+Persistence is "until the next action", and the next action is anything that
+produces an `actionData`: a failure replaces the message and a preview clears
+it, because by then the URL is describing a save two steps ago.
+
+**The slot is always in the DOM, empty when there is nothing to say.** It is the
+`aria-live="polite"` region, and a container that appears at the same moment as
+its text announces nothing. Polite rather than assertive because every message
+follows a submit the author just made and none of them vanishes.
+
+**The draft checkbox area carries a Live/Draft chip**, the same `.chip` the post
+list uses, so the page state is legible without reading the message. Bordered
+rather than tinted: binding rule 4 allows one semantic tint per view and the
+slot is where it is spent. The same rule is why the "Saving unavailable" banner
+moved off `--tint-danger` onto the neutral `.editor-notice`; two tinted banners
+would otherwise stack in that spot.
+
 ## Operator publish path (agents)
 
 `POST /api/operator`, a bearer-token JSON endpoint exposing the editor's save
@@ -448,13 +498,17 @@ refusals. Same trap already recorded for the Ask guards.
 
 `npm run check:policy` imports `app/lib/editor/publish-policy.mjs`, the module
 the Worker imports, on the same principle as `check:search` and `query.mjs`.
-Pure: no GitHub, no database, no network. 29 assertions, every rule paired with
-its negative.
+Pure: no GitHub, no database, no network. **45 assertions**, every rule paired
+with its negative. It covers three things: the first-publish permission, the
+Ask-publishability filter that keeps drafts out of the AI index, and the save
+OUTCOME the editor reports back.
 
-Verified by planting three violations and confirming a real exit 1 for each:
+Verified by planting five violations and confirming a real exit 1 for each:
 trusting the caller's `first_published` (the forgery hole, exactly 2 failures),
-removing the operator refusal (4), and clearing `first_published` on unpublish,
-which would lock an operator out of republishing its own post (2).
+removing the operator refusal (4), clearing `first_published` on unpublish,
+which would lock an operator out of republishing its own post (2), and, for the
+outcome classification, collapsing republish into an ordinary save (1) and
+collapsing unpublish into one (1).
 
 ## Social cards
 
@@ -554,7 +608,7 @@ design-tokens.md as token NAMES. Nothing in the script restates a hex, so a
 tuned hex moves one side of the comparison and fails.
 
 It also verifies every shiki token against both code surfaces, and, when a build
-is present, that all 104 light and dark values survived into the shipped CSS.
+is present, that all 106 light and dark values survived into the shipped CSS.
 WCAG 2.x is what fails a run; APCA Lc prints as advisory, because APCA is what
 produced the fills-over-pastels rule.
 
