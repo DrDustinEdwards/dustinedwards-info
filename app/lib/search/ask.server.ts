@@ -221,6 +221,74 @@ export interface CorpusSyncResult {
 }
 
 /**
+ * Every item in the index, following pagination to the end.
+ *
+ * `items.list()` is PAGED: it takes page and per_page and reports total_count,
+ * and a bare call returns only the first page. Every caller here used a bare
+ * call, which was invisible while the corpus was seven records and became a
+ * correctness bug the moment it was not. Measured 2026-07-29: a prune reported
+ * "removed 0" for a post whose items were real but sat on a later page, so a
+ * draft stayed answerable through the public Ask endpoint after the code that
+ * was supposed to remove it had run and reported success.
+ *
+ * A prune that cannot see an item cannot delete it, and it reports success
+ * either way. That is the failure mode this exists to remove.
+ */
+async function listAllAskItems(env: Env) {
+  /** @type {any[]} */
+  const all: Awaited<ReturnType<typeof env.AI_SEARCH.items.list>>["result"] = [];
+  // 50 is the API maximum. Measured: per_page 100 is rejected with
+  // "Too big: expected number to be <=50".
+  const perPage = 50;
+  for (let page = 1; ; page += 1) {
+    const listed = await env.AI_SEARCH.items.list({ page, per_page: perPage });
+    const batch = listed.result ?? [];
+    all.push(...batch);
+    const total = listed.result_info?.total_count;
+    if (batch.length < perPage) break;
+    if (typeof total === "number" && all.length >= total) break;
+    // Backstop against a server that never shrinks a page.
+    if (page > 200) break;
+  }
+  return all;
+}
+
+/**
+ * The posts that may appear in the Ask index.
+ *
+ * THE AI INDEX IS A PUBLIC SURFACE. `/search/ask` is unauthenticated and its
+ * citations name the post they came from, so anything uploaded here is
+ * readable by anyone who asks the right question. That makes this filter the
+ * same kind of gate as `publiclyVisible()` on the D1 side, and it must agree
+ * with it: a draft is excluded, and so is a post whose publish_at is still in
+ * the future.
+ *
+ * This was missing, and it leaked. Five unpublished drafts staged through the
+ * operator path on 2026-07-29 were uploaded unconditionally, and the public Ask
+ * endpoint answered from one of them and cited it by slug. The classic index
+ * was never affected: it filters at query time. Ask had no equivalent, because
+ * AI Search has no per-item status the query can filter on, so the filter has
+ * to happen at UPLOAD time. Nothing unpublished may enter the index at all.
+ *
+ * @param posts
+ */
+function publishableForAsk<T extends { draft?: boolean; publishAt?: string | null }>(
+  posts: readonly T[],
+): T[] {
+  const now = Date.now();
+  return posts.filter((p) => {
+    if (p.draft === true) return false;
+    if (p.publishAt && Date.parse(p.publishAt) > now) return false;
+    return true;
+  });
+}
+
+/** True when this one post is allowed in the index. */
+function askPublishable(post: { draft?: boolean; publishAt?: string | null }): boolean {
+  return publishableForAsk([post]).length === 1;
+}
+
+/**
  * Uploads every search record to built-in storage.
  *
  * WHY BUILT-IN STORAGE RATHER THAN THE CRAWLER. The crawler only indexes a
@@ -238,7 +306,8 @@ export async function syncAskCorpus(
   env: Env,
   posts: Parameters<typeof recordsForPosts>[0],
 ): Promise<CorpusSyncResult> {
-  const records = recordsForPosts(posts);
+  // Drafts and future posts never enter the index. See publishableForAsk.
+  const records = recordsForPosts(publishableForAsk(posts));
   const keys: string[] = [];
 
   for (const record of records) {
@@ -287,7 +356,12 @@ export async function syncAskPost(
   env: Env,
   post: Parameters<typeof recordsForPosts>[0][number],
 ): Promise<{ uploaded: number; removed: number }> {
-  const records = recordsForPosts([post]);
+  // A draft uploads NOTHING, and actively removes anything this post already
+  // has in the index. Skipping the upload alone would be a silent leak on the
+  // unpublish path: a post published, indexed, then withdrawn would stay
+  // answerable forever. The empty `live` set makes the existing prune below do
+  // the removal, so there is one removal path rather than two.
+  const records = askPublishable(post) ? recordsForPosts([post]) : [];
   const live = new Set<string>();
 
   for (const record of records) {
@@ -309,8 +383,8 @@ export async function syncAskPost(
   const documentKey = keyForUrl(post.url ?? `/blog/${post.slug}`);
   const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
   let removed = 0;
-  const listed = await env.AI_SEARCH.items.list();
-  for (const item of listed.result ?? []) {
+  const listed = await listAllAskItems(env);
+  for (const item of listed) {
     const ours = item.key === documentKey || item.key.startsWith(sectionPrefix);
     if (ours && !live.has(item.key)) {
       await env.AI_SEARCH.items.delete(item.id);
@@ -345,9 +419,13 @@ export async function askIndexStatus(
   env: Env,
   posts: Parameters<typeof recordsForPosts>[0],
 ): Promise<AskIndexStatus> {
-  const expected = new Set(recordsForPosts(posts).map((r) => keyForUrl(r.url)));
-  const listed = await env.AI_SEARCH.items.list();
-  const present = new Set((listed.result ?? []).map((item) => item.key));
+  // Same filter as the uploader, or every draft would read as a missing item
+  // forever and the drift panel would cry wolf.
+  const expected = new Set(
+    recordsForPosts(publishableForAsk(posts)).map((r) => keyForUrl(r.url)),
+  );
+  const listed = await listAllAskItems(env);
+  const present = new Set(listed.map((item) => item.key));
 
   return {
     expected: expected.size,
@@ -362,8 +440,8 @@ export async function removeAskPost(env: Env, slug: string): Promise<number> {
   const documentKey = `blog/${slug}.md`;
   const sectionPrefix = `blog/${slug}${KEY_SEPARATOR}`;
   let removed = 0;
-  const listed = await env.AI_SEARCH.items.list();
-  for (const item of listed.result ?? []) {
+  const listed = await listAllAskItems(env);
+  for (const item of listed) {
     if (item.key === documentKey || item.key.startsWith(sectionPrefix)) {
       await env.AI_SEARCH.items.delete(item.id);
       removed += 1;
@@ -384,8 +462,8 @@ export async function removeAskPost(env: Env, slug: string): Promise<number> {
 export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<string[]> {
   const live = new Set(liveKeys);
   const removed: string[] = [];
-  const listed = await env.AI_SEARCH.items.list();
-  for (const item of listed.result ?? []) {
+  const listed = await listAllAskItems(env);
+  for (const item of listed) {
     if (!live.has(item.key)) {
       await env.AI_SEARCH.items.delete(item.id);
       removed.push(item.key);

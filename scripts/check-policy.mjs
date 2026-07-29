@@ -16,6 +16,10 @@
  * publish the same post.
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { decide, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
 
 let checks = 0;
@@ -244,6 +248,78 @@ permits("admin may create an already published post", () =>
   eq("and writes it back into the file", readState(r.raw).firstPublished, "2026-01-01");
 }
 
+/* -------------------------------------------------------------------------
+ * The Ask index is a public surface
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Drafts must never reach the AI index.
+ *
+ * `/search/ask` is unauthenticated and cites the post it answered from, so an
+ * uploaded draft is publicly readable by anyone who asks the right question.
+ * The classic index filters at QUERY time; Ask cannot, because AI Search has no
+ * per-item status to filter on, so the exclusion has to happen at UPLOAD time.
+ *
+ * This is a regression test for a real leak. On 2026-07-29 five unpublished
+ * drafts were staged through the operator path, uploaded unconditionally, and
+ * the live Ask endpoint answered from one and cited it by slug.
+ *
+ * The predicate is re-derived here from the same rule the uploader applies:
+ * not a draft, and not scheduled for the future.
+ */
+{
+  const now = Date.parse("2026-07-29T12:00:00.000Z");
+  /** @param {{draft?: boolean, publishAt?: string|null}} p */
+  const publishable = (p) => {
+    if (p.draft === true) return false;
+    if (p.publishAt && Date.parse(p.publishAt) > now) return false;
+    return true;
+  };
+
+  eq("a draft is not Ask-publishable", publishable({ draft: true }), false);
+  eq("a published post is Ask-publishable", publishable({ draft: false }), true);
+  eq(
+    "a future-dated post is not Ask-publishable",
+    publishable({ draft: false, publishAt: "2099-01-01T00:00:00.000Z" }),
+    false,
+  );
+  eq(
+    "a past-dated post is Ask-publishable",
+    publishable({ draft: false, publishAt: "2020-01-01T00:00:00.000Z" }),
+    true,
+  );
+  // The withdrawn case, which is the one that leaks silently: a post that was
+  // published and indexed, then set back to draft, must be REMOVED rather than
+  // merely skipped on the next sync.
+  eq(
+    "a withdrawn post is not Ask-publishable",
+    publishable({ draft: true, publishAt: "2020-01-01T00:00:00.000Z" }),
+    false,
+  );
+
+  // And the source of truth actually enforces it. Read the shipped module
+  // rather than restating the rule, so this fails if the filter is removed.
+  const askSource = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "ask.server.ts"),
+    "utf8",
+  );
+  eq(
+    "syncAskCorpus filters through publishableForAsk",
+    /recordsForPosts\(publishableForAsk\(posts\)\)/.test(askSource),
+    true,
+  );
+  eq(
+    "syncAskPost refuses a non-publishable post",
+    /askPublishable\(post\)\s*\?\s*recordsForPosts\(\[post\]\)\s*:\s*\[\]/.test(askSource),
+    true,
+  );
+  eq(
+    "askIndexStatus uses the same filter",
+    (askSource.match(/publishableForAsk\(posts\)/g) ?? []).length >= 2,
+    true,
+  );
+}
+
 // --- Report ---------------------------------------------------------------
 
 if (failures.length > 0) {
@@ -253,3 +329,4 @@ if (failures.length > 0) {
 }
 
 console.log(`check:policy ok. ${checks} assertions, 0 failures.`);
+

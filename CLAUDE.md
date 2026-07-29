@@ -245,6 +245,38 @@ only by `wrangler ai-search create`, a control-plane call. The Worker reaches
 the instance through the binding and there is no AI Search secret in
 `wrangler secret list`. Verified 2026-07-28.
 
+### Drafts must never reach the Ask index (leak, fixed 2026-07-29)
+
+**The AI index is a PUBLIC surface.** `/search/ask` is unauthenticated and its
+citations name the post they came from, so anything uploaded is readable by
+anyone who asks the right question.
+
+The classic index filters at QUERY time. Ask cannot: AI Search has no per-item
+status a query can filter on, so the exclusion has to happen at UPLOAD time.
+`publishableForAsk()` in `ask.server.ts` is that gate and it must agree with
+`publiclyVisible()`: no drafts, and nothing whose `publish_at` is in the future.
+
+**It leaked.** Five unpublished drafts staged through the operator path on
+2026-07-29 were uploaded unconditionally, and the live Ask endpoint answered
+from one and cited it by slug. `syncAskPost` had no draft check at all.
+
+A draft now uploads NOTHING and actively REMOVES anything the post already has,
+because skipping the upload alone leaks on the unpublish path: a post published,
+indexed, then withdrawn would stay answerable forever. `check:policy` covers it,
+verified by planting the removal of each filter.
+
+**`items.list()` is PAGED and every call site ignored it.** It takes `page` and
+`per_page` (max 50, measured: 100 is rejected with "Too big: expected number to
+be <=50") and reports `total_count`. All four call sites made a bare call and so
+saw only the first page. Invisible at seven records; a correctness bug the
+moment it was not. Measured: a prune reported "removed 0" for a post whose items
+were real but sat on a later page, so a draft stayed answerable after the code
+meant to remove it had run and reported success. `listAllAskItems()` pages to
+the end and is the only listing path.
+
+**A prune that cannot see an item cannot delete it, and reports success either
+way.** That is the shape of this whole class of bug.
+
 ### Guards on /search/ask
 
 It is the only public endpoint on the site that costs money per request. Three
