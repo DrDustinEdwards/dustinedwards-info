@@ -4,7 +4,7 @@ slug: operator-round-trip-probe
 description: "A throwaway post created by the operator round trip. Safe to delete."
 date: 2026-07-29
 tags: [meta]
-draft: true
+draft: false
 first_published: 2026-07-29
 ---
 
