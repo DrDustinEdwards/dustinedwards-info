@@ -141,6 +141,71 @@
       ]
     },
     {
+      "slug": "bells-and-whistles-zero-js",
+      "title": "Bells and whistles under a zero-JavaScript law",
+      "description": "A reading experience in 1.59 kB of gzip, three lessons from having two writers, social cards that stay out of the gate, and the features deliberately refused.",
+      "date": "2026-07-28",
+      "publishAt": "2026-07-28T00:00:00.000Z",
+      "draft": true,
+      "tags": [
+        "cloudflare",
+        "performance",
+        "accessibility",
+        "progressive-enhancement"
+      ],
+      "cover": null,
+      "featured": false,
+      "series": null,
+      "part": null,
+      "furtherReading": [],
+      "ogTitle": null,
+      "ogDescription": null,
+      "updated": null,
+      "readingTimeMinutes": 6,
+      "toc": [
+        {
+          "depth": 2,
+          "id": "the-law",
+          "text": "The law"
+        },
+        {
+          "depth": 2,
+          "id": "three-lessons-from-having-two-writers",
+          "text": "Three lessons from having two writers"
+        },
+        {
+          "depth": 2,
+          "id": "social-cards-that-stay-out-of-the-gate",
+          "text": "Social cards that stay out of the gate"
+        },
+        {
+          "depth": 2,
+          "id": "version-history-as-a-window-not-a-mechanism",
+          "text": "Version history as a window, not a mechanism"
+        },
+        {
+          "depth": 2,
+          "id": "the-refusals",
+          "text": "The refusals"
+        },
+        {
+          "depth": 2,
+          "id": "disclosure",
+          "text": "Disclosure"
+        }
+      ],
+      "markdown": "\nAfter the pipeline shipped, the blog got its polish pass: reading progress, scroll-spy, copy buttons, related posts, series support, social cards, version history. This article is about the constraint that shaped all of it, the three lessons the architecture taught while resisting, and the features that were refused on purpose. Numbers are measured; the harness bugs that produced false failures are kept in the text.\n\n## The law\n\nEvery public route on this blog works completely with JavaScript disabled. Not degrades: works. The table of contents navigates, footnotes jump, images link to originals, tag and year filters run server-side, and highlighted code, including highlighted individual lines, is present in the stored HTML because the pipeline applied it at generation time. Enhancement is one lazily loaded chunk, served only on blog routes, measured at 3,871 bytes raw and 1.59 kB gzipped plus a 0.22 kB loader.\n\nThe citable claim: a reading experience with a progress bar, scroll-spy table of contents, code copy buttons with language labels, heading anchor links, footnote hover previews, and an image lightbox costs 1.59 kB of gzipped JavaScript when the server renders everything and script only decorates. The fallback for each enhancement is named in the repo; the progress bar's fallback is nothing, because it is decoration, and admitting that is part of the design.\n\nTwo harness traps from verifying this are worth recording because they produce confident false results. A `?url` import copies a file verbatim as an asset, so the browser would have been served raw TypeScript; it was caught only because a 250-line file emitted a 0.05 kB chunk, and 0.05 kB was not plausible. And an automated form-input tool intermittently failed to reach React's synthetic events, making autosave look broken when real keyboard input showed it working. Distrust of a surprising number, in both directions, was the actual debugging tool.\n\n## Three lessons from having two writers\n\nThe blog has two writers onto one pipeline: a build script in Node and the editor's save path in the Worker. Anything computed over the whole corpus must be computed identically by both, or live somewhere neither owns. This rule was learned three times.\n\nFirst, git dates. Displaying \"last updated\" from git history seems natural, until you notice the gated artifact is generated before the commit that contains it, so a git-derived date in the artifact records the previous commit and the next build computes a different one. The gate would go red after every ordinary content commit, by construction. Revision dates moved to sync time, outside the gated artifact.\n\nSecond, related posts. Relatedness is a property of the set: adding one post changes the related lists of others. Both writers therefore recompute it over the whole corpus, not incrementally, because an editor save that updated only its own post's list would leave the artifact inconsistent with a fresh generation, and the gate exists to notice exactly that.\n\nThird, and this one is an operational hazard with a name in the docs: deploying a Worker whose pipeline differs from main lets the live editor write artifacts main cannot reproduce. It happened mid-session, measured on a clean checkout, when a phase-3 Worker was deployed from a branch and an editor save committed an artifact in the new shape against pre-phase-3 main. The standing rule now: a branch deploy that changes the pipeline makes the editor a gate-poisoner until that branch merges.\n\n## Social cards that stay out of the gate\n\nOpen Graph images are generated with satori and resvg: 1200 by 630, site-branded, stored in R2 under a key of the slug plus an FNV-1a hash of slug, title, and description, served immutable. A per-post cover image wins when present, checked at both layers.\n\nTwo decisions here carry the article's weight. Generation is build-time only, in Node, because the numbers said so: the Worker-compatible rendering path would have added 1.87 MB to a Worker already carrying 3.46 MB plus 0.44 MB of WASM, for code that runs only on the admin save path, and the resvg WebAssembly build requires the runtime compilation Workers refuse. So a post created or retitled in the editor has no card until the next build and sync. The editor stores no URL rather than one that 404s: the failure mode is a missing image, never a broken one.\n\nAnd nothing about the card entered the gated artifact, including the key, which is deterministic and could have. The reasoning is the citable unit: whether an R2 object exists is a fact about R2, not about the markdown, and the gate compares statements about the markdown. The card's location is a database column instead. The PNG bytes were never a candidate, for exactly the reason the syntax-highlighter incident taught about byte comparisons and rendering stacks.\n\n## Version history as a window, not a mechanism\n\nThe admin's version history lists a post's commits via the GitHub API, shows diffs, and restores. Restore does not rewrite anything: it produces a new commit through the same atomic two-file save path, with prior history untouched, verified live (restore commit 0d72577, both earlier commits intact, gate green immediately after). Restored content re-runs the validation gates, closing a hole that is easy to miss: without it, restoring an old commit would be a way to publish prose that predates a rule and was never checked against it.\n\nAutosave, by contrast, deliberately never commits. Drafts persist locally in the browser with restore-on-return, verified across a forced reload, and the commit button remains the only writer. A system whose safety story is \"every change is a reviewed commit\" cannot also have a background process quietly committing keystrokes.\n\n## The refusals\n\nWhat this phase did not build is part of its engineering record. No comments, pending a decision rather than by default. No view counters yet; that needs its own measured session. No rich text editor: a textarea plus a preview rendered by the one true pipeline shipped first, and WYSIWYG remains a separate future decision rather than an assumption. No 103 Early Hints, because measurement showed the setting requires a zone and this hostname is not one until DNS cutover; that is a recorded fact, not a skipped config. Each refusal has a sentence in the docs saying why, which is the cheapest insurance against a future session helpfully building the wrong thing.\n\n## Disclosure\n\nThe zero-JS claim is scoped to public reading routes; the admin plane requires JavaScript and makes no such promise. The bundle figures are from the production build on the cited commit and will drift as features land; the gate that matters is not the number but the rule that produced it, which is that nothing on the reading path may require script, and every enhancement must name its fallback before it ships.\n",
+      "html": "<p>After the pipeline shipped, the blog got its polish pass: reading progress, scroll-spy, copy buttons, related posts, series support, social cards, version history. This article is about the constraint that shaped all of it, the three lessons the architecture taught while resisting, and the features that were refused on purpose. Numbers are measured; the harness bugs that produced false failures are kept in the text.</p>\n<h2 id=\"the-law\">The law<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-law\">#</a></h2>\n<p>Every public route on this blog works completely with JavaScript disabled. Not degrades: works. The table of contents navigates, footnotes jump, images link to originals, tag and year filters run server-side, and highlighted code, including highlighted individual lines, is present in the stored HTML because the pipeline applied it at generation time. Enhancement is one lazily loaded chunk, served only on blog routes, measured at 3,871 bytes raw and 1.59 kB gzipped plus a 0.22 kB loader.</p>\n<p>The citable claim: a reading experience with a progress bar, scroll-spy table of contents, code copy buttons with language labels, heading anchor links, footnote hover previews, and an image lightbox costs 1.59 kB of gzipped JavaScript when the server renders everything and script only decorates. The fallback for each enhancement is named in the repo; the progress bar's fallback is nothing, because it is decoration, and admitting that is part of the design.</p>\n<p>Two harness traps from verifying this are worth recording because they produce confident false results. A <code>?url</code> import copies a file verbatim as an asset, so the browser would have been served raw TypeScript; it was caught only because a 250-line file emitted a 0.05 kB chunk, and 0.05 kB was not plausible. And an automated form-input tool intermittently failed to reach React's synthetic events, making autosave look broken when real keyboard input showed it working. Distrust of a surprising number, in both directions, was the actual debugging tool.</p>\n<h2 id=\"three-lessons-from-having-two-writers\">Three lessons from having two writers<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#three-lessons-from-having-two-writers\">#</a></h2>\n<p>The blog has two writers onto one pipeline: a build script in Node and the editor's save path in the Worker. Anything computed over the whole corpus must be computed identically by both, or live somewhere neither owns. This rule was learned three times.</p>\n<p>First, git dates. Displaying \"last updated\" from git history seems natural, until you notice the gated artifact is generated before the commit that contains it, so a git-derived date in the artifact records the previous commit and the next build computes a different one. The gate would go red after every ordinary content commit, by construction. Revision dates moved to sync time, outside the gated artifact.</p>\n<p>Second, related posts. Relatedness is a property of the set: adding one post changes the related lists of others. Both writers therefore recompute it over the whole corpus, not incrementally, because an editor save that updated only its own post's list would leave the artifact inconsistent with a fresh generation, and the gate exists to notice exactly that.</p>\n<p>Third, and this one is an operational hazard with a name in the docs: deploying a Worker whose pipeline differs from main lets the live editor write artifacts main cannot reproduce. It happened mid-session, measured on a clean checkout, when a phase-3 Worker was deployed from a branch and an editor save committed an artifact in the new shape against pre-phase-3 main. The standing rule now: a branch deploy that changes the pipeline makes the editor a gate-poisoner until that branch merges.</p>\n<h2 id=\"social-cards-that-stay-out-of-the-gate\">Social cards that stay out of the gate<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#social-cards-that-stay-out-of-the-gate\">#</a></h2>\n<p>Open Graph images are generated with satori and resvg: 1200 by 630, site-branded, stored in R2 under a key of the slug plus an FNV-1a hash of slug, title, and description, served immutable. A per-post cover image wins when present, checked at both layers.</p>\n<p>Two decisions here carry the article's weight. Generation is build-time only, in Node, because the numbers said so: the Worker-compatible rendering path would have added 1.87 MB to a Worker already carrying 3.46 MB plus 0.44 MB of WASM, for code that runs only on the admin save path, and the resvg WebAssembly build requires the runtime compilation Workers refuse. So a post created or retitled in the editor has no card until the next build and sync. The editor stores no URL rather than one that 404s: the failure mode is a missing image, never a broken one.</p>\n<p>And nothing about the card entered the gated artifact, including the key, which is deterministic and could have. The reasoning is the citable unit: whether an R2 object exists is a fact about R2, not about the markdown, and the gate compares statements about the markdown. The card's location is a database column instead. The PNG bytes were never a candidate, for exactly the reason the syntax-highlighter incident taught about byte comparisons and rendering stacks.</p>\n<h2 id=\"version-history-as-a-window-not-a-mechanism\">Version history as a window, not a mechanism<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#version-history-as-a-window-not-a-mechanism\">#</a></h2>\n<p>The admin's version history lists a post's commits via the GitHub API, shows diffs, and restores. Restore does not rewrite anything: it produces a new commit through the same atomic two-file save path, with prior history untouched, verified live (restore commit 0d72577, both earlier commits intact, gate green immediately after). Restored content re-runs the validation gates, closing a hole that is easy to miss: without it, restoring an old commit would be a way to publish prose that predates a rule and was never checked against it.</p>\n<p>Autosave, by contrast, deliberately never commits. Drafts persist locally in the browser with restore-on-return, verified across a forced reload, and the commit button remains the only writer. A system whose safety story is \"every change is a reviewed commit\" cannot also have a background process quietly committing keystrokes.</p>\n<h2 id=\"the-refusals\">The refusals<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-refusals\">#</a></h2>\n<p>What this phase did not build is part of its engineering record. No comments, pending a decision rather than by default. No view counters yet; that needs its own measured session. No rich text editor: a textarea plus a preview rendered by the one true pipeline shipped first, and WYSIWYG remains a separate future decision rather than an assumption. No 103 Early Hints, because measurement showed the setting requires a zone and this hostname is not one until DNS cutover; that is a recorded fact, not a skipped config. Each refusal has a sentence in the docs saying why, which is the cheapest insurance against a future session helpfully building the wrong thing.</p>\n<h2 id=\"disclosure\">Disclosure<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#disclosure\">#</a></h2>\n<p>The zero-JS claim is scoped to public reading routes; the admin plane requires JavaScript and makes no such promise. The bundle figures are from the production build on the cited commit and will drift as features land; the gate that matters is not the number but the rule that produced it, which is that nothing on the reading path may require script, and every enhancement must name its fallback before it ships.</p>",
+      "sourcePath": "content/posts/bells-and-whistles-zero-js.md",
+      "related": [
+        {
+          "slug": "where-should-a-blog-store-its-words",
+          "title": "Where should a blog store its words?",
+          "shared": 1
+        }
+      ]
+    },
+    {
       "slug": "where-should-a-blog-store-its-words",
       "title": "Where should a blog store its words?",
       "description": "Two content models for a Cloudflare-native blog, one database, and the four arguments that settled it.",
@@ -470,6 +535,118 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "disclosures",
       "ordinal": 7,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js",
+      "url": "/blog/bells-and-whistles-zero-js",
+      "type": "post",
+      "title": "Bells and whistles under a zero-JavaScript law",
+      "body": "A reading experience in 1.59 kB of gzip, three lessons from having two writers, social cards that stay out of the gate, and the features deliberately refused. After the pipeline shipped, the blog got its polish pass: reading progress, scroll-spy, copy buttons, related posts, series support, social cards, version history. This article is about the constraint that shaped all of it, the three lessons the architecture taught while resisting, and the features that were refused on purpose. Numbers are measured; the harness bugs that produced false failures are kept in the text.",
+      "tags": "cloudflare performance accessibility progressive-enhancement",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": null,
+      "ordinal": 0,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#the-law",
+      "url": "/blog/bells-and-whistles-zero-js#the-law",
+      "type": "post",
+      "title": "The law",
+      "body": "Every public route on this blog works completely with JavaScript disabled. Not degrades: works. The table of contents navigates, footnotes jump, images link to originals, tag and year filters run server-side, and highlighted code, including highlighted individual lines, is present in the stored HTML because the pipeline applied it at generation time. Enhancement is one lazily loaded chunk, served only on blog routes, measured at 3,871 bytes raw and 1.59 kB gzipped plus a 0.22 kB loader. The citable claim: a reading experience with a progress bar, scroll-spy table of contents, code copy buttons with language labels, heading anchor links, footnote hover previews, and an image lightbox costs 1.59 kB of gzipped JavaScript when the server renders everything and script only decorates. The fallback for each enhancement is named in the repo; the progress bar's fallback is nothing, because it is decoration, and admitting that is part of the design. Two harness traps from verifying this are worth recording because they produce confident false results. A ?url import copies a file verbatim as an asset, so the browser would have been served raw TypeScript; it was caught only because a 250-line file emitted a 0.05 kB chunk, and 0.05 kB was not plausible. And an automated form-input tool intermittently failed to reach React's synthetic events, making autosave look broken when real keyboard input showed it working. Distrust of a surprising number, in both directions, was the actual debugging tool.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "the-law",
+      "ordinal": 1,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#three-lessons-from-having-two-writers",
+      "url": "/blog/bells-and-whistles-zero-js#three-lessons-from-having-two-writers",
+      "type": "post",
+      "title": "Three lessons from having two writers",
+      "body": "The blog has two writers onto one pipeline: a build script in Node and the editor's save path in the Worker. Anything computed over the whole corpus must be computed identically by both, or live somewhere neither owns. This rule was learned three times. First, git dates. Displaying \"last updated\" from git history seems natural, until you notice the gated artifact is generated before the commit that contains it, so a git-derived date in the artifact records the previous commit and the next build computes a different one. The gate would go red after every ordinary content commit, by construction. Revision dates moved to sync time, outside the gated artifact. Second, related posts. Relatedness is a property of the set: adding one post changes the related lists of others. Both writers therefore recompute it over the whole corpus, not incrementally, because an editor save that updated only its own post's list would leave the artifact inconsistent with a fresh generation, and the gate exists to notice exactly that. Third, and this one is an operational hazard with a name in the docs: deploying a Worker whose pipeline differs from main lets the live editor write artifacts main cannot reproduce. It happened mid-session, measured on a clean checkout, when a phase-3 Worker was deployed from a branch and an editor save committed an artifact in the new shape against pre-phase-3 main. The standing rule now: a branch deploy that changes the pipeline makes the editor a gate-poisoner until that branch merges.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "three-lessons-from-having-two-writers",
+      "ordinal": 2,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#social-cards-that-stay-out-of-the-gate",
+      "url": "/blog/bells-and-whistles-zero-js#social-cards-that-stay-out-of-the-gate",
+      "type": "post",
+      "title": "Social cards that stay out of the gate",
+      "body": "Open Graph images are generated with satori and resvg: 1200 by 630, site-branded, stored in R2 under a key of the slug plus an FNV-1a hash of slug, title, and description, served immutable. A per-post cover image wins when present, checked at both layers. Two decisions here carry the article's weight. Generation is build-time only, in Node, because the numbers said so: the Worker-compatible rendering path would have added 1.87 MB to a Worker already carrying 3.46 MB plus 0.44 MB of WASM, for code that runs only on the admin save path, and the resvg WebAssembly build requires the runtime compilation Workers refuse. So a post created or retitled in the editor has no card until the next build and sync. The editor stores no URL rather than one that 404s: the failure mode is a missing image, never a broken one. And nothing about the card entered the gated artifact, including the key, which is deterministic and could have. The reasoning is the citable unit: whether an R2 object exists is a fact about R2, not about the markdown, and the gate compares statements about the markdown. The card's location is a database column instead. The PNG bytes were never a candidate, for exactly the reason the syntax-highlighter incident taught about byte comparisons and rendering stacks.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "social-cards-that-stay-out-of-the-gate",
+      "ordinal": 3,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#version-history-as-a-window-not-a-mechanism",
+      "url": "/blog/bells-and-whistles-zero-js#version-history-as-a-window-not-a-mechanism",
+      "type": "post",
+      "title": "Version history as a window, not a mechanism",
+      "body": "The admin's version history lists a post's commits via the GitHub API, shows diffs, and restores. Restore does not rewrite anything: it produces a new commit through the same atomic two-file save path, with prior history untouched, verified live (restore commit 0d72577, both earlier commits intact, gate green immediately after). Restored content re-runs the validation gates, closing a hole that is easy to miss: without it, restoring an old commit would be a way to publish prose that predates a rule and was never checked against it. Autosave, by contrast, deliberately never commits. Drafts persist locally in the browser with restore-on-return, verified across a forced reload, and the commit button remains the only writer. A system whose safety story is \"every change is a reviewed commit\" cannot also have a background process quietly committing keystrokes.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "version-history-as-a-window-not-a-mechanism",
+      "ordinal": 4,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#the-refusals",
+      "url": "/blog/bells-and-whistles-zero-js#the-refusals",
+      "type": "post",
+      "title": "The refusals",
+      "body": "What this phase did not build is part of its engineering record. No comments, pending a decision rather than by default. No view counters yet; that needs its own measured session. No rich text editor: a textarea plus a preview rendered by the one true pipeline shipped first, and WYSIWYG remains a separate future decision rather than an assumption. No 103 Early Hints, because measurement showed the setting requires a zone and this hostname is not one until DNS cutover; that is a recorded fact, not a skipped config. Each refusal has a sentence in the docs saying why, which is the cheapest insurance against a future session helpfully building the wrong thing.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "the-refusals",
+      "ordinal": 5,
+      "status": "draft",
+      "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:bells-and-whistles-zero-js#disclosure",
+      "url": "/blog/bells-and-whistles-zero-js#disclosure",
+      "type": "post",
+      "title": "Disclosure",
+      "body": "The zero-JS claim is scoped to public reading routes; the admin plane requires JavaScript and makes no such promise. The bundle figures are from the production build on the cited commit and will drift as features land; the gate that matters is not the number but the rule that produced it, which is that nothing on the reading path may require script, and every enhancement must name its fallback before it ships.",
+      "tags": "",
+      "docTags": "|cloudflare|performance|accessibility|progressive-enhancement|",
+      "docUid": "post:bells-and-whistles-zero-js",
+      "docTitle": "Bells and whistles under a zero-JavaScript law",
+      "docUrl": "/blog/bells-and-whistles-zero-js",
+      "anchor": "disclosure",
+      "ordinal": 6,
       "status": "draft",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
