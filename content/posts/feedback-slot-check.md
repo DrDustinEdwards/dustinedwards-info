@@ -4,7 +4,7 @@ slug: feedback-slot-check
 description: "Throwaway post created to verify the editor feedback slot. Safe to delete."
 date: 2026-07-28
 tags: [cloudflare, testing]
-draft: true
+draft: false
 first_published: 2026-07-29
 ---
 
