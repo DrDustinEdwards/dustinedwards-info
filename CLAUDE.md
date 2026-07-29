@@ -336,6 +336,94 @@ Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write o
 this repo). Without it the editor still renders and previews, and saving reports
 that it is unavailable rather than half-working.
 
+## Operator publish path (agents)
+
+`POST /api/operator`, a bearer-token JSON endpoint exposing the editor's save
+machinery to non-browser callers. Ruling: `dustinedwards/decisions.md`,
+2026-07-28. Tools: `list_posts`, `get_post`, `save_post`, `delete_post`,
+`sync_status`. `GET` on the same URL describes them, behind the same token.
+
+**There is exactly one write path.** `app/lib/operator/api.server.ts` calls the
+same `savePost` and `deletePost` in `publish.server.ts` that the browser action
+calls, so an agent gets the same zod gates, the same wide-dash check, the same
+single atomic Git Data commit carrying markdown plus artifact, one renderer, the
+same D1 sync and the same Ask sync. Nothing in the operator layer touches
+GitHub, D1 or the AI index directly.
+
+**No refactor was needed and that is worth knowing.** `savePost(env, options)`
+already took a plain env and an options object rather than a Request, so
+`handleEditorAction` was already a 55-line FormData adapter over a callable
+module. The browser editor is unchanged apart from one hidden input.
+
+**Why a bearer API and not MCP.** Decided 2026-07-28. The router is not a
+blocker (a JSON-RPC body with MCP headers passes through a resource route
+untouched, measured). Two other reasons decided it: MCP shipped a BREAKING spec
+revision stable that same day, whose compatibility matrix has legacy-client to
+modern-server failing with no fall-forward and which no shipped client speaks
+yet; and the recova precedent has its MCP publish tools calling an operator HTTP
+API rather than a database. The API is the durable contract. MCP is a later
+front end, and the `{tool, args}` request shape is chosen so `tools/call` maps
+onto it with no reshaping.
+
+### The first-publish policy
+
+An operator may create, edit, unpublish and republish. It may NOT perform a
+post's FIRST transition to `draft: false`. Refused with 403 and
+`policy: first-publish-requires-admin`.
+
+The durable fact is `first_published` in FRONTMATTER, server-owned, stamped once
+by the save path the first time a post is committed with `draft: false`. Current
+state cannot answer the question on its own: a post at `draft: true` is either
+brand new (refuse) or previously published and withdrawn (allow).
+
+**The security-critical part is that the value is read only from the COMMITTED
+FILE and always overwritten on the way out.** Without that, an agent could
+publish any draft by submitting `first_published` in its own payload, asserting
+the very fact the gate checks. `check:policy` has a paired forgery test for
+exactly this, and it was observed failing.
+
+Chosen over a D1 column because D1 is derived: `Regenerate all` rebuilds rows
+from the artifact and would silently drop the fact. It is declared in the zod
+schema but deliberately NOT copied into the record by `renderPost`, so the gated
+artifact does not churn and the file stays the only place it lives.
+
+The editor carries it through a hidden input. `serializePost` writes exactly the
+keys it is handed, so a value the form did not carry would be dropped on the
+next browser edit and a published post would read as never published.
+
+### Auth and limits
+
+`OPERATOR_TOKEN`, a wrangler secret, minimum 32 characters. Compared in constant
+time after both sides are hashed to a fixed 32 bytes, so neither the contents
+nor the LENGTH of the presented token leaks through the comparison. Absent or
+too short, the endpoint returns 503: not configured means not open.
+
+Rate limited to 30 per 60 seconds, reusing the existing `AskBudget` Durable
+Object with an `op:<id>` instance name. No new class and no migration. Authenticate
+first, then rate limit, so an unauthenticated flood cannot exhaust a real
+operator's budget. Without `ASK_BUDGET` the endpoint refuses rather than serving
+unprotected, the same stance the Ask guards take.
+
+Commits carry `[operator:<id>]`, where the id is eight hex characters of a hash
+of the token: stable, changes on rotation, reveals nothing.
+
+**Verifying the limiter needs a CONCURRENT burst.** A sequential loop of 36
+requests produced zero refusals, because it straddled the fixed-window boundary,
+and that reads exactly like a dead limiter. 45 concurrent requests produced 19
+refusals. Same trap already recorded for the Ask guards.
+
+## check:policy (gate)
+
+`npm run check:policy` imports `app/lib/editor/publish-policy.mjs`, the module
+the Worker imports, on the same principle as `check:search` and `query.mjs`.
+Pure: no GitHub, no database, no network. 29 assertions, every rule paired with
+its negative.
+
+Verified by planting three violations and confirming a real exit 1 for each:
+trusting the caller's `first_published` (the forgery hole, exactly 2 failures),
+removing the operator refusal (4), and clearing `first_published` on unpublish,
+which would lock an operator out of republishing its own post (2).
+
 ## Social cards
 
 `npm run build:og -- --remote` renders a 1200x630 PNG per post with satori and
@@ -498,7 +586,7 @@ preview.
 1. Every public read goes through `publiclyVisible()`. It hides drafts and future publish_at rows. Do not query posts for public output without it.
 2. Migrations are hand-written in `drizzle/`. drizzle-kit is intentionally not a dependency (esbuild advisory). Add a new numbered file, never edit an applied one.
 3. Keep the worker lean. No heavy dependencies. Client bundles stay small; auth code loads only on admin and login routes. This is the repo's bundle-leanness rule, and it is why inline SVG is preferred here over an icon library.
-4. Secrets are wrangler secrets, read only in `.server` modules and in loaders/actions: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET, BETTER_AUTH_URL, ADMIN_EMAIL.
+4. Secrets are wrangler secrets, read only in `.server` modules and in loaders/actions: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET, BETTER_AUTH_URL, ADMIN_EMAIL, GITHUB_TOKEN, OPERATOR_TOKEN.
 5. Do not modify `.claude/settings.json` without explicit instruction. Two PreToolUse hooks block on exit 2: `no-em-dash.sh` on Write and Edit, and `scoped-git-add.sh` on Bash. A Stop hook runs `npx tsc -b`. That enforcement is deliberate. PreToolUse plus exit 2 is the only blocking combination; the older PostToolUse `.mjs` registration could not block a write and was retired in d36dbf2.
 6. `wrangler d1 export` does NOT work on this database: it fails outright on the
    `posts_fts` virtual table (measured 2026-07-27). Back up per table instead,
