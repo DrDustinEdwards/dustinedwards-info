@@ -17,9 +17,9 @@ export default function Home() {
       <SiteHeader />
       <main className="hero" id="main">
         <div className="hero-inner">
-          <p className="eyebrow">{SITE.affiliation}</p>
+          <p className="eyebrow">{SITE.eyebrow}</p>
           <h1 className="hero-name">{SITE.name}</h1>
-          <p className="hero-role">{SITE.role}</p>
+          <p className="hero-role">{SITE.tagline}</p>
         </div>
         {jsonLd.map((data, i) => (
           <script

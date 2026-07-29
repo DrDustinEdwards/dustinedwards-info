@@ -7,9 +7,11 @@ import { Link } from "react-router";
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p className="muted">
-        © {new Date().getFullYear()} Dustin Edwards · Tarleton State University
-      </p>
+      {/* The affiliation left this line on 2026-07-29. It is stated once, in
+          the homepage hero, and the footer no longer repeats a claim the rest
+          of the site stopped making. It survives in the Person JSON-LD, which
+          is where a machine looks for an employer. */}
+      <p className="muted">© {new Date().getFullYear()} Dustin Edwards</p>
       <Link to="/login" className="footer-login">
         <svg
           width="13"
