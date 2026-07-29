@@ -21,6 +21,15 @@ export type PostFields = {
   coverSrc: string;
   coverAlt: string;
   body: string;
+  /**
+   * Server-owned, carried through the editor untouched.
+   *
+   * The editor never offers this as a field and never sets it. It is here only
+   * so a browser save PRESERVES it: serializePost writes exactly the keys it
+   * knows about, so a value it did not carry would be silently dropped on the
+   * next edit, and a published post would read as never published.
+   */
+  firstPublished: string;
 };
 
 export const EMPTY_FIELDS: PostFields = {
@@ -34,6 +43,7 @@ export const EMPTY_FIELDS: PostFields = {
   coverSrc: "",
   coverAlt: "",
   body: "",
+  firstPublished: "",
 };
 
 /** Splits a comma or newline separated tag input into clean slugs. */
@@ -57,6 +67,10 @@ export function serializePost(fields: PostFields) {
 
   if (fields.publishAt.trim()) {
     lines.push(`publish_at: ${JSON.stringify(fields.publishAt.trim())}`);
+  }
+
+  if (fields.firstPublished.trim()) {
+    lines.push(`first_published: ${fields.firstPublished.trim()}`);
   }
 
   if (fields.coverSrc.trim()) {
@@ -97,6 +111,7 @@ export function parsePost(raw: string): PostFields {
     coverSrc: asString(cover.src),
     coverAlt: asString(cover.alt),
     body: parsed.content.replace(/^\n+/, ""),
+    firstPublished: asString(data.first_published),
   };
 }
 
@@ -114,5 +129,7 @@ export function fieldsFromForm(form: FormData): PostFields {
     coverSrc: get("coverSrc"),
     coverAlt: get("coverAlt"),
     body: get("body"),
+    // Round-tripped through a hidden input so a browser save preserves it.
+    firstPublished: get("firstPublished"),
   };
 }
