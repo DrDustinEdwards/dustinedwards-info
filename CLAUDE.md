@@ -365,6 +365,97 @@ through `savePost`. That is the ordinary atomic path, so a restore is a NEW
 commit. Never force push, never rewrite, never a second write path. The gates
 run again on restored content, so an old commit cannot bypass a newer rule.
 
+## Design tokens and theming
+
+The Hill Country token system, ratified 2026-07-28. The authoritative colour
+spec is `dustinedwards/design-tokens.md`; the ruling pointer is in
+`dustinedwards/decisions.md`. **Every hex in `app/app.css` is copied from that
+doc.** Do not re-derive, re-tune or improve one without a new ruling.
+
+Tokens are named for the ROLE a component asks for, never the hue: `--fill-danger`,
+not crimson. Six families (brand, danger, warning, success, info, accent) plus
+neutrals, marks and charts.
+
+**Theme resolution, and why there is no flash.**
+
+    :root, [data-theme="light"]   light
+    :root:not([data-theme])       dark, under a dark OS preference
+    [data-theme="dark"]           dark, chosen
+
+"System" is the ABSENCE of the attribute, not a third value. The choice lives in
+a COOKIE, read in the root loader, so the server writes the right attribute into
+the first byte of HTML. There is no inline script and nothing is corrected after
+paint. Verified: no cookie and `theme=system` both render `<html lang="en">`,
+`theme=dark` renders `data-theme="dark"`, a junk cookie degrades to system with a
+200. This RESOLVED the recorded theming divergence.
+
+Both theme blocks land on the same element, so they do not cascade into one
+another: **a token declared in light and forgotten in dark keeps its LIGHT
+value**. `check:contrast` asserts name parity for exactly this.
+
+The toggle is a real `<form method="post" action="/theme">` with three submit
+buttons carrying `aria-pressed`, so it works with scripting off; `app/enhance/theme.ts`
+only removes the round trip. Not a `role="radio"` group, because a real
+radiogroup owes arrow-key roving focus that cannot be delivered without script.
+
+**Six binding usage rules** live in design-tokens.md and are part of the ruling.
+Two shape this repo directly:
+- **Links are underlined.** Base rule on `a`. The only exemptions are elements
+  already carrying a non-colour affordance (a border or a fill): `.tag-chip`,
+  `.post-action`, `.search-chip`, `.btn`/`.btn-danger`, and the two wordmarks.
+  Decided with Dustin 2026-07-28.
+- **Interactive semantics take fills, never pastel text on the page.** Delete is
+  `--fill-danger`. Pastels are for banners and text (`.editor-problem`).
+
+Documented exceptions, both for the same reason (the colour is carrying DATA,
+not decoration): the version-history diff uses success and danger tints
+adjacently, against the one-tint-per-view rule, and each line keeps its literal
+`+`/`-` prefix as the second channel.
+
+Code blocks sit on `--surface-code`, NOT on a shiki theme's own background:
+github-dark ships a blue-black that fights the warm palette. Syntax themes are
+`github-light-high-contrast` / `github-dark-high-contrast`, chosen by
+measurement after that change voided the previous verification. The plain github
+themes failed four light tokens (comments 4.06, strings 3.90, keywords 3.86,
+constants 2.94) and dark comments at 3.34. Comments are repointed at the
+ratified `--text-muted`, the one hand-set syntax colour.
+
+**`OG_TEMPLATE_VERSION` in `pipeline.mjs` is part of the card's hash key.** The
+card key is what makes the R2 object safe to serve immutable, so a template
+restyle that did not change the key would never reach a cached reader. Bump it
+whenever card colours, type or layout change. It is at 2 for these tokens.
+
+## check:contrast (gate)
+
+`npm run check:contrast` reads the token values back out of `app/app.css` and
+recomputes the whole matrix. **Two independent sources argue:** the hexes come
+from the stylesheet, the pairs and thresholds are transcribed from
+design-tokens.md as token NAMES. Nothing in the script restates a hex, so a
+tuned hex moves one side of the comparison and fails.
+
+It also verifies every shiki token against both code surfaces, and, when a build
+is present, that all 104 light and dark values survived into the shipped CSS.
+WCAG 2.x is what fails a run; APCA Lc prints as advisory, because APCA is what
+produced the fills-over-pastels rule.
+
+Verified by planting three violation classes and confirming a real exit 1 each
+time (a tuned hex, a token missing from the dark block, the two dark blocks
+disagreeing). **Check the exit code directly, never through a pipe:** `tail`
+masked it and reported exit 0 on a failing run during this work.
+
+Two traps it already caught, both real:
+- The token block's own comment spells out the three selectors, so the parser
+  found the PROSE first and read the light block three times, passing every dark
+  row for the wrong reason. Comments are stripped before anything is located.
+- Lightning CSS rewrites `#ffffff` to `#fff`, so a substring match reported
+  three tokens missing from a stylesheet that carried all of them. Values are
+  compared normalised.
+
+Three low-contrast tokens in `github-dark-high-contrast` are reported as
+unreachable rather than failed: they are diff scopes and `diff` is not a loaded
+grammar. **That exemption fails closed**, conditioned on `LANGUAGES` not
+containing `diff`.
+
 ## Zero-JS rule (gate, not preference)
 
 Every public blog route must be fully functional with JavaScript disabled.

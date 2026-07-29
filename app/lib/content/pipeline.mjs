@@ -44,8 +44,8 @@ import markdown from "shiki/langs/markdown.mjs";
 import sql from "shiki/langs/sql.mjs";
 import tsx from "shiki/langs/tsx.mjs";
 import typescript from "shiki/langs/typescript.mjs";
-import githubDark from "shiki/themes/github-dark.mjs";
-import githubLight from "shiki/themes/github-light.mjs";
+import githubDarkHighContrast from "shiki/themes/github-dark-high-contrast.mjs";
+import githubLightHighContrast from "shiki/themes/github-light-high-contrast.mjs";
 
 /** Languages that get highlighted. Anything else renders as plain text. */
 export const LANGUAGES = [
@@ -225,6 +225,20 @@ export function setWasmLoader(loader) {
 }
 
 /**
+ * Bumped whenever the card TEMPLATE changes: colours, type, layout.
+ *
+ * The key is what makes the object safe to serve immutable, and the key is a
+ * hash of the card's inputs. The template was not one of those inputs, so
+ * restyling the card produced a byte-different PNG under an identical key,
+ * which an immutable cache is entitled to ignore forever. Bumping this is how
+ * a template change actually reaches a reader.
+ *
+ * 2: the Hill Country tokens, 2026-07-28. Background, body and muted moved off
+ * the old cool neutrals onto caliche and mesquite; brand purple is unchanged.
+ */
+const OG_TEMPLATE_VERSION = 2;
+
+/**
  * The R2 key for a post's generated social image.
  *
  * Deterministic from the content that appears on the card, so the key changes
@@ -239,10 +253,13 @@ export function setWasmLoader(loader) {
  * thing that varies between runs, and the shiki engine incident showed what a
  * byte-comparison gate does with a non-deterministic input.
  *
+ * The TEMPLATE is an input too, via OG_TEMPLATE_VERSION below.
+ *
  * @param {{ slug: string, title: string, description: string }} post
  */
+
 export function ogImageKey(post) {
-  const input = `${post.slug}\n${post.title}\n${post.description}`;
+  const input = `${OG_TEMPLATE_VERSION}\n${post.slug}\n${post.title}\n${post.description}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
@@ -305,6 +322,51 @@ function getHighlighter() {
   }
   return highlighterPromise;
 }
+
+/**
+ * Syntax themes, chosen by measurement against the ratified code surfaces.
+ *
+ * Code blocks no longer carry a theme's own background: they sit on
+ * --surface-code, with the highlighted-line band on --surface-popover. That
+ * voided the previous verification, and re-running it condemned the plain
+ * github themes: against the warm surfaces, github-light failed four token
+ * colours (comments 4.06, strings 3.90, keywords 3.86, constants 2.94) and
+ * github-dark failed comments at 3.34. The high-contrast variants clear every
+ * one, so the fix is a theme swap rather than hand-mixed hexes.
+ *
+ * Comments are the single exception, still 4.25 in light after the swap, so
+ * they are repointed at the ratified MUTED TEXT colour. That is not a new hex:
+ * it is --text-muted from design-tokens.md, which is what a comment is, and it
+ * keeps the one hand-set syntax colour inside the ratified palette.
+ *
+ * Measured and gated by `npm run check:contrast`.
+ */
+const COMMENT_LIGHT = "#5C5248";
+const COMMENT_DARK = "#B3A99C";
+
+/** @param {any} theme @param {string} colour */
+function withCommentColour(theme, colour) {
+  /** @type {any[]} */
+  const rules = theme.settings ?? theme.tokenColors ?? [];
+  return {
+    ...theme,
+    settings: rules.map((/** @type {any} */ rule) => {
+      const scope = Array.isArray(rule?.scope) ? rule.scope : [rule?.scope];
+      if (!scope.includes("comment")) return rule;
+      return { ...rule, settings: { ...rule.settings, foreground: colour } };
+    }),
+  };
+}
+
+const githubLight = withCommentColour(githubLightHighContrast, COMMENT_LIGHT);
+const githubDark = withCommentColour(githubDarkHighContrast, COMMENT_DARK);
+
+/**
+ * Exported so `check:contrast` verifies the themes this module actually
+ * highlights with. A gate that imported the themes by name would still pass
+ * after a swap here, which is the drift it exists to catch.
+ */
+export const SHIKI_THEMES = { light: githubLight, dark: githubDark };
 
 async function buildHighlighter() {
   return createHighlighterCore({
@@ -466,7 +528,10 @@ export async function renderBody({ file, body, resolveImage }) {
     })
     .use(rehypeImageDimensions, file, resolveImage, pending)
     .use(rehypeShikiFromHighlighter, highlighter, {
-      themes: { light: "github-light", dark: "github-dark" },
+      themes: {
+        light: "github-light-high-contrast",
+        dark: "github-dark-high-contrast",
+      },
       // Emits both palettes as CSS variables per token, so a code block follows
       // the page theme with no client script.
       defaultColor: false,

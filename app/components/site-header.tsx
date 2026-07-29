@@ -1,7 +1,10 @@
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useRouteLoaderData } from "react-router";
 
 import { SearchTrigger } from "~/components/search-trigger";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { SITE } from "~/lib/seo";
+
+import type { loader as rootLoader } from "~/root";
 
 /**
  * Public site header. Brand plus the one nav link the site currently earns.
@@ -14,6 +17,8 @@ import { SITE } from "~/lib/seo";
  * depends on the palette existing.
  */
 export function SiteHeader() {
+  const data = useRouteLoaderData<typeof rootLoader>("root");
+
   return (
     <header className="site-header">
       <Link to="/" className="site-header-brand">
@@ -22,6 +27,7 @@ export function SiteHeader() {
       <nav className="site-header-nav">
         <NavLink to="/blog">Blog</NavLink>
         <SearchTrigger />
+        <ThemeToggle theme={data?.theme ?? "system"} />
       </nav>
     </header>
   );
