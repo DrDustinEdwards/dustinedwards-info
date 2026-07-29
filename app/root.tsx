@@ -5,10 +5,26 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
 } from "react-router";
+
+import { themeAttribute, themeFromRequest } from "~/lib/theme";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+
+/**
+ * Reads the theme cookie so the attribute is server-rendered.
+ *
+ * This is the entire flash-of-wrong-theme fix. There is no inline script and
+ * nothing to correct after paint: the first byte of HTML already carries the
+ * right attribute, or deliberately carries none so prefers-color-scheme
+ * decides. Cookie parsing only, no binding and no I/O, so it costs nothing on
+ * a route that does not care.
+ */
+export function loader({ request }: Route.LoaderArgs) {
+  return { theme: themeFromRequest(request) };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -24,8 +40,14 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  // Layout also renders the error boundary, where the root loader may not have
+  // run, so this reads the optional route data rather than useLoaderData. No
+  // data means no attribute, which is the system path and always safe.
+  const data = useRouteLoaderData<typeof loader>("root");
+  const theme = data ? themeAttribute(data.theme) : undefined;
+
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

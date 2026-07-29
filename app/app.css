@@ -5,41 +5,389 @@
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-/* Design tokens. Light by default, dark via prefers-color-scheme. */
-:root {
-  --bg: #ffffff;
-  --fg: #171320;
-  --muted: #6b6577;
+/* The Hill Country token system ---------------------------------------------
+ *
+ * Ratified 2026-07-28. The authoritative specification is
+ * dustinedwards/design-tokens.md and every hex below is COPIED from it, never
+ * derived here. `npm run check:contrast` reads these declarations back out of
+ * the stylesheet and recomputes the whole matrix, so a hex tuned by hand fails
+ * the gate rather than shipping.
+ *
+ * Tokens are named for the role a component asks for, never for the hue that
+ * answers. A destructive button asks for --fill-danger; it does not ask for
+ * crimson. That is what lets a theme flip change every hue and no component.
+ *
+ * THEME RESOLUTION, in source order:
+ *
+ *   :root, [data-theme="light"]   light values
+ *   :root:not([data-theme])       dark values, under a dark OS preference
+ *   [data-theme="dark"]           dark values, explicitly chosen
+ *
+ * "System" is the ABSENCE of the attribute, not a third value. That is the
+ * whole anti-flash mechanism: with no attribute the OS preference decides in
+ * pure CSS, and with an attribute the server already wrote the right one from
+ * the cookie. Nothing is ever corrected after paint, so no blocking script is
+ * needed and there is no frame of wrong theme to eliminate.
+ *
+ * Both blocks land on the same element (html), so they do not cascade into one
+ * another: a token declared in light and forgotten in dark keeps its LIGHT
+ * value under a dark theme. The two blocks must therefore declare exactly the
+ * same names, and check:contrast asserts that parity.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Neutrals: caliche, limestone, mesquite. */
+  --bg: #faf7f2;
+  --surface: #f1ebe1;
+  --surface-popover: #ebe2d3;
+  --surface-code: #f1ebe1;
+  --surface-hero: #ede8f5;
+  --text: #2b2320;
+  /* No split in light mode: halation is a light-on-dark effect, so the heading
+     token exists here only so components can ask for the role unconditionally. */
+  --text-heading: #2b2320;
+  --text-muted: #5c5248;
+  --text-disabled: #93887a;
+  --border: #8a7d6e;
+  --border-strong: #6e6459;
+
+  /* Brand: bluebonnet. Brand only. It never signals a state. */
   --brand: #4f2d7f;
-  --brand-fg: #ffffff;
-  --border: #e7e4ee;
-  --surface: #f8f7fb;
-  --ok: #2e8b57;
-  --warn: #b8860b;
-  --error: #c0453f;
+  --brand-hover: #3d2263;
+  --brand-active: #2f1a4d;
+  --on-brand: #ffffff;
+  --tint-brand: #ede8f5;
+  --visited: #7f2651;
+  --selection-bg: #d9ccee;
+  --focus-ring: #4f2d7f;
+  --focus-ring-on-brand: #f3e3b8;
+
+  /* Danger: crimson. */
+  --text-danger: #a1122a;
+  --tint-danger: #f7e1e1;
+  --on-tint-danger: #7c0e20;
+  --border-danger: #c4677a;
+  --fill-danger: #8e1024;
+  --fill-danger-hover: #75091c;
+  --on-fill-danger: #ffffff;
+
+  /* Warning: prairie gold. */
+  --text-warning: #7a5a08;
+  --tint-warning: #f6eac8;
+  --on-tint-warning: #6b4f07;
+  --border-warning: #a67c24;
+  --fill-warning: #e0a428;
+  --on-fill-warning: #2b2320;
+
+  /* Success: sage. */
+  --text-success: #3e5d4b;
+  --tint-success: #e3ebdd;
+  --on-tint-success: #31503e;
+  --border-success: #5e7c6a;
+  --fill-success: #3e5d4b;
+  --on-fill-success: #ffffff;
+
+  /* Info: Space Cadet. The doc specifies no info fill, so there is none. */
+  --text-info: #16385e;
+  --tint-info: #dfe7ef;
+  --on-tint-info: #16385e;
+  --border-info: #63819f;
+
+  /* Accent: terracotta. Decorative only. It never signals a state. */
+  --text-accent: #7a3e12;
+  --text-accent-lifted: #8a4a1b;
+  --tint-accent: #f3e5dc;
+
+  /* Search highlight. Text on it is --text. */
+  --mark-bg: #f3e3b8;
+
+  /* Charts. Keyed by HUE, not by ladder position, because the doc lists the
+     two ladders in different orders: a series indexed by position would change
+     hue on a theme flip. Core-5 is the unlabeled-safe set; rust is extended and
+     requires a direct label. */
+  --chart-cadet: #142b42;
+  --chart-purple: #4f2d7f;
+  --chart-claret: #9b3268;
+  --chart-sage: #55684a;
+  --chart-gold: #9a7a0e;
+  --chart-rust: #8a4a1b;
 }
 
+/* No attribute and a dark OS preference. This is the zero-JS path and the
+   "system" setting, which are the same code path by construction. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0d15;
-    --fg: #f4f2f8;
-    --muted: #a29bb2;
-    --brand: #b79ce4;
-    --brand-fg: #17121f;
-    --border: #262232;
-    --surface: #16121f;
-    --ok: #5fbd85;
-    --warn: #d9a441;
-    --error: #e07670;
+  :root:not([data-theme]) {
     color-scheme: dark;
+
+    /* Neutrals: prairie night. Warm brown-black, never blue-black. */
+    --bg: #1a1614;
+    --surface: #26201c;
+    --surface-popover: #322a25;
+    --surface-code: #26201c;
+    --surface-hero: #3d2a5c;
+    /* v3 split: body steps one off maximum to reduce halation for astigmatic
+       readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
+    --text: #e3dbd0;
+    --text-heading: #ede6dc;
+    --text-muted: #b3a99c;
+    --text-disabled: #6e655b;
+    --border: #746a5f;
+    --border-strong: #8a8075;
+
+    --brand: #b7a5e0;
+    --brand-hover: #c9baea;
+    --brand-active: #c9baea;
+    --on-brand: #1a1614;
+    --tint-brand: #2b2440;
+    --visited: #d586ac;
+    --selection-bg: #4a3a6b;
+    --focus-ring: #b7a5e0;
+    --focus-ring-on-brand: #4a3d1e;
+
+    --text-danger: #ec9aa8;
+    --tint-danger: #3a2226;
+    --on-tint-danger: #f0aeba;
+    --border-danger: #9c5766;
+    --fill-danger: #a62239;
+    --fill-danger-hover: #8e1024;
+    --on-fill-danger: #ffffff;
+
+    --text-warning: #e2bc6b;
+    --tint-warning: #3a311a;
+    --on-tint-warning: #e5c078;
+    --border-warning: #9c8347;
+    --fill-warning: #e9b44c;
+    --on-fill-warning: #1a1614;
+
+    --text-success: #93b29b;
+    --tint-success: #252c1e;
+    --on-tint-success: #93b29b;
+    --border-success: #6e8259;
+    --fill-success: #8fac77;
+    --on-fill-success: #1a1614;
+
+    --text-info: #85aad3;
+    --tint-info: #1e2733;
+    --on-tint-info: #85aad3;
+    --border-info: #5f7c99;
+
+    --text-accent: #ce7f44;
+    --text-accent-lifted: #e0996a;
+    --tint-accent: #362317;
+
+    --mark-bg: #4a3d1e;
+
+    --chart-cadet: #5887b5;
+    --chart-purple: #c0b0e6;
+    --chart-claret: #c9699e;
+    --chart-sage: #93b29b;
+    --chart-gold: #efd99c;
+    --chart-rust: #ce7f44;
+  }
+}
+
+/* Dark, chosen explicitly. Identical values to the block above. They are
+   written twice rather than shared through a third custom property because a
+   token indirection would make check:contrast read a name instead of a hex,
+   and the gate has to see the hex that ships. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #1a1614;
+  --surface: #26201c;
+  --surface-popover: #322a25;
+  --surface-code: #26201c;
+  --surface-hero: #3d2a5c;
+  --text: #e3dbd0;
+  --text-heading: #ede6dc;
+  --text-muted: #b3a99c;
+  --text-disabled: #6e655b;
+  --border: #746a5f;
+  --border-strong: #8a8075;
+
+  --brand: #b7a5e0;
+  --brand-hover: #c9baea;
+  /* The doc specifies no dark brand-active. Reusing the ratified hover hex
+     keeps parity with the light block without inventing a value. */
+  --brand-active: #c9baea;
+  --on-brand: #1a1614;
+  --tint-brand: #2b2440;
+  --visited: #d586ac;
+  --selection-bg: #4a3a6b;
+  --focus-ring: #b7a5e0;
+  --focus-ring-on-brand: #4a3d1e;
+
+  --text-danger: #ec9aa8;
+  --tint-danger: #3a2226;
+  --on-tint-danger: #f0aeba;
+  --border-danger: #9c5766;
+  --fill-danger: #a62239;
+  --fill-danger-hover: #8e1024;
+  --on-fill-danger: #ffffff;
+
+  --text-warning: #e2bc6b;
+  --tint-warning: #3a311a;
+  --on-tint-warning: #e5c078;
+  --border-warning: #9c8347;
+  --fill-warning: #e9b44c;
+  --on-fill-warning: #1a1614;
+
+  --text-success: #93b29b;
+  --tint-success: #252c1e;
+  --on-tint-success: #93b29b;
+  --border-success: #6e8259;
+  --fill-success: #8fac77;
+  --on-fill-success: #1a1614;
+
+  --text-info: #85aad3;
+  --tint-info: #1e2733;
+  --on-tint-info: #85aad3;
+  --border-info: #5f7c99;
+
+  --text-accent: #ce7f44;
+  --text-accent-lifted: #e0996a;
+  --tint-accent: #362317;
+
+  --mark-bg: #4a3d1e;
+
+  --chart-cadet: #5887b5;
+  --chart-purple: #c0b0e6;
+  --chart-claret: #c9699e;
+  --chart-sage: #93b29b;
+  --chart-gold: #efd99c;
+  --chart-rust: #ce7f44;
+}
+
+/* v3 amendment 3: prefers-contrast: more ---------------------------------
+ *
+ * A narrow tier, deliberately. Only the two tokens that sit lowest in the
+ * matrix move, plus the default border promoting to its strong twin. The doc
+ * says "no other values change under the query", so nothing else does: a tier
+ * that rewrote the palette would be a second palette to keep in step.
+ *
+ * Literal hexes rather than var(--border-strong), because check:contrast reads
+ * these blocks back and asserts every token is a hex. An indirection would make
+ * the gate read a name where it needs a value.
+ */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme="light"] {
+    --text-muted: #4a423a;
+    --border: #6e6459;
+  }
+
+  [data-theme="dark"] {
+    --text-muted: #c6bdaf;
+    --border: #8a8075;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --text-muted: #c6bdaf;
+    --border: #8a8075;
+  }
+}
+
+/* v3 amendment 4: forced-colors: active -----------------------------------
+ *
+ * The palette yields ENTIRELY to system colours here. Nothing below re-asserts
+ * a brand colour; every rule exists to make a control keep its SHAPE once the
+ * user agent has replaced its background, because in this mode a fill is not a
+ * fill any more.
+ *
+ * A transparent outline is the technique: forced-colors resolves transparent
+ * outlines to a system colour, so a control that was only distinguishable by
+ * its background is still distinguishable by its edge. Focus is already an
+ * outline everywhere (amendment 4 again), so it survives untouched.
+ */
+@media (forced-colors: active) {
+  /* Anything whose shape came from a fill. */
+  .btn,
+  .btn-brand,
+  .btn-danger,
+  .btn-ghost,
+  .search-submit,
+  .blog-search button,
+  .skip-link,
+  .ask-badge,
+  .theme-option[aria-pressed="true"],
+  .tag-chip[aria-current="true"],
+  .search-chip.is-active,
+  .palette-option[aria-selected="true"] {
+    outline: 1px solid transparent;
+  }
+
+  /* Status dots carried their state in a background, which is exactly what
+     this mode removes. The shape survives, and the word beside them was always
+     the real channel. A forced border keeps them visible at all. */
+  .status-dot {
+    border: 1px solid currentColor;
+  }
+
+  /* Selected rows in the palette lose their tint, so the selection is restated
+     as an edge rather than left to disappear. */
+  .palette-option[aria-selected="true"] {
+    outline-offset: -2px;
   }
 }
 
 html,
 body {
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--text);
+}
+
+/* Rule 2: a link is underlined.
+ *
+ * The grounds are CVD, not taste. Brand purple against body text, and visited
+ * claret against brand purple, both fail Vienot simulation on hue alone, so
+ * the underline is what says "link" and the colour is only reinforcement.
+ *
+ * The exemption is narrow and stated once here rather than scattered: an
+ * element that already carries a NON-COLOUR affordance, a border or a fill,
+ * is not leaning on hue and does not need a second cue. Those are the chips
+ * and the buttons, and they opt out explicitly at their own rules. Everything
+ * else, including every nav link, underlines. Decided with Dustin 2026-07-28.
+ *
+ * These are element-level selectors on purpose: any component rule that sets
+ * its own colour outranks them, so this changes defaults without overriding
+ * anything already deliberate.
+ */
+/* v3 amendment 2. An element-level rule, so any component that sets its own
+   heading colour (the brand-purple page and post titles) still outranks it.
+   In light mode this resolves to the same value as body text, so it changes
+   nothing there and is not a second colour to keep in step. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-heading);
+}
+
+a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+a:visited {
+  color: var(--visited);
+}
+
+a:hover {
+  color: var(--brand-hover);
 }
 
 /* Public hero. Leaves room for the header and footer within the first viewport. */
@@ -59,7 +407,7 @@ body {
   font-size: 0.875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .hero-name {
@@ -73,7 +421,7 @@ body {
 .hero-role {
   margin: 0.5rem 0 0;
   font-size: 1.25rem;
-  color: var(--fg);
+  color: var(--text);
 }
 
 /* Auth gate (login + admin) */
@@ -98,7 +446,7 @@ body {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .btn-brand,
@@ -112,19 +460,45 @@ body {
 
 .btn-brand {
   background: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
   border: 1px solid var(--brand);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--fg);
+  color: var(--text);
   border: 1px solid var(--border);
 }
 
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* v3 amendment 4: the focus indicator is an OUTLINE, never a box-shadow.
+   forced-colors strips shadows, so a shadow-based ring is simply absent in
+   Windows High Contrast, which is precisely the mode where it matters most.
+
+   A brand ring sits on the page background, where it is measured. On a FILLED
+   control it would land on the fill instead, so filled controls take their
+   outline INSIDE, in the one colour the doc measured against a brand fill.
+   A negative outline-offset does that and stays an outline, so it survives
+   forced-colors and cannot be clipped by a scroll container either.
+
+   The DANGER fill is deliberately not in this list. --focus-ring-on-brand was
+   measured against brand purple, and on dark crimson it comes out at 1.47:1,
+   which is a ring you cannot see. The doc specifies no ring for a danger fill,
+   so the delete button keeps the outer brand ring alone, on the page
+   background where it is measured at 8.1:1. */
+.btn:focus-visible,
+.btn-brand:focus-visible,
+.skip-link:focus-visible,
+.search-submit:focus-visible,
+.blog-search button:focus-visible,
+.tag-chip[aria-current="true"]:focus-visible,
+.theme-option[aria-pressed="true"]:focus-visible {
+  outline: 2px solid var(--focus-ring-on-brand);
+  outline-offset: -4px;
 }
 
 /* Public header */
@@ -140,7 +514,7 @@ body {
 
 .site-header-brand {
   font-weight: 600;
-  color: var(--fg);
+  color: var(--text);
   text-decoration: none;
 }
 
@@ -190,12 +564,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  color: var(--muted);
-  text-decoration: none;
+  color: var(--text-muted);
 }
 
 .footer-login:hover {
-  color: var(--fg);
+  color: var(--text);
 }
 
 /* Admin cockpit shell */
@@ -219,7 +592,7 @@ body {
   align-items: center;
   gap: 0.625rem;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--text);
   text-decoration: none;
 }
 
@@ -230,7 +603,7 @@ body {
   height: 2rem;
   border-radius: 0.5rem;
   background: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -245,17 +618,16 @@ body {
 .admin-nav a {
   padding: 0.5rem 0.625rem;
   border-radius: 0.5rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
-  text-decoration: none;
 }
 
 .admin-nav a:hover {
-  color: var(--fg);
+  color: var(--text);
 }
 
 .admin-nav a[aria-current="page"] {
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  background: var(--tint-brand);
   color: var(--brand);
   font-weight: 600;
 }
@@ -263,12 +635,11 @@ body {
 .admin-view-site {
   margin-top: auto;
   font-size: 0.8125rem;
-  color: var(--muted);
-  text-decoration: none;
+  color: var(--text-muted);
 }
 
 .admin-view-site:hover {
-  color: var(--fg);
+  color: var(--text);
 }
 
 .admin-main {
@@ -290,7 +661,7 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .admin-topbar-user {
@@ -308,7 +679,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: transparent;
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -381,38 +752,56 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.6875rem;
-  color: var(--muted);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
+/* Chips read "live", "error" or "stubbed" in words, so the hue is the second
+   channel here rather than the only one. */
 .chip-live {
-  border-color: var(--ok);
-  color: var(--ok);
+  border-color: var(--border-success);
+  color: var(--text-success);
 }
 
 .chip-error {
-  border-color: var(--error);
-  color: var(--error);
+  border-color: var(--border-danger);
+  color: var(--text-danger);
 }
 
+/* Status dots carry a SHAPE as well as a fill, because a dot beside a number
+   is otherwise colour on its own and rule 1 forbids that. Circle is healthy,
+   ringed circle is degraded, square is failed. The word is in the adjacent
+   visually hidden label, so the state reaches assistive tech too. */
 .status-dot {
   flex: none;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: var(--muted);
+  background: var(--text-muted);
 }
 
+/* Every dot is RINGED in its family's border token, not just the gold one.
+   A fill alone does not reliably clear 3:1 against the page: measured, gold on
+   caliche is 2.07:1 and dark crimson on prairie night is 2.49:1, so the fill is
+   the identity and the ring is the boundary that makes it discernible. The
+   border tokens are the ones the doc measured for exactly this, 3.4 to 4.9. */
 .status-dot[data-status="ok"] {
-  background: var(--ok);
+  background: var(--fill-success);
+  outline: 2px solid var(--border-success);
+  outline-offset: 1px;
 }
 
 .status-dot[data-status="warn"] {
-  background: var(--warn);
+  background: var(--fill-warning);
+  outline: 2px solid var(--border-warning);
+  outline-offset: 1px;
 }
 
 .status-dot[data-status="error"] {
-  background: var(--error);
+  background: var(--fill-danger);
+  border-radius: 0.0625rem;
+  outline: 2px solid var(--border-danger);
+  outline-offset: 1px;
 }
 
 .card-grid {
@@ -449,7 +838,7 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .stat-card-value {
@@ -570,7 +959,7 @@ body {
 }
 
 .tool-row .btn-ghost:disabled {
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -587,14 +976,60 @@ body {
   font-size: 0.9375rem;
 }
 
+/* Amended rule 2: nav links render as bare text, so they underline. The base
+   `a` rule already does it; this only sets the colour. The icon search control
+   is a sibling of these and opts out on its own rule above. */
 .site-header-nav a {
-  color: var(--muted);
-  text-decoration: none;
+  color: var(--text-muted);
 }
 
 .site-header-nav a:hover,
 .site-header-nav a[aria-current="page"] {
-  color: var(--fg);
+  color: var(--text);
+}
+
+/* Theme toggle ------------------------------------------------------------
+ *
+ * A real form with three submit buttons, so it works with scripting off. The
+ * pressed one takes a brand fill: rule 5 says an interactive state is a fill,
+ * and the fill plus aria-pressed means the selection is not carried by hue.
+ *
+ * No transition. A theme flip repaints every surface at once, and animating
+ * only the few properties named here would tear the page into a fast half and
+ * an instant half. The switch is deliberately immediate, so there is no motion
+ * to reduce and nothing for prefers-reduced-motion to undo.
+ */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.theme-option {
+  display: grid;
+  place-items: center;
+  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.theme-option:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
+
+.theme-option[aria-pressed="true"] {
+  background: var(--brand);
+  color: var(--on-brand);
 }
 
 .page-head {
@@ -633,7 +1068,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
-  color: var(--fg);
+  color: var(--text);
   font-size: 0.875rem;
   text-decoration: none;
 }
@@ -645,7 +1080,7 @@ body {
 .tag-chip[aria-current="true"] {
   background: var(--brand);
   border-color: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
 }
 
 .tag-count {
@@ -670,8 +1105,7 @@ body {
 }
 
 .post-card-title a {
-  color: var(--fg);
-  text-decoration: none;
+  color: var(--text);
 }
 
 .post-card-title a:hover {
@@ -680,7 +1114,7 @@ body {
 
 .post-card-meta {
   margin: 0 0 0.5rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -698,7 +1132,7 @@ body {
 }
 
 .post-card-tags a {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .pagination {
@@ -739,7 +1173,7 @@ body {
   font-size: 0.8125rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .post-toc ol {
@@ -813,7 +1247,7 @@ body {
   margin: 1.5rem 0;
   padding: 0.25rem 0 0.25rem 1rem;
   border-left: 3px solid var(--border);
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .prose img {
@@ -828,7 +1262,7 @@ body {
 
 .prose figcaption {
   margin-top: 0.5rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -874,6 +1308,10 @@ body {
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
+  /* Also set here, not only on .shiki, so a fence in an unlisted language
+     still lands on a surface instead of the page background. */
+  background: var(--surface-code);
+  color: var(--text);
   overflow-x: auto;
   font-size: 0.875rem;
   line-height: 1.6;
@@ -885,7 +1323,7 @@ body {
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
   font-size: 0.9375rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* remark-gfm labels the footnote section with a visually hidden heading. */
@@ -905,8 +1343,7 @@ body {
    so they never clutter the page but stay reachable by keyboard. */
 .heading-anchor {
   margin-left: 0.375rem;
-  color: var(--muted);
-  text-decoration: none;
+  color: var(--text-muted);
   opacity: 0;
 }
 
@@ -917,20 +1354,53 @@ body {
   opacity: 1;
 }
 
-/* Shiki dual themes. The generator emits both palettes as CSS variables on each
-   token, so switching costs no client script and no second stylesheet.
-   Keyed to prefers-color-scheme to match how this repo themes today, with a
-   data-theme override so it stays correct when that divergence is resolved. */
+/* Shiki dual themes. The generator emits both palettes as CSS custom properties
+ * on every token, so switching costs no client script and no second stylesheet.
+ *
+ * The theme's own BACKGROUND is dropped. github-dark ships a blue-black
+ * (#24292e) that fights the ratified warm prairie night, and a code block that
+ * carried its own surface would be the one rectangle on the page the token
+ * system does not own. Blocks sit on --surface-code and the tokens supply
+ * colour only. check:contrast holds every syntax token to 4.5:1 against
+ * --surface-code and against --surface-popover, which is the highlighted-line
+ * band, in both modes.
+ *
+ * Resolution mirrors the token block exactly, and for the same reason: with the
+ * attribute absent :root:not([data-theme]) answers, and with it present only
+ * the attribute rules can match. There is no [data-theme="light"] override
+ * because there is nothing left for it to override.
+ */
 .prose .shiki,
 .prose .shiki span {
   color: var(--shiki-light);
+}
+
+/* The pre carries --shiki-light-bg inline but NO inline background-color, so
+   this wins cleanly. Measured against real pipeline output rather than assumed:
+   the emitted tag is
+   <pre class="shiki ..." style="--shiki-light:#...;--shiki-light-bg:#fff;..."> */
+.prose .shiki {
+  background-color: var(--surface-code);
+}
+
+/* A handful of theme rules pair a foreground with a background of their own:
+   the diff scopes (markup.inserted, markup.deleted, markup.changed,
+   markup.ignored) and carriage-return. Their foregrounds are near-white or
+   near-black and are only legible ON that background, so those spans keep it.
+   The attribute test is what makes this precise: custom properties INHERIT, so
+   a blanket background rule would read the pre's value and paint every token.
+   Only a span that declares its own is matched. */
+.prose .shiki span[style*="--shiki-light-bg"] {
   background-color: var(--shiki-light-bg);
 }
 
 @media (prefers-color-scheme: dark) {
-  .prose .shiki,
-  .prose .shiki span {
+  :root:not([data-theme]) .prose .shiki,
+  :root:not([data-theme]) .prose .shiki span {
     color: var(--shiki-dark);
+  }
+
+  :root:not([data-theme]) .prose .shiki span[style*="--shiki-dark-bg"] {
     background-color: var(--shiki-dark-bg);
   }
 }
@@ -938,13 +1408,10 @@ body {
 [data-theme="dark"] .prose .shiki,
 [data-theme="dark"] .prose .shiki span {
   color: var(--shiki-dark);
-  background-color: var(--shiki-dark-bg);
 }
 
-[data-theme="light"] .prose .shiki,
-[data-theme="light"] .prose .shiki span {
-  color: var(--shiki-light);
-  background-color: var(--shiki-light-bg);
+[data-theme="dark"] .prose .shiki span[style*="--shiki-dark-bg"] {
+  background-color: var(--shiki-dark-bg);
 }
 
 /* Post editor (admin) ------------------------------------------------------ */
@@ -965,15 +1432,37 @@ body {
   border: 1px solid var(--brand);
   border-radius: 0.375rem;
   background: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
   font-size: 0.9375rem;
+  /* Exempt from rule 2: a fill is already a non-colour affordance. */
   text-decoration: none;
   cursor: pointer;
 }
 
+/* Rule 5: an interactive semantic element takes a FILL, never pastel text on
+   the page background. Delete is the site's one destructive action. */
 .btn-danger {
-  border-color: var(--error);
-  background: var(--error);
+  /* The border is the LIGHTER family token, not the fill again. In dark mode
+     the crimson fill sits at 2.49:1 against prairie night, so a same-colour
+     border gives the button no edge; --border-danger is 3.4:1 and does. */
+  border-color: var(--border-danger);
+  background: var(--fill-danger);
+  color: var(--on-fill-danger);
+}
+
+.btn-danger:hover {
+  border-color: var(--fill-danger-hover);
+  background: var(--fill-danger-hover);
+}
+
+.btn:hover {
+  border-color: var(--brand-hover);
+  background: var(--brand-hover);
+}
+
+.btn:active {
+  border-color: var(--brand-active);
+  background: var(--brand-active);
 }
 
 .posts-table {
@@ -1046,14 +1535,14 @@ body {
 }
 
 .count {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
 }
 
 .count.over {
-  color: var(--warn);
+  color: var(--text-warning);
 }
 
 .field input,
@@ -1063,13 +1552,15 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   font-size: 0.9375rem;
 }
 
+/* An invalid field is interactive, so rule 5 sends it to the fill rather than
+   the pastel border. The field also carries an error message in words. */
 .field input[aria-invalid="true"] {
-  border-color: var(--error);
+  border-color: var(--fill-danger);
 }
 
 .field-draft {
@@ -1101,17 +1592,22 @@ body {
   gap: 0.75rem;
 }
 
+/* A banner, not a control, so the pastel tint is the right register here and
+   the fill is not. This is the editor's ONE semantic tint (rule 4): the
+   character counter and the invalid-field border alongside it are text and
+   border, never a second tinted surface. */
 .editor-problem {
   padding: 0.875rem 1rem;
-  border: 1px solid var(--error);
+  border: 1px solid var(--border-danger);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
 }
 
 .editor-problem strong {
   display: block;
   margin-bottom: 0.25rem;
-  color: var(--error);
+  color: var(--on-tint-danger);
 }
 
 .editor-problem p {
@@ -1156,7 +1652,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   font-size: 0.9375rem;
 }
@@ -1188,7 +1684,7 @@ body {
   z-index: 100;
   padding: 0.6rem 1rem;
   background: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
   border-radius: 0 0 0.375rem 0;
 }
 
@@ -1235,7 +1731,7 @@ body {
 }
 
 .post-series li[aria-current] {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* Code block furniture. The label and button are script-added; the padding
@@ -1252,7 +1748,7 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .code-copy {
@@ -1264,28 +1760,33 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   background: var(--bg);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
   cursor: pointer;
 }
 
 .code-copy:hover {
-  color: var(--fg);
+  color: var(--text);
   border-color: var(--brand);
 }
 
-/* Line highlighting, emitted by the pipeline into the stored HTML. */
+/* Line highlighting, emitted by the pipeline into the stored HTML.
+   The band is a NEUTRAL surface, not a brand tint, because syntax tokens are
+   verified for contrast against the code surfaces and a tinted band would put
+   them on a colour nothing measured. The brand appears as the left bar, where
+   no text sits on it. check:contrast holds every token to 4.5:1 against BOTH
+   --surface-code and --surface-popover for exactly this reason. */
 .prose .shiki .line.highlighted {
   display: inline-block;
   width: 100%;
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  background: var(--surface-popover);
   box-shadow: inset 3px 0 0 var(--brand);
 }
 
 .heading-anchor[data-copied]::after {
   content: " copied";
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* Footnote preview bubble, script-added. */
@@ -1352,7 +1853,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
-  color: var(--fg);
+  color: var(--text);
   font-size: 0.875rem;
   text-decoration: none;
 }
@@ -1418,12 +1919,11 @@ body {
 }
 
 .year-archive a {
-  color: var(--muted);
-  text-decoration: none;
+  color: var(--text-muted);
 }
 
 .year-archive a[aria-current] {
-  color: var(--fg);
+  color: var(--text);
   font-weight: 500;
 }
 
@@ -1528,7 +2028,7 @@ body {
 .editor-autosave {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* Version history (admin) --------------------------------------------------- */
@@ -1589,16 +2089,23 @@ body {
   white-space: pre;
 }
 
+/* The documented exception to rule 4 (one semantic tint per view). A diff is a
+   data surface whose whole job is to distinguish two states side by side, so
+   both tints are load-bearing rather than decorative. Rule 1 still holds: each
+   line keeps its literal "+" or "-" prefix in the text, which is the second
+   channel, and the tints are the ratified hexes rather than a mix. */
 .history-diff [data-diff="add"] {
-  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  background: var(--tint-success);
+  color: var(--on-tint-success);
 }
 
 .history-diff [data-diff="del"] {
-  background: color-mix(in srgb, var(--error) 14%, transparent);
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
 }
 
 .history-diff [data-diff="hunk"] {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* Search -------------------------------------------------------------------
@@ -1618,7 +2125,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
 }
 
@@ -1628,7 +2135,7 @@ body {
   border: 1px solid var(--brand);
   border-radius: 0.375rem;
   background: var(--brand);
-  color: var(--brand-fg);
+  color: var(--on-brand);
   font: inherit;
   cursor: pointer;
   /* WCAG 2.2 target size. */
@@ -1667,14 +2174,14 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   min-height: 2.75rem;
 }
 
 .search-hint {
   margin: 0.5rem 0 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -1684,7 +2191,7 @@ body {
 
 .search-count {
   margin: 0 0 1rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9375rem;
 }
 
@@ -1733,7 +2240,7 @@ body {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1741,7 +2248,7 @@ body {
 
 .search-result-context {
   margin: 0.25rem 0 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -1750,21 +2257,23 @@ body {
   line-height: 1.6;
 }
 
+/* Prairie gold, the ratified highlight. Purple would read as brand rather than
+   as a match, and rule 6 keeps purple off any signalling job. */
 .search-snippet mark {
   padding: 0 0.125rem;
   border-radius: 0.125rem;
-  background: color-mix(in srgb, var(--brand) 22%, transparent);
-  color: inherit;
+  background: var(--mark-bg);
+  color: var(--text);
 }
 
 .search-why {
   margin: 0.5rem 0 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
 .search-why-field {
-  color: var(--fg);
+  color: var(--text);
 }
 
 .search-why-sep {
@@ -1782,7 +2291,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   font-size: 0.875rem;
   cursor: pointer;
@@ -1802,7 +2311,7 @@ body {
      site's own prose at a glance. */
   border-left: 3px solid var(--brand);
   border-radius: 0.375rem;
-  background: color-mix(in srgb, var(--brand) 4%, transparent);
+  background: var(--tint-brand);
 }
 
 .ask-header {
@@ -1816,8 +2325,8 @@ body {
 .ask-badge {
   padding: 0.125rem 0.4rem;
   border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--brand) 18%, transparent);
-  color: var(--fg);
+  background: var(--brand);
+  color: var(--on-brand);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1826,7 +2335,7 @@ body {
 
 .ask-note,
 .ask-status {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
@@ -1853,7 +2362,7 @@ body {
 
 .ask-sources-heading {
   margin-bottom: 0.25rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1865,7 +2374,7 @@ body {
 }
 
 .ask-source-kind {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -1874,7 +2383,7 @@ body {
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .search-facets section + section {
@@ -1908,7 +2417,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
-  color: var(--fg);
+  color: var(--text);
   font-size: 0.8125rem;
   text-decoration: none;
   min-height: 1.75rem;
@@ -1920,11 +2429,12 @@ body {
 
 .search-chip.is-active {
   border-color: var(--brand);
-  background: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  background: var(--tint-brand);
+  color: var(--brand);
 }
 
 .search-chip-count {
-  color: var(--muted);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1951,7 +2461,7 @@ body {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9375rem;
 }
 
@@ -1959,10 +2469,42 @@ body {
    Enhancement only. Every rule here styles markup created by
    app/enhance/palette.ts, so a reader without script never sees any of it. */
 
-.search-trigger {
+/* Search entry point: an ICON control, with the shortcut hint beside it.
+ *
+ * The hint is a sibling of the anchor rather than a child, because inside it
+ * the "/" was link text pointing at /search and clicking it navigated. It is
+ * aria-hidden, not focusable, and hidden until the palette is listening.
+ *
+ * The anchor is NOT underlined. Rule 2 reaches an anchor whose only visual
+ * distinction from adjacent non-link text is colour; this one renders no text,
+ * so there is nothing for a colour cue to be doing.
+ */
+.search-trigger-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.375rem;
+}
+
+.search-trigger {
+  display: grid;
+  place-items: center;
+  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: 0.375rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.search-trigger:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
+
+/* Not a control. It never takes focus and it is not a click target. */
+.search-trigger-kbd {
+  pointer-events: none;
+  user-select: none;
 }
 
 .search-trigger-kbd {
@@ -1970,7 +2512,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   background: var(--surface);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
   line-height: 1.4;
 }
@@ -1982,7 +2524,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.625rem;
   background: var(--surface);
-  color: var(--fg);
+  color: var(--text);
   overflow: hidden;
   /* Sits nearer the top than centred: the list grows downward and a centred
      dialog would jump as results arrive. */
@@ -2020,7 +2562,7 @@ body {
   padding: 0.4rem 0.25rem;
   border: 0;
   background: transparent;
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   font-size: 1rem;
 }
@@ -2034,7 +2576,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   background: var(--bg);
-  color: var(--muted);
+  color: var(--text-muted);
   font: inherit;
   font-size: 0.75rem;
   cursor: pointer;
@@ -2044,7 +2586,7 @@ body {
 .palette-status {
   margin: 0;
   padding: 0.375rem 0.875rem 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
@@ -2062,7 +2604,7 @@ body {
 
 .palette-group {
   padding: 0.5rem 0.5rem 0.25rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2077,7 +2619,7 @@ body {
 }
 
 .palette-option[aria-selected="true"] {
-  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  background: var(--tint-brand);
 }
 
 .palette-title {
@@ -2087,12 +2629,12 @@ body {
 
 .palette-context,
 .palette-why {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
 .palette-snippet {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
   display: -webkit-box;
@@ -2102,8 +2644,8 @@ body {
 }
 
 .palette-snippet mark {
-  background: color-mix(in srgb, var(--brand) 26%, transparent);
-  color: inherit;
+  background: var(--mark-bg);
+  color: var(--text);
 }
 
 .palette-recent button {
@@ -2112,7 +2654,7 @@ body {
   border: 0;
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--fg);
+  color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -2120,7 +2662,7 @@ body {
 }
 
 .palette-recent button:hover {
-  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  background: var(--tint-brand);
 }
 
 .palette-footer {
@@ -2130,7 +2672,7 @@ body {
   margin: 0;
   padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--border);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -2176,7 +2718,7 @@ body {
   border: 1px dashed var(--border);
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-muted);
   font: inherit;
   font-size: 0.8125rem;
   text-align: left;
@@ -2186,7 +2728,7 @@ body {
 
 .palette-ask-trigger:hover {
   border-color: var(--brand);
-  color: var(--fg);
+  color: var(--text);
 }
 
 .palette-ask-container .ask-panel {
