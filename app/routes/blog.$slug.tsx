@@ -8,6 +8,7 @@ import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
 import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
+  DEFAULT_OG_IMAGE,
   PUBLIC_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -126,10 +127,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
   // frontmatter.
   const socialTitle = post.ogTitle ?? post.title;
   const socialDescription = post.ogDescription ?? description;
-  // A per-post cover always wins. The generated card is the fallback, and it is
-  // absent rather than broken when build:og has not run for this post yet.
+  // A per-post cover always wins, then the card build:og generated for this
+  // post. The site mark is the last resort, so a post whose card has not been
+  // built yet shares as the brand rather than as no image at all.
   const socialImage = post.coverImage ?? post.ogImage ?? null;
-  const image = socialImage ? `${SITE_ORIGIN}${socialImage}` : undefined;
+  const image = socialImage ? `${SITE_ORIGIN}${socialImage}` : DEFAULT_OG_IMAGE;
 
   return [
     { title: `${post.title} | ${SITE.name}` },
@@ -139,8 +141,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:description", content: socialDescription },
     { property: "og:type", content: "article" },
     { property: "og:url", content: canonical },
-    ...(image ? [{ property: "og:image", content: image }] : []),
-    { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
+    { property: "og:image", content: image },
+    { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: socialTitle },
     { name: "twitter:description", content: socialDescription },
     // The markdown twin, advertised so an agent can fetch source rather than

@@ -17,12 +17,34 @@
  */
 export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 
+/**
+ * The default social card, for any page without one of its own.
+ *
+ * Derived from SITE_ORIGIN rather than written out, so it names workers.dev
+ * today and dustinedwards.info the moment the cutover changes the constant
+ * above. Hardcoding the apex would point every scraper at the legacy WordPress
+ * site until DNS moves, which is a broken card rather than a future-proof one.
+ */
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+
+/**
+ * The site's identity, in one place, split by the job each string does.
+ *
+ * `role` and `affiliation` are STRUCTURED DATA: they are the jobTitle and
+ * worksFor a machine reads, so they stay short, literal and true. `eyebrow` and
+ * `tagline` are the homepage's own words and are free to be sentences. They
+ * were one field until 2026-07-29, when the hero copy stopped being a job
+ * title, and a hero line pushed into jobTitle would have made the Person record
+ * assert a sentence no schema consumer can use.
+ */
 export const SITE = {
   name: "Dustin Edwards",
   role: "Professor",
   affiliation: "Tarleton State University",
+  eyebrow: "Full-stack engineer",
+  tagline: "Professor by training. I build on Cloudflare and publish the numbers.",
   description:
-    "Personal site of Dustin Edwards. Writing, projects, and notes.",
+    "Dustin Edwards, professor and full-stack engineer. Building on Cloudflare Workers, D1, R2 and KV, with the measurements.",
 } as const;
 
 /** schema.org Person for the site owner. */

@@ -245,6 +245,10 @@ export async function savePost(
     askSync,
     firstPublished: decision.firstPublished,
     published: decision.published,
+    // What the save DID, for the editor to report. Named by the policy module
+    // because only it read the prior file, and the prior file is the only thing
+    // that can tell a first publication from a republication.
+    outcome: decision.outcome,
   };
 }
 

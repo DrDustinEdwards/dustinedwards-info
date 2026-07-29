@@ -252,6 +252,156 @@ for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
   console.log(`  assets checked: ${ok}/${total}`);
 }
 
+/* --- 9. Drafts reach NONE of the nine public surfaces -------------------- *
+ *
+ * Regression check for the leak of 2026-07-29: five unpublished drafts were
+ * uploaded to the AI index unconditionally, and the public unauthenticated
+ * /search/ask answered from one and cited it by slug.
+ *
+ * The eight keyword surfaces filter at QUERY time and are cheap, so every draft
+ * is checked against all of them. Ask is the ninth and it BILLS PER ANSWER, so
+ * it is capped and the cap is printed rather than left implicit: a silent cap
+ * reads as "covered everything" when it did not.
+ *
+ * The draft list comes from the gated artifact, so a post added later is swept
+ * without anyone remembering to add it here.
+ */
+
+const ASK_PROBE_LIMIT = 3;
+
+{
+  const artifact = JSON.parse(
+    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+  );
+  /** @type {any[]} */
+  const drafts = artifact.posts.filter((/** @type {any} */ p) => p.draft === true);
+  const live = artifact.posts.filter((/** @type {any} */ p) => p.draft !== true);
+  console.log(`  corpus: ${live.length} published, ${drafts.length} draft`);
+
+  // The published corpus is present, which is what stops "nothing is listed"
+  // passing this whole section for the wrong reason.
+  const index = await get("/blog");
+  check("blog: index renders", index.status === 200);
+  for (const p of live) {
+    check(
+      `blog: index lists the published post /blog/${p.slug}`,
+      index.text.includes(`/blog/${p.slug}`),
+    );
+  }
+
+  const [rss, feed, sitemap] = await Promise.all([
+    get("/blog/rss.xml"),
+    get("/blog/feed.json"),
+    get("/sitemap.xml"),
+  ]);
+
+  for (const p of drafts) {
+    const slug = p.slug;
+    check(`draft ${slug}: absent from /blog`, !index.text.includes(`/blog/${slug}`));
+
+    const page = await get(`/blog/${slug}`);
+    check(`draft ${slug}: /blog/${slug} is 404`, page.status === 404, `got ${page.status}`);
+
+    const twin = await get(`/blog/${slug}.md`);
+    check(`draft ${slug}: the markdown twin is 404`, twin.status === 404, `got ${twin.status}`);
+
+    check(`draft ${slug}: absent from rss.xml`, !rss.text.includes(slug));
+    check(`draft ${slug}: absent from feed.json`, !feed.text.includes(slug));
+    check(`draft ${slug}: absent from sitemap.xml`, !sitemap.text.includes(slug));
+
+    // Its own title is the query most likely to retrieve it, so a miss here is
+    // meaningful rather than an artefact of a weak query.
+    const q = encodeURIComponent(`"${p.title}"`);
+    const html = await get(`/search?q=${q}`);
+    check(`draft ${slug}: absent from /search results`, !html.text.includes(`/blog/${slug}`));
+
+    const json = await get(`/search?q=${q}`, { accept: "application/json" });
+    check(`draft ${slug}: absent from the search JSON`, !json.text.includes(`/blog/${slug}`));
+  }
+
+  /**
+   * The ninth surface. A citation rides as `item.key`, which is
+   * `blog/<slug>.md` or `blog/<slug>__<anchor>.md`, NOT a `/blog/<slug>` URL:
+   * the URL is reconstructed client side by ask-keys.mjs. The first version of
+   * this check searched the body for `/blog/<slug>` and could therefore never
+   * have failed, which is why it was made to fail before being trusted.
+   *
+   * @param {string} label @param {string} q
+   * @returns {Promise<{keys: string[], status: number} | null>} null if refused
+   */
+  async function askKeys(label, q) {
+    const res = await fetch(`${ORIGIN}/search/ask?q=${encodeURIComponent(q)}`, {
+      headers: { "user-agent": UA, "cache-control": "no-cache" },
+    });
+    const body = await res.text();
+    // A refusal is the guard working, not a leak result, and it must not be
+    // counted as evidence of absence.
+    if (res.status === 429) {
+      console.log(`  ask: ${label} refused by the rate limit, not probed`);
+      return null;
+    }
+    const m = body.match(/event: chunks\ndata: (.*)/);
+    check(`ask: ${label} returned a parseable chunks event`, Boolean(m), `status ${res.status}`);
+    if (!m) return { keys: [], status: res.status };
+    /** @type {any[]} */
+    const chunks = JSON.parse(m[1]);
+    return { keys: chunks.map((c) => String(c?.item?.key ?? "")), status: res.status };
+  }
+
+  /**
+   * A query MEASURED to retrieve on this corpus. Its job is to prove retrieval
+   * is alive, so that the draft probes below are absence of a leak rather than
+   * absence of an answer. Ask returns zero chunks for plenty of reasonable
+   * questions under the instance's 0.4 score threshold, and without this the
+   * whole section would pass on an empty index.
+   *
+   * If the corpus moves and this stops retrieving, this check fails and someone
+   * picks a new probe. That is the intended failure, not a false alarm.
+   */
+  const positive = await askKeys("positive control", "d1");
+  if (positive) {
+    check("ask: the positive control retrieves at least one chunk", positive.keys.length > 0);
+    for (const key of positive.keys) {
+      check(
+        `ask: retrieved key ${key} belongs to a published post`,
+        live.some((/** @type {any} */ p) => key.startsWith(`blog/${p.slug}`)),
+      );
+    }
+  }
+
+  // Billed per answer and rate limited to five per minute per IP, so this is
+  // capped and the cap is printed. A silent cap reads as full coverage.
+  const probes = drafts.slice(0, ASK_PROBE_LIMIT);
+  for (const p of probes) {
+    const got = await askKeys(`draft ${p.slug}`, p.title);
+    if (!got) continue;
+    const leaked = got.keys.filter((k) => k.startsWith(`blog/${p.slug}`));
+    check(`draft ${p.slug}: Ask cites nothing from it`, leaked.length === 0, leaked.join(", "));
+  }
+  console.log(
+    `  ask probes: ${probes.length} of ${drafts.length} drafts (billed per answer, ` +
+      `${drafts.length - probes.length} not probed)`,
+  );
+}
+
+/* --- 10. The retired routes are bare 404s, and the kept files are not ---- */
+
+{
+  // Never a redirect and never a prefix rule: /publications/* and
+  // /phage-hunters/* ARE the 40 kept files, and a gone rule matching either
+  // prefix would take them with it.
+  for (const path of [
+    "/research",
+    "/publications",
+    "/teaching",
+    "/phage-hunters",
+    "/phage-discovery",
+  ]) {
+    const { status } = await get(path);
+    check(`retired: ${path} is a bare 404`, status === 404, `got ${status}`);
+  }
+}
+
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

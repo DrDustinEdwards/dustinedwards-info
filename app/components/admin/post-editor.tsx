@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
+import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
 
 /**
@@ -43,20 +44,21 @@ export function PostEditor({
   isNew,
   headSha,
   previewHtml,
-  problem,
+  feedback,
   busy,
 }: {
   fields: PostFields;
   isNew: boolean;
   headSha: string;
   previewHtml?: string | null;
-  problem?: EditorProblem | null;
+  feedback?: EditorFeedback | null;
   busy?: boolean;
 }) {
   const [title, setTitle] = useState(fields.title);
   const [slug, setSlug] = useState(fields.slug);
   const [description, setDescription] = useState(fields.description);
   const [body, setBody] = useState(fields.body);
+  const [draft, setDraft] = useState(fields.draft);
   const [dirty, setDirty] = useState(false);
   const [autosavedAt, setAutosavedAt] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
@@ -129,6 +131,10 @@ export function PostEditor({
       setDescription(stored.fields.description);
     }
     if (stored.fields.body !== undefined) setBody(stored.fields.body);
+    // Mirrors the DOM loop above, which only touches the checkbox when the key
+    // is present. An unchecked box sends nothing, so absence is left alone
+    // rather than read as false.
+    if (stored.fields.draft !== undefined) setDraft(stored.fields.draft === "on");
     setRestored(true);
     setDirty(true);
   }, [storageKey]);
@@ -169,8 +175,15 @@ export function PostEditor({
         */}
         <input type="hidden" name="firstPublished" value={fields.firstPublished} />
 
+        {/*
+          A precondition, not the outcome of a save, and it is deliberately
+          UNTINTED: binding rule 4 allows one semantic tint per view, and the
+          feedback slot below is where that tint is spent. Two tinted banners
+          stacked here would break the rule at exactly the moment a message
+          matters most.
+        */}
         {!headSha ? (
-          <div className="editor-problem" role="alert">
+          <div className="editor-notice" role="alert">
             <strong>Saving unavailable</strong>
             <p>
               GITHUB_TOKEN is not configured on this Worker, so a save cannot
@@ -179,12 +192,19 @@ export function PostEditor({
           </div>
         ) : null}
 
-        {problem ? (
-          <div className="editor-problem" role="alert">
-            <strong>{problem.conflict ? "Conflict" : "Not saved"}</strong>
-            <p>{problem.message}</p>
-          </div>
-        ) : null}
+        {/*
+          THE FEEDBACK SLOT. One slot, four states, and it is always in the DOM
+          even when empty: a live region has to exist BEFORE its content changes
+          for a screen reader to announce it, and a node mounted alongside its
+          own message announces nothing.
+
+          Polite rather than assertive on purpose. Every message here follows a
+          submit the author just made, and none of them vanishes, so there is
+          nothing to interrupt for.
+        */}
+        <div className="editor-feedback-slot" role="status" aria-live="polite">
+          {feedback ? <FeedbackMessage feedback={feedback} /> : null}
+        </div>
 
         <div className="editor-grid">
           <label className="field">
@@ -295,10 +315,32 @@ export function PostEditor({
           </label>
         </div>
 
-        <label className="field field-draft">
-          <input type="checkbox" name="draft" defaultChecked={fields.draft} />
-          <span>Draft. Hidden from the blog, the feed and the sitemap.</span>
-        </label>
+        {/*
+          The chip states the CONSEQUENCE of the checkbox in the site's own
+          vocabulary, because "draft is unticked" and "this post is live" are
+          the same fact only to someone who already knows the mapping. On load
+          it is the committed state, since the loader reads the committed file;
+          while editing it tracks the box, and the autosave line beside it is
+          what says the change is not saved yet.
+
+          Bordered rather than tinted, so it is not a second tinted surface
+          beside the feedback slot (rule 4), and it names the state in words
+          next to the hue (rule 1). Same chip the post list uses.
+        */}
+        <div className="field field-draft">
+          <label className="field-draft-control">
+            <input
+              type="checkbox"
+              name="draft"
+              checked={draft}
+              onChange={(e) => setDraft(e.target.checked)}
+            />
+            <span>Draft. Hidden from the blog, the feed and the sitemap.</span>
+          </label>
+          <span className={draft ? "chip" : "chip chip-live"}>
+            {draft ? "Draft" : "Live"}
+          </span>
+        </div>
 
         <label className="field">
           <span className="field-label">Body (markdown)</span>
@@ -363,6 +405,148 @@ export function PostEditor({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The four things a save can have done, said in words.
+ *
+ * Every state carries the commit sha, because that is the fact that makes the
+ * claim checkable: the author can look the save up in `git log` rather than
+ * take the page's word for it. A published state carries the public URL as a
+ * real link, so "it is live" can be confirmed in one click instead of trusted.
+ *
+ * Tones are semantic tokens, one family per state, and the icon is the second
+ * channel rule 1 requires: the message must survive being read in greyscale.
+ */
+function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
+  if (feedback.state === "failed") {
+    return (
+      <div className="editor-feedback" data-tone="danger">
+        <Glyph tone="danger" />
+        <div>
+          <strong>{feedback.conflict ? "Conflict. Not saved." : "Not saved."}</strong>
+          <p>{feedback.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (feedback.state === "published-first") {
+    return (
+      // The ceremony state. First publication is the one act the system
+      // reserves to the human, so it is the one message that does not look like
+      // every other save.
+      <div className="editor-feedback" data-tone="success" data-ceremony="">
+        <Glyph tone="published" />
+        <div>
+          <strong>Published for the first time.</strong>
+          <p>
+            Stamped {feedback.at}. Commit {feedback.sha}.
+          </p>
+          <p>
+            Live at{" "}
+            <a href={`/blog/${feedback.slug}`} target="_blank" rel="noreferrer">
+              /blog/{feedback.slug}
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (feedback.state === "republished") {
+    return (
+      <div className="editor-feedback" data-tone="success">
+        <Glyph tone="published" />
+        <div>
+          <strong>Republished.</strong>
+          <p>
+            Public again at{" "}
+            <a href={`/blog/${feedback.slug}`} target="_blank" rel="noreferrer">
+              /blog/{feedback.slug}
+            </a>
+            . Commit {feedback.sha}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (feedback.state === "unpublished") {
+    return (
+      // Warning, not danger: nothing failed. Something the public could read a
+      // moment ago is gone, which is worth a colour of its own.
+      <div className="editor-feedback" data-tone="warning">
+        <Glyph tone="warning" />
+        <div>
+          <strong>Unpublished.</strong>
+          <p>
+            /blog/{feedback.slug} now returns 404, and the post is out of the
+            feed, the sitemap, search and the Ask index. Commit {feedback.sha}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="editor-feedback" data-tone="success">
+      <Glyph tone="success" />
+      <div>
+        <strong>Saved.</strong>
+        <p>Commit {feedback.sha}.</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The non-colour channel. Inline because this repo prefers inline SVG to an
+ * icon library, per its bundle-leanness rule.
+ */
+function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" }) {
+  const shape =
+    tone === "published" ? (
+      // A globe: this reached the public, which is what separates it from a
+      // save that only reached the repository.
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
+      </>
+    ) : tone === "warning" ? (
+      // A struck-through circle: withdrawn.
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M6 18 18 6" />
+      </>
+    ) : tone === "danger" ? (
+      <>
+        <path d="M12 3 2 20h20L12 3z" />
+        <path d="M12 10v4M12 17.5v.01" />
+      </>
+    ) : (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8 12 3 3 5-6" />
+      </>
+    );
+
+  return (
+    <svg
+      className="editor-feedback-glyph"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {shape}
+    </svg>
   );
 }
 

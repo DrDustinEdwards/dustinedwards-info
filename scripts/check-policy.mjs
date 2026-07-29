@@ -249,6 +249,89 @@ permits("admin may create an already published post", () =>
 }
 
 /* -------------------------------------------------------------------------
+ * What a save DID, which is what the editor reports back
+ * ----------------------------------------------------------------------
+ *
+ * The editor's feedback slot names the transition, and a first publication is
+ * rendered differently from every other save because it is the one act reserved
+ * to the human. The classification therefore has to be right about the two
+ * cases current state cannot tell apart on its own, and both are asserted here
+ * with their negatives: a withdrawn post republished is NOT a first
+ * publication, and a live post edited again is NOT a republication.
+ */
+
+{
+  /** @param {Parameters<typeof decide>[0]} o */
+  const outcome = (o) => decide(o).outcome;
+
+  eq(
+    "a new draft is an ordinary save",
+    outcome({ actor: ADMIN, incomingRaw: file({ draft: true }), priorRaw: null }),
+    "saved",
+  );
+  eq(
+    "editing an existing draft is an ordinary save",
+    outcome({
+      actor: ADMIN,
+      incomingRaw: file({ draft: true }),
+      priorRaw: file({ draft: true }),
+    }),
+    "saved",
+  );
+  eq(
+    "publishing a post that has never been public is a first publication",
+    outcome({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) }),
+    "published-first",
+  );
+  eq(
+    "creating a post already published is also a first publication",
+    outcome({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: null }),
+    "published-first",
+  );
+  // The negative that matters: a post published, withdrawn, and published again
+  // must NOT read as a first publication, or the editor would perform the
+  // ceremony a second time for an act that is not the one being marked.
+  eq(
+    "republishing a withdrawn post is a republication, not a first publication",
+    outcome({
+      actor: ADMIN,
+      incomingRaw: file({ draft: false }),
+      priorRaw: file({ draft: true, firstPublished: "2026-01-01" }),
+    }),
+    "republished",
+  );
+  // And its pair: a live post edited again did not become live a second time.
+  eq(
+    "editing a live post is an ordinary save, not a republication",
+    outcome({
+      actor: ADMIN,
+      incomingRaw: file({ draft: false, firstPublished: "2026-01-01" }),
+      priorRaw: file({ draft: false, firstPublished: "2026-01-01" }),
+    }),
+    "saved",
+  );
+  eq(
+    "withdrawing a live post is an unpublish",
+    outcome({
+      actor: ADMIN,
+      incomingRaw: file({ draft: true }),
+      priorRaw: file({ draft: false, firstPublished: "2026-01-01" }),
+    }),
+    "unpublished",
+  );
+  // Its negative: a draft saved as a draft again withdrew nothing.
+  eq(
+    "re-saving a withdrawn post as a draft is not a second unpublish",
+    outcome({
+      actor: ADMIN,
+      incomingRaw: file({ draft: true }),
+      priorRaw: file({ draft: true, firstPublished: "2026-01-01" }),
+    }),
+    "saved",
+  );
+}
+
+/* -------------------------------------------------------------------------
  * The Ask index is a public surface
  * ---------------------------------------------------------------------- */
 
