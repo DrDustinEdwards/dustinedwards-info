@@ -21,7 +21,8 @@
     "check:backup": "node scripts/check-backup.mjs",
     "check:search": "node scripts/check-search.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "check:policy": "node scripts/check-policy.mjs"
+    "check:policy": "node scripts/check-policy.mjs",
+    "check:logo": "node scripts/check-logo.mjs"
   },
   "dependencies": {
     "better-auth": "^1.6.23",
