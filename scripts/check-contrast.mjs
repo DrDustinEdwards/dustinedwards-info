@@ -227,6 +227,53 @@ for (const [mode, block] of MODES) {
 }
 
 /* -------------------------------------------------------------------------
+ * The APCA implementation, checked against the published vectors
+ * ---------------------------------------------------------------------- */
+
+/**
+ * An advisory number nobody has verified is decoration.
+ *
+ * These are the keystone vectors published with apca-w3, taken from the shipped
+ * `test/index.js` of version 0.1.9 (algorithm 0.0.98G-4g) rather than quoted
+ * from a write-up, because secondary sources get them wrong. There are EIGHT,
+ * not four: every pair appears in both polarities, which makes them a test of
+ * the sign convention as well as of the magnitude.
+ *
+ * Two further pairs (#123 on #234 and its reverse) sit in the same upstream
+ * block but are explicitly marked as NOT matching apca-w3, and both return 0
+ * under loClip. They are deliberately absent.
+ *
+ * Positive is dark text on a light background; negative is light on dark.
+ */
+const APCA_KEYSTONE = [
+  ["#888", "#fff", 63.056469930209424],
+  ["#fff", "#888", -68.54146436644962],
+  ["#000", "#aaa", 58.146262578561334],
+  ["#aaa", "#000", -56.24113336839742],
+  ["#123", "#def", 91.66830811481631],
+  ["#def", "#123", -93.06770049484275],
+  ["#123", "#444", 8.32326136957393],
+  ["#444", "#123", -7.526878460278154],
+];
+
+let apcaWorstDelta = 0;
+for (const [text, bg, expected] of APCA_KEYSTONE) {
+  const got = apca(String(text), String(bg));
+  const delta = Math.abs(got - Number(expected));
+  if (delta > apcaWorstDelta) apcaWorstDelta = delta;
+  assert(
+    `APCA keystone ${text} on ${bg}: expected ${expected}, got ${got}`,
+    delta < 1e-9,
+  );
+  // The sign is half the assertion. A magnitude-only check would happily pass
+  // an implementation whose polarity was backwards.
+  assert(
+    `APCA keystone ${text} on ${bg}: sign should be ${Number(expected) >= 0 ? "positive" : "negative"}`,
+    Math.sign(got) === Math.sign(Number(expected)),
+  );
+}
+
+/* -------------------------------------------------------------------------
  * The matrix, transcribed from design-tokens.md as NAMES
  * ---------------------------------------------------------------------- */
 
@@ -340,6 +387,96 @@ for (const [mode, block] of MODES) {
           `\n    ${ratio.toFixed(2)}:1, needs ${min}:1`,
       );
     }
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * The prefers-contrast: more tier (v3 amendment 3)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The high-contrast tier is a palette too, so it is held to the same matrix.
+ *
+ * It is narrow by design: only muted text and the default border move. That is
+ * exactly why it needs checking rather than eyeballing, because a tier nobody
+ * verifies is a tier that can quietly contain a value LOWER than the one it
+ * replaced and still look like a high-contrast mode.
+ *
+ * @param {string} label
+ * @param {string} selector
+ */
+function contrastTierBlock(label, selector) {
+  const at = css.indexOf("@media (prefers-contrast: more)");
+  if (at === -1) throw new Error("prefers-contrast tier not found in app.css");
+  const region = css.slice(at);
+  const sel = region.indexOf(selector);
+  if (sel === -1) throw new Error(`${label}: not found inside the tier`);
+  const open = region.indexOf("{", sel + selector.length - 1);
+  const close = region.indexOf("}", open);
+  const body = region.slice(open + 1, close);
+
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) out[m[1]] = m[2].trim();
+  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
+  return out;
+}
+
+{
+  const tierLight = contrastTierBlock("tier light", '[data-theme="light"]');
+  const tierDark = contrastTierBlock("tier dark", '[data-theme="dark"]');
+
+  for (const [mode, tier, base] of /** @type {Array<[string, Record<string,string>, Record<string,string>]>} */ ([
+    ["light", tierLight, light],
+    ["dark", tierDark, darkAttr],
+  ])) {
+    // Muted text must clear AA against every surface it can land on, as before.
+    for (const surface of ["--bg", "--surface", "--surface-popover"]) {
+      checks += 1;
+      const ratio = contrast(tier["--text-muted"], base[surface]);
+      if (ratio < TEXT) {
+        fail(
+          `${mode} prefers-contrast: muted on ${surface}` +
+            `
+    ${tier["--text-muted"]} on ${base[surface]}` +
+            `
+    ${ratio.toFixed(2)}:1, needs ${TEXT}:1`,
+        );
+      }
+    }
+    checks += 1;
+    const borderRatio = contrast(tier["--border"], base["--bg"]);
+    if (borderRatio < UI) {
+      fail(
+        `${mode} prefers-contrast: border on --bg` +
+          `
+    ${tier["--border"]} on ${base["--bg"]}` +
+          `
+    ${borderRatio.toFixed(2)}:1, needs ${UI}:1`,
+      );
+    }
+
+    // The whole point of the tier: it must be STRICTLY better than the default,
+    // or it is not a high-contrast mode, it is a different one.
+    assert(
+      `${mode} prefers-contrast raises muted text` +
+        ` (${contrast(base["--text-muted"], base["--bg"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--text-muted"], base["--bg"]).toFixed(2)})`,
+      contrast(tier["--text-muted"], base["--bg"]) >
+        contrast(base["--text-muted"], base["--bg"]),
+    );
+    assert(
+      `${mode} prefers-contrast raises the default border` +
+        ` (${contrast(base["--border"], base["--bg"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--border"], base["--bg"]).toFixed(2)})`,
+      contrast(tier["--border"], base["--bg"]) > contrast(base["--border"], base["--bg"]),
+    );
+    // The doc says the border promotes to border-strong. Assert the identity,
+    // not just that it went up.
+    assert(
+      `${mode} prefers-contrast border equals border-strong`,
+      tier["--border"].toLowerCase() === base["--border-strong"].toLowerCase(),
+    );
   }
 }
 
@@ -526,6 +663,9 @@ if (existsSync(assetDir)) {
 console.log("check:contrast");
 console.log(`  tokens        light ${Object.keys(light).length}, dark ${Object.keys(darkAttr).length}`);
 console.log(`  matrix        ${MATRIX.length} pairs x 2 modes`);
+console.log(
+  `  APCA impl     ${APCA_KEYSTONE.length}/${APCA_KEYSTONE.length} keystone vectors, worst delta ${apcaWorstDelta.toExponential(2)}`,
+);
 console.log(`  shiki         ${shikiTokensChecked} token/surface pairs`);
 if (shikiUnreachable.length > 0) {
   console.log(
@@ -543,10 +683,16 @@ const worst = advisory
   .filter((a) => Math.abs(a.lc) > 0)
   .sort((a, b) => Math.abs(a.lc) - Math.abs(b.lc))
   .slice(0, 8);
-console.log("\n  APCA Lc, advisory only, eight lowest of the matrix:");
+// SIGNED Lc, required by APCA conformance. The sign IS the polarity: positive
+// is dark text on a light background, negative is light on dark. Reporting a
+// bare magnitude throws that away, and it is the half of the number that says
+// which of the two asymmetric curves produced it. Ranked by magnitude, because
+// the question is "what is weakest", not "what is most negative".
+console.log("\n  APCA Lc (SIGNED, advisory only), eight weakest of the matrix:");
 for (const a of worst) {
+  const lc = `${a.lc >= 0 ? "+" : ""}${a.lc.toFixed(1)}`;
   console.log(
-    `    Lc ${Math.abs(a.lc).toFixed(1).padStart(5)}  ${a.ratio.toFixed(2).padStart(5)}:1  ${a.mode.padEnd(5)} ${a.note}`,
+    `    Lc ${lc.padStart(6)}  ${a.ratio.toFixed(2).padStart(5)}:1  ${a.mode.padEnd(5)} ${a.note}`,
   );
 }
 

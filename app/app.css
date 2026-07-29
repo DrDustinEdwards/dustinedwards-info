@@ -46,6 +46,9 @@
   --surface-code: #f1ebe1;
   --surface-hero: #ede8f5;
   --text: #2b2320;
+  /* No split in light mode: halation is a light-on-dark effect, so the heading
+     token exists here only so components can ask for the role unconditionally. */
+  --text-heading: #2b2320;
   --text-muted: #5c5248;
   --text-disabled: #93887a;
   --border: #8a7d6e;
@@ -125,7 +128,10 @@
     --surface-popover: #322a25;
     --surface-code: #26201c;
     --surface-hero: #3d2a5c;
-    --text: #ede6dc;
+    /* v3 split: body steps one off maximum to reduce halation for astigmatic
+       readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
+    --text: #e3dbd0;
+    --text-heading: #ede6dc;
     --text-muted: #b3a99c;
     --text-disabled: #6e655b;
     --border: #746a5f;
@@ -156,9 +162,9 @@
     --fill-warning: #e9b44c;
     --on-fill-warning: #1a1614;
 
-    --text-success: #a3b58c;
+    --text-success: #93b29b;
     --tint-success: #252c1e;
-    --on-tint-success: #a3b58c;
+    --on-tint-success: #93b29b;
     --border-success: #6e8259;
     --fill-success: #8fac77;
     --on-fill-success: #1a1614;
@@ -177,7 +183,7 @@
     --chart-cadet: #5887b5;
     --chart-purple: #c0b0e6;
     --chart-claret: #c9699e;
-    --chart-sage: #90a879;
+    --chart-sage: #93b29b;
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
   }
@@ -195,7 +201,8 @@
   --surface-popover: #322a25;
   --surface-code: #26201c;
   --surface-hero: #3d2a5c;
-  --text: #ede6dc;
+  --text: #e3dbd0;
+  --text-heading: #ede6dc;
   --text-muted: #b3a99c;
   --text-disabled: #6e655b;
   --border: #746a5f;
@@ -228,9 +235,9 @@
   --fill-warning: #e9b44c;
   --on-fill-warning: #1a1614;
 
-  --text-success: #a3b58c;
+  --text-success: #93b29b;
   --tint-success: #252c1e;
-  --on-tint-success: #a3b58c;
+  --on-tint-success: #93b29b;
   --border-success: #6e8259;
   --fill-success: #8fac77;
   --on-fill-success: #1a1614;
@@ -249,9 +256,83 @@
   --chart-cadet: #5887b5;
   --chart-purple: #c0b0e6;
   --chart-claret: #c9699e;
-  --chart-sage: #90a879;
+  --chart-sage: #93b29b;
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
+}
+
+/* v3 amendment 3: prefers-contrast: more ---------------------------------
+ *
+ * A narrow tier, deliberately. Only the two tokens that sit lowest in the
+ * matrix move, plus the default border promoting to its strong twin. The doc
+ * says "no other values change under the query", so nothing else does: a tier
+ * that rewrote the palette would be a second palette to keep in step.
+ *
+ * Literal hexes rather than var(--border-strong), because check:contrast reads
+ * these blocks back and asserts every token is a hex. An indirection would make
+ * the gate read a name where it needs a value.
+ */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme="light"] {
+    --text-muted: #4a423a;
+    --border: #6e6459;
+  }
+
+  [data-theme="dark"] {
+    --text-muted: #c6bdaf;
+    --border: #8a8075;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --text-muted: #c6bdaf;
+    --border: #8a8075;
+  }
+}
+
+/* v3 amendment 4: forced-colors: active -----------------------------------
+ *
+ * The palette yields ENTIRELY to system colours here. Nothing below re-asserts
+ * a brand colour; every rule exists to make a control keep its SHAPE once the
+ * user agent has replaced its background, because in this mode a fill is not a
+ * fill any more.
+ *
+ * A transparent outline is the technique: forced-colors resolves transparent
+ * outlines to a system colour, so a control that was only distinguishable by
+ * its background is still distinguishable by its edge. Focus is already an
+ * outline everywhere (amendment 4 again), so it survives untouched.
+ */
+@media (forced-colors: active) {
+  /* Anything whose shape came from a fill. */
+  .btn,
+  .btn-brand,
+  .btn-danger,
+  .btn-ghost,
+  .search-submit,
+  .blog-search button,
+  .skip-link,
+  .ask-badge,
+  .theme-option[aria-pressed="true"],
+  .tag-chip[aria-current="true"],
+  .search-chip.is-active,
+  .palette-option[aria-selected="true"] {
+    outline: 1px solid transparent;
+  }
+
+  /* Status dots carried their state in a background, which is exactly what
+     this mode removes. The shape survives, and the word beside them was always
+     the real channel. A forced border keeps them visible at all. */
+  .status-dot {
+    border: 1px solid currentColor;
+  }
+
+  /* Selected rows in the palette lose their tint, so the selection is restated
+     as an edge rather than left to disappear. */
+  .palette-option[aria-selected="true"] {
+    outline-offset: -2px;
+  }
 }
 
 html,
@@ -282,6 +363,19 @@ body {
  * its own colour outranks them, so this changes defaults without overriding
  * anything already deliberate.
  */
+/* v3 amendment 2. An element-level rule, so any component that sets its own
+   heading colour (the brand-purple page and post titles) still outranks it.
+   In light mode this resolves to the same value as body text, so it changes
+   nothing there and is not a second colour to keep in step. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-heading);
+}
+
 a {
   color: var(--brand);
   text-decoration: underline;
@@ -381,17 +475,21 @@ a:hover {
   outline-offset: 2px;
 }
 
-/* A brand ring sits on the page background, where it is measured. On a FILLED
-   control the ring would land on the fill instead, so filled controls get a
-   second ring drawn inside, in the one colour the doc measured against a brand
-   fill. Two rings, each verified against the surface it actually touches, and
-   the indicator survives whichever side the control is cropped on.
+/* v3 amendment 4: the focus indicator is an OUTLINE, never a box-shadow.
+   forced-colors strips shadows, so a shadow-based ring is simply absent in
+   Windows High Contrast, which is precisely the mode where it matters most.
+
+   A brand ring sits on the page background, where it is measured. On a FILLED
+   control it would land on the fill instead, so filled controls take their
+   outline INSIDE, in the one colour the doc measured against a brand fill.
+   A negative outline-offset does that and stays an outline, so it survives
+   forced-colors and cannot be clipped by a scroll container either.
 
    The DANGER fill is deliberately not in this list. --focus-ring-on-brand was
    measured against brand purple, and on dark crimson it comes out at 1.47:1,
    which is a ring you cannot see. The doc specifies no ring for a danger fill,
-   so rather than invent one the delete button keeps the outer brand ring alone,
-   which sits on the page background where it is measured at 8.1:1. */
+   so the delete button keeps the outer brand ring alone, on the page
+   background where it is measured at 8.1:1. */
 .btn:focus-visible,
 .btn-brand:focus-visible,
 .skip-link:focus-visible,
@@ -399,7 +497,8 @@ a:hover {
 .blog-search button:focus-visible,
 .tag-chip[aria-current="true"]:focus-visible,
 .theme-option[aria-pressed="true"]:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--focus-ring-on-brand);
+  outline: 2px solid var(--focus-ring-on-brand);
+  outline-offset: -4px;
 }
 
 /* Public header */
@@ -688,18 +787,21 @@ a:hover {
    border tokens are the ones the doc measured for exactly this, 3.4 to 4.9. */
 .status-dot[data-status="ok"] {
   background: var(--fill-success);
-  box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--border-success);
+  outline: 2px solid var(--border-success);
+  outline-offset: 1px;
 }
 
 .status-dot[data-status="warn"] {
   background: var(--fill-warning);
-  box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--border-warning);
+  outline: 2px solid var(--border-warning);
+  outline-offset: 1px;
 }
 
 .status-dot[data-status="error"] {
   background: var(--fill-danger);
   border-radius: 0.0625rem;
-  box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--border-danger);
+  outline: 2px solid var(--border-danger);
+  outline-offset: 1px;
 }
 
 .card-grid {
@@ -874,6 +976,9 @@ a:hover {
   font-size: 0.9375rem;
 }
 
+/* Amended rule 2: nav links render as bare text, so they underline. The base
+   `a` rule already does it; this only sets the colour. The icon search control
+   is a sibling of these and opts out on its own rule above. */
 .site-header-nav a {
   color: var(--text-muted);
 }
@@ -2364,10 +2469,42 @@ a:hover {
    Enhancement only. Every rule here styles markup created by
    app/enhance/palette.ts, so a reader without script never sees any of it. */
 
-.search-trigger {
+/* Search entry point: an ICON control, with the shortcut hint beside it.
+ *
+ * The hint is a sibling of the anchor rather than a child, because inside it
+ * the "/" was link text pointing at /search and clicking it navigated. It is
+ * aria-hidden, not focusable, and hidden until the palette is listening.
+ *
+ * The anchor is NOT underlined. Rule 2 reaches an anchor whose only visual
+ * distinction from adjacent non-link text is colour; this one renders no text,
+ * so there is nothing for a colour cue to be doing.
+ */
+.search-trigger-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.375rem;
+}
+
+.search-trigger {
+  display: grid;
+  place-items: center;
+  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: 0.375rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.search-trigger:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
+
+/* Not a control. It never takes focus and it is not a click target. */
+.search-trigger-kbd {
+  pointer-events: none;
+  user-select: none;
 }
 
 .search-trigger-kbd {
