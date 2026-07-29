@@ -29,6 +29,7 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
 - `npm run check:search` gate over the query parser and rank fusion (pure, no database)
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
+- `npm run check:logo` gate; proves the inline mark still reproduces the four SVG fixtures (pure)
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `wrangler deploy` (auto-deploy is not wired; deploy is manual)
 
@@ -616,6 +617,41 @@ ratified `--text-muted`, the one hand-set syntax colour.
 card key is what makes the R2 object safe to serve immutable, so a template
 restyle that did not change the key would never reach a cached reader. Bump it
 whenever card colours, type or layout change. It is at 2 for these tokens.
+
+## check:logo (gate)
+
+`npm run check:logo` proves `app/components/site-logo.tsx`, the module the Worker
+renders, still reproduces the ratified SVGs. Pure: no network, no database, no
+build. **80 assertions over 4 fixtures.**
+
+**The four `public/*.svg` files are FIXTURES, not dead assets, and that is why
+they stay.** They are not what the site renders; the component is. Two
+independent sources argue, exactly as in `check:contrast`: the expected path data
+and fills come from the files, the actual ones from the component, and nothing in
+the script restates a path. Delete them and the gate has nothing to check
+against.
+
+The component collapses four files into one path list plus a viewBox, because the
+four differ in exactly two ways: the viewBox, and whether the five purple paths
+carry `#4F2D7F` or `#B7A5E0`. Those five carry NO fill in the component; they
+take `.site-logo-brand`, which is `var(--brand)`. This gate is what keeps that
+collapse honest.
+
+It fails in BOTH directions, verified by planting five violations and confirming
+a real exit 1 for each: a digit of path data hand-edited in the component (4
+failures), a purple path hardcoded to the light hex instead of the token (3), an
+altered viewBox (2), a FIXTURE regenerated that the component did not follow (1),
+and a fixture deleted, which fails closed on ENOENT rather than passing on an
+empty read. Coverage of the script itself was proven the same way: a planted type
+error made `tsc -b` exit 2 naming `scripts/check-logo.mjs`.
+
+Block comments are stripped before anything is located, because this file's own
+header names `viewBox` and both hexes. That is the trap `check:contrast` already
+hit, where the parser found the prose in a comment first.
+
+Construction spec: Capsid `dustinedwards/logo-spec.md`, amended 2026-07-29 to
+record the brand binding. A variant is a rebuild from those values, never a hand
+edit of path data.
 
 ## check:contrast (gate)
 
