@@ -39,12 +39,19 @@ const BUCKET = "dustinedwards-media";
 const WIDTH = 1200;
 const HEIGHT = 630;
 
-/** Brand tokens, mirrored from app.css. Kept in sync by hand, deliberately:
- *  the card is an image, so it cannot read a stylesheet. */
+/** Hill Country LIGHT tokens, mirrored from app.css. Kept in sync by hand,
+ *  deliberately: the card is an image, so it cannot read a stylesheet.
+ *
+ *  Light values, always. A card is rendered once and served into a feed that
+ *  has no idea which theme the reader prefers, so there is no variant to pick.
+ *
+ *  Changing any of these MUST bump OG_TEMPLATE_VERSION in pipeline.mjs, or the
+ *  key stays the same, the object is served immutable, and every already-cached
+ *  card keeps the old colours forever. */
 const BRAND = "#4F2D7F";
-const FG = "#171320";
-const MUTED = "#6B6577";
-const BG = "#FFFFFF";
+const FG = "#2B2320";
+const MUTED = "#5C5248";
+const BG = "#FAF7F2";
 
 /**
  * The card layout, as satori's element objects rather than JSX so this file
