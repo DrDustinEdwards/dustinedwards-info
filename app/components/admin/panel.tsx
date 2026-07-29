@@ -49,8 +49,20 @@ export function SourceChip({ result }: { result: SourceResult<unknown> }) {
   );
 }
 
+/**
+ * Rule 1: colour is never the only channel. The dot carries a shape per status
+ * (circle, ringed circle, square) and the word rides alongside it, visually
+ * hidden. Before this the state reached sighted readers as a hue and reached
+ * assistive tech not at all, since the dot was the only carrier and it was
+ * aria-hidden.
+ */
 export function StatusDot({ status }: { status: HealthStatus }) {
-  return <span className="status-dot" data-status={status} aria-hidden="true" />;
+  return (
+    <>
+      <span className="status-dot" data-status={status} aria-hidden="true" />
+      <span className="sr-only">{status}</span>
+    </>
+  );
 }
 
 export function CardGrid({ children }: { children: React.ReactNode }) {

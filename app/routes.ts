@@ -18,6 +18,9 @@ export default [
   route("llms.txt", "routes/llms.ts"),
   route("llms-full.txt", "routes/llms-full[.txt].ts"),
   route("media/*", "routes/media.$.ts"),
+  // The zero-JS half of the theme toggle. Posts the choice, sets the cookie,
+  // sends the reader back to the page they were on.
+  route("theme", "routes/theme.ts"),
 
   // Auth
   route("login", "routes/login.tsx"),
