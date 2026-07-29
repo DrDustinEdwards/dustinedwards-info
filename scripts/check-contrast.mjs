@@ -118,7 +118,15 @@ const cssSource = readFileSync(CSS_PATH, "utf8");
  * times and reported the light values as the dark ones, and every dark row
  * passed for the wrong reason.
  */
-const css = cssSource.replace(/\/\*[\s\S]*?\*\//g, "");
+const css = cssSource
+  // CRLF is normalised FIRST. This repo runs core.autocrlf=true and app.css is
+  // not pinned by .gitattributes, so a fresh clone on Windows gets CRLF and
+  // every multi-line selector match below silently stops matching. Measured:
+  // this gate threw "selector not found in app.css" on the first clean checkout
+  // after a merge, having passed on the branch it was written on, purely
+  // because the working tree there still had LF.
+  .replace(/\r\n/g, "\n")
+  .replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
  * Pulls the custom properties out of one rule block, located by the literal
