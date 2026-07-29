@@ -30,8 +30,10 @@ import {
 import "~/lib/content/wasm.server";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { commitFiles, getHead, readFile, GitHubError } from "./github.server";
+import { decide, PolicyError, type Actor } from "./publish-policy.mjs";
 
-export { GitHubError };
+export { GitHubError, PolicyError };
+export type { Actor };
 
 const ARTIFACT_PATH = "content/generated/posts.json";
 const postPath = (slug: string) => `content/posts/${slug}.md`;
@@ -181,19 +183,36 @@ export async function savePost(
     raw: string;
     expectedHeadSha?: string | null;
     isNew: boolean;
+    /** Defaults to the human admin, so the browser editor is unchanged. */
+    actor?: Actor;
   },
 ) {
-  const record = await validateAndRender(env, options.slug, options.raw);
+  const actor: Actor = options.actor ?? { kind: "admin" };
 
-  if (options.isNew) {
-    const existing = await readFile(env, postPath(options.slug));
-    if (existing) {
-      throw new EditorError(
-        `A post with the slug "${options.slug}" already exists.`,
-        { field: "slug" },
-      );
-    }
+  // The existing file is read BEFORE anything is rendered, because it carries
+  // the only authoritative answer to "has this post ever been published", and
+  // because a write refused by policy should not pay for a render first.
+  const existing = await readFile(env, postPath(options.slug));
+
+  if (options.isNew && existing) {
+    throw new EditorError(
+      `A post with the slug "${options.slug}" already exists.`,
+      { field: "slug" },
+    );
   }
+
+  // Throws PolicyError on an operator's first publish. Also stamps
+  // first_published, overwriting whatever the caller sent.
+  const decision = decide({
+    actor,
+    incomingRaw: options.raw,
+    priorRaw: existing ? existing.content : null,
+  });
+  const raw = decision.raw;
+
+  // Rendered from the STAMPED markdown, so the committed file and the artifact
+  // entry describe the same bytes and check:content stays green.
+  const record = await validateAndRender(env, options.slug, raw);
 
   const posts = await loadArtifact(env);
   const next = sortBySlug([
@@ -203,9 +222,9 @@ export async function savePost(
 
   const { commitSha } = await commitFiles(env, {
     expectedHeadSha: options.expectedHeadSha,
-    message: `${options.isNew ? "Add" : "Update"} post: ${record.title}`,
+    message: commitMessage(actor, options.isNew ? "Add" : "Update", record.title),
     changes: [
-      { path: postPath(options.slug), content: options.raw },
+      { path: postPath(options.slug), content: raw },
       { path: ARTIFACT_PATH, content: serializeArtifact(next) },
     ],
   });
@@ -220,7 +239,26 @@ export async function savePost(
   // happened. Same asymmetry as the OG card gap, and recorded next to it.
   const askSync = await syncAskForPost(env, record);
 
-  return { commitSha, record, askSync };
+  return {
+    commitSha,
+    record,
+    askSync,
+    firstPublished: decision.firstPublished,
+    published: decision.published,
+  };
+}
+
+/**
+ * Marks who wrote the commit.
+ *
+ * An operator's commits must be distinguishable in history from Dustin's, so
+ * `git log` answers "did an agent write this" without anyone having to
+ * cross-reference anything. The marker names the operator id, because "an
+ * agent" is not a useful answer once there is more than one.
+ */
+function commitMessage(actor: Actor, verb: string, title: string) {
+  const base = `${verb} post: ${title}`;
+  return actor.kind === "operator" ? `${base} [operator:${actor.id}]` : base;
 }
 
 /**
@@ -243,8 +281,9 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
 /** Deletes a post: the file, the artifact entry, and the rows, in that order. */
 export async function deletePost(
   env: PublishEnv,
-  options: { slug: string; expectedHeadSha?: string | null },
+  options: { slug: string; expectedHeadSha?: string | null; actor?: Actor },
 ) {
+  const actor: Actor = options.actor ?? { kind: "admin" };
   const existing = await readFile(env, postPath(options.slug));
   if (!existing) {
     throw new EditorError(`No post file exists for "${options.slug}".`);
@@ -255,7 +294,7 @@ export async function deletePost(
 
   const { commitSha } = await commitFiles(env, {
     expectedHeadSha: options.expectedHeadSha,
-    message: `Remove post: ${options.slug}`,
+    message: commitMessage(actor, "Remove", options.slug),
     changes: [
       { path: postPath(options.slug), content: null },
       { path: ARTIFACT_PATH, content: serializeArtifact(next) },
