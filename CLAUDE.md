@@ -29,6 +29,7 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
 - `npm run check:search` gate over the query parser and rank fusion (pure, no database)
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
+- `npm run check:logo` gate; proves the inline mark still reproduces the four SVG fixtures (pure)
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `wrangler deploy` (auto-deploy is not wired; deploy is manual)
 
@@ -368,6 +369,56 @@ Requires the `GITHUB_TOKEN` wrangler secret (fine-grained, Contents read/write o
 this repo). Without it the editor still renders and previews, and saving reports
 that it is unavailable rather than half-working.
 
+### The feedback slot (built 2026-07-29)
+
+**A first publication used to complete in silence.** A save redirected to
+`/admin/posts` and said nothing, so the one act the system reserves to the human
+looked exactly like nothing having happened. That is a design failure by this
+architecture's own logic, not a missing nicety.
+
+ONE slot, four states, `app/components/admin/post-editor.tsx`:
+
+    saved             success tint. "Saved. Commit <sha>."
+    published-first   success tint, heavier edge, larger heading, the live link.
+    republished       success tint, the live link.
+    unpublished       warning tint, the URL that now 404s.
+    failed            danger tint, the gate's own prose, same prominence.
+
+**The transition is named by `publish-policy.mjs`, not by the UI**, because only
+the policy module read the prior FILE, and current state cannot tell a first
+publication from a republication: a post at `draft: true` is either brand new or
+withdrawn. `decide()` returns `outcome` alongside the permission it was already
+computing, and `check:policy` asserts all four transitions with their negatives
+(a live post edited again is NOT a republication; a draft re-saved is NOT a
+second unpublish).
+
+**Success travels in the URL, failure does not.** A save is post/redirect/get,
+so the outcome crosses a navigation as `?saved=<outcome>&sha=<short>&at=<date>`,
+parsed server side in the loader. No flash cookie, no session store, renders in
+the first byte of HTML with scripting off, and a reload repeats the message
+instead of re-posting the form. A FAILURE cannot redirect, because that would
+throw away the body the author just typed, so it stays in the action result.
+`app/lib/editor/feedback.ts` owns both directions and treats the query string as
+untrusted: the shas and the date are pattern-matched, the slug is taken from the
+route rather than the query, and a first publication with no valid date degrades
+to the plain saved message rather than claiming a ceremony it cannot date.
+
+Persistence is "until the next action", and the next action is anything that
+produces an `actionData`: a failure replaces the message and a preview clears
+it, because by then the URL is describing a save two steps ago.
+
+**The slot is always in the DOM, empty when there is nothing to say.** It is the
+`aria-live="polite"` region, and a container that appears at the same moment as
+its text announces nothing. Polite rather than assertive because every message
+follows a submit the author just made and none of them vanishes.
+
+**The draft checkbox area carries a Live/Draft chip**, the same `.chip` the post
+list uses, so the page state is legible without reading the message. Bordered
+rather than tinted: binding rule 4 allows one semantic tint per view and the
+slot is where it is spent. The same rule is why the "Saving unavailable" banner
+moved off `--tint-danger` onto the neutral `.editor-notice`; two tinted banners
+would otherwise stack in that spot.
+
 ## Operator publish path (agents)
 
 `POST /api/operator`, a bearer-token JSON endpoint exposing the editor's save
@@ -448,13 +499,17 @@ refusals. Same trap already recorded for the Ask guards.
 
 `npm run check:policy` imports `app/lib/editor/publish-policy.mjs`, the module
 the Worker imports, on the same principle as `check:search` and `query.mjs`.
-Pure: no GitHub, no database, no network. 29 assertions, every rule paired with
-its negative.
+Pure: no GitHub, no database, no network. **45 assertions**, every rule paired
+with its negative. It covers three things: the first-publish permission, the
+Ask-publishability filter that keeps drafts out of the AI index, and the save
+OUTCOME the editor reports back.
 
-Verified by planting three violations and confirming a real exit 1 for each:
+Verified by planting five violations and confirming a real exit 1 for each:
 trusting the caller's `first_published` (the forgery hole, exactly 2 failures),
-removing the operator refusal (4), and clearing `first_published` on unpublish,
-which would lock an operator out of republishing its own post (2).
+removing the operator refusal (4), clearing `first_published` on unpublish,
+which would lock an operator out of republishing its own post (2), and, for the
+outcome classification, collapsing republish into an ordinary save (1) and
+collapsing unpublish into one (1).
 
 ## Social cards
 
@@ -476,6 +531,24 @@ must never be handed.
 
 Order matters: `build:content` then `build:og` then `sync:content`.
 Fonts live in `assets/fonts/` and are build assets, not public ones.
+
+**The gap is now floored, not closed.** `DEFAULT_OG_IMAGE` in `app/lib/seo.ts` is
+the site mark, and card precedence is cover, then the `build:og` card, then that
+default, so a post whose card has not been built shares as the brand rather than
+as nothing. It is DERIVED from `SITE_ORIGIN`, never written out: the apex still
+resolves to the legacy WordPress site, so a hardcoded apex URL would ship a
+broken card until DNS cutover. Deriving it adds no new item to the cutover list.
+
+**Icons and the manifest live in root's `links` export, not `meta`.** `links`
+from every matched route are MERGED; `meta` is not. A root-level `og:image`
+would therefore be dropped by every route that exports its own meta, which is
+why the default card is a constant each public route names for itself. Grounds:
+`dustinedwards/session-2026-07-29-logo.md`.
+
+`.site-logo-brand { fill: var(--brand) }` is the whole dark-mode story for the
+mark. The token resolves through the same three theme selectors as everything
+else, so a chosen theme, a light default and system mode all land on the right
+mark with no media query of the mark's own and nothing to flash.
 
 ## Version history
 
@@ -545,6 +618,41 @@ card key is what makes the R2 object safe to serve immutable, so a template
 restyle that did not change the key would never reach a cached reader. Bump it
 whenever card colours, type or layout change. It is at 2 for these tokens.
 
+## check:logo (gate)
+
+`npm run check:logo` proves `app/components/site-logo.tsx`, the module the Worker
+renders, still reproduces the ratified SVGs. Pure: no network, no database, no
+build. **80 assertions over 4 fixtures.**
+
+**The four `public/*.svg` files are FIXTURES, not dead assets, and that is why
+they stay.** They are not what the site renders; the component is. Two
+independent sources argue, exactly as in `check:contrast`: the expected path data
+and fills come from the files, the actual ones from the component, and nothing in
+the script restates a path. Delete them and the gate has nothing to check
+against.
+
+The component collapses four files into one path list plus a viewBox, because the
+four differ in exactly two ways: the viewBox, and whether the five purple paths
+carry `#4F2D7F` or `#B7A5E0`. Those five carry NO fill in the component; they
+take `.site-logo-brand`, which is `var(--brand)`. This gate is what keeps that
+collapse honest.
+
+It fails in BOTH directions, verified by planting five violations and confirming
+a real exit 1 for each: a digit of path data hand-edited in the component (4
+failures), a purple path hardcoded to the light hex instead of the token (3), an
+altered viewBox (2), a FIXTURE regenerated that the component did not follow (1),
+and a fixture deleted, which fails closed on ENOENT rather than passing on an
+empty read. Coverage of the script itself was proven the same way: a planted type
+error made `tsc -b` exit 2 naming `scripts/check-logo.mjs`.
+
+Block comments are stripped before anything is located, because this file's own
+header names `viewBox` and both hexes. That is the trap `check:contrast` already
+hit, where the parser found the prose in a comment first.
+
+Construction spec: Capsid `dustinedwards/logo-spec.md`, amended 2026-07-29 to
+record the brand binding. A variant is a rebuild from those values, never a hand
+edit of path data.
+
 ## check:contrast (gate)
 
 `npm run check:contrast` reads the token values back out of `app/app.css` and
@@ -554,7 +662,7 @@ design-tokens.md as token NAMES. Nothing in the script restates a hex, so a
 tuned hex moves one side of the comparison and fails.
 
 It also verifies every shiki token against both code surfaces, and, when a build
-is present, that all 104 light and dark values survived into the shipped CSS.
+is present, that all 106 light and dark values survived into the shipped CSS.
 WCAG 2.x is what fails a run; APCA Lc prints as advisory, because APCA is what
 produced the fills-over-pastels rule.
 

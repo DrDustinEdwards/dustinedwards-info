@@ -440,6 +440,13 @@ a:hover {
   border-radius: 0.75rem;
 }
 
+.gate-mark {
+  display: block;
+  width: 4rem;
+  height: auto;
+  margin: 0 0 1rem;
+}
+
 .gate-card h1 {
   margin: 0 0 0.5rem;
   font-size: 1.5rem;
@@ -501,6 +508,20 @@ a:hover {
   outline-offset: -4px;
 }
 
+/* The site mark. The five purple paths carry this class; the warm three keep
+   the literal fills the ratified SVGs give them, because those are identical in
+   the light and dark variants.
+
+   This one declaration IS the dark-mode variant. --brand is #4f2d7f light and
+   #b7a5e0 dark, and it is resolved by the same three selectors as every other
+   token, so a chosen theme, a light default and system mode all land on the
+   right mark with no media query of the mark's own. Nothing is hidden, so
+   nothing can shift; the token resolves in the first paint, so nothing flashes.
+   Shared by the header and the login card. */
+.site-logo-brand {
+  fill: var(--brand);
+}
+
 /* Public header */
 .site-header {
   display: flex;
@@ -513,9 +534,20 @@ a:hover {
 }
 
 .site-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
+}
+
+/* 2rem keeps the brand row inside the header's existing 4rem min-height, so
+   adding the mark moves nothing below it. Width follows the 36x50 ratio. */
+.site-header-mark {
+  display: block;
+  height: 2rem;
+  width: auto;
 }
 
 /* Public content page. Generic, kept for the blog. */
@@ -1565,9 +1597,16 @@ a:hover {
 
 .field-draft {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.field-draft-control {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9375rem;
 }
 
 .field-draft input {
@@ -1621,6 +1660,109 @@ a:hover {
   border-radius: 0.5rem;
   background: var(--surface);
   font-size: 0.9375rem;
+}
+
+.editor-notice strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.editor-notice > p {
+  margin: 0;
+}
+
+/* The editor's feedback slot ------------------------------------------------
+ *
+ * One slot, four states, and the tint changes family with the state rather than
+ * the state changing only its words. Rule 4 holds because exactly one of these
+ * is ever rendered: the slot is a single node, so there is no arrangement in
+ * which two semantic tints appear together. Everything else in the editor that
+ * could have carried a tint (the missing-token notice) was moved off one for
+ * the same reason.
+ *
+ * The slot element itself is always present and unstyled when empty, because it
+ * is the live region: a container that appears at the same moment as its text
+ * announces nothing.
+ */
+.editor-feedback-slot:empty {
+  display: none;
+}
+
+.editor-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid;
+  border-radius: 0.5rem;
+}
+
+.editor-feedback strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: inherit;
+}
+
+.editor-feedback p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.editor-feedback p + p {
+  margin-top: 0.25rem;
+}
+
+/* The link inherits the banner's on-tint colour rather than the page link
+   colour, which was measured against the page background and not against a
+   tint. It keeps its underline, so rule 2 is untouched. */
+.editor-feedback a {
+  color: inherit;
+}
+
+.editor-feedback-glyph {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.editor-feedback[data-tone="success"] {
+  border-color: var(--border-success);
+  background: var(--tint-success);
+  color: var(--on-tint-success);
+}
+
+.editor-feedback[data-tone="warning"] {
+  border-color: var(--border-warning);
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.editor-feedback[data-tone="danger"] {
+  border-color: var(--border-danger);
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
+}
+
+/* First publication. The one act the system reserves to the human, so it is the
+   one message that does not look like every other save. The weight is carried
+   by size and a heavier edge, never by a colour the other success state does
+   not also have: a reader who cannot separate the two hues still sees a
+   different shape. */
+.editor-feedback[data-ceremony] {
+  padding: 1.125rem 1.25rem;
+  border-width: 1px 1px 1px 4px;
+}
+
+.editor-feedback[data-ceremony] strong {
+  font-size: 1.125rem;
+}
+
+/* forced-colors: the tint that separated these states is gone, so the edge is
+   the only thing left holding the shape, and the glyph plus the words carry the
+   meaning. Nothing here re-asserts a palette colour. */
+@media (forced-colors: active) {
+  .editor-feedback {
+    border-color: currentColor;
+  }
 }
 
 .editor-upload,

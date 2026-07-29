@@ -4,6 +4,7 @@ import { Panel } from "~/components/admin/panel";
 import { PostEditor } from "~/components/admin/post-editor";
 import { getEnv } from "~/lib/context";
 import { handleEditorAction } from "~/lib/editor/action.server";
+import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
 import { currentHead } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.posts.new";
@@ -22,7 +23,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const result = await handleEditorAction(getEnv(context), request);
-  if (result.kind === "saved") return redirect(`/admin/posts/${result.slug}/edit`);
+  if (result.kind === "saved") return redirect(savedRedirectPath(result));
   return result;
 }
 
@@ -37,7 +38,17 @@ export default function NewPost({ loaderData, actionData }: Route.ComponentProps
         isNew
         headSha={headSha}
         previewHtml={actionData?.kind === "preview" ? actionData.previewHtml : null}
-        problem={actionData?.kind === "problem" ? actionData.problem : null}
+        // A success never renders here: it redirects to the edit route, where
+        // the slug is fixed and the message belongs. Only a failure stays.
+        feedback={
+          actionData?.kind === "problem"
+            ? {
+                state: "failed",
+                message: actionData.problem.message,
+                conflict: Boolean(actionData.problem.conflict),
+              }
+            : null
+        }
       />
     </Panel>
   );

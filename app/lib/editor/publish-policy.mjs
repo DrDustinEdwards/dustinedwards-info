@@ -87,6 +87,33 @@ export function forceFirstPublished(raw, value) {
 }
 
 /**
+ * What a save DID to a post's public status, named.
+ *
+ * This is the editor's feedback, and it is computed here rather than in the UI
+ * for the same reason the permission is: the answer depends on the prior FILE,
+ * which no other layer has read. A route that inferred it from the checkbox
+ * alone could not tell a first publication from a republication, and those are
+ * the two the author most needs told apart.
+ *
+ * @typedef {"saved" | "published-first" | "republished" | "unpublished"} SaveOutcome
+ */
+
+/**
+ * @param {{ wantsPublished: boolean, everPublished: boolean, priorDraft: boolean | null }} state
+ * @returns {SaveOutcome}
+ */
+function classify(state) {
+  if (state.wantsPublished) {
+    if (!state.everPublished) return "published-first";
+    // Already published and edited again is an ordinary save. Only a post that
+    // was actually withdrawn can be republished.
+    return state.priorDraft === true ? "republished" : "saved";
+  }
+  // A new post created as a draft never went public, so nothing was withdrawn.
+  return state.priorDraft === false ? "unpublished" : "saved";
+}
+
+/**
  * Decides what a write is allowed to do, and what `first_published` becomes.
  *
  * `priorRaw` is the file as it exists in the repository right now, or null for
@@ -104,7 +131,7 @@ export function forceFirstPublished(raw, value) {
  */
 /**
  * @param {{ actor: Actor, incomingRaw: string, priorRaw: string | null }} options
- * @returns {{ raw: string, firstPublished: string | null, published: boolean }}
+ * @returns {{ raw: string, firstPublished: string | null, published: boolean, outcome: SaveOutcome }}
  */
 export function decide(options) {
   const incoming = readState(options.incomingRaw);
@@ -133,5 +160,10 @@ export function decide(options) {
     raw: forceFirstPublished(options.incomingRaw, firstPublished),
     firstPublished,
     published: wantsPublished,
+    outcome: classify({
+      wantsPublished,
+      everPublished,
+      priorDraft: prior ? prior.draft : null,
+    }),
   };
 }
