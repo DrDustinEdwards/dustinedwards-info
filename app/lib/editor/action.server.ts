@@ -1,5 +1,6 @@
 import { EditorError, GitHubError, currentHead, savePost, validateAndRender } from "./publish.server";
 import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
+import type { SaveOutcome } from "./publish-policy.mjs";
 
 /**
  * The shared save/preview handler behind both /admin/posts/new and the edit
@@ -9,7 +10,15 @@ import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
 export type EditorActionResult =
   | { kind: "preview"; fields: PostFields; previewHtml: string; headSha: string }
   | { kind: "problem"; fields: PostFields; problem: { message: string; field?: string; line?: number; conflict?: boolean }; headSha: string }
-  | { kind: "saved"; slug: string };
+  | {
+      kind: "saved";
+      slug: string;
+      /** What the save did to the post's public status. */
+      outcome: SaveOutcome;
+      commitSha: string;
+      /** The date the post first went public, present once it ever has. */
+      firstPublished: string | null;
+    };
 
 export async function handleEditorAction(
   env: Env & { GITHUB_TOKEN?: string },
@@ -36,13 +45,19 @@ export async function handleEditorAction(
       return { kind: "preview", fields, previewHtml: record.html, headSha: submittedHead };
     }
 
-    await savePost(env, {
+    const saved = await savePost(env, {
       slug: fields.slug,
       raw,
       expectedHeadSha: submittedHead || null,
       isNew,
     });
-    return { kind: "saved", slug: fields.slug };
+    return {
+      kind: "saved",
+      slug: fields.slug,
+      outcome: saved.outcome,
+      commitSha: saved.commitSha,
+      firstPublished: saved.firstPublished,
+    };
   } catch (error) {
     if (error instanceof EditorError) {
       return fail(error.message, { field: error.field, line: error.line });
