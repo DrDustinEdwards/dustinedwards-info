@@ -477,6 +477,24 @@ must never be handed.
 Order matters: `build:content` then `build:og` then `sync:content`.
 Fonts live in `assets/fonts/` and are build assets, not public ones.
 
+**The gap is now floored, not closed.** `DEFAULT_OG_IMAGE` in `app/lib/seo.ts` is
+the site mark, and card precedence is cover, then the `build:og` card, then that
+default, so a post whose card has not been built shares as the brand rather than
+as nothing. It is DERIVED from `SITE_ORIGIN`, never written out: the apex still
+resolves to the legacy WordPress site, so a hardcoded apex URL would ship a
+broken card until DNS cutover. Deriving it adds no new item to the cutover list.
+
+**Icons and the manifest live in root's `links` export, not `meta`.** `links`
+from every matched route are MERGED; `meta` is not. A root-level `og:image`
+would therefore be dropped by every route that exports its own meta, which is
+why the default card is a constant each public route names for itself. Grounds:
+`dustinedwards/session-2026-07-29-logo.md`.
+
+`.site-logo-brand { fill: var(--brand) }` is the whole dark-mode story for the
+mark. The token resolves through the same three theme selectors as everything
+else, so a chosen theme, a light default and system mode all land on the right
+mark with no media query of the mark's own and nothing to flash.
+
 ## Version history
 
 `/admin/posts/:slug/history` lists commits for the post's file, shows a diff per
