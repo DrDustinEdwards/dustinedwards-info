@@ -53,12 +53,14 @@ async function get(path, headers = {}) {
 }
 
 /** SSR splices HTML comments between adjacent text nodes. */
+/** @param {string} s */
 const strip = (s) => s.replace(/<!--[\s\S]*?-->/g, "");
 
 console.log(`Verifying ${ORIGIN}\n`);
 
 /* --- 1. Theme resolution, server rendered ------------------------------- */
 
+/** @param {string} s */
 const htmlTag = (s) => (s.match(/<html[^>]*>/) ?? [""])[0];
 
 for (const [label, cookie, expected] of [
@@ -116,7 +118,7 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
       ["mark is prairie gold #F3E3B8", "f3e3b8"],
       ["danger fill #8E1024", "8e1024"],
     ]) {
-      check(`css: ${label}`, css.toLowerCase().includes(needle));
+      check(`css: ${label}`, css.toLowerCase().includes(needle) === true);
     }
 
     // Rule 2 and the delete button, asserted on the shipped bytes.
@@ -209,7 +211,10 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
   check("search: a mark is rendered", results[0].includes("<mark>"));
 
   const json = await get("/search?q=blog", { accept: "application/json" });
-  check("search: JSON twin negotiates", json.res.headers.get("content-type")?.includes("json"));
+  check(
+    "search: JSON twin negotiates",
+    (json.res.headers.get("content-type") ?? "").includes("json"),
+  );
   check("search: Vary: Accept is set", (json.res.headers.get("vary") ?? "").includes("Accept"));
 }
 
