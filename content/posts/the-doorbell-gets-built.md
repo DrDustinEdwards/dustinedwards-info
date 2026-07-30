@@ -3,8 +3,9 @@ title: "The doorbell gets built: an MCP server that contains no policy"
 slug: the-doorbell-gets-built
 description: "Building a publishing MCP server the week the protocol went stable: a fake authorization server to interrogate the real client, a library chosen by conformance score, and a shim that deletes by removing one file."
 date: 2026-07-30
-draft: true
 tags: [mcp, cloudflare, oauth, agents, workers]
+draft: false
+first_published: 2026-07-30
 ---
 
 The previous article described the door: a bearer-authenticated operator API through which an AI agent can manage this site's posts, with every rule enforced server-side. This one is about the doorbell: the MCP server that lets an AI assistant discover and call that API as tools in a conversation. It was built during the single most interesting week to build such a thing, because the Model Context Protocol's 2026-07-28 revision, the largest since the protocol launched, shipped as final two days before this server deployed. Every claim below is dated for that reason, and the repository is public, so the claims are checkable.
