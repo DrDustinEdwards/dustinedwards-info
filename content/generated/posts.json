@@ -277,6 +277,45 @@
       ]
     },
     {
+      "slug": "mcp-wrapper-round-trip-check",
+      "title": "Round trip check: the operator MCP wrapper",
+      "description": "A throwaway post created by the MCP wrapper's end to end verification. It will be deleted in the same session.",
+      "date": "2026-07-30",
+      "publishAt": "2026-07-30T00:00:00.000Z",
+      "draft": true,
+      "tags": [
+        "cloudflare",
+        "mcp",
+        "operator"
+      ],
+      "cover": null,
+      "featured": false,
+      "series": null,
+      "part": null,
+      "furtherReading": [],
+      "ogTitle": null,
+      "ogDescription": null,
+      "updated": null,
+      "readingTimeMinutes": 1,
+      "toc": [
+        {
+          "depth": 2,
+          "id": "what-it-proves",
+          "text": "What it proves"
+        }
+      ],
+      "markdown": "\nThis post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.\n\n## What it proves\n\nOne atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.\n",
+      "html": "<p>This post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.</p>\n<h2 id=\"what-it-proves\">What it proves<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-it-proves\">#</a></h2>\n<p>One atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.</p>",
+      "sourcePath": "content/posts/mcp-wrapper-round-trip-check.md",
+      "related": [
+        {
+          "slug": "where-should-a-blog-store-its-words",
+          "title": "Where should a blog store its words?",
+          "shared": 1
+        }
+      ]
+    },
+    {
       "slug": "site-search-fts5-rank-fusion",
       "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
       "description": "Section-grained records, why tokenizers forced two indexes, reciprocal rank fusion over raw bm25, a flagship feature that returned zero for its own designed input, and what FTS5 does to your backups.",
@@ -919,6 +958,38 @@
       "ordinal": 7,
       "status": "draft",
       "publishAt": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "uid": "post:mcp-wrapper-round-trip-check",
+      "url": "/blog/mcp-wrapper-round-trip-check",
+      "type": "post",
+      "title": "Round trip check: the operator MCP wrapper",
+      "body": "A throwaway post created by the MCP wrapper's end to end verification. It will be deleted in the same session. This post exists only to prove that the operator MCP wrapper reaches the publishing pipeline through the operator API, and it will be deleted before the session ends.",
+      "tags": "cloudflare mcp operator",
+      "docTags": "|cloudflare|mcp|operator|",
+      "docUid": "post:mcp-wrapper-round-trip-check",
+      "docTitle": "Round trip check: the operator MCP wrapper",
+      "docUrl": "/blog/mcp-wrapper-round-trip-check",
+      "anchor": null,
+      "ordinal": 0,
+      "status": "draft",
+      "publishAt": "2026-07-30T00:00:00.000Z"
+    },
+    {
+      "uid": "post:mcp-wrapper-round-trip-check#what-it-proves",
+      "url": "/blog/mcp-wrapper-round-trip-check#what-it-proves",
+      "type": "post",
+      "title": "What it proves",
+      "body": "One atomic commit carrying both the markdown and the regenerated artifact, the content gates running server side, and the wrapper adding nothing of its own.",
+      "tags": "",
+      "docTags": "|cloudflare|mcp|operator|",
+      "docUid": "post:mcp-wrapper-round-trip-check",
+      "docTitle": "Round trip check: the operator MCP wrapper",
+      "docUrl": "/blog/mcp-wrapper-round-trip-check",
+      "anchor": "what-it-proves",
+      "ordinal": 1,
+      "status": "draft",
+      "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
       "uid": "post:site-search-fts5-rank-fusion",
