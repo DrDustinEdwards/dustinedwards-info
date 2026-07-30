@@ -4,7 +4,8 @@ slug: site-search-fts5-rank-fusion
 description: "Section-grained records, why tokenizers forced two indexes, reciprocal rank fusion over raw bm25, a flagship feature that returned zero for its own designed input, and what FTS5 does to your backups."
 date: 2026-07-28
 tags: [cloudflare, d1, fts5, search, sqlite]
-draft: true
+draft: false
+first_published: 2026-07-30
 ---
 
 This site's search answers in single-digit milliseconds from a database at the edge, works with JavaScript disabled, returns JSON to anyone who asks with an Accept header, and was built by hand on SQLite's FTS5 rather than on a search service. This article is the design, the measurements that justified each choice, one bug that reached production, and one finding about backups that anyone running FTS5 on D1 needs to know.
