@@ -1,5 +1,5 @@
 ---
-title: "WCAG 2.2 Color Palette Design: Contrast Math, CVD Testing, and a Build Gate"
+title: "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
 slug: a-color-palette-that-can-prove-itself
 description: "A method for accessible color palette design: the WCAG contrast ratio function in Python, OKLCH candidate selection, color vision deficiency simulation with the Vienot matrices, chart lightness ladders, and a build gate that recomputes every pair on every deploy."
 date: 2026-07-28
@@ -12,11 +12,11 @@ This is a method for building a site palette the way you would build any other e
 
 The constraints I was working under, so you can map them to yours: one locked brand color (a deep purple, `#4F2D7F`), light and dark modes, WCAG 2.2 AA everywhere, and a regional character I wanted to keep (warm West Texas neutrals rather than the blue-gray everything defaults to). Your brand color and character will differ. The method does not.
 
-Three of my attempts failed along the way. I have left them in as warnings at the point in the procedure where you would make the same mistake, because you probably will, and recognizing the failure is faster than rediscovering it.
+Three of my attempts failed along the way. I have left them in as warnings at the point in the procedure where you would make the same mistake, because each one produced a rule you can apply directly.
 
 ## Step 1: write the ratio function before choosing any color
 
-WCAG contrast is a formula, not a judgment. Relative luminance for each color, then `(L1 + 0.05) / (L2 + 0.05)` with the lighter luminance on top. Write it yourself rather than relying on a web checker, because you are about to run hundreds of pairs and you want them in a loop:
+WCAG contrast is a formula, not a judgment. Relative luminance for each color, then `(L1 + 0.05) / (L2 + 0.05)` with the lighter luminance on top, as defined in [WCAG 2.2](https://www.w3.org/TR/WCAG22/). Write it yourself rather than relying on a web checker, because you are about to run hundreds of pairs and you want them in a loop:
 
 ```python
 def srgb_channel(c):
@@ -66,11 +66,11 @@ Categorical chart colors have a harder job than interface colors: they must be d
 
 Here is the arithmetic that will stop you from promising too much, and it is worth doing for your own numbers before you commit to a set size. I wanted every pair of unlabeled categorical colors separated by at least `0.08` in OKLab lightness, a margin I chose as an engineering value, not a citation. Six colors means five gaps, so `0.40` of total lightness span. But every chart color must also hold `3:1` against the page background, and on my light background that constraint caps the usable lightness span at roughly `0.30`. Six fully lightness-separated categorical colors cannot exist inside AA contrast bounds. That is not a property of my palette; it is arithmetic, and it is why mature data visualization palettes are small or lean on redundant encoding. My resolution, which I recommend as the general pattern: a core set of five on a strict ladder, safe anywhere; a sixth color permitted only in charts whose series are directly labeled; and a binding rule that hue alone is never the distinguishing channel between adjacent series.
 
-I arrived at this the embarrassing way: I claimed my six chart colors were CVD-safe because "the lightness spread covers it," then computed the pairwise differences and found three pairs within `0.01` of each other, including an orange against a green, the classic deuteranopia collapse. Compute before you claim. It is the entire method in four words.
+I claimed my initial six chart colors were CVD-safe on the assumption that the lightness spread covered it, then computed the pairwise differences and found three pairs within `0.01` of each other, including an orange against a green, the classic deuteranopia collapse. The rule that survives: compute before you claim.
 
 ## Step 6: simulate color vision deficiency, and read the results honestly
 
-Simulate protanopia and deuteranopia with the Vienot 1999 matrices, applied in linear RGB, then measure the OKLab distance between each pair of colors that carry meaning near each other. The pairs to care about most are the ones your interface will actually juxtapose: danger against success (form validation puts them side by side), link color against body text, and adjacent chart series.
+Simulate protanopia and deuteranopia with the Vienot, Brettel, and Mollon (1999) matrices, applied in linear RGB, then measure the OKLab distance between each pair of colors that carry meaning near each other. The pairs to care about most are the ones your interface will actually juxtapose: danger against success (form validation puts them side by side), link color against body text, and adjacent chart series.
 
 My results, so you know what to expect: danger red versus success sage was marginal in light mode and collapsed in dark mode under deuteranopia, and blue versus purple failed under both deficiency types. Yours will fail somewhere too, because no six-hue palette passes on hue alone, and knowing that changes what the fix is. The fix is not better hues. It is the rule WCAG codifies as success criterion 1.4.1: color is never the only channel. Errors are red plus an icon plus a message. Links are underlined. Charts label series directly. Once those rules are binding, the CVD simulation stops being a pass-fail test of your hues and becomes a map of exactly where the second channel is load-bearing.
 
@@ -78,7 +78,7 @@ Two disclosures to attach if you publish your own numbers, because a careful rea
 
 ## Step 7: dark mode is where WCAG 2 needs a second opinion
 
-Dark mode will force every accent color light, because that is what the contrast math demands against a dark background. Run those pastels through WCAG 2 and they score generously; my dark danger text scores `8.4:1`. Then run them through APCA, the candidate successor contrast algorithm built on more recent perceptual research, and watch the same pastel score around `Lc 60`, adequate for large text and short of body-text targets. That disagreement is a known property of the WCAG 2 formula in dark polarity, and it has a practical design consequence you can adopt regardless of which algorithm you trust: interactive semantic elements in dark mode should use saturated fill variants, not pastel text colors, because a soft pink Delete button reads gentle, and gentle is the one thing a delete button must not be.
+Dark mode will force every accent color light, because that is what the contrast math demands against a dark background. Run those pastels through WCAG 2 and they score generously; my dark danger text scores `8.4:1`. Then run them through [APCA](https://git.apcacontrast.com/), the candidate successor contrast algorithm built on more recent perceptual research, and watch the same pastel score around `Lc 60`, adequate for large text and short of body-text targets. That disagreement is a known property of the WCAG 2 formula in dark polarity, and it has a practical design consequence you can adopt regardless of which algorithm you trust: interactive semantic elements in dark mode should use saturated fill variants, not pastel text colors, because a soft pink Delete button reads gentle, and gentle is the one thing a delete button must not be.
 
 Use APCA as an advisory column, not a gate, since WCAG 2.x remains the standard with legal weight. And if you implement APCA yourself, verify the implementation against the published keystone test vectors before you quote a single number from it; mine reproduces them to the last decimal, and checking took ten minutes that made every subsequent claim defensible.
 
@@ -91,3 +91,5 @@ Before you trust that gate, break it on purpose: change one value to something f
 Two smaller rules that earn their keep once the gate exists. Keep the palette's authoritative values in one specification document with every ratio recorded, so the gate has a source of truth to check the CSS against rather than checking the CSS against itself. And write your usage rules down as numbered law next to the values: color never the sole channel, links underlined, charts labeled, one semantic tint per view, fills for interactive semantics. The colors pass contrast; the rules are what make the system accessible, and a palette document without them is half a deliverable.
 
 What you get at the end is fifty-odd tokens per mode, every ratio recorded, a handful of binding rules, and a build that refuses to ship a regression. The method costs one evening more than picking colors by eye. The difference is that when someone asks whether your palette is accessible, you can answer with a script instead of an adjective, and when you change a color next year, the build will tell you what you broke before your readers do.
+
+This is the second post in [a series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare); the next one covers [the git-backed content pipeline](/blog/content-is-code-building-the-blog) that gates this palette's check script alongside everything else.
