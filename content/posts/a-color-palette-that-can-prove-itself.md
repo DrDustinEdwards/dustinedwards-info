@@ -14,7 +14,7 @@ The constraints I was working under, so you can map them to yours: one locked br
 
 Three of my attempts failed along the way. I have left them in as warnings at the point in the procedure where you would make the same mistake, because each one produced a rule you can apply directly.
 
-## Step 1: write the ratio function before choosing any color
+## Step 1: write the WCAG contrast ratio function before choosing any color
 
 WCAG contrast is a formula, not a judgment. Relative luminance for each color, then `(L1 + 0.05) / (L2 + 0.05)` with the lighter luminance on top, as defined in [WCAG 2.2](https://www.w3.org/TR/WCAG22/). Write it yourself rather than relying on a web checker, because you are about to run hundreds of pairs and you want them in a loop:
 
@@ -38,7 +38,7 @@ def ratio(a, b):
 
 The targets you will hold every pair to: `4.5:1` for normal text, `3:1` for large text and for user interface components such as borders and focus indicators. Those come from WCAG 2.2 success criteria 1.4.3 and 1.4.11. Write them down as constants; they are about to become your veto.
 
-## Step 2: inventory the roles before the colors
+## Step 2: inventory the color roles before the colors
 
 A palette is not a list of nice colors, it is a set of jobs. List the jobs first, because the jobs determine how many computed pairs each color owes you. The inventory that has worked for me, and that most sites eventually converge on whether they planned to or not:
 
@@ -54,13 +54,13 @@ One caveat you should carry: the OKLab model's approximation is weakest in deep 
 
 A warning from my first failed attempt. I found a published palette whose violet sat sixteen degrees of hue from my brand purple and tried to adapt the whole palette by applying the full transform between the two violets, hue shift plus the saturation and lightness scaling, to every color. The result was neon: the sand tone went to pure white and the red landed on `#FF1942`. The depth of a dark brand color is a property of that color, and propagating its lightness transform destroys its neighbors. If you adapt an existing palette, rotate hue only, then re-tune each color's lightness individually against your contrast targets. Formulas draft. They do not decide.
 
-## Step 4: run the full pairwise matrix, and rerun it after every change
+## Step 4: run the full pairwise contrast matrix, and rerun it after every change
 
 Put your candidate hexes in a table of (foreground, background, required ratio) triples and loop the ratio function over all of them. Any pair below its requirement fails the whole candidate set; adjust the OKLCH lightness of the offender and rerun. You will iterate this loop dozens of times, which is fine, because it is a loop.
 
 The warning attached to this step comes from my second failure. Partway through, a hue analysis showed my decorative rust accent sitting sixteen degrees from my danger red, close enough that the two could be confused, so I moved rust away. Then, choosing a warning color, I picked a burnt tangerine that sat almost exactly where rust had been, and recreated the same collision between two colors that now both carried meaning. The fix was moving warning to the amber family, where decades of interface convention already put it. The procedural lesson is the one to keep: the pairwise check, both the contrast matrix and a simple hue-distance scan between roles, runs after every change, not once at the end. A palette is a system, and edits have neighbors.
 
-## Step 5: the chart ladder, and an impossibility worth knowing in advance
+## Step 5: how many colorblind-safe chart colors are possible
 
 Categorical chart colors have a harder job than interface colors: they must be distinguishable from each other, not just from the background, including by readers with color vision deficiency. The reliable channel for that is lightness, because it survives every type of CVD. So build your chart set as a lightness ladder: pick your hues, then force their OKLab lightness values apart by a fixed margin.
 
@@ -68,7 +68,7 @@ Here is the arithmetic that will stop you from promising too much, and it is wor
 
 I claimed my initial six chart colors were CVD-safe on the assumption that the lightness spread covered it, then computed the pairwise differences and found three pairs within `0.01` of each other, including an orange against a green, the classic deuteranopia collapse. The rule that survives: compute before you claim.
 
-## Step 6: simulate color vision deficiency, and read the results honestly
+## Step 6: simulate color vision deficiency with the Vienot matrices
 
 Simulate protanopia and deuteranopia with the Vienot, Brettel, and Mollon (1999) matrices, applied in linear RGB, then measure the OKLab distance between each pair of colors that carry meaning near each other. The pairs to care about most are the ones your interface will actually juxtapose: danger against success (form validation puts them side by side), link color against body text, and adjacent chart series.
 
@@ -76,13 +76,13 @@ My results, so you know what to expect: danger red versus success sage was margi
 
 Two disclosures to attach if you publish your own numbers, because a careful reader will ask. The Vienot matrices model complete dichromacy, the worst case; most real CVD is anomalous trichromacy and milder, so simulated results are a floor, not a portrait. And any OKLab distance threshold you adopt as a pass mark is a chosen engineering value; there is no standard to cite for it, and pretending otherwise is the kind of overclaim that gets a methods section rejected.
 
-## Step 7: dark mode is where WCAG 2 needs a second opinion
+## Step 7: APCA vs WCAG 2 in dark mode
 
 Dark mode will force every accent color light, because that is what the contrast math demands against a dark background. Run those pastels through WCAG 2 and they score generously; my dark danger text scores `8.4:1`. Then run them through [APCA](https://git.apcacontrast.com/), the candidate successor contrast algorithm built on more recent perceptual research, and watch the same pastel score around `Lc 60`, adequate for large text and short of body-text targets. That disagreement is a known property of the WCAG 2 formula in dark polarity, and it has a practical design consequence you can adopt regardless of which algorithm you trust: interactive semantic elements in dark mode should use saturated fill variants, not pastel text colors, because a soft pink Delete button reads gentle, and gentle is the one thing a delete button must not be.
 
 Use APCA as an advisory column, not a gate, since WCAG 2.x remains the standard with legal weight. And if you implement APCA yourself, verify the implementation against the published keystone test vectors before you quote a single number from it; mine reproduces them to the last decimal, and checking took ten minutes that made every subsequent claim defensible.
 
-## Step 8: wire it into the build, or you did all of this once
+## Step 8: a build gate that recomputes every contrast pair
 
 The palette is only proved for as long as nothing changes, which is to say, it is not proved at all unless the proof runs automatically. The last step is a script in your build that reads the shipped CSS custom properties, recomputes the entire pairwise matrix from the actual deployed values, fails the build if any pair drops below its requirement, and prints the APCA advisory alongside. Mine currently checks the full matrix across both modes on every build, and if a future edit nudges one hex below its floor, the build fails and names the pair.
 
