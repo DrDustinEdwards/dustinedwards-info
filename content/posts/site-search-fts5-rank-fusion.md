@@ -8,9 +8,9 @@ draft: false
 first_published: 2026-07-30
 ---
 
-This article describes how to build full-text site search directly on Cloudflare D1 using SQLite's FTS5 extension, with no external search service. The implementation this describes runs in production on this site and answers queries in 6 milliseconds at the median, 15 at the 95th percentile, measured over 25 runs against local D1. The article covers the schema, the reason one index is not enough, the ranking method, the query dispatch that a naive design gets wrong, the interface work, and one operational finding about backups that I consider mandatory knowledge for anyone putting FTS5 on D1.
+This article describes how to build full-text site search directly on Cloudflare D1 using SQLite's [FTS5 extension](https://sqlite.org/fts5.html), with no external search service. The implementation this describes runs in production on this site and answers queries in 6 milliseconds at the median, 15 at the 95th percentile, measured over 25 runs against local D1. The article covers the schema, the reason one index is not enough, the ranking method, the query dispatch that a naive design gets wrong, the interface work, and one operational finding about backups that I consider mandatory knowledge for anyone putting FTS5 on D1.
 
-Prerequisites: a D1 database, familiarity with SQL and SQLite migrations, and content you can decompose into records. The design generalizes to any corpus; the examples are a blog.
+Prerequisites: a D1 database, familiarity with SQL and SQLite migrations, and content you can decompose into records. The design generalizes to any corpus; the examples are a blog whose content pipeline is described in [the previous article in this series](/blog/content-is-code-building-the-blog).
 
 ## Step 1: one record shape, at section granularity
 
@@ -76,9 +76,9 @@ The baseline is a server-rendered GET form: deep-linkable result URLs, highlight
 
 A command palette can layer on top. If you build one, implement the ARIA combobox pattern as specified rather than approximately: focus stays in the input, `aria-activedescendant` tracks the highlighted option, arrow keys move the highlight rather than focus. Two implementation findings from doing this that will save you time. An input with `type="search"` swallows the first Escape keypress natively to clear its own value, so your close handler fires on the second press unless you account for it. And an in-flight fetch that resolves after the palette closes will repaint a closed dialog, leaving `aria-expanded="true"` over stale options; cancel or discard responses that arrive after close. Both bugs only appear when you test the unhappy orderings, which is the reason to test the unhappy orderings.
 
-## Step 6: what FTS5 does to your backups, which you should verify today
+## wrangler d1 export fails on FTS5: the working backup procedure
 
-The most important operational finding in this article: `wrangler d1 export` fails outright on any database containing FTS5 virtual tables. It exits with an error stating it cannot export databases with virtual tables, and writes nothing. This means the moment you apply the search migration, the platform's default backup path stops working for your database, and the natural time to discover that is during a recovery, which is the worst time. I measured it before applying the migration, on purpose, and I would recommend the same order to anyone.
+The most important operational finding in this article: `wrangler d1 export` fails outright on any database containing FTS5 virtual tables. It exits with the error `D1 Export error: cannot export databases with Virtual Tables (fts5)` and writes nothing. This means the moment you apply the search migration, the platform's default backup path stops working for your database, and the natural time to discover that is during a recovery, which is the worst time. I measured it before applying the migration, on purpose, and I would recommend the same order to anyone.
 
 The working procedure is per-table export, with schema coming from your migration files rather than the dump:
 
@@ -95,4 +95,4 @@ Two adjacent facts from the same investigation, both counterintuitive. Verifying
 
 On this hardware and corpus: median 6 ms, 95th percentile 15 ms, over 25 runs against local D1, with the production numbers in the same range. The latency figures establish a floor rather than a curve; the corpus was small when measured, and I will re-measure as it grows. The two-index design is justified by a corpus that needs both stemmed and identity matching; a site with only prose could defensibly run one Porter-stemmed table and skip the fusion. The export failure is as measured on the wrangler version current at writing and may be fixed later; the per-table procedure and its check remain worthwhile regardless, because a backup that depends on a bug staying fixed is not a backup. And the general claim I would defend beyond this stack: at personal-site scale and probably well past it, hand-built search on the relational database you already operate is not the compromise option. Measured against the alternative of introducing and paying for a search service, it was the fast path in both senses.
 
-The next article adds the layer above this one: a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
+This is the fifth post in [the series](/blog/ten-years-on-cloudflare), following [the reading experience article](/blog/bells-and-whistles-zero-js); the next one adds [the layer above this one](/blog/ai-answer-layer-ask-mode): a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
