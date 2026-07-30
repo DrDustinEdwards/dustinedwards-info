@@ -3,8 +3,9 @@ title: "Ten years on Cloudflare, so I rebuilt everything on it"
 slug: ten-years-on-cloudflare
 description: "A decade as a customer, one full rebuild as the proof: what the 2026 developer platform is actually like from inside a working system, with the numbers."
 date: 2026-07-30
-draft: true
 tags: [cloudflare, workers, d1, platform, architecture]
+draft: false
+first_published: 2026-07-30
 ---
 
 Ten years ago I put my first domain behind Cloudflare and thought of it the way everyone did then: the orange cloud, the thing in front of your real host that absorbed abuse and cached your images. The real host was the point; Cloudflare was weather-proofing. This year I rebuilt my site so that there is no real host behind the cloud. The application, the database, the file storage, the search engine, the AI layer, and the publishing pipeline all run on Cloudflare's developer platform, and this post is the survey I wish I had read before starting: what the platform actually is in mid-2026, measured from inside a working system rather than summarized from a pricing page. Platform claims below were verified against Cloudflare's documentation and announcements as of July 30, 2026, and the dated ones say so, because a platform survey is the fastest-rotting genre on the technical internet.
