@@ -1,7 +1,7 @@
 ---
-title: "API vs MCP: Where Should Policy Live When AI Agents Call Your Service?"
+title: "API vs MCP: Put the Policy in the API"
 slug: one-door-two-doorbells
-description: "APIs and MCP servers are layers, not rivals. A practical rule for architects: put authentication, authorization, and business policy in the HTTP API exactly once, and build MCP servers as thin discovery layers that contain none of it."
+description: "APIs and MCP servers are layers, not rivals. A practical rule for architects: implement authentication, authorization, and business policy in the HTTP API exactly once, and build MCP servers as thin discovery layers that contain none of it."
 date: 2026-07-30
 tags: [mcp, api, architecture, agents]
 draft: false
