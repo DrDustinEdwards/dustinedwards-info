@@ -1,7 +1,7 @@
 ---
-title: "How to Build a WCAG 2.2 Color Palette and Verify It with Code"
+title: "WCAG 2.2 Color Palette Design: Contrast Math, CVD Testing, and a Build Gate"
 slug: a-color-palette-that-can-prove-itself
-description: "A step-by-step method for building an accessible color palette: the WCAG contrast ratio function in Python, OKLCH candidate selection, CVD simulation with the Vienot matrices, chart lightness ladders, and a build gate that recomputes every pair."
+description: "A method for accessible color palette design: the WCAG contrast ratio function in Python, OKLCH candidate selection, color vision deficiency simulation with the Vienot matrices, chart lightness ladders, and a build gate that recomputes every pair on every deploy."
 date: 2026-07-28
 tags: [design, accessibility, color, wcag]
 draft: false
