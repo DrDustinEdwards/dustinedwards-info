@@ -623,6 +623,13 @@ Two shape this repo directly:
   already carrying a non-colour affordance (a border or a fill): `.tag-chip`,
   `.post-action`, `.search-chip`, `.btn`/`.btn-danger`, and the two wordmarks.
   Decided with Dustin 2026-07-28.
+- **Identity elements never take `:visited`** (Dustin's ruling 2026-07-30). The
+  public header wordmark is brand at rest in both themes; hover feedback is kept.
+  This is a SPECIFICITY rule: a class-only rule is (0,1,0) and the base
+  `a:visited` is (0,1,1), so the base rule wins and the wordmark turns claret.
+  Identity rules carry an explicit `:visited` selector at (0,2,0). It is invisible
+  in review because it only appears once `/` is in history. The mark needs no rule,
+  because `.site-logo-brand` sets `fill` and no colour pseudo-class reaches it.
 - **Interactive semantics take fills, never pastel text on the page.** Delete is
   `--fill-danger`. Pastels are for banners and text (`.editor-problem`).
 

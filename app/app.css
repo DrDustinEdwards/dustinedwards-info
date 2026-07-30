@@ -533,13 +533,40 @@ a:hover {
   border-bottom: 1px solid var(--border);
 }
 
-.site-header-brand {
+/* Rule 2 identity-block exemption, EXTENDED by Dustin's ruling 2026-07-30: an
+ * identity element must not take :visited styling either.
+ *
+ * The bug this fixes was a SPECIFICITY one, and it was invisible in review
+ * because it only appears once "/" is in history, which for a returning reader
+ * is always. `.site-header-brand` is (0,1,0) and the base `a:visited` is (0,1,1),
+ * so the base rule WON and the wordmark turned visited claret. The site's own
+ * name is not somewhere the reader has been, it is who the site is, so a visited
+ * state is a category error rather than a cosmetic slip.
+ *
+ * Brand at rest matches `.hero-name`, the site's established identity treatment,
+ * so this introduces NO new colour pair: brand-on-bg is ratified at 9.8:1 light
+ * and 8.1:1 dark, and `.site-header` sets no background, so the pair really is
+ * brand on the page canvas. Hover keeps its feedback.
+ *
+ * The `:visited` and `:hover` selectors are (0,2,0) and outrank the base
+ * pseudo-class rules deliberately. Do not "simplify" them away.
+ *
+ * The MARK needs no rule of its own: `.site-logo-brand` sets `fill`, not
+ * `color`, so no colour pseudo-class can reach it. It shares this anchor and
+ * stays brand in every state for that reason.
+ */
+.site-header-brand,
+.site-header-brand:visited {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--brand);
   text-decoration: none;
+}
+
+.site-header-brand:hover {
+  color: var(--brand-hover);
 }
 
 /* 2rem keeps the brand row inside the header's existing 4rem min-height, so
@@ -619,7 +646,16 @@ a:hover {
   background: var(--surface);
 }
 
-.admin-brand {
+/* The second wordmark, and the same (0,1,0) versus (0,1,1) defect: without the
+ * `:visited` selector the base rule wins and the admin wordmark turns claret.
+ *
+ * Its RESTING colour deliberately stays `--text` rather than brand, unlike the
+ * public header. This block already carries brand as a solid fill in
+ * `.admin-brand-mark` beside it, so brand text here would be purple-on-purple,
+ * and Dustin's 2026-07-30 ruling named the public header. Revisit only with a
+ * ruling that names this one. */
+.admin-brand,
+.admin-brand:visited {
   display: flex;
   align-items: center;
   gap: 0.625rem;
