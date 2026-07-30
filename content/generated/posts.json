@@ -233,8 +233,8 @@
     },
     {
       "slug": "content-is-code-building-the-blog",
-      "title": "Content as code: how to build a blog where git is the source of truth and the database serves",
-      "description": "A method for building a gated content pipeline on Cloudflare: the storage decision, a deterministic renderer, a byte-comparison gate, atomic two-file commits through the Git Data API, and the two bugs to expect on the way.",
+      "title": "Building a Git-Backed Blog on Cloudflare Workers and D1",
+      "description": "How to build a content pipeline where markdown in git is the source of truth and D1 serves every read: a deterministic renderer, a byte-comparison build gate, atomic two-file commits via the GitHub Git Data API, and the two bugs to expect.",
       "date": "2026-07-28",
       "publishAt": "2026-07-28T00:00:00.000Z",
       "draft": false,
@@ -554,7 +554,7 @@
         },
         {
           "slug": "content-is-code-building-the-blog",
-          "title": "Content as code: how to build a blog where git is the source of truth and the database serves",
+          "title": "Building a Git-Backed Blog on Cloudflare Workers and D1",
           "shared": 2
         }
       ]
@@ -630,7 +630,7 @@
       "related": [
         {
           "slug": "content-is-code-building-the-blog",
-          "title": "Content as code: how to build a blog where git is the source of truth and the database serves",
+          "title": "Building a Git-Backed Blog on Cloudflare Workers and D1",
           "shared": 4
         },
         {
@@ -786,7 +786,7 @@
       "related": [
         {
           "slug": "content-is-code-building-the-blog",
-          "title": "Content as code: how to build a blog where git is the source of truth and the database serves",
+          "title": "Building a Git-Backed Blog on Cloudflare Workers and D1",
           "shared": 4
         },
         {
@@ -1191,12 +1191,12 @@
       "uid": "post:content-is-code-building-the-blog",
       "url": "/blog/content-is-code-building-the-blog",
       "type": "post",
-      "title": "Content as code: how to build a blog where git is the source of truth and the database serves",
-      "body": "A method for building a gated content pipeline on Cloudflare: the storage decision, a deterministic renderer, a byte-comparison gate, atomic two-file commits through the Git Data API, and the two bugs to expect on the way. This article describes a method for building a blog's content layer so that the repository is the source of truth, the database is a serving layer, and a build-time check proves the two agree. I use it in production on this site. The article is written so that a reader with working knowledge of TypeScript, git, and a Cloudflare Workers project can reproduce the architecture, and it includes the two failure modes I encountered that I believe most implementations will also encounter, at the point in the procedure where they will appear. A note on scope before beginning. The method assumes a single author or a small set of trusted authors, content volumes in the hundreds to low thousands of documents, and a willingness to treat prose with the same discipline as code. At substantially larger scales, or with untrusted authors, several of the trade-offs below change, and I flag those points where they occur.",
+      "title": "Building a Git-Backed Blog on Cloudflare Workers and D1",
+      "body": "How to build a content pipeline where markdown in git is the source of truth and D1 serves every read: a deterministic renderer, a byte-comparison build gate, atomic two-file commits via the GitHub Git Data API, and the two bugs to expect. This article describes a method for building a blog's content layer so that the repository is the source of truth, the database is a serving layer, and a build-time check proves the two agree. I use it in production on this site. The article is written so that a reader with working knowledge of TypeScript, git, and a Cloudflare Workers project can reproduce the architecture, and it includes the two failure modes I encountered that I believe most implementations will also encounter, at the point in the procedure where they will appear. A note on scope before beginning. The method assumes a single author or a small set of trusted authors, content volumes in the hundreds to low thousands of documents, and a willingness to treat prose with the same discipline as code. At substantially larger scales, or with untrusted authors, several of the trade-offs below change, and I flag those points where they occur.",
       "tags": "cloudflare d1 content-model architecture workers",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": null,
       "ordinal": 0,
@@ -1212,7 +1212,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "step-1-choose-where-the-words-live-and-why-it-matters-more-than-it-appears",
       "ordinal": 1,
@@ -1228,7 +1228,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "step-2-build-exactly-one-renderer-and-pay-for-it-knowingly",
       "ordinal": 2,
@@ -1244,7 +1244,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "step-3-the-gate-and-the-requirement-to-break-it-before-trusting-it",
       "ordinal": 3,
@@ -1260,7 +1260,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "expect-this-bug-one-commit-different-bytes-on-different-machines",
       "ordinal": 4,
@@ -1276,7 +1276,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "expect-this-bug-a-nondeterministic-syntax-highlighter",
       "ordinal": 5,
@@ -1292,7 +1292,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "step-4-make-every-save-one-atomic-commit",
       "ordinal": 6,
@@ -1308,7 +1308,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "step-5-what-to-check-when-you-are-done",
       "ordinal": 7,
@@ -1324,7 +1324,7 @@
       "tags": "",
       "docTags": "|cloudflare|d1|content-model|architecture|workers|",
       "docUid": "post:content-is-code-building-the-blog",
-      "docTitle": "Content as code: how to build a blog where git is the source of truth and the database serves",
+      "docTitle": "Building a Git-Backed Blog on Cloudflare Workers and D1",
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "limitations-and-disclosures",
       "ordinal": 8,
