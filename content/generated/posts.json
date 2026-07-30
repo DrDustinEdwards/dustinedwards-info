@@ -300,12 +300,12 @@
       "toc": [
         {
           "depth": 2,
-          "id": "what-it-proves",
-          "text": "What it proves"
+          "id": "what-it-proves-edited-by-the-round-trip",
+          "text": "What it proves (edited by the round trip)"
         }
       ],
-      "markdown": "\nThis post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.\n\n## What it proves\n\nOne atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.\n",
-      "html": "<p>This post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.</p>\n<h2 id=\"what-it-proves\">What it proves<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-it-proves\">#</a></h2>\n<p>One atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.</p>",
+      "markdown": "\nThis post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.\n\n## What it proves (edited by the round trip)\n\nOne atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.\n",
+      "html": "<p>This post exists only to prove that the operator MCP wrapper reaches the\npublishing pipeline through the operator API, and it will be deleted before the\nsession ends.</p>\n<h2 id=\"what-it-proves-edited-by-the-round-trip\">What it proves (edited by the round trip)<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-it-proves-edited-by-the-round-trip\">#</a></h2>\n<p>One atomic commit carrying both the markdown and the regenerated artifact, the\ncontent gates running server side, and the wrapper adding nothing of its own.</p>",
       "sourcePath": "content/posts/mcp-wrapper-round-trip-check.md",
       "related": [
         {
@@ -976,17 +976,17 @@
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
-      "uid": "post:mcp-wrapper-round-trip-check#what-it-proves",
-      "url": "/blog/mcp-wrapper-round-trip-check#what-it-proves",
+      "uid": "post:mcp-wrapper-round-trip-check#what-it-proves-edited-by-the-round-trip",
+      "url": "/blog/mcp-wrapper-round-trip-check#what-it-proves-edited-by-the-round-trip",
       "type": "post",
-      "title": "What it proves",
+      "title": "What it proves (edited by the round trip)",
       "body": "One atomic commit carrying both the markdown and the regenerated artifact, the content gates running server side, and the wrapper adding nothing of its own.",
       "tags": "",
       "docTags": "|cloudflare|mcp|operator|",
       "docUid": "post:mcp-wrapper-round-trip-check",
       "docTitle": "Round trip check: the operator MCP wrapper",
       "docUrl": "/blog/mcp-wrapper-round-trip-check",
-      "anchor": "what-it-proves",
+      "anchor": "what-it-proves-edited-by-the-round-trip",
       "ordinal": 1,
       "status": "draft",
       "publishAt": "2026-07-30T00:00:00.000Z"

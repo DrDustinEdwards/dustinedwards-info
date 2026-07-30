@@ -11,7 +11,7 @@ This post exists only to prove that the operator MCP wrapper reaches the
 publishing pipeline through the operator API, and it will be deleted before the
 session ends.
 
-## What it proves
+## What it proves (edited by the round trip)
 
 One atomic commit carrying both the markdown and the regenerated artifact, the
 content gates running server side, and the wrapper adding nothing of its own.
