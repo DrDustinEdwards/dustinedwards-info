@@ -151,7 +151,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 1
         }
       ]
@@ -221,7 +221,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 1
         },
         {
@@ -302,7 +302,7 @@
       "related": [
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 4
         },
         {
@@ -398,7 +398,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 2
         }
       ]
@@ -473,7 +473,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 1
         }
       ]
@@ -544,7 +544,7 @@
       "related": [
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 2
         },
         {
@@ -561,8 +561,8 @@
     },
     {
       "slug": "ten-years-on-cloudflare",
-      "title": "Ten years on Cloudflare, so I rebuilt everything on it",
-      "description": "A decade as a customer, one full rebuild as the proof: what the 2026 developer platform looks like from inside a working system, with measurements.",
+      "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
+      "description": "A ten-year Cloudflare customer rebuilds a complete site on Workers, D1, R2, Durable Objects, and AI Search, and reports the measurements: bundle sizes, query latency, rate limiter behavior, and the platform's real constraints.",
       "date": "2026-07-30",
       "publishAt": "2026-07-30T00:00:00.000Z",
       "draft": false,
@@ -721,7 +721,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 2
         }
       ]
@@ -791,7 +791,7 @@
         },
         {
           "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
+          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
           "shared": 3
         },
         {
@@ -1719,12 +1719,12 @@
       "uid": "post:ten-years-on-cloudflare",
       "url": "/blog/ten-years-on-cloudflare",
       "type": "post",
-      "title": "Ten years on Cloudflare, so I rebuilt everything on it",
-      "body": "A decade as a customer, one full rebuild as the proof: what the 2026 developer platform looks like from inside a working system, with measurements. Ten years ago I put my first domain behind Cloudflare for the same reason everyone did at the time. There was a real host somewhere, in my case a shared HostGator box running WordPress, and Cloudflare was the thing you put in front of it so the real host would survive being on the internet. DNS, caching, the orange cloud icon. I did not think of it as a place where software ran. I am not sure anyone did in 2016, because mostly it wasn't. This year I rebuilt my personal site so that there is no host behind the cloud anymore. The application server, the database, the object storage, the search engine, the AI answer layer, and the publishing pipeline all run on Cloudflare's developer platform. The WordPress install still answers at my apex domain as I write this, waiting for a DNS cutover, which is a detail that will matter later in this post for an unexpected reason. Everything else already lives on the new stack. This post is the survey I wanted to read before I started and could not find: an account of what the platform actually is in mid-2026, written from inside a system that uses most of it, with measurements instead of adjectives. Platform facts below were checked against Cloudflare's documentation and announcements on July 30, 2026, and the ones likely to rot carry their dates in the text. A platform survey is probably the fastest-aging genre in technical writing, and the only defense I know of is timestamping. It is also the first post in a series. Most sections of this post compress a full article's worth of work, including the parts that went wrong, and the series keeps those parts because they are usually where the transferable knowledge is.",
+      "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
+      "body": "A ten-year Cloudflare customer rebuilds a complete site on Workers, D1, R2, Durable Objects, and AI Search, and reports the measurements: bundle sizes, query latency, rate limiter behavior, and the platform's real constraints. Ten years ago I put my first domain behind Cloudflare for the same reason everyone did at the time. There was a real host somewhere, in my case a shared HostGator box running WordPress, and Cloudflare was the thing you put in front of it so the real host would survive being on the internet. DNS, caching, the orange cloud icon. I did not think of it as a place where software ran. I am not sure anyone did in 2016, because mostly it wasn't. This year I rebuilt my personal site so that there is no host behind the cloud anymore. The application server, the database, the object storage, the search engine, the AI answer layer, and the publishing pipeline all run on Cloudflare's developer platform. The WordPress install still answers at my apex domain as I write this, waiting for a DNS cutover, which is a detail that will matter later in this post for an unexpected reason. Everything else already lives on the new stack. This post is the survey I wanted to read before I started and could not find: an account of what the platform actually is in mid-2026, written from inside a system that uses most of it, with measurements instead of adjectives. Platform facts below were checked against Cloudflare's documentation and announcements on July 30, 2026, and the ones likely to rot carry their dates in the text. A platform survey is probably the fastest-aging genre in technical writing, and the only defense I know of is timestamping. It is also the first post in a series. Most sections of this post compress a full article's worth of work, including the parts that went wrong, and the series keeps those parts because they are usually where the transferable knowledge is.",
       "tags": "cloudflare workers d1 platform architecture",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": null,
       "ordinal": 0,
@@ -1740,7 +1740,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "what-the-platform-is-structurally",
       "ordinal": 1,
@@ -1756,7 +1756,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "the-numbers-from-one-real-system",
       "ordinal": 2,
@@ -1772,7 +1772,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "d1-is-better-than-its-reputation-with-edges-worth-respecting",
       "ordinal": 3,
@@ -1788,7 +1788,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "durable-objects-and-a-wrong-assumption-i-can-save-you-from",
       "ordinal": 4,
@@ -1804,7 +1804,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "constraints-that-shaped-the-architecture",
       "ordinal": 5,
@@ -1820,7 +1820,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "the-ai-layer-with-enthusiasm-and-a-budget",
       "ordinal": 6,
@@ -1836,7 +1836,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "the-web-is-renegotiating-with-its-machines-at-this-layer",
       "ordinal": 7,
@@ -1852,7 +1852,7 @@
       "tags": "",
       "docTags": "|cloudflare|workers|d1|platform|architecture|",
       "docUid": "post:ten-years-on-cloudflare",
-      "docTitle": "Ten years on Cloudflare, so I rebuilt everything on it",
+      "docTitle": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
       "docUrl": "/blog/ten-years-on-cloudflare",
       "anchor": "what-the-decade-actually-bought",
       "ordinal": 8,
