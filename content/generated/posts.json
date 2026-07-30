@@ -6,7 +6,7 @@
       "description": "Designing a WCAG 2.2 palette as an engineering artifact: every claim computed, three failures kept in the text, and one small impossibility proof.",
       "date": "2026-07-28",
       "publishAt": "2026-07-28T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "design",
         "accessibility",
@@ -220,13 +220,13 @@
           "shared": 1
         },
         {
-          "slug": "ai-answer-layer-ask-mode",
-          "title": "An AI answer layer that has to earn its keep",
+          "slug": "a-color-palette-that-can-prove-itself",
+          "title": "A color palette that can prove itself",
           "shared": 1
         },
         {
-          "slug": "content-is-code-building-the-blog",
-          "title": "Content is code: building a blog where the database serves and git remembers",
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
           "shared": 1
         }
       ]
@@ -796,7 +796,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -812,7 +812,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "the-method",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -828,7 +828,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "failure-one-harmony-math-produces-neon",
       "ordinal": 2,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -844,7 +844,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "failure-two-my-own-fix-recreated-the-collision-it-fixed",
       "ordinal": 3,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -860,7 +860,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "failure-three-and-a-small-impossibility-result",
       "ordinal": 4,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -876,7 +876,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "testing-for-color-vision-deficiency-honestly",
       "ordinal": 5,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -892,7 +892,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "where-wcag-2-and-apca-disagree-measured",
       "ordinal": 6,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -908,7 +908,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "what-i-will-not-overclaim",
       "ordinal": 7,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -924,7 +924,7 @@
       "docUrl": "/blog/a-color-palette-that-can-prove-itself",
       "anchor": "the-part-that-outlives-the-post",
       "ordinal": 8,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
