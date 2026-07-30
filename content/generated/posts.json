@@ -81,7 +81,7 @@
       "description": "Hybrid retrieval over classic search, a complementarity measurement, three cost gates including a rate limiter that did not count, and an index that syncs itself on save.",
       "date": "2026-07-28",
       "publishAt": "2026-07-28T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "cloudflare",
         "ai-search",
@@ -215,6 +215,11 @@
       "sourcePath": "content/posts/bells-and-whistles-zero-js.md",
       "related": [
         {
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
+          "shared": 1
+        },
+        {
           "slug": "content-is-code-building-the-blog",
           "title": "Content is code: building a blog where the database serves and git remembers",
           "shared": 1
@@ -222,11 +227,6 @@
         {
           "slug": "site-search-fts5-rank-fusion",
           "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
-          "shared": 1
-        },
-        {
-          "slug": "where-should-a-blog-store-its-words",
-          "title": "Where should a blog store its words?",
           "shared": 1
         }
       ]
@@ -306,8 +306,8 @@
           "shared": 2
         },
         {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
           "shared": 1
         }
       ]
@@ -392,8 +392,8 @@
           "shared": 2
         },
         {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
           "shared": 1
         }
       ]
@@ -533,6 +533,11 @@
       "sourcePath": "content/posts/site-search-fts5-rank-fusion.md",
       "related": [
         {
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
+          "shared": 2
+        },
+        {
           "slug": "content-is-code-building-the-blog",
           "title": "Content is code: building a blog where the database serves and git remembers",
           "shared": 2
@@ -541,11 +546,6 @@
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
           "shared": 2
-        },
-        {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
-          "shared": 1
         }
       ]
     },
@@ -690,13 +690,13 @@
           "shared": 2
         },
         {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
           "shared": 1
         },
         {
-          "slug": "site-search-fts5-rank-fusion",
-          "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
+          "slug": "bells-and-whistles-zero-js",
+          "title": "Bells and whistles under a zero-JavaScript law",
           "shared": 1
         }
       ]
@@ -770,8 +770,8 @@
           "shared": 2
         },
         {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
+          "slug": "ai-answer-layer-ask-mode",
+          "title": "An AI answer layer that has to earn its keep",
           "shared": 1
         }
       ]
@@ -935,7 +935,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -951,7 +951,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "the-layering-and-its-proof",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -967,7 +967,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "the-measurement-that-justifies-having-both-layers",
       "ordinal": 2,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -983,7 +983,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "feeding-the-index-without-a-crawler",
       "ordinal": 3,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -999,7 +999,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "three-gates-in-front-of-the-only-endpoint-that-bills",
       "ordinal": 4,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1015,7 +1015,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "the-agent-story",
       "ordinal": 5,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1031,7 +1031,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "costs-stated-plainly",
       "ordinal": 6,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1047,7 +1047,7 @@
       "docUrl": "/blog/ai-answer-layer-ask-mode",
       "anchor": "disclosures",
       "ordinal": 7,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {

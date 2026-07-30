@@ -3,8 +3,9 @@ title: "An AI answer layer that has to earn its keep"
 slug: ai-answer-layer-ask-mode
 description: "Hybrid retrieval over classic search, a complementarity measurement, three cost gates including a rate limiter that did not count, and an index that syncs itself on save."
 date: 2026-07-28
-draft: true
 tags: [cloudflare, ai-search, workers-ai, durable-objects, search]
+draft: false
+first_published: 2026-07-30
 ---
 
 The previous article built this site's classic search: two FTS5 indexes, rank fusion, six milliseconds. This one adds the AI layer on top, and the design constraint that governed it: the AI layer is an enhancement that must be removable without a trace, must never block the classic path, and must pay for its own risks, because it is the only public endpoint on this site that bills money per request. Every number here was measured on the live system.
