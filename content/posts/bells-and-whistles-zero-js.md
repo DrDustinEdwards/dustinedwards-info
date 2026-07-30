@@ -3,8 +3,9 @@ title: "Bells and whistles under a zero-JavaScript law"
 slug: bells-and-whistles-zero-js
 description: "A reading experience in 1.59 kB of gzip, three lessons from having two writers, social cards that stay out of the gate, and the features deliberately refused."
 date: 2026-07-28
-draft: true
 tags: [cloudflare, performance, accessibility, progressive-enhancement]
+draft: false
+first_published: 2026-07-30
 ---
 
 After the pipeline shipped, the blog got its polish pass: reading progress, scroll-spy, copy buttons, related posts, series support, social cards, version history. This article is about the constraint that shaped all of it, the three lessons the architecture taught while resisting, and the features that were refused on purpose. Numbers are measured; the harness bugs that produced false failures are kept in the text.
