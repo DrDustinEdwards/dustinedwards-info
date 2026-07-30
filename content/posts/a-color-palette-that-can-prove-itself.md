@@ -3,8 +3,9 @@ title: "A color palette that can prove itself"
 slug: a-color-palette-that-can-prove-itself
 description: "Designing a WCAG 2.2 palette as an engineering artifact: every claim computed, three failures kept in the text, and one small impossibility proof."
 date: 2026-07-28
-draft: true
 tags: [design, accessibility, color, wcag]
+draft: false
+first_published: 2026-07-30
 ---
 
 I needed a palette for this site. The constraints: one locked brand purple (#4F2D7F), a western Texas character, light and dark modes, and WCAG 2.2 AA throughout. The usual way to do this is taste plus a contrast checker at the end. I did it the other way around: arithmetic first, taste inside the bounds the arithmetic allowed, and every claim in this post is reproducible from a script in the repo.
