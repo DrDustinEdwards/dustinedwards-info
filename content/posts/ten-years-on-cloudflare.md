@@ -14,7 +14,7 @@ The personal context, briefly, because it explains the vantage point. Ten years 
 
 This is also the first post in a series of nine. Each section below compresses a full article, and where a section summarizes a finding, the link goes to the article that owns it in full, including how it was found and how to reproduce it.
 
-## What the platform is, structurally
+## Cloudflare Workers, D1, R2, KV, and Durable Objects: the primitives
 
 The center of the developer platform is Workers. Your code runs in V8 isolates distributed across Cloudflare's network, which means no servers to size, no regions to choose, and cold starts small enough that I have never once thought about them, which was not my experience with container-based serverless. The programming model is a fetch handler: a request comes in, your function returns a response, and the platform handles where and how.
 
@@ -22,7 +22,7 @@ Around Workers sits a family of storage and compute primitives. D1 is a relation
 
 The pitch is that these compose into complete applications with no infrastructure to operate. That pitch is broadly true, and this site is an existence proof. What the pitch omits is the texture: which primitives are mature, which are beta in ways that bite, and what the constraints cost in practice. The rest of this post is that texture.
 
-## The numbers from one real system
+## Measured performance and cost of an all-Cloudflare stack
 
 The Worker that serves every page is a 3.78 MB server asset. The largest single expense inside it is a complete markdown rendering pipeline, including syntax highlighting, run server-side because every public page of this site works with JavaScript disabled. Holding that constraint meant the client-side enhancement budget for the entire blog, progress bar, scroll-spy table of contents, copy buttons, footnote previews, lightbox, came to 1.59 kB gzipped; [the progressive enhancement article](/blog/bells-and-whistles-zero-js) covers how, including the measurement mistakes that nearly reported a different number.
 
@@ -30,7 +30,7 @@ Site search answers from D1 in 6 milliseconds at the median over 25 measured run
 
 The monthly cost of running all of this rounds to a few dollars. I want to be careful with that fact, because cost claims from personal-scale projects generalize badly, but the architectural version of the claim holds at any scale: nothing in this system required capacity planning, and there is no idle infrastructure anywhere in it.
 
-## D1 is better than its reputation, with edges worth respecting
+## Cloudflare D1 in production: real SQLite, FTS5 search, and the export failure
 
 D1 spent its early life with a reputation for being a toy, and I think that reputation is now mostly stale. It is real SQLite, and real SQLite is a serious database with decades of documented behavior. For a content site, the practical consequence is that FTS5 full-text search comes with the database. I built this site's search directly on it: two FTS5 indexes over the same corpus, one unstemmed for names and identifiers, one Porter-stemmed for prose, merged with reciprocal rank fusion, because the tokenizer is a property of the table rather than the query and a corpus needing both behaviors needs two tables. The result embarrassed my assumption that search means a search service: six milliseconds, section-level results with deep links, zero external dependencies. The schema, the fusion method, and the production bug that taught me search has two entry modes are all in [the search article](/blog/site-search-fts5-rank-fusion).
 
@@ -40,19 +40,19 @@ The edge every D1 user should know before trusting their backups: the platform's
 
 This site's AI answer layer is the only public endpoint that costs money per request, so it sits behind rate limiting, and building that rate limiting produced the most transferable single fact in this post: a Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an await are not atomic even in a single-threaded object. The synchronous SQLite storage API is the fix, and the same object rewritten on it admitted exactly three. The platform's built-in rate-limiting binding, tested alongside, sheds sustained load with eventual consistency rather than counting, which its documentation states and which matters when the limiter is guarding a budget. The full measurements, including the test-harness mistake that briefly made a working limiter look dead, are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
 
-## Constraints that shaped the architecture
+## Cloudflare Workers limitations: no runtime WebAssembly compilation
 
 Workers refuse to compile WebAssembly at runtime. This is a security decision, and I am not arguing with it, but it has consequences that only appear when a dependency assumes otherwise. It ruled out server-side social-card rendering entirely, moving card generation to build time, a trade covered in [the progressive enhancement article](/blog/bells-and-whistles-zero-js). And it complicated the fix for the strangest bug of the whole build: a syntax highlighter that produced different output bytes for the same input across runs, fatal for a pipeline that byte-compares its rendered artifact. The diagnosis, the deterministic engine that replaced it, and the loader arrangement that satisfies both Node and the Worker are in [the content pipeline article](/blog/content-is-code-building-the-blog), along with a second reproducibility bug involving git line endings that I would now call a certainty for any cross-platform pipeline rather than a risk.
 
 I list these not as complaints but because a survey that omits the constraints is an advertisement. Every platform has a shape, and the cost of a platform is learning where its shape and your assumptions disagree. Mine disagreed in the places above, the disagreements were all resolvable, and each one is now a check script or a documented rule rather than a memory.
 
-## The AI layer, with enthusiasm and a budget
+## Cloudflare AI Search results: hybrid retrieval measured against keyword search
 
 AI Search gave this site a streaming, cited answer mode over its own content in about a day of work, which is a remarkable sentence to be able to write. The retrieval is hybrid, keyword and vector fused, with a reranking pass, and I measured it against my classic engine on a shared query set rather than trusting either: classic search found two results the AI retrieval missed, all exact-token queries, and the AI retrieval found three the classic engine missed, all natural-language questions. Neither subsumes the other, which is the empirical argument for running both. The measurement method, the ingestion decisions, and the three cost gates in front of the paying endpoint are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
 
 It is a beta product with beta pricing, and I treated it accordingly: bounded exposure, a daily spend ceiling I chose, and a dated note in the project's decision log to re-run the economics when beta pricing ends. The habit matters more than the numbers: using a moving product is fine if the exposure is bounded and the re-evaluation is scheduled, and it is the scheduling that people skip.
 
-## The web is renegotiating with its machines, at this layer
+## AI crawlers, llms.txt, and Cloudflare's September 2026 crawler defaults
 
 The strangest part of this rebuild is that the most consequential platform developments had nothing to do with hosting my pages. They are about who, or what, reads them.
 
@@ -60,7 +60,7 @@ This site treats AI agents as a first-class audience in both directions. Inbound
 
 The economic half of the renegotiation is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare. On July 1, 2026 the company announced that from September 15, its defaults will block AI training and agent crawlers on ad-supported pages for new customers, new sites, and free-tier accounts, while search crawlers remain allowed by default, and that its Pay Per Crawl marketplace is becoming a broader Pay Per Use model that pays publishers when content surfaces in an AI answer rather than only when a bot fetches a page. The company's stated numbers include that the majority of its traffic is now non-human and that more than half of AI crawl traffic re-fetches pages that have not changed. I have no settled opinion yet on how well the mechanics will work. I do think the direction is unambiguous, and I notice that my ten-year-old decision about where to put my DNS has quietly become a decision about my position in that negotiation. This site's own crawl and monetization settings get configured the day the DNS cutover lands, and that will be its own post once there is data rather than speculation in it.
 
-## What the decade actually bought
+## Verdict: the Cloudflare developer platform in 2026
 
 Familiarity, mostly, compounding into leverage. The primitives are small enough to hold in your head. The billing has never once surprised me, which I have come to value more than any feature. The distance from an idea to code running worldwide is one command, and after ten years the command is reflex.
 
