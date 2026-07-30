@@ -5,6 +5,7 @@ description: "Two content models for a Cloudflare-native blog, one database, and
 date: 2026-07-27
 tags: [cloudflare, d1, content-model, architecture]
 draft: false
+first_published: 2026-07-27
 ---
 
 I'm rebuilding my site as a fully Cloudflare-native stack: React Router in framework mode, a Worker in front, D1 for data, KV for cache, R2 for media. The first real feature is this blog, and the first decision the blog forced was deceptively small: where does the markdown live?
