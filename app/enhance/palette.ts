@@ -475,10 +475,10 @@ function close() {
  * because it is still an anchor.
  */
 function upgradeTriggers() {
-  // The hint is a SIBLING of the trigger, not a child, so it is found from the
-  // document rather than from inside the anchor. It used to live inside it,
-  // where the "/" rendered as a second run of link text pointing at /search and
-  // clicking it navigated. A keyboard hint is not a destination.
+  // The hint lives inside the trigger, but it is found from the document rather
+  // than from inside the anchor, so this keeps working wherever it is placed.
+  // It ships `hidden`: pressing "/" does nothing until the listeners below are
+  // attached, so the shortcut is not advertised before it exists.
   for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
     hint.hidden = false;
   }

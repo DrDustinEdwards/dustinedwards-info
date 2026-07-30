@@ -1002,10 +1002,25 @@ a:hover {
  * footnotes label) is defined here rather than assumed from a utility scan.
  */
 
+/* ONE row, one centreline, one control height.
+ *
+ * This used to be a stretch row with no align-items, so the theme pill (the
+ * tallest item) set the height, the icon controls centred themselves inside
+ * their own boxes, and the Blog link's text sat at the TOP of a box taller
+ * than its line. Three items, three different vertical positions, none of it
+ * visible to any gate we have.
+ *
+ * --control-h is declared here rather than in the token blocks because these
+ * three controls are the only things that share it, and because check:contrast
+ * parses :root for colour tokens. Everything on the row is given that height
+ * explicitly rather than left to stretch, so the row's height stops depending
+ * on which item happens to be tallest. */
 .site-header-nav {
   display: flex;
-  gap: 1.25rem;
+  align-items: center;
+  gap: 0.75rem;
   font-size: 0.9375rem;
+  --control-h: 2.25rem;
 }
 
 /* Amended rule 2: nav links render as bare text, so they underline. The base
@@ -1013,6 +1028,17 @@ a:hover {
    is a sibling of these and opts out on its own rule above. */
 .site-header-nav a {
   color: var(--text-muted);
+}
+
+/* The text link gets the same hit area as the controls beside it, so it is as
+   clickable as they are and its baseline lands on their centreline. Centring
+   the text inside a fixed-height box is what keeps the underline still: the box
+   grew, the text did not move. `:not()` because the search control is also an
+   anchor in this nav and sizes itself. */
+.site-header-nav a:not(.search-trigger) {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
 }
 
 .site-header-nav a:hover,
@@ -1035,6 +1061,9 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.125rem;
+  /* Shared with the search control and the Blog link. Falls back to auto
+     wherever --control-h is not in scope, which is its natural height. */
+  height: var(--control-h);
   padding: 0.125rem;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2611,29 +2640,35 @@ a:hover {
    Enhancement only. Every rule here styles markup created by
    app/enhance/palette.ts, so a reader without script never sees any of it. */
 
-/* Search entry point: an ICON control, with the shortcut hint beside it.
+/* Search entry point: ONE control carrying the icon and the shortcut hint.
  *
- * The hint is a sibling of the anchor rather than a child, because inside it
- * the "/" was link text pointing at /search and clicking it navigated. It is
- * aria-hidden, not focusable, and hidden until the palette is listening.
+ * The hint used to be a sibling of the anchor, floating beside it with its own
+ * border. At header size that reads as a stray character sitting next to the
+ * icon rather than as a hint belonging to it, so it is now INSIDE the anchor:
+ * one border, one hover state, one focus ring, one hit area. It stays
+ * aria-hidden and unfocusable, and it stays `hidden` until the palette is
+ * listening, so a reader without script sees a plain icon control and is never
+ * told about a shortcut that does not exist.
  *
- * The anchor is NOT underlined. Rule 2 reaches an anchor whose only visual
- * distinction from adjacent non-link text is colour; this one renders no text,
- * so there is nothing for a colour cue to be doing.
+ * That is also what settles rule 2. The anchor previously opted out of the
+ * underline on the ground that it rendered no text at all; it renders a "/"
+ * now, so it opts out on the ordinary exemption instead: it carries a border,
+ * a non-colour affordance, exactly like .search-chip and .btn.
+ *
+ * Height comes from --control-h on .site-header-nav, so this control, the
+ * theme pill and the Blog link are one height and one centreline. With the
+ * hint hidden the padding leaves it a 36px square, above the 24px WCAG 2.2
+ * target floor; with the hint shown it grows into a pill.
  */
-.search-trigger-wrap {
+.search-trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.375rem;
-}
-
-.search-trigger {
-  display: grid;
-  place-items: center;
-  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
-  min-width: 1.75rem;
-  min-height: 1.75rem;
-  border-radius: 0.375rem;
+  height: var(--control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--text-muted);
   text-decoration: none;
 }
@@ -2643,20 +2678,16 @@ a:hover {
   background: var(--tint-brand);
 }
 
-/* Not a control. It never takes focus and it is not a click target. */
+/* No border, no background and no colour of its own: the control around it
+   owns all three, which is the point. It inherits the anchor's colour so it
+   follows the one hover state. Not a target: it never takes focus and a click
+   on it is a click on the control. */
 .search-trigger-kbd {
+  font-family: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
   pointer-events: none;
   user-select: none;
-}
-
-.search-trigger-kbd {
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
 }
 
 .palette {

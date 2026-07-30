@@ -11,6 +11,30 @@ Personal platform and Cloudflare showcase for Dustin Edwards. React Router 8 (SS
 Start: read `capsid/conventions.md`, then `dustinedwards/core.md`.
 End: write a `session-YYYY-MM-DD.md` episodic (type `episodic`, under ~2KB) to the dustinedwards namespace.
 
+## Workflow: mainline only, until launch
+
+Ratified 2026-07-29. Full ruling and grounds: `dustinedwards/workflow-mainline.md`.
+Scope is THIS REPO ONLY, and only until the DNS cutover; at launch the ruling
+sunsets and the PR workflow in `capsid/conventions.md` resumes.
+
+No feature branches and no PRs. Everything lands directly on `main`, committed
+and pushed immediately. Never leave work uncommitted and never leave a commit
+unpushed. **The gates are the review now**, so they run before every push:
+typecheck, build, and whichever of the check family the change touches.
+
+The site is pre-production on the workers.dev hostname, there is no CI, and
+pushing `main` deploys nothing on its own, so `main` IS the staging environment
+and a PR was ceremony without a second reviewer. Every recurring hazard this
+repo has actually suffered came from divergence: a branch deploy leaving `main`
+behind production, uncommitted work wiped by a one-file `git checkout`, PRs
+sitting unmerged while production ran their code. This also matches the content
+write path, where the editor and the operator API already commit straight to
+`main`.
+
+Unchanged by it: scoped `git add` of named paths, docs in the same commit,
+destructive operations stay with Dustin, and anything touching money paths or
+auth secrets is still flagged before it lands.
+
 ## Bindings
 
 Configured in wrangler.jsonc, read off the request context via `getEnv(context)` from `app/lib/context.ts`. Never import bindings globally.
@@ -31,7 +55,9 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
 - `npm run check:logo` gate; proves the inline mark still reproduces the four SVG fixtures (pure)
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
-- `wrangler deploy` (auto-deploy is not wired; deploy is manual)
+- `npm run deploy` (build then `wrangler deploy`). Auto-deploy is not wired, and
+  bare `wrangler deploy` is not the deploy path: it would ship whatever `build/`
+  already held.
 
 ## Blog content
 
