@@ -150,8 +150,8 @@
           "shared": 1
         },
         {
-          "slug": "bells-and-whistles-zero-js",
-          "title": "Bells and whistles under a zero-JavaScript law",
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
           "shared": 1
         }
       ]
@@ -220,13 +220,13 @@
           "shared": 1
         },
         {
-          "slug": "a-color-palette-that-can-prove-itself",
-          "title": "A color palette that can prove itself",
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
           "shared": 1
         },
         {
-          "slug": "ai-answer-layer-ask-mode",
-          "title": "An AI answer layer that has to earn its keep",
+          "slug": "a-color-palette-that-can-prove-itself",
+          "title": "A color palette that can prove itself",
           "shared": 1
         }
       ]
@@ -306,8 +306,8 @@
           "shared": 4
         },
         {
-          "slug": "site-search-fts5-rank-fusion",
-          "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
           "shared": 2
         }
       ]
@@ -387,13 +387,13 @@
           "shared": 3
         },
         {
-          "slug": "ten-years-on-cloudflare",
-          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
-          "shared": 2
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
+          "shared": 3
         },
         {
-          "slug": "content-is-code-building-the-blog",
-          "title": "Content is code: building a blog where the database serves and git remembers",
+          "slug": "ten-years-on-cloudflare",
+          "title": "Ten years on Cloudflare, so I rebuilt everything on it",
           "shared": 2
         }
       ]
@@ -457,6 +457,11 @@
       "sourcePath": "content/posts/one-door-two-doorbells.md",
       "related": [
         {
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
+          "shared": 2
+        },
+        {
           "slug": "ten-years-on-cloudflare",
           "title": "Ten years on Cloudflare, so I rebuilt everything on it",
           "shared": 1
@@ -464,11 +469,6 @@
         {
           "slug": "content-is-code-building-the-blog",
           "title": "Content is code: building a blog where the database serves and git remembers",
-          "shared": 1
-        },
-        {
-          "slug": "where-should-a-blog-store-its-words",
-          "title": "Where should a blog store its words?",
           "shared": 1
         }
       ]
@@ -619,8 +619,8 @@
           "shared": 3
         },
         {
-          "slug": "site-search-fts5-rank-fusion",
-          "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
+          "slug": "the-doorbell-gets-built",
+          "title": "The doorbell gets built: an MCP server that contains no policy",
           "shared": 2
         }
       ]
@@ -631,7 +631,7 @@
       "description": "Building a publishing MCP server the week the protocol went stable: a fake authorization server to interrogate the real client, a library chosen by conformance score, and a shim that deletes by removing one file.",
       "date": "2026-07-30",
       "publishAt": "2026-07-30T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "mcp",
         "cloudflare",
@@ -1788,7 +1788,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1804,7 +1804,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "the-law-the-whole-design-serves",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1820,7 +1820,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "interrogating-the-client-before-writing-the-server",
       "ordinal": 2,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1836,7 +1836,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "losing-an-argument-to-a-scoreboard",
       "ordinal": 3,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1852,7 +1852,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "two-legs-two-credentials",
       "ordinal": 4,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1868,7 +1868,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "the-proof-in-production",
       "ordinal": 5,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1884,7 +1884,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "publishing-the-template",
       "ordinal": 6,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
@@ -1900,7 +1900,7 @@
       "docUrl": "/blog/the-doorbell-gets-built",
       "anchor": "disclosures",
       "ordinal": 7,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-30T00:00:00.000Z"
     },
     {
