@@ -1,7 +1,7 @@
 ---
-title: "Content as code: how to build a blog where git is the source of truth and the database serves"
+title: "Building a Git-Backed Blog on Cloudflare Workers and D1"
 slug: content-is-code-building-the-blog
-description: "A method for building a gated content pipeline on Cloudflare: the storage decision, a deterministic renderer, a byte-comparison gate, atomic two-file commits through the Git Data API, and the two bugs to expect on the way."
+description: "How to build a content pipeline where markdown in git is the source of truth and D1 serves every read: a deterministic renderer, a byte-comparison build gate, atomic two-file commits via the GitHub Git Data API, and the two bugs to expect."
 date: 2026-07-28
 tags: [cloudflare, d1, content-model, architecture, workers]
 draft: false
