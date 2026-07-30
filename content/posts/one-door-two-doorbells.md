@@ -3,8 +3,9 @@ title: "One door, two doorbells: what an API is, what MCP is, and why the policy
 slug: one-door-two-doorbells
 description: "APIs and MCP servers are layers, not rivals. The door holds the lock; the doorbells introduce themselves. Getting the layering backward is how policy drifts."
 date: 2026-07-30
-draft: true
 tags: [mcp, api, architecture, agents]
+draft: false
+first_published: 2026-07-30
 ---
 
 The internet has a thousand posts comparing APIs to the Model Context Protocol, and most of them frame it as a rivalry: the old way versus the AI-native way. This site now runs both in production, twice over, so this article can make the comparison with receipts instead of vibes. The claim it defends: an API and an MCP server are not competing answers to the same question. They are layers answering different questions, and the failure mode worth writing about is building them as if they were peers.
