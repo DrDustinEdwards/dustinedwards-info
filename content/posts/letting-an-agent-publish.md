@@ -3,8 +3,9 @@ title: "Letting an agent publish, and the one thing it may not do"
 slug: letting-an-agent-publish
 description: "An AI operator with real write access to a production site, the single asymmetry enforced in code rather than requested in a prompt, and the leak that found the gap anyway."
 date: 2026-07-30
-draft: true
 tags: [cloudflare, agents, mcp, security, architecture]
+draft: false
+first_published: 2026-07-30
 ---
 
 This site can now be operated by an AI agent. Not read by one, which has been true since launch, but operated: an agent can create posts, edit live ones, withdraw them, and restore them, and every one of those actions lands as a commit in the repository with the agent's marker on it. This article is about the trust model that makes that acceptable, the one thing the agent is structurally prevented from doing, and the leak that happened anyway on the path's first real use. The transcripts and commit hashes are all real, because half of this article is evidence rather than description.
