@@ -3,7 +3,7 @@ title: "Ten years on Cloudflare, so I rebuilt everything on it"
 slug: ten-years-on-cloudflare
 description: "A decade as a customer, one full rebuild as the proof: what the 2026 developer platform looks like from inside a working system, with measurements."
 date: 2026-07-30
-draft: true
+draft: false
 tags: [cloudflare, workers, d1, platform, architecture]
 first_published: 2026-07-30
 ---
