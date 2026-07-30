@@ -12,21 +12,21 @@ This article describes how to build a modern blog reading experience under one s
 
 Progressive enhancement is an old idea, and I am not claiming novelty for it. What I can add is a worked example with current tooling, exact costs, and the specific places where the discipline required a decision rather than a habit.
 
-## The constraint, stated precisely
+## The progressive enhancement rule: server-complete, with every fallback named
 
 The rule I recommend, and the one this site enforces, has two parts. First, every feature on a public reading route must have a server-rendered form that is complete without script: navigation navigates, filters filter, code arrives highlighted. Second, every client-side enhancement must have a named fallback recorded somewhere a reviewer can find, even when the fallback is "nothing." A reading progress bar's fallback is nothing, because it is decoration; writing that down is what distinguishes a decision from an omission.
 
 The second part sounds bureaucratic and is the entire method. When each enhancement must declare its fallback before it ships, the declaration forces the design conversation at the right moment: if you cannot name what happens without script, the feature is not an enhancement, it is a dependency, and it either moves to the server or does not ship. In practice the inventory for this site is short. The table of contents is server-rendered anchor links; script adds scroll-spy highlighting. Code blocks arrive fully highlighted from [the build pipeline](/blog/content-is-code-building-the-blog), including highlighted line ranges baked into the stored HTML; script adds a copy button and a language label. Footnotes are ordinary bidirectional links; script adds hover preview cards. Images link to their originals; script intercepts into a lightbox. Tag and year filters are server-side query parameters. Nothing on the list requires the network after page load, and nothing renders content that was not already in the HTML.
 
-## How the budget stays small
+## How a complete blog UI fits in 1.59 kB of gzipped JavaScript
 
 The 1.59 kB figure is not the product of heroic minification. It follows from the architecture: when the server renders everything and script only attaches behavior to existing elements, the script contains event listeners and class toggles, which are cheap. There is no framework runtime in the chunk, no templates, no state management, because there is no client-rendered state. The chunk is lazily loaded and served only on blog routes, so the rest of the site pays nothing.
 
 The measurement itself deserves a paragraph, because my first measurement was wrong in an instructive direction. During verification, a 250-line TypeScript file emitted a 0.05 kB chunk. It was not plausible, and implausibility was the correct alarm: a misconfigured `?url` import had caused the bundler to copy the file verbatim as a static asset, meaning the browser would have been served raw TypeScript. The general procedure I would recommend for any bundle claim: distrust any number that surprises you in either direction, open the emitted files, and confirm the served bytes are the compiled form. A second false signal came from the automated browser harness, where a form-input tool intermittently failed to reach the framework's synthetic event system, making a working autosave feature look broken; real keyboard input resolved it. Verification tooling fails in both directions, and the habit that catches it is treating every surprising result as a claim about the harness first and the code second.
 
-## Rules for a pipeline with two writers
+## Rules when a build script and a live server both write the same content
 
-This blog's content is written by two different programs: a build script running in Node, and the editor's save path running in the Worker. Both produce the same generated artifact, and [a build gate byte-compares that artifact](/blog/content-is-code-building-the-blog) against a fresh generation, so the two writers must agree exactly. Three rules fell out of making that true, and each was learned by watching the gate fail.
+This blog's content is written by two different programs: a build script running in Node, and the editor's save path running in the Worker. Both produce the same generated artifact, and [the pipeline's byte-comparison gate](/blog/content-is-code-building-the-blog) requires the two writers to agree exactly. Three rules fell out of making that true, and each was learned by watching the gate fail.
 
 First, derived values that depend on commit history cannot live in the gated artifact. I wanted a "last updated" date derived from git. The artifact is generated before the commit that will contain it, so a git-derived date records the previous commit, and the next build computes a different value, which means the gate fails after every ordinary content commit, by construction rather than by accident. Dates of that kind belong in a layer outside the byte-compared artifact; here they are written at database sync time.
 
@@ -34,7 +34,7 @@ Second, corpus-level derived data must be recomputed over the whole corpus by ev
 
 Third, and this is the operational hazard I most want to pass along: if the deployed Worker's pipeline version differs from the main branch, the live editor becomes a machine for writing artifacts that main cannot reproduce. This happened during development, when a Worker deployed from a feature branch accepted an editor save and committed an artifact in the new pipeline's shape against a main branch still running the old pipeline. The gate on main went red through no fault of the content. The rule that prevents it: a deploy that changes the pipeline and a mainline that has not merged it cannot coexist with an active editor. Sequence deploys with merges, or lock the editor during the window.
 
-## Social card images: keep external facts out of the gate
+## Open Graph card generation at build time: keep external facts out of the gate
 
 Open Graph card images here are generated at build time with satori and resvg at 1200 by 630, stored in R2 under a key derived from the slug plus a hash of slug, title, and description, and served immutable. A per-post cover image takes precedence when present. Two decisions in this subsystem generalize.
 
@@ -42,7 +42,7 @@ Generation runs at build time in Node, not in the Worker, because the measured c
 
 The second decision is subtler. The card's R2 key is deterministic and could have been written into the gated artifact, and it deliberately was not. Whether an object exists in R2 is a fact about R2, not a fact about the markdown, and the gate compares statements about the markdown. Mixing an external system's state into a byte-compared artifact means the gate fails for reasons no content change explains. The card's location lives in a database column instead. As a general rule: a reproducibility gate should compare only what its inputs fully determine.
 
-## Version history and autosave, drawn as opposites
+## Version history from git, and an autosave that never commits
 
 Version history in the admin is a window onto git rather than a mechanism of its own: it lists a post's commits through the GitHub API, renders diffs, and implements restore as a new commit through the same atomic save path used everywhere else, never a history rewrite. I verified the non-destructive property live: after a restore, both earlier commits remained intact and the gate was green. One detail worth copying into any implementation: restored content re-runs the validation gates, which closes a hole where restoring an old commit would republish text that predates a rule and was never checked against it.
 
