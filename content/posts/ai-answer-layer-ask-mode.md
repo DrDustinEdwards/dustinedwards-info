@@ -8,7 +8,7 @@ draft: false
 first_published: 2026-07-30
 ---
 
-This article describes how to add a retrieval-augmented generation (RAG) answer mode to a site using Cloudflare AI Search: a public endpoint that streams a cited answer synthesized from your own content. The previous article in this series covered the classic keyword engine underneath; this one covers the AI layer on top, and it is organized around the three requirements I set before building, because they are the requirements I would recommend to anyone adding a similar layer. The AI mode must never block or degrade the classic path. It must be removable without a trace. And because it is the one public endpoint that costs money per request, it must sit behind cost controls whose behavior is measured rather than assumed.
+This article describes how to add a retrieval-augmented generation (RAG) answer mode to a site using [Cloudflare AI Search](https://developers.cloudflare.com/): a public endpoint that streams a cited answer synthesized from your own content. [The previous article in this series](/blog/site-search-fts5-rank-fusion) covered the classic keyword engine underneath; this one covers the AI layer on top, and it is organized around the three requirements I set before building, because they are the requirements I would recommend to anyone adding a similar layer. The AI mode must never block or degrade the classic path. It must be removable without a trace. And because it is the one public endpoint that costs money per request, it must sit behind cost controls whose behavior is measured rather than assumed.
 
 Prerequisites: a Workers project, content decomposable into records with stable anchors, and the willingness to probe a beta product before trusting it.
 
@@ -38,7 +38,7 @@ A public, unauthenticated endpoint that performs a model generation per request 
 
 The implementation of those gates produced the most transferable measurements in this article, so I will report them as the test sequence I would now recommend to anyone.
 
-## Step 5: measure your rate limiter, because two natural implementations do not count
+## Durable Objects are single-threaded, not atomic: measure your rate limiter
 
 Configure a limit, then attack it with genuinely concurrent requests and count what gets through. Three implementations, same test shape, very different results.
 
@@ -52,7 +52,7 @@ One warning about the test harness itself, because it produced a confident false
 
 ## Step 6: expose the layer to machines as well as people
 
-Once the endpoint exists, three levels of machine access come nearly free, and I would ship all three. The search URL itself, constructible by anyone. JSON from the same URL under content negotiation. And the Model Context Protocol endpoint that the AI Search instance can expose, which lets an AI assistant query the site conversationally through a standard protocol; verify it from an external client before advertising it. Document all three in llms.txt. The removability rule from step 1 applies at every level: each is a presentation of the same engine, and turning any off changes nothing underneath.
+Once the endpoint exists, three levels of machine access come nearly free, and I would ship all three. The search URL itself, constructible by anyone. JSON from the same URL under content negotiation. And the [Model Context Protocol](https://modelcontextprotocol.io) endpoint that the AI Search instance can expose, which lets an AI assistant query the site conversationally through a standard protocol; verify it from an external client before advertising it. Document all three in llms.txt. The removability rule from step 1 applies at every level: each is a presentation of the same engine, and turning any off changes nothing underneath. The architecture argument for this layering is [the next article in the series](/blog/one-door-two-doorbells).
 
 ## Costs, stated plainly, and limitations
 
@@ -60,4 +60,4 @@ At the time of writing, retrieval on AI Search is free during its open beta with
 
 Measured latency, for expectation-setting: time to first token between 2.1 and 6.5 seconds warm and 7.4 cold, with retrieved sources rendered before the answer begins so the wait is visibly progress. The complementarity measurement in step 2 was run on a small corpus and query set; it is strong enough to establish that neither layer subsumes the other here and far too small to estimate rates, and it should be re-run as any corpus grows. The retrieval threshold behavior around short exact tokens is a property of this instance's configuration rather than a universal constant. And the rate limiter table reflects one platform's bindings at one point in time; the durable finding is the atomicity mechanism, which is not vendor-specific at all.
 
-The next two articles in this series move from reading to writing: what happens when an AI agent is given write access to this site, and the protocol layer built on top of that access.
+This is the sixth post in [the series](/blog/ten-years-on-cloudflare). The next two move from reading to writing: [where policy belongs when agents call your service](/blog/one-door-two-doorbells), and [what happens when an AI agent is given write access to this site](/blog/letting-an-agent-publish).
