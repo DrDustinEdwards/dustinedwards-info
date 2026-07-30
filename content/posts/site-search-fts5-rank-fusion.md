@@ -10,15 +10,15 @@ first_published: 2026-07-30
 
 This article describes how to build full-text site search directly on Cloudflare D1 using SQLite's [FTS5 extension](https://sqlite.org/fts5.html), with no external search service. The implementation this describes runs in production on this site and answers queries in 6 milliseconds at the median, 15 at the 95th percentile, measured over 25 runs against local D1. The article covers the schema, the reason one index is not enough, the ranking method, the query dispatch that a naive design gets wrong, the interface work, and one operational finding about backups that I consider mandatory knowledge for anyone putting FTS5 on D1.
 
-Prerequisites: a D1 database, familiarity with SQL and SQLite migrations, and content you can decompose into records. The design generalizes to any corpus; the examples are a blog whose content pipeline is described in [the previous article in this series](/blog/content-is-code-building-the-blog).
+Prerequisites: a D1 database, familiarity with SQL and SQLite migrations, and content you can decompose into records. The design generalizes to any corpus; the examples are a blog.
 
-## Step 1: one record shape, at section granularity
+## Step 1: index at section granularity, with one record shape
 
 Reduce everything searchable to a single record shape. Mine is: id, url, type, title, body, date. The consequential decision is granularity. A search that indexes whole documents sends the reader to a page and leaves the finding to them; a search that indexes sections sends them to the paragraph. If your content has heading anchors, emit one record per document plus one record per heading, each section record carrying a URL that deep-links to its anchor.
 
 Two practical notes on granularity. First, it is what makes ranking observable during development: with document-level records and a small corpus, almost any query returns almost everything, and you cannot tell whether your ranking works. Section records give the ranker real decisions to make from the first day. Second, it requires query-time deduplication: when a document and its own sections both match, present the best section under the document's title, because one document should not fill a results page with itself.
 
-## Step 2: two indexes, because tokenizers are table-level
+## Step 2: FTS5 tokenizers are per-table, so stemmed plus exact matching needs two indexes
 
 Here is the FTS5 fact that determines the schema, and it surprised me: the tokenizer is a property of the table, not of the query. You cannot ask one index for stemmed matching on some queries and exact matching on others. A corpus that needs both, and most do, needs two tables.
 
@@ -42,7 +42,7 @@ CREATE VIRTUAL TABLE search_prose USING fts5(
 
 Both are external-content tables over one `search_docs` source table, so the text is stored once. On rebuilds, I rewrite `search_docs` wholesale and rebuild both indexes with the FTS5 `rebuild` command, because my corpus is regenerated as a set; per-row triggers are the right tool only for a path that edits single rows.
 
-## Step 3: merge with reciprocal rank fusion, not raw bm25
+## Step 3: merge with reciprocal rank fusion, not raw bm25 scores
 
 Two indexes produce two ranked lists, and the tempting merge, interleaving by raw bm25 score, is wrong in a way that ships quietly. Bm25 scores are not comparable across tables with different tokenizers and different average document lengths, and bm25 systematically over-rewards very short rows, which section records are. You will not notice in testing; you will notice when a two-line section outranks the document that answers the query.
 
@@ -62,7 +62,7 @@ function fuse(lists: string[][], k = 60): Map<string, number> {
 
 Positional fusion has a second benefit beyond correctness: it makes the merge testable with small fixtures, because the expected output depends only on orderings you construct, not on opaque score values.
 
-## Step 4: dispatch on query shape, or ship half a feature
+## Step 4: search versus browse: dispatch on query shape
 
 In front of the indexes, put a small parser: quoted phrases pass through, `tag:` and `type:` prefixes become filters, and a bare four-digit year becomes a date filter rather than a literal search term. That last rule is high-value and produced the one bug in this system that reached production, which I will describe as a warning because the design error is general.
 
@@ -70,7 +70,7 @@ Every filter-only query returned zero results on the live site. A bare year, a c
 
 The structural fix is recognizing that search has two entry modes. A query with text is a locate operation and goes to the indexes. A query with filters and no text is a browse operation and goes to ordinary filtered SQL over the source table, ordered by date, returning document records only, since "show me everything tagged d1" is a listing question. Put the dispatch predicate in a pure function so it can be unit-tested, and test the browse path's visibility rules (drafts and future-dated content excluded) as deliberately as the search path's. The general statement: if you test only the entry mode with a text box, you have shipped half a feature.
 
-## Step 5: the interface, where site search usually dies
+## Step 5: the search interface: GET form, JSON negotiation, and the combobox pattern
 
 The baseline is a server-rendered GET form: deep-linkable result URLs, highlighted snippets from FTS5's snippet function, visible labels for why a result matched, facet chips as plain links, and a zero-results state that suggests nearest tags and recent posts instead of dead-ending. Because it is a GET endpoint, adding `Vary: Accept` and returning JSON under content negotiation makes the same URL a machine-readable API at no extra cost, which matters more each year as AI agents become a real audience.
 
@@ -78,7 +78,7 @@ A command palette can layer on top. If you build one, implement the ARIA combobo
 
 ## wrangler d1 export fails on FTS5: the working backup procedure
 
-The most important operational finding in this article: `wrangler d1 export` fails outright on any database containing FTS5 virtual tables. It exits with the error `D1 Export error: cannot export databases with Virtual Tables (fts5)` and writes nothing. This means the moment you apply the search migration, the platform's default backup path stops working for your database, and the natural time to discover that is during a recovery, which is the worst time. I measured it before applying the migration, on purpose, and I would recommend the same order to anyone.
+The most important operational finding in this article: `wrangler d1 export` fails outright on any database containing FTS5 virtual tables. It exits with an error stating it cannot export databases with virtual tables, and writes nothing. This means the moment you apply the search migration, the platform's default backup path stops working for your database, and the natural time to discover that is during a recovery, which is the worst time. I measured it before applying the migration, on purpose, and I would recommend the same order to anyone.
 
 The working procedure is per-table export, with schema coming from your migration files rather than the dump:
 
@@ -95,4 +95,4 @@ Two adjacent facts from the same investigation, both counterintuitive. Verifying
 
 On this hardware and corpus: median 6 ms, 95th percentile 15 ms, over 25 runs against local D1, with the production numbers in the same range. The latency figures establish a floor rather than a curve; the corpus was small when measured, and I will re-measure as it grows. The two-index design is justified by a corpus that needs both stemmed and identity matching; a site with only prose could defensibly run one Porter-stemmed table and skip the fusion. The export failure is as measured on the wrangler version current at writing and may be fixed later; the per-table procedure and its check remain worthwhile regardless, because a backup that depends on a bug staying fixed is not a backup. And the general claim I would defend beyond this stack: at personal-site scale and probably well past it, hand-built search on the relational database you already operate is not the compromise option. Measured against the alternative of introducing and paying for a search service, it was the fast path in both senses.
 
-This is the fifth post in [the series](/blog/ten-years-on-cloudflare), following [the reading experience article](/blog/bells-and-whistles-zero-js); the next one adds [the layer above this one](/blog/ai-answer-layer-ask-mode): a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
+This is the fifth post in [the series](/blog/ten-years-on-cloudflare), following [the reading experience](/blog/bells-and-whistles-zero-js); the next one adds [the layer above this one](/blog/ai-answer-layer-ask-mode): a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
