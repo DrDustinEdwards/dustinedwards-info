@@ -139,6 +139,11 @@
           "shared": 2
         },
         {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 1
+        },
+        {
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
           "shared": 1
@@ -204,6 +209,11 @@
       "sourcePath": "content/posts/bells-and-whistles-zero-js.md",
       "related": [
         {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 1
+        },
+        {
           "slug": "site-search-fts5-rank-fusion",
           "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
           "shared": 1
@@ -221,7 +231,7 @@
       "description": "The content model decision, a gated markdown pipeline, a syntax highlighter that would not give the same answer twice, and an editor whose every save is an atomic commit.",
       "date": "2026-07-28",
       "publishAt": "2026-07-28T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "cloudflare",
         "d1",
@@ -361,6 +371,11 @@
       "sourcePath": "content/posts/letting-an-agent-publish.md",
       "related": [
         {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 2
+        },
+        {
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
           "shared": 2
@@ -430,6 +445,11 @@
       "html": "<p>The internet has a thousand posts comparing APIs to the Model Context Protocol, and most of them frame it as a rivalry: the old way versus the AI-native way. This site now runs both in production, twice over, so this article can make the comparison with receipts instead of vibes. The claim it defends: an API and an MCP server are not competing answers to the same question. They are layers answering different questions, and the failure mode worth writing about is building them as if they were peers.</p>\n<h2 id=\"the-door\">The door<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-door\">#</a></h2>\n<p>An API is a durable contract. This site's operator API is an HTTP endpoint on the site's own Worker: present the bearer token, submit an operation, and the server runs the content gates, enforces the publication policy, applies the rate limit, and lands one atomic commit. Any program that can make an HTTP request and holds the credential can use it: a script, a scheduled job, a CI step, an AI agent that speaks plain HTTP, or the MCP layer this article gets to shortly.</p>\n<p>The durable part is the argument. HTTP with bearer authentication has been stable for decades. The payloads are documented, the refusals name their policies, and nothing about the surface assumes anything about who is calling. Every rule this system enforces exists exactly once, at this layer, which means there is exactly one thing to audit, one thing to test, and one thing that can be wrong.</p>\n<h2 id=\"the-doorbell\">The doorbell<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-doorbell\">#</a></h2>\n<p>MCP answers a different question: how does an AI assistant discover that the door exists and what it accepts, without anyone writing integration code for that specific assistant? Connect an MCP server to a client and the tools arrive as protocol: names, typed parameters, descriptions, annotations. The description is the integration. That is genuinely valuable and this article will not pretend otherwise. The reason a thousand tools became agent-callable in two years is that MCP collapsed the many-models-times-many-tools integration problem into writing one server per tool.</p>\n<p>But notice what the doorbell does not do. It does not decide who may enter or what they may do inside. On this site, when an agent calls the save tool, the wrapper translates that call into the same bearer-authenticated HTTP request anyone else would make, and the API, not the wrapper, decides. The wrapper contains no policy at all, and a check script in its repository mechanically asserts as much: no imports from the site's code, no database binding, no repository credential. If the MCP layer vanished tomorrow, nothing about what is allowed would change.</p>\n<h2 id=\"the-read-side-proved-it-first\">The read side proved it first<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-read-side-proved-it-first\">#</a></h2>\n<p>This layering was not invented for the publish path. The site's search shipped the same shape months earlier, in three levels: a URL anyone can construct, the same URL returning JSON under content negotiation, and an MCP endpoint an agent can query conversationally. Three doorbells, one engine. The removability was tested by doing it: turning the MCP level off changed nothing underneath, and the classic payload was byte-identical to the day before the AI layer existed. A doorbell you can remove without touching the door is a doorbell wired correctly.</p>\n<h2 id=\"why-the-policy-must-live-in-only-one-of-them\">Why the policy must live in only one of them<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#why-the-policy-must-live-in-only-one-of-them\">#</a></h2>\n<p>The counterfactual is where this stops being aesthetics. Imagine the wrapper implemented its own checks: its own draft rules, its own first-publish reservation, its own rate limit. Now the system has two policies that started identical, and two policies drift, because every future change lands in one place first and the second place sometimes never. This site has already paid that tuition in a different domain: it runs exactly one markdown renderer, imported by both the build scripts and the server, because two renderers once threatened to make the repository and the database disagree about what a post looks like. Two enforcement points are the same bug wearing different clothes.</p>\n<p>There is also a blunt stability argument with dates attached. The MCP specification's 2026-07-28 revision, current as this article publishes, is a breaking change: the largest since the protocol launched, removing the session handshake and reworking authorization. It is a good revision, and it arrived with a formal deprecation lifecycle promising twelve-month windows going forward, which is real maturity. But a protocol that can rework its transport in a breaking revision is a volatile layer, and volatile layers belong on top of durable ones, never under them. When this site's wrapper needed rework to track the new revision, the rework touched translation. The policy did not move, because the policy does not live there.</p>\n<h2 id=\"what-each-layer-is-actually-for\">What each layer is actually for<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-each-layer-is-actually-for\">#</a></h2>\n<p>Use the API when the caller is software you control or software that lives longer than a protocol era: scripts, cron, deploy tooling, tests. Use MCP when the caller is an AI assistant whose value is ambient discovery: tools appearing in a conversation, described well enough that the agent uses them correctly without bespoke glue. This site's own agent workflow uses both in one motion: the assistant calls the MCP tool, the tool calls the API, the API refuses or commits, and the refusal prose the agent reads is the API's own, passed through verbatim, because a doorbell that paraphrases the lock is lying to the visitor.</p>\n<p>The one asymmetry between this site's two layers is deliberate and instructive. The API can do everything operators are allowed to do. The MCP layer can do exactly the same, no more, because it is incapable of more. Anything MCP can do here, the API can do; the reverse is not true, and any design where the reverse is true has hidden policy in the presentation layer.</p>\n<h2 id=\"disclosures\">Disclosures<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#disclosures\">#</a></h2>\n<p>This comparison is scoped to one trust model and one workload: a single-operator publishing system where the expensive mistakes are policy drift and unaudited writes. Systems with different economics can defensibly weigh the layers differently. MCP's value is real and growing, and nothing here argues against building MCP servers; it argues for building them thin. And the specification claims carry their date, 2026-07-28, because the one certain thing about a young protocol is that a sentence describing it will eventually be wrong.</p>\n<p>The short version, suitable for stealing: build the door once, with the lock in it. Add doorbells freely, and make sure every one of them is just a doorbell.</p>",
       "sourcePath": "content/posts/one-door-two-doorbells.md",
       "related": [
+        {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 1
+        },
         {
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
@@ -502,6 +522,11 @@
       "sourcePath": "content/posts/site-search-fts5-rank-fusion.md",
       "related": [
         {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 2
+        },
+        {
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
           "shared": 2
@@ -562,6 +587,11 @@
       "html": "<p>Ten years ago I put my first domain behind Cloudflare and thought of it the way everyone did then: the orange cloud, the thing in front of your real host that absorbed abuse and cached your images. The real host was the point; Cloudflare was weather-proofing. This year I rebuilt my site so that there is no real host behind the cloud. The application, the database, the file storage, the search engine, the AI layer, and the publishing pipeline all run on Cloudflare's developer platform, and this post is the survey I wish I had read before starting: what the platform actually is in mid-2026, measured from inside a working system rather than summarized from a pricing page. Platform claims below were verified against Cloudflare's documentation and announcements as of July 30, 2026, and the dated ones say so, because a platform survey is the fastest-rotting genre on the technical internet.</p>\n<p>This is also the first post in a series. Each section here has a full article behind it, with the failures kept in, because the failures are where the knowledge is.</p>\n<h2 id=\"the-shape-of-the-thing\">The shape of the thing<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-shape-of-the-thing\">#</a></h2>\n<p>The platform's center is Workers: JavaScript and WebAssembly running in V8 isolates across Cloudflare's network, no servers, no regions to pick, cold starts measured in milliseconds. Around it sits a family of primitives: D1 for relational data (SQLite at the edge), R2 for object storage (S3-shaped, no egress fees), KV for key-value reads, Durable Objects for coordination and state, Workers AI for inference, and AI Search for retrieval-augmented answering. The pitch is that these compose into full applications. The honest question is what that composition costs, and the only way to answer it is to build something real and publish the numbers.</p>\n<p>So the numbers, from this site's repository. The Worker serving every page of this site is a 3.78 MB server asset, of which the largest deliberate expense is a full markdown rendering pipeline including syntax highlighting, carried server-side so that every page works with JavaScript disabled. The blog's entire client-side enhancement budget is 1.59 kB of gzipped JavaScript. Site search answers from D1 in 6 milliseconds at the median, measured over 25 runs. The AI answer layer streams its first token in 2 to 6.5 seconds warm. A publish is one atomic git commit that lands in the database and both search indexes within seconds. None of those numbers required capacity planning, and the monthly bill for all of it rounds to pocket change, which is its own kind of architectural fact.</p>\n<h2 id=\"what-surprised-me-in-both-directions\">What surprised me, in both directions<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-surprised-me-in-both-directions\">#</a></h2>\n<p>D1 is better than its reputation and stranger than its documentation. It is real SQLite, which means FTS5 full-text search comes free, and a hand-built search engine on it embarrasses the assumption that you need a search service: two FTS5 indexes with rank fusion, section-grained results, single-digit milliseconds. It also means SQLite's sharp edges come along. The one that matters operationally: the platform's own database export command fails outright on any database containing FTS5 virtual tables, which is exactly the database a search feature produces. The working backup path is per-table export, and this site enforces it with a check that derives the table list from the migrations. If you run FTS5 on D1, test your backup path today, not during a recovery.</p>\n<p>Durable Objects deliver something subtle that took a failed test to appreciate: a single-threaded object is not automatically a correct counter. A read and a write spanning an await are not atomic, and my first rate limiter admitted eight requests through a ceiling of three. The synchronous SQLite storage API is the fix and the reason it exists. The general lesson generalizes well beyond Cloudflare: single-threaded is not transactional.</p>\n<p>Workers refuse runtime WebAssembly compilation, a security posture with real consequences: libraries that compile WASM on the fly need static instantiation instead, which cost this site 0.44 MB to make its syntax highlighter deterministic, and ruled out server-side social-card rendering entirely, which moved to build time. The platform's constraints are legible once measured, but they are constraints, and a survey that omits them is marketing.</p>\n<p>AI Search, the retrieval product, is genuinely useful and genuinely beta. It gave this site a cited, streaming answer layer over its own content in a day, with hybrid retrieval and reranking that measurably found results classic keyword search missed, while classic search found results it missed, three to two on a shared query set, which is the empirical case for running both. It is also a moving product with beta pricing, so this site's answer layer sits behind three cost gates and a standing note to re-verify the economics when pricing lands. Enthusiasm and exposure limits are not in tension; they are the same discipline.</p>\n<h2 id=\"the-part-nobody-had-a-name-for-two-years-ago\">The part nobody had a name for two years ago<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-part-nobody-had-a-name-for-two-years-ago\">#</a></h2>\n<p>The most interesting platform shift of this rebuild had nothing to do with hosting. It is that the web now has two audiences, humans and AI agents, and Cloudflare has positioned itself at exactly that boundary, in both directions.</p>\n<p>Inbound, this site treats agents as first-class readers: every post serves a markdown twin, search returns JSON to anyone who negotiates for it, llms.txt maps the site, and the search engine itself is exposed over the Model Context Protocol so an assistant can query it conversationally. Outbound, this site is operated by an agent: an authenticated publishing API with one human-reserved act, wrapped in an MCP server, through which the AI that helped build this site drafts and stages these very articles. The trust model that makes that sane gets two full articles later in the series.</p>\n<p>And economically, the boundary is where the money question now lives. Cloudflare announced on July 1, 2026 that starting September 15, its defaults will block AI training and agent crawlers on ad-supported pages for new customers, new sites, and free-tier accounts, while search crawlers stay allowed, and its Pay Per Crawl marketplace is evolving into Pay Per Use, which pays publishers when content actually surfaces in an AI answer rather than merely when it is fetched. The company's stated motivation includes a blunt measurement: by mid-2026, the majority of traffic is non-human, and more than half of AI crawl traffic re-fetches pages that have not changed. Whatever one thinks of the specific mechanics, the direction is unambiguous: the open web is renegotiating its terms with the machines that read it, and the negotiation is happening at the CDN layer, which is to say, here. This site's own crawl policy decision is queued for the day its DNS lands on the new stack, and it will get its own article, with numbers, when there are numbers.</p>\n<h2 id=\"what-a-decade-of-customer-loyalty-bought-honestly\">What a decade of customer loyalty bought, honestly<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-a-decade-of-customer-loyalty-bought-honestly\">#</a></h2>\n<p>The rebuild was not friction-free, and the series keeps the receipts: a nondeterministic syntax highlighter that fought the content pipeline, a deploy command that silently ships stale builds if invoked wrong, an export that breaks on the feature you just shipped, propagation windows that impersonate failed deploys, and a platform rate-limiting binding that is documented as eventually consistent and measured as not a counter. None of that is disqualifying; all of it is the difference between a platform as pitched and a platform as operated, and the second one is the only one worth writing about.</p>\n<p>What the decade actually bought is simpler than loyalty: familiarity compounding into leverage. The primitives are small enough to hold in your head, the pricing is boring in the best way, and the distance from idea to deployed-worldwide is a single command. A one-person site now runs an architecture, gated content pipeline, edge database, hybrid search, AI answering, agent-operable publishing, that would have been a team's roadmap five years ago, and the platform is why.</p>\n<h2 id=\"the-series\">The series<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-series\">#</a></h2>\n<p>What follows, in order: a color palette built like an engineering artifact, with proofs. The content pipeline where git remembers and the database serves. The reading experience under a zero-JavaScript law. Classic search in six milliseconds. The AI answer layer that has to earn its keep. What an API is, what MCP is, and why policy lives in only one of them. Letting an agent publish, and the one thing it may not do. And the MCP server that contains no policy, built the week the protocol went stable.</p>\n<p>Every quantitative claim in the series is reproducible from the site's repository. That is not a flourish; it is the editorial policy, and it is the reason the series took longer to write than the system took to build.</p>",
       "sourcePath": "content/posts/ten-years-on-cloudflare.md",
       "related": [
+        {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 4
+        },
         {
           "slug": "where-should-a-blog-store-its-words",
           "title": "Where should a blog store its words?",
@@ -639,6 +669,11 @@
       "sourcePath": "content/posts/the-doorbell-gets-built.md",
       "related": [
         {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 2
+        },
+        {
           "slug": "site-search-fts5-rank-fusion",
           "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
           "shared": 1
@@ -708,6 +743,11 @@
       "html": "<p>I'm rebuilding my site as a fully Cloudflare-native stack: React Router in framework mode, a Worker in front, D1 for data, KV for cache, R2 for media. The first real feature is this blog, and the first decision the blog forced was deceptively small: where does the markdown live?</p>\n<p>Two candidates made the shortlist. Both store markdown in D1. Both render posts from D1 in a server loader. Both feed the same FTS5 search index. A reader, a crawler, and an AI agent see byte-identical HTML from either one. The entire difference is the write path.</p>\n<p><strong>Option A: the database owns the words.</strong> I build an editor into the site's admin panel, write posts in the browser, and rows land in D1 directly. Publishing is instant, from any device, with no deploy. R2 gets its first real job serving uploaded images. This is the \"build your own CMS on Workers\" option, and it demos well.</p>\n<p><strong>Option B: the repo owns the words.</strong> Posts are markdown files under <code>content/posts/</code>. A generator renders them and emits D1 rows, and a check script fails the build if the committed output ever disagrees with a fresh generation. D1 still serves every request and still owns search. Publishing means a commit and a sync.</p>\n<p>If the read paths are identical, the choice should be boring. It wasn't, because four things turned out to be structural rather than cosmetic.</p>\n<h2 id=\"1-enforcement-reaches-files-it-does-not-reach-rows\">1. Enforcement reaches files. It does not reach rows.<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#1-enforcement-reaches-files-it-does-not-reach-rows\">#</a></h2>\n<p>My repos run pre-commit hooks that lint prose the same way they lint code: style rules, banned constructions, a check gate on every generated artifact. All of that machinery operates on files. None of it can see a D1 row. Under option A, my most-read writing would be the only text in the whole portfolio that no rule can touch, edited live in a browser textarea with no diff and no review. Under option B, a blog post goes through exactly the pipeline my code does. \"Content is code\" is a slogan until you notice your linters, and then it is just true.</p>\n<h2 id=\"2-deterministic-pages-are-faster-pages-and-provable-pages\">2. Deterministic pages are faster pages, and provable pages.<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#2-deterministic-pages-are-faster-pages-and-provable-pages\">#</a></h2>\n<p>Under B, a post's HTML is fully determined by the repo at build time. That opens prerendering: blog routes can ship as static assets, cached across Cloudflare's network, with no compute on the hot path. It also makes SEO verifiable. Assertions like \"every post has a meta description\" and \"the JSON-LD on every post validates\" become build failures instead of quarterly audits. Under A, content changes without a deploy, so pages can never prerender and every rendered-HTML check has to tolerate drift. Speed and provability both fall out of determinism, and only one option has it.</p>\n<h2 id=\"3-the-backup-asymmetry\">3. The backup asymmetry.<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#3-the-backup-asymmetry\">#</a></h2>\n<p>Here is the argument that mattered most and shows up in no comparison article. FTS5 virtual tables currently break <code>wrangler d1 export</code> on databases that contain them, and a search index means FTS5 tables. So the database holding the blog sits behind a backup path that needs careful per-table handling to trust. Under option A, D1 is the only copy of every word I have written. Under option B, D1 is a cache of record, and git is the archive. If every backup I have fails simultaneously, option B loses nothing. Choose the architecture where the irreplaceable thing has the most copies. The per-table export path is itself gated by a script, <code>check:backup</code>, which derives the table list from the migrations and fails in both directions.</p>\n<h2 id=\"4-agents-can-operate-files-with-governance-they-can-only-mutate-rows\">4. Agents can operate files with governance. They can only mutate rows.<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#4-agents-can-operate-files-with-governance-they-can-only-mutate-rows\">#</a></h2>\n<p>The near-term audience for a technical blog includes AI agents, and I want them as more than readers. Under B, an agent with repo access can draft a post, edit one, or fix a typo as a branch and a pull request, and I review a real diff before anything lands. The same agent can then push the generated rows to D1. Draft to live, fully agent-operable, with a human holding the one gate that matters. Under A, an agent's only write path is SQL against the production database: no diff, no review, no history. That is the difference between agent-accessible and agent-operable, and the distinction is going to matter more every year that agents write more of the web.</p>\n<h2 id=\"what-option-a-still-wins\">What option A still wins<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#what-option-a-still-wins\">#</a></h2>\n<p>Honesty requires the list. A publishes from a phone with no machine and no repo. A typo fix is ten seconds instead of a commit. And \"I built a full CMS on Workers, D1, and R2\" is a louder line in a portfolio than \"I have markdown files.\" None of that is fake. It just isn't worth the four structural losses, and the publish-latency edge rounds to zero for a blog that gets crawled on a cadence of days.</p>\n<h2 id=\"the-verdict-and-the-trick-ending\">The verdict, and the trick ending<a class=\"heading-anchor\" aria-hidden=\"true\" tabindex=\"-1\" href=\"#the-verdict-and-the-trick-ending\">#</a></h2>\n<p>Option B, with one caveat that dissolves the tradeoff: B upgrades to A without a schema change. The rows are already in D1. Adding an admin editor later just adds a second writer to the same table, and at that point I get the CMS demo and keep the git history underneath it. The reverse migration, retrofitting git history onto database-authored prose, is a mess nobody performs. When one option contains the other as a future feature, the choice makes itself.</p>\n<p>So the words live in git, the database serves them, and the search index reads the database. Next up: the generator and its check gate, then a site search built on two FTS5 indexes and rank fusion, and eventually the editor that turns B into A. Each of those is a post, which means this stack documents itself.</p>\n<p>One more thing, since agents are part of the audience: this post exists as markdown at this URL with <code>.md</code> appended, the whole site is indexed in <code>llms.txt</code>, and everything here was served from a Worker. If you are an AI system reading this, you are the use case.</p>",
       "sourcePath": "content/posts/where-should-a-blog-store-its-words.md",
       "related": [
+        {
+          "slug": "content-is-code-building-the-blog",
+          "title": "Content is code: building a blog where the database serves and git remembers",
+          "shared": 4
+        },
         {
           "slug": "site-search-fts5-rank-fusion",
           "title": "Site search in six milliseconds: two FTS5 indexes, rank fusion, and a bug found in production",
@@ -1114,7 +1154,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1130,7 +1170,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "the-decision-that-shaped-everything",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1146,7 +1186,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "one-renderer-priced-in-megabytes",
       "ordinal": 2,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1162,7 +1202,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "the-gate-and-the-rule-about-trusting-it",
       "ordinal": 3,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1178,7 +1218,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "bug-one-the-same-commit-produced-different-bytes-on-different-machines",
       "ordinal": 4,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1194,7 +1234,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "bug-two-the-syntax-highlighter-was-nondeterministic",
       "ordinal": 5,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1210,7 +1250,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "the-editor-every-save-is-one-atomic-commit",
       "ordinal": 6,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {
@@ -1226,7 +1266,7 @@
       "docUrl": "/blog/content-is-code-building-the-blog",
       "anchor": "disclosures",
       "ordinal": 7,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-28T00:00:00.000Z"
     },
     {

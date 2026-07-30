@@ -3,8 +3,9 @@ title: "Content is code: building a blog where the database serves and git remem
 slug: content-is-code-building-the-blog
 description: "The content model decision, a gated markdown pipeline, a syntax highlighter that would not give the same answer twice, and an editor whose every save is an atomic commit."
 date: 2026-07-28
-draft: true
 tags: [cloudflare, d1, content-model, architecture, workers]
+draft: false
+first_published: 2026-07-30
 ---
 
 This site's blog looks ordinary from the outside: posts, tags, an RSS feed. Under it is a content architecture I have not seen elsewhere, and this article is the build log, including the two bugs that only running the system could have found. Every claim here is checkable against the repository; commits are cited by sha.
