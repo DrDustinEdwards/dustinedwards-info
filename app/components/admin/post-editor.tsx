@@ -1,35 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
+import {
+  bufferDiffers,
+  clearAllBuffersFor,
+  draftKey,
+  readBuffer,
+  readForm,
+  writeBuffer,
+  type DraftBuffer,
+} from "~/lib/editor/draft-buffer";
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
+import type { PostState } from "~/lib/editor/publish-transition.mjs";
+import { PublishActions } from "./publish-actions";
+import { SettingsDrawer } from "./settings-drawer";
 
 /**
- * Textarea-first post editor. Frontmatter is form fields, the body is a plain
- * monospace textarea, and preview is a server round trip through the same
- * pipeline the build uses. No rich text editor: that is a separate decision.
+ * The three-region post editor: a sticky command bar, a writing canvas, and a
+ * settings drawer holding everything that is not writing.
+ *
+ * The body is still a textarea. CodeMirror, the exact preview and media
+ * insertion are the next session; this one is the shell they land in.
+ *
+ * What has NOT changed is the payload. Every field the checkbox era submitted
+ * is still submitted, under the same name, in the same format, to the same
+ * action. That is asserted by check:admin-ui against a baseline generated from
+ * the editor as it stood before this rewrite, so the claim is a gate rather
+ * than a comment.
  */
 
 const TITLE_LIMIT = 70;
-const DESCRIPTION_LIMIT = 160;
-
-/** How long after the last keystroke a local draft is written. */
 const AUTOSAVE_DELAY_MS = 800;
+const FORM_ID = "post-editor";
 
-const draftKey = (slug: string, isNew: boolean) =>
-  `post-draft:${isNew ? "new" : slug}`;
-
-/** Serialises the form into a plain object, for local persistence only. */
-function readForm(form: HTMLFormElement) {
-  const data = new FormData(form);
-  /** @type Record<string, string> */
-  const out: Record<string, string> = {};
-  for (const [key, value] of data.entries()) {
-    if (typeof value === "string" && key !== "headSha" && key !== "isNew") {
-      out[key] = value;
-    }
-  }
-  return out;
+/**
+ * Title to slug, matching the shape the save gate accepts and nothing more.
+ *
+ * Deliberately conservative: it strips rather than transliterates, because a
+ * wrong guess at what a non-ASCII character should become lands in a permanent
+ * URL. The field stays editable, so anything this gets wrong is one keystroke
+ * from being right.
+ */
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/, "");
 }
 
 export type EditorProblem = {
@@ -46,6 +66,12 @@ export function PostEditor({
   previewHtml,
   feedback,
   busy,
+  state,
+  everPublished,
+  tagOptions,
+  existingSlugs = [],
+  historySlot,
+  dangerSlot,
 }: {
   fields: PostFields;
   isNew: boolean;
@@ -53,94 +79,79 @@ export function PostEditor({
   previewHtml?: string | null;
   feedback?: EditorFeedback | null;
   busy?: boolean;
+  state: PostState;
+  everPublished: boolean;
+  tagOptions: string[];
+  /** Slugs already taken, so the new-post flow can say so before the save does. */
+  existingSlugs?: string[];
+  historySlot?: React.ReactNode;
+  dangerSlot?: React.ReactNode;
 }) {
   const [title, setTitle] = useState(fields.title);
   const [slug, setSlug] = useState(fields.slug);
+  /**
+   * Whether the author has taken the slug over.
+   *
+   * Until they do, it tracks the title, which is what makes the new-post flow
+   * one field instead of two. The moment they type in it, it stops moving:
+   * silently rewriting a slug somebody chose, because the title was edited
+   * afterwards, would change a URL they had already decided on.
+   */
+  const [slugPinned, setSlugPinned] = useState(fields.slug !== "");
   const [description, setDescription] = useState(fields.description);
+  const [tags, setTags] = useState(fields.tags);
+  const [coverSrc, setCoverSrc] = useState(fields.coverSrc);
+  const [coverAlt, setCoverAlt] = useState(fields.coverAlt);
+  const [publishAt, setPublishAt] = useState(fields.publishAt);
   const [body, setBody] = useState(fields.body);
-  const [draft, setDraft] = useState(fields.draft);
   const [dirty, setDirty] = useState(false);
-  const [autosavedAt, setAutosavedAt] = useState<string | null>(null);
-  const [restored, setRestored] = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [offer, setOffer] = useState<DraftBuffer | null>(null);
+
   const formRef = useRef<HTMLFormElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const draftFieldRef = useRef<HTMLInputElement>(null);
+  const primaryRef = useRef<HTMLDivElement>(null);
   const autosaveTimer = useRef<number>(0);
-  const storageKey = draftKey(fields.slug, isNew);
+  const storageKey = draftKey(fields.slug, headSha);
 
   /**
-   * Autosave, local only.
-   *
-   * This NEVER commits. The commit button is the only writer, per the editor
-   * ruling: nothing reaches the repository or the database except through the
-   * atomic save path. This is a crash net for the browser, nothing more.
+   * The crash net. This NEVER commits: the save path is the only writer, and
+   * this is a browser-local copy so a closed tab does not cost an afternoon.
    */
   const persist = useCallback(() => {
     const form = formRef.current;
     if (!form) return;
-    try {
-      window.localStorage.setItem(
-        storageKey,
-        JSON.stringify({ at: new Date().toISOString(), fields: readForm(form) }),
-      );
-      setAutosavedAt(new Date().toLocaleTimeString());
-    } catch {
-      // Private mode, quota, or storage disabled. The editor still works; it
-      // just has no crash net, and saying so is better than pretending.
-      setAutosavedAt(null);
-    }
+    setSavedAt(writeBuffer(storageKey, readForm(form)));
   }, [storageKey]);
 
-  // Restore on return. Only offered when the stored draft actually differs from
-  // what the server handed back, so a clean reload does not nag.
+  // Offer a recovery only when the buffer says something different from what
+  // the server just handed back. Restoring is never automatic: silently
+  // replacing committed content with older local text is exactly the surprise
+  // this is supposed to prevent.
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    let stored: { at: string; fields: Record<string, string> } | null = null;
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      stored = raw ? JSON.parse(raw) : null;
-    } catch {
-      stored = null;
-    }
+    const stored = readBuffer(storageKey);
     if (!stored) return;
-
-    const current = readForm(form);
-    const differs = Object.keys(stored.fields).some(
-      (key) => stored.fields[key] !== current[key],
-    );
-    if (!differs) {
-      // The draft matches what is committed, so there is nothing to recover.
-      window.localStorage.removeItem(storageKey);
+    if (!bufferDiffers(stored, readForm(form))) {
+      clearAllBuffersFor(fields.slug);
       return;
     }
+    setOffer(stored);
+  }, [storageKey, fields.slug]);
 
-    for (const [key, value] of Object.entries(stored.fields)) {
-      const field = form.elements.namedItem(key);
-      if (field instanceof HTMLInputElement && field.type === "checkbox") {
-        field.checked = value === "on";
-      } else if (
-        field instanceof HTMLInputElement ||
-        field instanceof HTMLTextAreaElement
-      ) {
-        field.value = value;
-      }
-    }
-    if (stored.fields.title !== undefined) setTitle(stored.fields.title);
-    if (stored.fields.slug !== undefined) setSlug(stored.fields.slug);
-    if (stored.fields.description !== undefined) {
-      setDescription(stored.fields.description);
-    }
-    if (stored.fields.body !== undefined) setBody(stored.fields.body);
-    // Mirrors the DOM loop above, which only touches the checkbox when the key
-    // is present. An unchecked box sends nothing, so absence is left alone
-    // rather than read as false.
-    if (stored.fields.draft !== undefined) setDraft(stored.fields.draft === "on");
-    setRestored(true);
-    setDirty(true);
-  }, [storageKey]);
+  // A save that landed makes every buffer for this post obsolete, including
+  // ones written against earlier heads that would otherwise sit there forever.
+  useEffect(() => {
+    if (!feedback || feedback.state === "failed") return;
+    clearAllBuffersFor(fields.slug);
+    if (isNew) clearAllBuffersFor("");
+    setOffer(null);
+    setDirty(false);
+  }, [feedback, fields.slug, isNew]);
 
-  // Unsaved-changes guard. Only armed once something actually changed, so it
-  // never nags on a page the author only looked at.
   useEffect(() => {
     if (!dirty) return;
     const onLeave = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -148,243 +159,350 @@ export function PostEditor({
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
 
+  // Cmd+S / Ctrl+S. It clicks the primary button rather than submitting the
+  // form directly, because the button's own click handler is what arms the
+  // `draft` field for the transition it names. Submitting around it would send
+  // whatever the last press happened to leave behind.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
+      event.preventDefault();
+      primaryRef.current?.querySelector<HTMLButtonElement>("button.btn")?.click();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const touched = () => {
+    setDirty(true);
+    window.clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = window.setTimeout(persist, AUTOSAVE_DELAY_MS);
+  };
+
+  const restore = () => {
+    const form = formRef.current;
+    if (!form || !offer) return;
+    const f = offer.fields;
+    if (f.title !== undefined) setTitle(f.title);
+    if (f.slug !== undefined) setSlug(f.slug);
+    if (f.description !== undefined) setDescription(f.description);
+    if (f.tags !== undefined) setTags(f.tags.split(",").map((t) => t.trim()).filter(Boolean));
+    if (f.coverSrc !== undefined) setCoverSrc(f.coverSrc);
+    if (f.coverAlt !== undefined) setCoverAlt(f.coverAlt);
+    if (f.publishAt !== undefined) setPublishAt(f.publishAt);
+    if (f.body !== undefined) setBody(f.body);
+    const date = form.elements.namedItem("date");
+    if (f.date !== undefined && date instanceof HTMLInputElement) date.value = f.date;
+    setOffer(null);
+    setDirty(true);
+  };
+
   const slugValid = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+  const slugTaken = isNew && slug !== "" && existingSlugs.includes(slug);
+  const slugProblem = slug === "" ? null : !slugValid ? "lowercase kebab-case only" : slugTaken ? "already taken" : null;
+  const shortHead = headSha ? headSha.slice(0, 7) : "";
 
   return (
-    <div className="editor">
+    <div className="editor-shell">
       <Form
+        id={FORM_ID}
         method="post"
         className="editor-form"
         ref={formRef}
-        onChange={() => {
-          setDirty(true);
-          window.clearTimeout(autosaveTimer.current);
-          autosaveTimer.current = window.setTimeout(persist, AUTOSAVE_DELAY_MS);
-        }}
+        onChange={touched}
         onSubmit={() => setDirty(false)}
       >
         <input type="hidden" name="headSha" value={headSha} />
         <input type="hidden" name="isNew" value={isNew ? "1" : "0"} />
         {/*
-          Server-owned, not editable, and carried through only so a browser save
-          PRESERVES it. serializePost writes exactly the keys it is handed, so a
-          value this form did not carry would be dropped on the next edit and a
-          published post would read as never published. Forging it here achieves
-          nothing: the save path overwrites it with the value from the committed
-          file before rendering. See app/lib/editor/publish-policy.ts.
+          Server-owned, carried through only so a browser save PRESERVES it.
+          serializePost writes exactly the keys it is handed, so a value this
+          form did not carry would be dropped on the next edit and a published
+          post would read as never published. Forging it achieves nothing: the
+          save path overwrites it from the committed file.
         */}
         <input type="hidden" name="firstPublished" value={fields.firstPublished} />
-
         {/*
-          A precondition, not the outcome of a save, and it is deliberately
-          UNTINTED: binding rule 4 allows one semantic tint per view, and the
-          feedback slot below is where that tint is spent. Two tinted banners
-          stacked here would break the rule at exactly the moment a message
-          matters most.
+          The draft flag, and the whole of what replaced the checkbox.
+
+          Rendered ENABLED when the post is currently a draft and DISABLED when
+          it is not, which reproduces a checkbox exactly: `draft=on` present, or
+          the key absent altogether. Each transition button flips
+          `.disabled` in its own onClick, before the submit, through a ref. It
+          is deliberately not driven by React state, because a state update
+          would not have applied by the time the form serialises.
         */}
-        {!headSha ? (
-          <div className="editor-notice" role="alert">
-            <strong>Saving unavailable</strong>
-            <p>
-              GITHUB_TOKEN is not configured on this Worker, so a save cannot
-              commit. Preview still works.
-            </p>
+        <input
+          ref={draftFieldRef}
+          type="hidden"
+          name="draft"
+          value="on"
+          // `disabled` has to be a real prop, not something set in an effect,
+          // or the server-rendered markup would claim a draft flag the post
+          // does not have. React only writes a DOM attribute when the prop
+          // CHANGES between renders, and this one is derived from server state,
+          // so the imperative flips in PublishActions survive every re-render
+          // that typing causes. If it ever does change, that is the server
+          // saying so, and being overwritten is correct.
+          disabled={!fields.draft}
+        />
+
+        {/* ---- Region 1: the command bar ---------------------------------- */}
+        <header className="editor-bar">
+          <div className="editor-bar-left">
+            <Link to="/admin/posts" className="editor-back">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Posts
+            </Link>
+            <span className="editor-identity">
+              <span className="editor-identity-title">{title || "Untitled"}</span>
+              <span className="status-pill" data-state={state}>
+                {state}
+              </span>
+            </span>
           </div>
-        ) : null}
 
-        {/*
-          THE FEEDBACK SLOT. One slot, four states, and it is always in the DOM
-          even when empty: a live region has to exist BEFORE its content changes
-          for a screen reader to announce it, and a node mounted alongside its
-          own message announces nothing.
+          <div className="editor-bar-right">
+            {/*
+              Dirty state as a first-class element rather than a line of prose
+              at the bottom of a form. It is the one thing the author checks
+              before closing the tab.
+            */}
+            <span className={dirty ? "editor-dirty is-dirty" : "editor-dirty"}>
+              <span className="editor-dirty-dot" aria-hidden="true" />
+              {dirty
+                ? savedAt
+                  ? "Unsaved changes, kept locally"
+                  : "Unsaved changes"
+                : feedback && feedback.state !== "failed"
+                  ? `Saved ${feedback.sha}`
+                  : shortHead
+                    ? `Up to date at ${shortHead}`
+                    : "Saving unavailable"}
+            </span>
 
-          Polite rather than assertive on purpose. Every message here follows a
-          submit the author just made, and none of them vanishes, so there is
-          nothing to interrupt for.
-        */}
-        <div className="editor-feedback-slot" role="status" aria-live="polite">
-          {feedback ? <FeedbackMessage feedback={feedback} /> : null}
-        </div>
+            <button
+              type="button"
+              className="btn-ghost"
+              aria-expanded={drawerOpen}
+              aria-haspopup="dialog"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.3.38.55.67.7H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              Settings
+            </button>
 
-        <div className="editor-grid">
-          <label className="field">
-            <span className="field-label">
-              Title
+            {/* Preview stays exactly as it was. The exact-render preview route
+                is the next session's work; removing the control now would drop
+                an intent the server still serves. */}
+            <button
+              type="submit"
+              name="intent"
+              value="preview"
+              className="btn-ghost"
+              disabled={busy}
+            >
+              Preview
+            </button>
+
+            <div ref={primaryRef} className="editor-primary">
+              <PublishActions
+                state={state}
+                everPublished={everPublished}
+                draftFieldRef={draftFieldRef}
+                publishAt={publishAt}
+                onPublishAtChange={(value) => {
+                  setPublishAt(value);
+                  setDirty(true);
+                }}
+                busy={busy}
+                disabled={!headSha}
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* ---- Region 2: the canvas --------------------------------------- */}
+        <div className="editor-canvas">
+          <div className="editor-page">
+            {!headSha ? (
+              <div className="editor-notice" role="alert">
+                <strong>Saving unavailable</strong>
+                <p>
+                  GITHUB_TOKEN is not configured on this Worker, so a save cannot
+                  commit. Preview still works.
+                </p>
+              </div>
+            ) : null}
+
+            {/*
+              THE FEEDBACK SLOT, unchanged in every guarantee it carried: always
+              in the DOM so the live region exists before its content does,
+              polite because every message follows a submit the author just
+              made, and persistent until the next action.
+            */}
+            <div className="editor-feedback-slot" role="status" aria-live="polite">
+              {feedback ? <FeedbackMessage feedback={feedback} /> : null}
+            </div>
+
+            {offer ? (
+              <RestoreOffer
+                buffer={offer}
+                onRestore={restore}
+                onDiscard={() => {
+                  clearAllBuffersFor(fields.slug);
+                  setOffer(null);
+                }}
+              />
+            ) : null}
+
+            <div className="editor-title-row">
+              <label className="sr-only" htmlFor="field-title">
+                Title
+              </label>
+              <input
+                id="field-title"
+                name="title"
+                className="editor-title"
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  if (isNew && !slugPinned) setSlug(slugify(event.target.value));
+                }}
+                placeholder="Untitled"
+                required
+                autoComplete="off"
+              />
               <span className={title.length > TITLE_LIMIT ? "count over" : "count"}>
                 {title.length}/{TITLE_LIMIT}
               </span>
-            </span>
-            <input
-              name="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              autoComplete="off"
-            />
-          </label>
+            </div>
 
-          <label className="field">
-            <span className="field-label">
-              Slug
-              {slug && !slugValid ? (
-                <span className="count over">lowercase kebab-case only</span>
-              ) : null}
-            </span>
-            <input
-              name="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              readOnly={!isNew}
-              required
-              aria-invalid={slug !== "" && !slugValid}
-              autoComplete="off"
-            />
-            {!isNew ? (
-              <span className="field-hint muted">
-                The slug is the public URL and the filename, so it is fixed after
-                the first save.
-              </span>
+            {isNew ? (
+              <div className="editor-slug-row">
+                <label className="field-label" htmlFor="field-slug">
+                  Slug
+                  {slugProblem ? <span className="count over">{slugProblem}</span> : null}
+                </label>
+                <div className="editor-slug-input">
+                  <span className="muted">/blog/</span>
+                  <input
+                    id="field-slug"
+                    name="slug"
+                    value={slug}
+                    onChange={(event) => {
+                      setSlugPinned(true);
+                      setSlug(event.target.value);
+                    }}
+                    required
+                    aria-invalid={slugProblem !== null}
+                    aria-describedby={slugProblem ? "slug-problem" : undefined}
+                    autoComplete="off"
+                  />
+                </div>
+                {slugProblem ? (
+                  <p className="field-alarm" id="slug-problem">
+                    {slugTaken
+                      ? `A post already lives at /blog/${slug}. Saving would be refused.`
+                      : "Lowercase letters, digits and single hyphens."}
+                  </p>
+                ) : null}
+                <span className="field-hint muted">
+                  Derived from the title until you change it. Fixed after the
+                  first save, because it is the filename and the public URL.
+                </span>
+              </div>
             ) : null}
-          </label>
-        </div>
 
-        <label className="field">
-          <span className="field-label">
-            Description
-            <span
-              className={
-                description.length > DESCRIPTION_LIMIT ? "count over" : "count"
-              }
-            >
-              {description.length}/{DESCRIPTION_LIMIT}
-            </span>
-          </span>
-          <input
-            name="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            autoComplete="off"
-          />
-        </label>
-
-        <div className="editor-grid">
-          <label className="field">
-            <span className="field-label">Date</span>
-            <input name="date" type="date" defaultValue={fields.date} required />
-          </label>
-
-          <label className="field">
-            <span className="field-label">Publish at (optional)</span>
-            <input
-              name="publishAt"
-              defaultValue={fields.publishAt}
-              placeholder="2026-08-01T09:00:00Z"
-              autoComplete="off"
+            <label className="sr-only" htmlFor="field-body">
+              Body, markdown
+            </label>
+            <textarea
+              id="field-body"
+              ref={bodyRef}
+              name="body"
+              className="editor-body"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              spellCheck
+              required
             />
-          </label>
+          </div>
         </div>
 
-        <label className="field">
-          <span className="field-label">Tags</span>
-          <input
-            name="tags"
-            defaultValue={fields.tags.join(", ")}
-            placeholder="cloudflare, d1"
-            autoComplete="off"
-          />
-        </label>
-
-        <div className="editor-grid">
-          <label className="field">
-            <span className="field-label">Cover image (optional)</span>
-            <input
-              name="coverSrc"
-              defaultValue={fields.coverSrc}
-              placeholder="/media/2026/cover.webp"
-              autoComplete="off"
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Cover alt (required with a cover)</span>
-            <input
-              name="coverAlt"
-              defaultValue={fields.coverAlt}
-              autoComplete="off"
-            />
-          </label>
-        </div>
-
-        {/*
-          The chip states the CONSEQUENCE of the checkbox in the site's own
-          vocabulary, because "draft is unticked" and "this post is live" are
-          the same fact only to someone who already knows the mapping. On load
-          it is the committed state, since the loader reads the committed file;
-          while editing it tracks the box, and the autosave line beside it is
-          what says the change is not saved yet.
-
-          Bordered rather than tinted, so it is not a second tinted surface
-          beside the feedback slot (rule 4), and it names the state in words
-          next to the hue (rule 1). Same chip the post list uses.
-        */}
-        <div className="field field-draft">
-          <label className="field-draft-control">
-            <input
-              type="checkbox"
-              name="draft"
-              checked={draft}
-              onChange={(e) => setDraft(e.target.checked)}
-            />
-            <span>Draft. Hidden from the blog, the feed and the sitemap.</span>
-          </label>
-          <span className={draft ? "chip" : "chip chip-live"}>
-            {draft ? "Draft" : "Live"}
-          </span>
-        </div>
-
-        <label className="field">
-          <span className="field-label">Body (markdown)</span>
-          <textarea
-            ref={bodyRef}
-            name="body"
-            className="editor-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={24}
-            spellCheck
-            required
-          />
-        </label>
-
-        <p className="editor-autosave" role="status">
-          {restored
-            ? "Restored an unsaved local draft. Save to commit it."
-            : dirty
-              ? autosavedAt
-                ? `Unsaved changes. Draft kept locally at ${autosavedAt}.`
-                : "Unsaved changes. Local draft unavailable in this browser."
-              : "No unsaved changes."}
-        </p>
-
-        <div className="editor-actions">
-          <button type="submit" name="intent" value="save" className="btn" disabled={busy}>
-            {busy ? "Saving" : isNew ? "Create post" : "Save post"}
-          </button>
-          <button
-            type="submit"
-            name="intent"
-            value="preview"
-            className="btn-ghost"
-            disabled={busy}
-          >
-            Preview
-          </button>
-          <Link to="/admin/posts" className="btn-ghost">
-            Back to posts
-          </Link>
-        </div>
+        {/* ---- Region 3: the settings drawer ------------------------------ */}
+        <SettingsDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          formId={FORM_ID}
+          slug={slug}
+          isNew={isNew}
+          description={description}
+          onDescriptionChange={(value) => {
+            setDescription(value);
+            setDirty(true);
+          }}
+          tags={tags}
+          onTagsChange={(value) => {
+            setTags(value);
+            setDirty(true);
+          }}
+          tagOptions={tagOptions}
+          coverSrc={coverSrc}
+          onCoverSrcChange={(value) => {
+            setCoverSrc(value);
+            setDirty(true);
+          }}
+          coverAlt={coverAlt}
+          onCoverAltChange={(value) => {
+            setCoverAlt(value);
+            setDirty(true);
+          }}
+          date={fields.date}
+          publishAt={publishAt}
+          onPublishAtChange={(value) => {
+            setPublishAt(value);
+            setDirty(true);
+          }}
+          historySlot={historySlot}
+          dangerSlot={dangerSlot}
+        />
       </Form>
 
+      {/*
+        Kept as it was, deliberately. Drag-drop, paste-from-clipboard and the
+        :::figure scaffold are the next session's work, and dropping the one
+        working image path in the meantime would leave the editor unable to
+        insert a picture at all for a session. It sits OUTSIDE the editing form
+        and contributes nothing to the payload: the file input and the alt input
+        carry no `name`, and the button is type="button". It uploads through its
+        own fetch to /admin/media, which is unchanged.
+      */}
       <ImageUploader
         onInsert={(snippet) => {
           const el = bodyRef.current;
@@ -398,12 +516,61 @@ export function PostEditor({
       {previewHtml !== undefined && previewHtml !== null ? (
         <section className="editor-preview" aria-label="Preview">
           <h2>Preview</h2>
-          <div
-            className="prose"
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
+          <div className="prose" dangerouslySetInnerHTML={{ __html: previewHtml }} />
         </section>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The recovery banner.
+ *
+ * Both ways out are explicit and neither is the default. An automatic restore
+ * would overwrite committed content with older local text; an automatic discard
+ * would throw away the thing this exists to save.
+ */
+function RestoreOffer({
+  buffer,
+  onRestore,
+  onDiscard,
+}: {
+  buffer: DraftBuffer;
+  onRestore: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <div className="editor-feedback" data-tone="warning">
+      <svg
+        className="editor-feedback-glyph"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 12a9 9 0 1 0 3-6.7" />
+        <path d="M3 4v5h5" />
+      </svg>
+      <div>
+        <strong>Unsaved local changes from an earlier session.</strong>
+        <p>
+          Kept in this browser at {new Date(buffer.at).toLocaleString()}. They
+          were never committed.
+        </p>
+        <p className="editor-restore-actions">
+          <button type="button" className="row-action" onClick={onRestore}>
+            Restore them
+          </button>
+          <button type="button" className="row-action" onClick={onDiscard}>
+            Discard them
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
@@ -415,9 +582,6 @@ export function PostEditor({
  * claim checkable: the author can look the save up in `git log` rather than
  * take the page's word for it. A published state carries the public URL as a
  * real link, so "it is live" can be confirmed in one click instead of trusted.
- *
- * Tones are semantic tokens, one family per state, and the icon is the second
- * channel rule 1 requires: the message must survive being read in greyscale.
  */
 function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
   if (feedback.state === "failed") {
@@ -434,9 +598,6 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
 
   if (feedback.state === "published-first") {
     return (
-      // The ceremony state. First publication is the one act the system
-      // reserves to the human, so it is the one message that does not look like
-      // every other save.
       <div className="editor-feedback" data-tone="success" data-ceremony="">
         <Glyph tone="published" />
         <div>
@@ -475,8 +636,6 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
 
   if (feedback.state === "unpublished") {
     return (
-      // Warning, not danger: nothing failed. Something the public could read a
-      // moment ago is gone, which is worth a colour of its own.
       <div className="editor-feedback" data-tone="warning">
         <Glyph tone="warning" />
         <div>
@@ -508,14 +667,11 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
 function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" }) {
   const shape =
     tone === "published" ? (
-      // A globe: this reached the public, which is what separates it from a
-      // save that only reached the repository.
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="M3 12h18M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
       </>
     ) : tone === "warning" ? (
-      // A struck-through circle: withdrawn.
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="M6 18 18 6" />
@@ -553,36 +709,37 @@ function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" 
 /**
  * Uploads an image to R2 and hands back a markdown snippet.
  *
- * Alt text is required at insert time rather than left for later, because an
- * image inserted without it is the one that ships without it.
+ * Unchanged from the checkbox era. Alt text is required at insert time rather
+ * than left for later, because an image inserted without it is the one that
+ * ships without it.
  */
 function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
   const [alt, setAlt] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function upload() {
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setStatus("Choose an image first.");
+      setMessage("Choose an image first.");
       return;
     }
     if (!alt.trim()) {
-      setStatus("Alt text is required before an image can be inserted.");
+      setMessage("Alt text is required before an image can be inserted.");
       return;
     }
-    setStatus("Uploading");
+    setMessage("Uploading");
 
     const form = new FormData();
     form.set("file", file);
     const response = await fetch("/admin/media", { method: "POST", body: form });
     if (!response.ok) {
-      setStatus(`Upload failed (${response.status}).`);
+      setMessage(`Upload failed (${response.status}).`);
       return;
     }
     const { url } = (await response.json()) as { url: string };
     onInsert(`\n![${alt.trim()}](${url})\n`);
-    setStatus(`Inserted ${url}`);
+    setMessage(`Inserted ${url}`);
     setAlt("");
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -594,7 +751,7 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
         <input ref={fileRef} type="file" accept="image/*" aria-label="Image file" />
         <input
           value={alt}
-          onChange={(e) => setAlt(e.target.value)}
+          onChange={(event) => setAlt(event.target.value)}
           placeholder="Alt text (required)"
           aria-label="Alt text"
         />
@@ -602,7 +759,7 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
           Upload and insert
         </button>
       </div>
-      {status ? <p className="muted">{status}</p> : null}
+      {message ? <p className="muted">{message}</p> : null}
     </section>
   );
 }
