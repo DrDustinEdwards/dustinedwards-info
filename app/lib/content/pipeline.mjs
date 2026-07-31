@@ -36,6 +36,7 @@ import { visit } from "unist-util-visit";
 import { z } from "zod";
 
 import { buildChartModel, renderChartHast } from "./chart.mjs";
+import { buildDiagramModel, renderDiagramHast } from "./diagram.mjs";
 
 import bash from "shiki/langs/bash.mjs";
 import css from "shiki/langs/css.mjs";
@@ -489,8 +490,8 @@ function remarkFigure(file) {
  * shipped with its contrast ratios wrapped in code spans to dodge this.
  *
  * Nothing legitimate is lost. A directive is an authoring construct and every
- * one this pipeline defines is a word (`figure`, `chart`), so a name that starts
- * with a digit is always prose that got captured.
+ * one this pipeline defines is a word (`figure`, `chart`, `diagram`), so a name
+ * that starts with a digit is always prose that got captured.
  *
  * Reconstructed by slicing the ORIGINAL SOURCE at the node's offsets rather than
  * rebuilding `:` + name, so a directive that also carried a label or attributes
@@ -521,7 +522,7 @@ function remarkNumericTextDirectives(source) {
 /**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "figure"];
+export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure"];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -631,6 +632,82 @@ function rehypeChart(models) {
 }
 
 /**
+ * Validates `:::diagram` and hands the model to the rehype half.
+ *
+ * Split across the two phases for the same reason `:::chart` is: validation
+ * belongs in remark so a bad diagram fails the build naming the post, while the
+ * caption is author-written markdown that only becomes hast after remark-rehype
+ * has run.
+ *
+ * @param {string} file
+ * @param {any[]} sink models, indexed by the marker written onto the node
+ */
+function remarkDiagram(file, sink) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, (/** @type {any} */ node) => {
+      if (node.type !== "containerDirective" || node.name !== "diagram") return;
+
+      const children = node.children ?? [];
+      const sourceNodes = children.filter((/** @type {any} */ c) => c.type === "code");
+      if (sourceNodes.length !== 1) {
+        throw new ContentError(
+          file,
+          `:::diagram requires exactly one fenced code block of mermaid source, found ${sourceNodes.length}`,
+        );
+      }
+      // The fence language is checked rather than ignored. An author who writes
+      // ```js inside a diagram has made a mistake worth naming, and the fence is
+      // also what makes the source render as mermaid in the .md twin, on GitHub
+      // and anywhere else that reads the markdown instead of the page.
+      const lang = sourceNodes[0].lang ?? "";
+      if (lang !== "mermaid") {
+        throw new ContentError(
+          file,
+          `:::diagram source must be a \`\`\`mermaid fenced block, found \`\`\`${lang || "(none)"}`,
+        );
+      }
+
+      /** @type {any} */
+      let model;
+      try {
+        model = buildDiagramModel(node.attributes ?? {}, sourceNodes[0].value);
+      } catch (error) {
+        throw new ContentError(
+          file,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
+      const index = sink.push(model) - 1;
+      node.data = {
+        ...node.data,
+        hName: "figure",
+        hProperties: { className: ["diagram-figure"], "data-diagram": String(index) },
+      };
+      // Everything that is not the source block is the caption.
+      node.children = children.filter((/** @type {any} */ c) => c.type !== "code");
+    });
+  };
+}
+
+/**
+ * Replaces each marked figure's children with the diagram's asset references.
+ *
+ * @param {any[]} models
+ */
+function rehypeDiagram(models) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, "element", (/** @type {any} */ node) => {
+      const marker = node.properties?.["data-diagram"];
+      if (marker === undefined) return;
+      const model = models[Number(marker)];
+      delete node.properties["data-diagram"];
+      node.children = renderDiagramHast(model, node.children ?? []);
+    });
+  };
+}
+
+/**
  * Writes intrinsic width and height onto every img, plus lazy-loading hints.
  *
  * @param {string} file
@@ -641,6 +718,13 @@ function rehypeImageDimensions(file, resolveImage, pending) {
   return (/** @type {any} */ tree) => {
     visit(tree, "element", (/** @type {any} */ node) => {
       if (node.tagName !== "img") return;
+      // A diagram's asset is rendered by a LATER build step and legitimately may
+      // not exist yet, so measuring it here would make the artifact depend on the
+      // filesystem and would fail the build on a diagram that has simply not been
+      // rendered. The pair is sized by CSS instead. Checked by class rather than
+      // by plugin order, so moving this plugin cannot silently re-enable it.
+      const classes = node.properties?.className ?? [];
+      if (Array.isArray(classes) && classes.includes("diagram-image")) return;
       const src = String(node.properties?.src ?? "");
       pending.push(
         resolveImage(src).then(({ width, height }) => {
@@ -695,6 +779,8 @@ export async function renderBody({ file, body, resolveImage }) {
   const pending = [];
   /** @type {any[]} */
   const charts = [];
+  /** @type {any[]} */
+  const diagrams = [];
 
   const highlighter = await getHighlighter();
 
@@ -710,8 +796,10 @@ export async function renderBody({ file, body, resolveImage }) {
     .use(remarkUnknownDirectives, file)
     .use(remarkFigure, file)
     .use(remarkChart, file, charts)
+    .use(remarkDiagram, file, diagrams)
     .use(remarkRehype)
     .use(rehypeChart, charts)
+    .use(rehypeDiagram, diagrams)
     .use(rehypeSlug)
     .use(rehypeCollectToc, toc)
     .use(rehypeAutolinkHeadings, {
@@ -754,7 +842,15 @@ export async function renderBody({ file, body, resolveImage }) {
   const transformed = await processor.run(tree);
   await Promise.all(pending);
 
-  return { html: processor.stringify(transformed), toc };
+  return {
+    html: processor.stringify(transformed),
+    toc,
+    // The keys and sources every diagram in this post resolved to. `build:diagrams`
+    // reads them off the artifact rather than parsing markdown a second time, on
+    // the same principle as `withRelated` and `records.mjs`: anything two callers
+    // need is computed once, by the module both of them already import.
+    diagrams: diagrams.map((/** @type {any} */ d) => ({ key: d.key, source: d.source })),
+  };
 }
 
 /**
@@ -784,7 +880,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     );
   }
 
-  const { html, toc } = await renderBody({
+  const { html, toc, diagrams } = await renderBody({
     file,
     body: parsed.content,
     resolveImage,
@@ -816,6 +912,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     updated: fm.updated ?? null,
     readingTimeMinutes: readingTimeMinutes(parsed.content),
     toc,
+    diagrams,
     markdown: parsed.content,
     html,
     sourcePath: `content/posts/${fm.slug}.md`,

@@ -1,9 +1,20 @@
 ---
 name: charts
-description: How to author a chart on dustinedwards.info. Use whenever adding, editing or reviewing a chart, graph, plot or data figure in a blog post, or when a post needs to show measured numbers. Covers the :::chart directive, its CSV shape, the mandatory alt rule, the palette-token rule, and the gates that enforce them.
+description: How to author a chart or a diagram on dustinedwards.info. Use whenever adding, editing or reviewing a chart, graph, plot, data figure, flowchart, sequence diagram or architecture drawing in a blog post, or when a post needs to show measured numbers or a structure. Covers the :::chart and :::diagram directives, the CSV and mermaid shapes, the mandatory alt rule, the palette-token rule, and the gates that enforce them.
 ---
 
-# Charts on dustinedwards.info
+# Charts and diagrams on dustinedwards.info
+
+Two directives, two different mechanisms, and the difference is worth knowing
+before you pick one.
+
+`:::chart` draws MEASUREMENTS from inline CSV, and its SVG lands inline in the
+gated artifact. `:::diagram` draws a STRUCTURE from mermaid source, and its SVG
+is a build-time asset the artifact only points at. Neither can do the other's
+job: `:::chart` cannot draw a flowchart, and `:::diagram` must not be used to
+plot numbers.
+
+# Charts
 
 Charts are CONTENT, not a widget. Observable Plot renders them to static SVG at
 build time and the SVG lands inline in `content/generated/posts.json`, so a chart
@@ -133,10 +144,97 @@ If you bump `@observablehq/plot` or `linkedom` (pinned to exact versions,
 deliberately), rerun `check:charts`: determinism and Node-versus-workerd byte
 parity are properties of those versions and nothing else proves them.
 
-## Not charts
+# Diagrams
 
-Diagrams (flowcharts, architecture) are a SEPARATE and currently UNBUILT ruling.
-No diagram tool passes the both-writers rule, because diagram layout needs real
-font metrics while Plot computes layout from data. When built they will be
-Mermaid rendered to build-time assets, not inline in the artifact. Do not try to
-draw a diagram with `:::chart`.
+Built 2026-07-30. A diagram is a picture of a STRUCTURE: a flow, a sequence, a
+layering. It is mermaid source in the markdown, rendered to a pair of static SVG
+assets at build time.
+
+**The one structural difference from charts, and everything follows from it:**
+the SVG is NOT in the artifact. Diagram layout needs real font metrics, so
+mermaid needs a real browser engine, which a Worker does not have. The assets
+live in `public/diagrams/` under a key that is a hash of the source, and the
+artifact carries the key. Same pattern as the social cards, and the same gap: **a
+new or edited diagram has no picture until someone runs `build:diagrams`.**
+
+## Syntax
+
+A container directive whose body is exactly one fenced `mermaid` block,
+optionally followed by caption markdown.
+
+    :::diagram{title="..." alt="..."}
+    ```mermaid
+    flowchart TB
+      a[One box] --> b[Another box]
+    ```
+    An optional caption, rendered as markdown.
+    :::
+
+| Attribute | Required | Meaning |
+|---|---|---|
+| `alt` | **yes** | Prose describing the structure, including what it shows. |
+| `title` | no | Rendered above the diagram. Not a heading, so it stays out of the TOC. |
+
+The fence language must be `mermaid`. That is checked, and not only for typos:
+the fence is what makes the source render as a diagram in the `.md` twin, on
+GitHub, and anywhere else reading the markdown instead of the page.
+
+## The rules that fail the build
+
+1. **`alt` is mandatory**, as on `:::chart` and `:::figure`. For a diagram the
+   alt IS the structure: name the boxes and the arrows. "Flowchart of the save
+   path" is a failure. The worked example below is the standard.
+2. **You never choose a colour, and there is no colour vocabulary.** Every
+   colour comes from the ratified tokens, mapped once in
+   `app/lib/content/diagram.mjs` and resolved from `app.css` at build time.
+   A diagram says what it means with SHAPE and LABEL: a refusal is an edge
+   labelled `403`, not a red arrow. A colour mermaid derives rather than takes
+   from the palette fails `build:diagrams` naming the rule that carried it.
+3. **Keep it narrow.** The prose column is 44rem. A drawing wider than about
+   700px is scaled down and takes its type with it, so a default
+   five-participant sequence diagram lands 16px text at an effective 9px. Prefer
+   `flowchart TB` over `LR`, keep message labels short, and drop a participant
+   before you accept a wide drawing. `build:diagrams` prints each asset's size.
+4. **Unknown directives fail closed**, and `diagram` is a known one. If you add
+   another, it goes in `KNOWN_DIRECTIVES` in the same commit.
+
+## Worked example
+
+    :::diagram{title="Two credentials, two questions, two different failures" alt="A sequence diagram with four participants: the AI client, the MCP server, the identity provider, and the publish API. The client calls a tool and the MCP server answers with an authorization challenge. The client completes an OAuth walk at the identity provider, which returns an identity restricted to the site owner, and calls the tool again carrying it. A note records that this leg answers who is operating and that its failure is a 401. The MCP server then makes the same bearer-authenticated request a script would make to the publish API, and a second note records that this leg answers what operators may do and that its failure is a 403 naming the policy."}
+    ```mermaid
+    sequenceDiagram
+      participant C as AI client
+      participant M as MCP server
+      participant API as Publish API
+      C->>M: call a tool
+      M->>M: verify per request
+      Note over C,M: who is operating? 401
+      M->>API: the request a script would make
+      Note over M,API: what may operators do? 403
+    ```
+    The MCP server holds no policy.
+    :::
+
+Note what the alt does: it walks the diagram in reading order and states the
+finding, because for a reader who cannot see it, that prose is the diagram.
+
+## After adding or editing a diagram
+
+    npm run build:content     # the key changes with the source
+    npm run build:diagrams    # renders anything whose key has no asset yet
+    npm run check:content     # the artifact matches its source
+    npm run check:diagrams    # the assets exist, and every colour is a token
+
+Commit the markdown, the artifact and the assets TOGETHER. `build:diagrams` is
+idempotent (an unchanged diagram is skipped) and prunes assets the corpus no
+longer references, so a re-render is only paid for by what actually changed.
+
+**Editing through the admin editor or the operator API is fine and needs no
+special care**, because the reference is derived from the source rather than
+stored: an unchanged diagram computes the same key on every writer. But a NEW or
+CHANGED diagram saved that way has no asset until `build:diagrams` runs from a
+clone, exactly like a retitled post has no social card. `check:diagrams` is what
+tells you, and it is red on purpose in that window.
+
+Do not hand-edit an SVG in `public/diagrams/`. `check:diagrams` audits every
+colour in every committed asset and exists to catch precisely that.

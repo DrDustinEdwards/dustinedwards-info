@@ -1432,6 +1432,64 @@ a:hover {
   margin: 0.75rem 0 0;
 }
 
+/*
+ * Diagrams.
+ *
+ * A diagram is a build-time asset referenced by <img>, not inline SVG, because
+ * mermaid needs real font metrics and therefore a real browser engine, which a
+ * Worker does not have. Ruling: Capsid `dustinedwards/chart-stack.md`.
+ *
+ * That is also why there are TWO images. An SVG loaded through <img> is an
+ * independent document, so the page's custom properties never reach it and the
+ * one-asset-serves-both-themes trick that charts use is unavailable. Each theme
+ * gets its own render, and these rules pick one.
+ *
+ * `display: none` rather than opacity or visibility, deliberately: it is the
+ * only one of the three that also removes the hidden image from the
+ * accessibility tree, which is what lets both carry the same alt without a
+ * screen reader announcing the diagram twice.
+ *
+ * The three selectors below are the site's theme resolution, unchanged: light by
+ * default, dark when the attribute is absent under a dark OS preference, dark
+ * when chosen. Because the server writes the attribute into the first byte of
+ * HTML, the right image is the displayed one before anything paints.
+ */
+.diagram-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .diagram-light {
+    display: none;
+  }
+
+  :root:not([data-theme]) .diagram-dark {
+    display: block;
+  }
+}
+
+[data-theme="dark"] .diagram-light {
+  display: none;
+}
+
+[data-theme="dark"] .diagram-dark {
+  display: block;
+}
+
+.diagram-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
 .prose table {
   width: 100%;
   margin: 1.5rem 0;
