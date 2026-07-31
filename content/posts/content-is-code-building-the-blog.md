@@ -30,7 +30,19 @@ The pipeline itself is conventional unified-ecosystem tooling: remark with GitHu
 
 The architectural rule that matters is that exactly one renderer module exists, imported by both the build scripts (Node) and the Worker (the editor's preview and save path). The reason is the gate in step 3: it compares bytes, and if two renderers exist, a mismatch is ambiguous between drift and implementation difference, which makes the gate useless. One renderer makes every byte difference meaningful.
 
-The rule has a measurable price, and you should measure yours before accepting it. Bundling full Shiki into the Worker produced a 14 MB output, because Shiki includes every grammar. Restricting to `shiki/core` with an explicit nine-language allowlist brought the highlighter to roughly 615 KB gzipped and the Worker from 1.49 MB to 3.55 MB. A language outside the allowlist renders as plain unhighlighted code, identically everywhere, which is the correct degradation. Record the bundle cost in your decision log with the alternative you rejected, because a future maintainer will otherwise be tempted to split the renderer to save megabytes, and the megabytes are cheaper than a blind gate.
+The rule has a measurable price, and you should measure yours before accepting it. Bundling full Shiki into the Worker produced a 14 MB output, because Shiki includes every grammar. Restricting to `shiki/core` with an explicit language allowlist brought the highlighter to roughly 615 KB gzipped and the Worker from 1.49 MB to 3.55 MB. A language outside the allowlist renders as plain unhighlighted code, identically everywhere, which is the correct degradation.
+
+:::chart{type="bar" x="configuration" y="worker_mb" title="Worker bundle size by highlighter configuration" alt="Bar chart of Worker bundle sizes in megabytes for three highlighter configurations: no server-side highlighter at 1.49 MB, shiki core with a language allowlist at 3.55 MB, and full Shiki with every grammar at 14 MB. The allowlist configuration is the accepted middle."}
+```csv
+configuration,worker_mb
+no highlighter,1.49
+shiki/core allowlist,3.55
+full Shiki,14.0
+```
+Measured Worker bundle size under each highlighter option. The allowlist was the accepted trade; both alternatives are recorded because a future maintainer will be tempted by each.
+:::
+
+Record the bundle cost in your decision log with the alternative you rejected, because a future maintainer will otherwise be tempted to split the renderer to save megabytes, and the megabytes are cheaper than a blind gate.
 
 ## Step 3: a byte-comparison gate, verified by breaking it
 
