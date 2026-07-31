@@ -3,7 +3,8 @@ title: "Observable Plot on Cloudflare Workers: Server-Side SVG Charts"
 slug: observable-plot-cloudflare-workers
 description: "How to render Observable Plot charts inside a Cloudflare Worker: the linkedom shim that works, the domino and Vega failures that don't, byte-identical output across Node and workerd, and accessible charts enforced by the build."
 date: 2026-07-31
-draft: true
+draft: false
+first_published: 2026-07-31
 tags: [cloudflare, workers, data-visualization, observable-plot, accessibility]
 ---
 
