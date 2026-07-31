@@ -423,6 +423,10 @@ export function renderChartHast(model, captionChildren) {
     height: DEFAULT_HEIGHT,
     marginLeft: 56,
     marginBottom: 44,
+    // A faceted bar chart prints the facet's tick labels AND the facet axis
+    // label along the top, and they collide at the middle facet. The extra room
+    // lifts the axis label clear of the group names.
+    marginTop: model.type === "bar" && model.labels.length > 1 ? 44 : 20,
     marginRight: model.labels.length > 1 && model.type !== "bar" ? 96 : 24,
     style: { fontSize: "12px" },
     ...scalesFor(model),
