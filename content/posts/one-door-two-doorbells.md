@@ -30,6 +30,23 @@ Second, auditability. When rules exist exactly once, there is exactly one code p
 
 Third, stability layering. HTTP with bearer authentication has been stable for decades. MCP is young and moving: its 2026-07-28 specification revision, current as this publishes, is a breaking change, the largest since the protocol launched, removing the session handshake and reworking authorization, though it arrives with a formal deprecation lifecycle promising twelve-month windows in the future. None of that is a criticism; it is what healthy young protocols do. It is, however, a strong argument about ordering: volatile layers belong on top of durable ones. When this site's MCP layer needed rework to track the new revision, the rework touched translation only. The policy did not move, because the policy does not live there.
 
+:::diagram{title="Every kind of author enters through the same door" alt="A flow diagram with four callers on the left: an AI assistant, a script or CI job, the browser editor, and a scheduled task. The AI assistant goes first to an MCP server marked translation only, no policy. All four paths then converge on one box, the HTTP API, which holds authentication, authorization and rate limiting. From there a single path runs through the gates, which check schema, style and the first-publish policy, and on to one atomic git commit, which then fans out to the D1 rows and the search and answer indexes. The MCP server has no arrow of its own to the gates or the commit."}
+```mermaid
+flowchart TB
+  agent[AI assistant] --> mcp[MCP server<br>translation only]
+  mcp --> api
+  script[Script or CI job] --> api
+  editor[Browser editor] --> api
+  cron[Scheduled task] --> api
+  api[HTTP API<br>auth, authorization, limits] --> gates[Gates<br>schema, style, first publish]
+  gates --> commit[One atomic git commit]
+  commit --> d1[D1 rows]
+  commit --> idx[Search and answer index]
+```
+The MCP server is one more caller, not a second entrance. Delete it and the set
+of allowed operations is unchanged, which is the property the rule buys.
+:::
+
 ## The same layering on the read side: three presentations, one engine
 
 The publish path was not the first place this site used the pattern. [Its search engine](/blog/ai-answer-layer-ask-mode) ships at three levels: a plain URL anyone can construct, the same URL returning JSON under HTTP content negotiation, and an MCP endpoint an assistant can query conversationally. Three presentations, one engine. The removability of the top layer was verified by removal: with the MCP level off, the classic search response was byte-identical to before it existed. A presentation layer you can remove without touching behavior is a presentation layer wired correctly, and the test is cheap enough to run rather than assert.
