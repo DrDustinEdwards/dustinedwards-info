@@ -40,6 +40,29 @@ The library offers legacy-revision support as a configuration default, which wou
 
 The server authenticates twice, and keeping the two legs distinct in both code and documentation prevents a whole category of confused debugging. The client leg answers who is operating: an OAuth 2.1 flow, gated on the site owner's identity through an upstream identity provider, re-verified on requests rather than trusted from a session. The API leg answers what operators may do: the same bearer token any raw caller of the publishing API would present, which means the API neither knows nor cares that an MCP layer exists. An identity failure and a policy refusal are different events with different remedies, and conflating the credentials makes them indistinguishable in logs at exactly the moment you need them distinguished.
 
+:::diagram{title="Two credentials, two questions, two different failures" alt="A sequence diagram with four participants: the AI client, the MCP server, the identity provider, and the publish API. The client calls a tool and the MCP server answers with an authorization challenge. The client completes an OAuth walk at the identity provider, which returns an identity restricted to the site owner, and calls the tool again carrying it. The MCP server verifies that identity on the request rather than trusting a session, and a note across those two participants records that this leg answers who is operating and that its failure is a 401. The MCP server then makes the same bearer-authenticated request a script would make to the publish API, and a second note across those two records that this leg answers what operators may do and that its failure is a 403 naming the policy. The API answers either 200 or a refusal carrying its policy name, and the MCP server passes it back verbatim."}
+```mermaid
+sequenceDiagram
+  participant C as AI client
+  participant M as MCP server
+  participant I as Identity provider
+  participant API as Publish API
+  C->>M: call a tool
+  M-->>C: authorization challenge
+  C->>I: OAuth walk
+  I-->>C: identity, owner only
+  C->>M: call a tool, with identity
+  M->>M: verify per request
+  Note over C,M: who is operating? 401
+  M->>API: the request a script would make
+  Note over M,API: what may operators do? 403
+  API-->>M: 200, or refusal + policy name
+  M-->>C: verbatim
+```
+The MCP server holds no policy. It verifies identity, then makes the same
+request a script would make, and repeats whatever comes back word for word.
+:::
+
 Two tool-design practices from this layer that cost little and are usually skipped. Tool descriptions carry the policy: the save tool's own documentation states [the human-reserved first-publication rule](/blog/letting-an-agent-publish), tells the agent to check a post's publishability field before attempting, and says the refusal is correct behavior. The agent is constrained by documentation before its first call. And refusals pass through verbatim: the API writes good refusal messages, policy name attached, and the wrapper never summarizes or softens them, because a translation layer that paraphrases the lock misinforms the visitor.
 
 ## Step 5: verify end to end from the real client, then verify the layer adds nothing
