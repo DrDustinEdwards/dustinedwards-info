@@ -301,6 +301,16 @@ const MATRIX = [
   ["--text", "--bg", TEXT, "body text"],
   ["--text", "--surface", TEXT, "body on surface"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
+  // The settings drawer sits on the popover step and puts its own inputs on
+  // --surface inside it, so the drawer's field text is body-on-surface, and its
+  // borders are the strong ones per the Session 1 elevated-surface rule.
+  ["--text-heading", "--surface-popover", TEXT, "heading on popover"],
+  // No --text-disabled on --surface-popover row, for the same reason there is
+  // no --border one: it does not clear the floor there (2.71:1 light, 2.46:1
+  // dark) and nothing ships it. The only disabled-coloured text in the editor
+  // is the title placeholder, which sits on the canvas. If a placeholder ever
+  // lands inside the drawer it needs a token that survives the elevation, and
+  // this comment is the reason why rather than a puzzle to re-derive.
   ["--text", "--surface-code", TEXT, "body on code surface"],
   ["--text", "--surface-hero", TEXT, "body on hero surface"],
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
@@ -331,6 +341,8 @@ const MATRIX = [
   ["--brand", "--bg", TEXT, "brand text"],
   ["--brand", "--surface", TEXT, "brand on surface"],
   ["--brand", "--surface-popover", TEXT, "brand on popover"],
+  // The cover picker rings the chosen thumbnail in brand, on the drawer.
+  ["--brand", "--surface-popover", UI, "brand ring on popover"],
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
   ["--brand-hover", "--bg", TEXT, "brand hover text"],
   ["--brand-active", "--bg", TEXT, "brand active text"],
@@ -347,6 +359,8 @@ const MATRIX = [
   // Danger
   ["--text-danger", "--bg", TEXT, "danger text"],
   ["--text-danger", "--surface", TEXT, "danger text on surface"],
+  // Revert to draft, as a row in the overflow menu on the popover step.
+  ["--text-danger", "--surface-popover", TEXT, "danger text on popover"],
   ["--on-tint-danger", "--tint-danger", TEXT, "text on danger tint"],
   ["--border-danger", "--bg", UI, "danger border"],
   ["--on-fill-danger", "--fill-danger", TEXT, "text on danger fill"],
@@ -358,6 +372,10 @@ const MATRIX = [
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
   ["--border-warning", "--bg", UI, "warning border"],
   ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
+  // The dirty-state indicator in the command bar: amber text and an amber fill
+  // dot, both on the shell surface rather than on the page.
+  ["--text-warning", "--surface", TEXT, "dirty state on the command bar"],
+  ["--border-warning", "--surface", UI, "dirty dot ring on the command bar"],
   ["--brand", "--tint-warning", UI, "brand fill edge on warning tint"],
   ["--on-fill-warning", "--fill-warning", TEXT, "text on warning fill"],
 

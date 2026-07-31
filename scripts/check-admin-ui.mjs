@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { stateOf, transitionsFor } from "../app/lib/editor/publish-transition.mjs";
 import {
   bundleRoutes,
   importBundled,
@@ -253,6 +254,104 @@ const STATES = [
 /* ---------------------------------------------------------------------- */
 
 console.log("\ncheck:admin-ui\n");
+
+/* -------------------------------------------------------------------------
+ * Section 1: the publish state machine, as a table rather than as pixels.
+ *
+ * Rendering cannot see what a button does when it is clicked, so the mapping
+ * from post state to transition lives in a module and is asserted here, exactly
+ * as check:policy asserts publish-policy.mjs. `wantsDraft` is the whole
+ * contract with the server: true means the request carries `draft=on`, false
+ * means it carries no `draft` key, and `fieldsFromForm` reads nothing else to
+ * decide whether a post is public.
+ *
+ * Every rule is paired with its negative, because a table that only ever
+ * asserts what SHOULD be there passes just as happily when everything is there.
+ * ---------------------------------------------------------------------- */
+
+const HOUR = 3600_000;
+const NOW = Date.parse("2026-07-31T12:00:00.000Z");
+
+/** @param {string} label @param {boolean} ok @param {string} [detail] */
+const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
+
+{
+  // A draft that has never been public.
+  const fresh = transitionsFor("draft", false);
+  t("fresh draft leads with Publish", fresh[0].label === "Publish", fresh[0].label);
+  t("fresh draft publish clears the draft flag", fresh[0].wantsDraft === false);
+  t("fresh draft publish is ceremonial", fresh[0].ceremony === true);
+  t("fresh draft can still be saved as a draft", fresh.some((x) => x.id === "save-draft" && x.wantsDraft === true));
+  t("fresh draft offers no unpublish", !fresh.some((x) => x.id === "unpublish"));
+
+  // A draft that was public once and was withdrawn.
+  const back = transitionsFor("draft", true);
+  t("withdrawn draft leads with Republish", back[0].label === "Republish", back[0].label);
+  t("withdrawn draft republish clears the draft flag", back[0].wantsDraft === false);
+  // The negative that matters: asking twice for a republication is not a
+  // ceremony, it is a habit, and habits get clicked through.
+  t("republishing is NOT ceremonial", back[0].ceremony === false);
+  t("withdrawn draft can still be saved as a draft", back.some((x) => x.id === "save-draft" && x.wantsDraft === true));
+
+  // Live.
+  const live = transitionsFor("published", true);
+  t("published leads with a plain save", live[0].id === "save" && live[0].wantsDraft === false);
+  t("published never leads with a publish", live[0].id !== "publish" && live[0].id !== "republish");
+  t("published offers unpublish", live.some((x) => x.id === "unpublish" && x.wantsDraft === true));
+  t("unpublish is not the primary", live[0].id !== "unpublish");
+  t("unpublish is marked as the consequential one", live.find((x) => x.id === "unpublish")?.danger === true);
+  t("published is never ceremonial", live.every((x) => x.ceremony === false));
+
+  // Scheduled behaves as published: it is already draft:false.
+  const soon = transitionsFor("scheduled", true);
+  t(
+    "scheduled matches published",
+    JSON.stringify(soon) === JSON.stringify(live),
+    `${JSON.stringify(soon.map((x) => x.id))} vs ${JSON.stringify(live.map((x) => x.id))}`,
+  );
+
+  // Exactly one primary, always, and every transition names itself.
+  for (const [label, list] of /** @type {Array<[string, ReturnType<typeof transitionsFor>]>} */ ([
+    ["fresh draft", fresh], ["withdrawn draft", back], ["published", live], ["scheduled", soon],
+  ])) {
+    t(`${label} offers at least two transitions`, list.length >= 2, `${list.length}`);
+    t(`${label} labels every transition`, list.every((x) => x.label.trim().length > 0));
+    t(`${label} has unique ids`, new Set(list.map((x) => x.id)).size === list.length);
+  }
+}
+
+{
+  // stateOf must agree with publiclyVisible(): draft is draft, a future
+  // publish_at is scheduled, everything else is published.
+  t("a draft is a draft", stateOf({ draft: true, publishAt: "" }, NOW) === "draft");
+  t(
+    "a draft with a future date is STILL a draft",
+    stateOf({ draft: true, publishAt: new Date(NOW + HOUR).toISOString() }, NOW) === "draft",
+  );
+  t("no publish_at means published", stateOf({ draft: false, publishAt: "" }, NOW) === "published");
+  t(
+    "a future publish_at is scheduled",
+    stateOf({ draft: false, publishAt: new Date(NOW + HOUR).toISOString() }, NOW) === "scheduled",
+  );
+  t(
+    "a past publish_at is published",
+    stateOf({ draft: false, publishAt: new Date(NOW - HOUR).toISOString() }, NOW) === "published",
+  );
+  // The boundary, stated rather than left to chance: publiclyVisible() uses
+  // `publish_at <= now`, so a post due exactly now is live, not scheduled.
+  t(
+    "publish_at exactly now is published, not scheduled",
+    stateOf({ draft: false, publishAt: new Date(NOW).toISOString() }, NOW) === "published",
+  );
+  t(
+    "an unreadable publish_at does not hide a live post",
+    stateOf({ draft: false, publishAt: "not a date" }, NOW) === "published",
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Section 2: what the rendered pages can submit.
+ * ---------------------------------------------------------------------- */
 
 const entries = [...new Set(STATES.map((s) => s.entry))];
 const bundle = await bundleRoutes(entries);
