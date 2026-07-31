@@ -315,11 +315,22 @@ const MATRIX = [
   // Borders are non-text UI
   ["--border", "--bg", UI, "border on page"],
   ["--border", "--surface", UI, "border on surface"],
+  // There is deliberately NO --border on --surface-popover row. It measures
+  // 2.66:1 in dark (#746a5f on #322a25) and would fail, which this gate
+  // reported the moment the admin's hovered table row was put on the popover
+  // surface. --border only just clears on --surface (3.04:1), so it has no
+  // headroom left for a third elevation, and anything drawn on the popover step
+  // takes --border-strong instead. Asserting the failing pair here would red
+  // the gate forever over a combination nothing ships; the two rows below are
+  // what actually holds that rule up.
   ["--border-strong", "--bg", UI, "strong border"],
+  ["--border-strong", "--surface", UI, "strong border on surface"],
+  ["--border-strong", "--surface-popover", UI, "strong border on popover"],
 
   // Brand
   ["--brand", "--bg", TEXT, "brand text"],
   ["--brand", "--surface", TEXT, "brand on surface"],
+  ["--brand", "--surface-popover", TEXT, "brand on popover"],
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
   ["--brand-hover", "--bg", TEXT, "brand hover text"],
   ["--brand-active", "--bg", TEXT, "brand active text"],
@@ -346,6 +357,8 @@ const MATRIX = [
   ["--text-warning", "--surface", TEXT, "warning text on surface"],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
   ["--border-warning", "--bg", UI, "warning border"],
+  ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
+  ["--brand", "--tint-warning", UI, "brand fill edge on warning tint"],
   ["--on-fill-warning", "--fill-warning", TEXT, "text on warning fill"],
 
   // Success
@@ -353,6 +366,7 @@ const MATRIX = [
   ["--text-success", "--surface", TEXT, "success text on surface"],
   ["--on-tint-success", "--tint-success", TEXT, "text on success tint"],
   ["--border-success", "--bg", UI, "success border"],
+  ["--border-success", "--surface", UI, "success border on surface"],
   ["--on-fill-success", "--fill-success", TEXT, "text on success fill"],
 
   // Info
