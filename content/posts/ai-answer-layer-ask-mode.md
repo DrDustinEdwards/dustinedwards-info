@@ -42,7 +42,18 @@ The implementation of those gates produced the most transferable measurements in
 
 Configure a limit, then attack it with genuinely concurrent requests and count what gets through. Three implementations, same test shape, very different results.
 
-Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, admitted one, then two, then nine, then zero across four runs. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter.
+Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, admitted one, then two, then nine, then zero across four runs. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter. The four runs are worth seeing side by side, because the variance is the finding:
+
+:::chart{type="bar" x="run" y="admitted" title="Requests admitted by the built-in rate-limiting binding, limit 5" alt="Bar chart of four identical test runs against Cloudflare's rate-limiting binding configured to allow 5 requests per minute, attacked with 12 concurrent requests. The runs admitted 1, 2, 9, and 0 requests respectively, scattering both far below and far above the configured limit of 5."}
+```csv
+run,admitted
+run 1,1
+run 2,2
+run 3,9
+run 4,0
+```
+Four identical runs: 12 concurrent requests against a configured limit of 5 per 60 seconds. Admissions scatter from 0 to 9 around the limit, consistent with the documented eventually-consistent design. It sheds load; it does not count.
+:::
 
 A Durable Object using the asynchronous storage API, with a read-increment-write sequence, admitted eight requests through a ceiling of three. The reason is the finding I most want to pass along: a Durable Object is single-threaded, but a read and a write separated by an await are not atomic, because other requests interleave at the await point. Single-threaded and transactional are different properties, and the difference only appears under concurrent load.
 
@@ -58,6 +69,6 @@ Once the endpoint exists, three levels of machine access come nearly free, and I
 
 At the time of writing, retrieval on AI Search is free during its open beta with pricing promised on notice, and answer generation bills through Workers AI per uncached request. The daily ceiling makes worst-case spend a number I chose; the cache converts repeated questions into free reads; and there is a dated entry in the project's decision log requiring a cost re-evaluation when beta pricing lands. I would generalize that habit: using a beta product is reasonable when the exposure is bounded and the re-evaluation is scheduled, and it is the scheduling that tends to be skipped.
 
-Measured latency, for expectation-setting: time to first token between 2.1 and 6.5 seconds warm and 7.4 cold, with retrieved sources rendered before the answer begins so the wait is visibly progress. The complementarity measurement in step 2 was run on a small corpus and query set; it is strong enough to establish that neither layer subsumes the other here and far too small to estimate rates, and it should be re-run as any corpus grows. The retrieval threshold behavior around short exact tokens is a property of this instance's configuration rather than a universal constant. And the rate limiter table reflects one platform's bindings at one point in time; the durable finding is the atomicity mechanism, which is not vendor-specific at all.
+Measured latency, for expectation-setting: time to first token between 2.1 and 6.5 seconds warm and 7.4 cold, with retrieved sources rendered before the answer begins so the wait is visibly progress. The complementarity measurement in step 2 was run on a small corpus and query set; it is strong enough to establish that neither layer subsumes the other here and far too small to estimate rates, and it should be re-run as any corpus grows. The retrieval threshold behavior around short exact tokens is a property of this instance's configuration rather than a universal constant. And the rate limiter measurements reflect one platform's bindings at one point in time; the durable finding is the atomicity mechanism, which is not vendor-specific at all.
 
 This is the sixth post in [the series](/blog/ten-years-on-cloudflare), following [the FTS5 search engine](/blog/site-search-fts5-rank-fusion). The next two move from reading to writing: [where policy belongs when agents call your service](/blog/one-door-two-doorbells), and [the trust model for an AI agent with write access](/blog/letting-an-agent-publish).
