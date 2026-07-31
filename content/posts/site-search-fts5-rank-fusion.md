@@ -60,6 +60,25 @@ function fuse(lists: string[][], k = 60): Map<string, number> {
 }
 ```
 
+The reason k matters is easier to see than to describe. With k at 60, the gap between rank 1 and rank 2 is small, so appearing in both lists at moderate rank beats appearing in one list at the top; with k near zero, rank 1 dominates everything and the fusion degenerates into "whichever list you trust more." The curve below plots each rank's contribution at k equal to 60, computed directly from the formula:
+
+:::chart{type="line" x="rank" y="contribution" title="RRF contribution by rank position, k = 60" alt="Line chart of reciprocal rank fusion contribution per rank for k equal to 60, falling gently from 0.0164 at rank 1 to 0.0125 at rank 20. The curve is nearly flat, showing that k at 60 keeps top ranks from dominating the fusion."}
+```csv
+rank,contribution
+1,0.01639
+2,0.01613
+3,0.01587
+4,0.01563
+5,0.01538
+7,0.01493
+10,0.01429
+13,0.01370
+16,0.01316
+20,0.01250
+```
+Per-rank contribution 1 / (k + rank) at k = 60. The near-flat curve is the design: membership in multiple lists outweighs position within one.
+:::
+
 Positional fusion has a second benefit beyond correctness: it makes the merge testable with small fixtures, because the expected output depends only on orderings you construct, not on opaque score values.
 
 ## Step 4: search versus browse: dispatch on query shape
