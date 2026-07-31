@@ -364,6 +364,9 @@ for (let i = 0; i < entries.length; i += 1) {
 
 /** @type {Record<string, string[]>} */
 const actual = {};
+/** Raw markup per state, kept for the structural assertions in section 3. */
+/** @type {Record<string, string>} */
+const renders = {};
 let rendered = 0;
 
 for (const state of STATES) {
@@ -391,6 +394,7 @@ for (const state of STATES) {
   // set and match a baseline that was also generated from a broken render.
   assert(`${state.name} produced markup`, html.length > 400, `${html.length} chars`);
   rendered += 1;
+  renders[state.name] = html;
   actual[state.name] = submissionKeys(html);
 }
 
@@ -446,6 +450,89 @@ for (const name of Object.keys(actual)) {
 // Same rule again, one level up: a baseline of empty arrays would compare equal
 // to a render that found no forms at all.
 assert("the comparison actually read submissions", submissionsCompared > 20, `${submissionsCompared} compared`);
+
+/* -------------------------------------------------------------------------
+ * Section 3: the editor's structure, from the same renders.
+ *
+ * Not interaction. A focus trap, Escape, Cmd+S and the draft buffer are all
+ * browser behaviour and none of them can be observed here; that gap is real and
+ * is stated rather than papered over. What CAN be asserted is that the elements
+ * those behaviours depend on exist, are the right elements, and carry the
+ * names and states assistive technology reads. A <dialog> that is not a
+ * <dialog> has no trap to test in the first place.
+ * ---------------------------------------------------------------------- */
+
+/** @param {string} name @returns {string} */
+const htmlFor = (name) => renders[name] ?? "";
+
+/** @param {string} label @param {string} state @param {(html: string) => boolean} test */
+function structural(label, state, test) {
+  const html = htmlFor(state);
+  assert(`structure: ${label}`, html.length > 0 && test(html), html ? "" : `no render for "${state}"`);
+}
+
+for (const state of [
+  "edit, draft that never published",
+  "edit, published",
+  "new post, fresh",
+]) {
+  structural("three regions are present", state, (h) =>
+    h.includes('class="editor-bar"') &&
+    h.includes('class="editor-canvas"') &&
+    h.includes('class="drawer"'),
+  );
+  structural("the drawer is a real dialog", state, (h) =>
+    /<dialog[^>]*class="drawer"/.test(h),
+  );
+  structural("the drawer is named", state, (h) =>
+    /<dialog[^>]*class="drawer"[^>]*aria-labelledby="drawer-title"/.test(h) &&
+    h.includes('id="drawer-title"'),
+  );
+  structural("the settings button reports its state", state, (h) =>
+    /aria-expanded="false"[^>]*aria-haspopup="dialog"|aria-haspopup="dialog"[^>]*aria-expanded="false"/.test(h),
+  );
+  // The one guarantee the feedback slot has always carried: it is in the DOM
+  // before it has anything to say, or a screen reader announces nothing.
+  structural("the feedback slot is a live region and always present", state, (h) =>
+    /class="editor-feedback-slot"[^>]*role="status"[^>]*aria-live="polite"/.test(h),
+  );
+  structural("the title is the canvas heading", state, (h) =>
+    h.includes('class="editor-title"') && h.includes(`/${70}`),
+  );
+  structural("dirty state is rendered, not implied", state, (h) =>
+    h.includes('class="editor-dirty"'),
+  );
+}
+
+// The primary button's LABEL must be the one the table names. This is the
+// bridge between section 1 and the rendered page: the table can be right and
+// the component can still show the wrong word.
+for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
+  ["edit, draft that never published", "draft", false],
+  ["edit, draft that published before", "draft", true],
+  ["edit, published", "published", true],
+  ["edit, scheduled", "scheduled", true],
+])) {
+  const want = transitionsFor(post, ever)[0].label;
+  structural(`primary button on "${stateName}" reads ${want}`, stateName, (h) =>
+    new RegExp(`<button[^>]*class="btn"[^>]*>${want}</button>|<button[^>]*class="btn"[^>]*>${want}`).test(h),
+  );
+}
+
+// A never-published draft must not be able to publish in one click: the
+// primary is type="button" and opens the ceremony instead of submitting.
+structural("first publication is not a plain submit", "edit, draft that never published", (h) => {
+  const button = /<button[^>]*class="btn"[^>]*>Publish/.exec(h)?.[0] ?? "";
+  return button.includes('type="button"');
+});
+structural("a republication IS a plain submit", "edit, draft that published before", (h) => {
+  const button = /<button[^>]*class="btn"[^>]*>Republish/.exec(h)?.[0] ?? "";
+  return button.includes('type="submit"');
+});
+
+// The slug is editable in exactly one place.
+structural("new posts get a slug input", "new post, fresh", (h) => h.includes('id="field-slug"'));
+structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
 
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
 
