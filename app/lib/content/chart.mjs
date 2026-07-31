@@ -300,6 +300,35 @@ function marksFor(model) {
 }
 
 /**
+ * Axis scales, including the axis LABELS.
+ *
+ * The model reshapes every chart into `{x, series, value}` so one set of marks
+ * serves both the single and multi-series case. Those internal names must not
+ * reach the reader: left to itself Plot labels the axes "x" and "value", which
+ * is the shape of the data structure rather than the name of the thing measured.
+ * The labels are put back to the author's own column names here.
+ *
+ * A multi-series chart gets NO y label, because its series are directly labelled
+ * and the columns they came from measure different things; inventing one name
+ * for all of them would be a claim the data does not make.
+ *
+ * @param {ReturnType<typeof buildChartModel>} model
+ */
+function scalesFor(model) {
+  const multi = model.labels.length > 1;
+  const y = { label: multi ? null : model.yColumns[0] };
+
+  if (model.type === "bar") {
+    return multi
+      // Grouped bars: the facet carries the x column, and the inner axis prints
+      // the series names, which are the direct labels.
+      ? { fx: { domain: model.xDomain, label: model.x }, x: { label: null }, y }
+      : { x: { domain: model.xDomain, label: model.x }, y };
+  }
+  return { x: { label: model.x }, y };
+}
+
+/**
  * Converts a linkedom element into hast.
  *
  * The alternative was `allowDangerousHtml` on remark-rehype plus rehype-stringify,
@@ -396,8 +425,7 @@ export function renderChartHast(model, captionChildren) {
     marginBottom: 44,
     marginRight: model.labels.length > 1 && model.type !== "bar" ? 96 : 24,
     style: { fontSize: "12px" },
-    x: model.type === "bar" && model.labels.length === 1 ? { domain: model.xDomain } : {},
-    fx: model.type === "bar" && model.labels.length > 1 ? { domain: model.xDomain } : {},
+    ...scalesFor(model),
     color: { range: CHART_SERIES_TOKENS.slice(0, model.labels.length) },
     marks: marksFor(model),
   }));

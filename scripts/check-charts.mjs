@@ -282,6 +282,29 @@ async function main() {
       `${fixture.name}: the data table must follow the chart, not precede it`,
     );
     assert(!/swatch|-legend/.test(html), `${fixture.name}: charts label series directly, never with a legend`);
+
+    // The model reshapes data into {x, series, value} internally. Those names
+    // are an implementation detail and must never surface as an axis label:
+    // Plot's default would print "x" and "value", which names the data
+    // structure rather than the thing measured.
+    const svg = html.slice(html.indexOf("<svg"), html.indexOf("</svg>"));
+    assert(
+      !/>\s*[↑→]?\s*value\s*</.test(svg),
+      `${fixture.name}: the internal "value" name leaked into an axis label`,
+    );
+    assert(!/>\s*x\s*</.test(svg), `${fixture.name}: the internal "x" name leaked into an axis label`);
+    // A linear x scale prints the label with a trailing arrow ("run →"); a band
+    // scale prints it bare. Both are the label, so the arrow is optional here.
+    assert(
+      new RegExp(`>\\s*${fixture.attrs.x}\\s*→?\\s*<`).test(svg),
+      `${fixture.name}: the x axis is not labelled with the author's column name "${fixture.attrs.x}"`,
+    );
+    if (!multi) {
+      assert(
+        new RegExp(`>\\s*↑\\s*${fixture.attrs.y}\\s*<`).test(svg),
+        `${fixture.name}: the y axis is not labelled with the author's column name "${fixture.attrs.y}"`,
+      );
+    }
     assert(
       !/<h[1-6][\s>]/.test(html),
       `${fixture.name}: a heading here would inject the chart title into the post's table of contents`,
