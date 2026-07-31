@@ -333,6 +333,54 @@
   .palette-option[aria-selected="true"] {
     outline-offset: -2px;
   }
+
+  /* The cockpit's surface ladder is entirely background, so it is entirely
+     gone here: sidebar, canvas, card and hovered row all resolve to the one
+     system Canvas. The card keeps its border, so the index is still framed,
+     and the hovered row is restated as an edge because its tint is gone. */
+  .posts-table tbody tr:hover {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  /* The published pill lost its fill and the scheduled pill lost its tint, so
+     all three would be an identical outline holding a different word. The word
+     is a real channel and was always the first one, but border-style is the
+     second and it SURVIVES this mode, which is the reason the pills differ by
+     stroke rather than only by hue. Restated on the outline as well, because
+     the border is what the forced palette is most likely to flatten. */
+  .status-pill {
+    outline: 1px solid transparent;
+  }
+
+  .status-pill[data-state="scheduled"] {
+    outline-style: dashed;
+  }
+
+  .status-pill[data-state="draft"] {
+    outline-style: dotted;
+  }
+
+  /* The alert's tint is gone, so the edge is the only thing left holding it
+     together, and the glyph plus the heading carry the meaning. */
+  .admin-alert {
+    border-color: currentColor;
+  }
+
+  /* Both are shapes made of a background: the panel floats over the page on a
+     popover surface, and a menu item highlights on a tint. */
+  .overflow-menu-panel {
+    outline: 1px solid transparent;
+  }
+
+  .overflow-menu-item:hover {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .row-action {
+    outline: 1px solid transparent;
+  }
 }
 
 html,
@@ -716,6 +764,22 @@ a:hover {
   min-width: 0;
 }
 
+/* Surface hierarchy in the cockpit.
+ *
+ * Three questions, three answers, out of the neutrals that already exist:
+ *
+ *   --surface  the SHELL. Sidebar and topbar together, one continuous L of
+ *              chrome that frames the work rather than holding it.
+ *   --bg       the CANVAS, inherited from body. What the shell wraps.
+ *   --surface  again for a CARD, but sitting on the canvas behind a border.
+ *
+ * The sidebar and a card resolve to the same hex and never touch, so the
+ * ladder still reads as chrome, canvas, raised without inventing a fourth
+ * neutral. Rule 7 sanctions a card here without argument: it says cards are
+ * for indexes, and the posts list is the only index this admin has.
+ *
+ * The topbar was transparent before this, so it read as canvas while the
+ * sidebar read as chrome, and the shell had a seam down the middle of itself. */
 .admin-topbar {
   display: flex;
   align-items: center;
@@ -723,6 +787,7 @@ a:hover {
   gap: 1rem;
   padding: 0.875rem 1.5rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .admin-topbar-scope {
@@ -1635,6 +1700,108 @@ a:hover {
   margin-bottom: 1.25rem;
 }
 
+/* The overflow sits at the far end, so the row reads as one primary action and
+   then, separately, a place where the repair operations live. */
+.posts-toolbar .overflow-menu {
+  margin-left: auto;
+}
+
+/* Overflow menu -------------------------------------------------------------
+ *
+ * See app/components/admin/overflow-menu.tsx for why this is a disclosure
+ * rather than a role="menu", and why it is <details> rather than a click
+ * handler. */
+.overflow-menu {
+  position: relative;
+}
+
+.overflow-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  /* The native marker is replaced by the chevron, which can then rotate with
+     the open state. Both selectors are needed: Safari still uses the WebKit
+     pseudo-element. */
+  list-style: none;
+}
+
+.overflow-menu-button::-webkit-details-marker {
+  display: none;
+}
+
+.overflow-menu-button:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.overflow-menu[open] > .overflow-menu-button {
+  color: var(--text);
+}
+
+.overflow-menu[open] .overflow-menu-chevron {
+  transform: rotate(180deg);
+}
+
+.overflow-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  z-index: 20;
+  min-width: 17rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  /* Rule 7's popover step, asked for by its own name. */
+  background: var(--surface-popover);
+}
+
+.overflow-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.overflow-menu-item:hover {
+  background: var(--tint-brand);
+}
+
+.overflow-menu-item-hint {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* The hint is muted text, and --text-muted was measured on --surface-popover
+   (7.1:1 light, 7.8:1 dark) but not on the brand tint a hovered row paints
+   underneath it. Rather than introduce a pair the doc has not ratified, the
+   hover row drops the hint back onto body text, which IS measured on the brand
+   tint. */
+.overflow-menu-item:hover .overflow-menu-item-hint {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .overflow-menu-chevron {
+    transition: transform 120ms ease;
+  }
+}
+
 .btn,
 .btn-danger {
   display: inline-flex;
@@ -1722,6 +1889,19 @@ a:hover {
   text-decoration: none;
 }
 
+/* The posts index, in a card. Rule 7 names indexes as what cards are for, and
+   this is the site's only one. The card is the third rung of the cockpit's
+   surface ladder: shell chrome, canvas, then this sitting on the canvas behind
+   a border. */
+.posts-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  /* The rows run to the card's edge, so the radius has to clip them or the
+     first and last row square off the corners. */
+  overflow: hidden;
+}
+
 .posts-table {
   width: 100%;
   border-collapse: collapse;
@@ -1730,25 +1910,222 @@ a:hover {
 
 .posts-table th,
 .posts-table td {
-  padding: 0.625rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 
+.posts-table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The last row's rule would otherwise draw against the card's own border and
+   read as a double line. */
+.posts-table tbody tr:last-child th,
+.posts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Hover is the NEUTRAL elevation step, not the brand tint the command palette
+   paints its active option with. The palette's row is SELECTED, an answer the
+   reader has moved to; a row under a pointer is not a choice, and rule 6 keeps
+   brand out of anything that reads as state. The practical half matters more:
+   a row carries muted text in the slug and the date, and --text-muted is a
+   measured pair against --surface-popover in both the default and the
+   prefers-contrast tier, where against a brand tint it is measured nowhere. */
+.posts-table tbody tr:hover {
+  background: var(--surface-popover);
+}
+
+/* The separator has to come up with the surface under it. --border clears the
+   3:1 UI floor on --surface by 0.04 in dark mode and drops to 2.66:1 on the
+   popover step, so a hovered row drawn with the default border would quietly
+   fall below AA. Measured by check:contrast on the run that introduced the
+   hover, not reasoned about afterwards. */
+.posts-table tbody tr:hover th,
+.posts-table tbody tr:hover td {
+  border-bottom-color: var(--border-strong);
+}
+
+/* Status pill. Three states out of the two the database stores; see the loader.
+ *
+ * Rule 1 wants a channel that is not colour, and the word is the first one. The
+ * second is BORDER STYLE, which is chosen over a hue difference on purpose:
+ * forced-colors takes the fill and the tint away and leaves the stroke, so the
+ * three stay separable in exactly the mode where the palette stops existing.
+ * Published is filled and solid, scheduled is dashed, draft is dotted. */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Rule 5: a state that is TRUE right now takes a fill. The ring is the LIGHTER
+   family token rather than the fill repeated, the same reasoning .btn-danger
+   already carries: a fill is not required to clear 3:1 as a shape against the
+   surface behind it, so the family's --border-* token is what gives the pill
+   an edge. */
+.status-pill[data-state="published"] {
+  border-style: solid;
+  border-color: var(--border-success);
+  background: var(--fill-success);
+  color: var(--on-fill-success);
+}
+
+/* The amber family, and the one semantic tint this view spends. It cannot
+   collide with the drift alert, which is the same family by design. */
+.status-pill[data-state="scheduled"] {
+  border-style: dashed;
+  border-color: var(--border-warning);
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+/* Outlined, per the spec. No fill and no tint, because a draft is the absence
+   of a state rather than a state of its own. */
+.status-pill[data-state="draft"] {
+  border-style: dotted;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
 .posts-title {
   display: block;
   font-weight: 500;
+  /* Exempt from rule 2 only while it is the row's heading line: the slug sits
+     directly under it in a smaller, muted style, so the pair is a title block
+     rather than a link buried in prose. The underline returns on hover. */
+  color: var(--text);
+  text-decoration: none;
+}
+
+.posts-title:visited {
+  color: var(--text);
+}
+
+.posts-title:hover,
+.posts-title:focus-visible {
+  color: var(--brand);
+  text-decoration: underline;
 }
 
 .posts-slug {
   display: block;
+  color: var(--text-muted);
   font-size: 0.8125rem;
+}
+
+.posts-date {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .posts-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
+}
+
+/* WCAG 2.2 target size (minimum) is 24 by 24 CSS pixels. 1.75rem is 28, so the
+   target clears it with the row's own padding still to spare.
+   --border-strong rather than --border, because these ride a row that elevates
+   to --surface-popover on hover, where --border is 2.66:1 in dark. */
+.row-action,
+.row-action:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  color: var(--text);
+  font-size: 0.8125rem;
+  /* Exempt from rule 2: the border is the non-colour affordance. */
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.row-action:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* Standing-condition alert. See app/components/admin/alert.tsx for why this is
+   a named region and not a live one.
+ *
+ * The amber family, because drift is a degradation and not a failure: the site
+ * works, its search works, and only the AI answer layer is out of step. It is
+ * the ONE semantic tint this view spends (rule 4), and the scheduled pill is
+ * deliberately the same family so the two can never sit adjacent in different
+ * ones. */
+.admin-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.admin-alert-glyph {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.admin-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-alert-title {
+  margin: 0 0 0.25rem;
+  /* Colour is inherited from the banner, not taken from --text-heading, which
+     was measured on the page and not on a tint. */
+  color: inherit;
+  font-size: 1rem;
+}
+
+.admin-alert p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.admin-alert-action {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .admin-alert {
+    flex-wrap: wrap;
+  }
+
+  .admin-alert-action {
+    width: 100%;
+  }
+}
+
+/* The quiet line under the table. Reference numbers about the AI layer, sitting
+   with the thing they describe rather than floating above it as body prose. */
+.posts-meta {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
 }
 
 .editor {
