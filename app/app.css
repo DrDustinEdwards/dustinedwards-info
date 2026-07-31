@@ -1677,6 +1677,51 @@ a:hover {
   background: var(--brand-active);
 }
 
+/* The (0,1,0) versus (0,1,1) specificity trap design-tokens.md records for the
+   wordmark, found live again on the New post control and this time as a real
+   contrast failure rather than a wrong hue.
+
+   These classes are worn by anchors as well as buttons, and an anchor is
+   reached by the base `a:visited` and `a:hover` rules at (0,1,1), which outrank
+   a class-only declaration at (0,1,0). So the base rules won on the colour
+   property while the class rules still won on the background, and the label
+   was painted with a token measured against the PAGE, on top of a fill:
+
+     rest, once /admin/posts/new was in history
+       light  --visited #7f2651 on --brand #4f2d7f          1.14:1
+       dark   --visited #d586ac on --brand #b7a5e0          1.21:1
+     hover, both themes
+       --brand-hover on --brand-hover                       1.00:1
+
+   Naming the link states explicitly puts these at (0,2,0), which outranks the
+   base rules, and the label lands back on the three pairs the doc measured for
+   a brand fill: 10.43 / 13.06 / 15.26 light, 8.10 / 10.01 / 10.01 dark.
+   check:contrast already asserts all three, so the fix is verified by a gate
+   rather than by this comment.
+
+   It is invisible in review because it only appears once the destination is in
+   the reader's history, which for the person who runs this admin is always.
+   Any future filled or bordered control worn by a Link needs the same
+   treatment. */
+.btn,
+.btn:visited,
+.btn:hover,
+.btn:active {
+  color: var(--on-brand);
+}
+
+.btn-ghost,
+.btn-ghost:visited,
+.btn-ghost:hover,
+.btn-ghost:active {
+  color: var(--text);
+  /* Exempt from rule 2 for the same reason .btn is: the border is already a
+     non-colour affordance. Without this the three ghost controls that are
+     Links underline while the ones that are buttons do not, from the same
+     base-rule leak. */
+  text-decoration: none;
+}
+
 .posts-table {
   width: 100%;
   border-collapse: collapse;
