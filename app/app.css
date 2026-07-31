@@ -1375,6 +1375,63 @@ a:hover {
   opacity: 0.8;
 }
 
+/*
+ * Charts.
+ *
+ * Observable Plot normally injects a <style> block into every SVG it renders.
+ * The chart renderer strips it, for two reasons: it carried
+ * `--plot-background: white`, the one colour literal in Plot's output and the
+ * only thing standing between chart output and the tokens-only rule; and N
+ * charts on a page would otherwise ship N copies of the same stylesheet. These
+ * rules are that block's replacement, declared once.
+ *
+ * The SVG itself carries `fill="currentColor"`, so axes and tick labels inherit
+ * --text and follow the theme with no second render. Series colours come in as
+ * var(--chart-*) custom properties written into the SVG at build time and
+ * resolved by the browser per theme, which is why one stored SVG serves light
+ * and dark.
+ */
+.chart-figure svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--text);
+  /* Plot marks that draw text haloes reference this. */
+  --plot-background: var(--bg);
+}
+
+.chart-figure svg text,
+.chart-figure svg tspan {
+  white-space: pre;
+}
+
+.chart-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+/*
+ * The equivalent data table. Collapsed by default because it repeats the chart
+ * rather than adding to it, but it is real content in the accessibility tree:
+ * the accessible name sits on the SVG, never on this figure, so nothing here is
+ * made presentational.
+ */
+.chart-data {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.chart-data summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.chart-data table {
+  margin: 0.75rem 0 0;
+}
+
 .prose table {
   width: 100%;
   margin: 1.5rem 0;
