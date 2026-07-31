@@ -55,6 +55,8 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
 - `npm run check:logo` gate; proves the inline mark still reproduces the four SVG fixtures (pure)
 - `npm run check:charts` gate over chart determinism, Node-vs-Worker byte parity, and the directive's accessibility contract
+- `npm run build:diagrams [-- --force]` render `:::diagram` sources to `public/diagrams/`; skips what is current, prunes what the corpus no longer references
+- `npm run check:diagrams` gate over the diagram contract, asset coverage, and the tokens-only colour audit (pure, no Chromium)
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `npm run deploy` (build then `wrangler deploy`). Auto-deploy is not wired, and
   bare `wrangler deploy` is not the deploy path: it would ship whatever `build/`
@@ -556,7 +558,9 @@ deterministic, but whether the object exists is a fact about R2, and PNG bytes
 from font rasterisation are exactly the kind of input a byte-comparison gate
 must never be handed.
 
-Order matters: `build:content` then `build:og` then `sync:content`.
+Order matters: `build:content`, then `build:og` and `build:diagrams`, then
+`sync:content`. Both generators read the artifact, so both need it fresh; neither
+writes to it, so they do not care about each other.
 Fonts live in `assets/fonts/` and are build assets, not public ones.
 
 **The gap is now floored, not closed.** `DEFAULT_OG_IMAGE` in `app/lib/seo.ts` is
@@ -887,6 +891,11 @@ meant to be and drop the author's caption with it. Silent wrong output is the
 class this repo forbids everywhere else, and a typo is precisely the case nobody
 catches in review.
 
+The list is `chart`, `diagram`, `figure`. **Adding a directive means adding it
+here in the same commit**, or the new syntax fails the build under this rule.
+That is the rule working, not a conflict, and it was observed: `diagram` removed
+from the list makes `build:content` reject the very posts that use it.
+
 Switched on only after a corpus scan: all 11 posts carried 2 directives in total,
 both `:::chart`, and zero unknown ones, so nothing existing had to be fixed.
 
@@ -895,9 +904,159 @@ now fails the build. That is the intended trade. The error message advertises th
 escape, `\:` or a code span, and `check:charts` asserts the escape actually works,
 because advice in an error message that has never been run is just a guess.
 
-## The chart authoring skill
+## Diagrams
 
-`.claude/skills/charts/SKILL.md` encodes the directive contract for authors.
+Ruling: Capsid `dustinedwards/chart-stack.md`. Authoring: the same skill charts
+use. Renderer: `app/lib/content/diagram.mjs` plus `scripts/build-diagrams.mjs`.
+Gate: `npm run check:diagrams`.
+
+`:::diagram` is a container directive whose body is one fenced `mermaid` block
+plus an optional caption, with a MANDATORY `alt` and an optional `title`, exactly
+like `:::chart`. The fence language is checked, because the fence is also what
+makes the source render as a diagram in the `.md` twin and on GitHub.
+
+**The SVG is NOT in the gated artifact, and that is the whole difference from
+charts.** Diagram layout needs real font metrics, so mermaid needs a real browser
+engine and cannot run in a Worker; charts pass the both-writers rule and diagrams
+cannot. So diagrams take the social-card pattern: `build:diagrams` renders them
+into `public/diagrams/` under a content-hashed key, and the artifact carries the
+KEY and the SOURCE. `check:content` still byte-compares everything the pipeline
+produced, while bytes that came out of a browser engine stay out of a
+byte-comparison gate. The mermaid source rides in the artifact because
+`build:diagrams` reads it from there rather than parsing markdown a second time.
+
+**Nothing preserves a reference on save, because nothing stores one.** The key is
+`FNV-1a(DIAGRAM_TEMPLATE_VERSION + normalized source)`, so an unchanged diagram
+computes the same key on every writer and an editor or operator save reproduces
+it for free. The gap is the card gap, restated: a NEW or CHANGED diagram has no
+asset until `build:diagrams` runs from a clone. `check:diagrams` goes red in
+exactly that window, on purpose, the same way `check:backup` is red between a
+migration being committed and applied.
+
+**`DIAGRAM_TEMPLATE_VERSION` is part of the key**, for the reason
+`OG_TEMPLATE_VERSION` is. The key is what makes the asset safe to serve immutable
+and what lets the build skip work, so a restyle that did not change the key would
+leave every asset at the old colours while the build reported nothing to do. Bump
+it when the token map, the values those tokens resolve to, or mermaid changes.
+Recovery for a token retune is `build:diagrams -- --force`, whose git diff is the
+review.
+
+### Two renders per diagram, and both halves are measured
+
+An `<img>`-embedded SVG cannot be themed the way a chart is. Measured 2026-07-30:
+
+- **mermaid rejects a custom property outright.**
+  `themeVariables: { primaryColor: "var(--surface)" }` fails the render with
+  `Error: Unsupported color format: "var(--surface-2)"`, because khroma parses
+  every value in order to derive the ones it was not given.
+- **An SVG behind an `<img>` is an independent document**, so even an embedded
+  `var()` would resolve against nothing, and a `prefers-color-scheme` block
+  inside the asset would be wrong anyway: this site resolves its theme from a
+  COOKIE, so a reader who chose light under a dark OS would get the dark drawing.
+
+So both are rendered and `app.css` shows one. `display: none` rather than opacity
+or visibility, because it is the only one of the three that also removes the
+hidden image from the accessibility tree, which is what lets both carry the same
+`alt` without a screen reader announcing the diagram twice. The cost is honest
+and measured: both images are fetched, about 25 kB each.
+
+Two more things that are settings rather than preferences:
+
+- **`htmlLabels: false`.** mermaid's default wraps flowchart labels in
+  `<foreignObject>`, and foreignObject is NOT rendered when an SVG is loaded
+  through `<img>`. Every node would come out blank on the page while looking
+  correct in a standalone viewer.
+- **The root gets an explicit width and height, copied from the viewBox.**
+  mermaid emits `width="100%"`, which inside an `<img>` is an SVG with no
+  intrinsic size, and the browser falls back to the 300x150 replaced-element
+  default. Done by rewriting the root TAG rather than by re-serialising: an
+  `.svg` is parsed as XML, so a serialiser that emits one unclosed tag produces a
+  file that renders as nothing.
+
+**The accessible name is `alt` on the `<img>`, not `role="img"` plus
+`aria-label`.** The corrected contract in chart-stack.md is about naming the
+element that IS the graphic rather than its figure; for an `<img>` that element
+is named by `alt`, and the ARIA pair would be a redundant override of a working
+native mechanism. There is also no generated equivalent the way a chart has a
+data table: the `.md` twin already serves the mermaid source verbatim, which is
+the machine-readable form, and the alt is the human one.
+
+**No width or height on the `<img>`**, and `rehypeImageDimensions` skips anything
+classed `diagram-image`. The pipeline may not touch the filesystem and the asset
+legitimately may not exist yet, so there is nothing honest to measure. Checked by
+class rather than by plugin order, so moving the plugin cannot silently
+re-enable it.
+
+**There is no colour vocabulary for authors, deliberately.** A diagram says what
+it means with shape and label, which is design-tokens.md rule 3 taken to its
+conclusion: a refusal is an edge labelled `403`, not a red arrow. The same
+deliberate first cut as `:::chart` shipping four mark types.
+
+**Sequence spacing is tightened from mermaid's defaults, for layout not taste.**
+The prose column is 44rem, so a drawing wider than about 700px is scaled down and
+takes its type with it. A default five-participant sequence diagram came out
+1210px, which lands 16px text at an effective 9px.
+
+**Font, recorded as a limitation rather than a solved problem.** The site's prose
+is Inter, loaded as a webfont, and an SVG inside an `<img>` may not load external
+resources, so a diagram is set in the system sans instead. That also means the
+viewer's font is not guaranteed to be the one the build measured text with, since
+mermaid bakes box sizes from the metrics it sees. Node padding is generous rather
+than default to absorb it. Closing this properly means embedding a subsetted font
+per asset, which was not built.
+
+## check:diagrams (gate)
+
+`npm run check:diagrams` imports `app/lib/content/diagram.mjs`, the module the
+Worker imports, on the same principle as `check:search` and `query.mjs`. No
+Chromium, no network, no database: mermaid is not run, because rendering is not
+the property this gate protects. **409 assertions** over the current corpus.
+
+`check:content` already catches a diagram REFERENCE that drifted, because the key
+is a pure function of the source and rides in the artifact. What it cannot catch
+is the thing that reference points at. A key that changed while the asset did not
+is a broken image in the middle of an article and is invisible to every other
+gate: the artifact is internally consistent, the typecheck passes, the page
+renders. Three sections: the contract (mandatory alt, deterministic keys, the
+emitted structure, the token map naming only tokens that exist in BOTH theme
+blocks and agree across the two dark blocks), coverage (every referenced key has
+both assets, and no asset is unreferenced), and colour.
+
+**The colour audit models the CASCADE rather than hunting for hexes**, and
+`scripts/lib/diagram-audit.mjs` is one implementation with two callers so that an
+asset written before a rule existed cannot survive by having been written first.
+mermaid ships a stylesheet inside every diagram covering every feature it can
+draw, most of which this pipeline never emits, so reachability is computed:
+
+- A CSS rule counts when its selector matches an element in that document.
+- A colour attribute counts unless it sits in a `<defs>` subtree nothing
+  references by `url(#id)`, or unless a rule matching THAT element sets the same
+  property. An inline `style` always counts.
+
+That last clause is not a convenience, it is the cascade, and it was found by
+measurement: mermaid writes a literal `fill="#eaeaea"` onto every sequence actor
+and then paints it from `.actor { fill: … }`. Reading the attribute as shipped
+reported four violations on a diagram that was entirely correct; reading it as
+dead without checking for the rule that kills it would let a real one through.
+Values are validated by being a palette hex or a keyword that names no colour, so
+`white`, `rgb(12.6, 10.1, 5.9)` and `hsl(-82.5, 36.4%, 91.4%)` are all caught,
+which a hex-hunting regex would miss. Shadow colours inside `filter` and
+`box-shadow` are out of scope and every rule carrying one in current output is
+unreachable. Unreachable rules and overridden attributes are COUNTED and printed,
+so "0 problems" can never quietly mean "0 things examined".
+
+**Twelve planted violations, each observed exiting 1**, 2026-07-30: a diagram
+with no alt; `diagram` removed from `KNOWN_DIRECTIVES`, caught separately by
+`build:content` and by the gate; the mandatory-alt check removed from
+`diagram.mjs`; a fence that is not `mermaid`; a rendered asset deleted; a colour
+hand-edited inside a committed asset; an unreferenced asset left on disk; a key
+hand-edited in the gated artifact; a hex written into the token map instead of a
+token name; a token the stylesheet does not declare; and a colour left unmapped
+so mermaid derived one of its own.
+
+## The chart and diagram authoring skill
+
+`.claude/skills/charts/SKILL.md` encodes both directive contracts for authors.
 
 Note the PATH. `chart-stack.md` named it `.claude/skills/charts.md`, but skills
 are discovered as `<name>/SKILL.md`; a flat file at that path is never loaded, and
