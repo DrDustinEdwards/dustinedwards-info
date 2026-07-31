@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
 import { postTags, posts, settings, tags } from "./schema";
@@ -115,7 +116,7 @@ export async function listBlogPosts(
   } = {},
 ) {
   const db = getDb(env);
-  const perPage = options.perPage ?? 10;
+  const perPage = options.perPage ?? POSTS_PER_PAGE;
   const page = Math.max(1, options.page ?? 1);
   const tag = options.tag?.trim() || null;
   const year = options.year?.trim() || null;

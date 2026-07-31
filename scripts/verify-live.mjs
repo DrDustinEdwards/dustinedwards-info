@@ -25,6 +25,15 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// The listing shape the site itself uses. Imported, never restated: this
+// harness deriving its own copy of the page size is exactly the staleness the
+// pagination assertions below were ruled against.
+import {
+  POSTS_PER_PAGE,
+  pageCount,
+  pageForPosition,
+} from "../app/lib/blog-listing.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ORIGIN = process.argv[2] ?? "https://dustinedwards.dustin-edwards.workers.dev";
 const SLUG = "where-should-a-blog-store-its-words";
@@ -155,12 +164,22 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
   const start = text.indexOf('<a class="search-trigger"');
   const end = text.indexOf("</a>", start);
   const anchor = start === -1 ? "" : text.slice(start, end);
-  check("header: the search anchor contains no <kbd>", start !== -1 && !anchor.includes("<kbd"));
+  check("header: the search anchor is present", start !== -1);
   check("header: the search anchor has an accessible name", anchor.includes('aria-label="Search"'));
+  // The keyboard hint lives INSIDE the anchor, shipped hidden and aria-hidden
+  // and revealed by the palette script. That is the ratified progressive
+  // enhancement: the hint is present in the markup and its visibility is the
+  // capability signal.
+  //
+  // A blanket "the anchor contains no <kbd>" assertion used to sit here. It
+  // predated the hint, asserted the old state, and directly contradicted the
+  // assertion below it, so it failed on a header that was correct. Ruled
+  // 2026-07-30: the specific assertion wins, the blanket one goes.
   check(
     "header: the hint is hidden and aria-hidden in the no-JS state",
     /<kbd[^>]*data-search-hint[^>]*aria-hidden="true"[^>]*hidden/.test(text),
   );
+  check("header: the hint sits inside the search anchor", anchor.includes("data-search-hint"));
   check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
   check(
     "header: exactly one theme option is pressed",
@@ -280,12 +299,58 @@ const ASK_PROBE_LIMIT = 3;
 
   // The published corpus is present, which is what stops "nothing is listed"
   // passing this whole section for the wrong reason.
-  const index = await get("/blog");
-  check("blog: index renders", index.status === 200);
-  for (const p of live) {
+  //
+  // CORPUS-AWARE, not page-1-naive. This block used to assert that every
+  // published post appeared on /blog, which silently meant page 1. It went red
+  // the moment the corpus passed POSTS_PER_PAGE, on a site that was paginating
+  // correctly, and it would have gone red again every ten posts by
+  // construction. Ruled 2026-07-30: derive the expected page from the published
+  // count and the page size instead.
+  //
+  // POSTS_PER_PAGE is IMPORTED rather than restated. The number already existed
+  // twice in the app; a third copy here is what the ruling is about.
+  const pages = pageCount(live.length);
+  const fetched = await Promise.all(
+    Array.from({ length: pages }, (_, i) => get(i === 0 ? "/blog" : `/blog?page=${i + 1}`)),
+  );
+
+  check("blog: index renders", fetched[0].status === 200);
+  check(
+    `blog: ${live.length} published at ${POSTS_PER_PAGE} per page is ${pages} page(s)`,
+    pages === Math.max(1, Math.ceil(live.length / POSTS_PER_PAGE)),
+  );
+
+  // Pagination is a surface the corpus only just grew, so assert it exists and
+  // answers rather than assuming the site kept up.
+  if (live.length > POSTS_PER_PAGE) {
+    check("blog: page 2 exists and renders", fetched[1]?.status === 200, `got ${fetched[1]?.status}`);
     check(
-      `blog: index lists the published post /blog/${p.slug}`,
-      index.text.includes(`/blog/${p.slug}`),
+      "blog: page 1 links to page 2",
+      fetched[0].text.includes("page=2"),
+    );
+  }
+  for (const [i, page] of fetched.entries()) {
+    check(`blog: page ${i + 1} renders`, page.status === 200, `got ${page.status}`);
+  }
+
+  // The listing is ordered by publishAt DESC, and SQLite does not promise an
+  // order WITHIN a tie. Several posts here share a publish date, so a post's
+  // position is a RANGE rather than a number, and pinning it to one page would
+  // make this harness flaky the first time a tie group straddled a boundary.
+  // The range collapses to a single page for any post whose date is unique,
+  // which is the usual case, so the assertion stays exact where exactness means
+  // anything.
+  const at = (/** @type {any} */ p) => String(p.publishAt);
+  for (const p of live) {
+    const after = live.filter((/** @type {any} */ o) => at(o) > at(p)).length;
+    const atOrAfter = live.filter((/** @type {any} */ o) => at(o) >= at(p)).length;
+    const first = pageForPosition(after + 1);
+    const last = pageForPosition(atOrAfter);
+    const candidates = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+    const found = candidates.filter((n) => fetched[n - 1]?.text.includes(`/blog/${p.slug}`));
+    check(
+      `blog: /blog/${p.slug} is listed on page ${candidates.join(" or ")}`,
+      found.length > 0,
     );
   }
 
@@ -297,7 +362,13 @@ const ASK_PROBE_LIMIT = 3;
 
   for (const p of drafts) {
     const slug = p.slug;
-    check(`draft ${slug}: absent from /blog`, !index.text.includes(`/blog/${slug}`));
+    // EVERY page, not page 1. This section exists because of the 2026-07-29
+    // draft leak, and a leak-regression check that only looks at the first page
+    // is the same page-1-naive defect the listing assertions above just shed.
+    check(
+      `draft ${slug}: absent from all ${pages} page(s) of /blog`,
+      fetched.every((page) => !page.text.includes(`/blog/${slug}`)),
+    );
 
     const page = await get(`/blog/${slug}`);
     check(`draft ${slug}: /blog/${slug} is 404`, page.status === 404, `got ${page.status}`);
