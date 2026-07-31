@@ -16,7 +16,10 @@
     "app/lib/search/query.mjs",
     // The operator publish policy: the Worker imports it and check:policy
     // imports it, on the same principle as query.mjs and check:search.
-    "app/lib/editor/publish-policy.mjs"
+    "app/lib/editor/publish-policy.mjs",
+    // The editor's transition table. Same principle: the Worker imports it and
+    // check:admin-ui imports it, so both projects must reach it.
+    "app/lib/editor/publish-transition.mjs"
   ],
   "compilerOptions": {
     "composite": true,
