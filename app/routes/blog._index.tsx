@@ -5,6 +5,7 @@ import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
+import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import {
   DEFAULT_OG_IMAGE,
@@ -14,8 +15,6 @@ import {
   breadcrumbJsonLd,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
-
-const PER_PAGE = 10;
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -28,7 +27,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
   const [listing, tagList, yearList] = await Promise.all([
-    listBlogPosts(env, { tag, year, page, perPage: PER_PAGE }),
+    listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE }),
     listBlogTags(env),
     listBlogYears(env),
   ]);

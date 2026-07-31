@@ -11,6 +11,7 @@
     "app/lib/content/chart.mjs",
     "app/lib/content/diagram.mjs",
     "app/lib/content/artifact.mjs",
+    "app/lib/blog-listing.mjs",
     "app/lib/search/records.mjs",
     "app/lib/search/query.mjs",
     // The operator publish policy: the Worker imports it and check:policy
