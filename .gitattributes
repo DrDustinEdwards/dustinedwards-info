@@ -14,5 +14,13 @@
 # Pinning these paths to LF makes the generator's output depend on the content
 # alone. Scoped deliberately: the rest of the tree keeps the default behaviour.
 
+#   3. `build:diagrams` writes its SVG assets with LF and rewrites them in place
+#      under `--force`. On a CRLF checkout every asset would come back as a diff
+#      the moment anyone forced a rebuild, whether or not the drawing changed,
+#      which is the churn the key is designed to avoid. The four `public/*.svg`
+#      logo fixtures are deliberately NOT pinned: nothing regenerates them, and
+#      `check:logo` is verified against a CRLF checkout.
+
 content/posts/*.md      text eol=lf
 content/generated/*.json text eol=lf
+public/diagrams/*.svg   text eol=lf
