@@ -1,0 +1,357 @@
+/**
+ * Gate over what the admin's forms SUBMIT.
+ *
+ *   npm run check:admin-ui
+ *   npm run check:admin-ui -- --update    (rewrites the baseline, deliberately loud)
+ *
+ * The admin redesign is a UI-only change running under one hard rule: a control
+ * may move anywhere, but pressing it must send exactly what it sent before.
+ * Nothing else in the check family can see that. A typecheck cannot: the form
+ * fields are strings in JSX. check:content cannot: no content changes. And no
+ * gate can reach /admin over HTTP, because it is behind a real Google session.
+ *
+ * So this renders the three admin routes as components and reads their markup
+ * back, reducing each page to the set of requests it can issue:
+ *
+ *     METHOD action | intent | comma-joined field names
+ *
+ * That tuple is what the server actually consumes. `handleEditorAction`
+ * dispatches on `intent`, and `fieldsFromForm` reads a fixed set of keys, so
+ * two different-looking pages with the same tuple set are the same API client.
+ *
+ * The baseline in scripts/fixtures/admin-ui-payloads.json was generated from
+ * the editor as it stood BEFORE the Session 2 redesign, which is the whole
+ * point: the fixture is the checkbox era's payload shape, and the gate passing
+ * today means the redesign did not change it.
+ *
+ * FAILS CLOSED. A missing fixture is an error, not an empty pass, and every
+ * comparison is paired with a count so "0 differences" can never quietly mean
+ * "0 pages rendered".
+ *
+ * Pure: no database, no network, no session. It does bundle with esbuild, and
+ * it stubs the routes' server-only imports rather than running them, so it
+ * proves things about components and nothing about loaders or actions.
+ */
+
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  bundleRoutes,
+  importBundled,
+  renderRoute,
+  submissionKeys,
+} from "./lib/route-render.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const FIXTURE = join(root, "scripts", "fixtures", "admin-ui-payloads.json");
+const update = process.argv.includes("--update");
+
+let checks = 0;
+let failures = 0;
+/** @param {string} message */
+function fail(message) {
+  failures += 1;
+  console.log(`\n  FAIL  ${message}`);
+}
+/** @param {string} label @param {boolean} ok @param {string} [detail] */
+function assert(label, ok, detail = "") {
+  checks += 1;
+  if (!ok) fail(`${label}${detail ? `\n    ${detail}` : ""}`);
+}
+
+/* -------------------------------------------------------------------------
+ * The loader states each route is rendered in.
+ *
+ * These describe the SHAPES a loader can hand a component, not real data. A
+ * state exists here when it changes which controls render: a drafted post and
+ * a published one offer different transitions, a drifted Ask index adds an
+ * alert that owns a repair, a conflict replaces the feedback slot.
+ * ---------------------------------------------------------------------- */
+
+const POSTS = [
+  { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+  { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+  { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z" },
+];
+
+const ASK_CLEAN = { present: 93, expected: 93, missing: [], stale: [] };
+const ASK_DRIFTED = { present: 90, expected: 93, missing: ["a", "b", "c"], stale: ["x"] };
+const BUDGET = { count: 4, limit: 200, day: "2026-07-31" };
+
+/** @param {Partial<Record<string, unknown>>} over */
+const fields = (over = {}) => ({
+  title: "A post",
+  slug: "a-post",
+  description: "What it is about.",
+  date: "2026-07-31",
+  tags: ["cloudflare", "d1"],
+  draft: true,
+  publishAt: "",
+  coverSrc: "",
+  coverAlt: "",
+  body: "# Heading\n\nProse.\n",
+  firstPublished: "",
+  ...over,
+});
+
+const HEAD = "abc1234def5678";
+
+/** Everything the edit route's loader hands its component. */
+const editLoader = (over = {}) => ({
+  fields: fields(),
+  headSha: HEAD,
+  slug: "a-post",
+  saved: null,
+  tagOptions: ["cloudflare", "d1", "workers"],
+  everPublished: false,
+  state: "draft",
+  ...over,
+});
+
+/** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string> }>} */
+const STATES = [
+  // ---- posts index --------------------------------------------------------
+  {
+    name: "posts index, clean",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET },
+  },
+  {
+    name: "posts index, Ask drifted",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_DRIFTED, budget: BUDGET },
+  },
+  {
+    name: "posts index, Ask disabled",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: null, budget: null },
+  },
+  {
+    name: "posts index, empty corpus",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: [], ask: null, budget: null },
+  },
+
+  // ---- new post -----------------------------------------------------------
+  {
+    name: "new post, fresh",
+    entry: "app/routes/admin.posts.new.tsx",
+    path: "/admin/posts/new",
+    url: "/admin/posts/new",
+    loaderData: { headSha: HEAD, fields: fields({ title: "", slug: "", description: "", body: "", tags: [] }), tagOptions: ["cloudflare"] },
+  },
+  {
+    name: "new post, gate refused the save",
+    entry: "app/routes/admin.posts.new.tsx",
+    path: "/admin/posts/new",
+    url: "/admin/posts/new",
+    loaderData: { headSha: HEAD, fields: fields(), tagOptions: ["cloudflare"] },
+    actionData: {
+      kind: "problem",
+      fields: fields(),
+      problem: { message: "description is required", field: "description" },
+      headSha: HEAD,
+    },
+  },
+  {
+    name: "new post, saving unavailable",
+    entry: "app/routes/admin.posts.new.tsx",
+    path: "/admin/posts/new",
+    url: "/admin/posts/new",
+    loaderData: { headSha: "", fields: fields(), tagOptions: [] },
+  },
+
+  // ---- edit ---------------------------------------------------------------
+  {
+    name: "edit, draft that never published",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader(),
+  },
+  {
+    name: "edit, draft that published before",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ draft: true, firstPublished: "2026-06-01" }),
+      everPublished: true,
+      state: "draft",
+    }),
+  },
+  {
+    name: "edit, published",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ draft: false, firstPublished: "2026-06-01" }),
+      everPublished: true,
+      state: "published",
+    }),
+  },
+  {
+    name: "edit, scheduled",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ draft: false, publishAt: "2099-01-02T09:00:00.000Z", firstPublished: "2026-06-01" }),
+      everPublished: true,
+      state: "scheduled",
+    }),
+  },
+  {
+    name: "edit, with a cover set",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ coverSrc: "/media/posts/2026/x.webp", coverAlt: "" }),
+    }),
+  },
+  {
+    name: "edit, save refused",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader(),
+    actionData: {
+      kind: "problem",
+      fields: fields(),
+      problem: { message: "main moved. Reload.", conflict: true },
+      headSha: HEAD,
+    },
+  },
+  {
+    name: "edit, saving unavailable",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({ headSha: "" }),
+  },
+];
+
+/* ---------------------------------------------------------------------- */
+
+console.log("\ncheck:admin-ui\n");
+
+const entries = [...new Set(STATES.map((s) => s.entry))];
+const bundle = await bundleRoutes(entries);
+
+/** @type {Map<string, { default: unknown }>} */
+const modules = new Map();
+for (let i = 0; i < entries.length; i += 1) {
+  modules.set(entries[i], await importBundled(bundle.files[i]));
+}
+
+/** @type {Record<string, string[]>} */
+const actual = {};
+let rendered = 0;
+
+for (const state of STATES) {
+  const mod = modules.get(state.entry);
+  if (!mod) {
+    fail(`${state.name}: route module did not bundle`);
+    continue;
+  }
+  let html = "";
+  try {
+    html = await renderRoute(mod, {
+      path: state.path,
+      url: state.url,
+      loaderData: state.loaderData,
+      actionData: state.actionData,
+      params: state.params,
+    });
+  } catch (error) {
+    fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
+    continue;
+  }
+
+  // An assertion that can pass by reading nothing is not an assertion. A state
+  // that rendered an empty string would otherwise report an empty submission
+  // set and match a baseline that was also generated from a broken render.
+  assert(`${state.name} produced markup`, html.length > 400, `${html.length} chars`);
+  rendered += 1;
+  actual[state.name] = submissionKeys(html);
+}
+
+await bundle.cleanup();
+
+assert("every state rendered", rendered === STATES.length, `${rendered} of ${STATES.length}`);
+
+if (update) {
+  writeFileSync(FIXTURE, `${JSON.stringify(actual, null, 2)}\n`, "utf8");
+  console.log(`  BASELINE REWRITTEN  ${Object.keys(actual).length} state(s) -> scripts/fixtures/admin-ui-payloads.json`);
+  console.log("  This is not a passing run. Review the diff in git before committing it.\n");
+  process.exit(0);
+}
+
+// Fail closed. A gate whose expectation is missing must block and say so, never
+// pass for want of anything to compare against.
+if (!existsSync(FIXTURE)) {
+  console.log("  FAIL  baseline fixture is missing: scripts/fixtures/admin-ui-payloads.json");
+  console.log("        Generate it with: npm run check:admin-ui -- --update\n");
+  process.exit(1);
+}
+
+/** @type {Record<string, string[]>} */
+const expected = JSON.parse(readFileSync(FIXTURE, "utf8"));
+
+assert(
+  "baseline covers exactly the states rendered",
+  JSON.stringify(Object.keys(expected).sort()) === JSON.stringify(Object.keys(actual).sort()),
+  `baseline has ${Object.keys(expected).length}, render produced ${Object.keys(actual).length}`,
+);
+
+let submissionsCompared = 0;
+for (const name of Object.keys(actual)) {
+  const want = expected[name];
+  const got = actual[name];
+  checks += 1;
+  if (!want) {
+    fail(`${name}: no baseline entry`);
+    continue;
+  }
+  submissionsCompared += got.length;
+  if (JSON.stringify(want) !== JSON.stringify(got)) {
+    const added = got.filter((k) => !want.includes(k));
+    const removed = want.filter((k) => !got.includes(k));
+    fail(
+      `${name}: the requests this page can submit changed` +
+        (removed.length ? `\n    GONE:  ${removed.join("\n           ")}` : "") +
+        (added.length ? `\n    NEW:   ${added.join("\n           ")}` : ""),
+    );
+  }
+}
+
+// Same rule again, one level up: a baseline of empty arrays would compare equal
+// to a render that found no forms at all.
+assert("the comparison actually read submissions", submissionsCompared > 20, `${submissionsCompared} compared`);
+
+console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
+
+if (failures > 0) {
+  console.log(`\n${failures} FAILED of ${checks} checks\n`);
+  process.exit(1);
+}
+console.log(`\n${checks} checks, 0 failures\n`);

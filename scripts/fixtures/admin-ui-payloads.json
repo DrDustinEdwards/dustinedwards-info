@@ -1,0 +1,70 @@
+{
+  "posts index, clean": [
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
+  "posts index, Ask drifted": [
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
+  "posts index, Ask disabled": [
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
+  "posts index, empty corpus": [
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
+  "new post, fresh": [
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title",
+    "POST /admin/posts/new | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title"
+  ],
+  "new post, gate refused the save": [
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title",
+    "POST /admin/posts/new | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title"
+  ],
+  "new post, saving unavailable": [
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=,isNew=1,publishAt,slug,tags,title",
+    "POST /admin/posts/new | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=,isNew=1,publishAt,slug,tags,title"
+  ],
+  "edit, draft that never published": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, draft that published before": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, published": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, scheduled": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,firstPublished=2026-06-01,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, with a cover set": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, save refused": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=0,publishAt,slug,tags,title"
+  ],
+  "edit, saving unavailable": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=,isNew=0,publishAt,slug,tags,title",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=,isNew=0,publishAt,slug,tags,title"
+  ]
+}
