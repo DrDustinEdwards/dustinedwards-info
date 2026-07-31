@@ -8,6 +8,7 @@
     "vite.config.ts",
     "scripts/**/*",
     "app/lib/content/pipeline.mjs",
+    "app/lib/content/chart.mjs",
     "app/lib/content/artifact.mjs",
     "app/lib/search/records.mjs",
     "app/lib/search/query.mjs",

@@ -54,6 +54,7 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npm run check:search` gate over the query parser and rank fusion (pure, no database)
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema
 - `npm run check:logo` gate; proves the inline mark still reproduces the four SVG fixtures (pure)
+- `npm run check:charts` gate over chart determinism, Node-vs-Worker byte parity, and the directive's accessibility contract
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `npm run deploy` (build then `wrangler deploy`). Auto-deploy is not wired, and
   bare `wrangler deploy` is not the deploy path: it would ship whatever `build/`
@@ -749,10 +750,133 @@ entry would make the artifact disagree with the next build.
 
 Markdown rendering lives in `app/lib/content/pipeline.mjs` so the Worker and the
 build scripts import the same module. There must never be a second renderer.
-Highlighting is `shiki/core` with the explicit `LANGUAGES` list, because the full
+Highlighting is `shiki/core` with an explicit grammar list, because the full
 shiki bundle ships every grammar and took the Worker to 14 MB; a fenced block in
 an unlisted language renders as plain text in published output as well as
 preview.
+
+**`LANGUAGES` is DERIVED from the `GRAMMARS` map, not maintained beside it.**
+There used to be two hand-kept lists, an exported array of names that
+`check:contrast` reads and a separate array of imported grammars handed to shiki,
+and adding python meant editing both. Editing only one is invisible in review:
+naming a language shiki was never given makes the gate assert about a grammar
+that is not loaded, and loading one the array omits leaves it unasserted. Same
+class as the backup table list, so it gets the same treatment.
+
+`python` was added 2026-07-30, measured at **+75.41 KiB raw / +8.59 KiB gzip** on
+the Worker.
+
+## Charts
+
+Ruling and probe numbers: Capsid `dustinedwards/chart-stack.md`. Charts are
+**content**, not a widget: the SVG is rendered at build time into the gated
+artifact, so `check:content` byte-compares it like prose and a reader with
+JavaScript off sees the same chart everyone else does.
+
+Authoring is a `:::chart` container directive whose body is one fenced block of
+CSV plus an optional caption:
+
+    :::chart{type=bar x=mechanism y=allowed,ceiling labels="Allowed,Ceiling"
+             title="..." alt="..."}
+    ```csv
+    mechanism,allowed,ceiling
+    async DO storage,8,3
+    sync SQLite DO,3,3
+    ```
+    An optional caption, rendered as markdown.
+    :::
+
+`type` is bar, line, dot or area. `alt` is MANDATORY, exactly as it is on
+`:::figure`. Multiple `y` columns make it multi-series; `labels` overrides the
+column headers for display and every series label must be present and unique.
+
+**Colours come from the ratified chart ladder as CSS custom properties**, never
+hexes: `var(--chart-cadet)`, `-purple`, `-claret`, `-sage`, `-gold`, and the
+extended `-rust`. The custom property passes into the SVG verbatim and resolves
+per theme in the browser, which is why ONE stored SVG serves light and dark with
+nothing to flash and no second render. More series than there are tokens is a
+build failure rather than a repeated colour.
+
+**Multi-series charts label series directly and never emit a legend**, because
+design-tokens.md rule 3 says hue is never the sole channel. Line, dot and area
+put the label at the last point of the series; bar facets by x so the series name
+sits under its own bar.
+
+**The accessible name goes on the `<svg>`, never on the `<figure>`.** This is the
+one thing to get right here and it is easy to get wrong: `role="img"` makes its
+descendants presentational and the WAI-ARIA spec says user agents SHOULD NOT
+expose them, so naming the figure would generate a caption and a data table and
+then hide both from exactly the readers they exist for. The contract in
+chart-stack.md originally said figure and was corrected against the spec.
+Structure is `<figure class="chart-figure">` holding an optional
+`<p class="chart-title">`, the named SVG, `<figcaption>` when captioned, and the
+generated table in `<details>`.
+
+The title is a `<p>`, deliberately not a heading: `rehypeCollectToc` scans h2 and
+h3, so a heading would inject chart titles into the post's table of contents.
+
+**Plot's injected `<style>` block is stripped.** It carried
+`--plot-background: white`, the one colour literal in Plot's output, and N charts
+on a page would otherwise ship N copies of it. The equivalent rules live once in
+`app.css` under `.chart-figure`.
+
+Dependencies are PINNED to exact versions (`@observablehq/plot` 0.6.17,
+`linkedom` 0.18.13). A bump reruns `check:charts`, because the determinism and
+parity properties are properties of those versions and nothing else proves them.
+
+## check:charts (gate)
+
+`npm run check:charts` imports `app/lib/content/chart.mjs`, the module the Worker
+imports. **141 assertions.**
+
+`check:content` already catches a hand-edited or stale chart SVG. What it cannot
+catch is a renderer that is not deterministic, which would make the byte
+comparison fail at random. That is not hypothetical here: it is exactly what the
+shiki JavaScript regex engine did, and why oniguruma is a dependency. This gate
+proves the property that makes `check:content` mean anything for charts.
+
+- **Determinism in-process**: 8 fixtures (4 mark types, single and multi-series)
+  rendered 200 times each, one distinct output apiece.
+- **Determinism across processes**: three separate node processes must agree with
+  the parent. Module-level state only shows up across a process boundary.
+- **Node vs Worker parity**: the same module is bundled for workerd with esbuild
+  and run under miniflare, and every fixture must be SHA-256 identical to the
+  Node render. The two writers must agree or the editor commits HTML the next
+  build will not reproduce.
+- **The contract**: tokens only, an accessible name on the SVG and not the
+  figure, the data table present and after the chart, no legend, no heading, and
+  a paired negative for every validation rule.
+
+**Scope, stated rather than implied:** the parity run bundles `chart.mjs`, which
+is the whole new rendering surface and the only part whose workerd behaviour was
+in question. It does not re-bundle the markdown pipeline, which would test the
+Vite plugin's WASM handling rather than the chart renderer.
+
+Verified by planting nine violations and confirming a real exit 1 for each: the
+alt rule removed, the multi-series label rule removed, a hex literal in the
+ladder, `role="img"` removed, the accessible name removed, the name moved onto
+the figure, the colon-digit fix removed, `Math.random()` in the render, and a
+`typeof WebSocketPair` branch to force a Node/Worker divergence. `check:content`
+was separately observed failing on a hand-edited chart SVG in the artifact and on
+python removed from the grammar list.
+
+## Directive names and prose that looks like markup
+
+`remark-directive` accepts digits in a directive name, so ordinary prose parsed
+as markup: `4.5:1` became a text directive named `1`, and so did `12:30` and
+`localhost:8080`, each rendering as an empty `<div>` that ate the rest of the
+token. The palette article shipped with its contrast ratios in code spans to work
+around it.
+
+`remarkNumericTextDirectives` turns any INLINE directive whose name starts with a
+digit back into text, reconstructed by slicing the original source at the node's
+offsets so a directive that also carried a label or attributes comes back exactly
+as written. Nothing legitimate is lost: every directive this pipeline defines is
+a word.
+
+Measured rather than assumed: `::30` does not parse as a leaf directive at all,
+and a numeric CONTAINER needs a deliberate `:::99` at the start of a line, so
+neither is reachable from prose and neither is rewritten.
 
 ## Hard rules
 

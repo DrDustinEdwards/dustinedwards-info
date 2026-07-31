@@ -35,30 +35,48 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
 
+import { buildChartModel, renderChartHast } from "./chart.mjs";
+
 import bash from "shiki/langs/bash.mjs";
 import css from "shiki/langs/css.mjs";
 import html from "shiki/langs/html.mjs";
 import javascript from "shiki/langs/javascript.mjs";
 import json from "shiki/langs/json.mjs";
 import markdown from "shiki/langs/markdown.mjs";
+import python from "shiki/langs/python.mjs";
 import sql from "shiki/langs/sql.mjs";
 import tsx from "shiki/langs/tsx.mjs";
 import typescript from "shiki/langs/typescript.mjs";
 import githubDarkHighContrast from "shiki/themes/github-dark-high-contrast.mjs";
 import githubLightHighContrast from "shiki/themes/github-light-high-contrast.mjs";
 
+/**
+ * The grammars shipped to the highlighter, keyed by the name a fence uses.
+ *
+ * ONE list, because there used to be two: an exported `LANGUAGES` array of
+ * names, read by `check:contrast`, and a separate hardcoded `langs:` array of
+ * imported grammars passed to shiki. Adding python meant editing both, and
+ * editing only one is invisible: naming a language in `LANGUAGES` that the
+ * highlighter was never given makes the gate assert about a grammar that is not
+ * loaded, while loading one that `LANGUAGES` omits leaves it unasserted. Two
+ * hand-maintained lists mirroring each other is the drift this repo already
+ * gated against for backup tables.
+ */
+const GRAMMARS = {
+  bash,
+  css,
+  html,
+  javascript,
+  json,
+  markdown,
+  python,
+  sql,
+  tsx,
+  typescript,
+};
+
 /** Languages that get highlighted. Anything else renders as plain text. */
-export const LANGUAGES = [
-  "bash",
-  "css",
-  "html",
-  "javascript",
-  "json",
-  "markdown",
-  "sql",
-  "tsx",
-  "typescript",
-];
+export const LANGUAGES = Object.keys(GRAMMARS);
 
 const WORDS_PER_MINUTE = 200;
 
@@ -387,7 +405,7 @@ export const SHIKI_THEMES = { light: githubLight, dark: githubDark };
 async function buildHighlighter() {
   return createHighlighterCore({
     themes: [githubLight, githubDark],
-    langs: [typescript, tsx, javascript, json, bash, sql, html, css, markdown],
+    langs: Object.values(GRAMMARS),
       // Oniguruma, not the JavaScript regex engine.
       //
       // The JS engine avoids shipping a WASM binary, which is why it was chosen
@@ -462,6 +480,111 @@ function remarkFigure(file) {
 }
 
 /**
+ * Turns an inline directive whose name begins with a digit back into text.
+ *
+ * `remark-directive` accepts digits in a directive name, so ordinary prose is
+ * parsed as markup: `4.5:1` yields a text directive named `1`, `12:30` yields
+ * one named `30`, and `localhost:8080` yields one named `8080`. Each rendered as
+ * an empty `<div>`, silently eating the rest of the token. The palette article
+ * shipped with its contrast ratios wrapped in code spans to dodge this.
+ *
+ * Nothing legitimate is lost. A directive is an authoring construct and every
+ * one this pipeline defines is a word (`figure`, `chart`), so a name that starts
+ * with a digit is always prose that got captured.
+ *
+ * Reconstructed by slicing the ORIGINAL SOURCE at the node's offsets rather than
+ * rebuilding `:` + name, so a directive that also carried a label or attributes
+ * comes back exactly as written instead of being silently truncated.
+ *
+ * Only inline directives are treated this way. Measured: `::30` does not parse
+ * as a leaf directive at all, and a numeric CONTAINER needs a deliberate `:::99`
+ * at the start of a line, which prose does not produce by accident.
+ *
+ * @param {string} source the markdown these positions refer to
+ */
+function remarkNumericTextDirectives(source) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, "textDirective", (/** @type {any} */ node, index, parent) => {
+      if (!parent || index === undefined || index === null) return;
+      if (!/^\d/.test(node.name ?? "")) return;
+      const { start, end } = node.position ?? {};
+      if (start?.offset === undefined || end?.offset === undefined) return;
+      parent.children[index] = {
+        type: "text",
+        value: source.slice(start.offset, end.offset),
+        position: node.position,
+      };
+    });
+  };
+}
+
+/**
+ * Validates `:::chart` and hands the model to the rehype half.
+ *
+ * The work is split across the two phases on purpose. Validation belongs in
+ * remark, so a bad chart fails the build naming the post before anything is
+ * rendered; but the caption is author-written markdown, and it only becomes hast
+ * after remark-rehype has run. Building the figure here would mean either
+ * dropping caption formatting or re-implementing markdown rendering.
+ *
+ * @param {string} file
+ * @param {any[]} sink models, indexed by the marker written onto the node
+ */
+function remarkChart(file, sink) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, (/** @type {any} */ node) => {
+      if (node.type !== "containerDirective" || node.name !== "chart") return;
+
+      const children = node.children ?? [];
+      const dataNodes = children.filter((/** @type {any} */ c) => c.type === "code");
+      if (dataNodes.length !== 1) {
+        throw new ContentError(
+          file,
+          `:::chart requires exactly one fenced code block of data, found ${dataNodes.length}`,
+        );
+      }
+
+      /** @type {any} */
+      let model;
+      try {
+        model = buildChartModel(node.attributes ?? {}, dataNodes[0].value);
+      } catch (error) {
+        throw new ContentError(
+          file,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
+      const index = sink.push(model) - 1;
+      node.data = {
+        ...node.data,
+        hName: "figure",
+        hProperties: { className: ["chart-figure"], "data-chart": String(index) },
+      };
+      // Everything that is not the data block is the caption.
+      node.children = children.filter((/** @type {any} */ c) => c.type !== "code");
+    });
+  };
+}
+
+/**
+ * Replaces each marked figure's children with the rendered chart.
+ *
+ * @param {any[]} models
+ */
+function rehypeChart(models) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, "element", (/** @type {any} */ node) => {
+      const marker = node.properties?.["data-chart"];
+      if (marker === undefined) return;
+      const model = models[Number(marker)];
+      delete node.properties["data-chart"];
+      node.children = renderChartHast(model, node.children ?? []);
+    });
+  };
+}
+
+/**
  * Writes intrinsic width and height onto every img, plus lazy-loading hints.
  *
  * @param {string} file
@@ -524,6 +647,8 @@ export async function renderBody({ file, body, resolveImage }) {
   const toc = [];
   /** @type {Array<Promise<void>>} */
   const pending = [];
+  /** @type {any[]} */
+  const charts = [];
 
   const highlighter = await getHighlighter();
 
@@ -531,8 +656,13 @@ export async function renderBody({ file, body, resolveImage }) {
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkDirective)
+    // Runs before any directive is interpreted, so prose that only LOOKS like a
+    // directive is text again before remarkFigure or remarkChart can see it.
+    .use(remarkNumericTextDirectives, body)
     .use(remarkFigure, file)
+    .use(remarkChart, file, charts)
     .use(remarkRehype)
+    .use(rehypeChart, charts)
     .use(rehypeSlug)
     .use(rehypeCollectToc, toc)
     .use(rehypeAutolinkHeadings, {
