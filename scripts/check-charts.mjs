@@ -49,7 +49,7 @@ import {
   buildChartModel,
   renderChartHast,
 } from "../app/lib/content/chart.mjs";
-import { renderBody } from "../app/lib/content/pipeline.mjs";
+import { KNOWN_DIRECTIVES, renderBody } from "../app/lib/content/pipeline.mjs";
 
 const HERE = fileURLToPath(import.meta.url);
 
@@ -411,6 +411,44 @@ async function main() {
     assert(prose.html.includes(literal), `prose: "${literal}" did not survive directive parsing`);
   }
   assert(!/<div>/.test(prose.html), "prose: a colon-digit sequence still renders as an empty div");
+
+  // 8. Unknown directives fail closed (ruled 2026-07-30).
+  //
+  // An unhandled directive is not inert: remark-rehype renders it as a bare
+  // <div>, so a typo publishes a silent empty element where a figure was meant
+  // to be. These are the paired negatives for that rule.
+  const render = (/** @type {string} */ body) =>
+    renderBody({ file: "check-charts", body, resolveImage: async () => ({ width: 1, height: 1 }) });
+
+  for (const [label, body, needle] of [
+    ["a typo'd container", ':::figrue{src="/a.png" alt="x"}\ncap\n:::', ":::figrue"],
+    ["an unknown inline directive", "Inline :abbr[HTML] here.", ":abbr"],
+    ["a numeric container", ":::99\nbody\n:::", ":::99"],
+  ]) {
+    try {
+      await render(body);
+      failed += 1;
+      console.error(`  FAIL ${label} did not fail the build`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      assert(message.includes(needle), `${label}: the error does not name "${needle}". Got: ${message}`);
+      assert(/on line \d+/.test(message), `${label}: the error does not name a line`);
+      assert(
+        message.includes(KNOWN_DIRECTIVES.join(", ")),
+        `${label}: the error does not list the known directives`,
+      );
+    }
+  }
+
+  // The escape hatch the error message advertises has to actually work, or the
+  // advice in it is wrong.
+  const escaped = await render("A note\\:this is important.");
+  assert(escaped.html.includes("note:this"), "an escaped colon did not survive as text");
+  assert(!/<div>/.test(escaped.html), "an escaped colon still produced a div");
+
+  // And the known ones still render, so the check is not simply refusing everything.
+  const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
+  assert(/<figure><img/.test(known.html), "the figure directive stopped rendering");
 
   console.log(`check:charts ${failed === 0 ? "ok" : "FAILED"}. ${passed} assertions passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

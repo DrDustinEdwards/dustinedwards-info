@@ -878,6 +878,33 @@ Measured rather than assumed: `::30` does not parse as a leaf directive at all,
 and a numeric CONTAINER needs a deliberate `:::99` at the start of a line, so
 neither is reachable from prose and neither is rewritten.
 
+**Any other unrecognized directive is a BUILD ERROR** (ruled 2026-07-30).
+`KNOWN_DIRECTIVES` in `pipeline.mjs` is the list, and `remarkUnknownDirectives`
+throws a `ContentError` naming the post, the line, the unknown name and the known
+list. An unhandled directive is not inert: remark-rehype renders it as a bare
+`<div>`, so `:::figrue` would publish a silent empty element where a figure was
+meant to be and drop the author's caption with it. Silent wrong output is the
+class this repo forbids everywhere else, and a typo is precisely the case nobody
+catches in review.
+
+Switched on only after a corpus scan: all 11 posts carried 2 directives in total,
+both `:::chart`, and zero unknown ones, so nothing existing had to be fixed.
+
+The cost is that genuine prose containing a colon followed by a word (`note:this`)
+now fails the build. That is the intended trade. The error message advertises the
+escape, `\:` or a code span, and `check:charts` asserts the escape actually works,
+because advice in an error message that has never been run is just a guess.
+
+## The chart authoring skill
+
+`.claude/skills/charts/SKILL.md` encodes the directive contract for authors.
+
+Note the PATH. `chart-stack.md` named it `.claude/skills/charts.md`, but skills
+are discovered as `<name>/SKILL.md`; a flat file at that path is never loaded, and
+advertising a skill that does not resolve is a defect by the house structure rule.
+Verified before choosing: all 202 installed skills use the directory form, and
+flat `.md` files appear only inside a skill's `references/`.
+
 ## Hard rules
 
 1. Every public read goes through `publiclyVisible()`. It hides drafts and future publish_at rows. Do not query posts for public output without it.

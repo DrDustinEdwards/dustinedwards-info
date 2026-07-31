@@ -519,6 +519,52 @@ function remarkNumericTextDirectives(source) {
 }
 
 /**
+ * Every directive this pipeline understands. Adding one means adding it here.
+ */
+export const KNOWN_DIRECTIVES = ["chart", "figure"];
+
+/**
+ * Fails the build on any directive this pipeline does not implement.
+ *
+ * Ruled 2026-07-30. An unhandled directive is not inert: remark-rehype turns it
+ * into a bare `<div>`, so `:::figrue` publishes a silent empty element where a
+ * figure was meant to be, and the author's caption disappears. Silent wrong
+ * output is the class this repo forbids everywhere else, and a typo is exactly
+ * the case that never gets noticed in review.
+ *
+ * Verified before it was switched on: a scan of all 11 posts found 2 directives
+ * in total, both `:::chart`, and zero unknown ones, so nothing existing had to
+ * be fixed to turn this on.
+ *
+ * Runs AFTER remarkNumericTextDirectives, so prose that only looked like a
+ * directive (`4.5:1`, `12:30`, `localhost:8080`) is already text and never
+ * reaches here. A numeric CONTAINER (`:::99`) does reach here and is an error,
+ * which is right: three colons at the start of a line is deliberate syntax.
+ *
+ * @param {string} file
+ */
+function remarkUnknownDirectives(file) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, (/** @type {any} */ node) => {
+      const type = String(node.type);
+      if (!type.endsWith("Directive")) return;
+      const name = node.name ?? "";
+      if (KNOWN_DIRECTIVES.includes(name)) return;
+
+      const marker =
+        type === "containerDirective" ? ":::" : type === "leafDirective" ? "::" : ":";
+      const line = node.position?.start?.line;
+      throw new ContentError(
+        file,
+        `unknown directive "${marker}${name}"${line ? ` on line ${line}` : ""}. ` +
+          `Known directives: ${KNOWN_DIRECTIVES.join(", ")}. ` +
+          "If this is ordinary prose, escape the colon as \\: or wrap it in a code span.",
+      );
+    });
+  };
+}
+
+/**
  * Validates `:::chart` and hands the model to the rehype half.
  *
  * The work is split across the two phases on purpose. Validation belongs in
@@ -659,6 +705,9 @@ export async function renderBody({ file, body, resolveImage }) {
     // Runs before any directive is interpreted, so prose that only LOOKS like a
     // directive is text again before remarkFigure or remarkChart can see it.
     .use(remarkNumericTextDirectives, body)
+    // Fails closed on anything the pipeline does not implement, before any
+    // handler runs, so a typo is a named build error rather than a silent div.
+    .use(remarkUnknownDirectives, file)
     .use(remarkFigure, file)
     .use(remarkChart, file, charts)
     .use(remarkRehype)
