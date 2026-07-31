@@ -172,13 +172,45 @@ export function submissions(html) {
   /** @type {Array<{ action: string, method: string, intent: string, fields: string[] }>} */
   const out = [];
 
-  for (const form of html.match(/<form[\s\S]*?<\/form>/g) ?? []) {
-    const action = /action="([^"]*)"/.exec(form)?.[1] ?? "";
-    const method = (/method="([^"]*)"/.exec(form)?.[1] ?? "get").toUpperCase();
+  // Form ownership is by the `form` ATTRIBUTE first and containment second,
+  // which is how a browser resolves it. Modelling only containment would be a
+  // lie the moment a control sits outside the form it submits, and the editor
+  // has exactly that case: the delete button lives at the foot of the settings
+  // drawer, inside the editing form, and belongs to a different one. Forms
+  // cannot nest, so a flat scan for their ranges is sufficient.
+  /** @type {Array<{ id: string, start: number, end: number, open: string }>} */
+  const forms = [];
+  for (const match of html.matchAll(/<form\b[^>]*>/g)) {
+    const start = match.index ?? 0;
+    const end = html.indexOf("</form>", start);
+    forms.push({
+      id: /\sid="([^"]*)"/.exec(match[0])?.[1] ?? "",
+      start,
+      end: end === -1 ? html.length : end,
+      open: match[0],
+    });
+  }
+
+  /**
+   * @param {number} at
+   * @param {string | undefined} formAttr
+   * @returns {number}
+   */
+  const ownerOf = (at, formAttr) => {
+    if (formAttr) return forms.findIndex((f) => f.id === formAttr);
+    return forms.findIndex((f) => at > f.start && at < f.end);
+  };
+
+  for (let i = 0; i < forms.length; i += 1) {
+    const form = forms[i];
+    const action = /action="([^"]*)"/.exec(form.open)?.[1] ?? "";
+    const method = (/method="([^"]*)"/.exec(form.open)?.[1] ?? "get").toUpperCase();
 
     /** @type {string[]} */
     const fields = [];
-    for (const tag of form.match(/<(?:input|textarea|select)\b[^>]*>/g) ?? []) {
+    for (const match of html.matchAll(/<(?:input|textarea|select)\b[^>]*>/g)) {
+      const tag = match[0];
+      if (ownerOf(match.index ?? 0, /\sform="([^"]*)"/.exec(tag)?.[1]) !== i) continue;
       // A disabled control submits nothing. That is load bearing rather than a
       // detail: it is how the editor reproduces a checkbox's "absent when
       // unticked" without a checkbox.
@@ -215,7 +247,9 @@ export function submissions(html) {
 
     /** @type {string[]} */
     const intents = [];
-    for (const button of form.match(/<button[\s\S]*?<\/button>/g) ?? []) {
+    for (const match of html.matchAll(/<button\b[^>]*>/g)) {
+      const button = match[0];
+      if (ownerOf(match.index ?? 0, /\sform="([^"]*)"/.exec(button)?.[1]) !== i) continue;
       if (/\bdisabled\b/.test(button)) continue;
       if (!/type="submit"/.test(button)) continue;
       const name = /\sname="([^"]*)"/.exec(button)?.[1];
