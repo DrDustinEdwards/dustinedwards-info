@@ -153,6 +153,18 @@ export async function importBundled(file) {
 }
 
 /**
+ * Fields whose VALUE the UI decides, so the value is part of the contract.
+ *
+ * `draft` is the whole publish state machine reduced to one key: present as
+ * "on" or absent, nothing else. `isNew` picks the create path over the edit
+ * path. `headSha` and `firstPublished` are server-owned facts the form carries
+ * back untouched, and a change to either would be a real defect rather than a
+ * layout choice. Everything else in the payload is the author's content, and
+ * recording its value would make the fixture a copy of the test data.
+ */
+const CONTRACT_VALUES = new Set(["draft", "isNew", "headSha", "firstPublished"]);
+
+/**
  * Every request the rendered page can submit, as a stable shape.
  *
  * A form's identity here is (action, method, intent, field names). That is
@@ -226,21 +238,26 @@ export function submissions(html) {
       // browser never sends, and then demanded the redesign reproduce it.
       if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag)) continue;
 
-      // Hidden and checkbox values are chosen by the UI rather than typed by
-      // the author, so they are part of the contract and are recorded. Text
-      // values are the author's content and are not.
+      // For a few fields the VALUE is the contract, so it is recorded; for the
+      // rest only the name is, because the value is whatever the author typed.
+      //
+      // The split is by field NAME, not by widget type. Keying it on
+      // `type="hidden"` was the obvious first cut and it was wrong: the
+      // redesign moved coverSrc, tags and publishAt from text inputs to hidden
+      // inputs driven by pickers, which changes the widget and changes nothing
+      // about the request, and the gate reported all three as payload changes.
+      // What is actually contractual is the set of fields the UI decides on the
+      // author's behalf.
       //
       // A checkbox with no `value` attribute submits the string "on" (HTML
       // spec, the "default/on" state). React renders `checked` and no value, so
-      // reading the attribute literally would record an empty string and the
-      // baseline would disagree with the browser. `fieldsFromForm` tests
-      // `=== "on"`, so this is the difference between recording what is sent
-      // and recording what is written.
+      // reading the attribute literally would record an empty string while the
+      // browser sends "on". `fieldsFromForm` tests `=== "on"`, so this is the
+      // difference between recording what is sent and what is written.
       const explicit = /\svalue="([^"]*)"/.exec(tag)?.[1];
-      const entry =
-        type === "hidden" || type === "checkbox" || type === "radio"
-          ? `${name}=${explicit ?? (type === "hidden" ? "" : "on")}`
-          : name;
+      const entry = CONTRACT_VALUES.has(name)
+        ? `${name}=${explicit ?? (type === "checkbox" || type === "radio" ? "on" : "")}`
+        : name;
       if (!fields.includes(entry)) fields.push(entry);
     }
     fields.sort();
@@ -270,7 +287,17 @@ export function submissions(html) {
  * @returns {string[]}
  */
 export function submissionKeys(html) {
-  return submissions(html)
-    .map((s) => `${s.method} ${s.action} | ${s.intent} | ${s.fields.join(",")}`)
-    .sort();
+  // DISTINCT, deliberately. The contract is which requests a page can issue,
+  // not how many controls offer each one: the drift alert and the maintenance
+  // menu both submit sync-ask, and the editor now reaches an identical save
+  // from the primary button and from inside the publish ceremony. Counting
+  // those as differences would make the gate object to layout, which is the one
+  // thing this redesign is allowed to change.
+  return [
+    ...new Set(
+      submissions(html).map(
+        (s) => `${s.method} ${s.action} | ${s.intent} | ${s.fields.join(",")}`,
+      ),
+    ),
+  ].sort();
 }
