@@ -69,6 +69,11 @@
       "sourcePath": "content/posts/a-color-palette-that-can-prove-itself.md",
       "related": [
         {
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
+          "shared": 1
+        },
+        {
           "slug": "bells-and-whistles-zero-js",
           "title": "Progressive Enhancement: A Complete Blog UI in 1.6 kB of JavaScript",
           "shared": 1
@@ -145,13 +150,13 @@
           "shared": 2
         },
         {
-          "slug": "letting-an-agent-publish",
-          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
           "shared": 1
         },
         {
-          "slug": "ten-years-on-cloudflare",
-          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
+          "slug": "letting-an-agent-publish",
+          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
           "shared": 1
         }
       ]
@@ -220,6 +225,11 @@
       "sourcePath": "content/posts/bells-and-whistles-zero-js.md",
       "related": [
         {
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
+          "shared": 2
+        },
+        {
           "slug": "letting-an-agent-publish",
           "title": "Giving an AI Agent Write Access to Production: A Trust Model",
           "shared": 1
@@ -227,11 +237,6 @@
         {
           "slug": "ten-years-on-cloudflare",
           "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
-          "shared": 1
-        },
-        {
-          "slug": "the-doorbell-gets-built",
-          "title": "Building an MCP Server on Cloudflare Workers with OAuth 2.1",
           "shared": 1
         }
       ]
@@ -279,13 +284,13 @@
           "shared": 2
         },
         {
-          "slug": "letting-an-agent-publish",
-          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
           "shared": 1
         },
         {
-          "slug": "ten-years-on-cloudflare",
-          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
+          "slug": "letting-an-agent-publish",
+          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
           "shared": 1
         }
       ]
@@ -370,8 +375,8 @@
           "shared": 4
         },
         {
-          "slug": "letting-an-agent-publish",
-          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
           "shared": 2
         }
       ]
@@ -463,7 +468,7 @@
       "description": "How to render Observable Plot charts inside a Cloudflare Worker: the linkedom shim that works, the domino and Vega failures that don't, byte-identical output across Node and workerd, and accessible charts enforced by the build.",
       "date": "2026-07-31",
       "publishAt": "2026-07-31T00:00:00.000Z",
-      "draft": true,
+      "draft": false,
       "tags": [
         "cloudflare",
         "workers",
@@ -774,8 +779,8 @@
           "shared": 3
         },
         {
-          "slug": "letting-an-agent-publish",
-          "title": "Giving an AI Agent Write Access to Production: A Trust Model",
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
           "shared": 2
         }
       ]
@@ -855,13 +860,13 @@
           "shared": 3
         },
         {
-          "slug": "one-door-two-doorbells",
-          "title": "API vs MCP: Put the Policy in the API",
+          "slug": "observable-plot-cloudflare-workers",
+          "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts",
           "shared": 2
         },
         {
-          "slug": "ten-years-on-cloudflare",
-          "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild",
+          "slug": "one-door-two-doorbells",
+          "title": "API vs MCP: Put the Policy in the API",
           "shared": 2
         }
       ]
@@ -1676,7 +1681,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": null,
       "ordinal": 0,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1692,7 +1697,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "why-render-charts-in-the-worker-at-all",
       "ordinal": 1,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1708,7 +1713,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "the-configuration-that-works-plot-plus-linkedom",
       "ordinal": 2,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1724,7 +1729,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "the-configuration-the-plot-team-demonstrated-which-does-not-transfer",
       "ordinal": 3,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1740,7 +1745,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "the-candidate-that-fails-at-runtime-vega-lite",
       "ordinal": 4,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1756,7 +1761,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "the-candidate-that-lost-on-the-axis-it-was-supposed-to-win-apache-echarts",
       "ordinal": 5,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1772,7 +1777,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "accessible-charts-enforced-by-the-build-rather-than-promised",
       "ordinal": 6,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1788,7 +1793,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "where-the-boundary-is-charts-yes-diagrams-no",
       "ordinal": 7,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
@@ -1804,7 +1809,7 @@
       "docUrl": "/blog/observable-plot-cloudflare-workers",
       "anchor": "limitations",
       "ordinal": 8,
-      "status": "draft",
+      "status": "published",
       "publishAt": "2026-07-31T00:00:00.000Z"
     },
     {
