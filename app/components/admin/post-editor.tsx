@@ -352,7 +352,7 @@ export function PostEditor({
 
         {/* ---- Region 1: the command bar ---------------------------------- */}
         <header className="editor-bar">
-          <div className="editor-bar-left">
+          <div className="editor-bar-group editor-bar-left">
             <Link to="/admin/posts" className="editor-back">
               <svg
                 width="15"
@@ -377,63 +377,20 @@ export function PostEditor({
             </span>
           </div>
 
-          <div className="editor-bar-right">
-            {/*
-              Dirty state as a first-class element rather than a line of prose
-              at the bottom of a form. It is the one thing the author checks
-              before closing the tab.
-            */}
-            <span className={dirty ? "editor-dirty is-dirty" : "editor-dirty"}>
-              <span className="editor-dirty-dot" aria-hidden="true" />
-              {dirty
-                ? savedAt
-                  ? "Unsaved changes, kept locally"
-                  : "Unsaved changes"
-                : feedback && feedback.state !== "failed"
-                  ? `Saved ${feedback.sha}`
-                  : shortHead
-                    ? `Up to date at ${shortHead}`
-                    : "Saving unavailable"}
-            </span>
+          {/*
+            CENTRE: the layout toggle, and nothing else.
 
-            <button
-              type="button"
-              className="btn-ghost"
-              aria-expanded={drawerOpen}
-              aria-haspopup="dialog"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.3.38.55.67.7H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              Settings
-            </button>
+            Gated on CodeMirror having mounted, and not only for tidiness. In
+            the preview layout the write pane is display:none, and a REQUIRED
+            control that is not displayed blocks submission with a validation
+            message the author can neither see nor reach. The textarea drops
+            `required` exactly when CodeMirror takes over, so the two conditions
+            have to be the same one.
 
-            {/*
-              Write / split / preview. Remembered per browser.
-              The live preview needs script, so this group is rendered only
-              alongside the form-submit Preview below, which is the path that
-              still works without it.
-            */}
-            {/*
-              Gated on CodeMirror having mounted, and not only for tidiness. In
-              the preview layout the write pane is display:none, and a REQUIRED
-              control that is not displayed blocks submission with a validation
-              message the author can neither see nor reach. The textarea drops
-              `required` exactly when CodeMirror takes over, so the two
-              conditions have to be the same one.
-            */}
+            The wrapper renders either way so the three groups keep their
+            positions whether or not script ran.
+          */}
+          <div className="editor-bar-group editor-bar-center">
             {richBody ? (
               <div className="editor-layout-toggle" role="group" aria-label="Editor layout">
                 {(["write", "split", "preview"] as Layout[]).map((option) => (
@@ -449,22 +406,77 @@ export function PostEditor({
                 ))}
               </div>
             ) : null}
+          </div>
+
+          <div className="editor-bar-group editor-bar-right">
+            {/*
+              Dirty state as a first-class element rather than a line of prose
+              at the bottom of a form. It is the one thing the author checks
+              before closing the tab. Short enough to sit on one line at 32px,
+              because the bar is a single row now: the longer phrasing wrapped
+              it to three rows at 1280px.
+            */}
+            <span className={dirty ? "editor-dirty is-dirty" : "editor-dirty"}>
+              <span className="editor-dirty-dot" aria-hidden="true" />
+              {!headSha
+                ? "Saving unavailable"
+                : dirty
+                  ? "Unsaved changes"
+                  : feedback && feedback.state !== "failed"
+                    ? `Saved ${feedback.sha}`
+                    : `Saved ${shortHead}`}
+            </span>
 
             {/*
-              The zero-JS preview, and the reason it survives the arrival of the
-              live one. With no script the layout toggle above cannot render a
-              thing, so this form submit is the ONLY way to see rendered output.
-              It also keeps `intent=preview` in the submission set, which
-              check:admin-ui holds against a pre-redesign baseline.
+              The zero-JS render, removed the moment CodeMirror takes over, on
+              the same principle as the textarea it sits beside: with no script
+              the layout toggle cannot render and this form submit is the ONLY
+              way to see rendered output, so it stays for that reader and goes
+              for everyone else.
+
+              It is REMOVED rather than hidden because, unlike the textarea, it
+              carries no value the save path needs. check:admin-ui renders
+              server-side, where `richBody` is false, so `intent=preview` is
+              still in the submission set and the fixture does not move.
             */}
+            {!richBody ? (
+              <button
+                type="submit"
+                name="intent"
+                value="preview"
+                className="btn-ghost editor-preview-submit"
+                disabled={busy}
+              >
+                Render
+              </button>
+            ) : null}
+
+            {/* A 32 by 32 icon button. The gear is decorative; the accessible
+                name is a real word, and the expanded state is on the control
+                that owns the drawer. */}
             <button
-              type="submit"
-              name="intent"
-              value="preview"
-              className="btn-ghost editor-preview-submit"
-              disabled={busy}
+              type="button"
+              className="editor-icon-button"
+              aria-expanded={drawerOpen}
+              aria-haspopup="dialog"
+              aria-label="Post settings"
+              title="Post settings"
+              onClick={() => setDrawerOpen(true)}
             >
-              Render
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.3.38.55.67.7H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
             </button>
 
             <div className="editor-primary">
@@ -627,29 +639,29 @@ export function PostEditor({
             </div>
 
             {/*
-              INSIDE the canvas, so it scrolls with the writing rather than
-              standing beside it. As a flex sibling of the form it took 126px of
-              the shell permanently and squeezed the canvas to 278px of a 598px
-              viewport, measured on the live deploy 2026-08-01. The canvas owns
-              the viewport height it was specced for; this is page content.
+              The zero-JS image path, and ONLY that. Once CodeMirror is mounted
+              the same job is done by drag-drop, paste, the toolbar and the
+              slash commands, and leaving a native file input plus a second alt
+              field under the canvas made the editor look like two editors
+              stacked. Removed on mount, exactly as the Render button and the
+              textarea are.
 
-              It contributes nothing to the payload wherever it sits: the file
+              It contributes nothing to the payload in either state: the file
               input and the alt input carry no `name`, and the button is
-              type="button". check:admin-ui holds that.
-
-              Kept rather than removed now that CodeMirror handles drag-drop and
-              paste, because it is the only image path that works without
-              script and the only one reachable by keyboard alone.
+              type="button". check:admin-ui renders server-side where richBody
+              is false, so it is still in that render and the fixture holds.
             */}
-            <ImageUploader
-              onInsert={(snippet) => {
-                const el = bodyRef.current;
-                if (!el) return;
-                const at = el.selectionStart ?? body.length;
-                setBody(body.slice(0, at) + snippet + body.slice(at));
-                setDirty(true);
-              }}
-            />
+            {!richBody ? (
+              <ImageUploader
+                onInsert={(snippet) => {
+                  const el = bodyRef.current;
+                  if (!el) return;
+                  const at = el.selectionStart ?? body.length;
+                  setBody(body.slice(0, at) + snippet + body.slice(at));
+                  setDirty(true);
+                }}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -692,7 +704,7 @@ export function PostEditor({
         />
       </Form>
 
-      {previewHtml !== undefined && previewHtml !== null ? (
+      {!richBody && previewHtml !== undefined && previewHtml !== null ? (
         <section className="editor-preview" aria-label="Preview">
           <h2>Preview</h2>
           <div className="prose" dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -736,11 +748,17 @@ function PreviewPane({
       .map((link) => `<link rel="stylesheet" href="${link.href}">`)
       .join("");
     const theme = document.documentElement.getAttribute("data-theme");
+    // `.post` is the blog's own article wrapper and carries the 44rem measure;
+    // `.prose` is the blog's own body typography. Both come from the site
+    // stylesheet linked above, so the preview cannot drift from the published
+    // page: there is no second copy of either rule to keep in step. The only
+    // thing declared here is the frame's own padding.
     setDoc(
       `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}>` +
         `<head><meta charset="utf-8">${styles}` +
-        `<style>body{margin:0;padding:1rem;background:var(--bg)}</style></head>` +
-        `<body><article class="prose">${result.html}</article></body></html>`,
+        `<style>body{margin:0;padding:2rem 1.5rem;background:var(--bg)}` +
+        `.post{margin:0 auto}</style></head>` +
+        `<body><div class="post"><article class="prose">${result.html}</article></div></body></html>`,
     );
   }, [result]);
 
