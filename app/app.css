@@ -939,8 +939,12 @@ a:hover {
   color: var(--text);
 }
 
+/* Height only. The WIDTH is the shared column, inherited from .admin-nav-icon,
+   which the chevron also carries: overriding it here is what left the toggle's
+   glyph 18px wide and centred at 41 while every other item sat at 43.516.
+   A little smaller than the nav glyphs on purpose, so the control reads as
+   chrome rather than as a sixth section. */
 .admin-sidebar-chevron {
-  width: 1.125rem;
   height: 1.125rem;
 }
 
