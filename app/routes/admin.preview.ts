@@ -1,6 +1,7 @@
 import { renderBody } from "~/lib/content/pipeline.mjs";
 import { getEnv } from "~/lib/context";
 import { ContentError } from "~/lib/content/pipeline.mjs";
+import { normalizeBody } from "~/lib/editor/frontmatter";
 import { EditorError, makeResolveImage } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.preview";
 
@@ -31,7 +32,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const env = getEnv(context);
   const form = await request.formData();
-  const body = String(form.get("body") ?? "");
+  // THE SAME transform the save path applies, from the same module, so the two
+  // cannot drift again. A multipart body arrives with every newline normalized
+  // to CRLF; rendering that raw is what made the preview differ from the
+  // published artifact by 14 bytes on the fixture post.
+  const body = normalizeBody(String(form.get("body") ?? ""));
   // Only used to label errors, exactly as the save path labels them, so a
   // failing directive reports the same file name it would report on save.
   const slug = String(form.get("slug") ?? "").trim() || "preview";

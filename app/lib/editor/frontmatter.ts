@@ -54,6 +54,28 @@ export function parseTags(input: string) {
     .filter(Boolean);
 }
 
+/**
+ * The body, exactly as it will be stored.
+ *
+ * CRLF to LF, then trimmed. Extracted from `serializePost`, where it was
+ * inline, because a SECOND caller needs the identical transform and the two
+ * silently disagreeing is not hypothetical: it shipped.
+ *
+ * The admin preview posts its body with `fetch` and a `FormData`, which encodes
+ * as multipart, and multipart serialization normalizes every newline to CRLF.
+ * The save path stripped them here and the preview route did not, so the
+ * preview rendered CRLF inside paragraph text where the published artifact had
+ * LF. Same source, different bytes, which is precisely the claim ruling 3
+ * exists to make true. Found on the live deploy 2026-08-01, invisible to the
+ * offline parity check because that feeds the renderer straight from the
+ * artifact and never crosses a form encoding.
+ *
+ * Both callers now use this. There is no third way to prepare a body.
+ */
+export function normalizeBody(body: string) {
+  return body.replace(/\r\n/g, "\n").trim();
+}
+
 export function serializePost(fields: PostFields) {
   const lines = [
     "---",
@@ -83,7 +105,7 @@ export function serializePost(fields: PostFields) {
 
   // The body is stored with a single leading blank line after the frontmatter
   // and exactly one trailing newline, so repeated saves do not drift.
-  return `${lines.join("\n")}\n${fields.body.replace(/\r\n/g, "\n").trim()}\n`;
+  return `${lines.join("\n")}\n${normalizeBody(fields.body)}\n`;
 }
 
 /** Parses a stored file back into form fields for editing. */
