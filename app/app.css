@@ -723,13 +723,25 @@ a:hover {
   --admin-sidebar-w: 3.75rem;
 }
 
-/* Ruling 6. The width is the only thing that animates, and only for readers
-   who have not asked it to stop. */
-@media (prefers-reduced-motion: no-preference) {
-  .admin-sidebar {
-    transition: width 160ms ease;
-  }
-}
+/* Ruling 6 asks that the width transition respect prefers-reduced-motion. There
+   is NO width transition, which satisfies it the short way, and that is a
+   correctness decision rather than laziness.
+ *
+ * Measured 2026-08-01, twice. Transitioning `grid-template-columns` left the
+ * computed template frozen at `60px 1220px` after expanding, while the variable
+ * had already resolved to 15rem and the labels were back. Moving the width onto
+ * the sidebar and transitioning that failed the same way in the other
+ * direction: computed width stuck at 240px with the variable resolved to
+ * 3.75rem, and `getAnimations()` reporting nothing running, so the transition
+ * had started, stalled, and left the element at its start value. Setting
+ * `transition: none` at runtime snapped it to 60px, which is what identified
+ * the cause.
+ *
+ * Both failures are the same circularity: the sidebar is a grid item in an
+ * `auto` track, so the track sizes to the item while the item's width is being
+ * animated. A rail that snaps is instant, correct, and cannot get stuck. What
+ * still animates is the CHEVRON, a transform, which does not feed back into
+ * layout. */
 
 .admin-sidebar {
   display: flex;
