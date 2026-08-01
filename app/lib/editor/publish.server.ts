@@ -60,8 +60,14 @@ type PublishEnv = Env & { GITHUB_TOKEN?: string };
  * moment ago is in the bucket but may not be reachable over the public origin
  * yet. Anything else is a committed asset under `public/`, fetched from the
  * canonical origin.
+ *
+ * Exported so the admin preview route resolves images exactly as a save does.
+ * There must not be a second implementation: preview's whole claim is that what
+ * it renders is what publishes, and image dimensions are baked into the markup
+ * by `rehypeImageDimensions`, so a preview that measured images differently
+ * would produce different HTML and quietly break the claim.
  */
-function makeResolveImage(env: PublishEnv) {
+export function makeResolveImage(env: PublishEnv) {
   return async (src: string) => {
     if (!src.startsWith("/")) {
       throw new EditorError(`Image src "${src}" must be a site-absolute path.`);
