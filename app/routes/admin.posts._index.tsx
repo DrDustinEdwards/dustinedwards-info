@@ -8,7 +8,7 @@ import { getEnv } from "~/lib/context";
 import { loadArtifact, regenerateAllFromArtifact } from "~/lib/editor/publish.server";
 import {
   askAvailable,
-  askIndexStatus,
+  askStatusContext,
   pruneAskCorpus,
   syncAskCorpus,
 } from "~/lib/search/ask.server";
@@ -55,14 +55,19 @@ export async function loader({ context }: Route.LoaderArgs) {
   // Ask index drift, shown because the editor's Ask sync is allowed to fail
   // without failing the save. This is an ADMIN page, so it may await the AI
   // layer; no public route ever does.
-  let ask: Awaited<ReturnType<typeof askIndexStatus>> | null = null;
+  //
+  // The status now comes from the reader the admin layout's middleware put on
+  // the context, because the Posts nav badge wants the same fact and a listing
+  // per consumer would be two. It still arrives in THIS route's loader data:
+  // the alert owns the repair, and check:admin-ui fabricates `ask` here.
+  const ask = await context.get(askStatusContext)();
+
   let budget: Awaited<ReturnType<typeof readAskBudget>> | null = null;
   if (askAvailable(env)) {
     try {
-      ask = await askIndexStatus(env, await loadArtifact(env));
       budget = await readAskBudget(env);
     } catch (error) {
-      console.error("ask index status failed", error);
+      console.error("ask budget read failed", error);
     }
   }
 

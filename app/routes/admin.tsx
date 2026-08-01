@@ -5,6 +5,8 @@ import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
+import { loadArtifact } from "~/lib/editor/publish.server";
+import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 
 export function meta() {
@@ -19,15 +21,37 @@ export function meta() {
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
-    const session = await getAdminSession(getEnv(context), request);
+    const env = getEnv(context);
+    const session = await getAdminSession(env, request);
     if (!session) throw redirect("/login");
     context.set(adminSessionContext, session);
+    // Lazy and memoized: this layout's loader wants a drift COUNT for the nav
+    // badge and /admin/posts wants the full status for its alert. Sharing the
+    // reader means one listing per request rather than two, and a route that
+    // never asks for it never pays for it.
+    context.set(
+      askStatusContext,
+      askStatusReader(env, () => loadArtifact(env)),
+    );
     return next();
   },
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  return { email: context.get(adminSessionContext).user.email };
+  const ask = await context.get(askStatusContext)();
+  return {
+    email: context.get(adminSessionContext).user.email,
+    /**
+     * ONE number, not the status object. The badge is a count and the repair
+     * lives on /admin/posts, so shipping the key lists to every admin page
+     * would be payload the shell has no use for.
+     *
+     * Drift counts in BOTH directions, exactly as the alert reports it: an item
+     * the corpus does not know about is as much a defect as a record the index
+     * lacks.
+     */
+    askDrift: ask ? ask.missing.length + ask.stale.length : 0,
+  };
 }
 
 /**
@@ -88,10 +112,20 @@ const ICONS = {
       <path d="M4 5h16M4 10h16M4 15h11M4 20h7" />
     </>
   ),
+  /**
+   * Sliders, not the pencil this used to draw.
+   *
+   * A pencil reads as COMPOSE, which is what Posts does, so two adjacent items
+   * were claiming the same job and the one that actually writes was not the one
+   * holding the pen. Sliders say "settings and switches", which is what Tools
+   * holds.
+   */
   tools: (
     <>
-      <path d="M14.7 6.3a4 4 0 0 0 5 5l-9.9 9.9a2.1 2.1 0 0 1-3-3z" />
-      <path d="M17.5 3.5 20.5 6.5" />
+      <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="8" cy="12" r="2" />
+      <circle cx="16" cy="18" r="2" />
     </>
   ),
 } as const;
@@ -100,9 +134,26 @@ const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
   { to: "/admin/sites", label: "Sites", icon: ICONS.sites },
   { to: "/admin/content", label: "Content", icon: ICONS.content },
-  { to: "/admin/posts", label: "Posts", icon: ICONS.posts },
+  // The only item that carries a count. Drift is a fact about the post corpus,
+  // and Posts is where the repair lives.
+  { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
 ];
+
+/**
+ * The accessible name for a nav item, count included as WORDS.
+ *
+ * A badge that is only a numeral announces "Posts 3", which names no unit and
+ * reads as a position as easily as a quantity. The digits are decoration over
+ * this string, so the numeral itself is aria-hidden and this is what is
+ * actually announced. It doubles as the `title`, which is how the count keeps a
+ * text equivalent for a SIGHTED reader in the collapsed rail, where the badge
+ * has room for the number but not for what the number counts.
+ */
+function navName(label: string, drift: number) {
+  if (drift <= 0) return label;
+  return `${label}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted`;
+}
 
 /** 24x24 stroked glyph, the same shape the rest of the admin uses. */
 function Glyph({ children }: { children: React.ReactNode }) {
@@ -259,29 +310,59 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             mark sits at the same coordinates on both planes. The rail's top
             gains the space it used to occupy. */}
         <nav className="admin-nav" aria-label="Admin sections">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              /*
-                The accessible name is on the element, always, so it survives
-                the label being hidden in the rail. `title` is the sighted
-                tooltip the ruling asks for; it is redundant beside a visible
-                label and native, which is the trade taken rather than a custom
-                tooltip that would have to reimplement dismissal.
-              */
-              aria-label={item.label}
-              title={item.label}
-            >
-              <Glyph>{item.icon}</Glyph>
-              <span className="admin-nav-label">{item.label}</span>
-            </NavLink>
-          ))}
+          {NAV.map((item) => {
+            const drift = item.drift ? loaderData.askDrift : 0;
+            const name = navName(item.label, drift);
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                /*
+                  The accessible name is on the element, always, so it survives
+                  the label being hidden in the rail. `title` is the sighted
+                  tooltip the ruling asks for; it is redundant beside a visible
+                  label and native, which is the trade taken rather than a
+                  custom tooltip that would have to reimplement dismissal.
+                */
+                aria-label={name}
+                title={name}
+              >
+                <Glyph>{item.icon}</Glyph>
+                <span className="admin-nav-label">{item.label}</span>
+                {/* Zero renders NOTHING, rather than a 0 badge: a count of
+                    nothing is not news, and a permanent badge stops being a
+                    signal. aria-hidden because the name above already says it
+                    in words. */}
+                {drift > 0 ? (
+                  <span className="admin-nav-badge" aria-hidden="true">
+                    {drift}
+                  </span>
+                ) : null}
+              </NavLink>
+            );
+          })}
         </nav>
 
+        {/*
+          The foot is a ZONE, not two more sections. Both items leave the list
+          of places you can be: one crosses to the public plane, the other
+          changes the rail itself. A hairline above the group says that, and is
+          why they take the nav item's shape without joining the nav's list.
+        */}
         <div className="admin-sidebar-foot">
-          <a className="admin-view-site" href="/" title="View site">
+          {/*
+            The nav item treatment, per the polish ruling, so it stops reading
+            as a footnote under the sections. The glyph carries the signal that
+            this leaves the plane; the accessible name says it in words, because
+            an arrow leaving a box is not a name.
+          */}
+          <a
+            className="admin-view-site"
+            href="/"
+            aria-label="View site, leaves the admin"
+            title="View site, leaves the admin"
+          >
             <svg
               className="admin-nav-icon"
               viewBox="0 0 24 24"
@@ -304,6 +385,12 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             pressing it DOES: left to collapse, right to expand. One glyph
             rotated by CSS off the same attribute, so the markup does not branch
             and the node is never replaced.
+
+            It takes the standard item shape rather than centring itself: as a
+            lone centred glyph it lined up with nothing above it and read as a
+            decoration on the rail's floor rather than a control. Its label is
+            the VERB, so expanded it reads "Collapse" beside the arrow and the
+            rail hides the word exactly as it hides every other one.
           */}
           <button
             ref={toggleRef}
@@ -316,7 +403,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             onClick={toggle}
           >
             <svg
-              className="admin-sidebar-chevron"
+              className="admin-nav-icon admin-sidebar-chevron"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -327,6 +414,9 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
+            {/* The verb, never "Expand": in the state where the word is
+                visible, the action available is collapsing. */}
+            <span className="admin-nav-label">Collapse</span>
           </button>
         </div>
       </aside>
