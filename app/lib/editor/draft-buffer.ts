@@ -100,6 +100,33 @@ export function clearAllBuffersFor(slug: string) {
 }
 
 /**
+ * Removes buffers written under the pre-Session-2 key scheme.
+ *
+ * That scheme was `post-draft:<slug>` and `post-draft:new`, with no base commit
+ * in the key. The current one is `post-draft:<slug>:<headSha>`, so a legacy key
+ * can never match a lookup and is never offered: it is dead storage rather than
+ * a hazard. Three were still in the browser on 2026-08-01, one of them for a
+ * post that no longer exists.
+ *
+ * A slug is kebab-case and cannot contain a colon, so the two schemes are told
+ * apart by counting segments: three means current, two means legacy.
+ */
+export function purgeLegacyBuffers() {
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (!key || !key.startsWith("post-draft:")) continue;
+      if (key.split(":").length === 2) doomed.push(key);
+    }
+    for (const key of doomed) window.localStorage.removeItem(key);
+    return doomed.length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Whether a stored buffer is worth offering.
  *
  * "Newer than the loaded content" in practice means "says something different

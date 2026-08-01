@@ -5,6 +5,7 @@ import {
   bufferDiffers,
   clearAllBuffersFor,
   draftKey,
+  purgeLegacyBuffers,
   readBuffer,
   readForm,
   writeBuffer,
@@ -132,7 +133,6 @@ export function PostEditor({
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const draftFieldRef = useRef<HTMLInputElement>(null);
-  const primaryRef = useRef<HTMLDivElement>(null);
   const autosaveTimer = useRef<number>(0);
   const storageKey = draftKey(fields.slug, headSha);
 
@@ -145,6 +145,12 @@ export function PostEditor({
     if (!form) return;
     setSavedAt(writeBuffer(storageKey, readForm(form)));
   }, [storageKey]);
+
+  // Housekeeping. Buffers written under the pre-Session-2 key scheme can never
+  // be matched by a lookup, so without this they sit in storage forever.
+  useEffect(() => {
+    purgeLegacyBuffers();
+  }, []);
 
   // Offer a recovery only when the buffer says something different from what
   // the server just handed back. Restoring is never automatic: silently
@@ -237,19 +243,38 @@ export function PostEditor({
     return () => window.clearTimeout(timer);
   }, [body, layout, fields.slug, slug]);
 
-  // Cmd+S / Ctrl+S. It clicks the primary button rather than submitting the
-  // form directly, because the button's own click handler is what arms the
-  // `draft` field for the transition it names. Submitting around it would send
-  // whatever the last press happened to leave behind.
+  /**
+   * Cmd+S / Ctrl+S. It SAVES, and it can never do anything else.
+   *
+   * It used to click the primary button, on the reasoning that the button's own
+   * handler arms the `draft` field for the transition it names. That was wrong
+   * in the one case that mattered: on a post that has never been published the
+   * primary button is the publish CEREMONY trigger, so the universal save
+   * shortcut opened the publish dialog, one Return away from making a draft
+   * public. Found on the live deploy 2026-08-01.
+   *
+   * Now it submits the form directly and arms `draft` to the post's CURRENT
+   * committed state, so a save preserves publication status rather than
+   * changing it. `requestSubmit()` with no submitter sends no `intent` at all,
+   * and `handleEditorAction` already defaults a missing intent to "save", so
+   * the payload is the same one the Save control sends.
+   *
+   * The ceremony is now reachable only by pointer or by focusing its trigger
+   * and activating it deliberately. No keyboard shortcut opens it.
+   */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
       event.preventDefault();
-      primaryRef.current?.querySelector<HTMLButtonElement>("button.btn")?.click();
+      const form = formRef.current;
+      if (!form) return;
+      const draftField = draftFieldRef.current;
+      if (draftField) draftField.disabled = !fields.draft;
+      form.requestSubmit();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [fields.draft]);
 
   const touched = () => {
     setDirty(true);
@@ -442,7 +467,7 @@ export function PostEditor({
               Render
             </button>
 
-            <div ref={primaryRef} className="editor-primary">
+            <div className="editor-primary">
               <PublishActions
                 state={state}
                 everPublished={everPublished}
@@ -600,6 +625,31 @@ export function PostEditor({
                 <PreviewPane result={preview} busy={previewing} />
               ) : null}
             </div>
+
+            {/*
+              INSIDE the canvas, so it scrolls with the writing rather than
+              standing beside it. As a flex sibling of the form it took 126px of
+              the shell permanently and squeezed the canvas to 278px of a 598px
+              viewport, measured on the live deploy 2026-08-01. The canvas owns
+              the viewport height it was specced for; this is page content.
+
+              It contributes nothing to the payload wherever it sits: the file
+              input and the alt input carry no `name`, and the button is
+              type="button". check:admin-ui holds that.
+
+              Kept rather than removed now that CodeMirror handles drag-drop and
+              paste, because it is the only image path that works without
+              script and the only one reachable by keyboard alone.
+            */}
+            <ImageUploader
+              onInsert={(snippet) => {
+                const el = bodyRef.current;
+                if (!el) return;
+                const at = el.selectionStart ?? body.length;
+                setBody(body.slice(0, at) + snippet + body.slice(at));
+                setDirty(true);
+              }}
+            />
           </div>
         </div>
 
@@ -641,25 +691,6 @@ export function PostEditor({
           dangerSlot={dangerSlot}
         />
       </Form>
-
-      {/*
-        Kept as it was, deliberately. Drag-drop, paste-from-clipboard and the
-        :::figure scaffold are the next session's work, and dropping the one
-        working image path in the meantime would leave the editor unable to
-        insert a picture at all for a session. It sits OUTSIDE the editing form
-        and contributes nothing to the payload: the file input and the alt input
-        carry no `name`, and the button is type="button". It uploads through its
-        own fetch to /admin/media, which is unchanged.
-      */}
-      <ImageUploader
-        onInsert={(snippet) => {
-          const el = bodyRef.current;
-          if (!el) return;
-          const at = el.selectionStart ?? body.length;
-          setBody(body.slice(0, at) + snippet + body.slice(at));
-          setDirty(true);
-        }}
-      />
 
       {previewHtml !== undefined && previewHtml !== null ? (
         <section className="editor-preview" aria-label="Preview">
