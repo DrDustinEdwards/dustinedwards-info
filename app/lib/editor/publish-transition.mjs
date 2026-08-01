@@ -41,10 +41,26 @@ const SAVE_DRAFT = {
   danger: false,
 };
 
-/** @type {Transition} */
+/**
+ * The transition on a post that is already public: it UPDATES what the reader
+ * sees.
+ *
+ * Named for the transition rather than for the mechanism, which is what ruling
+ * 4 asks of every primary. It read "Save changes" until 2026-08-01, and that
+ * was the one label in this table that named what the button does to the
+ * REPOSITORY rather than what it does to the site. The plumbing was already
+ * right: the component renders `primary.label` and check:admin-ui derives its
+ * expectation from this same table, so correcting the string here corrects both
+ * without touching either.
+ *
+ * The id stays `save`, so the payload, the policy weld and the gate fixture are
+ * all untouched.
+ *
+ * @type {Transition}
+ */
 const SAVE_CHANGES = {
   id: "save",
-  label: "Save changes",
+  label: "Update",
   wantsDraft: false,
   ceremony: false,
   danger: false,

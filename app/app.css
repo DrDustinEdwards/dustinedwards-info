@@ -2430,6 +2430,10 @@ a:hover {
 }
 
 .editor-page {
+  /* Declared once and read by both the panes grid and the title row, so the
+     two cannot disagree about where the left column ends. */
+  --editor-pane-gap: 1rem;
+  --editor-write-measure: 52rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -2445,16 +2449,50 @@ a:hover {
 
 /* Write view keeps the writing at an article-ish measure instead of stretching
    a single column across a wide screen. */
-.editor-canvas[data-layout="write"] .editor-panes {
-  max-width: 52rem;
+.editor-canvas[data-layout="write"] .editor-panes,
+.editor-canvas[data-layout="write"] .editor-title-row {
+  max-width: var(--editor-write-measure);
   width: 100%;
   margin: 0 auto;
+}
+
+/* The title belongs to the thing being edited, so it tracks the EDITOR pane
+   rather than the page. In split view it spanned both columns while the editor
+   was half of one, which read as a page heading floating above two unrelated
+   boxes. The width is derived from the same gap the grid uses, so the two
+   cannot drift apart. Preview view needs no rule: there is one column and the
+   title spans it. */
+.editor-canvas[data-layout="split"] .editor-title-row {
+  max-width: calc((100% - var(--editor-pane-gap)) / 2);
+  margin-right: auto;
 }
 
 .editor-title-row {
   display: flex;
   align-items: baseline;
-  gap: 0.75rem;
+  gap: 0.5rem;
+}
+
+/* The counter sits with the title, not on the page rail.
+ *
+ * `field-sizing: content` makes the input as wide as what is typed, so the
+ * counter lands immediately after the words it counts. Where that is not
+ * supported the input keeps `flex: 1` and the counter falls back to the right
+ * edge of the title row, which the rules above have already narrowed to the
+ * editor pane's measure. Both readings are acceptable; the enhanced one is what
+ * was asked for and the fallback is where it used to be minus the full-width
+ * rail that made it look unrelated. */
+@supports (field-sizing: content) {
+  .editor-title {
+    flex: 0 1 auto;
+    field-sizing: content;
+    min-width: 6rem;
+    max-width: 100%;
+  }
+
+  .editor-title-row .count {
+    margin-right: auto;
+  }
 }
 
 /* The title is the page's H1 in everything but element name. It is an input
@@ -2602,7 +2640,7 @@ a:hover {
 .editor-panes {
   display: grid;
   flex: 1;
-  gap: 1rem;
+  gap: var(--editor-pane-gap);
   grid-template-columns: 1fr;
   min-height: 0;
 }
@@ -2649,10 +2687,15 @@ a:hover {
 
 /* A sandboxed frame is a replaced element with no intrinsic height, so it is
    given one rather than collapsing to the 150px default. */
+/* No min-height. It was 20rem, which at a shorter viewport made the pane taller
+   than the canvas, so the canvas grew a scrollbar of its own and the preview
+   showed TWO stacked on its right edge: the iframe document's and the canvas's.
+   The pane is a flex child that fills what it is given; anything it cannot show
+   is the iframe's to scroll, and that is the one scroll context it should have. */
 .editor-preview-frame {
   flex: 1;
   width: 100%;
-  min-height: 20rem;
+  min-height: 0;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: var(--bg);

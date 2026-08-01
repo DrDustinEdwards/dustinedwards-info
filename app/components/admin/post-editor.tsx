@@ -764,10 +764,20 @@ function PreviewPane({
 
   return (
     <section className="editor-pane editor-pane-preview" aria-label="Preview">
+      {/*
+        The pane says only what the command bar cannot.
+
+        It used to read "Up to date" beside a bar that already said
+        "Saved <sha>", so two indicators described overlapping freshness at one
+        glance and the reader had to work out which was about the file and which
+        was about the render. The save state lives in the bar; this reports only
+        the two TRANSIENT conditions the bar has no way to know about, and says
+        nothing at rest.
+      */}
       <div className="editor-pane-head">
         <span className="field-label">Preview</span>
         <span className="muted" aria-live="polite">
-          {busy ? "Rendering" : result && "error" in result ? "Not renderable" : "Up to date"}
+          {busy ? "Rendering" : result && "error" in result ? "Not renderable" : ""}
         </span>
       </div>
       {result && "error" in result ? (
