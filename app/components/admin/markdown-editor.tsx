@@ -253,6 +253,17 @@ export default function MarkdownEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  /**
+   * Whether CodeMirror actually exists yet.
+   *
+   * React 19 resolves a lazy component during SSR, so this module's markup IS
+   * in the server-rendered document even though the editor itself only mounts
+   * in an effect. Without this the no-script reader was handed a dead toolbar,
+   * an empty box, and a strip telling them to drag and drop an image, which is
+   * the one thing that cannot work for them. The host div below always renders,
+   * because CodeMirror needs a node to attach to; the chrome waits.
+   */
+  const [ready, setReady] = useState(false);
   const [slashAt, setSlashAt] = useState<{ from: number; top: number; left: number } | null>(null);
   const [upload, setUpload] = useState<{ url: string; name: string } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -415,6 +426,7 @@ export default function MarkdownEditor({
 
   return (
     <div className="md-editor">
+      {ready ? (
       <div className="md-toolbar" role="toolbar" aria-label="Markdown formatting">
         <ToolButton label="Bold" hint="Ctrl or Cmd + B" onClick={run((v) => wrap(v, "**"))}>
           <path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z" />
@@ -450,8 +462,9 @@ export default function MarkdownEditor({
             {SCAFFOLD_GLYPHS[name]}
           </ToolButton>
         ))}
-        <span className="md-toolbar-hint muted">Type / on an empty line</span>
-      </div>
+          <span className="md-toolbar-hint muted">Type / on an empty line</span>
+        </div>
+      ) : null}
 
       <div className="md-surface" ref={host} />
 
@@ -466,23 +479,25 @@ export default function MarkdownEditor({
         through the toolbar's named buttons and the alt prompt that follows an
         upload. Announcing it here as well would be a third telling of one fact.
       */}
-      <p className="md-hint" aria-hidden="true">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="4" width="18" height="13" rx="2" />
-          <path d="m3 14 4-4 5 5" />
-          <circle cx="15.5" cy="8.5" r="1.5" />
-        </svg>
-        Drop or paste an image to upload it
-      </p>
+      {ready ? (
+        <p className="md-hint" aria-hidden="true">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="13" rx="2" />
+            <path d="m3 14 4-4 5 5" />
+            <circle cx="15.5" cy="8.5" r="1.5" />
+          </svg>
+          Drop or paste an image to upload it
+        </p>
+      ) : null}
 
       {slashAt ? (
         <ul
