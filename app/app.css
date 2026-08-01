@@ -690,7 +690,14 @@ a:hover {
    Ordinary pages are unaffected: .admin-content scrolls instead of the body. */
 .admin {
   display: grid;
-  grid-template-columns: var(--admin-sidebar-w) 1fr;
+  /* `auto` and not the width itself. The width lives on .admin-sidebar, which
+     the track then sizes to. Transitioning grid-template-columns directly was
+     the obvious way and it is BROKEN: measured 2026-08-01, expanding from the
+     rail left the computed template frozen at `60px 1220px` while the variable
+     had already resolved to 15rem and the labels were back. `width` on a real
+     element interpolates dependably; a track list built from a custom property
+     does not. */
+  grid-template-columns: auto 1fr;
   height: 100dvh;
   /* The shell's three declared lengths. Scoped to .admin DELIBERATELY, not
      added to the token block, because check:contrast parses every custom
@@ -719,8 +726,8 @@ a:hover {
 /* Ruling 6. The width is the only thing that animates, and only for readers
    who have not asked it to stop. */
 @media (prefers-reduced-motion: no-preference) {
-  .admin {
-    transition: grid-template-columns 160ms ease;
+  .admin-sidebar {
+    transition: width 160ms ease;
   }
 }
 
@@ -728,6 +735,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: var(--admin-sidebar-w);
   min-width: 0;
   padding: 1rem 0.625rem;
   border-right: 1px solid var(--border);
