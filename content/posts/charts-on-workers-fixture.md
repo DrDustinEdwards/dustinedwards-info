@@ -58,3 +58,6 @@ choice is recorded as measured rather than preferred.
 
 
 Verification marker: round trip 2026-08-01.
+
+:::figure{src="/media/posts/2026/verify-drop-6438b9a7.png" alt="A blue verification tile labelled DROP"}
+:::
