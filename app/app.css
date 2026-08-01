@@ -3,6 +3,10 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* The mono stack was written out twice, in the editor body and in the prose
+     code blocks. It is a token now because CodeMirror needs it a third time,
+     and a theme that restated the stack would be a fourth copy to drift. */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 /* The Hill Country token system ---------------------------------------------
@@ -688,6 +692,12 @@ a:hover {
   display: grid;
   grid-template-columns: 14rem 1fr;
   height: 100dvh;
+  /* Ruling 8's "combined offset", as a declared number rather than a guess:
+     the topbar takes this height and the command bar sticks at exactly it.
+     Scoped to .admin DELIBERATELY, not added to the token block, because
+     check:contrast parses every custom property in that block as a colour and
+     would throw on a length. */
+  --admin-topbar-h: 3.25rem;
 }
 
 .admin-sidebar {
@@ -793,8 +803,21 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.875rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  height: var(--admin-topbar-h);
+  padding: 0 1.5rem;
+  /* Ruling 8. On a desktop viewport this bar is ALREADY pinned structurally,
+     because .admin-content is the scroll container and this sits outside it.
+     `sticky` is here for the narrow breakpoint, where the shell releases its
+     height and the document scrolls again; without it the topbar would scroll
+     away on exactly the viewport where a fixed reference point is worth most.
+     It costs nothing in the case that was already correct. */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  /* Content scrolls beneath this edge, so it separates two live surfaces
+     rather than dividing two static blocks. --border-strong, per the
+     elevated-surface law. */
+  border-bottom: 1px solid var(--border-strong);
   background: var(--surface);
 }
 
@@ -2194,7 +2217,14 @@ a:hover {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.625rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  /* Pins directly beneath the topbar at the combined offset, so the two never
+     overlap and never stack ambiguously. Same reasoning as above: redundant on
+     a desktop viewport where the canvas is the scroll container, load bearing
+     at the narrow breakpoint where the document scrolls. */
+  position: sticky;
+  top: var(--admin-topbar-h);
+  z-index: 15;
+  border-bottom: 1px solid var(--border-strong);
   background: var(--surface);
 }
 
@@ -2437,6 +2467,272 @@ a:hover {
   height: 1.1rem;
 }
 
+/* Write, split and preview ------------------------------------------------
+ *
+ * The panes are the canvas's content, so they inherit its single scroll
+ * context: each pane scrolls its own overflow and the page still does not. */
+.editor-panes {
+  display: grid;
+  flex: 1;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.editor-canvas[data-layout="split"] .editor-panes {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* The write pane is HIDDEN, never unmounted, because the textarea inside it is
+   the field the form submits. Unmounting would drop the body from the payload;
+   display:none changes nothing about what is sent. */
+.editor-canvas[data-layout="preview"] .editor-pane-write {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .editor-canvas[data-layout="split"] .editor-panes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.editor-pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+/* A sandboxed frame is a replaced element with no intrinsic height, so it is
+   given one rather than collapsing to the 150px default. */
+.editor-preview-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 20rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.editor-layout-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.editor-layout-option {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.625rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.editor-layout-option + .editor-layout-option {
+  border-left: 1px solid var(--border);
+}
+
+.editor-layout-option:hover {
+  color: var(--text);
+}
+
+/* Rule 1 again: the pressed one carries a fill AND aria-pressed, so the state
+   reaches assistive tech rather than only the eye. */
+.editor-layout-option[aria-pressed="true"] {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.editor-layout-option[aria-pressed="true"]:focus-visible {
+  outline: 2px solid var(--focus-ring-on-brand);
+  outline-offset: -4px;
+}
+
+/* CodeMirror -------------------------------------------------------------- */
+
+.md-editor {
+  display: flex;
+  position: relative;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: var(--surface);
+}
+
+/* WCAG 2.2 target size: 1.75rem is 28px, clear of the 24px minimum. */
+.md-tool,
+.md-tool-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.md-tool:hover,
+.md-tool-text:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.md-toolbar-sep {
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.25rem;
+  background: var(--border);
+}
+
+.md-toolbar-hint {
+  margin-left: auto;
+  padding-right: 0.375rem;
+  font-size: 0.75rem;
+}
+
+.md-surface {
+  flex: 1;
+  min-height: 18rem;
+  border: 1px solid var(--border);
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.md-surface .cm-editor {
+  height: 100%;
+}
+
+/* The slash menu sits at the popover elevation, so --border-strong. */
+.md-slash {
+  position: absolute;
+  z-index: 30;
+  min-width: 15rem;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface-popover);
+  list-style: none;
+}
+
+.md-slash-item {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.md-slash-item:hover,
+.md-slash-item:focus-visible {
+  background: var(--tint-brand);
+}
+
+/* --text-muted is measured on the popover step but not on the brand tint a
+   hovered row paints under it, so the hint steps up to body text, which IS
+   measured there. Same move the overflow menu makes. */
+.md-slash-item:hover .muted,
+.md-slash-item:focus-visible .muted {
+  color: var(--text);
+}
+
+/* The alt prompt that stands between an upload and an insertion. */
+.md-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.md-upload-thumb {
+  width: 5rem;
+  height: 3.25rem;
+  border-radius: 0.375rem;
+  object-fit: cover;
+}
+
+.md-upload-fields {
+  display: grid;
+  flex: 1;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.md-upload-fields input {
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.md-upload-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.md-upload .field-alarm {
+  color: var(--on-tint-warning);
+}
+
+@media (forced-colors: active) {
+  .md-slash,
+  .md-upload,
+  .editor-preview-frame {
+    border: 1px solid CanvasText;
+  }
+
+  .editor-layout-option[aria-pressed="true"] {
+    outline: 1px solid transparent;
+  }
+}
+
 /* The body fills what is left of the canvas rather than carrying a fixed
    height with the page scrolling past it. `resize: none` because a manual
    resize handle inside a flex column fights the layout, and there is nothing
@@ -2449,11 +2745,19 @@ a:hover {
   border-radius: 0.5rem;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.6;
   tab-size: 2;
   resize: none;
+}
+
+/* Once CodeMirror has mounted, the textarea is still the submitted field but
+   is no longer the control. It is removed from view and from the accessibility
+   tree rather than left as a second, stale copy of the body for a screen
+   reader to find. */
+.editor-body.is-replaced {
+  display: none;
 }
 
 /* An alarm, never a block. The server gates own validity; this only tells the
@@ -3370,7 +3674,7 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--bg);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
   white-space: pre;
