@@ -33,6 +33,9 @@ export default [
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     route("media", "routes/admin.media.ts"),
+    // Read-only render of a draft body through the one pipeline. POST because a
+    // whole post body does not belong in a query string, not because it writes.
+    route("preview", "routes/admin.preview.ts"),
     route("posts", "routes/admin.posts._index.tsx"),
     route("posts/new", "routes/admin.posts.new.tsx"),
     route("posts/:slug/edit", "routes/admin.posts.$slug.edit.tsx"),
