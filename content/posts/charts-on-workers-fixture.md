@@ -58,3 +58,5 @@ choice is recorded as measured rather than preferred.
 
 
 Parity marker: sweep two.
+
+A [live javascript link](javascript:alert(1)) in prose.
