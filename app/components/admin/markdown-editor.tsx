@@ -366,6 +366,10 @@ export default function MarkdownEditor({
       parent,
     });
     viewRef.current = view;
+    // The chrome waits for this, not for the module having loaded. React 19
+    // resolves a lazy component during SSR, so the markup exists well before
+    // the editor it decorates does.
+    setReady(true);
     onReady();
 
     return () => {
