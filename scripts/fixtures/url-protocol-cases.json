@@ -1,0 +1,150 @@
+{
+  "note": "Cases for check:urls. Ruling: dustinedwards/url-protocol-allowlist.md. 'blocked' means the pipeline must emit NO href or src for that case and must render the markdown as visible text instead. 'allowed' means the href or src must survive exactly. The javascript entries are permanent negatives: they are the finding this allowlist exists for and they must never pass again.",
+  "cases": [
+    {
+      "label": "plain https link",
+      "markdown": "[x](https://example.com/a)",
+      "expect": "allowed",
+      "url": "https://example.com/a"
+    },
+    {
+      "label": "plain http link",
+      "markdown": "[x](http://example.com/a)",
+      "expect": "allowed",
+      "url": "http://example.com/a"
+    },
+    {
+      "label": "mailto link",
+      "markdown": "[x](mailto:a@b.test)",
+      "expect": "allowed",
+      "url": "mailto:a@b.test"
+    },
+    {
+      "label": "site absolute path",
+      "markdown": "[x](/blog/thing)",
+      "expect": "allowed",
+      "url": "/blog/thing"
+    },
+    {
+      "label": "relative dotted path",
+      "markdown": "[x](./notes.md)",
+      "expect": "allowed",
+      "url": "./notes.md"
+    },
+    {
+      "label": "bare fragment",
+      "markdown": "[x](#a-heading)",
+      "expect": "allowed",
+      "url": "#a-heading"
+    },
+    {
+      "label": "protocol relative",
+      "markdown": "[x](//example.com/a)",
+      "expect": "allowed",
+      "url": "//example.com/a"
+    },
+    {
+      "label": "relative image",
+      "markdown": "![a](/media/posts/x.webp)",
+      "expect": "allowed",
+      "url": "/media/posts/x.webp"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript link",
+      "markdown": "[x](javascript:alert(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript link, mixed case",
+      "markdown": "[x](JaVaScRiPt:alert(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript link, decimal entity",
+      "markdown": "[x](&#106;avascript:alert(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript link, hex entity",
+      "markdown": "[x](&#x6A;avascript:alert(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript link, leading whitespace",
+      "markdown": "[x](<  javascript:alert(1)>)",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript image",
+      "markdown": "![a](javascript:alert(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE: javascript in a figure directive",
+      "markdown": ":::figure{src=\"javascript:alert(1)\" alt=\"a\"}\ncap\n:::",
+      "expect": "blocked"
+    },
+    {
+      "label": "data url",
+      "markdown": "[x](data:text/html,<h1>hi</h1>)",
+      "expect": "blocked"
+    },
+    {
+      "label": "vbscript url",
+      "markdown": "[x](vbscript:msgbox(1))",
+      "expect": "blocked"
+    },
+    {
+      "label": "file url",
+      "markdown": "[x](file:///etc/passwd)",
+      "expect": "blocked"
+    }
+  ],
+  "predicateCases": [
+    { "url": "https://example.com", "allowed": true },
+    { "url": "HTTPS://EXAMPLE.COM", "allowed": true },
+    { "url": "mailto:a@b.test", "allowed": true },
+    { "url": "/relative", "allowed": true },
+    { "url": "#frag", "allowed": true },
+    { "url": "", "allowed": true },
+    { "url": "javascript:alert(1)", "allowed": false },
+    { "url": "JAVASCRIPT:alert(1)", "allowed": false },
+    { "url": "  javascript:alert(1)", "allowed": false },
+    { "url": "data:text/html,x", "allowed": false },
+    { "url": "vbscript:x", "allowed": false },
+    { "url": "tel:+15550100", "allowed": false },
+    { "url": "file:///etc/passwd", "allowed": false }
+  ],
+  "obfuscationCases": [
+    {
+      "label": "tab inside the scheme",
+      "codes": [106, 97, 118, 97, 9, 115, 99, 114, 105, 112, 116, 58, 120],
+      "allowed": false
+    },
+    {
+      "label": "newline inside the scheme",
+      "codes": [106, 97, 118, 97, 10, 115, 99, 114, 105, 112, 116, 58, 120],
+      "allowed": false
+    },
+    {
+      "label": "NUL inside the scheme",
+      "codes": [106, 97, 118, 97, 0, 115, 99, 114, 105, 112, 116, 58, 120],
+      "allowed": false
+    },
+    {
+      "label": "replacement character inside the scheme",
+      "codes": [106, 97, 118, 97, 65533, 115, 99, 114, 105, 112, 116, 58, 120],
+      "allowed": false
+    },
+    {
+      "label": "leading control characters",
+      "codes": [1, 2, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 58, 120],
+      "allowed": false
+    },
+    {
+      "label": "a real relative path is untouched by normalization",
+      "codes": [47, 98, 108, 111, 103, 47, 120],
+      "allowed": true
+    }
+  ]
+}
