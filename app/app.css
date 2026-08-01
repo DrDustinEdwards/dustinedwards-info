@@ -888,6 +888,12 @@ a:hover {
     overflow: visible;
   }
 
+  /* Here the document is the scrollport and the topbar is genuinely overhead,
+     so the command bar takes the combined offset it does not need above. */
+  .editor-bar {
+    top: var(--admin-topbar-h);
+  }
+
   .admin-sidebar {
     flex-direction: row;
     align-items: center;
@@ -1931,6 +1937,40 @@ a:hover {
   color: var(--on-brand);
 }
 
+/* Disabled affordance ------------------------------------------------------
+ *
+ * WCAG exempts a disabled control from the contrast minimum, so dimming is
+ * allowed here in a way it is not anywhere else in this stylesheet. What is NOT
+ * exempt is telling the reader the control is unavailable: a button that is
+ * blocked and still renders at full strength with a pointer cursor reads as
+ * broken rather than as waiting.
+ *
+ * Found live 2026-08-01 on Insert figure, which correctly refuses to run until
+ * alt text exists and gave no sign of it. The state is carried by opacity AND
+ * by the cursor, so it survives forced-colors, where opacity is preserved but
+ * the fill is not.
+ */
+.btn:disabled,
+.btn-brand:disabled,
+.btn-danger:disabled,
+.btn-ghost:disabled,
+.md-tool:disabled,
+.md-tool-text:disabled,
+.overflow-menu-item:disabled,
+.row-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Hover must not promise anything to a control that will not act. */
+.btn:disabled:hover,
+.btn-danger:disabled:hover,
+.btn-ghost:disabled:hover,
+.overflow-menu-item:disabled:hover {
+  border-color: inherit;
+  background: inherit;
+}
+
 .btn-ghost,
 .btn-ghost:visited,
 .btn-ghost:hover,
@@ -2217,12 +2257,18 @@ a:hover {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.625rem 1.5rem;
-  /* Pins directly beneath the topbar at the combined offset, so the two never
-     overlap and never stack ambiguously. Same reasoning as above: redundant on
-     a desktop viewport where the canvas is the scroll container, load bearing
-     at the narrow breakpoint where the document scrolls. */
+  /* Sticky offsets are measured from the SCROLLPORT, not from the viewport, and
+     .admin-content is the scrollport here. It already begins below the topbar,
+     so asking for --admin-topbar-h again applied the offset twice: the bar was
+     pushed 52px down, overlapped the top of the canvas, and covered the title
+     input so a click on it landed on a command-bar button instead. Measured by
+     elementFromPoint on the live deploy 2026-08-01.
+
+     Zero is correct wherever .admin-content is the scrollport. The narrow
+     breakpoint, where the shell releases its height and the DOCUMENT scrolls
+     instead, is the one case that needs the real offset, and it sets it. */
   position: sticky;
-  top: var(--admin-topbar-h);
+  top: 0;
   z-index: 15;
   border-bottom: 1px solid var(--border-strong);
   background: var(--surface);
