@@ -987,9 +987,8 @@ a:hover {
   gap: 1rem;
   height: var(--admin-topbar-h);
   /* 2rem inline, matching .site-header, so the mark's LEFT edge is 32px from
-     the viewport on both planes. The block padding is 0 with an explicit
-     height and centred items, which puts a 2rem mark at y=16 exactly as the
-     public header's `1rem 2rem` plus `min-height: 4rem` does. */
+     the viewport on both planes. The block padding is 0, so a centred 2rem mark
+     sits at (68 - 32) / 2 = 18, which is where .site-header puts its own. */
   padding: 0 2rem;
   /* Ruling 8. On a desktop viewport this bar is ALREADY pinned structurally,
      because .admin-content is the scroll container and this sits outside it.
@@ -1002,8 +1001,25 @@ a:hover {
   z-index: 20;
   /* Content scrolls beneath this edge, so it separates two live surfaces
      rather than dividing two static blocks. --border-strong, per the
-     elevated-surface law. */
-  border-bottom: 1px solid var(--border-strong);
+     elevated-surface law.
+
+     A SHADOW rather than a border, and that is load bearing for the parity this
+     bar exists to hold. `box-sizing` is border-box, so a border-bottom is
+     subtracted from the declared height: the content box became 68 minus the
+     hairline and the centred mark fell to y=17.667. The public header has the
+     same hairline and does NOT lose that height, because no height binds there
+     and the border adds onto its natural box instead.
+
+     Worse than the 0.333px, the miss was not even CONSTANT. Chrome snaps a
+     hairline to a whole device pixel, so `1px` renders 1 at dpr 1, 0.667 at
+     1.5 and 0.5 at 2, and a border-box height would have landed the mark at a
+     different y on every display while matching on none of them.
+
+     A shadow is outside the box entirely, so the bar stays exactly
+     --admin-topbar-h, the mark centres at 18 at every dpr, and the token keeps
+     telling .editor-canvas the truth about what to subtract. The line still
+     draws over the content below, which is what a pinned bar wants. */
+  box-shadow: 0 1px 0 var(--border-strong);
   background: var(--surface);
 }
 
