@@ -200,6 +200,37 @@ const SCAFFOLDS = {
 
 type ScaffoldName = keyof typeof SCAFFOLDS;
 
+/**
+ * A glyph per directive, in the house inline-SVG idiom (ruling 7).
+ *
+ * Each one draws what the directive PRODUCES rather than an abstract symbol:
+ * bars for a chart, connected nodes for a diagram, a framed picture for a
+ * figure. The accessible name is still the word, so the drawing is the second
+ * channel and never the only one.
+ */
+const SCAFFOLD_GLYPHS: Record<ScaffoldName, React.ReactNode> = {
+  chart: (
+    <>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </>
+  ),
+  diagram: (
+    <>
+      <rect x="3" y="4" width="7" height="5" rx="1" />
+      <rect x="14" y="15" width="7" height="5" rx="1" />
+      <path d="M10 6.5h4a3 3 0 0 1 3 3V15" />
+    </>
+  ),
+  figure: (
+    <>
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="m3 14 4-4 5 5" />
+      <circle cx="15.5" cy="8.5" r="1.5" />
+      <path d="M6 21h12" />
+    </>
+  ),
+};
+
 export type MarkdownEditorHandle = {
   focus: () => void;
 };
@@ -406,21 +437,52 @@ export default function MarkdownEditor({
           <path d="M18 5v6M21 8h-6" />
         </ToolButton>
         <span className="md-toolbar-sep" aria-hidden="true" />
+        {/* The three house directives, as icons in the same row. They were
+            text buttons, which made the toolbar wrap to two lines at the
+            editor's real width and read as a second, different toolbar. */}
         {(Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => (
-          <button
+          <ToolButton
             key={name}
-            type="button"
-            className="md-tool-text"
+            label={SCAFFOLDS[name].label}
+            hint={SCAFFOLDS[name].hint}
             onClick={() => scaffold(name)}
-            title={SCAFFOLDS[name].hint}
           >
-            {SCAFFOLDS[name].label}
-          </button>
+            {SCAFFOLD_GLYPHS[name]}
+          </ToolButton>
         ))}
         <span className="md-toolbar-hint muted">Type / on an empty line</span>
       </div>
 
       <div className="md-surface" ref={host} />
+
+      {/*
+        The replacement affordance for the Insert image section this pass
+        removes. Drag-drop and paste are invisible until someone tells you they
+        exist, and the native file input that used to say so is gone, so the
+        capability now announces itself here instead of being folklore.
+
+        A hint, not a control: nothing to focus, nothing to activate, and it is
+        `aria-hidden` because the same information reaches assistive tech
+        through the toolbar's named buttons and the alt prompt that follows an
+        upload. Announcing it here as well would be a third telling of one fact.
+      */}
+      <p className="md-hint" aria-hidden="true">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="4" width="18" height="13" rx="2" />
+          <path d="m3 14 4-4 5 5" />
+          <circle cx="15.5" cy="8.5" r="1.5" />
+        </svg>
+        Drop or paste an image to upload it
+      </p>
 
       {slashAt ? (
         <ul
