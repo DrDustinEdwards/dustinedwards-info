@@ -821,17 +821,24 @@ a:hover {
    The nav links, View site and the collapse toggle all take it: a 44px target,
    the shared icon column, the shared gap, and a 14px label the rail hides.
 
-   The left padding is DERIVED from the inset so the two cannot drift: the rule
-   and the padding add up to 2rem, which is where the mark's column starts. */
+   The inset is spent ENTIRELY as padding, and the active rule is drawn out of
+   flow by the pseudo-element below. */
 .admin-nav a,
 .admin-view-site,
 .admin-sidebar-toggle {
+  /* The containing block for that rule, and for the rail's badge. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--admin-icon-gap);
   min-height: var(--admin-nav-item-h);
-  padding: 0 0.625rem 0 calc(var(--admin-item-inset) - var(--admin-item-rule));
-  border-left: var(--admin-item-rule) solid transparent;
+  /* Measured 2026-08-01: this was briefly `calc(inset - rule)` over a real 3px
+     border, and the icon column came out at 31.667 against the mark's 32.
+     Chrome snaps a border to whole device pixels, so `3px` RENDERS 2.667 at
+     dpr 1.5, and subtracting the DECLARED 3px from the padding cannot cancel a
+     rendered 2.667. Same trap as the topbar hairline, one element down: a
+     border may participate in an alignment or be a fixed length, not both. */
+  padding: 0 0.625rem 0 var(--admin-item-inset);
   border-radius: 0.5rem;
   white-space: nowrap;
 }
@@ -883,11 +890,8 @@ a:hover {
  * icon. Kept rather than dropped because the badge exists to pull the eye to
  * Posts from wherever you are, and the collapsed rail is exactly the state in
  * which the label that would otherwise say so is gone. Legibility is what the
- * `title` covers: it carries the same words the accessible name does. */
-[data-admin-sidebar="collapsed"] .admin-nav a {
-  position: relative;
-}
-
+ * `title` covers: it carries the same words the accessible name does. The item
+ * is already the containing block, for the active rule. */
 [data-admin-sidebar="collapsed"] .admin-nav-badge {
   position: absolute;
   top: 0.25rem;
@@ -923,9 +927,7 @@ a:hover {
 /* The toggle is an item, not an orphan. Everything but the button reset now
    comes from the shared item shape above. */
 .admin-sidebar-toggle {
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
+  border: none;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
@@ -1017,16 +1019,31 @@ a:hover {
   color: var(--text);
 }
 
-/* Ruling 5. THREE channels, not one: a left border, a surface change, and the
-   weight. forced-colors keeps the border and the weight when it takes the tint
-   and the hue away, so the current page is still findable there. The border is
-   on every item as `transparent` so nothing shifts by 3px when it lands. */
+/* Ruling 5. THREE channels, not one: a left rule, a surface change, and the
+   weight. forced-colors keeps the rule and the weight when it takes the tint
+   and the hue away, so the current page is still findable there. */
 .admin-nav a[aria-current="page"] {
-  border-left-color: var(--brand);
   border-radius: 0 0.5rem 0.5rem 0;
   background: var(--tint-brand);
   color: var(--brand);
   font-weight: 600;
+}
+
+/* The rule itself, OUT OF FLOW, which is what lets every item spend its whole
+   2rem inset on padding and stand in the mark's column.
+
+   It is a BORDER on an absolutely positioned box rather than a background bar,
+   and that is the forced-colors half of ruling 5: forced-colors overrides
+   `background`, so a painted bar would disappear in exactly the mode this
+   channel exists for, while a border is re-coloured and survives. Nothing
+   shifts when it lands, because an absolutely positioned box is not in the
+   flow at all, which also retires the transparent border every item used to
+   carry to reserve the space. */
+.admin-nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-left: var(--admin-item-rule) solid var(--brand);
 }
 
 /* The nav item treatment, at the nav's own type size.
