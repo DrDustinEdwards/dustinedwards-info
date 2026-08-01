@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Form, NavLink, Outlet, redirect } from "react-router";
+import { Form, Link, NavLink, Outlet, redirect } from "react-router";
 
 import { SiteLogoHeader } from "~/components/site-logo";
+import { SITE } from "~/lib/seo";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin";
@@ -180,18 +181,83 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       {/* Before the sidebar, so the attribute is set before it is painted. */}
       <script dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
 
-      <aside className="admin-sidebar" id="admin-sidebar">
-        {/*
-          The site mark, imported rather than copied. It is the same component
-          the public header renders, so the two planes cannot drift and
-          check:logo covers both. It stays visible in either state and is the
-          rail's top anchor when collapsed.
-        */}
-        <NavLink to="/admin" end className="admin-brand" aria-label="Cockpit, admin home">
-          <SiteLogoHeader className="admin-brand-mark" />
-          <span className="admin-brand-word">Cockpit</span>
-        </NavLink>
+      {/*
+        THE FULL-WIDTH HEADER, above both columns.
 
+        It used to live inside .admin-main, which put it in the right-hand
+        column and made the mark's position a function of the sidebar's width.
+        Spanning both columns is what lets the mark land at the same
+        coordinates as the public header by construction rather than by tuning.
+      */}
+      <header className="admin-topbar">
+        {/*
+          The identity block, at the public header's treatment. The component is
+          imported, never copied, so check:logo covers this instance too.
+
+          It links to /admin, the home of the plane you are on, mirroring the
+          public mark's link to / rather than copying its destination. Crossing
+          planes is what View site in the sidebar foot is for.
+        */}
+        <Link to="/admin" className="admin-brand">
+          {/* Decorative: the link's accessible name is the wordmark beside it,
+              so naming the mark too would say it twice. */}
+          <SiteLogoHeader className="admin-brand-mark" />
+          {SITE.name}
+        </Link>
+        <span className="admin-topbar-scope">Private plane</span>
+
+        <div className="admin-topbar-user">
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="admin-menu-button"
+            aria-expanded={drawerOpen}
+            aria-controls="admin-sidebar"
+            aria-label="Admin sections"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="muted">{loaderData.email}</span>
+          <Form method="post" action="/admin/logout">
+            <button type="submit" className="admin-signout">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
+              Sign out
+            </button>
+          </Form>
+        </div>
+      </header>
+
+      <aside className="admin-sidebar" id="admin-sidebar">
+        {/* The brand moved to the topbar, which spans both columns now, so the
+            mark sits at the same coordinates on both planes. The rail's top
+            gains the space it used to occupy. */}
         <nav className="admin-nav" aria-label="Admin sections">
           {NAV.map((item) => (
             <NavLink
@@ -273,55 +339,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="admin-main">
-        <header className="admin-topbar">
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className="admin-menu-button"
-            aria-expanded={drawerOpen}
-            aria-controls="admin-sidebar"
-            aria-label="Admin sections"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <span className="admin-topbar-scope">Private plane</span>
-          <div className="admin-topbar-user">
-            <span className="muted">{loaderData.email}</span>
-            <Form method="post" action="/admin/logout">
-              <button type="submit" className="admin-signout">
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <path d="M16 17l5-5-5-5" />
-                  <path d="M21 12H9" />
-                </svg>
-                Sign out
-              </button>
-            </Form>
-          </div>
-        </header>
         <main className="admin-content">
           <Outlet />
         </main>

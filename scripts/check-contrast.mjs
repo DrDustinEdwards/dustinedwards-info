@@ -353,6 +353,10 @@ const MATRIX = [
   ["--brand", "--surface-popover", UI, "brand ring on popover"],
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
   ["--brand-hover", "--bg", TEXT, "brand hover text"],
+  // The admin identity block sits on the shell surface, not the page, so its
+  // hover colour lands on a background the public header never puts it on.
+  // The only genuinely new pairing the brand-parity pass introduced.
+  ["--brand-hover", "--surface", TEXT, "brand hover on surface"],
   ["--brand-active", "--bg", TEXT, "brand active text"],
   ["--on-brand", "--brand", TEXT, "text on brand fill"],
   ["--on-brand", "--brand-hover", TEXT, "text on brand hover fill"],
