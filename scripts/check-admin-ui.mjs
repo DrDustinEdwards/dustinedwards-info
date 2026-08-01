@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
 import { stateOf, transitionsFor } from "../app/lib/editor/publish-transition.mjs";
 import {
   bundleRoutes,
@@ -347,6 +348,127 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     "an unreadable publish_at does not hide a live post",
     stateOf({ draft: false, publishAt: "not a date" }, NOW) === "published",
   );
+}
+
+/* -------------------------------------------------------------------------
+ * Section 1b: the WELD between the transition table and the policy.
+ *
+ * publish-transition.mjs decides what the button says and what it sends.
+ * publish-policy.mjs decides what the server then does with it. They are
+ * separate modules on purpose (one is UI, before the fact; one is server, after
+ * it) and they are driven by the same two facts, so they agree today. Nothing
+ * structural stops them drifting apart tomorrow.
+ *
+ * This welds them, in both directions:
+ *
+ *   Forward.  Every transition in the table is LEGAL under the policy. Pressing
+ *             it as the admin must not throw, and the outcome the policy
+ *             computes must be the one the table's label promised.
+ *   Backward. Every outcome the policy can produce is REACHABLE from some table
+ *             state. An outcome no button can cause is either dead policy or a
+ *             missing control, and both are worth failing over.
+ *
+ * The policy is driven through its real entry point with real frontmatter, not
+ * a stub, so a change to how `decide` reads a file is caught here too.
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The markdown a save would carry for a given draft flag.
+ * @param {boolean} draft
+ * @param {string | null} firstPublished
+ */
+const raw = (draft, firstPublished) =>
+  [
+    "---",
+    'title: "A post"',
+    "slug: a-post",
+    'description: "What it is about."',
+    "date: 2026-07-31",
+    "tags: [cloudflare]",
+    `draft: ${draft ? "true" : "false"}`,
+    ...(firstPublished ? [`first_published: ${firstPublished}`] : []),
+    "---",
+    "",
+    "Prose.",
+  ].join("\n");
+
+{
+  /** Every state the table can be asked about, with the prior file it implies. */
+  const SITUATIONS = /** @type {const} */ ([
+    { label: "fresh draft", state: "draft", ever: false, priorDraft: true, priorFirst: null },
+    { label: "withdrawn draft", state: "draft", ever: true, priorDraft: true, priorFirst: "2026-06-01" },
+    { label: "published", state: "published", ever: true, priorDraft: false, priorFirst: "2026-06-01" },
+    { label: "scheduled", state: "scheduled", ever: true, priorDraft: false, priorFirst: "2026-06-01" },
+  ]);
+
+  /** What the table's transition id claims the save will do. */
+  const CLAIMS = {
+    publish: "published-first",
+    republish: "republished",
+    "save-draft": "saved",
+    save: "saved",
+    unpublish: "unpublished",
+  };
+
+  /** @type {Set<string>} */
+  const reached = new Set();
+
+  for (const situation of SITUATIONS) {
+    const prior = raw(situation.priorDraft, situation.priorFirst);
+    for (const transition of transitionsFor(situation.state, situation.ever)) {
+      let result;
+      try {
+        result = decide({
+          actor: { kind: "admin" },
+          incomingRaw: raw(transition.wantsDraft, situation.priorFirst),
+          priorRaw: prior,
+        });
+      } catch (error) {
+        assert(
+          `weld: ${situation.label} / ${transition.id} is legal under the policy`,
+          false,
+          error instanceof Error ? error.message : String(error),
+        );
+        continue;
+      }
+
+      assert(`weld: ${situation.label} / ${transition.id} is legal under the policy`, true);
+      reached.add(result.outcome);
+
+      const claimed = CLAIMS[/** @type {keyof typeof CLAIMS} */ (transition.id)];
+      assert(
+        `weld: ${situation.label} / ${transition.id} produces the outcome its label promises`,
+        result.outcome === claimed,
+        `label "${transition.label}" implies ${claimed}, policy says ${result.outcome}`,
+      );
+
+      // The one fact the whole publish story rests on: draft-ness in the
+      // committed file must be what the transition asked for.
+      assert(
+        `weld: ${situation.label} / ${transition.id} lands the draft flag it sent`,
+        readState(result.raw).draft === transition.wantsDraft,
+      );
+    }
+  }
+
+  // Backward: no orphan outcomes in the policy.
+  const POLICY_OUTCOMES = ["saved", "published-first", "republished", "unpublished"];
+  for (const outcome of POLICY_OUTCOMES) {
+    assert(
+      `weld: policy outcome "${outcome}" is reachable from the table`,
+      reached.has(outcome),
+      `reachable: ${[...reached].sort().join(", ")}`,
+    );
+  }
+  // And the reverse orphan check, so a table that grew a transition the policy
+  // does not model shows up here rather than at runtime.
+  for (const outcome of reached) {
+    assert(
+      `weld: table outcome "${outcome}" is one the policy defines`,
+      POLICY_OUTCOMES.includes(outcome),
+    );
+  }
+  assert("weld: the two modules were actually exercised", reached.size === POLICY_OUTCOMES.length, `${reached.size} of ${POLICY_OUTCOMES.length}`);
 }
 
 /* -------------------------------------------------------------------------
