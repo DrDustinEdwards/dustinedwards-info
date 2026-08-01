@@ -713,10 +713,15 @@ a:hover {
                        has to be a number rather than whatever the content
                        happened to make it.
      --admin-control-h ONE control height across the command bar, 32px. */
-  /* 4rem, matching .site-header's min-height, so the mark lands at the same y
-     on both planes. Load bearing: .editor-canvas subtracts it and the narrow
-     breakpoint offsets .editor-bar by it. */
-  --admin-topbar-h: 4rem;
+  /* 4.25rem, not the 4rem the ruling assumed, and the difference is measured
+     rather than chosen. .site-header carries `min-height: 4rem`, but that
+     minimum never binds: its nav controls are 36px tall, so with 1rem block
+     padding the real header is 68.67px and the 32px mark centres at y=18.
+     Matching the DECLARED minimum would have put the admin mark at y=16 and
+     missed by 2px. 4.25rem is 68px, which centres a 32px mark at exactly 18.
+     Load bearing: .editor-canvas subtracts it and the narrow breakpoint offsets
+     .editor-bar by it, so both are re-measured as a regression. */
+  --admin-topbar-h: 4.25rem;
   --admin-cmdbar-h: 3.5rem;
   --admin-control-h: 2rem;
   /* The two sidebar widths from the ruling, 240px and 60px. The COLLAPSED one
