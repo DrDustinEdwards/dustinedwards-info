@@ -14,6 +14,8 @@
  * exactly as there is one markdown renderer.
  */
 
+import { createContext } from "react-router";
+
 import { invalidateAnswerCache } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
 import { recordsForPosts } from "./records.mjs";
@@ -432,6 +434,55 @@ export async function askIndexStatus(
     present: present.size,
     missing: [...expected].filter((k) => !present.has(k)).sort(),
     stale: [...present].filter((k) => !expected.has(k)).sort(),
+  };
+}
+
+/**
+ * The request-scoped, MEMOIZED reader for the drift status above.
+ *
+ * Two surfaces want the same fact now: the alert on /admin/posts, which owns
+ * the repair, and the count badge on the Posts nav item, which is rendered by
+ * the admin LAYOUT on every admin page. A parent cannot read a child's loader
+ * data, and moving the computation up to the layout was ruled out for a
+ * concrete reason: check:admin-ui fabricates `ask` in the posts route's OWN
+ * loader data, and the drift alert carries the `sync-ask` form, so relocating
+ * it would have emptied that scenario and moved the gate's fixture.
+ *
+ * So the VALUE moves rather than the loader: the admin layout's middleware puts
+ * this getter on the context, exactly as it already puts the verified session
+ * there "so children read it without a second lookup", and both loaders call
+ * it. On /admin/posts that is one listing per request instead of two, and the
+ * posts route's loader data keeps the shape the gate asserts.
+ *
+ * It is a getter rather than an awaited value because middleware runs for the
+ * whole /admin subtree. A route that never asks never pays.
+ */
+export type AskStatusReader = () => Promise<AskIndexStatus | null>;
+
+export const askStatusContext = createContext<AskStatusReader>();
+
+/**
+ * Builds that reader. Resolves to null rather than throwing, on the same
+ * grounds the posts loader already had: the AI index is an enhancement and it
+ * may not take an admin page down with it when it is unbound or unreachable.
+ */
+export function askStatusReader(
+  env: Env,
+  loadPosts: () => Promise<Parameters<typeof askIndexStatus>[1]>,
+): AskStatusReader {
+  /** One in-flight promise per request, so concurrent callers share a listing. */
+  let pending: Promise<AskIndexStatus | null> | undefined;
+  return () => {
+    pending ??= (async () => {
+      if (!askAvailable(env)) return null;
+      try {
+        return await askIndexStatus(env, await loadPosts());
+      } catch (error) {
+        console.error("ask index status failed", error);
+        return null;
+      }
+    })();
+    return pending;
   };
 }
 

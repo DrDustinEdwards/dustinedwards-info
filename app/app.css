@@ -729,6 +729,32 @@ a:hover {
      the rail never flashes wide and nothing is corrected after the fact. */
   --admin-sidebar-w: 15rem;
   --admin-nav-item-h: 2.75rem;
+  /* THE SHARED ICON COLUMN, and the reason it is this exact width.
+   *
+   * One column and one gap serve the topbar's brand block and every sidebar
+   * item, so the mark and the nav icons stand in the same column and the
+   * wordmark and the nav labels begin at the same x. Before this the sidebar
+   * ran its own inset (10 + 3 + 10 = 23px) while the parity ruling had already
+   * fixed the mark at 32px, so the two columns missed each other by 9px.
+   *
+   * The alignment moves the SIDEBAR out to the mark, not the mark in to the
+   * sidebar: the mark's 2rem inset is what admin-brand-parity.md fixed against
+   * the public header, and it is not this ruling's to spend.
+   *
+   * 1.44rem is the MARK'S OWN WIDTH and that is what makes both halves true at
+   * once. The header crop is intrinsically 36x50, so a 2rem-tall mark is
+   * 2rem * 36/50 = 1.44rem wide. Any wider a column would centre the mark by
+   * pushing its left edge off 32px and break the parity it is aligning to; any
+   * narrower and the 20px nav glyphs would not fit. Written as the arithmetic
+   * rather than as 1.44rem so the 36x50 stays visible next to it. */
+  --admin-icon-col: calc(2rem * 36 / 50);
+  --admin-icon-gap: 0.5rem;
+  /* The x where that column starts, on both planes. The topbar spends it as
+     padding; a sidebar item spends it as padding plus its 3px active rule. */
+  --admin-item-inset: 2rem;
+  /* The active item's left rule. Named because the item's padding is derived
+     from it, and the two must add up to the inset above. */
+  --admin-item-rule: 3px;
 }
 
 [data-admin-sidebar="collapsed"] .admin {
@@ -763,39 +789,60 @@ a:hover {
   gap: 1rem;
   width: var(--admin-sidebar-w);
   min-width: 0;
-  padding: 1rem 0.625rem;
+  /* No LEFT padding: the whole inset lives on the item, so the active rule can
+     sit flush against the rail's edge. That is what the active item's
+     `0 0.5rem 0.5rem 0` radius always described, and with a 10px gutter in
+     front of it the shape read as a square-cornered chip floating in the
+     column instead of a tab attached to it. */
+  padding: 1rem 0.625rem 1rem 0;
   border-right: 1px solid var(--border);
   background: var(--surface);
   /* Tooltips and the collapsed rail's labels need to escape the 60px column. */
   overflow: visible;
 }
 
+/* The foot reads as a ZONE, not as two more sections.
+ *
+ * A hairline is enough to say it, so it is a hairline: both items already carry
+ * the nav item's shape, and without a separator they simply extended the list
+ * of places you can be with two things that are not places. --border, not
+ * --border-strong: the sidebar is not an elevated surface, it is the shell, and
+ * the elevated-surface law is about the popover step and pinned bars. */
 .admin-sidebar-foot {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
   margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
 }
 
-/* One item shape for the nav links, View site, and anything that joins them:
-   a 44px target, a 20px icon in a fixed column, and a 14px label that the rail
-   hides. The icon column does not move between states, so collapsing does not
-   shuffle the icons sideways. */
+/* ONE item shape, and now it is the same shape the topbar's brand block uses.
+   The nav links, View site and the collapse toggle all take it: a 44px target,
+   the shared icon column, the shared gap, and a 14px label the rail hides.
+
+   The left padding is DERIVED from the inset so the two cannot drift: the rule
+   and the padding add up to 2rem, which is where the mark's column starts. */
 .admin-nav a,
-.admin-view-site {
+.admin-view-site,
+.admin-sidebar-toggle {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--admin-icon-gap);
   min-height: var(--admin-nav-item-h);
-  padding: 0 0.625rem;
-  border-left: 3px solid transparent;
+  padding: 0 0.625rem 0 calc(var(--admin-item-inset) - var(--admin-item-rule));
+  border-left: var(--admin-item-rule) solid transparent;
   border-radius: 0.5rem;
   white-space: nowrap;
 }
 
+/* The glyph is 20px but its BOX is the shared column, so it centres in the same
+   column the mark does. The viewBox is square and the height is what binds, so
+   `preserveAspectRatio` centres the 20px drawing inside the 23.04px box on its
+   own; no wrapper element is needed to make a column out of it. */
 .admin-nav-icon {
   flex: none;
-  width: 1.25rem;
+  width: var(--admin-icon-col);
   height: 1.25rem;
 }
 
@@ -803,6 +850,49 @@ a:hover {
   overflow: hidden;
   font-size: 0.875rem;
   text-overflow: ellipsis;
+}
+
+/* Ask index drift, on the item that owns the repair.
+ *
+ * A FILL, per the binding rule that interactive semantics take fills and never
+ * pastel text on the page. Warning rather than danger: a drifted index means
+ * Ask is answering from a stale corpus, which is a degraded enhancement and not
+ * a broken site, and this badge sits permanently in the furniture where danger
+ * would cry wolf.
+ *
+ * The numeral is aria-hidden and the item's accessible name carries the count
+ * in words, so nothing here has to be readable to be announced. */
+.admin-nav-badge {
+  flex: none;
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 0.625rem;
+  background: var(--fill-warning);
+  color: var(--on-fill-warning);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+/* In the RAIL the badge stays, and stays a numeral.
+ *
+ * There is no label left to sit beside, so it anchors to the item's top right
+ * and overlaps the icon's corner, which is the ordinary shape of a count on an
+ * icon. Kept rather than dropped because the badge exists to pull the eye to
+ * Posts from wherever you are, and the collapsed rail is exactly the state in
+ * which the label that would otherwise say so is gone. Legibility is what the
+ * `title` covers: it carries the same words the accessible name does. */
+[data-admin-sidebar="collapsed"] .admin-nav a {
+  position: relative;
+}
+
+[data-admin-sidebar="collapsed"] .admin-nav-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  margin-left: 0;
 }
 
 /* THE COLLAPSED RAIL. Labels go, targets stay, icons centre. The accessible
@@ -813,6 +903,15 @@ a:hover {
   display: none;
 }
 
+/* THE RAIL BREAKS THE SHARED COLUMN, deliberately.
+ *
+ * The topbar does not collapse, so the mark stays at the 2rem inset while the
+ * rail is only 60px wide. Holding the icons at 32px there would leave 23px of
+ * icon with 32px of space on its left and 5px on its right, which reads as an
+ * alignment failure rather than as alignment. Centring in the 60px is what an
+ * icon rail is, and the column's job in that state is to be a column of icons
+ * consistent with ITSELF. Reported to Dustin with both numbers rather than
+ * quietly chosen. */
 [data-admin-sidebar="collapsed"] .admin-nav a,
 [data-admin-sidebar="collapsed"] .admin-view-site,
 [data-admin-sidebar="collapsed"] .admin-sidebar-toggle {
@@ -821,16 +920,12 @@ a:hover {
   padding: 0;
 }
 
+/* The toggle is an item, not an orphan. Everything but the button reset now
+   comes from the shared item shape above. */
 .admin-sidebar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  min-height: var(--admin-nav-item-h);
-  padding: 0 0.625rem;
-  border: none;
-  border-left: 3px solid transparent;
-  border-radius: 0.5rem;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
@@ -859,14 +954,6 @@ a:hover {
   }
 }
 
-/* The second wordmark, and the same (0,1,0) versus (0,1,1) defect: without the
- * `:visited` selector the base rule wins and the admin wordmark turns claret.
- *
- * Its RESTING colour deliberately stays `--text` rather than brand, unlike the
- * public header. This block already carries brand as a solid fill in
- * `.admin-brand-mark` beside it, so brand text here would be purple-on-purple,
- * and Dustin's 2026-07-30 ruling named the public header. Revisit only with a
- * ruling that names this one. */
 /* THE IDENTITY BLOCK, at exactly .site-header-brand's treatment.
  *
  * The `:visited` selector is not decoration. `.admin-brand` alone is (0,1,0)
@@ -883,7 +970,11 @@ a:hover {
 .admin-brand:visited {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  /* The SHARED gap, the same one every sidebar item uses, which is what puts
+     the wordmark's left edge and the nav labels' left edge on the same x. It is
+     still 0.5rem, the value .site-header-brand carries, so sharing it cost the
+     public parity nothing. */
+  gap: var(--admin-icon-gap);
   font-weight: 600;
   color: var(--brand);
   text-decoration: none;
@@ -900,7 +991,12 @@ a:hover {
 .admin-brand-mark {
   display: block;
   flex: none;
-  width: auto;
+  /* The SHARED column, stated rather than left to `width: auto`. The token IS
+     the mark's natural width (2rem * 36/50), so the rendered box is the same
+     23.04px the public mark occupies and the parity measurement is unmoved;
+     what changes is that the column is now declared in one place and the
+     sidebar's icons read it too. */
+  width: var(--admin-icon-col);
   height: 2rem;
 }
 
@@ -933,10 +1029,18 @@ a:hover {
   font-weight: 600;
 }
 
-.admin-view-site {
-  margin-top: auto;
-  font-size: 0.8125rem;
+/* The nav item treatment, at the nav's own type size.
+ *
+ * `margin-top: auto` moved to the foot, which is the group that owns the push.
+ * The underline goes for a reason the link rule already sanctions: this carries
+ * a non-colour affordance of its own, the arrow leaving a box, and it now sits
+ * in a list of undecorated items where an underline on one of them read as the
+ * odd one out rather than as an affordance. The glyph is the signal that it
+ * leaves the plane; the accessible name says so in words. */
+.admin-view-site,
+.admin-view-site:visited {
   color: var(--text-muted);
+  text-decoration: none;
 }
 
 /* Desktop: neither of these exists. They are the narrow-viewport drawer's
