@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
 import {
@@ -30,9 +30,24 @@ import { SettingsDrawer } from "./settings-drawer";
  * than a comment.
  */
 
+/**
+ * CodeMirror, in its own chunk.
+ *
+ * Ruling 6: editor machinery never reaches a public-plane bundle. This dynamic
+ * import is the chunk boundary that makes that true, and the build output is
+ * what proves it rather than this comment. It also means the editor's first
+ * paint is the textarea below, which is what a reader with no script keeps.
+ */
+const MarkdownEditor = lazy(() => import("./markdown-editor"));
+
 const TITLE_LIMIT = 70;
 const AUTOSAVE_DELAY_MS = 800;
+const PREVIEW_DELAY_MS = 600;
 const FORM_ID = "post-editor";
+const LAYOUT_KEY = "post-editor:layout";
+
+/** @see LAYOUT_KEY. Remembered per browser, never on the server. */
+type Layout = "write" | "split" | "preview";
 
 /**
  * Title to slug, matching the shape the save gate accepts and nothing more.
@@ -108,6 +123,11 @@ export function PostEditor({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offer, setOffer] = useState<DraftBuffer | null>(null);
+  /** True once CodeMirror has mounted and taken over from the textarea. */
+  const [richBody, setRichBody] = useState(false);
+  const [layout, setLayout] = useState<Layout>("write");
+  const [preview, setPreview] = useState<{ html: string } | { error: string } | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -158,6 +178,64 @@ export function PostEditor({
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
+
+  // The layout choice is a browser preference, not a fact about the post, so it
+  // lives in localStorage and never reaches the server. Read after mount rather
+  // than during render, so the server and the first client paint agree.
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(LAYOUT_KEY);
+      if (stored === "write" || stored === "split" || stored === "preview") setLayout(stored);
+    } catch {
+      // Storage disabled. The editor opens in Write, which is the default anyway.
+    }
+  }, []);
+
+  const chooseLayout = (next: Layout) => {
+    setLayout(next);
+    try {
+      window.localStorage.setItem(LAYOUT_KEY, next);
+    } catch {
+      // As above. The choice still applies to this session.
+    }
+  };
+
+  /**
+   * The exact preview, debounced.
+   *
+   * It posts the body to an admin-only route that renders it through
+   * `pipeline.mjs`, the module the build and the Worker import, and returns the
+   * fragment unmodified. So this is not an approximation of the published page;
+   * it is the published markup, produced by the one renderer.
+   *
+   * A sequence number guards the response, because a fast typist can have two
+   * renders in flight and the slower one can land last. Same trap the command
+   * palette recorded: a fetch that resolves after its context has moved on will
+   * happily paint a stale answer.
+   */
+  const previewSeq = useRef(0);
+  useEffect(() => {
+    if (layout === "write") return;
+    const seq = (previewSeq.current += 1);
+    setPreviewing(true);
+    const timer = window.setTimeout(async () => {
+      const form = new FormData();
+      form.set("body", body);
+      form.set("slug", fields.slug || slug);
+      try {
+        const response = await fetch("/admin/preview", { method: "POST", body: form });
+        const result = (await response.json()) as { html?: string; error?: string };
+        if (seq !== previewSeq.current) return;
+        setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
+      } catch (error) {
+        if (seq !== previewSeq.current) return;
+        setPreview({ error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        if (seq === previewSeq.current) setPreviewing(false);
+      }
+    }, PREVIEW_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [body, layout, fields.slug, slug]);
 
   // Cmd+S / Ctrl+S. It clicks the primary button rather than submitting the
   // form directly, because the button's own click handler is what arms the
@@ -317,17 +395,51 @@ export function PostEditor({
               Settings
             </button>
 
-            {/* Preview stays exactly as it was. The exact-render preview route
-                is the next session's work; removing the control now would drop
-                an intent the server still serves. */}
+            {/*
+              Write / split / preview. Remembered per browser.
+              The live preview needs script, so this group is rendered only
+              alongside the form-submit Preview below, which is the path that
+              still works without it.
+            */}
+            {/*
+              Gated on CodeMirror having mounted, and not only for tidiness. In
+              the preview layout the write pane is display:none, and a REQUIRED
+              control that is not displayed blocks submission with a validation
+              message the author can neither see nor reach. The textarea drops
+              `required` exactly when CodeMirror takes over, so the two
+              conditions have to be the same one.
+            */}
+            {richBody ? (
+              <div className="editor-layout-toggle" role="group" aria-label="Editor layout">
+                {(["write", "split", "preview"] as Layout[]).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className="editor-layout-option"
+                    aria-pressed={layout === option}
+                    onClick={() => chooseLayout(option)}
+                  >
+                    {option === "write" ? "Write" : option === "split" ? "Split" : "Preview"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {/*
+              The zero-JS preview, and the reason it survives the arrival of the
+              live one. With no script the layout toggle above cannot render a
+              thing, so this form submit is the ONLY way to see rendered output.
+              It also keeps `intent=preview` in the submission set, which
+              check:admin-ui holds against a pre-redesign baseline.
+            */}
             <button
               type="submit"
               name="intent"
               value="preview"
-              className="btn-ghost"
+              className="btn-ghost editor-preview-submit"
               disabled={busy}
             >
-              Preview
+              Render
             </button>
 
             <div ref={primaryRef} className="editor-primary">
@@ -348,7 +460,7 @@ export function PostEditor({
         </header>
 
         {/* ---- Region 2: the canvas --------------------------------------- */}
-        <div className="editor-canvas">
+        <div className="editor-canvas" data-layout={layout}>
           <div className="editor-page">
             {!headSha ? (
               <div className="editor-notice" role="alert">
@@ -439,19 +551,55 @@ export function PostEditor({
               </div>
             ) : null}
 
-            <label className="sr-only" htmlFor="field-body">
-              Body, markdown
-            </label>
-            <textarea
-              id="field-body"
-              ref={bodyRef}
-              name="body"
-              className="editor-body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              spellCheck
-              required
-            />
+            <div className="editor-panes">
+              <div className="editor-pane editor-pane-write">
+                <label className="sr-only" htmlFor="field-body">
+                  Body, markdown
+                </label>
+                {/*
+                  THE SUBMITTED FIELD, always. CodeMirror does not replace it,
+                  it drives it: the editor pushes every change into `body`
+                  state, which is this textarea's value, which is what the form
+                  serialises. So the payload is the same field carrying the same
+                  bytes it carried when this was the only control, and
+                  check:admin-ui's fixture does not move.
+
+                  It stays in the DOM rather than being swapped out, because it
+                  is also the no-script path: with nothing loaded, this IS the
+                  editor. `required` is dropped once CodeMirror mounts, since a
+                  hidden required control blocks submission with a validation
+                  message the author cannot see or reach. The server gate is the
+                  authority on an empty body either way.
+                */}
+                <textarea
+                  id="field-body"
+                  ref={bodyRef}
+                  name="body"
+                  className={richBody ? "editor-body is-replaced" : "editor-body"}
+                  value={body}
+                  onChange={(event) => setBody(event.target.value)}
+                  spellCheck
+                  required={!richBody}
+                  aria-hidden={richBody}
+                  tabIndex={richBody ? -1 : undefined}
+                />
+                <Suspense fallback={null}>
+                  <MarkdownEditor
+                    value={body}
+                    onChange={(next) => {
+                      setBody(next);
+                      touched();
+                    }}
+                    onReady={() => setRichBody(true)}
+                    slug={fields.slug}
+                  />
+                </Suspense>
+              </div>
+
+              {layout !== "write" ? (
+                <PreviewPane result={preview} busy={previewing} />
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -520,6 +668,76 @@ export function PostEditor({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The live preview, in a sandboxed frame.
+ *
+ * The HTML is passed through UNTOUCHED, because the whole claim of ruling 3 is
+ * that what you see is what publishes. Sanitising it here would make the
+ * preview differ from the stored output and quietly void that claim.
+ *
+ * So the isolation is the frame, not the markup. `sandbox` with no
+ * `allow-scripts` and no `allow-same-origin` means nothing inside can execute,
+ * reach this document, or navigate the parent. That is not belt and braces:
+ * measured 2026-08-01, the pipeline strips raw `<script>`, `<iframe>` and
+ * `onerror=` (remark-rehype drops raw HTML) but PASSES `javascript:` URLs
+ * through from ordinary markdown links, so a body can contain one and the
+ * author would otherwise be one click from running it inside the admin origin.
+ *
+ * The site stylesheets are copied in by href so the preview is styled the way
+ * the published page is, and the theme attribute is mirrored so tokens resolve
+ * to the mode the author is actually working in.
+ */
+function PreviewPane({
+  result,
+  busy,
+}: {
+  result: { html: string } | { error: string } | null;
+  busy: boolean;
+}) {
+  const [doc, setDoc] = useState("");
+
+  useEffect(() => {
+    if (!result || "error" in result) return;
+    const styles = [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')]
+      .map((link) => `<link rel="stylesheet" href="${link.href}">`)
+      .join("");
+    const theme = document.documentElement.getAttribute("data-theme");
+    setDoc(
+      `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}>` +
+        `<head><meta charset="utf-8">${styles}` +
+        `<style>body{margin:0;padding:1rem;background:var(--bg)}</style></head>` +
+        `<body><article class="prose">${result.html}</article></body></html>`,
+    );
+  }, [result]);
+
+  return (
+    <section className="editor-pane editor-pane-preview" aria-label="Preview">
+      <div className="editor-pane-head">
+        <span className="field-label">Preview</span>
+        <span className="muted" aria-live="polite">
+          {busy ? "Rendering" : result && "error" in result ? "Not renderable" : "Up to date"}
+        </span>
+      </div>
+      {result && "error" in result ? (
+        <div className="editor-feedback" data-tone="danger">
+          <Glyph tone="danger" />
+          <div>
+            <strong>The renderer refused this body.</strong>
+            <p>{result.error}</p>
+          </div>
+        </div>
+      ) : (
+        <iframe
+          className="editor-preview-frame"
+          title="Rendered preview"
+          sandbox=""
+          srcDoc={doc}
+        />
+      )}
+    </section>
   );
 }
 
