@@ -300,6 +300,14 @@ const MATRIX = [
   // Body and neutrals
   ["--text", "--bg", TEXT, "body text"],
   ["--text", "--surface", TEXT, "body on surface"],
+  // CodeMirror's syntax colours. The markdown editor paints headings and bold
+  // in --text-heading and inline code in --text-accent, on --bg normally and on
+  // --surface for the active line, so all four combinations ship. They are
+  // drawn from tokens the matrix already knows rather than a syntax theme of
+  // their own, which is the whole reason they can be checked here at all.
+  ["--text-heading", "--bg", TEXT, "heading text on page"],
+  ["--text-heading", "--surface", TEXT, "heading text on surface"],
+  ["--text-accent", "--surface", TEXT, "accent text on surface"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
   // The settings drawer sits on the popover step and puts its own inputs on
   // --surface inside it, so the drawer's field text is body-on-surface, and its
