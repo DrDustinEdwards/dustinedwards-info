@@ -707,6 +707,187 @@ function rehypeDiagram(models) {
   };
 }
 
+/* -------------------------------------------------------------------------
+ * URL protocol allowlist
+ *
+ * Ruled 2026-08-01 (dustinedwards/url-protocol-allowlist.md), on a finding
+ * measured the day before: `[x](javascript:alert(1))` rendered as a LIVE href
+ * and reached the stored HTML, the gated artifact, D1 and the published page.
+ * The operator API writes posts, so it was agent-reachable on a public surface
+ * with no human click anywhere in the path.
+ *
+ * It lives at the render layer, and that placement is the whole point. There is
+ * one renderer on this site, so one guard here binds every writer identically:
+ * the build script, an editor save, an operator save, and the admin preview all
+ * call `renderBody`. A check in the editor would have protected the one path
+ * that already has a human looking at it and missed the one that does not.
+ * ---------------------------------------------------------------------- */
+
+/** https, http, mailto, and anything with no scheme at all. */
+const ALLOWED_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
+
+/**
+ * Strips what a browser strips, and then some, before the scheme is read.
+ *
+ * The URL spec has a user agent remove ASCII tab and newline from ANYWHERE in a
+ * URL and trim leading and trailing C0 controls and space. That is what makes
+ * `java\tscript:` live: the browser removes the tab and is left with a
+ * javascript URL. Measured on this pipeline, and it is not theoretical here,
+ * because `:::figure{src=...}` passes its value through raw where markdown
+ * would have percent-encoded the tab.
+ *
+ * Every other C0 control and DEL is removed too, which is STRICTER than the
+ * spec. That direction is deliberate: removing characters can only turn an
+ * unrecognised string into a recognised scheme, so being aggressive can only
+ * ever block more, never allow more. A NUL inside the scheme is the case that
+ * matters. Left in place it makes the scheme pattern fail to match, and the URL
+ * then falls through as "relative", which is the one outcome we cannot afford
+ * to get wrong.
+ *
+ * Percent escapes are deliberately NOT decoded. `%09` and `%20` are not valid
+ * in a scheme, so a browser already treats `java%09script:` as a relative path
+ * and it is inert; decoding it here would buy no safety and would start
+ * rejecting legitimate relative paths that merely contain an encoded colon.
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+function normalizeForProtocolTest(raw) {
+  let out = "";
+  for (const character of raw) {
+    const code = character.codePointAt(0) ?? 0;
+    // C0 controls, space, and DEL. Compared by code point rather than
+    // matched by an escape sequence, so this line stays plain ASCII.
+    if (code <= 0x20 || code === 0x7f) continue;
+    // U+FFFD, the replacement character. It is what a NUL inside a link
+    // destination becomes by the time markdown has parsed it, measured on this
+    // pipeline. Nothing legitimate carries one: its presence means the input
+    // was already malformed, so removing it can only expose a scheme somebody
+    // was hiding.
+    if (code === 0xfffd) continue;
+    out += character;
+  }
+  return out.toLowerCase();
+}
+
+/**
+ * The scheme a browser would read, or null when there is none.
+ * @param {string} value
+ * @returns {string | null}
+ */
+function protocolOf(value) {
+  const match = /^([a-z][a-z0-9+.-]*):/.exec(normalizeForProtocolTest(value));
+  return match ? `${match[1]}:` : null;
+}
+
+/**
+ * Percent-decodes without throwing on a malformed escape.
+ *
+ * A URL is allowed to contain a stray `%`, and `decodeURIComponent` throws on
+ * one. Throwing here would turn a typo into a build failure, so a value that
+ * cannot be decoded is simply tested in the form it arrived in.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function decodeOrSelf(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Whether a URL may be emitted as a live href or src.
+ *
+ * No scheme means relative, which covers `/blog/x`, `./notes.md`, `#heading`
+ * and `//example.com/x`. Fragments matter more than they look: the heading
+ * autolinks and every footnote reference are `#...`, so a guard that rejected
+ * schemeless URLs would strip the entire footnote apparatus off every post.
+ *
+ * BOTH the raw form and the percent-decoded form have to pass. Measured on this
+ * pipeline: markdown percent-encodes whitespace inside a link destination, so
+ * `[x](<  javascript:alert(1)>)` arrives as `%20%20javascript:alert(1)`. That
+ * form is inert in a browser today, because `%` cannot begin a scheme and the
+ * URL therefore resolves as a relative path. It is rejected anyway, on the
+ * grounds that no author writes it by accident: it only appears when somebody
+ * is trying to smuggle a scheme past a check, and "inert in today's URL parser"
+ * is a thinner guarantee than "never emitted".
+ *
+ * The cost is a false positive on a relative path whose first segment carries
+ * an encoded colon, as in `foo%3Abar`. The corpus was checked for that shape
+ * before this landed and has none.
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isAllowedUrl(value) {
+  for (const form of [value, decodeOrSelf(value)]) {
+    const protocol = protocolOf(form);
+    if (protocol !== null && !ALLOWED_PROTOCOLS.has(protocol)) return false;
+  }
+  return true;
+}
+
+/**
+ * Demotes a link or image with a disallowed protocol to plain text.
+ *
+ * It renders as the markdown that produced it rather than as a stripped href or
+ * an empty one, because those two both LOOK like the author's link worked. The
+ * ruling asks for the failure to be visible in preview, and un-rendered
+ * markdown is the one signal every markdown author already reads as "this did
+ * not become what I meant". The offending URL stays in the text, so the reason
+ * is legible without opening a console.
+ *
+ * The text is emitted as a text node, so rehype-stringify escapes it on the way
+ * out and the blocked URL cannot re-enter the document as markup.
+ *
+ * Runs LAST in the chain, deliberately, so it sees every href and src the
+ * pipeline can emit no matter which plugin produced it: markdown links and
+ * images, the `:::figure` directive, diagram assets, heading autolinks and
+ * footnote references. A guard placed earlier would only cover the sources that
+ * existed when it was written.
+ *
+ * @param {string} file
+ * @param {Array<{ file: string, tag: string, url: string }>} sink
+ */
+function rehypeUrlProtocols(file, sink) {
+  return (/** @type {any} */ tree) => {
+    visit(tree, "element", (/** @type {any} */ node, index, parent) => {
+      const isLink = node.tagName === "a";
+      const isImage = node.tagName === "img";
+      if (!isLink && !isImage) return;
+
+      const attribute = isLink ? "href" : "src";
+      const raw = node.properties?.[attribute];
+      if (raw === undefined || raw === null) return;
+
+      const url = String(raw);
+      if (isAllowedUrl(url)) return;
+
+      sink.push({ file, tag: node.tagName, url });
+
+      const text = isLink
+        ? `[${textOf(node)}](${url})`
+        : `![${String(node.properties?.alt ?? "")}](${url})`;
+
+      if (parent && typeof index === "number") {
+        parent.children[index] = { type: "text", value: text };
+      }
+    });
+  };
+}
+
+/** The visible text inside a node, for reconstructing link markdown. */
+function textOf(/** @type {any} */ node) {
+  let out = "";
+  visit(node, "text", (/** @type {any} */ child) => {
+    out += child.value;
+  });
+  return out;
+}
+
 /**
  * Writes intrinsic width and height onto every img, plus lazy-loading hints.
  *
@@ -781,6 +962,16 @@ export async function renderBody({ file, body, resolveImage }) {
   const charts = [];
   /** @type {any[]} */
   const diagrams = [];
+  /**
+   * Every URL the allowlist demoted, so a caller can report it.
+   *
+   * Collected rather than thrown, because a blocked link is a content problem
+   * the AUTHOR has to see, not a build failure: throwing would make one bad
+   * href in one post fail the whole site build, and the ruling asks for the
+   * failure to be visible in preview instead.
+   * @type {Array<{ file: string, tag: string, url: string }>}
+   */
+  const blockedUrls = [];
 
   const highlighter = await getHighlighter();
 
@@ -836,6 +1027,11 @@ export async function renderBody({ file, body, resolveImage }) {
         },
       ],
     })
+    // LAST, on purpose. Every href and src the pipeline can emit has been
+    // written by now: markdown links and images, the figure directive, diagram
+    // assets, heading autolinks and footnote references. A guard placed
+    // earlier would only cover the sources that existed when it was written.
+    .use(rehypeUrlProtocols, file, blockedUrls)
     .use(rehypeStringify);
 
   const tree = processor.parse(body);
@@ -850,6 +1046,11 @@ export async function renderBody({ file, body, resolveImage }) {
     // the same principle as `withRelated` and `records.mjs`: anything two callers
     // need is computed once, by the module both of them already import.
     diagrams: diagrams.map((/** @type {any} */ d) => ({ key: d.key, source: d.source })),
+    // Deliberately NOT written into the artifact. It is a fact about one
+    // render, not about the post, and putting it in the gated artifact would
+    // make a blocked URL churn the byte comparison. The preview reads it to
+    // tell the author; the build script reads it to warn.
+    blockedUrls,
   };
 }
 
