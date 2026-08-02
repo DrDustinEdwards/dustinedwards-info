@@ -353,7 +353,7 @@ export default function MarkdownEditor({
     setUpload({ url: "", name: file.name });
     const form = new FormData();
     form.set("file", file);
-    const response = await fetch("/admin/media", { method: "POST", body: form });
+    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
     if (!response.ok) {
       const detail = await response
         .json<{ error?: string }>()

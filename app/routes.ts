@@ -32,7 +32,12 @@ export default [
     route("content", "routes/admin.content.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
-    route("media", "routes/admin.media.ts"),
+    // The media library page. Its loader is also the picker's listing, which is
+    // what keeps one media surface rather than two.
+    route("media", "routes/admin.media._index.tsx"),
+    // Upload only. It used to be at /admin/media and carried the listing loader
+    // too; the listing moved to the page above.
+    route("media/upload", "routes/admin.media.upload.ts"),
     // Read-only render of a draft body through the one pipeline. POST because a
     // whole post body does not belong in a query string, not because it writes.
     route("preview", "routes/admin.preview.ts"),
