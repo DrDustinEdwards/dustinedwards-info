@@ -34,8 +34,18 @@ const DERIVED_PREFIX = "og/";
  * is a billed unique transformation. Three sizes cover the grid thumbnail, the
  * picker tile and a 2x display of either.
  */
-export const THUMB_WIDTHS = [160, 320, 640] as const;
-export type ThumbWidth = (typeof THUMB_WIDTHS)[number];
+/* Re-exported from widths.mjs so this module stays the one import an admin
+ * surface needs, while the ladders themselves live somewhere the markdown
+ * pipeline can also reach. The pipeline cannot import this file: it is a
+ * `.server.ts` that imports `~/db`, and the build scripts run it in Node. */
+export {
+  ALL_WIDTHS,
+  CONTENT_SIZES,
+  CONTENT_WIDTHS,
+  THUMB_WIDTHS,
+  contentSrcSet,
+} from "./widths.mjs";
+export type ThumbWidth = 160 | 320 | 640;
 
 export type MediaObject = {
   key: string;

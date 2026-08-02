@@ -31,12 +31,24 @@ import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
-import { getPlatformProxy } from "wrangler";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
+import { listForPrune } from "./lib/r2.mjs";
+import { bucketFor } from "./lib/wrangler-config.mjs";
 
-const BUCKET = "dustinedwards-media";
+/**
+ * The derived-card bucket, DERIVED from the wrangler config rather than named
+ * here.
+ *
+ * It used to be the literal `"dustinedwards-media"`. That was survivable while
+ * this script only ever PUT objects; it stopped being survivable when the prune
+ * landed, because a stale literal aims a DELETE at whatever bucket still answers
+ * to that name. Reading the binding means a rename in the config is a rename
+ * here, and a binding that no longer exists is a named error rather than a
+ * silent no-op against the wrong bucket.
+ */
+const BUCKET = bucketFor("OG");
 /** Every generated key begins here, and the prune will not look outside it. */
 const PREFIX = "og/";
 const WIDTH = 1200;
@@ -149,78 +161,6 @@ function card(post) {
   );
 }
 
-/**
- * Every key currently under `og/`, paged to the end.
- *
- * **Why a platform proxy and not the CLI.** `wrangler r2 object` has exactly
- * three verbs, `get`, `put` and `delete`; there is no `list`. So the one thing a
- * prune cannot do without is the one thing the CLI this script already shells
- * out to does not offer. `getPlatformProxy` hands a Node script the same
- * `env.MEDIA` the Worker gets, over wrangler's existing OAuth, which is why this
- * needs no new API token and no S3 access key.
- *
- * The config it is handed is BUILT HERE and thrown away, rather than tracked as
- * a third wrangler file. `remote: true` is what makes the binding address the
- * real bucket instead of local miniflare state, and it must not leak into
- * wrangler.jsonc: that flag would also point `npm run dev` at production R2.
- * Measured 2026-08-02, and it is the difference between reading 1 object and 13.
- *
- * PAGED, because this repo has already been bitten by a listing that was not.
- * `listAllAskItems` exists for the same reason: a prune that cannot see an item
- * cannot delete it, and reports success either way. R2 caps `limit` at 1000 and
- * reports `truncated` with a `cursor`.
- *
- * @param {boolean} remote
- * @returns {Promise<string[]>}
- */
-async function listCardKeys(remote) {
-  const dir = await mkdtemp(path.join(tmpdir(), "og-cfg-"));
-  const configPath = path.join(dir, "wrangler.json");
-  await writeFile(
-    configPath,
-    JSON.stringify({
-      name: "build-og-prune",
-      compatibility_date: "2026-07-08",
-      compatibility_flags: ["nodejs_compat"],
-      r2_buckets: [{ binding: "MEDIA", bucket_name: BUCKET, ...(remote ? { remote: true } : {}) }],
-    }),
-    "utf8",
-  );
-
-  // `remote: true` on the BINDING is what selects the real bucket; there is no
-  // options-level switch to pass here. wrangler 4.107 has no `experimental`
-  // field on GetPlatformProxyOptions, and the typecheck is what said so.
-  const proxy = await getPlatformProxy({ configPath });
-
-  /** @type {string[]} */
-  const keys = [];
-  try {
-    const bucket = /** @type {any} */ (proxy.env).MEDIA;
-    /** @type {string | undefined} */
-    let cursor;
-    for (;;) {
-      const page = await bucket.list({ prefix: PREFIX, limit: 1000, ...(cursor ? { cursor } : {}) });
-      for (const object of page.objects) keys.push(object.key);
-      if (!page.truncated) break;
-      cursor = page.cursor;
-      // A truncated page with no cursor would spin forever. Refuse instead of
-      // silently pruning against a partial listing.
-      if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
-    }
-  } finally {
-    // workerd can throw on teardown after a remote session (measured: a WSARecv
-    // failure). The listing is already in hand by then, so a dispose that fails
-    // must not fail the build.
-    try {
-      await proxy.dispose();
-    } catch {
-      /* teardown only */
-    }
-  }
-
-  return keys;
-}
-
 async function main() {
   const target = process.argv.includes("--local") ? "--local" : "--remote";
   const dryRun = process.argv.includes("--dry-run");
@@ -306,15 +246,26 @@ async function main() {
   // changing any of them writes a NEW object and abandons the old one under a
   // name nothing will ever ask for again.
   //
-  // Scoped to `og/` by the listing, which matters more here than it does for
-  // diagrams: this bucket is shared with `posts/`, where the editor's uploads
-  // live, and those are irreplaceable. An unscoped prune would delete them all.
+  // **It will not act on a listing it cannot trust.** On 2026-08-02 a run
+  // printed `WSARecv(): #64 The specified network name is no longer available`
+  // in the middle of its output and carried on to report one orphan. It was
+  // right that time, and a run that had been cut short would have looked
+  // identical. `listForPrune` refuses an empty listing outright and refuses one
+  // that is missing any key the corpus still references, because a listing
+  // demonstrably missing objects that exist proves nothing about the objects it
+  // appears not to have.
   const live = new Set(cards.map((card) => card.key));
-  const present = await listCardKeys(target === "--remote");
-  const orphans = present.filter((key) => !live.has(key));
+  const present = await listForPrune({
+    bucket: BUCKET,
+    prefix: PREFIX,
+    remote: target === "--remote",
+    expected: live,
+    label: "prune",
+  });
+  const orphans = present.map((o) => o.key).filter((key) => !live.has(key));
 
   console.log(
-    `\n  ${present.length} object(s) under ${PREFIX}, ` +
+    `  ${present.length} object(s) under ${PREFIX}, ` +
       `${live.size} referenced by the corpus, ${orphans.length} orphaned`,
   );
 
@@ -329,7 +280,7 @@ async function main() {
       stdio: ["ignore", "pipe", "pipe"],
     });
     pruned += 1;
-    console.log(`  pruned /media/${key}`);
+    console.log(`  pruned ${key}`);
   }
 
   console.log(

@@ -3761,7 +3761,15 @@ a:hover {
   width: 100%;
   height: 10rem;
   object-fit: cover;
-  background: var(--bg);
+  background-color: var(--bg);
+  /* The LQIP is set as an inline background-image on this same element, so these
+     describe how it is painted. `cover` and `center` mirror the object-fit
+     above, which puts the blur exactly where the real image will land and makes
+     the swap invisible. It is a ~20px image scaled up, so the browser's own
+     smoothing IS the blur: no filter is applied and none is needed. */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .media-card-body {
