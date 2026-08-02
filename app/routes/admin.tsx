@@ -113,6 +113,22 @@ const ICONS = {
     </>
   ),
   /**
+   * A picture: frame, horizon, sun.
+   *
+   * Chosen against the five already here rather than in isolation. Overview is
+   * rectangles, Sites a globe, Content a document, Posts stacked lines, Tools
+   * sliders, so a framed image collides with none of them at rail size. Not a
+   * pencil and not a stack of photos: the pencil reads as compose, which is
+   * Posts' job, and a stack reads as "copies" rather than "the library".
+   */
+  media: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m4 17 4.5-4.5 3 3 3.5-3.5 5 5" />
+    </>
+  ),
+  /**
    * Sliders, not the pencil this used to draw.
    *
    * A pencil reads as COMPOSE, which is what Posts does, so two adjacent items
@@ -137,6 +153,12 @@ const NAV = [
   // The only item that carries a count. Drift is a fact about the post corpus,
   // and Posts is where the repair lives.
   { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true },
+  // After Posts and before Tools, because it is content the posts consume
+  // rather than an admin control. Until now /admin/media existed and loaded but
+  // NOTHING linked to it: the sidebar had five items, none of them Media, and
+  // no item even marked itself active while the page was open, so the library
+  // was reachable only by typing the URL.
+  { to: "/admin/media", label: "Media", icon: ICONS.media },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
 ];
 
