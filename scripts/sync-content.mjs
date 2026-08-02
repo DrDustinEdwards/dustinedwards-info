@@ -27,6 +27,9 @@ import { ARTIFACT_PATH, lastCommitDate } from "./build-content.mjs";
 
 const DB_NAME = "dustinedwards";
 
+/** The tracked source of the `llms.txt` settings row. */
+const LLMS_PATH = "content/llms.txt";
+
 /**
  * Escapes a value for a SQLite string literal.
  * @param {string | null} value
@@ -193,6 +196,40 @@ async function main() {
   if (applied.status !== 0) {
     console.error(applied.stdout);
     throw new Error("wrangler d1 execute failed");
+  }
+
+  // The llms.txt settings row, from its tracked source file.
+  //
+  // Same shape as everything else here: the FILE is the source of truth and the
+  // row is derived, so a rebuild reproduces it. Before 2026-08-02 the only thing
+  // that ever wrote this row was 0001_init.sql, which seeds the virology copy
+  // retired on 2026-07-27, so a rebuilt site would have served a stale llms.txt
+  // with nothing to flag it. check:llms compares the two now.
+  //
+  // Read as a Buffer and decoded explicitly rather than with an encoding hint,
+  // because this file is compared byte for byte and the platform text layer is
+  // cp1252 on this host.
+  const llms = (await readFile(LLMS_PATH)).toString("utf8");
+  if (llms.includes("\r")) {
+    throw new Error(
+      `${LLMS_PATH} contains CR. It is pinned to LF in .gitattributes; a CRLF ` +
+        `checkout would sync CRLF into D1 and change what /llms.txt serves.`,
+    );
+  }
+  const settingsPath = path.join(dir, "sync-settings.sql");
+  await writeFile(
+    settingsPath,
+    `INSERT INTO settings (key, value) VALUES ('llms.txt', ${sql(llms)})\n` +
+      `  ON CONFLICT(key) DO UPDATE SET value = excluded.value;\n`,
+    "utf8",
+  );
+  console.log(`sync:content applying llms.txt (${Buffer.byteLength(llms)} bytes)`);
+  const settingsApplied = wrangler(
+    `d1 execute ${DB_NAME} ${target} --file "${settingsPath}" --yes`,
+  );
+  if (settingsApplied.status !== 0) {
+    console.error(settingsApplied.stdout);
+    throw new Error("wrangler d1 execute failed for the llms.txt settings row");
   }
 
   // Search index second, as its own statement file. Kept separate from the post

@@ -1,75 +1,25 @@
 import { getSetting } from "~/db";
 import { getEnv } from "~/lib/context";
+// THE source of truth, inlined at build. See the note on FALLBACK below.
+import llmsTxt from "../../content/llms.txt?raw";
 import type { Route } from "./+types/llms";
 
 /**
- * Kept byte-identical to the `llms.txt` row in `settings`. The row is what the
- * route actually serves; this is the fallback for a database that has not been
- * seeded. If you change one, change the other.
+ * What to serve when the `llms.txt` settings row is absent.
+ *
+ * This used to be a 60-line template literal carrying a hand-maintained copy of
+ * the row, under a comment reading "If you change one, change the other". It had
+ * already drifted: measured 2026-08-02, the literal was byte-identical to the
+ * live row EXCEPT that it carried 62 CRs, because this .ts file is CRLF on a
+ * Windows checkout while the D1 row is LF. The site therefore served different
+ * bytes depending on whether the row existed, and nothing could see it.
+ *
+ * It is now the content file itself, inlined by Vite at build time, so the
+ * fallback cannot drift from what the sync writes. `content/llms.txt` is pinned
+ * to LF in .gitattributes, which is what keeps the inlined copy and the row
+ * byte-identical on every platform.
  */
-const FALLBACK = `# dustinedwards.info
-
-Personal site of Dustin Edwards.
-
-## About
-
-Writing, projects, and notes.
-
-## Blog
-
-Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.
-Every post has a plain markdown twin at /blog/<slug>.md, which is the source
-the page was rendered from. Requesting /blog/<slug> with an
-Accept: text/markdown header returns the same markdown. The feed is at
-/blog/rss.xml and /blog/feed.json.
-
-## Search
-
-/search?q=<query> searches the whole site and returns a normal HTML page.
-
-The same URL returns JSON when requested with Accept: application/json. It is
-the same query against the same index, not a separate API, and the response
-varies on Accept. Parameters: q, type, tag, year, page. Operators inside q:
-tag:<tag>, type:<type>, "quoted phrases", and a bare four-digit year, which is
-read as a date filter rather than as text.
-
-Results are section-grained: a hit carries the heading it was found under and a
-url with that anchor, so a citation can point at the passage rather than the
-page. Each result reports what it matched on (title, tag, body, or filter, the
-last meaning the query was a bare year or tag with no text to match).
-
-For programmatic use prefer the JSON form. It is keyword search over an FTS5
-index: deterministic, the same query returning the same results, with no model
-in the path and no per-request cost.
-
-## Search over MCP
-
-The same corpus is exposed as a Model Context Protocol endpoint, so an agent can
-search this site as a tool without scraping it:
-
-  https://2795d719-a4de-4558-9322-8fced66a48e6.search.ai.cloudflare.com/mcp
-
-It needs no authentication and provides one tool, "search". Results carry the
-same section-grained keys the rest of the site uses: blog/<slug>.md is a whole
-post and blog/<slug>__<anchor>.md is one heading within it, which maps back to
-/blog/<slug>#<anchor>.
-
-This is semantic retrieval and it is not the same thing as the JSON endpoint
-above. It finds passages that answer a question phrased in a sentence, and it
-misses short exact tokens that the keyword index finds immediately. Neither
-covers the other, so for a known term use the JSON search and for a question use
-this.
-
-Three ways in, then: a URL for people, JSON for programs, MCP for agents.
-
-## Full text
-
-/llms-full.txt carries every published post in markdown in one document.
-
-## Contact
-
-https://dustinedwards.info
-`;
+const FALLBACK = llmsTxt;
 
 export async function loader({ context }: Route.LoaderArgs) {
   const value = await getSetting(getEnv(context), "llms.txt");

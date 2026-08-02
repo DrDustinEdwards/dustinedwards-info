@@ -21,6 +21,14 @@
 #      logo fixtures are deliberately NOT pinned: nothing regenerates them, and
 #      `check:logo` is verified against a CRLF checkout.
 
+#   4. `content/llms.txt` is the SOURCE of the `llms.txt` settings row and is
+#      compared against that row byte for byte by `check:llms`. The live row is
+#      LF, so a CRLF checkout would fail the gate on every fresh Windows clone
+#      and, worse, would sync CRLF into D1 and change what /llms.txt serves. The
+#      route inlines the same file, so a CRLF checkout would also have changed
+#      the bytes served when the row is absent.
+
 content/posts/*.md      text eol=lf
 content/generated/*.json text eol=lf
+content/llms.txt        text eol=lf
 public/diagrams/*.svg   text eol=lf
