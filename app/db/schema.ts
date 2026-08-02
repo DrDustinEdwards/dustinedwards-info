@@ -91,7 +91,31 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
 });
 
+/**
+ * Annotation for one R2 object. Grounds are in drizzle/0007_media.sql.
+ *
+ * It describes the IMAGE and never the citations: usage is derived by scanning
+ * content through the resolver seam, so no row here can authorise a delete that
+ * a fresh scan would refuse.
+ */
+export const media = sqliteTable(
+  "media",
+  {
+    r2Key: text("r2_key").primaryKey(),
+    alt: text("alt").notNull().default(""),
+    caption: text("caption").notNull().default(""),
+    uploaded: text("uploaded"),
+    /** NULL means "not measured", which an SVG legitimately is. */
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => [index("media_uploaded_idx").on(t.uploaded)],
+);
+
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type Media = typeof media.$inferSelect;
