@@ -15,6 +15,7 @@ import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
 import type { PostState } from "~/lib/editor/publish-transition.mjs";
 import { PublishActions } from "./publish-actions";
+import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
 
 /**
@@ -89,6 +90,7 @@ export function PostEditor({
   everPublished,
   tagOptions,
   linkTargets = [],
+  revisions = [],
   existingSlugs = [],
   historySlot,
   dangerSlot,
@@ -104,6 +106,8 @@ export function PostEditor({
   tagOptions: string[];
   /** The site's own posts, for the body editor's Cmd+K link search. */
   linkTargets?: LinkTarget[];
+  /** Commits touching this post, for the drawer's revision list. */
+  revisions?: Revision[];
   /** Slugs already taken, so the new-post flow can say so before the save does. */
   existingSlugs?: string[];
   historySlot?: React.ReactNode;
@@ -130,6 +134,15 @@ export function PostEditor({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offer, setOffer] = useState<DraftBuffer | null>(null);
+  /**
+   * The sha a revision was loaded from, or null.
+   *
+   * Stated in the editor because loading old content changes what the buffer
+   * and the save mean, and an author who walked away mid-task must not come
+   * back to a document that silently is not the current one. Cleared by a save,
+   * along with the dirty flag.
+   */
+  const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   /** True once CodeMirror has mounted and taken over from the textarea. */
   const [richBody, setRichBody] = useState(false);
   const [layout, setLayout] = useState<Layout>("write");
@@ -182,6 +195,9 @@ export function PostEditor({
     if (isNew) clearAllBuffersFor("");
     setOffer(null);
     setDirty(false);
+    // The revision has been committed, so the editor is no longer holding old
+    // content: it is holding the current content, which is what it just became.
+    setRestoredFrom(null);
   }, [feedback, fields.slug, isNew]);
 
   useEffect(() => {
@@ -304,6 +320,55 @@ export function PostEditor({
     if (f.date !== undefined && date instanceof HTMLInputElement) date.value = f.date;
     setOffer(null);
     setDirty(true);
+  };
+
+  /**
+   * Ruling 1: a revision LOADS into the editor. It does not write.
+   *
+   * Everything below is `setState`. There is no request here, and the fetch
+   * that produced these fields was a GET to a route that exports no action, so
+   * no path through this function can commit anything. What it produces is a
+   * dirty editor holding old content, which Dustin then saves or abandons; a
+   * save takes the ordinary write path and lands a new commit on top, exactly
+   * as an edit typed by hand would.
+   *
+   * **The draft buffer is handled explicitly, and it has to be.** Two hazards,
+   * both real:
+   *
+   * 1. A pending recovery OFFER is dismissed. The banner describes a buffer
+   *    written before this load, so leaving it up would let one click silently
+   *    replace the revision the author just chose with older local text, which
+   *    is the exact surprise the offer exists to prevent.
+   * 2. The buffer is rewritten IMMEDIATELY rather than on the usual idle
+   *    timer. Otherwise a tab closed in the seconds after a restore would leave
+   *    a buffer describing the pre-restore document, and the next load would
+   *    offer to "recover" the author out of the revision they had just loaded.
+   *
+   * `persist` reads the FORM, so it runs after paint rather than inline: the
+   * inputs are controlled and still hold the previous values until React has
+   * committed this state.
+   */
+  const applyRevision = (revision: PostFields, sha: string) => {
+    setTitle(revision.title);
+    // Pinned, so the title arriving from the revision does not immediately
+    // rewrite the slug that came with it.
+    setSlugPinned(true);
+    setSlug(revision.slug);
+    setDescription(revision.description);
+    setTags(revision.tags);
+    setCoverSrc(revision.coverSrc);
+    setCoverAlt(revision.coverAlt);
+    setPublishAt(revision.publishAt);
+    setBody(revision.body);
+    const form = formRef.current;
+    const date = form?.elements.namedItem("date");
+    if (date instanceof HTMLInputElement) date.value = revision.date;
+
+    setOffer(null);
+    setDirty(true);
+    setRestoredFrom(sha);
+    window.clearTimeout(autosaveTimer.current);
+    window.setTimeout(persist, 0);
   };
 
   const slugValid = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
@@ -536,6 +601,22 @@ export function PostEditor({
               />
             ) : null}
 
+            {/*
+              Ruling 1 made visible. The editor is holding old content and
+              nothing has been written, so it says both: an author who came back
+              to this tab an hour later must not mistake a loaded revision for
+              the live post. Neutral, not tinted: this is a state of the editor,
+              not a problem, and rule 4 spends the one tint per view on the
+              feedback slot above.
+            */}
+            {restoredFrom ? (
+              <p className="editor-notice">
+                Loaded revision <code>{restoredFrom.slice(0, 7)}</code> into the
+                editor. Nothing has been written yet. Save to commit it on top,
+                or leave without saving to discard it.
+              </p>
+            ) : null}
+
             <div className="editor-title-row">
               <label className="sr-only" htmlFor="field-title">
                 Title
@@ -706,7 +787,14 @@ export function PostEditor({
             setPublishAt(value);
             setDirty(true);
           }}
-          historySlot={historySlot}
+          previewPost={{ slug, title, description, coverSrc, coverAlt }}
+          historySlot={
+            revisions.length > 0 ? (
+              <RevisionList slug={fields.slug} revisions={revisions} onRestore={applyRevision} />
+            ) : (
+              historySlot
+            )
+          }
           dangerSlot={dangerSlot}
         />
       </Form>

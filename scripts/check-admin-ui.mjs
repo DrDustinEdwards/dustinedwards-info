@@ -127,6 +127,15 @@ const editLoader = (over = {}) => ({
     { slug: "live-one", title: "A live post", state: "published" },
     { slug: "wip", title: "A draft post", state: "draft" },
   ],
+  // The drawer's revision list, RENDERED rather than omitted, and that is the
+  // point. Ruling 1 says a restore loads and never writes; the way this gate
+  // can hold that rule is by rendering the control and observing that the
+  // page's submission set does not grow. An empty list would have proved
+  // nothing, because a control that is not rendered submits nothing either.
+  revisions: [
+    { sha: "1111111111111111111111111111111111111111", message: "Latest edit", author: "Dustin Edwards", date: "2026-08-01T10:00:00Z" },
+    { sha: "2222222222222222222222222222222222222222", message: "An earlier edit", author: "Dustin Edwards", date: "2026-07-30T09:00:00Z" },
+  ],
   everPublished: false,
   state: "draft",
   ...over,

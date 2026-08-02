@@ -1,4 +1,4 @@
-import { Form, Link, data, redirect } from "react-router";
+import { Link, data } from "react-router";
 
 import { Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
@@ -7,25 +7,26 @@ import {
   listCommitsForPath,
   readFile,
 } from "~/lib/editor/github.server";
-import {
-  EditorError,
-  GitHubError,
-  currentHead,
-  savePost,
-} from "~/lib/editor/publish.server";
+import { currentHead } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
 /**
- * Version history for one post.
+ * Version history for one post. READ ONLY.
  *
- * Read-heavy and admin-only. Git already holds the history, so this is a window
- * onto it: the commit list and the diffs come straight from the GitHub API over
- * the token the editor already uses.
+ * Admin-only. Git already holds the history, so this is a window onto it: the
+ * commit list and the diffs come straight from the GitHub API over the token
+ * the editor already uses.
  *
- * Restore is the one write, and it does not touch refs. It reads the file as it
- * was at an old commit and puts it through `savePost`, the same atomic path the
- * editor uses, which lands a NEW commit on top. History is never rewritten and
- * nothing is ever force pushed.
+ * **This route used to be able to restore, and that ability was removed on
+ * 2026-08-02 by ruling 1 of the feature queue.** It restored by reading the
+ * file at an old commit and putting it straight through `savePost`, which was
+ * atomic and never rewrote history, but it was still a SECOND ROUTE THAT COULD
+ * COMMIT. Ruling 1 says a restore loads a revision into the editor as unsaved
+ * content and that every mutation stays on the one existing write path, so the
+ * action is gone and restoring now happens in the editor's drawer, where the
+ * author sees the change before deciding to keep it.
+ *
+ * This page therefore exports NO action at all. A POST here answers 405.
  */
 
 const postPath = (slug: string) => `content/posts/${slug}.md`;
@@ -63,39 +64,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ params, request, context }: Route.ActionArgs) {
-  const env = getEnv(context);
-  const form = await request.formData();
-  const sha = String(form.get("sha") ?? "");
-  const headSha = String(form.get("headSha") ?? "");
-
-  if (form.get("intent") !== "restore" || !sha) {
-    return { error: "Nothing to restore." };
-  }
-
-  try {
-    const old = await readFile(env, postPath(params.slug), sha);
-    if (!old) {
-      return { error: `The post does not exist at ${sha.slice(0, 7)}.` };
-    }
-
-    // The gates run again on the restored content, which is correct: an old
-    // commit predating a rule should not be able to bypass it.
-    await savePost(env, {
-      slug: params.slug,
-      raw: old.content,
-      expectedHeadSha: headSha || null,
-      isNew: false,
-    });
-    return redirect(`/admin/posts/${params.slug}/edit`);
-  } catch (error) {
-    if (error instanceof EditorError || error instanceof GitHubError) {
-      return { error: error.message };
-    }
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
-}
-
 function diffKind(line: string) {
   if (line.startsWith("+") && !line.startsWith("+++")) return "add";
   if (line.startsWith("-") && !line.startsWith("---")) return "del";
@@ -103,24 +71,14 @@ function diffKind(line: string) {
   return undefined;
 }
 
-export default function PostHistory({
-  loaderData,
-  actionData,
-}: Route.ComponentProps) {
-  const { slug, commits, selected, patch, headSha } = loaderData;
+export default function PostHistory({ loaderData }: Route.ComponentProps) {
+  const { slug, commits, selected, patch } = loaderData;
 
   return (
     <Panel
       title={`History: ${slug}`}
-      description="Every commit that touched this post. Restoring writes a new commit; nothing is rewritten."
+      description="Every commit that touched this post. Restoring happens in the editor's drawer, where a revision loads as unsaved changes."
     >
-      {actionData?.error ? (
-        <div className="editor-problem" role="alert">
-          <strong>Not restored</strong>
-          <p>{actionData.error}</p>
-        </div>
-      ) : null}
-
       <p className="posts-toolbar">
         <Link to={`/admin/posts/${slug}/edit`} className="btn-ghost">
           Back to editor
@@ -157,20 +115,10 @@ export default function PostHistory({
                   {selected === commit.sha ? "Hide diff" : "View diff"}
                 </Link>
 
-                {index > 0 ? (
-                  <Form method="post">
-                    <input type="hidden" name="sha" value={commit.sha} />
-                    <input type="hidden" name="headSha" value={headSha} />
-                    <button
-                      type="submit"
-                      name="intent"
-                      value="restore"
-                      className="btn-ghost"
-                    >
-                      Restore this version
-                    </button>
-                  </Form>
-                ) : null}
+                {/* No restore control here any more. Ruling 1 moved restoring
+                    into the editor's drawer, where it loads rather than
+                    writes, and leaving a second one on this page would have
+                    been a second way to commit wearing the same word. */}
               </div>
 
               {selected === commit.sha ? (

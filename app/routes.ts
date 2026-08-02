@@ -40,6 +40,10 @@ export default [
     route("posts/new", "routes/admin.posts.new.tsx"),
     route("posts/:slug/edit", "routes/admin.posts.$slug.edit.tsx"),
     route("posts/:slug/history", "routes/admin.posts.$slug.history.tsx"),
+    // Reading git for the editor's revision drawer. Loader only, no action, so
+    // ruling 1's "restore loads, it does not write" is enforced by the route's
+    // shape rather than by discipline.
+    route("posts/:slug/revisions", "routes/admin.posts.$slug.revisions.tsx"),
   ]),
 
   // API

@@ -9,7 +9,7 @@ import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "~/lib/editor/publish-transition.mjs";
 import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
-import { readFile } from "~/lib/editor/github.server";
+import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 
 export function meta({ params }: Route.MetaArgs) {
@@ -46,6 +46,19 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     tagOptions: (await listBlogTags(env).catch(() => [])).map((tag) => tag.slug),
     // The site's own posts, for the body editor's Cmd+K link search.
     linkTargets: await loadLinkTargets(env),
+    // Commits touching this post, for the drawer's revision list. LOADER work,
+    // deliberately: reading history is a read, so it belongs in the loader and
+    // adds no form and no submission to this page. Diffs and revision contents
+    // are fetched on demand from the revisions resource route, which exports no
+    // action, so ruling 1's "restore loads, it does not write" holds by the
+    // shape of the routes rather than by anything this page promises.
+    //
+    // Non-fatal: a GitHub outage must not blank the editor. The drawer simply
+    // reports no commits, and writing still works because the save path fails
+    // loudly on its own.
+    revisions: await listCommitsForPath(env, `content/posts/${params.slug}.md`).catch(
+      () => [],
+    ),
   };
 }
 
@@ -119,6 +132,7 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         everPublished={loaderData.everPublished}
         tagOptions={loaderData.tagOptions}
         linkTargets={loaderData.linkTargets}
+        revisions={loaderData.revisions}
         historySlot={
           <>
             <p className="muted">
