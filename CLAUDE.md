@@ -37,11 +37,42 @@ auth secrets is still flagged before it lands.
 
 ## Bindings
 
-Configured in wrangler.jsonc, read off the request context via `getEnv(context)` from `app/lib/context.ts`. Never import bindings globally.
+Read off the request context via `getEnv(context)` from `app/lib/context.ts`.
+Never import bindings globally.
 
-  DB      D1 database "dustinedwards"
-  APP_KV  KV namespace (Better Auth session store)
-  MEDIA   R2 bucket "dustinedwards-media"
+  DB          D1 database "dustinedwards"
+  APP_KV      KV namespace (Better Auth session store)
+  MEDIA       R2 bucket "dustinedwards-media"
+  AI_SEARCH   AI Search instance "dustinedwards" (Ask, search Layer 2)
+  ASK_BUDGET  Durable Object, class AskBudget (Ask per-IP limit, daily ceiling)
+  IMAGES      Images binding (media thumbnails, transforms on request)
+
+### Where the config lives, and why it is split
+
+**`wrangler.jsonc` is gitignored and `wrangler.jsonc.example` is tracked.** That
+is a PORTFOLIO rule, not this repo's choice: capsid/conventions.md, "Public-repo
+hygiene", says real config never goes in git and an example with placeholder ids
+does. Three other repos commit the real file and are tracked there as convention
+violations, so do not "fix" this one by committing it.
+
+The two files differ in exactly **two values**, `database_id` and the KV
+namespace `id`. Every binding, the compat date and flags, and the durable object
+migrations are identical, which is what makes the example a real description of
+this Worker rather than a stub. `postinstall` copies it into place on a fresh
+clone via `scripts/bootstrap-config.mjs`, which never overwrites an existing
+config.
+
+Neither file has ever held a secret. All seven live secrets are in
+`wrangler secret`, confirmed by `wrangler versions view`.
+
+**The failure mode this has already had.** On 2026-08-02 the `images` binding
+was added to the real config and not mirrored into the example, so a fresh clone
+would have built a site whose media thumbnails silently fell back to
+full-resolution originals. Nothing compared the two files.
+
+`npm run check:config` now does, failing in both directions and failing if the
+example ever starts carrying a real id. **Adding a binding means editing both
+files in the same commit.**
 
 ## Commands
 
@@ -50,6 +81,8 @@ Configured in wrangler.jsonc, read off the request context via `getEnv(context)`
 - `npx tsc -b` typecheck (`tsc --noEmit` is a no-op here)
 - `npm run build:content` regenerate `content/generated/posts.json` from `content/posts/`
 - `npm run check:content` gate; fails when the committed artifact differs from a fresh generation
+- `npm run check:config` gate; fails when wrangler.jsonc and wrangler.jsonc.example
+  declare different bindings, or when the example carries a real resource id
 - `npm run sync:content -- --local|--remote` push the artifact into D1 and rebuild the FTS index
 - `npm run check:search` gate over the query parser and rank fusion (pure, no database)
 - `npm run check:backup -- --local|--remote` proves the per-table export path still covers the schema

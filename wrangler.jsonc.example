@@ -35,6 +35,16 @@
 			"bucket_name": "dustinedwards-media"
 		}
 	],
+	// Media thumbnails. The library derives every size from the one original in
+	// R2 through this binding, so without it /media/<key>?w=<n> falls back to
+	// serving the full-resolution original and says so in x-media-thumb.
+	//
+	// Account-scoped rather than zone-scoped, and that is why it is the binding
+	// rather than the /cdn-cgi/image/ URL syntax: measured 2026-08-02, the URL
+	// interface answers 404 with Cloudflare error 1042 on workers.dev, because
+	// it needs a customer zone. Carries no id, so this line is complete as
+	// written rather than a placeholder.
+	"images": { "binding": "IMAGES" },
 	// Ask mode (search Layer 2). Remove this block and Ask disappears cleanly:
 	// classic search is D1 only and never waits on it. Instance binding rather
 	// than ai_search_namespaces because there is exactly one instance.
