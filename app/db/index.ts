@@ -378,6 +378,22 @@ export async function mediaCounts(env: Env) {
 }
 
 /**
+ * The same rows, split by role.
+ *
+ * A SEPARATE query from `mediaCounts` because it answers a separate question.
+ * The row count says whether a rebuild ran; this says whether `roleOf()` did
+ * anything. Deriving role happens per row, after the row exists, so a rebuild
+ * with a broken deriver still produces every row with the column default and the
+ * two numbers disagree in a way that is only legible if both are shown.
+ */
+export async function mediaRoleCounts(env: Env) {
+  return getDb(env)
+    .select({ role: media.role, n: count() })
+    .from(media)
+    .groupBy(media.role);
+}
+
+/**
  * Writes the DERIVED half of a row and leaves the AUTHORED half alone.
  *
  * This is the whole reason a rebuild is not `DELETE` then `INSERT`. Hash, mime,
