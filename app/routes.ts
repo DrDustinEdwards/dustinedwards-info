@@ -9,10 +9,12 @@ export default [
   route("blog/feed.json", "routes/blog.feed[.json].ts"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
-  // Roster. The URL predates the page's current title and is kept as it is,
-  // because the nine photo assets sit under the same prefix and other people's
-  // citations point at them.
-  route("phage-hunters", "routes/phage-hunters.tsx"),
+  // Roster, at the LEGACY URL. /phage-discovery is the address the old
+  // WordPress page holds and the one that is indexed, so the Worker takes it
+  // over at cutover rather than redirecting it. The nine photo assets stay at
+  // /phage-hunters/*, which is a static prefix and not a route; the page prefix
+  // and the asset prefix differ on purpose. See the route file.
+  route("phage-discovery", "routes/phage-discovery.tsx"),
   // Ordered before /search so the Ask endpoint is not read as a search param
   // variant, and kept a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),
