@@ -15,6 +15,7 @@ import {
   MEDIA_PAGE_SIZE,
   deleteMediaObject,
   isManagedKey,
+  isViewable,
   listMedia,
   thumbUrl,
 } from "~/lib/media/core.server";
@@ -34,6 +35,23 @@ export function meta() {
   return [{ title: "Media · Admin" }, { name: "robots", content: "noindex" }];
 }
 
+/**
+ * The filter vocabulary, in ONE place, used to build the chips and to read the
+ * URL back. A second list would be a second answer to "is this a valid filter".
+ *
+ * `?role=` values are the role column verbatim; `unused` is the one view that is
+ * not a role, which is why it is a member here rather than a separate parameter.
+ */
+const FILTERS = [
+  { id: "content", label: "Content", hint: "Images and documents you can use in a post" },
+  { id: "generated", label: "Generated", hint: "Social cards and diagrams, rebuilt by command" },
+  { id: "brand", label: "Brand", hint: "Logos and marks the site code references" },
+  { id: "icon", label: "Icons", hint: "Favicons and touch icons the browser asks for" },
+  { id: "unused", label: "Unused", hint: "Nothing the renderer emitted cites these" },
+] as const;
+
+const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
@@ -43,6 +61,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // is what makes it the same listing rather than a second one.
   const picker = url.searchParams.get("picker") === "1";
 
+  // DEFAULT TO CONTENT, which is the whole ordering fix stated as a default.
+  // An empty `?role=` is not "no filter", it is the absence of the parameter;
+  // `?role=all` is how the reader asks for everything. Anything unrecognised
+  // falls back to the default rather than erroring, because a bad URL should
+  // show a library rather than a stack trace.
+  const requested = url.searchParams.get("role");
+  const filter = requested === "all" || (requested && (ROLE_IDS.has(requested) || requested === "unused"))
+    ? requested
+    : "content";
+
   const listed = await listMedia(env, {
     page,
     limit: picker ? 200 : MEDIA_PAGE_SIZE,
@@ -51,7 +79,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     // chrome built for a social feed; inserting one into a post body would be
     // nonsense, so `r2-derived` is excluded outright. Documents go too: this
     // picker inserts images.
+    //
+    // Unconditional, and deliberately NOT merged with the `role` filter below:
+    // the picker's rule is a constraint on what may be inserted, not a view the
+    // reader chose, so a `?role=` in the URL must not be able to widen it.
     insertableOnly: picker,
+    ...(picker
+      ? {}
+      : {
+          ...(ROLE_IDS.has(filter) ? { role: filter } : {}),
+          ...(filter === "unused" ? { unusedOnly: true } : {}),
+        }),
   });
   const keys = listed.objects.map((object) => object.key);
 
@@ -86,12 +124,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     objects: listed.objects.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
+      /**
+       * Decided HERE, not in the component.
+       *
+       * `core.server` is stubbed when `check:admin-ui` renders these routes, and
+       * the stub is a Proxy with no own keys, so a named export that a component
+       * CALLS comes back undefined and the render throws. Nothing had called one
+       * before, only referenced them from loaders. Keeping the decision in the
+       * loader keeps the component free of server imports, which is what the
+       * harness assumes and what the split is for anyway.
+       */
+      viewable: isViewable(object.kind),
       citations: resolution.citations.get(object.key) ?? [],
       /** Rows the pipeline wrote. The refcount that makes a shared blob safe. */
       refCount: (refs.get(object.key) ?? []).length,
     })),
     page: listed.page,
     hasMore: listed.hasMore,
+    /** Which chip is active. Echoed back so the chips render without re-parsing. */
+    filter,
     /** False when a resolver threw. The page says so and delete refuses. */
     scanComplete: resolution.complete,
     scanFailed: resolution.failed,
@@ -273,16 +324,76 @@ function formatBytes(size: number) {
 }
 
 export default function AdminMedia({ loaderData, actionData }: Route.ComponentProps) {
-  const [params] = useSearchParams();
   if (loaderData.picker) return null;
-  const { objects, page, hasMore, scanComplete, scanFailed, counts, roleCounts } = loaderData;
+  const { objects, page, hasMore, filter, scanComplete, scanFailed, counts, roleCounts } =
+    loaderData;
   const total = counts.reduce((sum, row) => sum + Number(row.n), 0);
+  const byRole = new Map(roleCounts.map((row) => [row.role, Number(row.n)]));
+  const active = FILTERS.find((f) => f.id === filter);
 
   return (
     <Panel
       title="Media"
-      description="Everything the index knows about: editor uploads in R2, generated cards, and the static assets that ship with the repo. Thumbnails are transforms of the original."
+      // Written for someone looking for a picture. The old copy described the
+      // storage tiers, which is the schema talking: a reader arriving here wants
+      // to find an image, and the tiers only matter once they have.
+      description="Every picture, card and file the site knows about. Pick a group to narrow it down, then copy the filename into a post."
     >
+      {/* FILTER CHIPS AS LINKS, carrying ?role=, exactly as /search does. Links
+          and not a dropdown, because a link is navigable, bookmarkable, opens in
+          a new tab, and needs no script; a select would need an onchange to do
+          anything at all. The whole filter surface is the URL. */}
+      {/* `is-active` is the class /search already uses for a selected chip, and
+          it is the one the prefers-contrast and forced-colors blocks already
+          name. A parallel `aria-current` styling hook would have been a second
+          convention that neither accessibility tier covers. `aria-current="page"`
+          rides alongside it for the semantics the class cannot carry. */}
+      <nav aria-label="Filter media by group" className="media-filters">
+        <Link
+          to="/admin/media?role=all"
+          className={`search-chip${filter === "all" ? " is-active" : ""}`}
+          aria-current={filter === "all" ? "page" : undefined}
+        >
+          All <span className="search-chip-count">{total}</span>
+        </Link>
+        {FILTERS.map((f) => (
+          <Link
+            key={f.id}
+            to={`/admin/media?role=${f.id}`}
+            className={`search-chip${filter === f.id ? " is-active" : ""}`}
+            aria-current={filter === f.id ? "page" : undefined}
+            title={f.hint}
+          >
+            {f.label}
+            {byRole.has(f.id) ? (
+              <span className="search-chip-count">{byRole.get(f.id)}</span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
+      {/* ONE LINE, in words. The old line printed a GROUP BY to the screen
+          ("1 static/other, 12 r2-derived/image, ..."), which is the shape of the
+          query rather than an answer to anything a reader asked. */}
+      <p className="muted media-summary">
+        {active ? (
+          <>
+            Showing {objects.length} {active.label.toLowerCase()} item
+            {objects.length === 1 ? "" : "s"}
+            {byRole.has(filter) && byRole.get(filter) !== objects.length
+              ? ` of ${byRole.get(filter)}`
+              : ""}
+            . {active.hint}.
+          </>
+        ) : (
+          <>
+            Showing all {total} items: {byRole.get("content") ?? 0} content,{" "}
+            {byRole.get("generated") ?? 0} generated, {byRole.get("brand") ?? 0} brand,{" "}
+            {byRole.get("icon") ?? 0} icons.
+          </>
+        )}
+      </p>
+
       <div className="posts-toolbar">
         {/* Always offered, not conditional on a count. The old backfill button
             appeared only when THIS PAGE held an unannotated object, which meant
@@ -294,17 +405,12 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
             Rebuild media index
           </button>
         </Form>
-        {/* The standing row count. This is what makes a rebuild VISIBLE: the
-            action's message reports the new total and this line already
-            displayed the old one, so the two can be compared. Pressing the
-            button used to change nothing on screen, which read as a no-op. */}
+        {/* The standing counts, kept because they are what makes a rebuild
+            VISIBLE: the action reports the new totals and this already showed
+            the old ones. Row count and role split are BOTH here on purpose and
+            neither substitutes for the other; the rebuild action says why. */}
         <p className="muted">
-          {total} row(s) indexed:{" "}
-          {counts
-            .map((row) => `${row.n} ${row.storage}/${row.kind}`)
-            .sort()
-            .join(", ")}
-          {" · by role: "}
+          {total} rows indexed · by role:{" "}
           {roleCounts
             .map((row) => `${row.n} ${row.role}`)
             .sort()
@@ -332,42 +438,71 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
 
       {objects.length === 0 ? (
         <p className="muted">
-          No objects in the bucket yet. Images arrive here when you drop or paste one
-          into a post body, or set a cover image in the editor.
+          Nothing in this group. Try{" "}
+          <Link to="/admin/media?role=all">all media</Link>, or drop an image into a post
+          body to upload one.
         </p>
       ) : (
+        // A plain list. NOT role="grid": positional information is meaningless
+        // to a screen reader here, because the number of columns depends on the
+        // container width, and directional navigation does not help anyone find
+        // a specific picture. Semantic elements first; the only ARIA on this
+        // page is the nav label above and aria-current on the active chip.
         <ul className="media-grid">
           {objects.map((object) => {
             const cited = object.citations.length > 0;
+            const name = object.originalName ?? object.key;
             return (
               <li key={object.key} className="media-card">
-                {/* LQIP, as a CSS background BEHIND the real image.
+                {/* A FIXED BOX, declared as aspect-ratio on the wrapper rather
+                    than left to the image.
 
-                    An <img> paints nothing until its bytes arrive; the
-                    background of that same element paints immediately, and the
-                    image covers it when it loads. So the tile is never empty,
-                    the swap needs no JavaScript and no onload handler, and there
-                    is no layout shift because the element's box is unchanged
-                    throughout. That last property is why this is a background
-                    rather than a second stacked <img>.
-
-                    A ~300 byte data URI, chosen over ThumbHash and BlurHash for
-                    exactly this reason: both of those need client-side script to
-                    decode, and the zero-JS rule forbids it. The extra bytes buy
-                    the rule. */}
-                <img
-                  className="media-thumb"
-                  src={object.thumb}
-                  alt=""
-                  loading="lazy"
-                  width={320}
-                  height={320}
+                    The grid was ragged because it mixes 1200x630 cards, 3:2
+                    photos and 1:1 icons and nothing constrained them, which also
+                    made the cards tall enough to clip the Save button. An
+                    explicit ratio on the wrapper reserves the space before the
+                    image arrives, so a lazily-loaded tile cannot reflow the rows
+                    below it as it lands. */}
+                <div
+                  className="media-thumb-box"
+                  // LQIP as a CSS background BEHIND the real image. The element
+                  // paints immediately and the image covers it on arrival, so
+                  // the tile is never empty, the swap needs no script and no
+                  // onload, and the box never changes size.
+                  //
+                  // ELEVEN OF SEVENTY ROWS HAVE NO PLACEHOLDER: the Images
+                  // binding does not rasterize vectors, so every SVG has a null
+                  // one. Those must degrade to the surface colour rather than
+                  // render as a black or empty hole, which is why this is set
+                  // conditionally over a token background rather than always
+                  // written as `url(null)`.
                   style={
                     object.placeholder
                       ? { backgroundImage: `url("${object.placeholder}")` }
                       : undefined
                   }
-                />
+                  data-placeholder={object.placeholder ? "lqip" : "none"}
+                >
+                  {/* A PDF has no thumbnail to show, so it gets a label rather
+                      than an <img> pointed at something that cannot render one.
+                      31 of the 70 rows are documents; an empty box for each
+                      would read as a loading failure. */}
+                  {object.viewable ? (
+                    <img
+                      className="media-thumb"
+                      src={object.thumb}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      width={320}
+                      height={320}
+                    />
+                  ) : (
+                    <span className="media-thumb-label" aria-hidden="true">
+                      {(object.mime ?? "file").split("/").pop()?.toUpperCase()}
+                    </span>
+                  )}
+                </div>
 
                 <div className="media-card-body">
                   {/* The original filename first when there is one. A
@@ -375,31 +510,53 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                       the name the author gave the file is what identifies it to
                       a human; the key stays visible underneath because it is
                       what appears in a post's markdown. */}
-                  <p className="media-key">{object.originalName ?? object.key}</p>
+                  <p className="media-name" title={object.key}>
+                    {name}
+                  </p>
+                  {/* Say what it is before someone commits to it. ONE quiet
+                      badge carrying role, not two carrying role and storage:
+                      storage is an implementation detail of where the bytes
+                      sit, and the reader is choosing a picture. */}
                   <p className="media-meta">
-                    <span className="chip">{object.storage}</span> {formatBytes(object.size)}
-                    {object.width && object.height ? ` · ${object.width}x${object.height}` : ""}
+                    <span className="chip">{object.role}</span> {formatBytes(object.size)}
+                    {object.width && object.height ? ` · ${object.width}×${object.height}` : ""}
                     {object.uploaded ? ` · ${object.uploaded.slice(0, 10)}` : ""}
                   </p>
 
-                  {/* Alt on the RECORD. Saving it changes what future
-                      insertions pre-fill and rewrites no existing post. */}
-                  <Form method="post" className="media-alt-form">
-                    <input type="hidden" name="key" value={object.key} />
-                    <label className="sr-only" htmlFor={`alt-${object.key}`}>
-                      Alt text for {object.key}
-                    </label>
-                    <input
-                      id={`alt-${object.key}`}
-                      name="alt"
-                      defaultValue={object.alt}
-                      placeholder="Describe this image"
-                      className="media-alt-input"
-                    />
-                    <button type="submit" name="intent" value="set-alt" className="btn-ghost">
-                      Save alt
-                    </button>
-                  </Form>
+                  {/* NATIVE DISCLOSURE, closed by default.
+
+                      Seventy always-open forms was the failure mode that in-page
+                      editing patterns exist to avoid, and it is what made the
+                      cards tall enough to clip their own buttons. <details> is
+                      keyboard accessible, screen-reader announced and needs no
+                      script, so this collapses seventy open forms into seventy
+                      closed ones without adding a line of JavaScript.
+
+                      The FORM INSIDE IS UNCHANGED: same fields, same intent,
+                      same submission. check:admin-ui compares exactly that, so
+                      the disclosure is provably presentation only. */}
+                  <details className="media-alt">
+                    <summary>
+                      {object.alt ? "Alt text" : "Add alt text"}
+                      {object.alt ? <span className="media-alt-preview">{object.alt}</span> : null}
+                    </summary>
+                    <Form method="post" className="media-alt-form">
+                      <input type="hidden" name="key" value={object.key} />
+                      <label className="sr-only" htmlFor={`alt-${object.key}`}>
+                        Alt text for {name}
+                      </label>
+                      <input
+                        id={`alt-${object.key}`}
+                        name="alt"
+                        defaultValue={object.alt}
+                        placeholder="Describe this image"
+                        className="media-alt-input"
+                      />
+                      <button type="submit" name="intent" value="set-alt" className="btn-ghost">
+                        Save alt
+                      </button>
+                    </Form>
+                  </details>
 
                   {/* USAGE. Never optimistic: "unused" is only shown when the
                       scan actually completed. */}
@@ -465,13 +622,15 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
       {hasMore || page > 1 ? (
         <p className="posts-toolbar">
           {page > 1 ? (
-            <Link to={`/admin/media?page=${page - 1}`} className="btn-ghost">
+            <Link to={`/admin/media?role=${filter}&page=${page - 1}`} className="btn-ghost">
               Previous
             </Link>
           ) : null}
           <span className="muted">Page {page}</span>
           {hasMore ? (
-            <Link to={`/admin/media?page=${page + 1}`} className="btn-ghost">
+            // The filter travels with the page number. Dropping it was how
+            // paging out of a filtered view silently reverted to the default.
+            <Link to={`/admin/media?role=${filter}&page=${page + 1}`} className="btn-ghost">
               Next
             </Link>
           ) : null}

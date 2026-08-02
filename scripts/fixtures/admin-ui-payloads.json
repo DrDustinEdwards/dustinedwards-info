@@ -37,18 +37,30 @@
   ],
   "media, unused object": [
     "POST /admin/media | intent=delete | key",
+    "POST /admin/media | intent=rebuild | ",
     "POST /admin/media | intent=set-alt | alt,key"
   ],
   "media, cited object": [
     "POST /admin/media | intent=delete | key",
+    "POST /admin/media | intent=rebuild | ",
     "POST /admin/media | intent=set-alt | alt,key"
   ],
   "media, reference scan failed": [
-    "POST /admin/media | intent=backfill | ",
     "POST /admin/media | intent=delete | key",
+    "POST /admin/media | intent=rebuild | ",
     "POST /admin/media | intent=set-alt | alt,key"
   ],
-  "media, empty bucket": [],
+  "media, empty bucket": [
+    "POST /admin/media | intent=rebuild | "
+  ],
+  "media, document row": [
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media | intent=set-alt | alt,key"
+  ],
+  "media, static row": [
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media | intent=set-alt | alt,key"
+  ],
   "new post, fresh": [
     "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title",
     "POST /admin/posts/new | intent=save | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title"

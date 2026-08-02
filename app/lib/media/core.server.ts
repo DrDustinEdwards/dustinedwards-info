@@ -54,6 +54,8 @@ export type MediaObject = {
   uploaded: string;
   storage: string;
   kind: string;
+  /** What the asset is FOR. The one badge the card shows. */
+  role: string;
   mime: string | null;
   originalName: string | null;
   width: number | null;
@@ -79,7 +81,24 @@ export type MediaPage = {
  * One object, every size derived from it.
  */
 export function thumbUrl(key: string, width: ThumbWidth) {
+  // A STATIC asset is indexed under its own public path, which already begins
+  // with `/`, so prefixing `/media/` yields `/media//publications/x.pdf` and the
+  // R2 route 404s on it. That was every one of the 58 static rows, including all
+  // nine roster photos: the grid rendered a broken image for the only pictures
+  // the page exists to surface.
+  //
+  // A static asset is served by the assets host directly, so it needs no
+  // transform URL and gets none. The cost is that it is delivered at full size
+  // into a thumbnail box; these are small files and a correct image beats a
+  // resized 404. Serving static transforms would mean teaching /media/* to read
+  // through ASSETS, which is a route change rather than a UI one.
+  if (key.startsWith("/")) return key;
   return `/media/${key}?w=${width}`;
+}
+
+/** True when there is an image to show at all. A PDF has no thumbnail. */
+export function isViewable(kind: string) {
+  return kind === "image";
 }
 
 /**
@@ -99,12 +118,20 @@ export function thumbUrl(key: string, width: ThumbWidth) {
  */
 export async function listMedia(
   env: Env,
-  options: { page?: number; limit?: number; insertableOnly?: boolean } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    insertableOnly?: boolean;
+    role?: string;
+    unusedOnly?: boolean;
+  } = {},
 ): Promise<MediaPage> {
   const { rows, page, hasMore } = await listMediaPage(env, {
     page: options.page,
     limit: options.limit ?? MEDIA_PAGE_SIZE,
     insertableOnly: options.insertableOnly,
+    role: options.role,
+    unusedOnly: options.unusedOnly,
   });
 
   return {
@@ -118,6 +145,7 @@ export async function listMedia(
       uploaded: row.uploadedAt ?? "",
       storage: row.storage,
       kind: row.kind,
+      role: row.role,
       mime: row.mime,
       originalName: row.originalName,
       width: row.width,

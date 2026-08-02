@@ -3756,20 +3756,103 @@ a:hover {
   background: var(--surface);
 }
 
-.media-thumb {
-  display: block;
-  width: 100%;
-  height: 10rem;
-  object-fit: cover;
-  background-color: var(--bg);
-  /* The LQIP is set as an inline background-image on this same element, so these
-     describe how it is painted. `cover` and `center` mirror the object-fit
-     above, which puts the blur exactly where the real image will land and makes
-     the swap invisible. It is a ~20px image scaled up, so the browser's own
+/* THE FIXED BOX. An explicit ratio on the WRAPPER, so the space is reserved
+   before the image arrives and a lazily-loaded tile cannot reflow the rows below
+   it. The grid was ragged because it mixes 1200x630 cards, 3:2 photos and 1:1
+   icons with nothing constraining them, which also made cards tall enough to
+   clip their own buttons. */
+.media-thumb-box {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  /* The floor every tile paints on. An SVG has NO LQIP, because the Images
+     binding does not rasterize vectors (11 of 70 rows), so the background image
+     below is set only when one exists and this colour is what shows through
+     otherwise. That is the difference between a quiet empty tile and a black
+     hole. */
+  background-color: var(--surface-2);
+  /* Describes the inline LQIP when there is one. `cover` and `center` mirror the
+     object-fit below, so the blur sits exactly where the real image lands and
+     the swap is invisible. It is a ~20px image scaled up, so the browser's own
      smoothing IS the blur: no filter is applied and none is needed. */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.media-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A vector fills its box rather than being cropped: an icon or a logo cropped to
+   3:2 loses the mark, and these are the same files check:logo treats as
+   fixtures. They also carry no LQIP, so there is nothing behind them to hide. */
+.media-thumb-box[data-placeholder="none"] .media-thumb {
+  object-fit: contain;
+  padding: 1rem;
+}
+
+/* What a document shows instead of an image. 31 of 70 rows are PDFs and the
+   Images binding cannot render one, so they get a legible label rather than an
+   empty box that reads as a failed load. */
+.media-thumb-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+}
+
+.media-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.media-summary {
+  margin: 0 0 1rem;
+}
+
+/* The disclosure. Closed by default, so seventy cards carry seventy closed rows
+   rather than seventy open forms. */
+.media-alt > summary {
+  cursor: pointer;
+  padding: 0.25rem 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.media-alt > summary:hover {
+  color: var(--text);
+}
+
+.media-alt-preview {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-alt-form {
+  padding-top: 0.5rem;
+}
+
+.media-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .media-card-body {
