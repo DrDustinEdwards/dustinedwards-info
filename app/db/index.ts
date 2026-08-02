@@ -292,8 +292,68 @@ export async function listAllPostTagsForAdmin(env: Env) {
 /** Annotations for a set of keys, as a map the library can index by key. */
 export async function mediaRecordsFor(env: Env, keys: string[]) {
   if (keys.length === 0) return new Map<string, Media>();
-  const rows = await getDb(env).select().from(media).where(inArray(media.r2Key, keys));
-  return new Map(rows.map((row) => [row.r2Key, row]));
+  const rows = await getDb(env).select().from(media).where(inArray(media.key, keys));
+  return new Map(rows.map((row) => [row.key, row]));
+}
+
+/** Every row, for reconciliation and for the library listing. */
+export async function listMediaRecords(env: Env) {
+  return getDb(env).select().from(media);
+}
+
+/**
+ * Writes the DERIVED half of a row and leaves the AUTHORED half alone.
+ *
+ * This is the whole reason a rebuild is not `DELETE` then `INSERT`. Hash, mime,
+ * bytes, dimensions and the placeholder are recomputable from the object; alt,
+ * caption, focal_x and focal_y are recoverable from NOTHING, and are the only
+ * media data in this system that can be permanently lost. A rebuild that
+ * reinserted rows would silently destroy every alt text on the site, and would
+ * look exactly like a successful rebuild while doing it.
+ *
+ * So the conflict clause names the derived columns EXPLICITLY and never spreads
+ * the caller's object. A column added later is then absent from this list and
+ * simply not updated, which is the safe failure; spreading would have made the
+ * unsafe direction the default.
+ */
+export async function upsertDerivedMedia(
+  env: Env,
+  record: {
+    key: string;
+    storage: string;
+    kind: string;
+    mime?: string | null;
+    bytes?: number | null;
+    width?: number | null;
+    height?: number | null;
+    originalName?: string | null;
+    placeholder?: string | null;
+    uploadedAt?: string | null;
+  },
+) {
+  const now = new Date().toISOString();
+  const derived = {
+    storage: record.storage,
+    kind: record.kind,
+    mime: record.mime ?? null,
+    bytes: record.bytes ?? null,
+    width: record.width ?? null,
+    height: record.height ?? null,
+    placeholder: record.placeholder ?? null,
+    uploadedAt: record.uploadedAt ?? null,
+    updatedAt: now,
+  };
+  await getDb(env)
+    .insert(media)
+    .values({
+      key: record.key,
+      ...derived,
+      // Only ever set on INSERT. On a rebuild the existing name is kept, because
+      // the object no longer carries the filename once keys are content
+      // addressed: this column IS the only surviving copy.
+      originalName: record.originalName ?? null,
+    })
+    .onConflictDoUpdate({ target: media.key, set: derived });
 }
 
 /**
@@ -306,10 +366,15 @@ export async function mediaRecordsFor(env: Env, keys: string[]) {
 export async function upsertMediaRecord(
   env: Env,
   record: {
-    r2Key: string;
+    key: string;
     alt?: string;
     caption?: string;
-    uploaded?: string | null;
+    storage?: string;
+    kind?: string;
+    mime?: string | null;
+    bytes?: number | null;
+    originalName?: string | null;
+    uploadedAt?: string | null;
     width?: number | null;
     height?: number | null;
   },
@@ -318,22 +383,32 @@ export async function upsertMediaRecord(
   await getDb(env)
     .insert(media)
     .values({
-      r2Key: record.r2Key,
+      key: record.key,
       alt: record.alt ?? "",
       caption: record.caption ?? "",
-      uploaded: record.uploaded ?? null,
+      storage: record.storage ?? "r2",
+      kind: record.kind ?? "image",
+      mime: record.mime ?? null,
+      bytes: record.bytes ?? null,
+      originalName: record.originalName ?? null,
+      uploadedAt: record.uploadedAt ?? null,
       width: record.width ?? null,
       height: record.height ?? null,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: media.r2Key,
+      target: media.key,
       set: {
         // Only the fields the caller actually supplied. An alt edit must not
         // blank the dimensions a backfill measured.
         ...(record.alt !== undefined ? { alt: record.alt } : {}),
         ...(record.caption !== undefined ? { caption: record.caption } : {}),
-        ...(record.uploaded !== undefined ? { uploaded: record.uploaded } : {}),
+        ...(record.storage !== undefined ? { storage: record.storage } : {}),
+        ...(record.kind !== undefined ? { kind: record.kind } : {}),
+        ...(record.mime !== undefined ? { mime: record.mime } : {}),
+        ...(record.bytes !== undefined ? { bytes: record.bytes } : {}),
+        ...(record.originalName !== undefined ? { originalName: record.originalName } : {}),
+        ...(record.uploadedAt !== undefined ? { uploadedAt: record.uploadedAt } : {}),
         ...(record.width !== undefined ? { width: record.width } : {}),
         ...(record.height !== undefined ? { height: record.height } : {}),
         updatedAt: now,
@@ -341,14 +416,20 @@ export async function upsertMediaRecord(
     });
 }
 
-/** Drops the annotation. Called only after the object itself is gone. */
+/**
+ * Drops the row.
+ *
+ * Called when the OBJECT is already gone, never as a way of making it go. The
+ * conflict rule runs one way only: R2 wins, so a row is deleted because an
+ * object is absent, and an object is never deleted because a row is.
+ */
 export async function deleteMediaRecord(env: Env, key: string) {
-  await getDb(env).delete(media).where(eq(media.r2Key, key));
+  await getDb(env).delete(media).where(eq(media.key, key));
 }
 
 /** Keys that already have a row, so a backfill can skip them. */
 export async function existingMediaKeys(env: Env) {
-  const rows = await getDb(env).select({ key: media.r2Key }).from(media);
+  const rows = await getDb(env).select({ key: media.key }).from(media);
   return new Set(rows.map((row) => row.key));
 }
 

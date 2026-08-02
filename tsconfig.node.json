@@ -18,6 +18,12 @@
     "app/lib/blog-listing.mjs",
     "app/lib/search/records.mjs",
     "app/lib/search/query.mjs",
+    // What an asset IS. The Worker imports it, build:assets imports it and
+    // check:media imports it, on the same principle as query.mjs and
+    // check:search: there must never be a second answer to "what kind of thing
+    // is this file", because the gate and the writer disagreeing is the drift
+    // the gate exists to catch.
+    "app/lib/media/classify.mjs",
     // The operator publish policy: the Worker imports it and check:policy
     // imports it, on the same principle as query.mjs and check:search.
     "app/lib/editor/publish-policy.mjs",

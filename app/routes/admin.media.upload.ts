@@ -1,5 +1,6 @@
 import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
+import { classify, contentKey } from "~/lib/media/classify.mjs";
 import { readDimensions } from "~/lib/media/core.server";
 import type { Route } from "./+types/admin.media.upload";
 
@@ -7,10 +8,29 @@ import type { Route } from "./+types/admin.media.upload";
  * Image upload for the editor. Sits under /admin so the existing Better Auth
  * middleware gates it; there is no unauthenticated write path to the bucket.
  *
- * Objects are keyed by year and a random suffix so a re-upload of the same
- * filename never overwrites an image an older post still references. Keys are
- * immutable once written, which is what lets /media/* serve them with a long
- * immutable cache.
+ * ## Keys are CONTENT-ADDRESSED
+ *
+ * Ruling: decisions.md 2026-08-02. `sha256(bytes)` truncated plus the extension,
+ * replacing `posts/<year>/<slug>-<8hex>.<ext>`.
+ *
+ * **The security argument is what decided it.** `/media/*` is public and
+ * unauthenticated, and the old key was derivable from public information: a
+ * draft post's images were reachable by anyone who guessed a slug the sitemap
+ * publishes plus eight hex characters. A content-addressed key is not derivable
+ * from anything public, because it is a function of bytes nobody outside has.
+ *
+ * Secondary, all real: the same photo uploaded twice is now ONE object rather
+ * than two; immutability stops being a convention the uploader maintains and
+ * becomes arithmetic, which is what makes the `immutable` cache header provably
+ * safe rather than merely intended; and the key is VERIFIABLE against the bytes,
+ * which nothing in the old scheme could be.
+ *
+ * The cost, taken knowingly: deduplication makes delete a REFCOUNT rather than
+ * an object operation, because once two posts share a blob, deleting for one
+ * must not delete for the other. `media_refs` is what will answer that.
+ *
+ * Human readability moved to `original_name`. The key is an address, not a
+ * label, and the filename the author chose survives in D1 where it belongs.
  */
 
 const ALLOWED = new Map([
@@ -24,16 +44,9 @@ const ALLOWED = new Map([
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
-function slugifyName(name: string) {
-  return (
-    name
-      .replace(/\.[^.]+$/, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "image"
-  );
-}
+/* `slugifyName` lived here to build the human-readable half of a key. Content
+ * addressing removed the only caller: the key is a digest now, and the filename
+ * goes to `original_name` verbatim rather than being mangled into a slug. */
 
 /**
  * The listing loader that used to live here MOVED to the media page at
@@ -71,11 +84,16 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
 
-  const year = new Date().getUTCFullYear();
-  const suffix = crypto.randomUUID().slice(0, 8);
-  const key = `posts/${year}/${slugifyName(file.name)}-${suffix}.${extension}`;
+  // Read once. The bytes are needed twice, to hash and to store, and a File's
+  // stream cannot be consumed twice.
+  const bytes = await file.arrayBuffer();
+  const key = contentKey(await crypto.subtle.digest("SHA-256", bytes), extension);
 
-  await env.MEDIA.put(key, await file.arrayBuffer(), {
+  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the
+  // bytes, so re-uploading the same image overwrites an object with a
+  // byte-identical one. There is deliberately no "does it exist" check first,
+  // which would cost a round trip to save a write that changes nothing.
+  await env.MEDIA.put(key, bytes, {
     httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
   });
 
@@ -96,10 +114,18 @@ export async function action({ request, context }: Route.ActionArgs) {
    */
   try {
     const dimensions = await readDimensions(env, key);
+    const { kind, mime } = classify(key);
     await upsertMediaRecord(env, {
-      r2Key: key,
+      key,
       alt: "",
-      uploaded: new Date().toISOString(),
+      storage: "r2",
+      kind,
+      mime,
+      bytes: bytes.byteLength,
+      // The ONLY surviving copy of what the author called this file. The key
+      // cannot carry it any more, so losing this loses it outright.
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
       width: dimensions?.width ?? null,
       height: dimensions?.height ?? null,
     });
