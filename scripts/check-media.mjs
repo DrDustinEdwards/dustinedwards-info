@@ -91,9 +91,106 @@ function sample(list, n = 8) {
     .join("\n");
 }
 
+/**
+ * The reference collector, over a fixture that exercises every form.
+ *
+ * **This exists because the real corpus exercises NONE of it.** All 12 posts
+ * carry zero images, zero figure directives and zero covers, so the collector
+ * could be completely broken and every other gate would still pass. A code path
+ * with no coverage and no exercise is exactly the thing this repo refuses to
+ * ship, and "it returned 0 refs" would look identical whether it worked or not.
+ *
+ * Pure: no network, no database. Runs FIRST so a contract failure is immediate.
+ *
+ * @returns {Promise<string[]>} problems
+ */
+async function checkReferenceForms() {
+  // Imported lazily. It pulls shiki and an oniguruma WASM binary, which is a
+  // real cost to pay before the cheap filesystem work below has had a chance to
+  // fail.
+  const { renderBody } = await import("../app/lib/content/pipeline.mjs");
+
+  const body = [
+    "![a plain image](/media/aabbccddeeff0011.png)",
+    "",
+    ':::figure{src="/media/1122334455667788.webp" alt="figured"}',
+    "A caption.",
+    ":::",
+    "",
+    "[a download](/publications/some-paper.pdf)",
+    "",
+    "[absolute](https://dustinedwards.info/media/99aabbccddeeff00.png)",
+    "",
+    '<img src="/media/rawhtml0011223344.png" alt="raw">',
+    "",
+    "[ref style][d1]",
+    "",
+    "[d1]: /media/def0123456789abc.gif",
+    "",
+    "Not media: [a post](/blog/something) and [an anchor](#top).",
+    "",
+    "```",
+    "![in a code fence](/media/codefence00112233.png)",
+    "```",
+  ].join("\n");
+
+  const { mediaRefs } = await renderBody({
+    file: "check-media fixture",
+    body,
+    // The fixture's keys name nothing real, so there are no bytes to measure.
+    // Zeroes rather than nulls only because that is the signature; nothing in
+    // this check reads a dimension.
+    resolveImage: async () => ({ width: 0, height: 0 }),
+  });
+
+  const got = new Set(mediaRefs.map((/** @type {any} */ r) => `${r.form} ${r.key}`));
+  /** @type {string[]} */
+  const problems = [];
+
+  const expected = [
+    ["markdown-image aabbccddeeff0011.png", "a markdown image"],
+    ["figure-directive 1122334455667788.webp", "a :::figure directive"],
+    ["link /publications/some-paper.pdf", "a link to a STATIC asset, indexed by its public path"],
+    ["link 99aabbccddeeff00.png", "an absolute URL, origin stripped"],
+    ["html rawhtml0011223344.png", "raw HTML written into a post"],
+    ["link def0123456789abc.gif", "a reference-style link definition"],
+  ];
+  for (const [key, label] of expected) {
+    if (!got.has(key)) problems.push(`reference form not collected: ${label} (${key})`);
+  }
+
+  // The negatives matter as much as the positives. Over-collection puts rows in
+  // media_refs that can never join to anything, and every one of them would
+  // refuse a delete forever for a citation that does not exist.
+  for (const [needle, label] of [
+    ["/blog/something", "a page link"],
+    ["#top", "a bare anchor"],
+    ["codefence00112233", "a URL inside a code fence"],
+  ]) {
+    if ([...got].some((k) => k.includes(needle))) {
+      problems.push(`collected something it should not: ${label} (${needle})`);
+    }
+  }
+
+  // An assertion that can pass by collecting nothing is not an assertion.
+  if (mediaRefs.length === 0) {
+    problems.push("the fixture collected zero references, so every check above passed vacuously");
+  }
+
+  console.log(`  reference forms: ${mediaRefs.length} collected from the fixture, 6 required`);
+  return problems;
+}
+
 async function main() {
   const target = process.argv.includes("--local") ? "--local" : "--remote";
   console.log(`\ncheck:media reconciling the D1 index against R2 and public/ (${target.slice(2)})\n`);
+
+  const formProblems = await checkReferenceForms();
+  if (formProblems.length > 0) {
+    for (const problem of formProblems) console.error(`\n  FAIL  ${problem}`);
+    console.error("");
+    throw new Error(`${formProblems.length} reference-collection failure(s)`);
+  }
 
   const objects = await listAllObjects({ bucket: BUCKET, remote: target === "--remote" });
   const files = await walkPublic();

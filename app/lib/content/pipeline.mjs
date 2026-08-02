@@ -35,6 +35,7 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
 
+import { classify } from "../media/classify.mjs";
 import { buildChartModel, renderChartHast } from "./chart.mjs";
 import { buildDiagramModel, renderDiagramHast } from "./diagram.mjs";
 
@@ -479,6 +480,115 @@ function remarkFigure(file) {
 
       node.data = { ...node.data, hName: "figure" };
       node.children = figureChildren;
+    });
+  };
+}
+
+/**
+ * The media key a URL points at, or null.
+ *
+ * Two shapes, because the index holds two storage tiers in one key space. An R2
+ * object is cited as `/media/<key>`; a static asset IS its public path and is
+ * indexed under that path, so `/publications/paper.pdf` cites the row keyed
+ * `/publications/paper.pdf`.
+ *
+ * An absolute URL works through the same code, because a post that hardcodes the
+ * site origin is making a citation nobody should be able to lose by having
+ * written it the long way.
+ *
+ * A path whose extension `classify()` does not recognise returns null, and that
+ * is the right refusal: `/blog/something` is a page link, not a media citation,
+ * and counting it would fill `media_refs` with rows that can never join.
+ *
+ * @param {string} raw
+ * @returns {string | null}
+ */
+function mediaKeyOf(raw) {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+
+  let path = raw;
+  const origin = path.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]+(\/.*)$/i);
+  if (origin) path = origin[1];
+  // Query and fragment are not part of the key: `?w=320` is a transform request.
+  path = path.split(/[?#]/)[0];
+  if (!path.startsWith("/")) return null;
+
+  if (path.startsWith("/media/")) {
+    const key = path.slice("/media/".length);
+    return key.length > 0 ? key : null;
+  }
+
+  try {
+    classify(path);
+  } catch {
+    return null;
+  }
+  return path;
+}
+
+/**
+ * Records every media citation the renderer is about to emit.
+ *
+ * **This runs at RENDER time, and that is the whole point.** A scan asks "does
+ * this text contain the URL"; this asks "did the renderer emit a reference to
+ * it", which is a different and better question. The fail-open it closes: a
+ * content type whose resolver was never registered returned no citations,
+ * `resolveCitations` reported `complete: true`, and the library showed "Unused"
+ * beside a working Delete button. Absence is not failure. Anything that goes
+ * through this pipeline is now indexed by construction, and anything that does
+ * not is an enumerable gap rather than a silent one.
+ *
+ * Placed BEFORE `remarkFigure` deliberately. Once that has run, a figure's image
+ * is a paragraph carrying `hName: "img"` and the directive is gone, so the form
+ * would collapse to `markdown-image`. Running first is what lets
+ * `figure-directive` be distinguished at all.
+ *
+ * @param {any[]} sink
+ */
+function remarkCollectMedia(sink) {
+  return (/** @type {any} */ tree) => {
+    /** @param {string | undefined} url @param {string} form @param {any} node */
+    const add = (url, form, node) => {
+      const key = mediaKeyOf(url ?? "");
+      if (!key) return;
+      sink.push({
+        key,
+        form,
+        detail: node?.position?.start?.line ? `line ${node.position.start.line}` : null,
+      });
+    };
+
+    visit(tree, (/** @type {any} */ node) => {
+      switch (node.type) {
+        case "image":
+          add(node.url, "markdown-image", node);
+          break;
+        case "link":
+          add(node.url, "link", node);
+          break;
+        // Reference-style definitions: `[label]: /media/x.png`. The link that
+        // uses one carries no URL of its own, so the definition is where the
+        // citation actually lives.
+        case "definition":
+          add(node.url, "link", node);
+          break;
+        case "containerDirective":
+          if (node.name === "figure") add(node.attributes?.src, "figure-directive", node);
+          break;
+        // Raw HTML written into a post. Matched by regex rather than parsed,
+        // deliberately: this catches every attribute that could carry a URL,
+        // where a parser would have to be taught each one. Over-detection is
+        // safe here because the only consequence is refusing a delete.
+        case "html": {
+          const text = String(node.value ?? "");
+          for (const match of text.matchAll(/["'\s(]((?:https?:)?\/[^"'\s)>]+)/g)) {
+            add(match[1], "html", node);
+          }
+          break;
+        }
+        default:
+          break;
+      }
     });
   };
 }
@@ -966,6 +1076,11 @@ export async function renderBody({ file, body, resolveImage }) {
   /** @type {any[]} */
   const diagrams = [];
   /**
+   * Media citations, collected as the renderer walks the body.
+   * @type {Array<{ key: string, form: string, detail: string | null }>}
+   */
+  const mediaRefs = [];
+  /**
    * Every URL the allowlist demoted, so a caller can report it.
    *
    * Collected rather than thrown, because a blocked link is a content problem
@@ -988,6 +1103,9 @@ export async function renderBody({ file, body, resolveImage }) {
     // Fails closed on anything the pipeline does not implement, before any
     // handler runs, so a typo is a named build error rather than a silent div.
     .use(remarkUnknownDirectives, file)
+    // Before remarkFigure, so a `:::figure` is still a directive and its form
+    // can be told apart from an ordinary markdown image.
+    .use(remarkCollectMedia, mediaRefs)
     .use(remarkFigure, file)
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)
@@ -1049,6 +1167,11 @@ export async function renderBody({ file, body, resolveImage }) {
     // the same principle as `withRelated` and `records.mjs`: anything two callers
     // need is computed once, by the module both of them already import.
     diagrams: diagrams.map((/** @type {any} */ d) => ({ key: d.key, source: d.source })),
+    // Every media citation this render emitted. Rides in the artifact for the
+    // same reason `diagrams` and `records` do: both writers produce it from one
+    // module, so the editor and the build cannot disagree, and `check:content`
+    // byte-compares it like everything else.
+    mediaRefs,
     // Deliberately NOT written into the artifact. It is a fact about one
     // render, not about the post, and putting it in the gated artifact would
     // make a blocked URL churn the byte comparison. The preview reads it to
@@ -1084,7 +1207,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     );
   }
 
-  const { html, toc, diagrams } = await renderBody({
+  const { html, toc, diagrams, mediaRefs } = await renderBody({
     file,
     body: parsed.content,
     resolveImage,
@@ -1094,6 +1217,14 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
   if (fm.cover) {
     const { width, height } = await resolveImage(fm.cover.src);
     cover = { src: fm.cover.src, alt: fm.cover.alt, width, height };
+    // The cover is a citation the BODY renderer can never see, because it comes
+    // from frontmatter and is emitted by the page template rather than by the
+    // markdown. Added here so a cover image is not reported as unused, which is
+    // the label that would invite deleting it.
+    const coverKey = mediaKeyOf(fm.cover.src);
+    if (coverKey) {
+      mediaRefs.push({ key: coverKey, form: "frontmatter-cover", detail: "cover image" });
+    }
   }
 
   return {
@@ -1117,6 +1248,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     readingTimeMinutes: readingTimeMinutes(parsed.content),
     toc,
     diagrams,
+    mediaRefs,
     markdown: parsed.content,
     html,
     sourcePath: `content/posts/${fm.slug}.md`,
