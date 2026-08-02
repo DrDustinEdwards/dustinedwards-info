@@ -1,5 +1,5 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
-import { classify, isRaster, storageOf } from "~/lib/media/classify.mjs";
+import { classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 
 /**
  * The media index write path: R2 emits, a queue delivers, this derives the row.
@@ -122,6 +122,7 @@ async function indexOne(env: Env, key: string) {
     key,
     storage: storageOf(key),
     kind,
+    role: roleOf(key),
     mime,
     bytes: object.size,
     width,

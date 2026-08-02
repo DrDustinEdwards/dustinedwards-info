@@ -89,11 +89,78 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
     // workerd can throw on teardown after a remote session (measured: a WSARecv
     // failure on Windows). The listing is already in hand by then, so a dispose
     // that fails must not fail the caller.
+    //
+    // Note what this does NOT swallow: an error thrown by `list()` itself
+    // propagates out of the try above and this function never returns. That
+    // distinction is the whole safety property. A caller that deletes things
+    // must be able to tell "the bucket holds nothing" from "the listing did not
+    // finish", and a partial listing returned as if it were total is how a
+    // prune deletes live objects.
     try {
       await proxy.dispose();
     } catch {
       /* teardown only */
     }
+  }
+
+  return objects;
+}
+
+/**
+ * A listing a destructive caller may act on, or a refusal.
+ *
+ * **Why this is separate from `listAllObjects`.** On 2026-08-02 a prune run
+ * printed `workerd/jsg/util.c++: WSARecv(): #64 The specified network name is no
+ * longer available` in the middle of its output and carried on to report
+ * "1 orphaned". It was correct that time. It would have looked EXACTLY THE SAME
+ * if the listing had been cut short, and the difference between those two cases
+ * is deleting one dead file or deleting eleven live ones.
+ *
+ * So a caller that is about to delete does not get a bare array. It states how
+ * many objects it expects to still be there, and this refuses if the listing
+ * cannot support that:
+ *
+ *   - an EMPTY listing is always a refusal. A bucket that genuinely holds
+ *     nothing needs no prune, so there is no case where acting on zero is both
+ *     correct and necessary.
+ *   - a listing that does not contain every key the caller expects to keep means
+ *     the listing is missing objects that certainly exist, so everything else it
+ *     appears to be missing is unproven too.
+ *
+ * @param {object} options
+ * @param {string} options.bucket
+ * @param {string} [options.prefix]
+ * @param {boolean} [options.remote]
+ * @param {Set<string>} options.expected keys the caller knows must be present
+ * @param {string} options.label for the message
+ */
+export async function listForPrune({ bucket, prefix = "", remote = true, expected, label }) {
+  const objects = await listAllObjects({ bucket, prefix, remote });
+  const keys = new Set(objects.map((o) => o.key));
+
+  const missing = [...expected].filter((key) => !keys.has(key));
+
+  console.log(
+    `  ${label}: listed ${objects.length} object(s) under "${prefix}", ` +
+      `expected at least ${expected.size} to be present, ${missing.length} of those missing`,
+  );
+
+  if (objects.length === 0) {
+    throw new Error(
+      `refusing to prune ${bucket}: the listing came back EMPTY. A prune computes what to ` +
+        `delete from what is absent, so an empty listing means "delete everything". If the ` +
+        `bucket is genuinely empty there is nothing to prune.`,
+    );
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `refusing to prune ${bucket}: ${missing.length} object(s) the corpus still references ` +
+        `are absent from the listing, so the listing is incomplete and everything it appears ` +
+        `to be missing is unproven. Missing: ${missing.slice(0, 5).join(", ")}` +
+        `${missing.length > 5 ? ` and ${missing.length - 5} more` : ""}. ` +
+        `Re-run; if it persists, the objects really are gone and need regenerating first.`,
+    );
   }
 
   return objects;

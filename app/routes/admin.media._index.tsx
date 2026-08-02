@@ -300,6 +300,20 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
             const cited = object.citations.length > 0;
             return (
               <li key={object.key} className="media-card">
+                {/* LQIP, as a CSS background BEHIND the real image.
+
+                    An <img> paints nothing until its bytes arrive; the
+                    background of that same element paints immediately, and the
+                    image covers it when it loads. So the tile is never empty,
+                    the swap needs no JavaScript and no onload handler, and there
+                    is no layout shift because the element's box is unchanged
+                    throughout. That last property is why this is a background
+                    rather than a second stacked <img>.
+
+                    A ~300 byte data URI, chosen over ThumbHash and BlurHash for
+                    exactly this reason: both of those need client-side script to
+                    decode, and the zero-JS rule forbids it. The extra bytes buy
+                    the rule. */}
                 <img
                   className="media-thumb"
                   src={object.thumb}
@@ -307,6 +321,11 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                   loading="lazy"
                   width={320}
                   height={320}
+                  style={
+                    object.placeholder
+                      ? { backgroundImage: `url("${object.placeholder}")` }
+                      : undefined
+                  }
                 />
 
                 <div className="media-card-body">

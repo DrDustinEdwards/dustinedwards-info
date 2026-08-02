@@ -36,6 +36,7 @@ import { visit } from "unist-util-visit";
 import { z } from "zod";
 
 import { classify } from "../media/classify.mjs";
+import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
 import { buildChartModel, renderChartHast } from "./chart.mjs";
 import { buildDiagramModel, renderDiagramHast } from "./diagram.mjs";
 
@@ -1020,10 +1021,31 @@ function rehypeImageDimensions(file, resolveImage, pending) {
       const classes = node.properties?.className ?? [];
       if (Array.isArray(classes) && classes.includes("diagram-image")) return;
       const src = String(node.properties?.src ?? "");
+
+      // RESPONSIVE SOURCES, for images the transform route can actually serve.
+      //
+      // The prose column is 44rem, so a full-width slot needs 1408 physical
+      // pixels on a 2x display, and the largest width available before the
+      // content ladder existed was 640. Every content image was therefore being
+      // served at under half the resolution a modern screen asks for.
+      //
+      // Safe in the gated artifact because it is a PURE function of the src: no
+      // filesystem, no database, no measurement. `sizes` and the device pixel
+      // ratio do the choosing in the browser, with no JavaScript.
+      //
+      // Only `/media/` keys get this. A static asset is served straight from the
+      // assets host and never passes through the transform route, so offering
+      // widths for one would advertise URLs that 404.
+      const mediaKey = src.startsWith("/media/") ? src.slice("/media/".length) : null;
+      const responsive = mediaKey
+        ? { srcSet: contentSrcSet(mediaKey), sizes: CONTENT_SIZES }
+        : {};
+
       pending.push(
         resolveImage(src).then(({ width, height }) => {
           node.properties = {
             ...node.properties,
+            ...responsive,
             width,
             height,
             loading: "lazy",

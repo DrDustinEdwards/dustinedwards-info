@@ -94,6 +94,80 @@ export function storageOf(pathOrKey) {
 }
 
 /**
+ * What an asset is FOR, as opposed to what it is or where it lives.
+ *
+ * `kind` and `storage` turned out not to be enough, and the gap was live rather
+ * than theoretical. The picker filtered on `kind='image' AND storage IN
+ * ('r2','static')` and so offered 26 assets of which 9 were insertable: the site
+ * logos, every favicon, and both halves of every rendered diagram.
+ *
+ * **The diagram pair is the sharp edge.** `/diagrams/<hash>-light.svg` and
+ * `-dark.svg` are two renders of one drawing, and `app.css` shows whichever
+ * matches the theme. Picking one out of the library inserts HALF A PAIR and
+ * bypasses the `:::diagram` directive whose entire job is to emit both. That is
+ * a broken post in one click, not cosmetic noise, which is why this is a column
+ * and not a nicety.
+ *
+ * Four roles:
+ *   content    insertable into a post. Editor uploads, roster photos, the PDFs.
+ *   brand      identity marks. Shown, never inserted; also check:logo FIXTURES.
+ *   generated  build output. Diagrams and OG cards, regenerable by command.
+ *   icon       site chrome. Favicons, touch icons, the manifest.
+ *
+ * **The default is `content`, and that direction is deliberate.** An
+ * unrecognised asset showing up in the picker is a visible nuisance the author
+ * corrects in a second; an unrecognised asset silently EXCLUDED from the picker
+ * is an image nobody can find and nobody knows is missing. Fail toward being
+ * seen. `check:media` verifies every row against this function in both
+ * directions, so a misclassification cannot sit unnoticed either way.
+ *
+ * @param {string} pathOrKey
+ * @returns {"content" | "brand" | "generated" | "icon"}
+ */
+export function roleOf(pathOrKey) {
+  // Build output, either bucket. Keyed by prefix because that is what the
+  // generator controls and what survives a rename of the thing it drew.
+  if (pathOrKey.startsWith("og/")) return "generated";
+  if (pathOrKey.startsWith("/diagrams/")) return "generated";
+
+  // Identity. `og-image.png` belongs here rather than with the icons: it is the
+  // site mark, used as the default social card, and `seo.ts` names it directly.
+  if (/^\/(logo(-[a-z]+)*\.svg|favicon\.svg|og-image\.png)$/.test(pathOrKey)) return "brand";
+
+  // Chrome. The manifest rides with the icons it declares.
+  if (
+    /^\/(favicon\.ico|apple-touch-icon\.png|android-chrome-[\dx]+\.png|maskable-icon-[\dx]+\.png|site\.webmanifest)$/.test(
+      pathOrKey,
+    )
+  ) {
+    return "icon";
+  }
+
+  return "content";
+}
+
+/**
+ * Whether this asset may be cropped when a transform asks for a fixed shape.
+ *
+ * **Roster photos may not.** They are group photographs and `fit=cover` cuts
+ * faces off the edge of the frame, which is the one failure mode a photo of
+ * named people must not have. Everything else crops safely, because the
+ * saliency detector keeps the subject and losing background is what a thumbnail
+ * is for.
+ *
+ * Keyed on the path, which is correct TODAY and will need moving: execution
+ * step 11 migrates these nine files into R2 under content-addressed keys, at
+ * which point there is no path left to recognise them by and this becomes a
+ * stored property rather than a derived one. Recorded here so the migration
+ * does not silently start cropping faces.
+ *
+ * @param {string} pathOrKey
+ */
+export function cropSafe(pathOrKey) {
+  return !pathOrKey.startsWith("/phage-hunters/");
+}
+
+/**
  * The content-addressed key for a blob.
  *
  * Ruling: decisions.md 2026-08-02, "Media keys are CONTENT-ADDRESSED". The key

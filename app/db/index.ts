@@ -338,11 +338,18 @@ export async function listMediaPage(
   const page = Math.max(1, options.page ?? 1);
   const offset = (page - 1) * limit;
 
-  // THE PICKER FILTER. An OG card is 1200x630 of branded chrome generated for a
-  // social feed; inserting one into a post body would be nonsense, so
-  // `r2-derived` is excluded rather than merely discouraged. Documents are
-  // excluded because this picker inserts images.
-  const insertable = and(eq(media.kind, "image"), inArray(media.storage, ["r2", "static"]));
+  // THE PICKER FILTER, on `role` rather than on `storage`.
+  //
+  // The storage-based version was wrong and the error was live: it assumed
+  // static+image meant content, and so offered the site logos, every favicon,
+  // and BOTH HALVES of every rendered diagram. Picking one half of a diagram
+  // pair inserts an image the theme switch cannot swap and bypasses the
+  // `:::diagram` directive entirely, which is a broken post rather than noise.
+  //
+  // `kind='image'` stays alongside it because the two answer different
+  // questions: the 31 PDFs are genuinely `role='content'`, they are simply not
+  // images and this picker inserts images.
+  const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
   const where = options.insertableOnly ? insertable : undefined;
 
   const db = getDb(env);
@@ -391,6 +398,7 @@ export async function upsertDerivedMedia(
     key: string;
     storage: string;
     kind: string;
+    role: string;
     mime?: string | null;
     bytes?: number | null;
     width?: number | null;
@@ -404,6 +412,7 @@ export async function upsertDerivedMedia(
   const derived = {
     storage: record.storage,
     kind: record.kind,
+    role: record.role,
     mime: record.mime ?? null,
     bytes: record.bytes ?? null,
     width: record.width ?? null,
@@ -440,6 +449,7 @@ export async function upsertMediaRecord(
     caption?: string;
     storage?: string;
     kind?: string;
+    role?: string;
     mime?: string | null;
     bytes?: number | null;
     originalName?: string | null;
@@ -457,6 +467,7 @@ export async function upsertMediaRecord(
       caption: record.caption ?? "",
       storage: record.storage ?? "r2",
       kind: record.kind ?? "image",
+      role: record.role ?? "content",
       mime: record.mime ?? null,
       bytes: record.bytes ?? null,
       originalName: record.originalName ?? null,
@@ -474,6 +485,7 @@ export async function upsertMediaRecord(
         ...(record.caption !== undefined ? { caption: record.caption } : {}),
         ...(record.storage !== undefined ? { storage: record.storage } : {}),
         ...(record.kind !== undefined ? { kind: record.kind } : {}),
+        ...(record.role !== undefined ? { role: record.role } : {}),
         ...(record.mime !== undefined ? { mime: record.mime } : {}),
         ...(record.bytes !== undefined ? { bytes: record.bytes } : {}),
         ...(record.originalName !== undefined ? { originalName: record.originalName } : {}),

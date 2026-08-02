@@ -114,6 +114,13 @@ export const media = sqliteTable(
     storage: text("storage").notNull().default("r2"),
     /** 'image' | 'document' | 'other'. Derived by `classify()`. */
     kind: text("kind").notNull().default("image"),
+    /**
+     * 'content' | 'brand' | 'generated' | 'icon'. Derived by `roleOf()`.
+     *
+     * What the asset is FOR. The picker takes `content` only, because inserting
+     * one half of a generated diagram pair produces a broken post.
+     */
+    role: text("role").notNull().default("content"),
     mime: text("mime"),
     bytes: integer("bytes"),
     /** NULL means "not measured", which an SVG and a PDF legitimately are. */
@@ -140,6 +147,7 @@ export const media = sqliteTable(
     index("media_uploaded_idx").on(t.uploadedAt),
     index("media_storage_idx").on(t.storage),
     index("media_kind_idx").on(t.kind),
+    index("media_role_idx").on(t.role),
   ],
 );
 

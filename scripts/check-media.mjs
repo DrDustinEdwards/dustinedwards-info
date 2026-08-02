@@ -39,12 +39,16 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-import { classify, storageOf } from "../app/lib/media/classify.mjs";
+import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { ASSET_MANIFEST_PATH, walkPublic } from "./build-assets.mjs";
+import { bucketNames } from "./lib/wrangler-config.mjs";
 
 const DB_NAME = "dustinedwards";
-const BUCKET = "dustinedwards-media";
+// DERIVED from the wrangler config, never restated. Two buckets split on
+// lifecycle, and both are indexed: an OG card that existed but appeared in no
+// listing is exactly the invisible-object problem the index exists to end.
+const BUCKETS = bucketNames();
 
 /**
  * Runs wrangler as one already-quoted command string. Passing an args array
@@ -66,12 +70,12 @@ function wrangler(args) {
  * Every row in the media index.
  *
  * @param {string} target
- * @returns {Array<{ key: string, storage: string, kind: string }>}
+ * @returns {Array<{ key: string, storage: string, kind: string, role: string }>}
  */
 function mediaRows(target) {
   const result = wrangler(
     `d1 execute ${DB_NAME} ${target} --json --command ` +
-      `"SELECT key, storage, kind FROM media ORDER BY key;"`,
+      `"SELECT key, storage, kind, role FROM media ORDER BY key;"`,
   );
   if (result.status !== 0) {
     console.error(result.stdout);
@@ -192,23 +196,28 @@ async function main() {
     throw new Error(`${formProblems.length} reference-collection failure(s)`);
   }
 
-  const objects = await listAllObjects({ bucket: BUCKET, remote: target === "--remote" });
+  /** @type {Array<{ key: string, size: number, uploaded: string, etag: string }>} */
+  const objects = [];
+  for (const [binding, bucket] of Object.entries(BUCKETS)) {
+    const listed = await listAllObjects({ bucket, remote: target === "--remote" });
+    console.log(`  R2 ${bucket} (${binding}): ${listed.length} object(s)`);
+    objects.push(...listed);
+  }
   const files = await walkPublic();
   const rows = mediaRows(target);
 
-  // An assertion that can pass by reading nothing is not an assertion. All three
+  // An assertion that can pass by reading nothing is not an assertion. Both
   // sides must have found something before any comparison below means anything.
   if (objects.length === 0) {
     throw new Error(
-      `listed 0 objects in ${BUCKET}. Either the bucket is genuinely empty or the listing ` +
-        `failed; both make every comparison below pass vacuously, so this is a failure.`,
+      `listed 0 objects across ${Object.values(BUCKETS).join(", ")}. Either they are genuinely ` +
+        `empty or the listing failed; both make every comparison below pass vacuously.`,
     );
   }
   if (files.length === 0) {
     throw new Error("walked public/ and found 0 files, which cannot be right");
   }
 
-  console.log(`  R2 ${BUCKET}: ${objects.length} object(s)`);
   console.log(`  public/:               ${files.length} file(s)`);
   console.log(`  D1 media:              ${rows.length} row(s)`);
 
@@ -295,6 +304,7 @@ async function main() {
       continue;
     }
     const expectedStorage = storageOf(row.key);
+    const expectedRole = roleOf(row.key);
     if (row.kind !== expected.kind) {
       misclassified.push(`${row.key}: kind is "${row.kind}", classify() says "${expected.kind}"`);
     }
@@ -302,6 +312,13 @@ async function main() {
       misclassified.push(
         `${row.key}: storage is "${row.storage}", storageOf() says "${expectedStorage}"`,
       );
+    }
+    // ROLE, verified against the deriver exactly as kind and storage are. This
+    // is what stops the picker filter silently rotting: a row whose role drifts
+    // from `roleOf()` either hides a real image or offers half a diagram pair,
+    // and neither is visible from anywhere else.
+    if (row.role !== expectedRole) {
+      misclassified.push(`${row.key}: role is "${row.role}", roleOf() says "${expectedRole}"`);
     }
   }
   if (misclassified.length > 0) {
@@ -318,10 +335,18 @@ async function main() {
 
   const byStorage = new Map();
   for (const row of rows) byStorage.set(row.storage, (byStorage.get(row.storage) ?? 0) + 1);
+  const byRole = new Map();
+  for (const row of rows) byRole.set(row.role, (byRole.get(row.role) ?? 0) + 1);
   console.log(
-    `\n  indexed: ${[...byStorage.entries()]
+    `\n  by storage: ${[...byStorage.entries()]
       .sort()
       .map(([s, n]) => `${n} ${s}`)
+      .join(", ")}`,
+  );
+  console.log(
+    `  by role:    ${[...byRole.entries()]
+      .sort()
+      .map(([r, n]) => `${n} ${r}`)
       .join(", ")}`,
   );
   console.log(

@@ -1,5 +1,6 @@
 import { getEnv } from "~/lib/context";
-import { THUMB_WIDTHS, type ThumbWidth } from "~/lib/media/core.server";
+import { cropSafe, storageOf } from "~/lib/media/classify.mjs";
+import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import type { Route } from "./+types/media.$";
 
 /**
@@ -40,16 +41,16 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   if (requested) {
     const width = Number(requested);
-    // A CLOSED set of widths. An open one lets any caller mint unlimited
+    // TWO closed sets, unioned. An open set lets any caller mint unlimited
     // distinct transforms of one object, each a separately billed unique
-    // transformation and a separate cache entry.
-    if (!THUMB_WIDTHS.includes(width as ThumbWidth)) {
+    // transformation and a separate cache entry, so both sets stay closed.
+    if (!ALL_WIDTHS.includes(width as (typeof ALL_WIDTHS)[number])) {
       return new Response("Unsupported width", { status: 400 });
     }
-    return serveThumbnail(env, request, key, width as ThumbWidth);
+    return serveThumbnail(env, request, key, width);
   }
 
-  const object = await env.MEDIA.get(key);
+  const object = await bucketFor(env, key).get(key);
   if (!object) return new Response("Not found", { status: 404 });
 
   const etag = object.httpEtag;
@@ -65,7 +66,19 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   return new Response(object.body, { headers });
 }
 
-async function serveThumbnail(env: Env, request: Request, key: string, width: ThumbWidth) {
+/**
+ * Which bucket holds this key.
+ *
+ * Two buckets split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
+ * command regenerates. `storageOf` already answers the question from the key
+ * shape, so this asks it rather than testing the prefix a second time and giving
+ * the answer somewhere it could drift.
+ */
+function bucketFor(env: Env, key: string): R2Bucket {
+  return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
+}
+
+async function serveThumbnail(env: Env, request: Request, key: string, width: number) {
   // Keyed by the full request URL, so each width is its own entry and the
   // original is untouched. Safe to cache forever for the same reason the
   // original is: the key never changes meaning.
@@ -77,7 +90,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: Th
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
-  const object = await env.MEDIA.get(key);
+  const object = await bucketFor(env, key).get(key);
   if (!object) return new Response("Not found", { status: 404 });
 
   // The binding is configured in wrangler.jsonc, which this repo does not track
@@ -93,21 +106,52 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: Th
     return new Response(object.body, { headers });
   }
 
+  // ADMIN TILES CROP, CONTENT DOES NOT.
+  //
+  // The two width sets serve different shapes. `.media-thumb` is a fixed 10rem
+  // strip that already crops in CSS, so cropping server-side as well is strictly
+  // better: `gravity: "auto"` uses saliency detection to keep the subject, where
+  // CSS `object-fit: cover` blindly keeps the centre, and the smaller body is
+  // fewer bytes over the wire. A content image in the prose column has no fixed
+  // height and must never be cropped at all: the author chose the framing.
+  //
+  // ROSTER PHOTOS ARE EXEMPT EVEN AT TILE SIZES. They are group photographs and
+  // `fit: "cover"` cuts faces off the edge of the frame, which is the one thing
+  // a photo of named people may not do.
+  const isTile = THUMB_WIDTHS.includes(width as (typeof THUMB_WIDTHS)[number]);
+  const crop = isTile && cropSafe(key);
+
+  // FORMAT NEGOTIATION, done here because the BINDING CANNOT DO IT.
+  //
+  // The ruling said `format=auto`. That exists on the `/cdn-cgi/image/` URL
+  // interface, which this site cannot use: it needs a customer zone and answers
+  // 404 with error 1042 on workers.dev. The binding's `output()` accepts only
+  // concrete formats and the typecheck is what said so, so "auto" here is a
+  // literal Accept-header negotiation rather than a flag.
+  //
+  // The outcome the ruling wanted is unchanged, and so is its corollary: there
+  // is still no <picture> element anywhere in this codebase, because its usual
+  // job is exactly this fallback and it is being done server-side instead. One
+  // <img>, one URL per width.
+  const accept = request.headers.get("accept") ?? "";
+  const format = accept.includes("image/avif")
+    ? "image/avif"
+    : accept.includes("image/webp")
+      ? "image/webp"
+      : "image/jpeg";
+
   let response: Response;
   try {
     const result = await env.IMAGES.input(object.body)
-      .transform({ width })
-      // webp rather than avif: encoding is markedly cheaper and these are
-      // administrative thumbnails, where a few percent of file size matters
-      // far less than the transform's latency and cost.
-      .output({ format: "image/webp" });
+      .transform({ width, ...(crop ? { fit: "cover", gravity: "auto" } : {}) })
+      .output({ format });
     response = result.response();
   } catch {
     // A file the transformer cannot read (an SVG, a corrupt upload) is not an
     // error worth a 500: the grid should still show something. Falling back to
     // the original is safe HERE, where it is one tile, and is exactly what must
     // not happen silently as a general strategy.
-    const original = await env.MEDIA.get(key);
+    const original = await bucketFor(env, key).get(key);
     if (!original) return new Response("Not found", { status: 404 });
     const headers = new Headers();
     original.writeHttpMetadata(headers);
@@ -118,6 +162,12 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: Th
 
   const headers = new Headers(response.headers);
   headers.set("cache-control", "public, max-age=31536000, immutable");
+  // REQUIRED, not decorative. The response body now depends on the request's
+  // Accept header, and this URL is cached both in caches.default and by Workers
+  // Cache in front of the Worker. Without this a browser that asked for AVIF
+  // would poison the entry for one that cannot decode it, and the failure would
+  // be a broken image for some readers and not others.
+  headers.set("vary", "Accept");
   // Makes the transform observable from outside, which is what lets a
   // verification prove the grid is not being served full-resolution originals.
   headers.set("x-media-thumb", `w=${width}`);

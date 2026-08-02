@@ -1,6 +1,6 @@
 import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
-import { classify, contentKey } from "~/lib/media/classify.mjs";
+import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
 import { readDimensions } from "~/lib/media/core.server";
 import type { Route } from "./+types/admin.media.upload";
 
@@ -120,6 +120,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       alt: "",
       storage: "r2",
       kind,
+      role: roleOf(key),
       mime,
       bytes: bytes.byteLength,
       // The ONLY surviving copy of what the author called this file. The key

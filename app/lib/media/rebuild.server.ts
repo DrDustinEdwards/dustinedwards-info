@@ -1,7 +1,7 @@
 import assetManifest from "../../../content/generated/assets.json";
 
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
-import { classify, isRaster, storageOf } from "./classify.mjs";
+import { classify, isRaster, roleOf, storageOf } from "./classify.mjs";
 
 /**
  * Re-derives the media index from the things that are actually true.
@@ -81,24 +81,31 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   /** @type {string[]} */
   const failures: string[] = [];
 
-  // ---- 1. Enumerate R2, exhaustively and to the end of the cursor. ----------
+  // ---- 1. Enumerate BOTH buckets, exhaustively and to the end of the cursor.
+  //
+  // Two buckets, split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
+  // command can regenerate. Both are indexed, because the index describes every
+  // asset the site has and an OG card that existed but appeared nowhere would be
+  // exactly the invisible-object problem the index exists to end.
   const objects: Array<{ key: string; size: number; uploaded: string }> = [];
-  let cursor: string | undefined;
-  for (;;) {
-    const page = await env.MEDIA.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
-    for (const object of page.objects) {
-      objects.push({
-        key: object.key,
-        size: object.size,
-        uploaded:
-          object.uploaded instanceof Date
-            ? object.uploaded.toISOString()
-            : String(object.uploaded ?? ""),
-      });
+  for (const bucket of [env.MEDIA, env.OG]) {
+    let cursor: string | undefined;
+    for (;;) {
+      const page = await bucket.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const object of page.objects) {
+        objects.push({
+          key: object.key,
+          size: object.size,
+          uploaded:
+            object.uploaded instanceof Date
+              ? object.uploaded.toISOString()
+              : String(object.uploaded ?? ""),
+        });
+      }
+      if (!page.truncated) break;
+      cursor = (page as { cursor?: string }).cursor;
+      if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
     }
-    if (!page.truncated) break;
-    cursor = (page as { cursor?: string }).cursor;
-    if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
   }
 
   // ---- 2. The static half, from the committed manifest. --------------------
@@ -121,20 +128,25 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   for (const object of objects) {
     try {
       const { kind, mime } = classify(object.key);
+      // An OG card lives in the OG bucket now, so the read has to follow the
+      // key rather than assume MEDIA. `storageOf` already answers which is
+      // which, so this asks it rather than testing the prefix a second time.
+      const bucket = storageOf(object.key) === "r2-derived" ? env.OG : env.MEDIA;
       // Two separate GETs, because a body is a stream and can only be read once.
       // `.info()` and the transform each consume one.
       const measurable = isRaster(object.key);
       const dimensions = measurable
-        ? await env.MEDIA.get(object.key).then((o) => (o ? dimensionsFor(env, o.body) : null))
+        ? await bucket.get(object.key).then((o) => (o ? dimensionsFor(env, o.body) : null))
         : null;
       const placeholder = measurable
-        ? await env.MEDIA.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
+        ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
         : null;
 
       await upsertDerivedMedia(env, {
         key: object.key,
         storage: storageOf(object.key),
         kind,
+        role: roleOf(object.key),
         mime,
         bytes: object.size,
         width: dimensions?.width ?? null,
@@ -174,6 +186,7 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         key: path,
         storage: storageOf(path),
         kind,
+        role: roleOf(path),
         mime,
         bytes: buffer.byteLength,
         width: dimensions?.width ?? null,
