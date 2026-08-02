@@ -350,8 +350,15 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
             URL, and a link says that and is bookmarkable. `reset` would restore
             the form's defaults, which are the CURRENT filters, so it would
             appear to do nothing. */}
+        {/* `.btn-ghost`, matching the empty state's Clear, and that settles the
+            fourth appearance of the a:visited specificity rule at the DESIGN
+            level rather than with another `:visited` selector. A bare text link
+            to an already-visited URL correctly turns claret, so the two Clears
+            did not match. A ghost button carries a border, which is a
+            non-colour affordance, so rule 2 exempts it from the underline and
+            from visited styling and the two controls now agree. */}
         {filtered ? (
-          <Link to="/admin/posts" className="posts-filter-clear">
+          <Link to="/admin/posts" className="btn-ghost posts-filter-clear">
             Clear
           </Link>
         ) : null}
