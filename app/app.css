@@ -309,6 +309,26 @@
  * outline everywhere (amendment 4 again), so it survives untouched.
  */
 @media (forced-colors: active) {
+  /* THE TWO SHADOW HAIRLINES, put back as real borders.
+   *
+   * The admin topbar and sidebar draw their edges with `box-shadow` rather
+   * than a border, because a border-box border is subtracted from a declared
+   * height or width and both of those lengths ARE alignments (the mark's y and
+   * the rail's icon column). Amendment 4 says forced-colors strips shadows, so
+   * in this mode both edges would simply vanish and the shell would blend into
+   * the content it frames the moment the surfaces yield to Canvas.
+   *
+   * Here the border is restored, and the sub-pixel it costs those alignments is
+   * the right trade: structure that is present beats a mark whose y is exact on
+   * a surface the user can no longer see. */
+  .admin-topbar {
+    border-bottom: 1px solid;
+  }
+
+  .admin-sidebar {
+    border-right: 1px solid;
+  }
+
   /* Anything whose shape came from a fill. */
   .btn,
   .btn-brand,
@@ -389,6 +409,20 @@
 
 html,
 body {
+  /* THE SHARED INSET, declared ONCE for the whole site.
+   *
+   * The x where the site's identity mark sits, on the public plane and in the
+   * admin, in both sidebar states. Amended from 2rem to 1.5rem on 2026-08-01,
+   * so the collapsed admin rail could hold the same icon column the expanded
+   * one indents to without becoming a 90px slab.
+   *
+   * It lives on `body` rather than in the token block for the reason the
+   * admin's other lengths are scoped to `.admin`: check:contrast parses every
+   * custom property in that block as a colour and would throw on a length. It
+   * is on `body` rather than in `.admin` because the public header and footer
+   * read it too, and two declarations of one alignment is how the two planes
+   * drift apart. */
+  --site-inset: 1.5rem;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -581,7 +615,9 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
   min-height: 4rem;
-  padding: 1rem 2rem;
+  /* The shared inset. The admin topbar reads the same declaration, which is
+     what makes the mark land on the same x on both planes by construction. */
+  padding: 1rem var(--site-inset);
   border-bottom: 1px solid var(--border);
 }
 
@@ -662,7 +698,10 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
   min-height: 4rem;
-  padding: 1rem 2rem;
+  /* Moves WITH the header. A footer left at 2rem would have put the public
+     plane's two horizontal rules at different insets, which is the site
+     disagreeing with itself about where its own edge is. */
+  padding: 1rem var(--site-inset);
   border-top: 1px solid var(--border);
   font-size: 0.8125rem;
 }
@@ -724,7 +763,9 @@ a:hover {
   --admin-topbar-h: 4.25rem;
   --admin-cmdbar-h: 3.5rem;
   --admin-control-h: 2rem;
-  /* The two sidebar widths from the ruling, 240px and 60px. The COLLAPSED one
+  /* The expanded width, 240px from the ruling. The collapsed one is no longer
+     the ruling's 60px: the 2026-08-01 amendment DERIVES it from the inset, so
+     the rail can hold the same icon column the expanded state indents to. It
      is applied by an attribute the inline script sets before first paint, so
      the rail never flashes wide and nothing is corrected after the fact. */
   --admin-sidebar-w: 15rem;
@@ -734,31 +775,36 @@ a:hover {
    * One column and one gap serve the topbar's brand block and every sidebar
    * item, so the mark and the nav icons stand in the same column and the
    * wordmark and the nav labels begin at the same x. Before this the sidebar
-   * ran its own inset (10 + 3 + 10 = 23px) while the parity ruling had already
-   * fixed the mark at 32px, so the two columns missed each other by 9px.
+   * ran its own inset (10 + 3 + 10 = 23px) while the parity ruling had fixed
+   * the mark at 32px, so the two columns missed each other by 9px.
    *
-   * The alignment moves the SIDEBAR out to the mark, not the mark in to the
-   * sidebar: the mark's 2rem inset is what admin-brand-parity.md fixed against
-   * the public header, and it is not this ruling's to spend.
-   *
-   * 1.44rem is the MARK'S OWN WIDTH and that is what makes both halves true at
-   * once. The header crop is intrinsically 36x50, so a 2rem-tall mark is
-   * 2rem * 36/50 = 1.44rem wide. Any wider a column would centre the mark by
-   * pushing its left edge off 32px and break the parity it is aligning to; any
-   * narrower and the 20px nav glyphs would not fit. Written as the arithmetic
-   * rather than as 1.44rem so the 36x50 stays visible next to it. */
+   * 1.44rem is the MARK'S OWN WIDTH and that is what makes the column work at
+   * all. The header crop is intrinsically 36x50, so a 2rem-tall mark is
+   * 2rem * 36/50 = 1.44rem wide. A wider column would centre the mark by
+   * pushing its left edge off the inset; a narrower one would not fit the 20px
+   * nav glyphs. Written as the arithmetic rather than as 1.44rem so the 36x50
+   * stays visible next to it. */
   --admin-icon-col: calc(2rem * 36 / 50);
   --admin-icon-gap: 0.5rem;
-  /* The x where that column starts, on both planes. The topbar spends it as
-     padding; a sidebar item spends it as padding plus its 3px active rule. */
-  --admin-item-inset: 2rem;
-  /* The active item's left rule. Named because the item's padding is derived
-     from it, and the two must add up to the inset above. */
+  /* THE SHARED INSET, taken from the site-wide declaration on `body` rather
+     than restated, which is what keeps the two planes agreeing. Aliased here
+     because everything in this shell reads it under the admin name. */
+  --admin-item-inset: var(--site-inset);
+  /* THE RAIL IS DERIVED, never a literal.
+   *
+   * inset + column + inset, so the collapsed rail centres the very column the
+   * expanded one indents to, and the icons do not move sideways when the rail
+   * closes. It resolves to 71.04px. Writing 71px here instead would be a number
+   * that silently stops matching the inset the first time the inset is tuned,
+   * and the failure would be a 0.5px drift nobody looks for. */
+  --admin-sidebar-rail-w: calc(var(--admin-item-inset) * 2 + var(--admin-icon-col));
+  /* The active item's left rule. Drawn out of flow, so it is a length this
+     alignment never has to subtract. */
   --admin-item-rule: 3px;
 }
 
 [data-admin-sidebar="collapsed"] .admin {
-  --admin-sidebar-w: 3.75rem;
+  --admin-sidebar-w: var(--admin-sidebar-rail-w);
 }
 
 /* Ruling 6 asks that the width transition respect prefers-reduced-motion. There
@@ -795,9 +841,15 @@ a:hover {
      front of it the shape read as a square-cornered chip floating in the
      column instead of a tab attached to it. */
   padding: 1rem 0.625rem 1rem 0;
-  border-right: 1px solid var(--border);
+  /* A SHADOW, for the reason the topbar's hairline is one: `box-sizing` is
+     border-box, so a border-right would be subtracted from the width, and the
+     collapsed rail's width IS the alignment. The rail is
+     inset + column + inset, and a real border would eat a device-pixel-snapped
+     slice off it and land the icon at 23.67 instead of 24. Out of the box, the
+     content width is exactly what the token says. */
+  box-shadow: 1px 0 0 var(--border);
   background: var(--surface);
-  /* Tooltips and the collapsed rail's labels need to escape the 60px column. */
+  /* Tooltips and the collapsed rail's labels need to escape the rail. */
   overflow: visible;
 }
 
@@ -907,21 +959,35 @@ a:hover {
   display: none;
 }
 
-/* THE RAIL BREAKS THE SHARED COLUMN, deliberately.
+/* THE RAIL KEEPS THE SHARED COLUMN. This is the 2026-08-01 amendment.
  *
- * The topbar does not collapse, so the mark stays at the 2rem inset while the
- * rail is only 60px wide. Holding the icons at 32px there would leave 23px of
- * icon with 32px of space on its left and 5px on its right, which reads as an
- * alignment failure rather than as alignment. Centring in the 60px is what an
- * icon rail is, and the column's job in that state is to be a column of icons
- * consistent with ITSELF. Reported to Dustin with both numbers rather than
- * quietly chosen. */
+ * The rail used to be 60px with its icons CENTRED, which put them at x 13.146
+ * against the mark's 32: the topbar does not collapse, so a rail narrower than
+ * inset + column + inset cannot hold the column the expanded state indents to,
+ * and the icons jumped sideways every time the rail closed.
+ *
+ * The amendment moves the inset in to 1.5rem on both planes and sizes the rail
+ * FROM it, so the same padding-left serves both states and centring is never
+ * asked for. The symmetry Dustin asked to see is then a consequence rather than
+ * a technique: the icon sits at the inset, and what is left to its right is the
+ * rail less the inset less the column, which is the inset again.
+ *
+ * The padding is kept rather than zeroed for the same reason it is not
+ * `justify-content: center`: centring derives the icon's x from the CONTENT
+ * BOX, so the sidebar's right padding and its right border would both have to
+ * be zero and stay zero for the number to hold. Positioning it from the left
+ * edge depends on nothing but the inset. */
 [data-admin-sidebar="collapsed"] .admin-nav a,
 [data-admin-sidebar="collapsed"] .admin-view-site,
 [data-admin-sidebar="collapsed"] .admin-sidebar-toggle {
-  justify-content: center;
   gap: 0;
-  padding: 0;
+  padding: 0 0 0 var(--admin-item-inset);
+}
+
+/* The rail's own box must BE the derived width, so nothing inside it is
+   measured against a content box that the padding has already shortened. */
+[data-admin-sidebar="collapsed"] .admin-sidebar {
+  padding-inline: 0;
 }
 
 /* The toggle is an item, not an orphan. Everything but the button reset now
@@ -1034,7 +1100,7 @@ a:hover {
 }
 
 /* The rule itself, OUT OF FLOW, which is what lets every item spend its whole
-   2rem inset on padding and stand in the mark's column.
+   inset on padding and stand in the mark's column.
 
    It is a BORDER on an absolutely positioned box rather than a background bar,
    and that is the forced-colors half of ruling 5: forced-colors overrides
@@ -1111,10 +1177,11 @@ a:hover {
   align-items: center;
   gap: 1rem;
   height: var(--admin-topbar-h);
-  /* 2rem inline, matching .site-header, so the mark's LEFT edge is 32px from
-     the viewport on both planes. The block padding is 0, so a centred 2rem mark
-     sits at (68 - 32) / 2 = 18, which is where .site-header puts its own. */
-  padding: 0 2rem;
+  /* THE SHARED INSET, the same token .site-header and every sidebar item use,
+     so the mark's LEFT edge is identical on both planes and in both sidebar
+     states. The block padding is 0, so a centred 2rem mark sits at
+     (68 - 32) / 2 = 18, which is where .site-header puts its own. */
+  padding: 0 var(--admin-item-inset);
   /* Ruling 8. On a desktop viewport this bar is ALREADY pinned structurally,
      because .admin-content is the scroll container and this sits outside it.
      `sticky` is here for the narrow breakpoint, where the shell releases its
@@ -1222,7 +1289,7 @@ a:hover {
     top: var(--admin-topbar-h);
   }
 
-  /* Ruling 8. The rail is a DESKTOP affordance; a 60px icon strip beside a
+  /* Ruling 8. The rail is a DESKTOP affordance; a 71px icon strip beside a
      phone-width column would leave the content nothing. Here the sidebar is an
      off-canvas drawer instead, opened from the topbar and dismissed by Escape
      or by the backdrop, and the collapsed attribute is ignored entirely. */
