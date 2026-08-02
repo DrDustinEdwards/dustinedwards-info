@@ -139,12 +139,55 @@ export function personJsonLd(origin: string) {
 }
 
 /**
- * Cache policy for public blog surfaces. Ten minutes at the edge, then a day of
- * serving stale while revalidating, so a deploy or a content sync propagates
- * quickly without every reader paying for an origin hit.
+ * Cache policy for public NON-HTML surfaces: the markdown twins, the feeds,
+ * `llms-full.txt`, and the JSON half of a content-negotiated route.
+ *
+ * Ten minutes at the edge, then a day of serving stale while revalidating, so a
+ * deploy or a content sync propagates quickly without every reader paying for an
+ * origin hit.
+ *
+ * **Not for HTML.** See `HTML_CACHE_CONTROL` below for why that is a different
+ * question, and note the discriminator: these bodies are identical for every
+ * reader, and an HTML document on this site is not.
  */
 export const PUBLIC_CACHE_CONTROL =
   "public, s-maxage=600, stale-while-revalidate=86400";
+
+/**
+ * Cache policy for HTML DOCUMENTS. Never shared-cached, and this is a
+ * correctness rule rather than a performance preference.
+ *
+ * **Every HTML document on this site embeds reader state.** The theme is read
+ * from a cookie in the root loader and written into `<html data-theme>` in the
+ * first byte, which is what makes the no-flash design work with no inline
+ * script. A shared cache keyed by path therefore serves whichever theme the
+ * request that FILLED the entry happened to carry.
+ *
+ * **This shipped, and it was live for three sessions.** Enabling Workers Cache
+ * on 2026-08-02 made the Worker's responses edge-cacheable; the cache key is
+ * path, entrypoint and version, and does NOT include cookies. Measured on the
+ * deploy: with `cookie: theme=dark`, a MISS returned
+ * `<html lang="en" data-theme="dark">` and a HIT returned `<html lang="en">`.
+ * The Worker was right every time; the cache was answering for it.
+ *
+ * **Why no gate caught it.** The Worker version is part of the cache key, so
+ * every deploy empties the cache, and `verify-live` always runs seconds after
+ * deploying. It was passing on cold entries. The failure only appears once an
+ * entry is warm, which is why the count moved between runs.
+ *
+ * `Vary: Cookie` was the alternative and would have preserved caching for
+ * readers carrying no cookie at all. It was not taken: almost every returning
+ * reader carries at least a theme cookie, so it would have bought complexity for
+ * a shrinking minority while leaving a correctness rule expressed as a header
+ * that is easy to drop. Not shared-caching HTML is the simpler invariant, and it
+ * matches what the rest of the site already does, since every route without a
+ * `headers` export already returns `private, no-store` from `workers/app.ts`.
+ *
+ * The site's rule is now uniform and stateable: HTML is never shared-cached,
+ * assets are. Workers Cache stays ON, because it was enabled for the Images
+ * binding and `/media/*` still carries `public, max-age=31536000, immutable`.
+ */
+export const HTML_CACHE_CONTROL = "private, no-store";
 
 export type ArticleSeo = {
   slug: string;
