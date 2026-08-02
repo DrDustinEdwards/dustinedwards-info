@@ -1111,4 +1111,3 @@ flat `.md` files appear only inside a skill's `references/`.
    detect index drift. Count `posts_fts_docsize` instead. Never run
    `DELETE FROM posts_fts`; it corrupts the index, and the repair is
    `INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`.
-7. `public/publications/` and `public/phage-hunters/` hold 31 PDFs and 9 photos from retired content. They are orphaned on purpose, reachable by direct URL and linked from nowhere, kept for citation integrity in other people's published work. Do not delete them as hygiene, and never write a redirect or gone rule that matches `/publications/*` or `/phage-hunters/*` as a prefix.
