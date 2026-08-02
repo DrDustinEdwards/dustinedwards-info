@@ -3,8 +3,10 @@ import { getEnv } from "~/lib/context";
 import { SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/sitemap";
 
-// Static, always-present URLs.
-const STATIC_PATHS = ["/", "/blog"];
+// Static, always-present URLs. /phage-discovery is a hand-built route reading a
+// typed data file rather than a `kind = 'page'` row, so the D1 filter below
+// cannot find it and it is listed here instead.
+const STATIC_PATHS = ["/", "/blog", "/phage-discovery"];
 
 export async function loader({ context }: Route.LoaderArgs) {
   const origin = SITE_ORIGIN;
