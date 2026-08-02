@@ -83,20 +83,51 @@ const POSTS = [
 
 /** One object in the media library, overridable per scenario. */
 const MEDIA_OBJECT = (over = {}) => ({
-  key: "posts/2026/a-picture-1234abcd.png",
-  url: "/media/posts/2026/a-picture-1234abcd.png",
+  key: "1234abcd5678ef90.png",
+  url: "/media/1234abcd5678ef90.png",
   // The THUMBNAIL url, carrying the transform width. The gate renders it, so a
   // regression that started serving originals into the grid would show here as
   // a changed src.
-  thumb: "/media/posts/2026/a-picture-1234abcd.png?w=320",
+  thumb: "/media/1234abcd5678ef90.png?w=320",
   size: 51234,
   uploaded: "2026-08-01T10:00:00.000Z",
   alt: "",
   caption: "",
   width: 1200,
   height: 630,
-  hasRecord: true,
+  storage: "r2",
+  kind: "image",
+  role: "content",
+  mime: "image/png",
+  originalName: "a-picture.png",
+  // A row WITH an LQIP. The null-placeholder case is its own scenario below,
+  // because it is 11 of the 70 real rows and renders a different tile.
+  placeholder: "data:image/webp;base64,UklGRg==",
+  deletable: true,
+  viewable: true,
   citations: [],
+  refCount: 0,
+  ...over,
+});
+
+/**
+ * The loader's non-object fields.
+ *
+ * One helper so a change to the loader's shape is one edit rather than five.
+ * These went stale once already and it was not caught: Phase 3 replaced
+ * `cursor`/`truncated`/`unannotated` with `page`/`hasMore`/`counts`, this gate
+ * was not run in that session or the next, and every media scenario had been
+ * failing with "Cannot read properties of undefined" ever since.
+ */
+const MEDIA_SHELL = (over = {}) => ({
+  picker: false,
+  page: 1,
+  hasMore: false,
+  filter: "content",
+  scanComplete: true,
+  scanFailed: [],
+  counts: [{ storage: "r2", kind: "image", n: 1 }],
+  roleCounts: [{ role: "content", n: 1 }],
   ...over,
 });
 
@@ -244,68 +275,103 @@ const STATES = [
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
     url: "/admin/media",
-    loaderData: {
-      picker: false,
-      objects: [MEDIA_OBJECT()],
-      cursor: null,
-      truncated: false,
-      scanComplete: true,
-      scanFailed: [],
-      unannotated: 0,
-    },
+    loaderData: MEDIA_SHELL({ objects: [MEDIA_OBJECT()] }),
   },
   {
     name: "media, cited object",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
     url: "/admin/media",
-    loaderData: {
-      picker: false,
+    loaderData: MEDIA_SHELL({
       objects: [
         MEDIA_OBJECT({
           citations: [
             { type: "post", id: "a-post", title: "A post", form: "markdown-image", detail: "line 12" },
           ],
+          refCount: 1,
         }),
       ],
-      cursor: null,
-      truncated: false,
-      scanComplete: true,
-      scanFailed: [],
-      unannotated: 0,
-    },
+    }),
   },
   {
     name: "media, reference scan failed",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
     url: "/admin/media",
-    loaderData: {
-      picker: false,
+    // Ruling 4's state: usage is unknown, so nothing is labelled unused and the
+    // action refuses every delete.
+    loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
-      cursor: null,
-      truncated: false,
-      // Ruling 4's state: usage is unknown, so nothing is labelled unused and
-      // the action refuses every delete.
       scanComplete: false,
       scanFailed: ["posts"],
-      unannotated: 2,
-    },
+    }),
   },
   {
     name: "media, empty bucket",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
     url: "/admin/media",
-    loaderData: {
-      picker: false,
-      objects: [],
-      cursor: null,
-      truncated: false,
-      scanComplete: true,
-      scanFailed: [],
-      unannotated: 0,
-    },
+    loaderData: MEDIA_SHELL({ objects: [], counts: [], roleCounts: [] }),
+  },
+  {
+    // A DOCUMENT: 31 of the 70 real rows. It has no thumbnail the Images
+    // binding can produce, so the tile renders a label instead of an <img>
+    // pointed at something that cannot exist.
+    name: "media, document row",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({
+          key: "/publications/a-paper.pdf",
+          url: "/publications/a-paper.pdf",
+          thumb: "/publications/a-paper.pdf",
+          storage: "static",
+          kind: "document",
+          mime: "application/pdf",
+          originalName: null,
+          placeholder: null,
+          width: null,
+          height: null,
+          deletable: false,
+          viewable: false,
+        }),
+      ],
+    }),
+  },
+  {
+    // A STATIC row: not deletable through the UI, so it renders the explanation
+    // instead of the delete form. The refusal itself lives in the action and is
+    // not what this proves; this proves the page stops OFFERING the control, so
+    // a regression that put the button back would change this scenario's
+    // payload set and fail here.
+    name: "media, static row",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({
+      filter: "brand",
+      objects: [
+        MEDIA_OBJECT({
+          key: "/logo.svg",
+          url: "/logo.svg",
+          // A static asset is its OWN url. Prefixing /media/ produced
+          // `/media//logo.svg` and 404'd every one of the 58 static rows.
+          thumb: "/logo.svg",
+          storage: "static",
+          role: "brand",
+          mime: "image/svg+xml",
+          originalName: null,
+          // EVERY SVG HAS A NULL PLACEHOLDER: the Images binding does not
+          // rasterize vectors. 11 of the 70 real rows are in this state, so the
+          // tile must degrade to a plain surface rather than a blank hole.
+          placeholder: null,
+          deletable: false,
+        }),
+      ],
+      roleCounts: [{ role: "brand", n: 1 }],
+    }),
   },
 
   // ---- new post -----------------------------------------------------------

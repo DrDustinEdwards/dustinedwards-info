@@ -332,7 +332,13 @@ export async function listMediaRecords(env: Env) {
  */
 export async function listMediaPage(
   env: Env,
-  options: { page?: number; limit?: number; insertableOnly?: boolean } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    insertableOnly?: boolean;
+    role?: string;
+    unusedOnly?: boolean;
+  } = {},
 ) {
   const limit = options.limit ?? 24;
   const page = Math.max(1, options.page ?? 1);
@@ -350,14 +356,46 @@ export async function listMediaPage(
   // questions: the 31 PDFs are genuinely `role='content'`, they are simply not
   // images and this picker inserts images.
   const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
-  const where = options.insertableOnly ? insertable : undefined;
+
+  /* The library's own filters, as SQL rather than as a post-filter, so a page is
+   * a full page and the pagination means what it says. */
+  const clauses = [];
+  if (options.insertableOnly) clauses.push(insertable);
+  if (options.role) clauses.push(eq(media.role, options.role));
+  if (options.unusedOnly) {
+    // NOT EXISTS against media_refs, which is what the PIPELINE recorded. The
+    // resolver scan is a second and more conservative opinion and cannot be
+    // expressed here, so it still runs per page and the card's own usage line
+    // remains the authority. This filter therefore means "nothing the renderer
+    // emitted cites it", which is narrower than "unused" and is why the chip
+    // carries that wording rather than a bare claim.
+    clauses.push(
+      sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`,
+    );
+  }
+  const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
   const rows = await db
     .select()
     .from(media)
     .where(where)
-    .orderBy(desc(media.uploadedAt), asc(media.key))
+    // ROLE FIRST, then newest.
+    //
+    // `uploaded_at DESC` alone put every static row last, because a build-time
+    // asset has no upload event and SQLite sorts NULL below everything. The
+    // effect was backwards: the 12 generated cards you can neither insert nor
+    // delete came first, and the 9 roster photos, the only insertable images in
+    // the corpus, landed on pages 2 and 3.
+    //
+    // So content sorts first as a rank, and only then by date. A CASE rather
+    // than a second column: the ordering is a property of this VIEW, not of the
+    // asset, and storing a sort key would be storing a UI decision in the index.
+    .orderBy(
+      sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
+      desc(media.uploadedAt),
+      asc(media.key),
+    )
     .limit(limit + 1)
     .offset(offset);
 
