@@ -41,6 +41,9 @@ import { SettingsDrawer } from "./settings-drawer";
  */
 const MarkdownEditor = lazy(() => import("./markdown-editor"));
 
+/** Type-only, so importing it does not pull the CodeMirror chunk in eagerly. */
+type LinkTarget = import("./markdown-editor").LinkTarget;
+
 const TITLE_LIMIT = 70;
 const AUTOSAVE_DELAY_MS = 800;
 const PREVIEW_DELAY_MS = 600;
@@ -85,6 +88,7 @@ export function PostEditor({
   state,
   everPublished,
   tagOptions,
+  linkTargets = [],
   existingSlugs = [],
   historySlot,
   dangerSlot,
@@ -98,6 +102,8 @@ export function PostEditor({
   state: PostState;
   everPublished: boolean;
   tagOptions: string[];
+  /** The site's own posts, for the body editor's Cmd+K link search. */
+  linkTargets?: LinkTarget[];
   /** Slugs already taken, so the new-post flow can say so before the save does. */
   existingSlugs?: string[];
   historySlot?: React.ReactNode;
@@ -629,6 +635,7 @@ export function PostEditor({
                     }}
                     onReady={() => setRichBody(true)}
                     slug={fields.slug}
+                    linkTargets={linkTargets}
                   />
                 </Suspense>
               </div>

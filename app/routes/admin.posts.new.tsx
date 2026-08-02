@@ -3,6 +3,7 @@ import { redirect } from "react-router";
 import { PostEditor } from "~/components/admin/post-editor";
 import { listAllPostsForAdmin, listBlogTags } from "~/db";
 import { getEnv } from "~/lib/context";
+import { loadLinkTargets } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
@@ -23,6 +24,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     headSha,
     fields: { ...EMPTY_FIELDS, date: today },
     tagOptions: (await listBlogTags(env).catch(() => [])).map((tag) => tag.slug),
+    // The site's own posts, for the body editor's Cmd+K link search.
+    linkTargets: await loadLinkTargets(env),
     // So the slug field can say "taken" while the author is still typing,
     // rather than after a round trip that gets refused. The save gate remains
     // the authority; this only saves a wasted submit.
@@ -63,6 +66,7 @@ export default function NewPost({ loaderData, actionData }: Route.ComponentProps
       state="draft"
       everPublished={false}
       tagOptions={loaderData.tagOptions}
+      linkTargets={loaderData.linkTargets}
       existingSlugs={loaderData.existingSlugs}
     />
   );
