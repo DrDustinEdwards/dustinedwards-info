@@ -31,11 +31,14 @@ import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
+import { getPlatformProxy } from "wrangler";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
 
 const BUCKET = "dustinedwards-media";
+/** Every generated key begins here, and the prune will not look outside it. */
+const PREFIX = "og/";
 const WIDTH = 1200;
 const HEIGHT = 630;
 
@@ -146,8 +149,81 @@ function card(post) {
   );
 }
 
+/**
+ * Every key currently under `og/`, paged to the end.
+ *
+ * **Why a platform proxy and not the CLI.** `wrangler r2 object` has exactly
+ * three verbs, `get`, `put` and `delete`; there is no `list`. So the one thing a
+ * prune cannot do without is the one thing the CLI this script already shells
+ * out to does not offer. `getPlatformProxy` hands a Node script the same
+ * `env.MEDIA` the Worker gets, over wrangler's existing OAuth, which is why this
+ * needs no new API token and no S3 access key.
+ *
+ * The config it is handed is BUILT HERE and thrown away, rather than tracked as
+ * a third wrangler file. `remote: true` is what makes the binding address the
+ * real bucket instead of local miniflare state, and it must not leak into
+ * wrangler.jsonc: that flag would also point `npm run dev` at production R2.
+ * Measured 2026-08-02, and it is the difference between reading 1 object and 13.
+ *
+ * PAGED, because this repo has already been bitten by a listing that was not.
+ * `listAllAskItems` exists for the same reason: a prune that cannot see an item
+ * cannot delete it, and reports success either way. R2 caps `limit` at 1000 and
+ * reports `truncated` with a `cursor`.
+ *
+ * @param {boolean} remote
+ * @returns {Promise<string[]>}
+ */
+async function listCardKeys(remote) {
+  const dir = await mkdtemp(path.join(tmpdir(), "og-cfg-"));
+  const configPath = path.join(dir, "wrangler.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      name: "build-og-prune",
+      compatibility_date: "2026-07-08",
+      compatibility_flags: ["nodejs_compat"],
+      r2_buckets: [{ binding: "MEDIA", bucket_name: BUCKET, ...(remote ? { remote: true } : {}) }],
+    }),
+    "utf8",
+  );
+
+  // `remote: true` on the BINDING is what selects the real bucket; there is no
+  // options-level switch to pass here. wrangler 4.107 has no `experimental`
+  // field on GetPlatformProxyOptions, and the typecheck is what said so.
+  const proxy = await getPlatformProxy({ configPath });
+
+  /** @type {string[]} */
+  const keys = [];
+  try {
+    const bucket = /** @type {any} */ (proxy.env).MEDIA;
+    /** @type {string | undefined} */
+    let cursor;
+    for (;;) {
+      const page = await bucket.list({ prefix: PREFIX, limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const object of page.objects) keys.push(object.key);
+      if (!page.truncated) break;
+      cursor = page.cursor;
+      // A truncated page with no cursor would spin forever. Refuse instead of
+      // silently pruning against a partial listing.
+      if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
+    }
+  } finally {
+    // workerd can throw on teardown after a remote session (measured: a WSARecv
+    // failure). The listing is already in hand by then, so a dispose that fails
+    // must not fail the build.
+    try {
+      await proxy.dispose();
+    } catch {
+      /* teardown only */
+    }
+  }
+
+  return keys;
+}
+
 async function main() {
   const target = process.argv.includes("--local") ? "--local" : "--remote";
+  const dryRun = process.argv.includes("--dry-run");
   const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
   const posts = artifact.posts ?? [];
 
@@ -167,20 +243,29 @@ async function main() {
     },
   ];
 
+  // ONE derivation of "which posts get a card", used by the writer below and by
+  // the prune after it. Two loops each applying the cover rule for themselves is
+  // how a prune ends up deleting the card the writer just uploaded.
+  /** @type {Array<{ post: any, key: string }>} */
+  const cards = [];
+  let skipped = 0;
+  for (const post of posts) {
+    // A post with its own cover never gets a generated card.
+    if (post.cover) {
+      skipped += 1;
+      console.log(`  skip   ${post.slug} (has a cover)`);
+      continue;
+    }
+    cards.push({ post, key: ogImageKey(post) });
+  }
+
   const workDir = await mkdtemp(path.join(tmpdir(), "og-"));
   let written = 0;
-  let skipped = 0;
 
   try {
-    for (const post of posts) {
-      // A post with its own cover never gets a generated card.
-      if (post.cover) {
-        skipped += 1;
-        console.log(`  skip   ${post.slug} (has a cover)`);
-        continue;
-      }
+    for (const { post, key } of cards) {
+      if (dryRun) continue;
 
-      const key = ogImageKey(post);
       // satori's types want a ReactNode; these are the plain element objects it
       // actually accepts, built without JSX so this file needs no build step.
       const svg = await satori(/** @type {any} */ (card(post)), {
@@ -215,7 +300,43 @@ async function main() {
     await rm(workDir, { recursive: true, force: true });
   }
 
-  console.log(`build:og ${written} generated, ${skipped} skipped (${target.slice(2)})`);
+  // Prune. `build:diagrams` has had one since it shipped; cards never did, so
+  // every OG_TEMPLATE_VERSION bump and every retitle has left an orphan behind:
+  // the key is a hash of the template version, slug, title and description, so
+  // changing any of them writes a NEW object and abandons the old one under a
+  // name nothing will ever ask for again.
+  //
+  // Scoped to `og/` by the listing, which matters more here than it does for
+  // diagrams: this bucket is shared with `posts/`, where the editor's uploads
+  // live, and those are irreplaceable. An unscoped prune would delete them all.
+  const live = new Set(cards.map((card) => card.key));
+  const present = await listCardKeys(target === "--remote");
+  const orphans = present.filter((key) => !live.has(key));
+
+  console.log(
+    `\n  ${present.length} object(s) under ${PREFIX}, ` +
+      `${live.size} referenced by the corpus, ${orphans.length} orphaned`,
+  );
+
+  let pruned = 0;
+  for (const key of orphans) {
+    if (dryRun) {
+      console.log(`  ORPHAN ${key}`);
+      continue;
+    }
+    execSync(`npx wrangler r2 object delete "${BUCKET}/${key}" ${target}`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    pruned += 1;
+    console.log(`  pruned /media/${key}`);
+  }
+
+  console.log(
+    `build:og ${written} generated, ${skipped} skipped, ` +
+      `${dryRun ? `${orphans.length} orphaned (dry run, nothing changed)` : `${pruned} pruned`} ` +
+      `(${target.slice(2)})`,
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

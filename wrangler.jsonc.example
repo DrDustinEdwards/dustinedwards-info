@@ -15,6 +15,21 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	// Workers Cache, in front of the Worker. Added for the Images binding: its
+	// responses are NOT cached by Cloudflare and every uncached call is a full
+	// decode and re-encode, which /media/<key>?w= pays on every request.
+	//
+	// This is a TOP-LEVEL switch, not an Images setting, so it governs every
+	// response the Worker returns. A 200 carrying no Cache-Control is cached
+	// for two hours under RFC 9111 heuristic freshness, and cookies are not in
+	// the cache key, so an authenticated /admin render would otherwise be
+	// stored and served to anyone. `workers/app.ts` closes that by defaulting
+	// every response without an explicit Cache-Control to `private, no-store`.
+	"cache": { "enabled": true },
+	// Static assets, so the Worker can read them through a binding. The Vite
+	// plugin supplies `directory` from the client build output; setting it here
+	// would fight that.
+	"assets": { "binding": "ASSETS" },
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -29,10 +44,18 @@
 			"id": "00000000000000000000000000000000"
 		}
 	],
+	// Two buckets, split on LIFECYCLE rather than on UI. MEDIA is irreplaceable
+	// and is never emptied; OG holds derived cards, which are regenerable by
+	// running build:og and so may be emptied and rebuilt by command. Neither
+	// carries an account-scoped id, so both lines are complete as written.
 	"r2_buckets": [
 		{
 			"binding": "MEDIA",
 			"bucket_name": "dustinedwards-media"
+		},
+		{
+			"binding": "OG",
+			"bucket_name": "dustinedwards-og"
 		}
 	],
 	// Media thumbnails. The library derives every size from the one original in
