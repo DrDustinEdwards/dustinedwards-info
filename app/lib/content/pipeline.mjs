@@ -51,6 +51,8 @@ import typescript from "shiki/langs/typescript.mjs";
 import githubDarkHighContrast from "shiki/themes/github-dark-high-contrast.mjs";
 import githubLightHighContrast from "shiki/themes/github-light-high-contrast.mjs";
 
+import { readingTimeMinutes } from "./reading-time.mjs";
+
 /**
  * The grammars shipped to the highlighter, keyed by the name a fence uses.
  *
@@ -78,8 +80,6 @@ const GRAMMARS = {
 
 /** Languages that get highlighted. Anything else renders as plain text. */
 export const LANGUAGES = Object.keys(GRAMMARS);
-
-const WORDS_PER_MINUTE = 200;
 
 /** Raised for any content problem. Carries the file so the message can name it. */
 export class ContentError extends Error {
@@ -226,12 +226,15 @@ export function findWideDashes(text) {
 
 /**
  * Estimated reading time in whole minutes, never less than one.
- * @param {string} markdownText
+ *
+ * Re-exported rather than implemented here, so every existing caller keeps its
+ * import. The arithmetic moved to `reading-time.mjs` when the editor started
+ * showing a live count as the author types: the editor CANNOT import this
+ * module, because it carries shiki and its grammars and would have taken the
+ * whole markdown renderer into a browser bundle. One derivation, two consumers,
+ * the same rule `records.mjs` lives under.
  */
-export function readingTimeMinutes(markdownText) {
-  const words = markdownText.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
-}
+export { readingTimeMinutes };
 
 /** @type {any} */
 let highlighterPromise = null;

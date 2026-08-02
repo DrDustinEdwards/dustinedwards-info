@@ -8,6 +8,10 @@
     "vite.config.ts",
     "scripts/**/*",
     "app/lib/content/pipeline.mjs",
+    // Split out of pipeline.mjs so the editor can show a live reading time
+    // without pulling shiki into a browser bundle. The pipeline imports it, so
+    // this project has to reach it too.
+    "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
     "app/lib/content/diagram.mjs",
     "app/lib/content/artifact.mjs",
