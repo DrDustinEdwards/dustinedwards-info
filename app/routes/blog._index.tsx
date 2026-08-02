@@ -9,7 +9,7 @@ import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import {
   DEFAULT_OG_IMAGE,
-  PUBLIC_CACHE_CONTROL,
+  HTML_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
@@ -51,7 +51,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export function headers() {
-  return { "Cache-Control": PUBLIC_CACHE_CONTROL };
+  // HTML embeds the reader's theme, so it is never shared-cached. Grounds on
+  // HTML_CACHE_CONTROL in seo.ts.
+  return { "Cache-Control": HTML_CACHE_CONTROL };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
