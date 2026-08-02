@@ -14,6 +14,7 @@
     "cf-typegen": "wrangler types",
     "build:content": "node scripts/build-content.mjs",
     "check:content": "node scripts/check-content.mjs",
+    "check:config": "node scripts/check-config.mjs",
     "sync:content": "node scripts/sync-content.mjs",
     "bootstrap:config": "node scripts/bootstrap-config.mjs",
     "postinstall": "node scripts/bootstrap-config.mjs && wrangler types",
