@@ -6,7 +6,11 @@
     "app/**/.server/**/*",
     "app/**/.client/**/*",
     "workers/**/*",
-    "worker-configuration.d.ts"
+    "worker-configuration.d.ts",
+    // The static asset manifest, imported by the media rebuild. A Worker cannot
+    // list its own static assets (the assets binding has only `fetch()`), so the
+    // list has to be handed to it at build time.
+    "content/generated/assets.json"
   ],
   "compilerOptions": {
     "composite": true,

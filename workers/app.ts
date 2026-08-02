@@ -1,6 +1,7 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { cloudflareContext } from "~/lib/context";
+import { handleMediaEvents } from "./media-events";
 
 // Re-exported so the runtime can find the class its binding names. The Ask
 // spend ceiling lives in a Durable Object rather than KV because it has to be
@@ -64,5 +65,16 @@ export default {
     }
 
     return response;
+  },
+
+  /**
+   * R2 event notifications from `dustinedwards-media`, deriving the D1 index.
+   *
+   * Separate from `fetch` on purpose: no HTTP request ever triggers this, and no
+   * reader ever waits on it. The grounds and the idempotency argument are in
+   * `media-events.ts`.
+   */
+  async queue(batch, env) {
+    await handleMediaEvents(batch, env);
   },
 } satisfies ExportedHandler<Env>;

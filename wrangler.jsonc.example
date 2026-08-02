@@ -68,6 +68,28 @@
 	// it needs a customer zone. Carries no id, so this line is complete as
 	// written rather than a placeholder.
 	"images": { "binding": "IMAGES" },
+	// The media index write path. R2 emits a notification, this Worker's queue()
+	// handler derives the D1 row. An event notification rather than a dual write:
+	// the Worker writes ONLY to R2, so the two systems cannot diverge silently.
+	//
+	// `max_retries` then the dead-letter queue, because a permanent failure must
+	// land somewhere inspectable rather than in a log line nobody reads. The
+	// consumer is idempotent by construction (it re-derives from the object as it
+	// is now, never from what the message claimed), so a retry is always safe.
+	//
+	// Queue names carry no account-scoped id, so these lines are complete as
+	// written rather than placeholders.
+	"queues": {
+		"consumers": [
+			{
+				"queue": "dustinedwards-media-events",
+				"max_batch_size": 10,
+				"max_batch_timeout": 5,
+				"max_retries": 3,
+				"dead_letter_queue": "dustinedwards-media-events-dlq"
+			}
+		]
+	},
 	// Ask mode (search Layer 2). Remove this block and Ask disappears cleanly:
 	// classic search is D1 only and never waits on it. Instance binding rather
 	// than ai_search_namespaces because there is exactly one instance.

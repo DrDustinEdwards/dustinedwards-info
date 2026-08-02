@@ -2,21 +2,16 @@ import { Form, Link, useSearchParams } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
 import { Panel } from "~/components/admin/panel";
-import {
-  deleteMediaRecord,
-  existingMediaKeys,
-  mediaRecordsFor,
-  upsertMediaRecord,
-} from "~/db";
+import { deleteMediaRecord, mediaRecordsFor, upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
 import {
   MEDIA_PAGE_SIZE,
   deleteMediaObject,
   isManagedKey,
   listMedia,
-  readDimensions,
   thumbUrl,
 } from "~/lib/media/core.server";
+import { rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { resolveCitations, type MediaCitation } from "~/lib/media/resolvers.server";
 import type { Route } from "./+types/admin.media._index";
 
@@ -101,35 +96,33 @@ export async function action({ request, context }: Route.ActionArgs) {
     // Editing alt updates the RECORD and rewrites no post. Ruling 2: alt is
     // contextual as well as intrinsic, so posts keep whatever alt they were
     // written with and only future insertions pick this up.
-    await upsertMediaRecord(env, { r2Key: key, alt: String(form.get("alt") ?? "") });
+    await upsertMediaRecord(env, { key, alt: String(form.get("alt") ?? "") });
     return { message: `Alt text saved for ${key}. Existing posts are unchanged.` };
   }
 
-  if (intent === "backfill") {
-    // Idempotent: rows that exist are skipped, so this can be re-run safely
-    // after any upload that predates the table.
-    const existing = await existingMediaKeys(env);
-    let created = 0;
-    let cursor: string | null = null;
-    do {
-      const page = await listMedia(env, { cursor, limit: 100 });
-      for (const object of page.objects) {
-        if (existing.has(object.key)) continue;
-        const dimensions = await readDimensions(env, object.key);
-        await upsertMediaRecord(env, {
-          r2Key: object.key,
-          alt: "",
-          uploaded: object.uploaded,
-          width: dimensions?.width ?? null,
-          height: dimensions?.height ?? null,
-        });
-        created += 1;
-      }
-      cursor = page.cursor;
-    } while (cursor);
-    return {
-      message: `Backfilled ${created} media record(s) with empty alt. Rows that already existed were left alone.`,
-    };
+  if (intent === "rebuild") {
+    // Replaces the old page-scoped backfill, which only ever saw the objects on
+    // the current page and could not touch static assets at all. This one is
+    // whole-corpus and idempotent: it re-derives every derived column and
+    // preserves every authored one, so it is safe to press at any time.
+    const report = await rebuildMediaIndex(env);
+    const parts = [
+      `Rebuilt the media index: ${report.indexed} row(s) indexed from ` +
+        `${report.scannedObjects} R2 object(s) and ${report.scannedFiles} static file(s)`,
+    ];
+    if (report.removed > 0) {
+      parts.push(`${report.removed} row(s) removed for objects that no longer exist`);
+    }
+    // Reported, never swallowed. A rebuild that quietly skipped assets would be
+    // indistinguishable from one that had nothing to do.
+    if (report.failures.length > 0) {
+      parts.push(
+        `${report.failures.length} could not be derived: ${report.failures.slice(0, 3).join("; ")}` +
+          (report.failures.length > 3 ? ` and ${report.failures.length - 3} more` : ""),
+      );
+    }
+    parts.push("Alt text, captions and focal points were preserved.");
+    return { message: `${parts.join(". ")}.` };
   }
 
   if (intent === "delete") {
@@ -197,13 +190,17 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
       description="Everything the editor has uploaded. Thumbnails are transforms of the original; the bucket stores one copy of each image."
     >
       <div className="posts-toolbar">
-        {unannotated > 0 ? (
-          <Form method="post">
-            <button type="submit" name="intent" value="backfill" className="btn-ghost">
-              Backfill {unannotated} missing record{unannotated === 1 ? "" : "s"}
-            </button>
-          </Form>
-        ) : null}
+        {/* Always offered, not conditional on a count. The old backfill button
+            appeared only when THIS PAGE held an unannotated object, which meant
+            the repair for a drifted index was invisible exactly when the drift
+            was somewhere else. A rebuild is idempotent, so there is no state in
+            which offering it is wrong. */}
+        <Form method="post">
+          <button type="submit" name="intent" value="rebuild" className="btn-ghost">
+            Rebuild media index
+            {unannotated > 0 ? ` (${unannotated} unindexed here)` : ""}
+          </button>
+        </Form>
       </div>
 
       {actionData?.message ? (
