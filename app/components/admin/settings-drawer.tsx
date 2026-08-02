@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 
+import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
+
 const DESCRIPTION_LIMIT = 160;
 
 /**
@@ -38,6 +40,7 @@ export function SettingsDrawer({
   date,
   publishAt,
   onPublishAtChange,
+  previewPost,
   historySlot,
   dangerSlot,
 }: {
@@ -58,6 +61,8 @@ export function SettingsDrawer({
   date: string;
   publishAt: string;
   onPublishAtChange: (value: string) => void;
+  /** Live editor state, for the SERP and social-card previews. */
+  previewPost: PreviewPost;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
 }) {
@@ -135,6 +140,19 @@ export function SettingsDrawer({
             </p>
           ) : null}
         </div>
+
+        {/*
+          The two previews, directly under the field they are about, because the
+          description is the one input in this editor whose effect is completely
+          invisible from inside it. Both render from `postSocial`, the same
+          function `blog.$slug.tsx`'s meta() calls, so they cannot drift from
+          what the site actually emits.
+        */}
+        <section className="drawer-section">
+          <h3>How this appears</h3>
+          <SerpPreview post={previewPost} />
+          <OgPreview post={previewPost} />
+        </section>
 
         <TagField
           formId={formId}
