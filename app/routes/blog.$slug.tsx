@@ -8,12 +8,12 @@ import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
 import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
-  DEFAULT_OG_IMAGE,
   PUBLIC_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
   articleJsonLd,
   breadcrumbJsonLd,
+  postSocial,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
@@ -120,21 +120,17 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const canonical = `${SITE_ORIGIN}/blog/${post.slug}`;
-  const description = post.description ?? SITE.description;
-  // Per-post social overrides. Absent means the page title and description are
-  // reused, which is the right default and keeps most posts free of extra
-  // frontmatter.
-  const socialTitle = post.ogTitle ?? post.title;
-  const socialDescription = post.ogDescription ?? description;
-  // A per-post cover always wins, then the card build:og generated for this
-  // post. The site mark is the last resort, so a post whose card has not been
-  // built yet shares as the brand rather than as no image at all.
-  const socialImage = post.coverImage ?? post.ogImage ?? null;
-  const image = socialImage ? `${SITE_ORIGIN}${socialImage}` : DEFAULT_OG_IMAGE;
+  // Built by `postSocial` and not here. The per-post social overrides, the
+  // description fallback and the cover/card/mark precedence all moved into that
+  // one function on 2026-08-02, when the editor gained SERP and social-card
+  // previews: a preview whose job is to show what this route emits must not
+  // compute it a second way, because the day the two disagree the preview lies
+  // and nothing renders both at once to catch it.
+  const { canonical, pageTitle, description, socialTitle, socialDescription, image } =
+    postSocial(post);
 
   return [
-    { title: `${post.title} | ${SITE.name}` },
+    { title: pageTitle },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: socialTitle },
