@@ -73,10 +73,22 @@ function assert(label, ok, detail = "") {
  * ---------------------------------------------------------------------- */
 
 const POSTS = [
-  { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
-  { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
-  { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z" },
+  { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare"], scheduledInDays: null },
+  // `scheduledInDays` arrives PRE-COMPUTED, which is the contract the loader
+  // owes: the component may not read the clock, so a fixture that made it
+  // derive one from the date would be testing a rule the code must not follow.
+  { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare", "d1"], scheduledInDays: 12 },
+  { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z", tags: [], scheduledInDays: null },
 ];
+
+/** The unfiltered view: every filter empty, nothing narrowed. */
+const NO_FILTERS = {
+  filters: { q: "", status: "", tag: "" },
+  filtered: false,
+  total: POSTS.length,
+  scheduledTotal: 1,
+  tagOptions: ["cloudflare", "d1", "workers"],
+};
 
 const ASK_CLEAN = { present: 93, expected: 93, missing: [], stale: [] };
 const ASK_DRIFTED = { present: 90, expected: 93, missing: ["a", "b", "c"], stale: ["x"] };
@@ -107,6 +119,14 @@ const editLoader = (over = {}) => ({
   slug: "a-post",
   saved: null,
   tagOptions: ["cloudflare", "d1", "workers"],
+  // The Cmd+K palette's corpus. It renders nothing until the palette opens, so
+  // it changes no submission here; it is present because the component reads it
+  // and a loader shape the gate does not supply is a loader shape it is not
+  // actually testing.
+  linkTargets: [
+    { slug: "live-one", title: "A live post", state: "published" },
+    { slug: "wip", title: "A draft post", state: "draft" },
+  ],
   everPublished: false,
   state: "draft",
   ...over,
@@ -120,28 +140,69 @@ const STATES = [
     entry: "app/routes/admin.posts._index.tsx",
     path: "/admin/posts",
     url: "/admin/posts",
-    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET },
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
   },
   {
     name: "posts index, Ask drifted",
     entry: "app/routes/admin.posts._index.tsx",
     path: "/admin/posts",
     url: "/admin/posts",
-    loaderData: { posts: POSTS, ask: ASK_DRIFTED, budget: BUDGET },
+    loaderData: { posts: POSTS, ask: ASK_DRIFTED, budget: BUDGET, ...NO_FILTERS },
   },
   {
     name: "posts index, Ask disabled",
     entry: "app/routes/admin.posts._index.tsx",
     path: "/admin/posts",
     url: "/admin/posts",
-    loaderData: { posts: POSTS, ask: null, budget: null },
+    loaderData: { posts: POSTS, ask: null, budget: null, ...NO_FILTERS },
   },
   {
     name: "posts index, empty corpus",
     entry: "app/routes/admin.posts._index.tsx",
     path: "/admin/posts",
     url: "/admin/posts",
-    loaderData: { posts: [], ask: null, budget: null },
+    loaderData: {
+      posts: [],
+      ask: null,
+      budget: null,
+      ...NO_FILTERS,
+      total: 0,
+      scheduledTotal: 0,
+      tagOptions: [],
+    },
+  },
+  // The two filtered views exist here because they change WHICH CONTROLS
+  // RENDER, which is this gate's admission test: a filtered list gains a Clear
+  // link, and a filtered list that matched nothing replaces the table with an
+  // empty state carrying a second way out. An empty RESULT is not an empty
+  // corpus and the two must not collapse into one scenario.
+  {
+    name: "posts index, filtered with matches",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts?q=live&status=published",
+    loaderData: {
+      posts: [POSTS[0]],
+      ask: ASK_CLEAN,
+      budget: BUDGET,
+      ...NO_FILTERS,
+      filters: { q: "live", status: "published", tag: "" },
+      filtered: true,
+    },
+  },
+  {
+    name: "posts index, filtered with no matches",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts?q=nothing-matches-this&tag=d1",
+    loaderData: {
+      posts: [],
+      ask: ASK_CLEAN,
+      budget: BUDGET,
+      ...NO_FILTERS,
+      filters: { q: "nothing-matches-this", status: "", tag: "d1" },
+      filtered: true,
+    },
   },
 
   // ---- new post -----------------------------------------------------------

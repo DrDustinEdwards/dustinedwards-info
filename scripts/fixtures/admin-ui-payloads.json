@@ -1,23 +1,39 @@
 {
   "posts index, clean": [
+    "GET  | (none) | q,status,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask drifted": [
+    "GET  | (none) | q,status,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask disabled": [
+    "GET  | (none) | q,status,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, empty corpus": [
+    "GET  | (none) | q,status,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
+  ],
+  "posts index, filtered with matches": [
+    "GET  | (none) | q,status,tag",
+    "POST /admin/posts?q=live&amp;status=published | intent=regenerate | ",
+    "POST /admin/posts?q=live&amp;status=published | intent=reset-ask-budget | ",
+    "POST /admin/posts?q=live&amp;status=published | intent=sync-ask | "
+  ],
+  "posts index, filtered with no matches": [
+    "GET  | (none) | q,status,tag",
+    "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=regenerate | ",
+    "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=reset-ask-budget | ",
+    "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=sync-ask | "
   ],
   "new post, fresh": [
     "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,firstPublished=,headSha=abc1234def5678,isNew=1,publishAt,slug,tags,title",

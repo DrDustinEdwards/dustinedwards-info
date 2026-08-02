@@ -260,6 +260,28 @@ export async function listAllPostsForAdmin(env: Env) {
     .orderBy(desc(posts.publishAt));
 }
 
+/**
+ * Every post's tags, DRAFTS INCLUDED, for the admin list's tag filter.
+ *
+ * Deliberately not `listBlogTags`, which filters through `isBlogPost()` and so
+ * cannot see a draft's tags. Filtering the admin list by a tag that only drafts
+ * carry has to return those drafts, or the filter would quietly disagree with
+ * the list it is filtering.
+ *
+ * Returns one row per (post, tag) pair rather than a grouped string: SQLite's
+ * `group_concat` would need raw sql and a delimiter that no tag may contain,
+ * and at this corpus size grouping in the loader is clearer and costs nothing.
+ */
+export async function listAllPostTagsForAdmin(env: Env) {
+  return getDb(env)
+    .select({ slug: posts.slug, tag: tags.slug })
+    .from(postTags)
+    .innerJoin(posts, eq(posts.id, postTags.postId))
+    .innerJoin(tags, eq(tags.id, postTags.tagId))
+    .where(eq(posts.kind, "post"))
+    .orderBy(asc(tags.slug));
+}
+
 /** Every visible post with its markdown body, newest first, for llms-full.txt. */
 export async function listBlogPostsFullText(env: Env) {
   const db = getDb(env);
