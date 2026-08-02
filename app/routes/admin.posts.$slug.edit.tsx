@@ -3,6 +3,7 @@ import { Form, Link, data, redirect } from "react-router";
 import { PostEditor } from "~/components/admin/post-editor";
 import { listBlogTags } from "~/db";
 import { getEnv } from "~/lib/context";
+import { loadLinkTargets } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
@@ -43,6 +44,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // so tagging tends toward the existing vocabulary instead of inventing a
     // near-duplicate of a tag that already exists.
     tagOptions: (await listBlogTags(env).catch(() => [])).map((tag) => tag.slug),
+    // The site's own posts, for the body editor's Cmd+K link search.
+    linkTargets: await loadLinkTargets(env),
   };
 }
 
@@ -115,6 +118,7 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         state={state}
         everPublished={loaderData.everPublished}
         tagOptions={loaderData.tagOptions}
+        linkTargets={loaderData.linkTargets}
         historySlot={
           <>
             <p className="muted">
