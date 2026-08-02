@@ -94,10 +94,12 @@ by the D1 platform itself rather than by any migration.
 `drizzle-kit` is deliberately not a dependency. Migrations are hand-written. Add a
 new numbered file; never edit an applied one.
 
-**One caveat, and it is a real loss.** `0001_init.sql` seeds a
-`settings` row for `llms.txt`, but it seeds the **retired virology copy**: 247
-bytes describing a Professor of Virology. The live row is 2371 bytes of current
-copy, and **nothing in this repo reproduces it**. See "What is not recoverable".
+**One historical caveat, now fixed.** `0001_init.sql` seeds a `settings` row for
+`llms.txt` carrying the **retired virology copy**, 247 bytes. That was the only
+thing that ever wrote the row, so a rebuild used to produce a stale, wrong
+`llms.txt`. Since 2026-08-02 the source of truth is the tracked file
+`content/llms.txt` and `sync:content` writes the row from it, so the migration's
+seed is overwritten by step 9 below. `check:llms` fails if the two ever disagree.
 
 ---
 
@@ -293,8 +295,15 @@ npm run deploy        # build, then wrangler deploy
 ```sh
 npm run build:content                  # regenerate the artifact from content/posts
 npm run check:content                  # gate: artifact must match a fresh generation
-npm run sync:content -- --remote       # write posts into D1, rebuild both FTS indexes
+npm run sync:content -- --remote       # posts, the llms.txt row, both FTS indexes
+npm run check:llms -- --remote         # gate: the row must match content/llms.txt
 ```
+
+`sync:content` writes three things: the posts and their tags, the `llms.txt`
+settings row from `content/llms.txt`, and the search index. The `llms.txt` row is
+**derived**, exactly like the post rows: the tracked file is the source of truth
+and the row is overwritten from it on every sync, including over the stale seed
+`0001_init.sql` leaves behind.
 
 Then, optionally, the derived assets:
 
@@ -348,15 +357,13 @@ records.
 time, so it is recovered as long as git history is intact. `first_published` lives
 in frontmatter and is recovered with the file.
 
-### Permanently lost
+**The `llms.txt` settings row.** Source of truth is `content/llms.txt`, tracked
+and pinned to LF. `sync:content` writes the row from it and `check:llms` fails if
+they disagree. Until 2026-08-02 this was a permanent loss, because the only
+writer was a migration seeding copy retired in July; that is what prompted this
+document's own gap analysis to be turned into a fix.
 
-**The `settings` row for `llms.txt`.** Measured 2026-08-02: the live row is 2371
-bytes of current copy; the only thing in this repo that writes it is
-`0001_init.sql`, which seeds **247 bytes of retired virology copy**. No script
-re-seeds it. A rebuilt site would serve a stale, wrong `llms.txt` and nothing
-would flag it. **Back this row up before it is needed, or move the current text
-into the repo.** This is the one finding here that is worth fixing rather than
-documenting.
+### Permanently lost
 
 **R2 objects.** 15 objects, 848 kB, in two groups:
 - `og/` social cards. **Regenerable** with `npm run build:og -- --remote`.
@@ -392,7 +399,8 @@ back to one. The code is in git; the deployment ledger is not.
 
 ## Verification status
 
-Verified on 2026-08-02 against the live account or the installed toolchain:
+Verified on 2026-08-02 against the live account or the installed toolchain
+(`compatibility_date` was bumped to 2026-08-02 the same day):
 
 - Resource names and existence: D1 `dustinedwards`, KV `dustinedwards-app-kv`,
   R2 `dustinedwards-media`, AI Search `dustinedwards`. Read from
@@ -407,7 +415,9 @@ Verified on 2026-08-02 against the live account or the installed toolchain:
 - Migrations reproduce the schema: measured by applying all seven to an empty
   database and diffing 37 objects against the live schema.
 - The seven secret names: `wrangler secret list`.
-- The `llms.txt` divergence: both values read and compared by length and content.
+- The `llms.txt` divergence, since FIXED: the live row was captured byte-exact
+  into `content/llms.txt` and is now written by `sync:content` and gated by
+  `check:llms`.
 - Durable Object wiring: the config block, `workers/ask-budget.ts` and the
   re-export in `workers/app.ts`.
 - Row counts: queried directly.
