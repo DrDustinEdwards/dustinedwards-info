@@ -118,6 +118,31 @@ function buildSql(posts) {
     }
   }
 
+  // Media citations, replaced wholesale for source_type='post'.
+  //
+  // Wholesale rather than per post, because this writer already holds the WHOLE
+  // corpus: a per-post delete would leave refs behind for a post that has since
+  // been removed from the artifact, and that stale row would be enough to refuse
+  // the delete of an image nothing actually cites any more. The editor's save
+  // path is the incremental writer and scopes its delete to one slug, because
+  // one post is all it re-rendered.
+  out.push(`DELETE FROM media_refs WHERE source_type = 'post';`);
+  const seenRefs = new Set();
+  for (const post of posts) {
+    for (const ref of post.mediaRefs ?? []) {
+      // The primary key is (media_key, source_type, source_id, form, detail), so
+      // the same image cited twice on one line in one form is one row. Deduped
+      // here rather than left to fail the batch.
+      const id = `${ref.key} ${post.slug} ${ref.form} ${ref.detail ?? ""}`;
+      if (seenRefs.has(id)) continue;
+      seenRefs.add(id);
+      out.push(
+        `INSERT INTO media_refs (media_key, source_type, source_id, form, detail) VALUES (` +
+          `${sql(ref.key)}, 'post', ${sql(post.slug)}, ${sql(ref.form)}, ${sql(ref.detail)});`,
+      );
+    }
+  }
+
   // Full rebuild rather than trusting per-row triggers across a bulk write.
   out.push(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild');`);
 

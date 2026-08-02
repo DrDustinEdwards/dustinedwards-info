@@ -36,6 +36,7 @@
 
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -289,6 +290,33 @@ async function main() {
     `build:diagrams ${diagrams.length} diagrams, ${written} rendered, ` +
       `${skipped} already current, ${pruned} pruned`,
   );
+
+  // `public/diagrams/` is in the MEDIA INDEX now, so rendering or pruning an
+  // asset here changes what `check:media` expects. Two things follow, and
+  // neither should have to be remembered.
+  //
+  // The manifest is regenerated automatically, because it is derived from the
+  // filesystem and there is no world in which a stale one is wanted. The index
+  // itself cannot be: the rebuild needs the ASSETS binding and therefore runs in
+  // the Worker, so this can only say so. Saying so loudly is the point: someone
+  // was always going to hit this cold, halfway through a content change, with a
+  // red gate and no obvious cause.
+  if (written > 0 || pruned > 0) {
+    const manifest = spawnSync("node scripts/build-assets.mjs", {
+      encoding: "utf8",
+      shell: true,
+    });
+    process.stdout.write(manifest.stdout ?? "");
+    if (manifest.status !== 0) {
+      process.stderr.write(manifest.stderr ?? "");
+      throw new Error("build:assets failed after diagrams changed");
+    }
+    console.log(
+      `\n  NOTE: ${written + pruned} diagram asset(s) changed, so the media index is now\n` +
+        `        stale and check:media will fail until it is rebuilt. Press\n` +
+        `        "Rebuild media index" on /admin/media, then re-run check:media.\n`,
+    );
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

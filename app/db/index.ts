@@ -17,7 +17,16 @@ import { drizzle } from "drizzle-orm/d1";
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
-import { media, postTags, posts, settings, tags, type Media } from "./schema";
+import {
+  media,
+  mediaRefs,
+  postTags,
+  posts,
+  settings,
+  tags,
+  type Media,
+  type MediaRef,
+} from "./schema";
 
 export function getDb(env: Env) {
   return drizzle(env.DB, { schema: { ...schema, ...authSchema } });
@@ -302,6 +311,66 @@ export async function listMediaRecords(env: Env) {
 }
 
 /**
+ * One page of the library, newest first.
+ *
+ * **This is the query the whole index was ruled in to make possible.** Listing
+ * from R2 could only ever paginate in KEY order, and once keys became content
+ * addressed that order carried no meaning at all. Sort by date, filter to a
+ * kind, count by storage: each is a query, and none of them can be built on a
+ * key-ordered iterator without listing the entire bucket per request.
+ *
+ * `uploaded_at DESC, key ASC`. SQLite sorts NULL below every other value, so a
+ * DESC ordering puts the static rows last, which is right: a build-time asset
+ * has no upload event and NULL is the honest value for one. `key` breaks the tie
+ * so the order within that block is stable rather than whatever the planner
+ * returns, because an unstable sort makes offset pagination skip and repeat
+ * rows.
+ *
+ * OFFSET pagination rather than a cursor. The row count here is dozens; offset's
+ * cost is a scan the planner does anyway, and it buys a page NUMBER, which is
+ * what a library UI wants and what an opaque R2 cursor could never provide.
+ */
+export async function listMediaPage(
+  env: Env,
+  options: { page?: number; limit?: number; insertableOnly?: boolean } = {},
+) {
+  const limit = options.limit ?? 24;
+  const page = Math.max(1, options.page ?? 1);
+  const offset = (page - 1) * limit;
+
+  // THE PICKER FILTER. An OG card is 1200x630 of branded chrome generated for a
+  // social feed; inserting one into a post body would be nonsense, so
+  // `r2-derived` is excluded rather than merely discouraged. Documents are
+  // excluded because this picker inserts images.
+  const insertable = and(eq(media.kind, "image"), inArray(media.storage, ["r2", "static"]));
+  const where = options.insertableOnly ? insertable : undefined;
+
+  const db = getDb(env);
+  const rows = await db
+    .select()
+    .from(media)
+    .where(where)
+    .orderBy(desc(media.uploadedAt), asc(media.key))
+    .limit(limit + 1)
+    .offset(offset);
+
+  // One extra row is fetched rather than running a second COUNT query: the only
+  // question the UI asks is "is there another page", and a row that exists
+  // answers it for the cost of one row.
+  const hasMore = rows.length > limit;
+  return { rows: rows.slice(0, limit), page, hasMore };
+}
+
+/** How many rows the index holds, by storage tier. For the rebuild's report. */
+export async function mediaCounts(env: Env) {
+  const rows = await getDb(env)
+    .select({ storage: media.storage, kind: media.kind, n: count() })
+    .from(media)
+    .groupBy(media.storage, media.kind);
+  return rows;
+}
+
+/**
  * Writes the DERIVED half of a row and leaves the AUTHORED half alone.
  *
  * This is the whole reason a rebuild is not `DELETE` then `INSERT`. Hash, mime,
@@ -431,6 +500,73 @@ export async function deleteMediaRecord(env: Env, key: string) {
 export async function existingMediaKeys(env: Env) {
   const rows = await getDb(env).select({ key: media.key }).from(media);
   return new Set(rows.map((row) => row.key));
+}
+
+/* ---- media_refs: who cites what --------------------------------------------
+ *
+ * Written by the PIPELINE at render time, never by a scan. That is what closes
+ * the fail-open: a content type whose resolver was never registered used to
+ * return no citations, `resolveCitations` reported complete, and the library
+ * showed "Unused" beside a working Delete button. Absence is not failure.
+ * Anything that goes through the renderer is indexed by construction.
+ */
+
+/**
+ * Replaces every ref for one source, atomically in intent.
+ *
+ * DELETE-then-INSERT scoped to the source, rather than an upsert: an edit that
+ * REMOVES the last image from a post has to remove the ref too, and an upsert
+ * has no way to express a row that should no longer exist. Scoped to the source
+ * so re-rendering one post cannot disturb another post's refs.
+ */
+export async function replaceMediaRefsForSource(
+  env: Env,
+  sourceType: string,
+  sourceId: string,
+  refs: Array<{ mediaKey: string; form: string; detail: string | null }>,
+) {
+  const db = getDb(env);
+  await db
+    .delete(mediaRefs)
+    .where(and(eq(mediaRefs.sourceType, sourceType), eq(mediaRefs.sourceId, sourceId)));
+  if (refs.length === 0) return;
+
+  // Deduplicated before insert. The primary key is
+  // (media_key, source_type, source_id, form, detail), so a post citing the same
+  // image twice on the SAME line in the same form is one row, and inserting it
+  // twice would fail the batch rather than being merged.
+  const seen = new Set<string>();
+  const values = [];
+  for (const ref of refs) {
+    const id = `${ref.mediaKey} ${ref.form} ${ref.detail ?? ""}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    values.push({
+      mediaKey: ref.mediaKey,
+      sourceType,
+      sourceId,
+      form: ref.form,
+      detail: ref.detail,
+    });
+  }
+  await db.insert(mediaRefs).values(values);
+}
+
+/** Every ref for a set of keys, for the refcount and for a refusal message. */
+export async function mediaRefsFor(env: Env, keys: string[]) {
+  if (keys.length === 0) return new Map<string, MediaRef[]>();
+  const rows = await getDb(env)
+    .select()
+    .from(mediaRefs)
+    .where(inArray(mediaRefs.mediaKey, keys));
+  const out = new Map<string, MediaRef[]>(keys.map((key) => [key, []]));
+  for (const row of rows) out.get(row.mediaKey)?.push(row);
+  return out;
+}
+
+/** Wipes every ref for a source type. Used before a full re-sync. */
+export async function clearMediaRefs(env: Env, sourceType: string) {
+  await getDb(env).delete(mediaRefs).where(eq(mediaRefs.sourceType, sourceType));
 }
 
 /** Every visible post with its markdown body, newest first, for llms-full.txt. */

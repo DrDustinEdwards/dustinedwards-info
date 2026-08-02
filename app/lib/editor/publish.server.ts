@@ -400,9 +400,50 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
     ),
     db.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`),
     ...searchStatements(db, record),
+    ...mediaRefStatements(db, record),
   ];
 
   await db.batch(statements);
+}
+
+/**
+ * The media citations this post emitted, replacing whatever it had before.
+ *
+ * SCOPED TO THIS SLUG, which is the difference from `sync:content`. That writer
+ * holds the whole corpus and so replaces every `source_type='post'` row at once;
+ * this one re-rendered exactly one post and must not touch another post's refs.
+ * Both derive the refs from `renderPost`, so neither can invent a form the other
+ * would not, which is the same both-writers rule `records.mjs` and `withRelated`
+ * live under.
+ *
+ * In the same batch as the post write, so a save either records its citations or
+ * does not happen. A post whose body no longer references an image, with the ref
+ * left behind, would refuse a delete forever for a citation that is gone.
+ */
+function mediaRefStatements(db: D1Database, record: any) {
+  const statements = [
+    db.prepare(`DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`).bind(
+      record.slug,
+    ),
+  ];
+  const seen = new Set<string>();
+  for (const ref of record.mediaRefs ?? []) {
+    // The primary key includes form and detail, so the same image cited twice on
+    // one line in one form is one row. Deduped rather than left to fail a batch
+    // that also carries the post itself.
+    const id = `${ref.key} ${ref.form} ${ref.detail ?? ""}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO media_refs (media_key, source_type, source_id, form, detail)
+           VALUES (?1, 'post', ?2, ?3, ?4)`,
+        )
+        .bind(ref.key, record.slug, ref.form, ref.detail ?? null),
+    );
+  }
+  return statements;
 }
 
 /**
