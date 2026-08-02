@@ -81,6 +81,25 @@ const POSTS = [
   { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z", tags: [], scheduledInDays: null },
 ];
 
+/** One object in the media library, overridable per scenario. */
+const MEDIA_OBJECT = (over = {}) => ({
+  key: "posts/2026/a-picture-1234abcd.png",
+  url: "/media/posts/2026/a-picture-1234abcd.png",
+  // The THUMBNAIL url, carrying the transform width. The gate renders it, so a
+  // regression that started serving originals into the grid would show here as
+  // a changed src.
+  thumb: "/media/posts/2026/a-picture-1234abcd.png?w=320",
+  size: 51234,
+  uploaded: "2026-08-01T10:00:00.000Z",
+  alt: "",
+  caption: "",
+  width: 1200,
+  height: 630,
+  hasRecord: true,
+  citations: [],
+  ...over,
+});
+
 /** The unfiltered view: every filter empty, nothing narrowed. */
 const NO_FILTERS = {
   filters: { q: "", status: "", tag: "" },
@@ -211,6 +230,81 @@ const STATES = [
       ...NO_FILTERS,
       filters: { q: "nothing-matches-this", status: "", tag: "d1" },
       filtered: true,
+    },
+  },
+
+  // ---- media library ------------------------------------------------------
+  //
+  // Three states, because they render different controls: an object nothing
+  // cites offers a delete, an object a post cites still offers it (the refusal
+  // is the ACTION's job, server side, never the UI's), and a failed scan
+  // replaces every usage label and is the state ruling 4 turns on.
+  {
+    name: "media, unused object",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: {
+      picker: false,
+      objects: [MEDIA_OBJECT()],
+      cursor: null,
+      truncated: false,
+      scanComplete: true,
+      scanFailed: [],
+      unannotated: 0,
+    },
+  },
+  {
+    name: "media, cited object",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: {
+      picker: false,
+      objects: [
+        MEDIA_OBJECT({
+          citations: [
+            { type: "post", id: "a-post", title: "A post", form: "markdown-image", detail: "line 12" },
+          ],
+        }),
+      ],
+      cursor: null,
+      truncated: false,
+      scanComplete: true,
+      scanFailed: [],
+      unannotated: 0,
+    },
+  },
+  {
+    name: "media, reference scan failed",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: {
+      picker: false,
+      objects: [MEDIA_OBJECT()],
+      cursor: null,
+      truncated: false,
+      // Ruling 4's state: usage is unknown, so nothing is labelled unused and
+      // the action refuses every delete.
+      scanComplete: false,
+      scanFailed: ["posts"],
+      unannotated: 2,
+    },
+  },
+  {
+    name: "media, empty bucket",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: {
+      picker: false,
+      objects: [],
+      cursor: null,
+      truncated: false,
+      scanComplete: true,
+      scanFailed: [],
+      unannotated: 0,
     },
   },
 

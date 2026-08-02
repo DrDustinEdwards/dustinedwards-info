@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 
+import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
 const DESCRIPTION_LIMIT = 160;
@@ -361,13 +362,7 @@ function CoverField({
   onAltChange: (value: string) => void;
   needsAlt: boolean;
 }) {
-  const media = useFetcher<{ objects: Array<{ key: string; url: string }>; truncated: boolean }>();
   const [picking, setPicking] = useState(false);
-
-  // Loaded on demand, so the editor's first paint never waits on R2.
-  useEffect(() => {
-    if (picking && media.state === "idle" && !media.data) media.load("/admin/media");
-  }, [picking, media]);
 
   return (
     <div className="field">
@@ -394,42 +389,25 @@ function CoverField({
         {src ? "Choose a different image" : "Choose an image"}
       </button>
 
+      {/*
+        THE PICKER COMPONENT, not picker logic. Shape 3: the drawer renders it
+        and takes a chosen object back, so the listing, the thumbnails and the
+        empty state are the media module's and cannot drift from the library's.
+
+        Picking also pre-fills ALT from the record, per ruling 2, and only when
+        the field is empty: alt is contextual as well as intrinsic, so a
+        description already written for this cover outranks the stored one.
+      */}
       {picking ? (
         <div className="cover-picker">
-          {media.state === "loading" ? <p className="muted">Loading images.</p> : null}
-          {media.data ? (
-            media.data.objects.length === 0 ? (
-              <p className="muted">Nothing in the bucket yet.</p>
-            ) : (
-              <>
-                <ul className="cover-grid">
-                  {media.data.objects.map((object) => (
-                    <li key={object.key}>
-                      <button
-                        type="button"
-                        className="cover-option"
-                        aria-pressed={src === object.url}
-                        onClick={() => {
-                          onSrcChange(object.url);
-                          setPicking(false);
-                        }}
-                      >
-                        <img src={object.url} alt="" loading="lazy" />
-                        <span className="sr-only">{object.key}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {/* Never a silent cap. A picker that quietly shows page one of
-                    a longer list is the Ask-prune bug in another costume. */}
-                {media.data.truncated ? (
-                  <p className="muted">
-                    Showing the first 200 objects. Older images are not listed.
-                  </p>
-                ) : null}
-              </>
-            )
-          ) : null}
+          <MediaPicker
+            onCancel={() => setPicking(false)}
+            onPick={(picked) => {
+              onSrcChange(picked.url);
+              if (picked.alt && !alt.trim()) onAltChange(picked.alt);
+              setPicking(false);
+            }}
+          />
         </div>
       ) : null}
 

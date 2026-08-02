@@ -1,5 +1,5 @@
 import { getEnv } from "~/lib/context";
-import type { Route } from "./+types/admin.media";
+import type { Route } from "./+types/admin.media.upload";
 
 /**
  * Image upload for the editor. Sits under /admin so the existing Better Auth
@@ -34,41 +34,12 @@ function slugifyName(name: string) {
 }
 
 /**
- * What is already in the bucket, for the cover picker in the editor's settings
- * drawer.
- *
- * A READ, deliberately added alongside the upload rather than as a route of its
- * own: the two are the same resource and the same authorization, and splitting
- * them would mean a second path to keep gated. The redesign ruling allows this
- * (a read-only route is not a new write path) and the upload action below is
- * untouched.
- *
- * The `posts/` prefix is the only place the uploader writes, so listing it
- * cannot surface anything the editor did not put there. `truncated` is returned
- * rather than swallowed, because a picker that silently shows the first page of
- * a longer list is the same class of bug as the Ask prune that reported
- * "removed 0" while reading only page one.
+ * The listing loader that used to live here MOVED to the media page at
+ * /admin/media, so there is one lister and one media surface. This route is now
+ * the upload endpoint only, which is why it kept the action and lost the
+ * loader. Its URL changed from /admin/media to /admin/media/upload; the editor
+ * and the picker both post to the new one.
  */
-export async function loader({ context }: Route.LoaderArgs) {
-  const env = getEnv(context);
-  const listed = await env.MEDIA.list({ prefix: "posts/", limit: 200 });
-  return {
-    objects: listed.objects
-      .map((object) => ({
-        key: object.key,
-        url: `/media/${object.key}`,
-        size: object.size,
-        uploaded:
-          object.uploaded instanceof Date
-            ? object.uploaded.toISOString()
-            : String(object.uploaded ?? ""),
-      }))
-      // Newest first: the image you want is nearly always the one you just
-      // uploaded.
-      .sort((a, b) => b.uploaded.localeCompare(a.uploaded)),
-    truncated: listed.truncated,
-  };
-}
 
 export async function action({ request, context }: Route.ActionArgs) {
   if (request.method !== "POST") {

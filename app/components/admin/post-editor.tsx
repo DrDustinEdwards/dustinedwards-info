@@ -1104,7 +1104,7 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
 
     const form = new FormData();
     form.set("file", file);
-    const response = await fetch("/admin/media", { method: "POST", body: form });
+    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
     if (!response.ok) {
       setMessage(`Upload failed (${response.status}).`);
       return;
