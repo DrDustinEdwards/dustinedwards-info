@@ -2,7 +2,13 @@ import { Form, Link, useSearchParams } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
 import { Panel } from "~/components/admin/panel";
-import { deleteMediaRecord, mediaCounts, mediaRefsFor, upsertMediaRecord } from "~/db";
+import {
+  deleteMediaRecord,
+  mediaCounts,
+  mediaRefsFor,
+  mediaRoleCounts,
+  upsertMediaRecord,
+} from "~/db";
 import { getEnv } from "~/lib/context";
 import { storageOf } from "~/lib/media/classify.mjs";
 import {
@@ -91,6 +97,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     scanFailed: resolution.failed,
     /** What the index holds, so a rebuild's effect is visible on the page. */
     counts: await mediaCounts(env),
+    /**
+     * The role split, shown BESIDE the row count rather than instead of it.
+     * The two answer different questions: rows say the rebuild ran, roles say
+     * the deriver worked. See the rebuild action for why conflating them cost a
+     * session.
+     */
+    roleCounts: await mediaRoleCounts(env),
   };
 }
 
@@ -123,6 +136,21 @@ export async function action({ request, context }: Route.ActionArgs) {
     // from one that failed, so the count is now read back OUT OF D1 afterwards
     // rather than trusted from the report, and the listing this redirects to
     // reads D1 too, so the page itself changes.
+    // **The row count and the role split answer DIFFERENT questions, and reading
+    // one as a proxy for the other sends the next session to debug a correct
+    // file.** This cost real time on 2026-08-02, so it is written down here next
+    // to the numbers rather than left to be rediscovered:
+    //
+    //   ROW COUNT   answers "did the rebuild run at all". Backfilling rows from
+    //               the buckets is one code path.
+    //   ROLE SPLIT  answers "does roleOf() work". Deriving role is a DIFFERENT
+    //               code path, and it runs per row after the row exists.
+    //
+    // They are independent. A rebuild that ran with a completely broken
+    // `roleOf()` still produces the full row count, every row simply carrying
+    // the column default. So a stale-looking role split does NOT imply the
+    // deriver is broken, and a correct role split does not prove the rebuild
+    // reached every source. Report both, and read each for what it answers.
     const report = await rebuildMediaIndex(env);
     const after = await mediaCounts(env);
     const total = after.reduce((sum, row) => sum + Number(row.n), 0);
@@ -130,10 +158,18 @@ export async function action({ request, context }: Route.ActionArgs) {
       .map((row) => `${row.n} ${row.storage}/${row.kind}`)
       .sort()
       .join(", ");
+    const roles = await mediaRoleCounts(env);
+    const roleBreakdown = roles
+      .map((row) => `${row.n} ${row.role}`)
+      .sort()
+      .join(", ");
 
     const parts = [
       `Rebuilt from ${report.scannedObjects} R2 object(s) and ${report.scannedFiles} static ` +
         `file(s). The index now holds ${total} row(s): ${breakdown}`,
+      // Reported ALONGSIDE the row count, never instead of it. See above: one
+      // says the rebuild ran, the other says the deriver worked.
+      `By role: ${roleBreakdown}`,
     ];
     if (report.removed > 0) {
       parts.push(`${report.removed} row(s) removed for sources that no longer exist`);
@@ -239,7 +275,7 @@ function formatBytes(size: number) {
 export default function AdminMedia({ loaderData, actionData }: Route.ComponentProps) {
   const [params] = useSearchParams();
   if (loaderData.picker) return null;
-  const { objects, page, hasMore, scanComplete, scanFailed, counts } = loaderData;
+  const { objects, page, hasMore, scanComplete, scanFailed, counts, roleCounts } = loaderData;
   const total = counts.reduce((sum, row) => sum + Number(row.n), 0);
 
   return (
@@ -266,6 +302,11 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
           {total} row(s) indexed:{" "}
           {counts
             .map((row) => `${row.n} ${row.storage}/${row.kind}`)
+            .sort()
+            .join(", ")}
+          {" · by role: "}
+          {roleCounts
+            .map((row) => `${row.n} ${row.role}`)
             .sort()
             .join(", ")}
         </p>

@@ -114,6 +114,20 @@ export function storageOf(pathOrKey) {
  *   generated  build output. Diagrams and OG cards, regenerable by command.
  *   icon       site chrome. Favicons, touch icons, the manifest.
  *
+ * **`brand` versus `icon` is the one boundary that needs a stated rule**, because
+ * both are square images of the mark and eyeballing them decides nothing.
+ * `og-image.png` is what forced it: it looks exactly like an icon and is not one.
+ *
+ *   icon   is DECLARED TO THE PLATFORM. Something outside the application asks
+ *          for it: a `<link rel>`, or an entry in the webmanifest. The browser
+ *          or the OS fetches it without any of this code being involved.
+ *   brand  is REFERENCED BY APPLICATION CODE. Some module names it. `og-image.png`
+ *          is `DEFAULT_OG_IMAGE` in `seo.ts`, and the four logo SVGs are the
+ *          fixtures `check:logo` reads.
+ *
+ * The test is therefore "who fetches it", not "what shape is it". A new asset
+ * classifies itself by answering that, with no judgment call left over.
+ *
  * **The default is `content`, and that direction is deliberate.** An
  * unrecognised asset showing up in the picker is a visible nuisance the author
  * corrects in a second; an unrecognised asset silently EXCLUDED from the picker
