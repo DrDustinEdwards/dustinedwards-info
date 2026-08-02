@@ -2281,10 +2281,10 @@ a:hover {
   height: var(--admin-control-h);
 }
 
+/* Aligns to the CONTROLS like its sibling submit, not to the labels above
+   them. It is a .btn-ghost now, so everything but the height comes from that. */
 .posts-filter-clear {
-  align-self: center;
-  padding-top: 1.125rem;
-  font-size: 0.875rem;
+  height: var(--admin-control-h);
 }
 
 /* THE SCHEDULED QUEUE NOTE. Neutral by rule 4: the one semantic tint in this
@@ -3729,6 +3729,121 @@ a:hover {
 .drawer-section h3 {
   margin: 0;
   font-size: 0.9375rem;
+}
+
+/* SERP AND SOCIAL CARD PREVIEWS -------------------------------------------
+ *
+ * Both live in the drawer, which is the POPOVER STEP, so every border here is
+ * --border-strong: --border clears 3:1 on --surface but drops to 2.66:1 on
+ * --surface-popover, which is the elevated-surface law this repo already
+ * records twice.
+ *
+ * Neither imitates a specific search engine's or network's chrome. They show
+ * the STRINGS the site emits, cut where they will be cut, because the rendering
+ * of those strings changes without notice and a pixel-faithful mock would be
+ * quietly wrong within a month. */
+.serp-preview,
+.og-preview {
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.serp-url {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* The one place on this site where brand-on-bg is used as a RESULT TITLE rather
+   than as identity. It is the ratified brand/bg pair, already asserted. */
+.serp-title {
+  margin: 0.125rem 0;
+  color: var(--brand);
+  font-size: 1.0625rem;
+  line-height: 1.3;
+}
+
+.serp-description {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* Not an alarm and not tinted: truncation is the normal case for a long
+   description, and the drawer's one semantic tint is spent on the field alarm
+   above. */
+.serp-note {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.og-preview {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 1200x630 is the card's real aspect, so the box cannot imply a crop the
+   scrapers will not perform. */
+.og-preview-image {
+  aspect-ratio: 1200 / 630;
+  background: var(--surface);
+}
+
+.og-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.og-preview-body {
+  padding: 0.625rem 0.75rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.og-preview-host {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.og-preview-title {
+  margin: 0.125rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.og-preview-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.og-preview-note {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* The revision list inside the drawer. It reuses .history-list, .history-entry
+   and .history-diff wholesale; only the popover-step border differs, because
+   the standalone page sits on the canvas and this does not. */
+.drawer .history-entry {
+  border-color: var(--border-strong);
+}
+
+.drawer .history-diff {
+  border-color: var(--border-strong);
+  max-height: 20rem;
 }
 
 .drawer .field input,
