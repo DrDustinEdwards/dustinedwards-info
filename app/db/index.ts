@@ -17,7 +17,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
-import { postTags, posts, settings, tags } from "./schema";
+import { media, postTags, posts, settings, tags, type Media } from "./schema";
 
 export function getDb(env: Env) {
   return drizzle(env.DB, { schema: { ...schema, ...authSchema } });
@@ -280,6 +280,76 @@ export async function listAllPostTagsForAdmin(env: Env) {
     .innerJoin(tags, eq(tags.id, postTags.tagId))
     .where(eq(posts.kind, "post"))
     .orderBy(asc(tags.slug));
+}
+
+/* ---- media annotations ---------------------------------------------------
+ *
+ * The table describes the IMAGE. It never stores citations, so nothing here can
+ * be consulted to decide whether an object is safe to delete; that answer comes
+ * from a live scan through the resolver seam every time.
+ */
+
+/** Annotations for a set of keys, as a map the library can index by key. */
+export async function mediaRecordsFor(env: Env, keys: string[]) {
+  if (keys.length === 0) return new Map<string, Media>();
+  const rows = await getDb(env).select().from(media).where(inArray(media.r2Key, keys));
+  return new Map(rows.map((row) => [row.r2Key, row]));
+}
+
+/**
+ * Creates or updates the annotation for one object.
+ *
+ * Upsert on the key, because the row may not exist: an object uploaded before
+ * this table shipped has none until a backfill or an edit creates one, and the
+ * editing path should not have to care which case it is in.
+ */
+export async function upsertMediaRecord(
+  env: Env,
+  record: {
+    r2Key: string;
+    alt?: string;
+    caption?: string;
+    uploaded?: string | null;
+    width?: number | null;
+    height?: number | null;
+  },
+) {
+  const now = new Date().toISOString();
+  await getDb(env)
+    .insert(media)
+    .values({
+      r2Key: record.r2Key,
+      alt: record.alt ?? "",
+      caption: record.caption ?? "",
+      uploaded: record.uploaded ?? null,
+      width: record.width ?? null,
+      height: record.height ?? null,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: media.r2Key,
+      set: {
+        // Only the fields the caller actually supplied. An alt edit must not
+        // blank the dimensions a backfill measured.
+        ...(record.alt !== undefined ? { alt: record.alt } : {}),
+        ...(record.caption !== undefined ? { caption: record.caption } : {}),
+        ...(record.uploaded !== undefined ? { uploaded: record.uploaded } : {}),
+        ...(record.width !== undefined ? { width: record.width } : {}),
+        ...(record.height !== undefined ? { height: record.height } : {}),
+        updatedAt: now,
+      },
+    });
+}
+
+/** Drops the annotation. Called only after the object itself is gone. */
+export async function deleteMediaRecord(env: Env, key: string) {
+  await getDb(env).delete(media).where(eq(media.r2Key, key));
+}
+
+/** Keys that already have a row, so a backfill can skip them. */
+export async function existingMediaKeys(env: Env) {
+  const rows = await getDb(env).select({ key: media.r2Key }).from(media);
+  return new Set(rows.map((row) => row.key));
 }
 
 /** Every visible post with its markdown body, newest first, for llms-full.txt. */
