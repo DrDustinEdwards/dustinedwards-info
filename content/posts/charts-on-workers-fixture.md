@@ -1,13 +1,10 @@
 ---
 title: "Charts on Workers: the rate limiter that would not count"
 slug: charts-on-workers-fixture
+description: "A pipeline fixture carrying the chart directive's first real charts, drawn from the rate limiter measurements taken while building the Ask guards."
 date: 2026-07-30
+tags: [cloudflare, charts, durable-objects]
 draft: true
-description: A pipeline fixture carrying the chart directive's first real charts, drawn from the rate limiter measurements taken while building the Ask guards.
-tags:
-  - cloudflare
-  - charts
-  - durable-objects
 ---
 
 This post is a fixture. It exists so the chart directive has real, recorded data
@@ -58,3 +55,5 @@ the whole reason the class is registered as `new_sqlite_classes`.
 The synchronous SQLite API is the only one of the three that landed on its
 ceiling exactly. That is why both Ask counters are Durable Objects, and why the
 choice is recorded as measured rather than preferred.
+
+![A purple card reading session C throwaway](/media/posts/2026/session-c-throwaway-fb60b5e5.png)
