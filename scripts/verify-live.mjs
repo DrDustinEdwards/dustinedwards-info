@@ -461,16 +461,58 @@ const ASK_PROBE_LIMIT = 3;
   // Never a redirect and never a prefix rule: /publications/* and
   // /phage-hunters/* ARE the 40 kept files, and a gone rule matching either
   // prefix would take them with it.
-  for (const path of [
-    "/research",
-    "/publications",
-    "/teaching",
-    "/phage-hunters",
-    "/phage-discovery",
-  ]) {
+  // `/phage-discovery` LEFT THIS LIST on 2026-08-02: the Worker serves the
+  // Roster page there now, so asserting a 404 would assert the page is broken.
+  // It is asserted as a 200 in section 11 instead.
+  //
+  // `/phage-hunters` STAYS, and the difference is deliberate rather than an
+  // oversight. There is no /phage-hunters ROUTE any more, while
+  // /phage-hunters/* is still nine static photos that section 8 asserts are
+  // reachable. The page prefix and the asset prefix differ on purpose.
+  for (const path of ["/research", "/publications", "/teaching", "/phage-hunters"]) {
     const { status } = await get(path);
     check(`retired: ${path} is a bare 404`, status === 404, `got ${status}`);
   }
+}
+
+/* --- 11. The Roster page at the legacy URL ------------------------------ */
+
+{
+  const { status, text } = await get("/phage-discovery");
+  check("roster: /phage-discovery returns 200", status === 200, `got ${status}`);
+
+  // Comments stripped before matching, per the harness rules: SSR splices
+  // <!-- --> between adjacent text nodes, which silently defeats a naive match.
+  const page = strip(text);
+
+  check("roster: the page says Roster", page.includes("Roster"));
+
+  // All nine cohort years. Asserted individually rather than as a count, so a
+  // failure names the year that is missing instead of reporting "8 of 9".
+  const years = Array.from({ length: 9 }, (_, i) => 2017 + i);
+  const missing = years.filter((y) => !page.includes(`id="year-${y}"`));
+  check(
+    `roster: all nine ids year-2017 through year-2025 are present`,
+    missing.length === 0,
+    missing.length > 0 ? `missing ${missing.map((y) => `year-${y}`).join(", ")}` : "",
+  );
+  // An assertion that can pass by reading nothing is not an assertion: if the
+  // fetch returned an error page, the loop above would report nine misses, but
+  // this states the positive count so "0 missing" cannot mean "0 examined".
+  check(
+    "roster: nine year ids were actually examined",
+    years.length === 9 && page.length > 500,
+    `page ${page.length} bytes`,
+  );
+
+  // The nav link, from the HOMEPAGE, which is what makes the page reachable
+  // rather than merely present.
+  const home = await get("/");
+  check(
+    "roster: the homepage links to /phage-discovery",
+    strip(home.text).includes('href="/phage-discovery"'),
+    `home ${home.status}`,
+  );
 }
 
 /* --- Report ------------------------------------------------------------ */
