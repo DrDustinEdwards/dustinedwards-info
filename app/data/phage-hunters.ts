@@ -6,6 +6,16 @@
  * dimensions are the real output of scripts/resize-phage-photos.mjs and differ
  * by year, so they are recorded per photo to keep layout shift at zero.
  *
+ * ALT TEXT IS DELIBERATELY NEUTRAL, 2026-08-02. It used to name the program
+ * ("Tarleton State University phage discovery research group"). Those nine
+ * strings were the only subject-matter language rendered anywhere on the public
+ * site, on a page whose whole point is that it carries names and nothing else,
+ * so they were the last thing left to remove. "For now": if descriptive copy
+ * returns to this page, the alt text is part of that decision.
+ *
+ * It is not emptied, because these photos are half the page's content rather
+ * than decoration, and `alt=""` on a content image is a WCAG failure.
+ *
  * TODO: "Matthew Bristerpostma" (2018) is likely "Brister-Postma", pending
  * confirmation.
  */
@@ -23,7 +33,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2025.webp",
       width: 1080,
       height: 720,
-      alt: "The 2025 Tarleton State University phage discovery research group.",
+      alt: "The 2025 research group.",
     },
     researchers: [
       "Alexandra Aguilar",
@@ -51,7 +61,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2024.webp",
       width: 1080,
       height: 720,
-      alt: "The 2024 Tarleton State University phage discovery research group.",
+      alt: "The 2024 research group.",
     },
     researchers: [
       "Gustave Allen",
@@ -77,7 +87,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2023.webp",
       width: 1080,
       height: 720,
-      alt: "The 2023 Tarleton State University phage discovery research group.",
+      alt: "The 2023 research group.",
     },
     researchers: [
       "Anna Buchholz",
@@ -105,7 +115,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2022.webp",
       width: 1080,
       height: 720,
-      alt: "The 2022 Tarleton State University phage discovery research group.",
+      alt: "The 2022 research group.",
     },
     researchers: [
       "Selina Alvarado",
@@ -133,7 +143,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2021.webp",
       width: 1080,
       height: 720,
-      alt: "The 2021 Tarleton State University phage discovery research group.",
+      alt: "The 2021 research group.",
     },
     researchers: [
       "Ivy Adame",
@@ -165,7 +175,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2020.webp",
       width: 1080,
       height: 720,
-      alt: "The 2020 Tarleton State University phage discovery research group.",
+      alt: "The 2020 research group.",
     },
     researchers: [
       "Selina Alvarado",
@@ -189,7 +199,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2019.webp",
       width: 1080,
       height: 720,
-      alt: "The 2019 Tarleton State University phage discovery research group.",
+      alt: "The 2019 research group.",
     },
     researchers: [
       "Skyler Adams",
@@ -220,7 +230,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2018.webp",
       width: 1080,
       height: 720,
-      alt: "The 2018 Tarleton State University phage discovery research group.",
+      alt: "The 2018 research group.",
     },
     researchers: [
       "Michaela Aguirre",
@@ -248,7 +258,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2017.webp",
       width: 1080,
       height: 810,
-      alt: "The 2017 Tarleton State University phage discovery research group.",
+      alt: "The 2017 research group.",
     },
     researchers: [
       "Megan Adams",
