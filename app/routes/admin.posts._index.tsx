@@ -3,7 +3,7 @@ import { Form, Link } from "react-router";
 import { AdminAlert } from "~/components/admin/alert";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
-import { listAllPostsForAdmin } from "~/db";
+import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
 import { loadArtifact, regenerateAllFromArtifact } from "~/lib/editor/publish.server";
 import {
@@ -43,14 +43,85 @@ function statusOf(
   return "published";
 }
 
-export async function loader({ context }: Route.LoaderArgs) {
+/** The three filter keys, named once so the form, the loader and the clear link agree. */
+const FILTER_KEYS = { q: "q", status: "status", tag: "tag" } as const;
+
+/**
+ * The filter state, read from the URL and normalized.
+ *
+ * URL-driven rather than component state, which is what makes it work with
+ * scripting off and makes a filtered list a LINK. `status` is validated against
+ * the three states the pill can show, so a hand-typed `?status=banana` degrades
+ * to "no status filter" rather than silently matching nothing and looking like
+ * an empty corpus.
+ */
+function readFilters(params: URLSearchParams) {
+  const status = (params.get(FILTER_KEYS.status) ?? "").trim();
+  return {
+    q: (params.get(FILTER_KEYS.q) ?? "").trim(),
+    status: status === "published" || status === "scheduled" || status === "draft" ? status : "",
+    tag: (params.get(FILTER_KEYS.tag) ?? "").trim(),
+  };
+}
+
+/**
+ * Days from now until a scheduled post goes live, rounded UP.
+ *
+ * Ceiling rather than round, because a post going live in 30 hours is "in 2
+ * days" and never "in 1 day": the author must not read a number that has
+ * already passed. Computed in the LOADER for the same reason `statusOf` is;
+ * see the note there.
+ */
+function daysUntil(publishAt: Date, now: number) {
+  return Math.max(1, Math.ceil((publishAt.getTime() - now) / 86_400_000));
+}
+
+export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const rows = await listAllPostsForAdmin(env);
+  const filters = readFilters(new URL(request.url).searchParams);
+
+  const [rows, tagRows] = await Promise.all([
+    listAllPostsForAdmin(env),
+    listAllPostTagsForAdmin(env),
+  ]);
+
+  const tagsBySlug = new Map<string, string[]>();
+  for (const row of tagRows) {
+    const list = tagsBySlug.get(row.slug);
+    if (list) list.push(row.tag);
+    else tagsBySlug.set(row.slug, [row.tag]);
+  }
+
   const now = Date.now();
-  const posts = rows.map((post) => ({
-    ...post,
-    state: statusOf(post.status, post.publishAt, now),
-  }));
+  const all = rows.map((post) => {
+    const state = statusOf(post.status, post.publishAt, now);
+    return {
+      ...post,
+      state,
+      tags: tagsBySlug.get(post.slug) ?? [],
+      // Only a scheduled post has one, and it is a NUMBER by the time the
+      // component sees it. Rendering "in N days" from a date in the component
+      // would read the clock during render, which is the trap `statusOf`
+      // already documents: the server and the hydration would disagree for any
+      // post near a day boundary.
+      scheduledInDays:
+        state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
+    };
+  });
+
+  // Searching title AND slug, because the slug is what the author types when
+  // they remember the URL and not the wording of the headline.
+  const needle = filters.q.toLowerCase();
+  const posts = all.filter((post) => {
+    if (filters.status && post.state !== filters.status) return false;
+    if (filters.tag && !post.tags.includes(filters.tag)) return false;
+    if (!needle) return true;
+    return (
+      post.title.toLowerCase().includes(needle) || post.slug.toLowerCase().includes(needle)
+    );
+  });
+
+  const filtered = Boolean(filters.q || filters.status || filters.tag);
 
   // Ask index drift, shown because the editor's Ask sync is allowed to fail
   // without failing the save. This is an ADMIN page, so it may await the AI
@@ -71,7 +142,23 @@ export async function loader({ context }: Route.LoaderArgs) {
     }
   }
 
-  return { posts, ask, budget };
+  return {
+    posts,
+    ask,
+    budget,
+    filters,
+    filtered,
+    /** The unfiltered total, so the list can say "12 of 31" honestly. */
+    total: all.length,
+    /**
+     * The scheduled queue's headline number, counted over the WHOLE corpus and
+     * not the filtered view. What is scheduled is a fact about the site, and it
+     * must not disappear because the author happened to be searching.
+     */
+    scheduledTotal: all.filter((post) => post.state === "scheduled").length,
+    /** Every tag in use, drafts included, for the filter's options. */
+    tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
+  };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -125,8 +212,16 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function AdminPosts({ loaderData, actionData }: Route.ComponentProps) {
-  const { posts, ask, budget } = loaderData;
+  const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
+    loaderData;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
+
+  /** What the author actually asked for, in words, for the empty state. */
+  const askedFor = [
+    filters.q ? `"${filters.q}"` : null,
+    filters.status ? `status ${filters.status}` : null,
+    filters.tag ? `tag ${filters.tag}` : null,
+  ].filter(Boolean);
 
   return (
     <Panel
@@ -190,6 +285,109 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
         </OverflowMenu>
       </div>
 
+      {/*
+        SEARCH AND FILTER, as a GET form.
+
+        A GET form is the whole design: the filter state lives in the URL, so it
+        survives a reload, is linkable, is what the back button restores, and
+        works with scripting off with no enhancement at all. That is also why
+        this is a plain <form> rather than react-router's <Form>: the browser's
+        own submission already produces exactly the navigation wanted.
+
+        It is a NEW SUBMISSION on this page and therefore a real change to
+        check:admin-ui's fixture. Regenerated deliberately, with the before and
+        after triples reported, per the queue's standing rule.
+      */}
+      <form method="get" className="posts-filters" role="search">
+        <div className="posts-filter-field">
+          <label htmlFor="posts-q">Search</label>
+          <input
+            id="posts-q"
+            type="search"
+            name={FILTER_KEYS.q}
+            defaultValue={filters.q}
+            placeholder="Title or slug"
+            className="posts-filter-input"
+          />
+        </div>
+
+        <div className="posts-filter-field">
+          <label htmlFor="posts-status">Status</label>
+          <select
+            id="posts-status"
+            name={FILTER_KEYS.status}
+            defaultValue={filters.status}
+            className="posts-filter-select"
+          >
+            <option value="">Any status</option>
+            <option value="published">Published</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+
+        <div className="posts-filter-field">
+          <label htmlFor="posts-tag">Tag</label>
+          <select
+            id="posts-tag"
+            name={FILTER_KEYS.tag}
+            defaultValue={filters.tag}
+            className="posts-filter-select"
+          >
+            <option value="">Any tag</option>
+            {tagOptions.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button type="submit" className="btn-ghost posts-filter-submit">
+          Filter
+        </button>
+        {/* A LINK, not a reset button: clearing means going to the unfiltered
+            URL, and a link says that and is bookmarkable. `reset` would restore
+            the form's defaults, which are the CURRENT filters, so it would
+            appear to do nothing. */}
+        {filtered ? (
+          <Link to="/admin/posts" className="posts-filter-clear">
+            Clear
+          </Link>
+        ) : null}
+      </form>
+
+      {/*
+        THE SCHEDULED QUEUE, stated whenever anything is scheduled.
+
+        It is counted over the whole corpus rather than the filtered view, and
+        it links to the filtered list rather than duplicating it: what is
+        scheduled is a fact about the site, and a second table would be a second
+        thing to keep true. Neutral, not tinted: this is information, and rule 4
+        spends the one tint per view on the drift alert.
+      */}
+      {scheduledTotal > 0 ? (
+        <p className="posts-scheduled-note">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          {scheduledTotal} post{scheduledTotal === 1 ? " is" : "s are"} scheduled and not yet
+          public.{" "}
+          <Link to={`/admin/posts?${FILTER_KEYS.status}=scheduled`}>Show the queue</Link>
+        </p>
+      ) : null}
+
       {/* This one IS a live announcement, and correctly so: it reports what the
           submit the operator just pressed did. Unlike the drift region below,
           it is news. */}
@@ -225,7 +423,24 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
       ) : null}
 
       {posts.length === 0 ? (
-        <p className="muted">No posts yet.</p>
+        /* Two different nothings, and they must not read the same. An empty
+           corpus is a state of the site; an empty RESULT is a state of the
+           question just asked, so it repeats the question and offers the way
+           back out. Reporting "no posts yet" to someone who mistyped a slug
+           would be the system lying about itself. */
+        filtered ? (
+          <div className="posts-empty">
+            <p>
+              No posts match {askedFor.join(", ")}. Searched {total} post
+              {total === 1 ? "" : "s"} by title and slug.
+            </p>
+            <Link to="/admin/posts" className="btn-ghost">
+              Clear filters
+            </Link>
+          </div>
+        ) : (
+          <p className="muted">No posts yet.</p>
+        )
       ) : (
         <div className="posts-card">
           <table className="posts-table">
@@ -259,6 +474,15 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
                     {post.publishAt
                       ? new Date(post.publishAt).toISOString().slice(0, 10)
                       : "not set"}
+                    {/* The queue, per post: a scheduled row says WHEN in
+                        readable terms as well as in ISO. The number arrived
+                        from the loader already computed, so nothing here reads
+                        the clock. */}
+                    {post.scheduledInDays !== null ? (
+                      <span className="posts-date-relative">
+                        in {post.scheduledInDays} day{post.scheduledInDays === 1 ? "" : "s"}
+                      </span>
+                    ) : null}
                   </td>
                   <td>
                     <div className="posts-actions">
@@ -305,8 +529,10 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
           {/* Reference, not a demand: the numbers that describe the AI layer's
               condition sit under the thing they describe, quiet, and only the
               drift alert above ever asks for anything. */}
-          {ask || budget ? (
+          {filtered || ask || budget ? (
             <p className="posts-meta">
+              {/* Only when filtered. Unfiltered, "31 of 31" is noise. */}
+              {filtered ? `Showing ${posts.length} of ${total} posts. ` : null}
               {ask ? `Ask index: ${ask.present} of ${ask.expected} records indexed.` : null}
               {ask && budget ? " " : null}
               {budget

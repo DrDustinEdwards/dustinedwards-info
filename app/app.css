@@ -2218,6 +2218,114 @@ a:hover {
   margin-left: auto;
 }
 
+/* SEARCH AND FILTER.
+ *
+ * A row that wraps rather than a grid, because the three fields have honestly
+ * different natural widths and a grid would either stretch the two selects to
+ * match the search box or squeeze the search box to match them. The search
+ * field is the only one that grows. */
+.posts-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.posts-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/* The search field is the one that takes the slack. `min-width` rather than a
+   percentage so it can still wrap onto its own line on a narrow admin. */
+.posts-filters .posts-filter-field:first-child {
+  flex: 1 1 14rem;
+}
+
+.posts-filter-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* The controls sit on the CANVAS behind a border, like the editor's own inputs,
+   rather than on a raised surface: this is a form on the page, not a popover,
+   so --border is correct here and the elevated-surface law does not apply. */
+.posts-filter-input,
+.posts-filter-select {
+  min-width: 0;
+  /* The command bar's control height, so the filter row and the editor's chrome
+     agree about how tall a control is. */
+  height: var(--admin-control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.posts-filter-input::placeholder {
+  color: var(--text-disabled);
+}
+
+/* Both buttons align to the CONTROLS, not to the labels above them, which is
+   why the row is `align-items: flex-end`. */
+.posts-filter-submit {
+  height: var(--admin-control-h);
+}
+
+.posts-filter-clear {
+  align-self: center;
+  padding-top: 1.125rem;
+  font-size: 0.875rem;
+}
+
+/* THE SCHEDULED QUEUE NOTE. Neutral by rule 4: the one semantic tint in this
+   view is spent on the drift alert, and this is information rather than a
+   demand. The glyph is a clock, so the meaning is not carried by wording
+   alone. */
+.posts-scheduled-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.posts-scheduled-note svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+/* THE EMPTY RESULT, which is not the empty corpus. It states the question that
+   returned nothing and offers the way out of it. */
+.posts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.posts-empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 /* Overflow menu -------------------------------------------------------------
  *
  * See app/components/admin/overflow-menu.tsx for why this is a disclosure
@@ -2576,6 +2684,15 @@ a:hover {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* The scheduled row's second line: the ISO date says WHICH day, this says how
+   far away, which is the question the author actually has. Its own line, so the
+   column stays scannable as dates. */
+.posts-date-relative {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 .posts-actions {
@@ -3257,18 +3374,42 @@ a:hover {
 
 /* The foot strip. It replaces the Insert image section this pass removes, and
    it is the only place drag-drop and paste are advertised. */
-.md-hint {
+/* The editor's foot: the drop hint on the left, the counts on the right. It
+   carries the border and the corners that .md-hint used to own alone, so the
+   two items read as one strip rather than as two stacked boxes. */
+.md-foot {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 0.375rem;
-  margin: 0;
+  gap: 0.75rem;
   padding: 0.375rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 0 0 0.5rem 0.5rem;
   background: var(--surface);
-  color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+.md-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Word count and reading time. Pushed to the far end, away from the drop hint,
+   and TABULAR so the strip does not twitch sideways as the count climbs through
+   a digit. Muted: it is reference, and the command bar upstream owns anything
+   in this view that is actually urgent. */
+.md-stats {
+  margin: 0 0 0 auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.md-stats-sep {
+  margin: 0 0.375rem;
 }
 
 .md-surface .cm-editor {
@@ -3286,6 +3427,83 @@ a:hover {
   border-radius: 0.5rem;
   background: var(--surface-popover);
   list-style: none;
+}
+
+/* THE LINK PALETTE (Cmd+K). Same popover step as the slash menu, so
+   --border-strong per the elevated-surface law: --border drops to 2.66:1 on
+   --surface-popover in dark and would not clear 3:1. */
+.md-link-palette {
+  position: absolute;
+  z-index: 30;
+  width: min(26rem, 90%);
+  padding: 0.375rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface-popover);
+}
+
+.md-link-input {
+  width: 100%;
+  height: var(--admin-control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.md-link-list {
+  max-height: 15rem;
+  margin: 0.375rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.md-link-item {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.md-link-item .muted {
+  font-size: 0.75rem;
+}
+
+/* ONE highlight, driven by `data-active`, which both the arrow keys and the
+   pointer write. A separate :hover rule would let the mouse light one row while
+   Enter still pointed at another. */
+.md-link-item[data-active],
+.md-link-item:focus-visible {
+  background: var(--tint-brand);
+  color: var(--brand);
+}
+
+.md-link-item[data-active] .muted {
+  color: var(--brand);
+}
+
+/* Not a colour: the words say it. This only keeps them from reading as part of
+   the slug. */
+.md-link-state {
+  font-style: italic;
+}
+
+.md-link-note {
+  margin: 0.375rem 0 0;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 .md-slash-item {
