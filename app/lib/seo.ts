@@ -154,38 +154,40 @@ export const PUBLIC_CACHE_CONTROL =
   "public, s-maxage=600, stale-while-revalidate=86400";
 
 /**
- * Cache policy for HTML DOCUMENTS. Never shared-cached, and this is a
- * correctness rule rather than a performance preference.
+ * What public HTML varies on. Paired with the downgrade in `workers/app.ts`.
+ *
+ * A route carrying this is declaring two things: it is publicly cacheable, and
+ * its body depends on the Cookie header. The Worker entry then refuses to let
+ * any response generated FOR a cookie-bearing request be stored. Together those
+ * mean the only variant ever written is the cookieless one.
+ *
+ * **Why not `Vary: Cookie` alone.** Measured 2026-08-02: an ABSENT Cookie header
+ * is not treated as its own variant. A cookieless request matches whatever
+ * variant is already stored, so if a reader with `theme=dark` warmed the entry,
+ * every first-time visitor was served a dark document. Present-but-different
+ * cookie values DO separate correctly; absent does not. Grounds and the full
+ * matrix: Capsid `dustinedwards/workers-cache-vary.md`.
+ *
+ * `Vary` is still required here, and dropping it would invert the bug: without
+ * it a cookie-bearing request would match the stored cookieless variant and see
+ * someone else's page. The measurement confirms that direction is safe WITH the
+ * header.
+ */
+export const HTML_VARY = "Cookie";
+
+/** For the two routes that also negotiate on Accept. */
+export const HTML_VARY_ACCEPT = "Accept, Cookie";
+
+/**
+ * Cache policy for a response that must never be shared.
+ *
+ * Still the value hard rule 8's default uses in `workers/app.ts`, and still what
+ * a cookie-bearing request gets on the HTML routes after the downgrade there.
  *
  * **Every HTML document on this site embeds reader state.** The theme is read
  * from a cookie in the root loader and written into `<html data-theme>` in the
  * first byte, which is what makes the no-flash design work with no inline
- * script. A shared cache keyed by path therefore serves whichever theme the
- * request that FILLED the entry happened to carry.
- *
- * **This shipped, and it was live for three sessions.** Enabling Workers Cache
- * on 2026-08-02 made the Worker's responses edge-cacheable; the cache key is
- * path, entrypoint and version, and does NOT include cookies. Measured on the
- * deploy: with `cookie: theme=dark`, a MISS returned
- * `<html lang="en" data-theme="dark">` and a HIT returned `<html lang="en">`.
- * The Worker was right every time; the cache was answering for it.
- *
- * **Why no gate caught it.** The Worker version is part of the cache key, so
- * every deploy empties the cache, and `verify-live` always runs seconds after
- * deploying. It was passing on cold entries. The failure only appears once an
- * entry is warm, which is why the count moved between runs.
- *
- * `Vary: Cookie` was the alternative and would have preserved caching for
- * readers carrying no cookie at all. It was not taken: almost every returning
- * reader carries at least a theme cookie, so it would have bought complexity for
- * a shrinking minority while leaving a correctness rule expressed as a header
- * that is easy to drop. Not shared-caching HTML is the simpler invariant, and it
- * matches what the rest of the site already does, since every route without a
- * `headers` export already returns `private, no-store` from `workers/app.ts`.
- *
- * The site's rule is now uniform and stateable: HTML is never shared-cached,
- * assets are. Workers Cache stays ON, because it was enabled for the Images
- * binding and `/media/*` still carries `public, max-age=31536000, immutable`.
+ * script. That is why these routes cannot simply be `public`.
  */
 export const HTML_CACHE_CONTROL = "private, no-store";
 

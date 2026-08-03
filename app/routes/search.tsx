@@ -8,7 +8,7 @@ import { prefersType } from "~/lib/negotiate";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import { search, zeroState, type SearchHit } from "~/lib/search/search.server";
-import { HTML_CACHE_CONTROL, PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
+import { HTML_VARY_ACCEPT, PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
 const PAGE_SIZE = 10;
@@ -121,11 +121,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function headers() {
   return new Headers({
-    // The HTML half only. The JSON twin above keeps PUBLIC_CACHE_CONTROL,
-    // because its body is identical for every reader; this one carries the
-    // theme. Grounds on HTML_CACHE_CONTROL in seo.ts.
-    "Cache-Control": HTML_CACHE_CONTROL,
-    Vary: "Accept",
+    // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
+    // it when a cookie is present. Varies on Accept (the JSON twin) AND on
+    // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
+    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    Vary: HTML_VARY_ACCEPT,
   });
 }
 

@@ -45,6 +45,37 @@ export default {
     context.set(cloudflareContext, { env, ctx });
     const response = await requestHandler(request, context);
 
+    // THE COOKIELESS-ONLY RULE.
+    //
+    // A route that sets `Vary: Cookie` is declaring that its body depends on the
+    // Cookie header and that it wants to be shared-cached. `Vary` alone is not
+    // enough to make that safe here, and the reason is measured rather than
+    // assumed: an ABSENT Cookie header is not treated as its own variant, so a
+    // cookieless request matches whatever variant is already stored. With
+    // `theme=dark` warming the entry first, every first-time visitor was served
+    // a dark document. Present-but-different cookie values DO separate; absent
+    // does not. Full matrix in Capsid `dustinedwards/workers-cache-vary.md`.
+    //
+    // So the response to any request that CARRIES a cookie is downgraded and
+    // never stored. The only variant that can ever exist is the cookieless one,
+    // which is correct for exactly the readers who match it, and the broken
+    // direction is never exercised. That makes the order-dependence structurally
+    // impossible instead of avoided by luck.
+    //
+    // Keyed on the PRESENCE of any cookie, not on a theme cookie. If it looked
+    // for `theme=` specifically, a request carrying only a Better Auth session
+    // cookie would count as cookieless and its response would be stored as the
+    // shared variant, leaking anything session-dependent to everyone. Presence
+    // is the fail-closed reading.
+    //
+    // Scoped by the response's own `Vary`, so it touches only routes that opted
+    // in. The feeds and the markdown twins stay publicly cached for every reader
+    // because they do not vary on Cookie and do not carry the header.
+    const varies = response.headers.get("vary") ?? "";
+    if (request.headers.has("cookie") && /(^|,)\s*cookie\s*(,|$)/i.test(varies)) {
+      response.headers.set("cache-control", UNCACHED);
+    }
+
     if (!response.headers.has("cache-control")) {
       try {
         response.headers.set("cache-control", UNCACHED);
