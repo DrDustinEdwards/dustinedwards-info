@@ -57,18 +57,20 @@ function objectKeyOf(body: unknown): string | null {
  * Which bucket holds this key.
  *
  * **This must ask, not assume, and the reason is a real defect it once caused.**
- * `indexOne` read `env.MEDIA` unconditionally while deriving `storage` from
- * `storageOf(key)` four lines later, so the consumer knew the key belonged to OG
- * and read the other bucket anyway. Because a missing object is treated as a
- * deletion, an OG-key event did not merely fail to index: it DELETED the row.
+ * Until 2026-08-02 `indexOne` read `env.MEDIA` unconditionally while deriving
+ * `storage` from `storageOf(key)` four lines later, so the consumer knew the key
+ * belonged to OG and read the other bucket anyway. Because a missing object is
+ * treated as a deletion, an OG-key event did not merely fail to index: it
+ * DELETED the row.
  *
  * It was latent only because the notification rule was configured on
  * `dustinedwards-media` alone, which is safety by dashboard configuration rather
- * than by code. Adding notifications on OG, the obvious next step, would have
- * had every `build:og --remote` run silently strip the index. Found by an
- * external audit 2026-08-02, finding A004; the asymmetry was invisible from
- * inside because `rebuild.server.ts` already walked both buckets correctly and
- * each file read correctly on its own.
+ * than by code. Adding notifications on OG, the obvious next step, would have had
+ * every `build:og --remote` run silently strip the index.
+ *
+ * The asymmetry was invisible from inside: `rebuild.server.ts` already walked
+ * both buckets correctly, and each file read correctly on its own. It took an
+ * outside reader comparing the two.
  */
 function bucketFor(env: Env, key: string): R2Bucket {
   return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
