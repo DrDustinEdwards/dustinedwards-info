@@ -78,11 +78,12 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   // original is untouched. Safe to cache forever for the same reason the
   // original is: the key never changes meaning.
   //
-  // **THE RESPONSE MUST NOT VARY ON ANYTHING BUT THIS URL.** The key is built
-  // from the URL alone, with no headers, so any request header that changed the
-  // body would be invisible to both `match` and `put` and the first caller would
-  // poison every later one. See the format note below for the specific case this
-  // already cost.
+  // **THIS KEY CARRIES NO HEADERS, SO `Vary` CANNOT HELP IT.** The lookup
+  // presents a synthetic Request built from the URL alone, so there is no
+  // `Accept` (or anything else) for a variant to be matched against. Workers
+  // Cache in front of the Worker DOES honour `Vary` on any header, but this
+  // layer does not and cannot. Any response served from here must therefore
+  // depend on nothing but the URL. See the format note below.
   //
   // `caches.default` is the Workers runtime's own cache. The DOM lib's
   // CacheStorage type does not declare it, so the cast is narrowing to the
@@ -125,25 +126,26 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
 
   // ONE FORMAT, UNCONDITIONALLY. WebP, for everyone, regardless of Accept.
   //
-  // **This used to negotiate AVIF/WebP/JPEG from the request's `Accept` header
-  // and set `Vary: Accept`. That was a live cache-poisoning bug and the `Vary`
-  // could never have fixed it.** The cache key above is built from the URL with
-  // no headers at all, so `put` and `match` both present an empty `Accept`, and
-  // every client collapsed onto whichever format the first caller happened to
-  // get, for a year, under `immutable`. The same URL is ALSO cached by Workers
-  // Cache in front of the Worker, whose key is path plus entrypoint plus
-  // ctx.props plus version and likewise contains no `Accept`. Two layers, both
-  // blind to the thing the body varied on. Found by an external audit 2026-08-02.
+  // **This used to negotiate AVIF/WebP/JPEG from `Accept` and set
+  // `Vary: Accept`, which was a live cache-poisoning bug.** The `caches.default`
+  // key above is built from the URL with no headers, so `put` and `match` both
+  // presented an empty `Accept` and every client collapsed onto whichever format
+  // the first caller happened to get, for a year, under `immutable`. Found by an
+  // external audit 2026-08-02.
   //
-  // The fix removes the variance rather than keying on it, which is the same
-  // shape as the theme-cookie fix on public HTML: keying would have required
-  // splitting this Worker into a gateway and a cached backend entrypoint, and it
-  // would fail open on the next request header anyone made the body depend on.
+  // **A PRECISION THAT MATTERS, because the first write-up of this got it
+  // wrong:** the failure was specific to `caches.default`, NOT to `Vary` in
+  // general. Workers Cache honours `Vary` on any request header with no
+  // allowlist, so the outer layer would have keyed correctly. Only the manual
+  // key here could not. Keeping the negotiation was therefore possible, by
+  // dropping this explicit cache and relying on Workers Cache alone.
   //
-  // **The measurement is what makes this easy.** AVIF came in at 21797 bytes
-  // against WebP's 22072 for the same source: 275 bytes, 1.2%. That is what the
-  // negotiation bought, against a correctness hazard at two cache layers. WebP
-  // is universally supported by every browser that can reach this site.
+  // It was still dropped, on the measurement rather than the mechanism: AVIF
+  // came in at 21797 bytes against WebP's 22072 for the same source, 275 bytes,
+  // 1.2%. That is not worth a second cache layer's worth of subtlety, and this
+  // layer exists for a real reason (an uncached binding call is a full decode
+  // and re-encode, and a billed transformation, on a grid that renders many
+  // tiles at once).
   //
   // There is still no <picture> element anywhere in this codebase. Its usual job
   // is exactly this fallback, and there is now nothing to fall back between.
@@ -172,8 +174,9 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   const headers = new Headers(response.headers);
   headers.set("cache-control", "public, max-age=31536000, immutable");
   // NO `Vary` HEADER, deliberately. The body no longer depends on any request
-  // header, so there is nothing to vary on, and advertising a `Vary` this cache
-  // key cannot honour is worse than advertising none: it reads as a guarantee.
+  // header, so there is nothing to vary on, and advertising a `Vary` the
+  // `caches.default` key cannot honour is worse than advertising none: it reads
+  // as a guarantee this layer is structurally unable to make.
   // Makes the transform observable from outside, which is what lets a
   // verification prove the grid is not being served full-resolution originals.
   headers.set("x-media-thumb", `w=${width}`);
