@@ -1,6 +1,10 @@
 /**
  * Gate for the query parser and rank fusion.
  *
+ * OBSERVATION BOUNDARY: pure functions only, the parser and the fusion. It runs
+ * no SQL, so it cannot see an index that is empty, drifted, or tokenising
+ * differently from what the parser assumes.
+ *
  *   npm run check:search
  *
  * Imports app/lib/search/query.mjs directly, so it exercises the parser the

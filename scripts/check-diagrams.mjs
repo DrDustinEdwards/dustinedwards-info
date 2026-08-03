@@ -1,6 +1,11 @@
 /**
  * Gate over the `:::diagram` directive and the assets it references.
  *
+ * OBSERVATION BOUNDARY: the contract, asset coverage and a colour audit over
+ * committed bytes. It does NOT run mermaid and does not open a browser, so a
+ * diagram that renders as tangled spaghetti passes as long as its key, its alt
+ * and its colours are right.
+ *
  *   npm run check:diagrams
  *
  * It imports `app/lib/content/diagram.mjs`, the module the Worker imports, on

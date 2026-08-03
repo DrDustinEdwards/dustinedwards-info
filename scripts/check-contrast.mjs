@@ -1,6 +1,11 @@
 /**
  * Gate over the shipped colour tokens.
  *
+ * OBSERVATION BOUNDARY: computes ratios from token values in the stylesheet. It
+ * does not render a page, so it cannot see a token applied to the wrong element,
+ * text over an image, or a pair that never occurs in the markup. It also skips
+ * the built-CSS check when the build is older than app.css, and SAYS SO.
+ *
  *   npm run check:contrast
  *
  * The point of this script is that it reads TWO INDEPENDENT SOURCES and makes

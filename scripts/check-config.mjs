@@ -2,6 +2,11 @@
  * Gate: the committed wrangler.jsonc.example must declare the same BINDING
  * SURFACE as the real wrangler.jsonc.
  *
+ * OBSERVATION BOUNDARY: compares the two wrangler files to each other. It does
+ * not ask Cloudflare whether any of these resources EXIST, so a binding naming
+ * a deleted bucket passes, and it only knows the binding kinds surfaceOf()
+ * enumerates: a new kind is invisible until added there.
+ *
  * Why this exists. The real config is gitignored portfolio-wide
  * (capsid/conventions.md, "Public-repo hygiene": secrets live in
  * `wrangler secret`, real wrangler.jsonc is gitignored, commit an example with

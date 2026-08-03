@@ -1,6 +1,12 @@
 /**
  * Gate: the D1 media index must agree with R2 and with `public/`, both ways.
  *
+ * OBSERVATION BOUNDARY: reconciles KEYS. It lists R2, walks public/ and diffs
+ * both against D1, and it never FETCHES a single one of those URLs. An object
+ * that exists with a row and 404s through the serving route passes, which is
+ * exactly how 58 static rows carried broken /media//path thumbnails while this
+ * gate was green.
+ *
  *   npm run check:media -- --local
  *   npm run check:media -- --remote
  *

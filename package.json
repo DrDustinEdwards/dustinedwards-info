@@ -13,6 +13,8 @@
     "preview": "npm run build && vite preview",
     "cf-typegen": "wrangler types",
     "build:content": "node scripts/build-content.mjs",
+    "check": "node scripts/check-all.mjs",
+    "check:all": "node scripts/check-all.mjs --all",
     "check:content": "node scripts/check-content.mjs",
     "check:config": "node scripts/check-config.mjs",
     "check:llms": "node scripts/check-llms.mjs",

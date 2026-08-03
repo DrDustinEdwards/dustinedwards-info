@@ -1,6 +1,11 @@
 /**
  * Gate for the chart directive.
  *
+ * OBSERVATION BOUNDARY: determinism, Node-vs-Worker parity and the emitted
+ * contract. It bundles chart.mjs ALONE, not the markdown pipeline, and it never
+ * looks at a chart in a browser, so nothing here sees whether a chart is legible
+ * or correctly scaled.
+ *
  * `check:content` already byte-compares the artifact, so it catches a chart
  * whose SVG was hand-edited or has gone stale. What it CANNOT catch is a chart
  * renderer that is not deterministic: a generator that emits a different SVG on

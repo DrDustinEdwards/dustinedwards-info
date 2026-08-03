@@ -1,6 +1,11 @@
 /**
  * Verifies the per-table backup path against the live schema.
  *
+ * OBSERVATION BOUNDARY: proves the export PATH works and that the table list
+ * matches the migrations. It never restores, so it cannot tell you the dump
+ * would reconstruct the database, and --local reads miniflare state rather than
+ * production.
+ *
  *   npm run check:backup -- --local
  *   npm run check:backup -- --remote
  *
