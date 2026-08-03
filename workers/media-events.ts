@@ -53,6 +53,27 @@ function objectKeyOf(body: unknown): string | null {
   return typeof key === "string" && key.length > 0 ? key : null;
 }
 
+/**
+ * Which bucket holds this key.
+ *
+ * **This must ask, not assume, and the reason is a real defect it once caused.**
+ * `indexOne` read `env.MEDIA` unconditionally while deriving `storage` from
+ * `storageOf(key)` four lines later, so the consumer knew the key belonged to OG
+ * and read the other bucket anyway. Because a missing object is treated as a
+ * deletion, an OG-key event did not merely fail to index: it DELETED the row.
+ *
+ * It was latent only because the notification rule was configured on
+ * `dustinedwards-media` alone, which is safety by dashboard configuration rather
+ * than by code. Adding notifications on OG, the obvious next step, would have
+ * had every `build:og --remote` run silently strip the index. Found by an
+ * external audit 2026-08-02, finding A004; the asymmetry was invisible from
+ * inside because `rebuild.server.ts` already walked both buckets correctly and
+ * each file read correctly on its own.
+ */
+function bucketFor(env: Env, key: string): R2Bucket {
+  return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
+}
+
 export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) {
   for (const message of batch.messages) {
     const key = objectKeyOf(message.body);
@@ -88,9 +109,15 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
  * correctly by asking R2 what is true now, and that is what makes out-of-order
  * delivery safe. Branching on the action would make the answer depend on message
  * ordering, which Queues does not promise.
+ *
+ * A `static` key can never arrive here: those objects are not in any bucket and
+ * emit no notifications. `bucketFor` sends them to MEDIA, where the miss deletes
+ * a row that a rebuild would immediately restore, so the failure is loud in
+ * check:media rather than silent. If static keys ever DO reach this path, that
+ * is the bug to fix, not this line.
  */
 async function indexOne(env: Env, key: string) {
-  const object = await env.MEDIA.get(key);
+  const object = await bucketFor(env, key).get(key);
 
   if (!object) {
     // R2 WINS. The object is gone, so the row goes. Never the reverse: nothing
