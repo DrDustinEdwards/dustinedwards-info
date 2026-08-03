@@ -133,8 +133,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   // get, for a year, under `immutable`. The same URL is ALSO cached by Workers
   // Cache in front of the Worker, whose key is path plus entrypoint plus
   // ctx.props plus version and likewise contains no `Accept`. Two layers, both
-  // blind to the thing the body varied on. Found by an external audit
-  // 2026-08-02, finding A001.
+  // blind to the thing the body varied on. Found by an external audit 2026-08-02.
   //
   // The fix removes the variance rather than keying on it, which is the same
   // shape as the theme-cookie fix on public HTML: keying would have required
