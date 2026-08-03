@@ -574,6 +574,84 @@ const ASK_PROBE_LIMIT = 3;
   );
 }
 
+/* --- 12. The cache, observed WARM -------------------------------------- */
+
+/**
+ * **This section exists because every other one runs cold.**
+ *
+ * The Worker version is part of the cache key, so a deploy empties the cache
+ * and this sweep normally runs seconds later. Every assertion above is
+ * therefore answered by the Worker itself, which is a smaller claim than it
+ * looks: the theme-cookie bug lived for four sessions behind exactly that,
+ * asserting the theme persists while never once reading a cached response.
+ *
+ * So this section deliberately warms each entry and then asks again.
+ *
+ * **It does NOT use `get()`.** That helper sends `Cache-Control: no-cache` on
+ * every request, which forces revalidation and would make "not a HIT" pass for
+ * the wrong reason: the response would be uncached because the REQUEST said so,
+ * not because the route is uncacheable. Reusing it here would have produced a
+ * green section that proved nothing, which is the failure mode hard rule 10 is
+ * about.
+ */
+{
+  const UA_ONLY = { "user-agent": UA };
+
+  /** A plain GET. No `no-cache`, because cache behaviour is the subject. */
+  const warm = async (/** @type {string} */ path, /** @type {string} */ cookie) => {
+    const res = await fetch(`${ORIGIN}${path}`, {
+      headers: cookie ? { ...UA_ONLY, cookie } : UA_ONLY,
+      redirect: "manual",
+    });
+    const body = res.headers.get("content-type")?.includes("image/") ? "" : await res.text();
+    return { res, body, cf: res.headers.get("cf-cache-status") ?? "(none)" };
+  };
+
+  const themeOf = (/** @type {string} */ html) =>
+    (htmlTag(html).match(/data-theme="(\w+)"/) ?? [])[1] ?? "(none)";
+
+  // Every public HTML surface, including the two with no `headers` export,
+  // which reach `private, no-store` through the Worker default instead.
+  const HTML_ROUTES = ["/", "/blog", `/blog/${SLUG}`, "/search?q=d1", "/phage-discovery"];
+
+  for (const path of HTML_ROUTES) {
+    // First request warms whatever is going to be cached. The SECOND is the
+    // one under test, and it carries the OTHER theme: if the first response
+    // were stored, this is where it would come back wearing the wrong one.
+    await warm(path, "theme=dark");
+    const second = await warm(path, "theme=light");
+
+    check(
+      `cache: ${path} is not served from cache on a second request`,
+      second.cf !== "HIT",
+      `cf-cache-status ${second.cf}, cache-control ${second.res.headers.get("cache-control")}`,
+    );
+    check(
+      `cache: ${path} renders the theme the cookie asked for`,
+      themeOf(second.body) === "light",
+      `sent theme=light, rendered ${themeOf(second.body)}`,
+    );
+  }
+
+  // AND THE CACHE STILL WORKS WHERE IT IS MEANT TO. The fix above made HTML
+  // uncacheable; it must not have disabled the cache it was enabled for. A
+  // regression that turned caching off site-wide would satisfy every assertion
+  // above and would be invisible without this one.
+  const THUMB = "/media/og/ai-answer-layer-ask-mode-9933971b.png?w=320";
+  await warm(THUMB, "");
+  const cachedThumb = await warm(THUMB, "");
+  check(
+    "cache: /media/* still HITs on a second request",
+    cachedThumb.cf === "HIT",
+    `cf-cache-status ${cachedThumb.cf}`,
+  );
+  check(
+    "cache: /media/* is still served immutable",
+    (cachedThumb.res.headers.get("cache-control") ?? "").includes("immutable"),
+    `cache-control ${cachedThumb.res.headers.get("cache-control")}`,
+  );
+}
+
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
