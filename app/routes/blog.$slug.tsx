@@ -8,7 +8,7 @@ import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
 import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
-  HTML_CACHE_CONTROL,
+  HTML_VARY_ACCEPT,
   PUBLIC_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -107,12 +107,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   const headers = new Headers({
-    // The HTML half only. The markdown twin builds its own Response and keeps
-    // PUBLIC_CACHE_CONTROL, because its body is identical for every reader;
-    // this one carries the theme. Grounds on HTML_CACHE_CONTROL in seo.ts.
-    "Cache-Control": HTML_CACHE_CONTROL,
-    // The response body depends on Accept, so caches must key on it.
-    Vary: "Accept",
+    // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
+    // it when a cookie is present. Varies on Accept (the markdown twin) AND on
+    // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
+    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    Vary: HTML_VARY_ACCEPT,
   });
   const link = loaderHeaders.get("Link");
   if (link) headers.set("Link", link);

@@ -614,22 +614,64 @@ const ASK_PROBE_LIMIT = 3;
   // which reach `private, no-store` through the Worker default instead.
   const HTML_ROUTES = ["/", "/blog", `/blog/${SLUG}`, "/search?q=d1", "/phage-discovery"];
 
+  // TWO POPULATIONS, asserted separately, because the whole design turns on
+  // treating them differently.
+  //
+  //   cookieless    shared-cached. SHOULD hit, and must render the default.
+  //   cookie-bearing  never stored. Should BYPASS, and must render its own theme.
+  //
+  // These assertions are INVERTED from what this section first said. It used to
+  // assert HTML is never served from cache, which was right while all HTML was
+  // `private, no-store`. Half of it is now the opposite.
   for (const path of HTML_ROUTES) {
-    // First request warms whatever is going to be cached. The SECOND is the
-    // one under test, and it carries the OTHER theme: if the first response
-    // were stored, this is where it would come back wearing the wrong one.
-    await warm(path, "theme=dark");
-    const second = await warm(path, "theme=light");
+    // Cookieless first, repeatedly: the entry needs a couple of requests to
+    // settle, and a BYPASS proves nothing about caching. Measured: after a
+    // cookie-bearing request the next cookieless one can read BYPASS, then MISS,
+    // then HIT.
+    let cookieless = await warm(path, "");
+    for (let i = 0; i < 4 && cookieless.cf !== "HIT"; i += 1) {
+      cookieless = await warm(path, "");
+    }
 
     check(
-      `cache: ${path} is not served from cache on a second request`,
-      second.cf !== "HIT",
-      `cf-cache-status ${second.cf}, cache-control ${second.res.headers.get("cache-control")}`,
+      `cache: ${path} is shared-cached for cookieless readers`,
+      cookieless.cf === "HIT",
+      `cf-cache-status ${cookieless.cf}, cache-control ${cookieless.res.headers.get("cache-control")}`,
+    );
+    check(
+      `cache: ${path} cookieless renders the default theme`,
+      themeOf(cookieless.body) === "(none)",
+      `rendered ${themeOf(cookieless.body)} with no cookie sent (cf ${cookieless.cf})`,
+    );
+
+    // A cookie-bearing request must never be served from, or written to, the
+    // shared entry. `private, no-store` is what guarantees the second half.
+    const dark = await warm(path, "theme=dark");
+    check(
+      `cache: ${path} bypasses the cache for a cookie-bearing reader`,
+      dark.cf !== "HIT" &&
+        (dark.res.headers.get("cache-control") ?? "").includes("no-store"),
+      `cf ${dark.cf}, cache-control ${dark.res.headers.get("cache-control")}`,
     );
     check(
       `cache: ${path} renders the theme the cookie asked for`,
-      themeOf(second.body) === "light",
-      `sent theme=light, rendered ${themeOf(second.body)}`,
+      themeOf(dark.body) === "dark",
+      `sent theme=dark, rendered ${themeOf(dark.body)} (cf ${dark.cf})`,
+    );
+  }
+
+  // CASE A, ASSERTED DIRECTLY. This exact ordering served a cached dark document
+  // to a cookieless reader when the fix was `Vary: Cookie` alone, and it is the
+  // reason that attempt was reverted. A fresh URL per run, so the result cannot
+  // be an artifact of whatever happened to populate the cache first.
+  {
+    const cold = `/?verify=${Math.random().toString(36).slice(2)}${Date.now()}`;
+    await warm(cold, "theme=dark");
+    const after = await warm(cold, "");
+    check(
+      "cache: a cookie-bearing request cannot poison the cookieless variant",
+      themeOf(after.body) === "(none)",
+      `cookie-first then cookieless rendered ${themeOf(after.body)} (cf ${after.cf})`,
     );
   }
 

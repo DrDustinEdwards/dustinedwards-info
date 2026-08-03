@@ -1,7 +1,15 @@
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
-import { SITE } from "~/lib/seo";
+import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE } from "~/lib/seo";
+
+/**
+ * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
+ * same downgrade in workers/app.ts.
+ */
+export function headers() {
+  return { "Cache-Control": PUBLIC_CACHE_CONTROL, Vary: HTML_VARY };
+}
 
 /**
  * Roster. Photos and names, by year, and nothing else.

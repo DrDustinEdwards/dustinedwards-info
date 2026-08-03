@@ -10,7 +10,8 @@ import { getEnv } from "~/lib/context";
 import { serverTiming, timed, type Timings } from "~/lib/timing";
 import {
   DEFAULT_OG_IMAGE,
-  HTML_CACHE_CONTROL,
+  HTML_VARY,
+  PUBLIC_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
@@ -78,9 +79,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  // HTML embeds the reader's theme, so it is never shared-cached. Grounds on
-  // HTML_CACHE_CONTROL in seo.ts.
-  const headers = new Headers({ "Cache-Control": HTML_CACHE_CONTROL });
+  // Publicly cacheable for COOKIELESS readers only. `workers/app.ts` downgrades
+  // this to private, no-store whenever the request carries a cookie, so the only
+  // variant ever stored is the themeless one. Grounds on HTML_VARY in seo.ts.
+  const headers = new Headers({
+    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    Vary: HTML_VARY,
+  });
   // Carried through from the loader. `headers` does not inherit them, so a
   // loader header that is not forwarded here simply never reaches the client.
   const timing = loaderHeaders.get("Server-Timing");
