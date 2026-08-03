@@ -213,7 +213,7 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
 /* --- 5. The markdown twin is byte-identical to the repo ----------------- */
 
 {
-  const { text: live, status } = await get(`/blog/${SLUG}.md`);
+  const { res: liveRes, text: live, status } = await get(`/blog/${SLUG}.md`);
   check(`md twin: /blog/${SLUG}.md serves`, status === 200);
 
   // Compared against the ARTIFACT's markdown field, not the repo file.
@@ -235,9 +235,17 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
   );
   // And the artifact is itself gated against the file by check:content, so the
   // chain from file to served bytes is closed without comparing unlike things.
+  //
+  // **This assertion was `true`.** A literal, passing unconditionally, inflating
+  // the count by one and proving nothing about the header it named. The twin's
+  // whole purpose is that an agent can fetch source rather than scrape a page,
+  // and an agent decides that from the content-type; serving the right bytes
+  // under `text/html` would have failed the reader while this passed.
+  const twinType = liveRes.headers.get("content-type") ?? "";
   check(
     "md twin: content-type is text/markdown",
-    true,
+    twinType.includes("text/markdown"),
+    `got ${twinType || "(none)"}`,
   );
 }
 
@@ -338,9 +346,31 @@ const ASK_PROBE_LIMIT = 3;
   );
 
   check("blog: index renders", fetched[0].status === 200);
+
+  // **This assertion used to be `pages === Math.max(1, Math.ceil(live.length /
+  // POSTS_PER_PAGE))`, which is the body of `pageCount` restated.** `pages` IS
+  // `pageCount(live.length)`, so it compared an expression to itself and could
+  // never fail, while its label claimed the site paginated correctly. It made
+  // no request. Second tautology found in this file, after the literal `true`.
+  //
+  // What it should have asserted is the SITE's boundary against the derived
+  // count: the last page in range carries posts, and the first page out of
+  // range carries none. That fails if the site paginates at a different size
+  // than the app's own constant, which is the thing worth knowing.
+  const onPage = (/** @type {string} */ body) =>
+    live.filter((/** @type {any} */ p) => body.includes(`/blog/${p.slug}"`)).length;
+
   check(
-    `blog: ${live.length} published at ${POSTS_PER_PAGE} per page is ${pages} page(s)`,
-    pages === Math.max(1, Math.ceil(live.length / POSTS_PER_PAGE)),
+    `blog: the last page (${pages} of ${pages}) carries posts`,
+    onPage(fetched[pages - 1].text) > 0,
+    `page ${pages} listed ${onPage(fetched[pages - 1].text)} of ${live.length} published`,
+  );
+
+  const overflow = await get(`/blog?page=${pages + 1}`);
+  check(
+    `blog: page ${pages + 1} is past the end and lists nothing`,
+    onPage(overflow.text) === 0,
+    `listed ${onPage(overflow.text)} post(s) beyond the ${pages}-page corpus`,
   );
 
   // Pagination is a surface the corpus only just grew, so assert it exists and
@@ -522,10 +552,16 @@ const ASK_PROBE_LIMIT = 3;
   // An assertion that can pass by reading nothing is not an assertion: if the
   // fetch returned an error page, the loop above would report nine misses, but
   // this states the positive count so "0 missing" cannot mean "0 examined".
+  //
+  // The first conjunct used to be `years.length === 9`, where `years` is built
+  // by `Array.from({ length: 9 })` two lines up. Constant true, and so half of
+  // this guard was dead: it asserted the harness's own literal rather than the
+  // page. Counting what was FOUND is what actually proves examination.
+  const found = years.length - missing.length;
   check(
     "roster: nine year ids were actually examined",
-    years.length === 9 && page.length > 500,
-    `page ${page.length} bytes`,
+    found === 9 && page.length > 500,
+    `found ${found} of ${years.length} year ids, page ${page.length} bytes`,
   );
 
   // The nav link, from the HOMEPAGE, which is what makes the page reachable

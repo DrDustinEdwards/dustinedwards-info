@@ -477,15 +477,28 @@ export async function upsertDerivedMedia(
   };
   await getDb(env)
     .insert(media)
-    .values({
-      key: record.key,
-      ...derived,
-      // Only ever set on INSERT. On a rebuild the existing name is kept, because
-      // the object no longer carries the filename once keys are content
-      // addressed: this column IS the only surviving copy.
-      originalName: record.originalName ?? null,
-    })
-    .onConflictDoUpdate({ target: media.key, set: derived });
+    .values({ key: record.key, ...derived, originalName: record.originalName ?? null })
+    .onConflictDoUpdate({
+      target: media.key,
+      set: {
+        ...derived,
+        // WRITTEN WHEN THERE IS ONE, NEVER BLANKED.
+        //
+        // The comment here used to say this column was the only surviving copy
+        // of the filename and so must only ever be set on INSERT. That was true
+        // and it was the bug: the queue consumer inserts from an R2 event, and
+        // if it won the race it inserted NULL and nothing could ever fill it,
+        // because a content-addressed key carries no name and the upload
+        // route's D1 write is deliberately non-fatal.
+        //
+        // The name now rides in the object's custom metadata, so callers that
+        // read the object can supply it and this can safely update. Callers
+        // that cannot (a static asset has no metadata) pass null, and null
+        // means LEAVE IT ALONE rather than erase, which is what keeps a name
+        // already recorded from being lost by a later pass that did not see one.
+        ...(record.originalName ? { originalName: record.originalName } : {}),
+      },
+    });
 }
 
 /**

@@ -95,6 +95,18 @@ export async function action({ request, context }: Route.ActionArgs) {
   // which would cost a round trip to save a write that changes nothing.
   await env.MEDIA.put(key, bytes, {
     httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
+    // THE FILENAME LIVES ON THE OBJECT, not only in the row.
+    //
+    // A content-addressed key is a digest, so the name the author chose is not
+    // recoverable from it and a rebuild cannot re-derive what only D1 held. The
+    // D1 write below is deliberately non-fatal, and the queue consumer inserts
+    // its own row from the event without one, so the name had exactly one
+    // source and that source was allowed to fail silently.
+    //
+    // Custom metadata makes it a property of the OBJECT, which is the same rule
+    // the whole module runs on: R2 is the truth, D1 is derived, and anything
+    // derived must be re-derivable. Found by audit 2026-08-02.
+    customMetadata: { originalName: file.name },
   });
 
   /**

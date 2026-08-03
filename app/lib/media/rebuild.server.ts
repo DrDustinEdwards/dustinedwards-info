@@ -142,11 +142,19 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
         : null;
 
+      // The filename, re-derived from the OBJECT rather than preserved by luck.
+      // This is what makes `original_name` recomputable and therefore honestly
+      // a derived column: before the name rode in custom metadata, a rebuild
+      // could only keep whatever D1 already had, and a row that never got one
+      // could never acquire it.
+      const named = await bucket.head(object.key);
+
       await upsertDerivedMedia(env, {
         key: object.key,
         storage: storageOf(object.key),
         kind,
         role: roleOf(object.key),
+        originalName: named?.customMetadata?.originalName ?? null,
         mime,
         bytes: object.size,
         width: dimensions?.width ?? null,
