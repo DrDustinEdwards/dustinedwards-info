@@ -101,50 +101,267 @@
     }
   ],
   "predicateCases": [
-    { "url": "https://example.com", "allowed": true },
-    { "url": "HTTPS://EXAMPLE.COM", "allowed": true },
-    { "url": "mailto:a@b.test", "allowed": true },
-    { "url": "/relative", "allowed": true },
-    { "url": "#frag", "allowed": true },
-    { "url": "", "allowed": true },
-    { "url": "javascript:alert(1)", "allowed": false },
-    { "url": "JAVASCRIPT:alert(1)", "allowed": false },
-    { "url": "  javascript:alert(1)", "allowed": false },
-    { "url": "data:text/html,x", "allowed": false },
-    { "url": "vbscript:x", "allowed": false },
-    { "url": "tel:+15550100", "allowed": false },
-    { "url": "file:///etc/passwd", "allowed": false }
+    {
+      "url": "https://example.com",
+      "allowed": true
+    },
+    {
+      "url": "HTTPS://EXAMPLE.COM",
+      "allowed": true
+    },
+    {
+      "url": "mailto:a@b.test",
+      "allowed": true
+    },
+    {
+      "url": "/relative",
+      "allowed": true
+    },
+    {
+      "url": "#frag",
+      "allowed": true
+    },
+    {
+      "url": "",
+      "allowed": true
+    },
+    {
+      "url": "javascript:alert(1)",
+      "allowed": false
+    },
+    {
+      "url": "JAVASCRIPT:alert(1)",
+      "allowed": false
+    },
+    {
+      "url": "  javascript:alert(1)",
+      "allowed": false
+    },
+    {
+      "url": "data:text/html,x",
+      "allowed": false
+    },
+    {
+      "url": "vbscript:x",
+      "allowed": false
+    },
+    {
+      "url": "tel:+15550100",
+      "allowed": false
+    },
+    {
+      "url": "file:///etc/passwd",
+      "allowed": false
+    }
   ],
   "obfuscationCases": [
     {
       "label": "tab inside the scheme",
-      "codes": [106, 97, 118, 97, 9, 115, 99, 114, 105, 112, 116, 58, 120],
+      "codes": [
+        106,
+        97,
+        118,
+        97,
+        9,
+        115,
+        99,
+        114,
+        105,
+        112,
+        116,
+        58,
+        120
+      ],
       "allowed": false
     },
     {
       "label": "newline inside the scheme",
-      "codes": [106, 97, 118, 97, 10, 115, 99, 114, 105, 112, 116, 58, 120],
+      "codes": [
+        106,
+        97,
+        118,
+        97,
+        10,
+        115,
+        99,
+        114,
+        105,
+        112,
+        116,
+        58,
+        120
+      ],
       "allowed": false
     },
     {
       "label": "NUL inside the scheme",
-      "codes": [106, 97, 118, 97, 0, 115, 99, 114, 105, 112, 116, 58, 120],
+      "codes": [
+        106,
+        97,
+        118,
+        97,
+        0,
+        115,
+        99,
+        114,
+        105,
+        112,
+        116,
+        58,
+        120
+      ],
       "allowed": false
     },
     {
       "label": "replacement character inside the scheme",
-      "codes": [106, 97, 118, 97, 65533, 115, 99, 114, 105, 112, 116, 58, 120],
+      "codes": [
+        106,
+        97,
+        118,
+        97,
+        65533,
+        115,
+        99,
+        114,
+        105,
+        112,
+        116,
+        58,
+        120
+      ],
       "allowed": false
     },
     {
       "label": "leading control characters",
-      "codes": [1, 2, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 58, 120],
+      "codes": [
+        1,
+        2,
+        106,
+        97,
+        118,
+        97,
+        115,
+        99,
+        114,
+        105,
+        112,
+        116,
+        58,
+        120
+      ],
       "allowed": false
     },
     {
       "label": "a real relative path is untouched by normalization",
-      "codes": [47, 98, 108, 111, 103, 47, 120],
+      "codes": [
+        47,
+        98,
+        108,
+        111,
+        103,
+        47,
+        120
+      ],
       "allowed": true
+    }
+  ],
+  "frontmatterNote": "Frontmatter never passes through renderBody, so rehypeUrlProtocols cannot see it. These cases bind the SCHEMA instead. Findings B001 (further_reading) and B008 (cover). PERMANENT NEGATIVES: the blocked entries are the vulnerability, not examples.",
+  "frontmatterCases": [
+    {
+      "label": "PERMANENT NEGATIVE further_reading javascript:",
+      "field": "further_reading",
+      "value": "javascript:alert(1)",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading data:",
+      "field": "further_reading",
+      "value": "data:text/html;base64,PHNjcmlwdD4=",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading vbscript:",
+      "field": "further_reading",
+      "value": "vbscript:msgbox(1)",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading file:",
+      "field": "further_reading",
+      "value": "file:///etc/passwd",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading mixed case",
+      "field": "further_reading",
+      "value": "JaVaScRiPt:alert(1)",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading percent-encoded j",
+      "field": "further_reading",
+      "value": "%6aavascript:alert(1)",
+      "expect": "blocked"
+    },
+    {
+      "label": "further_reading https",
+      "field": "further_reading",
+      "value": "https://example.com/a",
+      "expect": "allowed"
+    },
+    {
+      "label": "further_reading http",
+      "field": "further_reading",
+      "value": "http://example.com/a",
+      "expect": "allowed"
+    },
+    {
+      "label": "further_reading mailto",
+      "field": "further_reading",
+      "value": "mailto:someone@example.com",
+      "expect": "allowed"
+    },
+    {
+      "label": "PERMANENT NEGATIVE cover protocol-relative",
+      "field": "cover",
+      "value": "//evil.example/x.png",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE cover backslash-relative",
+      "field": "cover",
+      "value": "/\\evil.example/x.png",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE cover absolute https",
+      "field": "cover",
+      "value": "https://evil.example/x.png",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE cover javascript:",
+      "field": "cover",
+      "value": "javascript:alert(1)",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE cover data:",
+      "field": "cover",
+      "value": "data:image/svg+xml,<svg onload=alert(1)>",
+      "expect": "blocked"
+    },
+    {
+      "label": "cover site-absolute path",
+      "field": "cover",
+      "value": "/media/abc123.png",
+      "expect": "allowed"
+    },
+    {
+      "label": "cover nested site-absolute path",
+      "field": "cover",
+      "value": "/publications/a-paper.pdf",
+      "expect": "allowed"
     }
   ]
 }

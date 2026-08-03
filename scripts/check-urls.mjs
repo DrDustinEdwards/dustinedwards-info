@@ -41,7 +41,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
+import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
@@ -60,6 +60,7 @@ if (!existsSync(FIXTURE)) {
  *   cases: Array<{ label: string, markdown: string, expect: "allowed" | "blocked", url?: string }>,
  *   predicateCases: Array<{ url: string, allowed: boolean }>,
  *   obfuscationCases: Array<{ label: string, codes: number[], allowed: boolean }>,
+ *   frontmatterCases: Array<{ label: string, field: string, value: string, expect: "allowed" | "blocked" }>,
  * }}
  */
 const fixture = JSON.parse(readFileSync(FIXTURE, "utf8"));
@@ -156,8 +157,73 @@ for (const probe of fixture.cases) {
 }
 
 /* -------------------------------------------------------------------------
+ * FRONTMATTER, which the render layer never sees
+ *
+ * `rehypeUrlProtocols` walks the hast tree `renderBody` produces. Frontmatter is
+ * not in that tree, so the allowlist that closed the markdown XSS did not bind
+ * the two frontmatter fields that reach a URL context. `further_reading[].url`
+ * is rendered as a live public `<a href>` and was validated with `z.url()`,
+ * which accepts `javascript:`, `data:`, `vbscript:` and `file:`. Findings B001
+ * and B008.
+ *
+ * These bind the SCHEMA, because the schema is the only thing in that path.
+ * Asserted against `frontmatterSchema` itself, the object both writers import,
+ * so it cannot pass against a copy of the rule.
+ * ---------------------------------------------------------------------- */
+
+const FM_BASE = { title: "t", slug: "a-slug", date: "2026-01-01", description: "d" };
+
+/** @param {string} field @param {string} value */
+function frontmatterFor(field, value) {
+  if (field === "further_reading") {
+    return { ...FM_BASE, further_reading: [{ title: "x", url: value }] };
+  }
+  if (field === "cover") return { ...FM_BASE, cover: { src: value, alt: "a" } };
+  throw new Error(`unknown frontmatter field in fixture: ${field}`);
+}
+
+let fmBlocked = 0;
+let fmAllowed = 0;
+for (const probe of fixture.frontmatterCases) {
+  const result = frontmatterSchema.safeParse(frontmatterFor(probe.field, probe.value));
+  if (probe.expect === "blocked") {
+    fmBlocked += 1;
+    assert(
+      `frontmatter: ${probe.label} is REFUSED`,
+      result.success === false,
+      `the schema ACCEPTED ${JSON.stringify(probe.value)} for ${probe.field}`,
+    );
+  } else {
+    fmAllowed += 1;
+    assert(
+      `frontmatter: ${probe.label} is accepted`,
+      result.success === true,
+      result.success
+        ? ""
+        : result.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; "),
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
  * Counts, so a green run cannot mean an empty one
  * ---------------------------------------------------------------------- */
+
+assert(
+  "the frontmatter fixture still carries its permanent negatives",
+  fixture.frontmatterCases.filter((c) => c.label.startsWith("PERMANENT NEGATIVE")).length >= 10,
+  `${fixture.frontmatterCases.filter((c) => c.label.startsWith("PERMANENT NEGATIVE")).length} found`,
+);
+assert("frontmatter blocked cases were exercised", fmBlocked >= 10, `${fmBlocked}`);
+assert("frontmatter allowed cases were exercised", fmAllowed >= 5, `${fmAllowed}`);
+// BOTH fields, so a fixture that quietly lost one cannot pass.
+for (const field of ["further_reading", "cover"]) {
+  assert(
+    `frontmatter: ${field} has both blocked and allowed coverage`,
+    fixture.frontmatterCases.some((c) => c.field === field && c.expect === "blocked") &&
+      fixture.frontmatterCases.some((c) => c.field === field && c.expect === "allowed"),
+  );
+}
 
 assert(
   "the fixture still carries its permanent negatives",

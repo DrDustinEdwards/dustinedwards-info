@@ -133,7 +133,24 @@ export const frontmatterSchema = z.object({
   publish_at: isoDateTime.optional(),
   cover: z
     .object({
-      src: z.string().startsWith("/", "must be a site-absolute path"),
+      /**
+       * A SITE-ABSOLUTE path: one leading slash, and the next character is not
+       * another slash or a backslash.
+       *
+       * `startsWith("/")` was the entire rule and it let `//evil.com/x.png`
+       * through, because a protocol-relative URL also starts with a slash. The
+       * admin cover preview uses this value as a real `<img src>`, so it loaded
+       * from the external host; the public side prefixes SITE_ORIGIN and
+       * produced a broken URL rather than an off-origin one, which is a smaller
+       * failure but still not what the message claimed. Finding B008.
+       *
+       * The backslash is excluded with it: `/\evil.com` is treated as
+       * protocol-relative by some parsers and there is no legitimate path that
+       * begins that way.
+       */
+      src: z
+        .string()
+        .regex(/^\/(?![/\\])/, "must be a site-absolute path, not //host or a full URL"),
       alt: z.string().min(1, "is required when cover is set"),
     })
     .optional(),
@@ -147,7 +164,28 @@ export const frontmatterSchema = z.object({
     .array(
       z.object({
         title: z.string().min(1, "must not be empty"),
-        url: z.string().url("must be an absolute URL"),
+        /**
+         * THE PROTOCOL ALLOWLIST APPLIES HERE TOO, and it did not.
+         *
+         * `z.url()` accepts `javascript:`, `data:`, `vbscript:` and `file:`:
+         * they are well-formed absolute URLs. This value is rendered as a live
+         * `<a href>` on the public post page, and `rehypeUrlProtocols` never
+         * sees it, because that plugin walks the hast tree `renderBody`
+         * produces and frontmatter is not in it. So the allowlist that closed
+         * the markdown XSS did not bind the one field that bypasses markdown
+         * entirely. Finding B001.
+         *
+         * Latent only because no corpus post sets `further_reading`. Both write
+         * paths, the operator API and a hand-edited commit, were open.
+         *
+         * `isAllowedUrl` is the SAME predicate the render layer uses, called
+         * here rather than reimplemented, so the two can never drift apart.
+         * It is declared below in this file and hoists.
+         */
+        url: z
+          .string()
+          .url("must be an absolute URL")
+          .refine(isAllowedUrl, "protocol is not allowed (https, http, mailto or relative only)"),
       }),
     )
     .default([]),
