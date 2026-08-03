@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, data } from "react-router";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { BlogSpeculation } from "~/components/blog-speculation";
@@ -7,6 +7,7 @@ import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
+import { serverTiming, timed, type Timings } from "~/lib/timing";
 import {
   DEFAULT_OG_IMAGE,
   HTML_CACHE_CONTROL,
@@ -26,11 +27,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  const [listing, tagList, yearList] = await Promise.all([
-    listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE }),
-    listBlogTags(env),
-    listBlogYears(env),
-  ]);
+  // INSTRUMENTATION, reported as Server-Timing. Measurement only: nothing here
+  // changes what the loader returns or how it queries. `/blog` measured 276ms
+  // p50 against 35ms for `/`, and the cause was suspected rather than known.
+  const timings: Timings = [];
+  const loaderStart = performance.now();
+
+  const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
+    Promise.all([
+      // Already parallel with the two below. The three ROUND TRIPS this one
+      // makes internally are not parallel with each other, which is the
+      // distinction the numbers have to settle.
+      listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
+      timed(timings, "d1_tag_list", () => listBlogTags(env)),
+      timed(timings, "d1_year_list", () => listBlogYears(env)),
+    ]),
+  );
 
   // The featured post is surfaced only on the unfiltered first page. Inside a
   // filter it would be noise, and repeating it above a list it already appears
@@ -40,20 +52,30 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ? (listing.posts.find((post) => post.featured) ?? null)
       : null;
 
-  return {
-    ...listing,
-    tags: tagList,
-    years: yearList,
-    activeTag: tag,
-    activeYear: year,
-    featured,
-  };
+  timings.push({ name: "loader_total", ms: performance.now() - loaderStart });
+
+  return data(
+    {
+      ...listing,
+      tags: tagList,
+      years: yearList,
+      activeTag: tag,
+      activeYear: year,
+      featured,
+    },
+    { headers: { "Server-Timing": serverTiming(timings) } },
+  );
 }
 
-export function headers() {
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
   // HTML embeds the reader's theme, so it is never shared-cached. Grounds on
   // HTML_CACHE_CONTROL in seo.ts.
-  return { "Cache-Control": HTML_CACHE_CONTROL };
+  const headers = new Headers({ "Cache-Control": HTML_CACHE_CONTROL });
+  // Carried through from the loader. `headers` does not inherit them, so a
+  // loader header that is not forwarded here simply never reaches the client.
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

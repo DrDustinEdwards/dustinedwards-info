@@ -15,6 +15,7 @@ import {
 import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
+import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
 import {
@@ -122,6 +123,8 @@ export async function listBlogPosts(
     year?: string | null;
     page?: number;
     perPage?: number;
+    /** Optional collector. Absent means no instrumentation and no cost. */
+    timings?: Timings;
   } = {},
 ) {
   const db = getDb(env);
@@ -150,17 +153,27 @@ export async function listBlogPosts(
   }
   const where = and(...clauses);
 
-  const [{ total }] = await db.select({ total: count() }).from(posts).where(where);
+  // THREE SERIAL ROUND TRIPS. The loader calls this inside a `Promise.all`
+  // alongside two single-query functions, so the parallelism is at that level;
+  // these three are strictly sequential with each other, and the third cannot
+  // even start until the second returns because it needs the row ids.
+  const [{ total }] = await timed(options.timings, "d1_count", () =>
+    db.select({ total: count() }).from(posts).where(where),
+  );
 
-  const rows = await db
-    .select({ ...postCard, id: posts.id })
-    .from(posts)
-    .where(where)
-    .orderBy(desc(posts.publishAt))
-    .limit(perPage)
-    .offset((page - 1) * perPage);
+  const rows = await timed(options.timings, "d1_rows", () =>
+    db
+      .select({ ...postCard, id: posts.id })
+      .from(posts)
+      .where(where)
+      .orderBy(desc(posts.publishAt))
+      .limit(perPage)
+      .offset((page - 1) * perPage),
+  );
 
-  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  const tagMap = await timed(options.timings, "d1_tags", () =>
+    tagsForPosts(db, rows.map((r) => r.id)),
+  );
 
   return {
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
