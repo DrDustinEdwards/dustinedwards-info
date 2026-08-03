@@ -124,6 +124,16 @@ async function indexOne(env: Env, key: string) {
   if (!object) {
     // R2 WINS. The object is gone, so the row goes. Never the reverse: nothing
     // in this file writes to the bucket, and there is no import that could.
+    //
+    // LOGGED, because this branch is indistinguishable from the bug it hides.
+    // A genuine delete and a key the consumer looked for in the wrong place, or
+    // under the wrong encoding, both land here and both ack silently. That is
+    // exactly how A004 stayed invisible: the symptom of reading the wrong bucket
+    // was a row quietly not appearing.
+    console.log(
+      `media event: no object for ${JSON.stringify(key)} in ` +
+        `${storageOf(key) === "r2-derived" ? "OG" : "MEDIA"}; deleting any row`,
+    );
     await deleteMediaRecord(env, key);
     return;
   }
@@ -156,6 +166,12 @@ async function indexOne(env: Env, key: string) {
     bytes: object.size,
     width,
     height,
+    // Read off the OBJECT, so this path no longer depends on the upload route's
+    // D1 write having succeeded. That write is non-fatal by design, and a
+    // content-addressed key cannot yield a filename, so before this the name
+    // had one source that was allowed to fail. Null for anything uploaded
+    // without it, which `upsertDerivedMedia` treats as "do not touch".
+    originalName: object.customMetadata?.originalName ?? null,
     // The placeholder is NOT derived here. It needs a second read of the body
     // and this path runs on every write; the rebuild computes it in bulk, where
     // paying for it once per object is the right trade.
