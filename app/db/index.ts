@@ -153,30 +153,116 @@ export async function listBlogPosts(
   }
   const where = and(...clauses);
 
-  // THREE SERIAL ROUND TRIPS. The loader calls this inside a `Promise.all`
-  // alongside two single-query functions, so the parallelism is at that level;
-  // these three are strictly sequential with each other, and the third cannot
-  // even start until the second returns because it needs the row ids.
-  const [{ total }] = await timed(options.timings, "d1_count", () =>
-    db.select({ total: count() }).from(posts).where(where),
+  // ONE ROUND TRIP, not three.
+  //
+  // This used to be `count`, then `rows`, then `tagsForPosts(rows.map(id))`,
+  // strictly serial because the third needed ids the second had not returned
+  // yet. Measured on the deployed Worker: 59 + 56 + 55 = 171ms of loader time,
+  // of which D1 reported 0.1471ms as actual SQL for the count. The cost was
+  // never the queries. It was three round trips to ENAM/ORD.
+  //
+  // Two changes, in this order:
+  //
+  //   1. The tag lookup becomes a LEFT JOIN onto the page of posts, removing
+  //      the dependency that forced the third trip to wait.
+  //   2. What remains, `count` and `rows`, have no dependency on each other, so
+  //      `db.batch` sends both as one round trip.
+  //
+  // **The page is selected in a SUBQUERY and the join wraps it.** Joining first
+  // and paginating after would apply LIMIT to JOINED rows, so a post with four
+  // tags would consume four of the ten slots and the page would silently hold
+  // fewer posts than it claimed. This is the trap that makes a many-to-many
+  // LEFT JOIN wrong by default, and the subquery is what avoids it.
+  // `id DESC` as an explicit tie-break, and it is load-bearing.
+  //
+  // Nine of the eleven published posts share a `publish_at` with at least one
+  // other: four on 1785369600 and five on 1785196800. `ORDER BY publish_at DESC`
+  // alone leaves their relative order UNSPECIFIED. It happened to come back id
+  // DESC, and the listing has always been in that order, but by luck rather
+  // than by instruction.
+  //
+  // That luck cannot survive this rewrite. The outer query below orders by tag
+  // slug as its last key, so within a tie the rows of several posts INTERLEAVE
+  // and the fold ends up ordering posts by their alphabetically-first tag.
+  // Measured: the listing came back ordered by first tag rather than by date.
+  // Stating the tie-break fixes it and also removes the original reliance on
+  // undefined behaviour.
+  const pageOfPosts = db
+    .select({ ...postCard, id: posts.id })
+    .from(posts)
+    .where(where)
+    .orderBy(desc(posts.publishAt), desc(posts.id))
+    .limit(perPage)
+    .offset((page - 1) * perPage)
+    .as("page_of_posts");
+
+  // Named one by one because drizzle will not select a subquery as a nested
+  // object. A column added to `postCard` and forgotten here does not fail
+  // silently: the field disappears from the return type and every consumer of
+  // it stops typechecking.
+  const [countRows, joined] = await timed(options.timings, "d1_batch", () =>
+    db.batch([
+      db.select({ total: count() }).from(posts).where(where),
+      db
+        .select({
+          id: pageOfPosts.id,
+          slug: pageOfPosts.slug,
+          title: pageOfPosts.title,
+          description: pageOfPosts.description,
+          publishAt: pageOfPosts.publishAt,
+          updatedAt: pageOfPosts.updatedAt,
+          coverImage: pageOfPosts.coverImage,
+          coverAlt: pageOfPosts.coverAlt,
+          readingTimeMinutes: pageOfPosts.readingTimeMinutes,
+          featured: pageOfPosts.featured,
+          series: pageOfPosts.series,
+          part: pageOfPosts.part,
+          // ALIASED, and this is not cosmetic. `posts.slug` and `tags.slug` are
+          // both named `slug`; D1 returns one flat row per result and drizzle
+          // maps it back by COLUMN NAME, so without a distinct alias the two
+          // collide: `slug` silently took the TAG's value and `tagSlug` came
+          // back undefined. Every post then linked to `/blog/<a-tag-slug>` and
+          // every tag rendered as `?tag=undefined`.
+          //
+          // The page still returned 200 with ten cards, correct titles, correct
+          // dates and the right NUMBER of tag chips. It looked completely
+          // normal. Caught only by comparing slugs and tag arrays before and
+          // after, which is why that comparison is the gate here and not the
+          // render.
+          tagSlug: sql<string | null>`${tags.slug}`.as("tag_slug"),
+        })
+        .from(pageOfPosts)
+        // LEFT, so a post carrying no tags keeps its row with a null tag rather
+        // than vanishing from the listing. An INNER JOIN here would drop it.
+        .leftJoin(postTags, eq(postTags.postId, pageOfPosts.id))
+        .leftJoin(tags, eq(tags.id, postTags.tagId))
+        // Post order FIRST and completely, then tag order. Both post keys must
+        // appear before the tag key or a tie lets tag slugs interleave rows
+        // from different posts, which is exactly what happened.
+        .orderBy(desc(pageOfPosts.publishAt), desc(pageOfPosts.id), asc(tags.slug)),
+    ]),
   );
 
-  const rows = await timed(options.timings, "d1_rows", () =>
-    db
-      .select({ ...postCard, id: posts.id })
-      .from(posts)
-      .where(where)
-      .orderBy(desc(posts.publishAt))
-      .limit(perPage)
-      .offset((page - 1) * perPage),
-  );
+  const total = countRows[0].total;
 
-  const tagMap = await timed(options.timings, "d1_tags", () =>
-    tagsForPosts(db, rows.map((r) => r.id)),
-  );
+  // Fold the joined rows back into one entry per post, preserving both orders.
+  // A Map keyed by id keeps first-seen post order, which the ORDER BY above
+  // already fixed, and tags append in the slug order the same clause fixed.
+  type Row = (typeof joined)[number];
+  const byId = new Map<number, Omit<Row, "tagSlug"> & { tags: string[] }>();
+  for (const row of joined) {
+    const { tagSlug, ...post } = row;
+    let entry = byId.get(post.id);
+    if (!entry) {
+      entry = { ...post, tags: [] };
+      byId.set(post.id, entry);
+    }
+    // Null for a post with no tags, which is the LEFT JOIN doing its job.
+    if (tagSlug !== null) entry.tags.push(tagSlug);
+  }
 
   return {
-    posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
+    posts: [...byId.values()].map(({ id, ...rest }) => rest),
     total,
     page,
     perPage,

@@ -27,17 +27,24 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  // INSTRUMENTATION, reported as Server-Timing. Measurement only: nothing here
-  // changes what the loader returns or how it queries. `/blog` measured 276ms
-  // p50 against 35ms for `/`, and the cause was suspected rather than known.
-  const timings: Timings = [];
+  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in.
+  //
+  // It shipped unconditionally during the measurement session, which put an
+  // unratified header on every public response as a side effect of diagnosing
+  // something. The problem was never that durations are sensitive; it is that
+  // the next person to touch this loader could not tell whether anything
+  // depended on that header. Behind a parameter it is a tool, not an API.
+  const wantTiming = url.searchParams.get("timing") === "1";
+  const timings: Timings | undefined = wantTiming ? [] : undefined;
   const loaderStart = performance.now();
 
   const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
     Promise.all([
-      // Already parallel with the two below. The three ROUND TRIPS this one
-      // makes internally are not parallel with each other, which is the
-      // distinction the numbers have to settle.
+      // ONE round trip now, not three: the tag lookup became a LEFT JOIN and
+      // what remained went into a `db.batch`. These two run in parallel with
+      // it and were entirely hidden underneath the old serial chain, so
+      // whether they are now the critical path is the thing to read off the
+      // numbers rather than assume.
       listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
       timed(timings, "d1_tag_list", () => listBlogTags(env)),
       timed(timings, "d1_year_list", () => listBlogYears(env)),
@@ -52,19 +59,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ? (listing.posts.find((post) => post.featured) ?? null)
       : null;
 
-  timings.push({ name: "loader_total", ms: performance.now() - loaderStart });
+  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
 
-  return data(
-    {
-      ...listing,
-      tags: tagList,
-      years: yearList,
-      activeTag: tag,
-      activeYear: year,
-      featured,
-    },
-    { headers: { "Server-Timing": serverTiming(timings) } },
-  );
+  const payload = {
+    ...listing,
+    tags: tagList,
+    years: yearList,
+    activeTag: tag,
+    activeYear: year,
+    featured,
+  };
+
+  // No header at all unless it was asked for, so the default response is
+  // byte-identical to what it was before any of this instrumentation existed.
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
