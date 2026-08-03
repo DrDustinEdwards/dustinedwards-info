@@ -6,31 +6,26 @@ import type { Route } from "./+types/media.$";
 /**
  * Serves editor-uploaded media from R2, and derives thumbnails from it.
  *
- * Keys are immutable by construction (the upload route adds a random suffix),
- * so responses carry a one year immutable cache and an ETag.
+ * Keys are immutable by construction, so responses carry a one year immutable
+ * cache and an ETag.
  *
  * ## Thumbnails, ruling 3
  *
- * `?w=160|320|640` returns a transform of the ORIGINAL, computed on request.
- * Nothing is ever written back to the bucket: one object, every size derived
- * from it, which is what keeps R2 free of variant sprawl and is why the bucket
- * needs no lifecycle rules.
+ * `?w=` returns a transform of the ORIGINAL, computed on request. Nothing is
+ * ever written back to the bucket: one object, every size derived from it, which
+ * is what keeps R2 free of variant sprawl and is why the bucket needs no
+ * lifecycle rules.
  *
  * **It uses the Images BINDING rather than the `/cdn-cgi/image/` URL syntax,
  * and that is forced rather than preferred.** Measured 2026-08-02: the URL
  * interface answers 404 with Cloudflare error 1042 on this hostname, because
  * transformations there require a customer zone and this site is served from
  * `workers.dev`. The binding is not zone-scoped and was verified working
- * against the real edge before any of this was written. Both mechanisms are
- * URL-derived from the caller's point of view, which is what the ruling asks
- * for; only the implementation differs, and this one keeps working after the
- * DNS cutover as well.
+ * against the real edge before any of this was written.
  *
  * The transform is CACHED explicitly through the Cache API. The binding's own
  * responses are not cached by Cloudflare, and every uncached call is a full
- * decode and re-encode, which is both slow and a billed transformation. The
- * grid renders many thumbnails at once, so an uncached path here would be paid
- * for on every visit to the page.
+ * decode and re-encode, which is both slow and a billed transformation.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const key = params["*"];
@@ -82,6 +77,13 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   // Keyed by the full request URL, so each width is its own entry and the
   // original is untouched. Safe to cache forever for the same reason the
   // original is: the key never changes meaning.
+  //
+  // **THE RESPONSE MUST NOT VARY ON ANYTHING BUT THIS URL.** The key is built
+  // from the URL alone, with no headers, so any request header that changed the
+  // body would be invisible to both `match` and `put` and the first caller would
+  // poison every later one. See the format note below for the specific case this
+  // already cost.
+  //
   // `caches.default` is the Workers runtime's own cache. The DOM lib's
   // CacheStorage type does not declare it, so the cast is narrowing to the
   // runtime that actually serves this, not papering over an unknown.
@@ -121,24 +123,32 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   const isTile = THUMB_WIDTHS.includes(width as (typeof THUMB_WIDTHS)[number]);
   const crop = isTile && cropSafe(key);
 
-  // FORMAT NEGOTIATION, done here because the BINDING CANNOT DO IT.
+  // ONE FORMAT, UNCONDITIONALLY. WebP, for everyone, regardless of Accept.
   //
-  // The ruling said `format=auto`. That exists on the `/cdn-cgi/image/` URL
-  // interface, which this site cannot use: it needs a customer zone and answers
-  // 404 with error 1042 on workers.dev. The binding's `output()` accepts only
-  // concrete formats and the typecheck is what said so, so "auto" here is a
-  // literal Accept-header negotiation rather than a flag.
+  // **This used to negotiate AVIF/WebP/JPEG from the request's `Accept` header
+  // and set `Vary: Accept`. That was a live cache-poisoning bug and the `Vary`
+  // could never have fixed it.** The cache key above is built from the URL with
+  // no headers at all, so `put` and `match` both present an empty `Accept`, and
+  // every client collapsed onto whichever format the first caller happened to
+  // get, for a year, under `immutable`. The same URL is ALSO cached by Workers
+  // Cache in front of the Worker, whose key is path plus entrypoint plus
+  // ctx.props plus version and likewise contains no `Accept`. Two layers, both
+  // blind to the thing the body varied on. Found by an external audit
+  // 2026-08-02, finding A001.
   //
-  // The outcome the ruling wanted is unchanged, and so is its corollary: there
-  // is still no <picture> element anywhere in this codebase, because its usual
-  // job is exactly this fallback and it is being done server-side instead. One
-  // <img>, one URL per width.
-  const accept = request.headers.get("accept") ?? "";
-  const format = accept.includes("image/avif")
-    ? "image/avif"
-    : accept.includes("image/webp")
-      ? "image/webp"
-      : "image/jpeg";
+  // The fix removes the variance rather than keying on it, which is the same
+  // shape as the theme-cookie fix on public HTML: keying would have required
+  // splitting this Worker into a gateway and a cached backend entrypoint, and it
+  // would fail open on the next request header anyone made the body depend on.
+  //
+  // **The measurement is what makes this easy.** AVIF came in at 21797 bytes
+  // against WebP's 22072 for the same source: 275 bytes, 1.2%. That is what the
+  // negotiation bought, against a correctness hazard at two cache layers. WebP
+  // is universally supported by every browser that can reach this site.
+  //
+  // There is still no <picture> element anywhere in this codebase. Its usual job
+  // is exactly this fallback, and there is now nothing to fall back between.
+  const format = "image/webp";
 
   let response: Response;
   try {
@@ -162,12 +172,9 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
 
   const headers = new Headers(response.headers);
   headers.set("cache-control", "public, max-age=31536000, immutable");
-  // REQUIRED, not decorative. The response body now depends on the request's
-  // Accept header, and this URL is cached both in caches.default and by Workers
-  // Cache in front of the Worker. Without this a browser that asked for AVIF
-  // would poison the entry for one that cannot decode it, and the failure would
-  // be a broken image for some readers and not others.
-  headers.set("vary", "Accept");
+  // NO `Vary` HEADER, deliberately. The body no longer depends on any request
+  // header, so there is nothing to vary on, and advertising a `Vary` this cache
+  // key cannot honour is worse than advertising none: it reads as a guarantee.
   // Makes the transform observable from outside, which is what lets a
   // verification prove the grid is not being served full-resolution originals.
   headers.set("x-media-thumb", `w=${width}`);
