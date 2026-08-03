@@ -1,6 +1,11 @@
 /**
  * Gate for the generated content artifact.
  *
+ * OBSERVATION BOUNDARY: byte-compares the artifact against a fresh generation.
+ * It never renders a page, never queries D1, and cannot tell whether the rows
+ * the artifact syncs INTO match it. A correct artifact and a stale database
+ * look identical here.
+ *
  * Regenerates from content/posts in memory and compares against the committed
  * content/generated/posts.json. Any difference fails, which is what stops a
  * hand-edited artifact or a stale build from shipping.

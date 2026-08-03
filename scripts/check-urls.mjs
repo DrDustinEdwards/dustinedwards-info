@@ -1,6 +1,10 @@
 /**
  * Gate over the URL protocol allowlist.
  *
+ * OBSERVATION BOUNDARY: the allowlist predicate over crafted inputs. It never
+ * fetches a URL and never scans the live corpus, so it proves the rule and not
+ * that every published href obeys it.
+ *
  *   npm run check:urls
  *
  * Ruling: dustinedwards/url-protocol-allowlist.md, 2026-08-01. The finding it

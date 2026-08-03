@@ -3,9 +3,32 @@
  *
  *   node scripts/verify-live.mjs [origin]
  *
+ * OBSERVATION BOUNDARY: it sees ONE cache state, whichever exists when it runs,
+ * and it is normally run seconds after a deploy. The Worker version is part of
+ * the cache key, so a deploy empties the cache and every assertion below is
+ * answered by the Worker itself. It cannot see a bug that only appears once an
+ * entry is WARM unless it is run twice, which is not automatic.
+ *
  * Not a gate: it needs the network and a deploy, so it is not in the check
  * family. It exists so a deploy is verified by running assertions rather than
  * by looking at a page and feeling reassured.
+ *
+ * ## The cold-cache blind spot, recorded because it cost four sessions
+ *
+ * Enabling Workers Cache on 2026-08-02 made the theme cookie invisible to the
+ * cache key, so `/blog` served whichever theme filled the entry. This file
+ * asserts the theme persists and DID NOT CATCH IT for four consecutive
+ * sessions, because it always ran within seconds of a deploy and therefore
+ * always against a cold cache. Every run was answered by the Worker, which was
+ * correct the whole time.
+ *
+ * The tell, when it finally appeared, was that the failure count MOVED between
+ * runs: 79/17, then 95/1, then 96/0. A deterministic failure does not do that.
+ * **If this file's count varies run to run, suspect the cache before the diff.**
+ *
+ * RUN IT TWICE after any change to caching or to a `headers` export: once cold,
+ * once warm. Passing cold means the Worker is right, which is a smaller claim
+ * than it looks.
  *
  * Harness rules, every one learned the hard way on this site:
  *   - Send a browser user-agent. Cloudflare answers 403 error 1010 to some

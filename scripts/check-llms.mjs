@@ -2,6 +2,10 @@
  * Gate: `content/llms.txt` is the source of truth for the `llms.txt` settings
  * row, and nothing may drift from it.
  *
+ * OBSERVATION BOUNDARY: compares the committed llms.txt against the settings row
+ * it seeds. It does not fetch /llms.txt, so it cannot see the route failing to
+ * serve what the row holds.
+ *
  *   npm run check:llms                 pure checks only
  *   npm run check:llms -- --local      also compare against the local D1 row
  *   npm run check:llms -- --remote     also compare against the remote D1 row

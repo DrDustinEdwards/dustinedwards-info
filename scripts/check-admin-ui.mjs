@@ -1,6 +1,12 @@
 /**
  * Gate over what the admin's forms SUBMIT.
  *
+ * OBSERVATION BOUNDARY: reduces each page to the set of requests it can SUBMIT.
+ * It renders components with stubbed loaders, so it sees no server behaviour, no
+ * styling and no layout: a page that submits correctly and is unusable passes.
+ * A component that CALLS a stubbed .server export throws here, because the stub
+ * is a Proxy with no own keys.
+ *
  *   npm run check:admin-ui
  *   npm run check:admin-ui -- --update    (rewrites the baseline, deliberately loud)
  *

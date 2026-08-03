@@ -1,6 +1,10 @@
 /**
  * Gate over the operator publish policy.
  *
+ * OBSERVATION BOUNDARY: the decision function in isolation. It never calls
+ * GitHub, D1 or the operator endpoint, so it proves what the policy DECIDES and
+ * nothing about whether a caller actually consults it before writing.
+ *
  *   npm run check:policy
  *
  * Imports app/lib/editor/publish-policy.mjs directly, the same module the Worker

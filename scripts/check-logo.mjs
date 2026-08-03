@@ -1,6 +1,11 @@
 /**
  * Gate over the site mark.
  *
+ * OBSERVATION BOUNDARY: compares the component's path data against the four SVG
+ * fixtures. It does not rasterise anything, so a mark that is geometrically
+ * identical and visually broken (a fill token that resolves to the page colour)
+ * passes.
+ *
  *   npm run check:logo
  *
  * Proves that app/components/site-logo.tsx, the module the Worker renders,
