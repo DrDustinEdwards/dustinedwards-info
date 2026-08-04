@@ -397,6 +397,25 @@ export function PostEditor({
         */}
         <input type="hidden" name="firstPublished" value={fields.firstPublished} />
         {/*
+          Schema keys this editor does not offer a control for, RELAYED so that
+          saving does not delete them. Finding B004: `serializePost` writes
+          exactly the keys it is handed, and these were not among them, so a
+          post committed by hand or by the operator API with a series, a
+          featured flag, further reading, an OG override or an explicit
+          `updated` lost them on the next browser save, silently and validly.
+
+          `featured` is an explicit "true"/"false" rather than a checkbox,
+          because an unchecked checkbox is simply absent from the FormData and
+          absence here would mean "cleared" rather than "not offered".
+        */}
+        <input type="hidden" name="featured" value={fields.featured ? "true" : "false"} />
+        <input type="hidden" name="series" value={fields.series} />
+        <input type="hidden" name="part" value={fields.part} />
+        <input type="hidden" name="furtherReading" value={fields.furtherReading} />
+        <input type="hidden" name="ogTitle" value={fields.ogTitle} />
+        <input type="hidden" name="ogDescription" value={fields.ogDescription} />
+        <input type="hidden" name="updated" value={fields.updated} />
+        {/*
           The draft flag, and the whole of what replaced the checkbox.
 
           Rendered ENABLED when the post is currently a draft and DISABLED when

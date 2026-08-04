@@ -64,6 +64,31 @@ export async function getPublicPostBySlug(env: Env, slug: string) {
   return rows[0] ?? null;
 }
 
+/**
+ * Which of these slugs are still publicly visible, as a Set.
+ *
+ * One query for the whole list, composing `publiclyVisible()` like every other
+ * public read, so there is no second opinion about what "public" means.
+ *
+ * Exists for finding B010. A cached Ask answer carries its citations, and that
+ * cache is invalidated by a KV `list` which is EVENTUALLY CONSISTENT: an answer
+ * written moments before a post is unpublished can outlive the invalidation
+ * meant to remove it, for as long as the seven day TTL. Replaying it would name
+ * and link a post that is no longer public, which is the 2026-07-29 draft leak
+ * arriving by a different route. The replay path asks this before it serves.
+ */
+export async function publiclyVisibleSlugs(
+  env: Env,
+  slugs: string[],
+): Promise<Set<string>> {
+  if (slugs.length === 0) return new Set();
+  const rows = await getDb(env)
+    .select({ slug: posts.slug })
+    .from(posts)
+    .where(and(inArray(posts.slug, slugs), publiclyVisible()));
+  return new Set(rows.map((r) => r.slug));
+}
+
 /* Blog ---------------------------------------------------------------------
  *
  * Blog rows are `kind = 'post'` and carry a source_path, since they are
@@ -672,6 +697,40 @@ export async function upsertMediaRecord(
  */
 export async function deleteMediaRecord(env: Env, key: string) {
   await getDb(env).delete(media).where(eq(media.key, key));
+}
+
+/**
+ * Claims a media key for deletion, atomically, and says whether it won.
+ *
+ * Finding B009: the delete action read the citations, found none, and then
+ * deleted the blob. Between those two steps a concurrent save can insert a
+ * `media_refs` row, and the object is removed anyway, leaving the post that
+ * just cited it rendering a broken image.
+ *
+ * This makes the decisive step ONE statement, so the "is it still unreferenced"
+ * test and the row removal cannot be separated by anything: D1 executes a
+ * single statement atomically, and `NOT EXISTS` is evaluated inside it. A
+ * return of false means either the key was already gone or something cited it,
+ * and the caller must refuse either way.
+ *
+ * Deleting the ROW is what claims the key, and it deliberately runs BEFORE the
+ * object. The module's conflict rule is that R2 wins, so the failure mode of
+ * stopping here is a surviving object with no row, which the next rebuild
+ * backfills; the reverse order would leave a row pointing at nothing, which is
+ * the direction `check:media` treats as the error.
+ *
+ * Raw SQL rather than the query builder because the correctness is in the
+ * single-statement `NOT EXISTS`, and that is worth being able to read.
+ */
+export async function claimMediaKeyForDelete(env: Env, key: string) {
+  const result = await env.DB.prepare(
+    `DELETE FROM media
+      WHERE r2_key = ?1
+        AND NOT EXISTS (SELECT 1 FROM media_refs WHERE media_key = ?1)`,
+  )
+    .bind(key)
+    .run();
+  return (result.meta?.changes ?? 0) > 0;
 }
 
 /** Keys that already have a row, so a backfill can skip them. */

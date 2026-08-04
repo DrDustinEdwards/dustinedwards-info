@@ -3,7 +3,7 @@ import { Form, Link, useSearchParams } from "react-router";
 import { AdminAlert } from "~/components/admin/alert";
 import { Panel } from "~/components/admin/panel";
 import {
-  deleteMediaRecord,
+  claimMediaKeyForDelete,
   mediaCounts,
   mediaRefsFor,
   mediaRoleCounts,
@@ -290,12 +290,33 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     }
 
+    /*
+     * THE CLAIM, and it is one statement on purpose. Finding B009: everything
+     * above is a check-then-act, so a save that adds a citation after the read
+     * and before the delete used to lose its image. `claimMediaKeyForDelete`
+     * removes the row only if nothing cites the key AT THAT INSTANT, inside a
+     * single D1 statement, and reports whether it won.
+     *
+     * Losing means something cited it in the meantime, so this refuses, which
+     * is the same fail-closed stance the checks above take. The row goes first
+     * because R2 wins every conflict: a surviving object with no row is
+     * backfilled by the next rebuild, while a row with no object is the case
+     * `check:media` calls an error.
+     *
+     * The residual, stated rather than implied: a save can still land a ref
+     * between this claim and the R2 delete below. Closing that needs both paths
+     * to take a lock, which the save path does not have. What this removes is
+     * the wide window, the one that spanned two awaits and a network round
+     * trip; what is left is bounded by a single R2 call and cannot be reached
+     * without a concurrent writer on a single-author system.
+     */
+    if (!(await claimMediaKeyForDelete(env, key))) {
+      return {
+        message: `Delete refused: ${key} was cited or removed while this delete was being checked. Reload and try again.`,
+      };
+    }
+
     await deleteMediaObject(env, key);
-    // The row goes with the object, or the table would accumulate annotations
-    // for things that no longer exist. The queue consumer would also do this
-    // from the delete event; doing it here too is idempotent and means the page
-    // the operator lands on is already correct rather than eventually correct.
-    await deleteMediaRecord(env, key);
     return { message: `Deleted ${key} and its row. Nothing cited it.` };
   }
 

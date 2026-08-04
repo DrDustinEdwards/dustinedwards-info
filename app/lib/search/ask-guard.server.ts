@@ -190,6 +190,19 @@ export async function readCachedAnswer(
   return { answer: value.answer, chunks: value.chunks };
 }
 
+/**
+ * Removes one cached answer.
+ *
+ * The targeted counterpart to `invalidateAnswerCache`, for finding B010: the
+ * replay path finds an entry whose citations are no longer public and deletes
+ * exactly that entry. A KV `delete` by name is strongly consistent, unlike the
+ * `list` the bulk invalidation walks, so this is not subject to the lag that
+ * produced the stale entry in the first place.
+ */
+export async function dropCachedAnswer(env: Env, key: string): Promise<void> {
+  await env.APP_KV.delete(key);
+}
+
 export async function writeCachedAnswer(
   env: Env,
   key: string,

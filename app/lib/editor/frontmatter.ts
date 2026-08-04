@@ -30,6 +30,34 @@ export type PostFields = {
    * next edit, and a published post would read as never published.
    */
   firstPublished: string;
+  /**
+   * CARRIED, NOT EDITED. Finding B004.
+   *
+   * Everything below is a real key in `frontmatterSchema` that this pair did
+   * not know about, and the consequence was silent data loss: `serializePost`
+   * writes exactly the keys it is handed, so a post committed by hand or by the
+   * operator API with `featured`, `series`/`part`, `further_reading`, an OG
+   * override or an explicit `updated` had those keys ERASED by the next browser
+   * save. Nothing warned, because the save was valid: the file simply came back
+   * smaller. Revision restore lost them the same way, since it loads a
+   * historical file through `parsePost`.
+   *
+   * They are preserved rather than exposed as form controls, which is the same
+   * treatment `firstPublished` gets and the smallest change that makes the round
+   * trip lossless. Giving them editors is a feature and can be decided on its
+   * own; losing them is a bug either way.
+   *
+   * `furtherReading` is the one that cannot be a scalar. It travels as JSON in a
+   * hidden input and is re-emitted as a YAML block, so the editor never has to
+   * understand its shape to avoid destroying it.
+   */
+  featured: boolean;
+  series: string;
+  part: string;
+  furtherReading: string;
+  ogTitle: string;
+  ogDescription: string;
+  updated: string;
 };
 
 export const EMPTY_FIELDS: PostFields = {
@@ -44,6 +72,13 @@ export const EMPTY_FIELDS: PostFields = {
   coverAlt: "",
   body: "",
   firstPublished: "",
+  featured: false,
+  series: "",
+  part: "",
+  furtherReading: "",
+  ogTitle: "",
+  ogDescription: "",
+  updated: "",
 };
 
 /** Splits a comma or newline separated tag input into clean slugs. */
@@ -76,6 +111,39 @@ export function normalizeBody(body: string) {
   return body.replace(/\r\n/g, "\n").trim();
 }
 
+/**
+ * The `further_reading` list a hidden input is carrying, as objects.
+ *
+ * Tolerant on purpose. This value crosses a form round trip, so the honest
+ * failure mode is "the input was empty or malformed", and the schema is what
+ * judges the CONTENT: `frontmatterSchema` rejects a bad url with the protocol
+ * allowlist, and it runs on the serialized file server side either way. Parsing
+ * loosely here and validating strictly there keeps one authority over the rule
+ * rather than two that can disagree.
+ *
+ * Entries missing a title or url are dropped rather than emitted half-formed,
+ * because a `- title:` with no `url` is a schema failure that would block the
+ * save on data the author never typed.
+ */
+export function parseFurtherReading(raw: string) {
+  if (!raw.trim()) return [] as { title: string; url: string }[];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const title = (item as Record<string, unknown>).title;
+    const url = (item as Record<string, unknown>).url;
+    if (typeof title !== "string" || typeof url !== "string") return [];
+    if (!title.trim() || !url.trim()) return [];
+    return [{ title: title.trim(), url: url.trim() }];
+  });
+}
+
 export function serializePost(fields: PostFields) {
   const lines = [
     "---",
@@ -99,6 +167,35 @@ export function serializePost(fields: PostFields) {
     lines.push("cover:");
     lines.push(`  src: ${fields.coverSrc.trim()}`);
     lines.push(`  alt: ${JSON.stringify(fields.coverAlt)}`);
+  }
+
+  /*
+   * The B004 keys. Each is emitted only when it has a value, so a post that
+   * never set one is byte-identical to what it was before this existed: adding
+   * `featured: false` to twelve files would have churned the artifact for a
+   * default nobody wrote.
+   */
+  if (fields.featured) lines.push("featured: true");
+  if (fields.series.trim()) {
+    lines.push(`series: ${JSON.stringify(fields.series.trim())}`);
+  }
+  // Unquoted: `part` is a number in the schema and a quoted scalar is a string.
+  if (fields.part.trim()) lines.push(`part: ${fields.part.trim()}`);
+  if (fields.ogTitle.trim()) {
+    lines.push(`og_title: ${JSON.stringify(fields.ogTitle.trim())}`);
+  }
+  if (fields.ogDescription.trim()) {
+    lines.push(`og_description: ${JSON.stringify(fields.ogDescription.trim())}`);
+  }
+  if (fields.updated.trim()) lines.push(`updated: ${fields.updated.trim()}`);
+
+  const reading = parseFurtherReading(fields.furtherReading);
+  if (reading.length > 0) {
+    lines.push("further_reading:");
+    for (const item of reading) {
+      lines.push(`  - title: ${JSON.stringify(item.title)}`);
+      lines.push(`    url: ${JSON.stringify(item.url)}`);
+    }
   }
 
   lines.push("---", "");
@@ -134,6 +231,17 @@ export function parsePost(raw: string): PostFields {
     coverAlt: asString(cover.alt),
     body: parsed.content.replace(/^\n+/, ""),
     firstPublished: asString(data.first_published),
+    featured: data.featured === true,
+    series: asString(data.series),
+    part: asString(data.part),
+    // Re-serialized to JSON rather than kept as a structure, because this has
+    // to survive a form round trip and a FormData value is a string.
+    furtherReading: Array.isArray(data.further_reading)
+      ? JSON.stringify(data.further_reading)
+      : "",
+    ogTitle: asString(data.og_title),
+    ogDescription: asString(data.og_description),
+    updated: asString(data.updated),
   };
 }
 
@@ -153,5 +261,18 @@ export function fieldsFromForm(form: FormData): PostFields {
     body: get("body"),
     // Round-tripped through a hidden input so a browser save preserves it.
     firstPublished: get("firstPublished"),
+    // The B004 keys, all through hidden inputs for the same reason. A checkbox
+    // is absent from a FormData when unchecked, so `featured` is carried as an
+    // explicit "true"/"false" string rather than by presence: the editor is not
+    // offering a control here, it is relaying a committed value, and presence
+    // semantics would turn "the form did not carry it" into "the author cleared
+    // it", which is the exact class of loss this finding is about.
+    featured: get("featured") === "true",
+    series: get("series"),
+    part: get("part"),
+    furtherReading: get("furtherReading"),
+    ogTitle: get("ogTitle"),
+    ogDescription: get("ogDescription"),
+    updated: get("updated"),
   };
 }
