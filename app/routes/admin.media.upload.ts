@@ -1,7 +1,7 @@
 import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
 import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
-import { readDimensions } from "~/lib/media/core.server";
+import { measureDimensions } from "~/lib/media/core.server";
 import type { Route } from "./+types/admin.media.upload";
 
 /**
@@ -87,7 +87,26 @@ export async function action({ request, context }: Route.ActionArgs) {
   // Read once. The bytes are needed twice, to hash and to store, and a File's
   // stream cannot be consumed twice.
   const bytes = await file.arrayBuffer();
-  const key = contentKey(await crypto.subtle.digest("SHA-256", bytes), extension);
+
+  /**
+   * MEASURED BEFORE THE KEY EXISTS, because the key carries the measurement.
+   *
+   * Finding B002: image dimensions are baked into the gated HTML, and the two
+   * writers measured them from two different stores, one of which a clone
+   * cannot reach. The key carries `-<w>x<h>` so both resolvers parse rather
+   * than fetch. That makes this measurement an input to the key, which is why
+   * it happens here instead of through `readDimensions` after the put.
+   *
+   * Null is a real answer and not a failure: an SVG has no intrinsic pixel
+   * size, so it gets a key with no dimension segment, exactly as the `media`
+   * table records a NULL width for the same reason.
+   */
+  const dimensions = await measureDimensions(env, bytes);
+  const key = contentKey(
+    await crypto.subtle.digest("SHA-256", bytes),
+    extension,
+    dimensions,
+  );
 
   // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the
   // bytes, so re-uploading the same image overwrites an object with a
@@ -125,7 +144,9 @@ export async function action({ request, context }: Route.ActionArgs) {
    * backfill button offering to fix it.
    */
   try {
-    const dimensions = await readDimensions(env, key);
+    // `dimensions` is the measurement the key was built from, reused rather
+    // than re-read: one measurement means the row and the key cannot disagree,
+    // and it drops a round trip back to R2 for bytes we just had in hand.
     const { kind, mime } = classify(key);
     await upsertMediaRecord(env, {
       key,

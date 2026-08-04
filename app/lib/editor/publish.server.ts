@@ -28,8 +28,14 @@ import {
 } from "~/lib/content/pipeline.mjs";
 // Side-effect import: installs the Worker WASM loader before anything renders.
 import "~/lib/content/wasm.server";
-import { SITE_ORIGIN } from "~/lib/seo";
-import { commitFiles, getHead, readFile, GitHubError } from "./github.server";
+import { dimensionsFromKey } from "~/lib/media/classify.mjs";
+import {
+  commitFiles,
+  getHead,
+  readFile,
+  readBinaryFile,
+  GitHubError,
+} from "./github.server";
 import { decide, PolicyError, type Actor } from "./publish-policy.mjs";
 
 export { GitHubError, PolicyError };
@@ -56,16 +62,28 @@ type PublishEnv = Env & { GITHUB_TOKEN?: string };
 /**
  * Measures an image the editor referenced.
  *
- * `/media/*` is read straight from the R2 binding, because an image uploaded a
- * moment ago is in the bucket but may not be reachable over the public origin
- * yet. Anything else is a committed asset under `public/`, fetched from the
- * canonical origin.
+ * BOTH BRANCHES EXIST TO AGREE WITH `scripts/lib/content.mjs`, and finding B002
+ * is that neither did. Dimensions are written into the stored HTML by
+ * `rehypeImageDimensions`, so they are part of the gated artifact: whatever
+ * this returns, `build:content` has to return too, from a clone, with no
+ * bindings and no network.
+ *
+ * `/media/*` is resolved from the KEY. Those blobs live only in R2, so reading
+ * bytes here was something the Node build could never match; the first
+ * `/media/` citation would have committed HTML that `build:content` could not
+ * reproduce. The key carries `-<w>x<h>` and both resolvers call the same
+ * `dimensionsFromKey`, so nothing is fetched and nothing can drift.
+ *
+ * `public/*` is read from the REPOSITORY at the pinned ref, not from
+ * `SITE_ORIGIN`. That was the second half of B002: the origin serves the
+ * DEPLOYED asset while the build measures the working tree, so an image
+ * retouched and committed but not yet deployed gave the two writers different
+ * numbers for the same src. The repo is what a clone builds from, so the repo
+ * is what this measures.
  *
  * Exported so the admin preview route resolves images exactly as a save does.
  * There must not be a second implementation: preview's whole claim is that what
- * it renders is what publishes, and image dimensions are baked into the markup
- * by `rehypeImageDimensions`, so a preview that measured images differently
- * would produce different HTML and quietly break the claim.
+ * it renders is what publishes.
  */
 export function makeResolveImage(env: PublishEnv) {
   return async (src: string) => {
@@ -73,21 +91,23 @@ export function makeResolveImage(env: PublishEnv) {
       throw new EditorError(`Image src "${src}" must be a site-absolute path.`);
     }
 
-    let bytes: Uint8Array;
     if (src.startsWith("/media/")) {
-      const object = await env.MEDIA.get(src.slice("/media/".length));
-      if (!object) {
-        throw new EditorError(`Image "${src}" is not in the media bucket.`);
-      }
-      bytes = new Uint8Array(await object.arrayBuffer());
-    } else {
-      const response = await fetch(`${SITE_ORIGIN}${src}`);
-      if (!response.ok) {
+      const dimensions = dimensionsFromKey(src);
+      if (!dimensions) {
         throw new EditorError(
-          `Image "${src}" could not be fetched (${response.status}).`,
+          `Image "${src}" carries no dimensions in its key. Uploaded images ` +
+            `are keyed <hash>-<width>x<height>.<ext>; re-upload it to get a ` +
+            `key the build can measure.`,
         );
       }
-      bytes = new Uint8Array(await response.arrayBuffer());
+      return dimensions;
+    }
+
+    const bytes = await readBinaryFile(env, `public${src}`);
+    if (!bytes) {
+      throw new EditorError(
+        `Image "${src}" is not in the repository at public${src}.`,
+      );
     }
 
     const size = imageSize(bytes);
@@ -490,7 +510,28 @@ function searchStatements(db: D1Database, record: any) {
   ];
 }
 
-/** Removes a post's rows. Tag rows stay, matching the bulk sync's behaviour. */
+/**
+ * Removes a post's rows. Tag rows stay, matching the bulk sync's behaviour.
+ *
+ * THE `media_refs` DELETE IS FINDING B003, and it is the one line here that is
+ * not merely tidiness. A save already scope-clears that slug's refs through
+ * `mediaRefStatements`, and the bulk sync clears every `source_type='post'` row
+ * before rewriting them, so delete was the only lifecycle edge that left them.
+ *
+ * The consequence was not a stale row, it was a permanently refused delete. The
+ * media delete action fails closed on EITHER channel, the refs table or the
+ * resolver scan, and it is right to: refs are precise and the scan is a
+ * conservative superset, so the union is what makes a refcount safe once blobs
+ * are shared. But after a post was deleted the resolver correctly reported zero
+ * citations while `media_refs` still claimed one, so the image it had cited
+ * could never be removed from the library. `Regenerate all` does not repair it
+ * either: it loops the posts still in the artifact and never issues a scoped
+ * delete for a slug that is gone. Only a full `sync:content`, which rewrites
+ * the table wholesale, cleared it.
+ *
+ * In the same batch as the post row, for the reason `mediaRefStatements` gives:
+ * a delete either records that the citations are gone or does not happen.
+ */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
   await env.DB.batch([
     env.DB.prepare(
@@ -501,6 +542,9 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
     env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`),
     env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    env.DB.prepare(
+      `DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`,
+    ).bind(slug),
   ]);
 }
 

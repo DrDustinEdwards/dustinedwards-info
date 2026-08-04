@@ -120,6 +120,47 @@ export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
   }
 }
 
+/**
+ * Reads a file at a given ref as RAW BYTES.
+ *
+ * `readFile` decodes to text, which is right for markdown and destroys an
+ * image: `TextDecoder` replaces every invalid UTF-8 sequence, so a PNG comes
+ * back a different length than it went in and nothing can measure it.
+ *
+ * Added for finding B002. The editor's image resolver used to measure
+ * `public/*` by fetching `SITE_ORIGIN`, which is the DEPLOYED asset, while
+ * `build:content` measured the file in the working tree. A retouched image
+ * committed but not yet deployed therefore gave the two writers different
+ * dimensions for the same src. Reading the repo at the pinned ref measures what
+ * the repository says, which is exactly the bytes a clone would build from.
+ *
+ * The Contents API caps out at 1 MB per file; anything larger comes back with
+ * an empty `content` and needs the blob endpoint. Site images are well under
+ * that, and the empty-content case is reported rather than measured, so an
+ * oversized asset fails the save instead of silently losing its dimensions.
+ */
+export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
+  try {
+    const file = await gh<{ content: string; encoding: string; size: number }>(
+      env,
+      `/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`,
+    );
+    if (file.encoding !== "base64" || file.content.length === 0) {
+      throw new GitHubError(
+        `"${path}" is ${file.size} bytes and did not come back as base64 ` +
+          `content; the Contents API caps at 1 MB.`,
+        422,
+      );
+    }
+    return Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) =>
+      c.charCodeAt(0),
+    );
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export type FileChange =
   /** Write or overwrite a file. */
   | { path: string; content: string }

@@ -54,6 +54,24 @@ export function urlForKey(key) {
 }
 
 /**
+ * The post slug an item key came from, or null.
+ *
+ * The same mapping as `urlForKey`, reduced to the identifier D1 stores, so a
+ * caller can ask whether the post behind a citation is still public without
+ * re-parsing a URL that this module just built. Finding B010 needs exactly
+ * that on the cached-answer replay path.
+ *
+ * @param {string} key
+ * @returns {string | null}
+ */
+export function slugForKey(key) {
+  const url = urlForKey(key);
+  if (!url) return null;
+  const slug = url.split("#")[0].replace(/^\/blog\//, "");
+  return slug.length > 0 ? slug : null;
+}
+
+/**
  * A readable label for a citation.
  *
  * The heading text is not carried on the chunk, so the anchor is un-slugged.

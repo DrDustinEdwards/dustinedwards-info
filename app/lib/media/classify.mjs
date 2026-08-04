@@ -194,12 +194,77 @@ export function cropSafe(pathOrKey) {
  * recoverable from the bytes. The extension rides along so the object is still
  * self-describing to a browser and to `classify()`.
  *
+ * THE KEY ALSO CARRIES THE INTRINSIC DIMENSIONS, and that is finding B002.
+ *
+ * Image dimensions are baked into the stored HTML by `rehypeImageDimensions`,
+ * so they are part of the gated artifact and BOTH writers have to produce the
+ * same ones. They could not: the Node build measured bytes under `public/` and
+ * the Worker measured bytes in R2, and an R2 blob is not readable from a clone
+ * at all. The first `/media/` citation would therefore have committed HTML that
+ * `build:content` could not reproduce.
+ *
+ * Carrying `-<w>x<h>` in the key makes the two agree BY CONSTRUCTION rather
+ * than by both reaching the same store: each resolver parses the string it was
+ * handed and neither reads bytes. It cannot go stale, because the digest pins
+ * the bytes the dimensions were measured from; a different image is a different
+ * key. Chosen over a committed dimensions manifest because a manifest would add
+ * the gap that an uploaded image is not citable until the manifest is
+ * regenerated and committed.
+ *
+ * `dimensions` is null for anything with no intrinsic pixel size, which is the
+ * same truth the `media` table records as a NULL width: an SVG has none, and 0
+ * would be a measurement rather than the absence of one. Such a key has no
+ * suffix and resolves to no dimensions.
+ *
  * @param {ArrayBuffer} digest a SHA-256 digest
  * @param {string} extension
+ * @param {{ width: number, height: number } | null} [dimensions]
  */
-export function contentKey(digest, extension) {
+export function contentKey(digest, extension, dimensions = null) {
   const hex = [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  return `${hex.slice(0, 16)}.${extension}`;
+  const size =
+    dimensions && dimensions.width > 0 && dimensions.height > 0
+      ? `-${dimensions.width}x${dimensions.height}`
+      : "";
+  return `${hex.slice(0, 16)}${size}.${extension}`;
+}
+
+/**
+ * The intrinsic dimensions a media key carries, or null if it carries none.
+ *
+ * The one reader of the `-<w>x<h>` segment `contentKey` writes. Both resolvers
+ * call THIS, exactly as both content writers call `records.mjs`, so there is no
+ * second parser to drift from the producer.
+ *
+ * Accepts a bare key (`ab12-1600x900.webp`) or a `/media/` path, because the
+ * pipeline hands resolvers a site-absolute src and the upload path holds a key.
+ *
+ * Deliberately strict. A key whose segment is malformed, zero or oversized
+ * returns null rather than a guess, and a null is a build failure at the call
+ * site rather than a silently missing attribute. Preventing layout shift is the
+ * whole point, so "I could not tell" must never render as "no dimensions
+ * needed".
+ *
+ * @param {string} keyOrPath
+ * @returns {{ width: number, height: number } | null}
+ */
+export function dimensionsFromKey(keyOrPath) {
+  if (typeof keyOrPath !== "string") return null;
+  // Query and fragment are stripped, the same rule and for the same reason as
+  // `mediaKeyOf`: `?w=320` is a transform request, not a different object, and
+  // the intrinsic size the key records is a property of the blob either way.
+  const path = keyOrPath.split(/[?#]/)[0];
+  const key = path.startsWith("/media/")
+    ? path.slice("/media/".length)
+    : path;
+  // Anchored on the 16 hex digits so ordinary filenames containing something
+  // like "-800x600" cannot be read as a measurement.
+  const match = key.match(/^[0-9a-f]{16}-(\d{1,5})x(\d{1,5})\.[a-z0-9]+$/);
+  if (!match) return null;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (width <= 0 || height <= 0) return null;
+  return { width, height };
 }
