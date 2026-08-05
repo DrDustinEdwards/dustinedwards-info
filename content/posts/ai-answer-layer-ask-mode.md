@@ -42,17 +42,17 @@ The implementation of those gates produced the most transferable measurements in
 
 Configure a limit, then attack it with genuinely concurrent requests and count what gets through. Three implementations, same test shape, very different results.
 
-Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, admitted one, then two, then nine, then zero across four runs. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter. The four runs are worth seeing side by side, because the variance is the finding:
+Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, refused one, then two, then nine, then zero across four runs. A limiter honouring its own limit refuses seven of twelve every time, so those runs let eleven requests through, then ten, then three, then all twelve. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter. The four runs are worth seeing side by side, because the variance is the finding:
 
-:::chart{type="bar" x="run" y="admitted" title="Requests admitted by the built-in rate-limiting binding, limit 5" alt="Bar chart of four identical test runs against Cloudflare's rate-limiting binding configured to allow 5 requests per minute, attacked with 12 concurrent requests. The runs admitted 1, 2, 9, and 0 requests respectively, scattering both far below and far above the configured limit of 5."}
+:::chart{type="bar" x="run" y="refused" title="Requests refused by the built-in rate-limiting binding, limit 5" alt="Bar chart of four identical test runs against Cloudflare's rate-limiting binding configured to allow 5 requests per minute, attacked with 12 concurrent requests. The binding refused 1, then 2, then 9, then 0 requests. A limiter honouring the limit would refuse 7 every time."}
 ```csv
-run,admitted
+run,refused
 run 1,1
 run 2,2
 run 3,9
 run 4,0
 ```
-Four identical runs: 12 concurrent requests against a configured limit of 5 per 60 seconds. Admissions scatter from 0 to 9 around the limit, consistent with the documented eventually-consistent design. It sheds load; it does not count.
+Four identical runs: 12 concurrent requests against a configured limit of 5 per 60 seconds. Refusals scatter from 0 to 9 where a counting limiter would refuse 7 every time, consistent with the documented eventually-consistent design. It sheds load; it does not count.
 :::
 
 A Durable Object using the asynchronous storage API, with a read-increment-write sequence, admitted eight requests through a ceiling of three. The reason is the finding I most want to pass along: a Durable Object is single-threaded, but a read and a write separated by an await are not atomic, because other requests interleave at the await point. Single-threaded and transactional are different properties, and the difference only appears under concurrent load.
