@@ -33,7 +33,8 @@
     "check:logo": "node scripts/check-logo.mjs",
     "check:charts": "node scripts/check-charts.mjs",
     "check:admin-ui": "node scripts/check-admin-ui.mjs",
-    "check:urls": "node scripts/check-urls.mjs"
+    "check:urls": "node scripts/check-urls.mjs",
+    "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",

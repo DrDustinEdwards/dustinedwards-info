@@ -1,7 +1,7 @@
 import assetManifest from "../../../content/generated/assets.json";
 
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
-import { classify, isRaster, roleOf, storageOf } from "./classify.mjs";
+import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
 
 /**
  * Re-derives the media index from the things that are actually true.
@@ -129,9 +129,9 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
     try {
       const { kind, mime } = classify(object.key);
       // An OG card lives in the OG bucket now, so the read has to follow the
-      // key rather than assume MEDIA. `storageOf` already answers which is
-      // which, so this asks it rather than testing the prefix a second time.
-      const bucket = storageOf(object.key) === "r2-derived" ? env.OG : env.MEDIA;
+      // key rather than assume MEDIA. This was the third inline copy of that
+      // expression; it is one shared function since 2026-08-04.
+      const bucket = bucketFor(env, object.key);
       // Two separate GETs, because a body is a stream and can only be read once.
       // `.info()` and the transform each consume one.
       const measurable = isRaster(object.key);

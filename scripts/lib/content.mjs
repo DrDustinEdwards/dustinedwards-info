@@ -36,10 +36,13 @@ const PUBLIC_DIR = "public";
  * `-<w>x<h>` and both resolvers parse it with the same `dimensionsFromKey`, so
  * neither reads bytes and there is nothing left to disagree about.
  *
+ * Exported so `check:invariants` can compare it against the Worker's resolver
+ * directly rather than inferring their agreement from rendered HTML.
+ *
  * @param {string} file source markdown path, for the error message
  * @returns {(src: string) => Promise<{ width: number, height: number }>}
  */
-function makeResolveImage(file) {
+export function makeResolveImage(file) {
   return async (/** @type {string} */ src) => {
     if (!src.startsWith("/")) {
       throw new ContentError(file, `image src "${src}" must be site-absolute`);

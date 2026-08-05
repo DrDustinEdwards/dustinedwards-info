@@ -140,8 +140,15 @@ function truncateWords(value: string, limit: number): string {
  * The visibility predicate, and the SQL twin of publiclyVisible() in
  * app/db/index.ts. Both must stay in step: a scheduled post that is hidden on
  * the blog index and findable in search would be a leak.
+ *
+ * The two cannot be collapsed into one function: that one is a drizzle
+ * condition over the `posts` schema and this is a string spliced into a
+ * hand-written query over the `search_docs` alias `d`. So the agreement is
+ * asserted instead. `check:invariants` runs both against a fixture of post
+ * states and fails if they ever admit different rows, which is why this is
+ * exported.
  */
-function visibilityClause(): string {
+export function visibilityClause(): string {
   return `d.status = 'published' AND (d.publish_at IS NULL OR d.publish_at <= ?)`;
 }
 
