@@ -1,5 +1,5 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
-import { classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
+import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 
 /**
  * The media index write path: R2 emits, a queue delivers, this derives the row.
@@ -53,8 +53,9 @@ function objectKeyOf(body: unknown): string | null {
   return typeof key === "string" && key.length > 0 ? key : null;
 }
 
-/**
- * Which bucket holds this key.
+/*
+ * `bucketFor` MOVED to `classify.mjs`, and the history is why it must be one
+ * function rather than three that happen to agree.
  *
  * **This must ask, not assume, and the reason is a real defect it once caused.**
  * Until 2026-08-02 `indexOne` read `env.MEDIA` unconditionally while deriving
@@ -66,15 +67,16 @@ function objectKeyOf(body: unknown): string | null {
  * It was latent only because the notification rule was configured on
  * `dustinedwards-media` alone, which is safety by dashboard configuration rather
  * than by code. Adding notifications on OG, the obvious next step, would have had
- * every `build:og --remote` run silently strip the index.
+ * every `build:og --remote` run silently strip the index. Since 2026-08-04 both
+ * buckets DO notify this queue, so that safety margin is gone and the rule has to
+ * hold in code.
  *
  * The asymmetry was invisible from inside: `rebuild.server.ts` already walked
  * both buckets correctly, and each file read correctly on its own. It took an
- * outside reader comparing the two.
+ * outside reader comparing the two. That is exactly the review this repo cannot
+ * rely on, so the copies were collapsed into one and `check:invariants` now fails
+ * if a second appears anywhere.
  */
-function bucketFor(env: Env, key: string): R2Bucket {
-  return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
-}
 
 export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) {
   for (const message of batch.messages) {

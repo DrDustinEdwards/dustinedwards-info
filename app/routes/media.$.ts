@@ -1,5 +1,5 @@
 import { getEnv } from "~/lib/context";
-import { cropSafe, storageOf } from "~/lib/media/classify.mjs";
+import { bucketFor, cropSafe, storageOf } from "~/lib/media/classify.mjs";
 import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import type { Route } from "./+types/media.$";
 
@@ -61,17 +61,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   return new Response(object.body, { headers });
 }
 
-/**
- * Which bucket holds this key.
- *
- * Two buckets split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
- * command regenerates. `storageOf` already answers the question from the key
- * shape, so this asks it rather than testing the prefix a second time and giving
- * the answer somewhere it could drift.
- */
-function bucketFor(env: Env, key: string): R2Bucket {
-  return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
-}
+/* `bucketFor` MOVED to `classify.mjs`. It was one of three copies of the same
+ * expression, all agreeing, with nothing holding them together;
+ * `check:invariants` now fails if a second one reappears. */
 
 async function serveThumbnail(env: Env, request: Request, key: string, width: number) {
   // Keyed by the full request URL, so each width is its own entry and the

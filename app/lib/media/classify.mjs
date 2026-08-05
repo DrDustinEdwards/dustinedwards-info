@@ -94,6 +94,43 @@ export function storageOf(pathOrKey) {
 }
 
 /**
+ * Which bucket holds this key.
+ *
+ * Two buckets split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
+ * command regenerates. `storageOf` already answers the question from the key
+ * shape, so this asks it rather than testing the prefix a second time.
+ *
+ * ONE IMPLEMENTATION, and that is the point. This expression previously existed
+ * three times: named `bucketFor` in `workers/media-events.ts` and
+ * `app/routes/media.$.ts`, and inline in `rebuild.server.ts`. All three agreed,
+ * nothing enforced that they would keep agreeing, and this is the class of pair
+ * that deleted rows: the queue consumer once resolved every key to MEDIA, so an
+ * OG card's event looked like a delete of an object that was not there.
+ *
+ * It lives here beside `storageOf` because it is a pure function of the key
+ * shape and nothing else, and a caller only has to supply the env it already
+ * holds. `check:invariants` asserts no second copy reappears, which is the real
+ * failure mode now that there is one.
+ *
+ * A `static` key resolves to MEDIA, where the miss is loud in `check:media`
+ * rather than silent. Static objects are in no bucket and emit no notifications,
+ * so reaching here with one is itself the bug.
+ *
+ * Typed generically over the two bindings rather than against `Env`, because
+ * this module is shared with the Node build scripts and must not depend on the
+ * Worker's generated types. A real `Env` satisfies it and `T` infers to
+ * `R2Bucket`.
+ *
+ * @template T
+ * @param {{ OG: T, MEDIA: T }} env
+ * @param {string} key
+ * @returns {T}
+ */
+export function bucketFor(env, key) {
+  return storageOf(key) === "r2-derived" ? env.OG : env.MEDIA;
+}
+
+/**
  * What an asset is FOR, as opposed to what it is or where it lives.
  *
  * `kind` and `storage` turned out not to be enough, and the gap was live rather
