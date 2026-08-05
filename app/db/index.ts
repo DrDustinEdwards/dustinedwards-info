@@ -719,18 +719,31 @@ export async function deleteMediaRecord(env: Env, key: string) {
  * backfills; the reverse order would leave a row pointing at nothing, which is
  * the direction `check:media` treats as the error.
  *
- * Raw SQL rather than the query builder because the correctness is in the
- * single-statement `NOT EXISTS`, and that is worth being able to read.
+ * **Built through the query builder, so every table and column name comes from
+ * the schema rather than from a string.** The first version of this was raw SQL
+ * and named the primary key `r2_key`, which is what `0007_media.sql` creates and
+ * NOT what the table has: `0009_media_index.sql` renames it to `key`, because
+ * the column stopped holding only R2 keys once static assets were indexed in
+ * place. The statement was therefore guaranteed to throw on the one path it
+ * exists to protect, and nothing caught it, because no gate and no typecheck
+ * reads a SQL string. Reading the migration that CREATES a table is not reading
+ * the schema; the migration that last touched it is what counts, and
+ * `app/db/schema.ts` is what both agree on.
+ *
+ * `RETURNING` rather than a rowcount so the outcome is a row this code can see,
+ * which does not depend on how a driver reports `changes`.
  */
 export async function claimMediaKeyForDelete(env: Env, key: string) {
-  const result = await env.DB.prepare(
-    `DELETE FROM media
-      WHERE r2_key = ?1
-        AND NOT EXISTS (SELECT 1 FROM media_refs WHERE media_key = ?1)`,
-  )
-    .bind(key)
-    .run();
-  return (result.meta?.changes ?? 0) > 0;
+  const claimed = await getDb(env)
+    .delete(media)
+    .where(
+      and(
+        eq(media.key, key),
+        sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${key})`,
+      ),
+    )
+    .returning({ key: media.key });
+  return claimed.length > 0;
 }
 
 /** Keys that already have a row, so a backfill can skip them. */
