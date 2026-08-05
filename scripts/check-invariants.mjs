@@ -838,13 +838,24 @@ console.log("\n  5. every column named in raw SQL exists in the schema");
  * disagreement between schema sources, it was a string nobody compared to any
  * of them.
  *
- * **It does not parse SQL and does not need to.** Two extractions, both regex:
+ * **It does not parse SQL and does not need to.** Five extractions, all regex,
+ * and every one of them was added because a probe proved the previous set let a
+ * real column rename through:
  *
- *   INSERT INTO <table> (a, b, c)   table-scoped, so a column that exists on
- *                                   some OTHER table is still caught
- *   <qualifier>.<column>            schema-wide, because resolving an alias to
- *                                   its table needs a parser and the useful
- *                                   question is whether the name exists at all
+ *   (a) INSERT INTO <table> (a, b, c)  table-scoped, so a column that exists on
+ *                                      some OTHER table is still caught
+ *   (b) <qualifier>.<column>           resolved through FROM/JOIN aliases, and
+ *                                      through `excluded` to the INSERT target
+ *   (c) unqualified names after
+ *       WHERE / AND / OR / SET / BY     table-scoped when one table is in play,
+ *                                      otherwise a schema-wide existence check
+ *   (d) EVERY assignment in a SET      not just the first after the keyword
+ *   (e) bare SELECT lists              plain identifiers only
+ *
+ * Statements are read from string literals JOINED ACROSS `+` first. Without
+ * that, `sync-content.mjs` was the last hole in this gate: it builds its SQL as
+ * literal text, so every column name is statically present, but it concatenates
+ * fragments for line length and no single fragment holds a whole statement.
  *
  * **It asserts only that a named column EXISTS, never that a statement names
  * every column.** That distinction is load-bearing: the editor's `posts` upsert
@@ -869,6 +880,40 @@ console.log("\n  5. every column named in raw SQL exists in the schema");
  */
 const STRING_LITERAL = /`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
 const LOOKS_LIKE_SQL = /\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i;
+
+/**
+ * Adjacent string literals joined across `+`, so a statement split for line
+ * length is one statement again.
+ *
+ * **This is what `sync-content.mjs` needed, and without it that file was the
+ * last hole in this gate.** It builds its SQL as literal text, so the column
+ * names are all statically present, but it concatenates fragments:
+ *
+ *     `INSERT INTO posts (slug, kind, title, body, ` +
+ *       `html, description, ...) VALUES (` +
+ *       ...
+ *
+ * Every extraction below needs a WHOLE statement. The INSERT column list is
+ * matched up to its closing paren, and that paren is three fragments away, so
+ * the largest write path in the repo was invisible while the file still
+ * appeared in the scan because its single-fragment statements matched.
+ *
+ * Joining is safe for the same reason it is necessary: it can only make a
+ * literal longer, and a longer literal that is not SQL still fails
+ * `LOOKS_LIKE_SQL`, while a name that resolves to no table is caught either way.
+ *
+ * @param {string} source
+ */
+function joinConcatenatedLiterals(source) {
+  let previous;
+  let text = source;
+  // Repeated because one pass leaves `a` + `b` + `c` half joined.
+  do {
+    previous = text;
+    text = text.replace(/`\s*\+\s*`/g, "").replace(/'\s*\+\s*'/g, "");
+  } while (text !== previous);
+  return text;
+}
 
 try {
   const columnUniverse = new Map();
@@ -929,7 +974,9 @@ try {
     // Generated ambient types. No SQL, and its doc comments carry URLs that
     // read as qualified names.
     if (relativePath.endsWith(".d.ts")) continue;
-    const text = stripComments(readFileSync(file, "utf8"));
+    const text = joinConcatenatedLiterals(
+      stripComments(readFileSync(file, "utf8")),
+    );
     if (!LOOKS_LIKE_SQL.test(text)) continue;
 
     /*
@@ -1035,6 +1082,18 @@ try {
       )) {
         if (realTables.includes(table)) aliases.set(alias, table);
       }
+      /*
+       * `excluded` is the row the INSERT tried to write, so it carries exactly
+       * the target table's columns. Binding it makes `excluded.og_title` a
+       * checkable reference instead of an unresolvable qualifier, and an upsert
+       * is where most of this repo's column names appear twice.
+       */
+      const insertTarget = body.match(
+        /INSERT\s+(?:OR\s+\w+\s+)?INTO\s+([A-Za-z_]\w*)/i,
+      );
+      if (insertTarget && realTables.includes(insertTarget[1])) {
+        aliases.set("excluded", insertTarget[1]);
+      }
 
       /*
        * (c) UNQUALIFIED references.
@@ -1065,9 +1124,50 @@ try {
 
       const bare = [
         ...body.matchAll(
-          /\b(?:WHERE|AND|OR|SET|BY)\s+([A-Za-z_]\w*)\s*(?:=|<|>|!=|\bIS\b|\bIN\b|\bLIKE\b|\bNOT\b|,|$)/gi,
+          /\b(?:WHERE|AND|OR|SET|BY)\s+([A-Za-z_]\w*)\s*(?:=|<|>|!=|\bIS\b|\bIN\b|\bLIKE\b|\bNOT\b|\bDESC\b|\bASC\b|,|$)/gi,
         ),
       ].map((m) => m[1]);
+
+      /*
+       * (e) BARE SELECT lists.
+       *
+       * `SELECT uid, url, title, publish_at FROM search_docs` names four
+       * columns and none of them followed a keyword this scan anchored on, so
+       * all four were unchecked. Measured before this existed: `titl` in that
+       * list was accepted with 0 failures.
+       *
+       * Only plain identifiers are taken. `COUNT(*)`, `snippet(...)`,
+       * `substr(d.body, 1, 240) AS snippet` and anything qualified are left to
+       * the other extractions, which already handle them or correctly ignore
+       * them.
+       */
+      const selectList = body.match(/\bSELECT\b\s+(?:DISTINCT\s+)?([\s\S]*?)\bFROM\b/i);
+      if (selectList) {
+        for (const item of selectList[1].split(",")) {
+          const name = item.trim();
+          if (!/^[A-Za-z_]\w*$/.test(name)) continue;
+          bare.push(name);
+        }
+      }
+
+      /*
+       * (d) EVERY assignment target in a SET clause, not just the first.
+       *
+       * The pattern above anchors on the SET keyword, so in
+       * `SET kind = excluded.kind, title = excluded.title, ...` it saw `kind`
+       * and stopped. An upsert in this repo assigns twenty-two columns, so
+       * twenty-one of them were unchecked, and a typo in any of them passed.
+       * Measured before this existed: `og_titl = excluded.og_title` in
+       * sync-content.mjs was accepted with 0 failures.
+       */
+      const setClause = body.match(/\bSET\b([\s\S]*?)(?:\bWHERE\b|$)/i);
+      if (setClause) {
+        for (const [, name] of setClause[1].matchAll(
+          /(?:^|,)\s*([A-Za-z_]\w*)\s*=/g,
+        )) {
+          bare.push(name);
+        }
+      }
 
       for (const name of bare) {
         if (SQL_KEYWORDS.has(name.toLowerCase())) continue;
