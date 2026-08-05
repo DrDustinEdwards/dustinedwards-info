@@ -37,6 +37,7 @@
     "check:admin-ui": "node scripts/check-admin-ui.mjs",
     "check:urls": "node scripts/check-urls.mjs",
     "check:stack": "node scripts/check-stack.mjs",
+    "check:features": "node scripts/check-features.mjs",
     "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {
