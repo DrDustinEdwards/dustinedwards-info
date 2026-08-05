@@ -42,6 +42,10 @@
  *   - Never bake a content hash into a check. Asset names change.
  *   - React SSR inserts <!-- --> between adjacent text nodes, so comments are
  *     stripped before matching rendered output.
+ *   - SSR also ESCAPES. An apostrophe becomes &#x27;, so prose taken from a data
+ *     file needs entities decoded before matching, not only comments stripped.
+ *     Cost five red runs against a correct page before it was noticed, and the
+ *     failure read as missing content rather than as a harness bug.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -58,6 +62,23 @@ import {
 } from "../app/lib/blog-listing.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/*
+ * The colophon's two data files, READ rather than restated. This harness
+ * listing its own copy of the bindings or the features would be a third mirror
+ * to go stale, and the whole point of those assertions is that what the page
+ * renders matches what the artifact carries.
+ *
+ * `readFileSync` rather than an import attribute: `with { type: "json" }` is
+ * only legal under a newer `module` setting than this repo's tsconfig uses, and
+ * it fails the typecheck rather than the run.
+ */
+const stack = JSON.parse(
+  readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
+);
+const features = JSON.parse(
+  readFileSync(join(root, "content", "features.json"), "utf8"),
+);
 const ORIGIN = process.argv[2] ?? "https://dustinedwards.dustin-edwards.workers.dev";
 const SLUG = "where-should-a-blog-store-its-words";
 
@@ -87,6 +108,33 @@ async function get(path, headers = {}) {
 /** SSR splices HTML comments between adjacent text nodes. */
 /** @param {string} s */
 const strip = (s) => s.replace(/<!--[\s\S]*?-->/g, "");
+
+/**
+ * Character references decoded, so prose from a data file can be matched
+ * against rendered output.
+ *
+ * **The second transform SSR applies, and the one that is easy to forget.**
+ * Stripping comments is already documented above; escaping is not, and it is the
+ * same class of trap. React escapes `'` to `&#x27;`, so an assertion looking for
+ * "Every form's submitted payload" in the HTML finds nothing while the page is
+ * perfectly correct.
+ *
+ * Measured, not theorised: two of the thirty-eight colophon features carry an
+ * apostrophe, and the completeness assertion below was RED against a correct
+ * page in five consecutive runs before this existed. It reported "36 of 38",
+ * which reads exactly like missing content rather than like a harness bug.
+ *
+ * @param {string} s
+ */
+const unescape = (s) =>
+  s
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    // Ampersand LAST, or a double-escaped entity decodes into the wrong thing.
+    .replace(/&amp;/g, "&");
 
 console.log(`Verifying ${ORIGIN}\n`);
 
@@ -574,7 +622,87 @@ const ASK_PROBE_LIMIT = 3;
   );
 }
 
-/* --- 12. The cache, observed WARM -------------------------------------- */
+/* --- 12. The colophon ---------------------------------------------------- */
+
+{
+  const { status, text } = await get("/colophon");
+  check("colophon: /colophon returns 200", status === 200, `got ${status}`);
+
+  // Comments stripped AND entities decoded, per the harness rules. Both are
+  // transforms SSR applies between the data file and the wire, and matching
+  // prose that came out of JSON needs both undone.
+  const page = unescape(strip(text));
+
+  // The TITLE, not the URL. Both are ruled and they deliberately differ: the
+  // path takes the IndieWeb convention, the heading takes the legibility.
+  check(
+    "colophon: the h1 reads How this site is built",
+    /<h1[^>]*>How this site is built<\/h1>/.test(page),
+    `h1 not found in ${page.length} bytes`,
+  );
+
+  // Generated content actually rendered, rather than an empty shell. A POSITIVE
+  // count, so "nothing missing" cannot mean "nothing examined".
+  const bindingsShown = stack.bindings.filter((/** @type {any} */ b) =>
+    page.includes(`>${b.name}<`),
+  ).length;
+  check(
+    "colophon: every binding in the artifact is on the page",
+    bindingsShown === stack.bindings.length && bindingsShown > 0,
+    `${bindingsShown} of ${stack.bindings.length} binding names found`,
+  );
+
+  // The hand-written half, which no generator produces.
+  const featuresShown = features.features.filter((/** @type {any} */ f) =>
+    page.includes(f.name),
+  ).length;
+  check(
+    "colophon: every feature in the anchors file is on the page",
+    featuresShown === features.features.length && featuresShown > 0,
+    `${featuresShown} of ${features.features.length} feature names found`,
+  );
+
+  // Reachability, not mere existence, and taken from a DIFFERENT page's footer
+  // so this proves the site-wide footer carries it rather than the page linking
+  // to itself.
+  const home = await get("/");
+  check(
+    "colophon: the footer links to /colophon",
+    strip(home.text).includes('href="/colophon"'),
+    `home ${home.status}`,
+  );
+
+  const sitemap = await get("/sitemap.xml");
+  check(
+    "colophon: /colophon is in the sitemap",
+    sitemap.text.includes(`${ORIGIN}/colophon<`),
+    `sitemap ${sitemap.status}, ${sitemap.text.length} bytes`,
+  );
+
+  // THE LIVE ROW, not the file. `llms.txt` is served from D1 and the tracked
+  // file is only the fallback, so this is the one assertion that catches a
+  // committed file whose sync never ran. check:llms --remote reports the same
+  // drift offline; this asserts it on the path a reader actually takes.
+  const llms = await get("/llms.txt");
+  check(
+    "colophon: the live llms.txt mentions /colophon",
+    llms.text.includes("/colophon"),
+    `llms.txt ${llms.status}, ${llms.text.length} bytes. ` +
+      `If this fails, sync:content -- --remote has not run since the file changed.`,
+  );
+
+  // One post carries the pointer line. Ratified as ONE line in the template
+  // rather than a section per article, so asserting it on a single post is
+  // asserting the template.
+  const post = await get(`/blog/${SLUG}`);
+  check(
+    "colophon: a post links to /colophon in its footer line",
+    strip(post.text).includes('href="/colophon"'),
+    `post ${post.status}`,
+  );
+}
+
+/* --- 13. The cache, observed WARM -------------------------------------- */
 
 /**
  * **This section exists because every other one runs cold.**
@@ -612,7 +740,18 @@ const ASK_PROBE_LIMIT = 3;
 
   // Every public HTML surface, including the two with no `headers` export,
   // which reach `private, no-store` through the Worker default instead.
-  const HTML_ROUTES = ["/", "/blog", `/blog/${SLUG}`, "/search?q=d1", "/phage-discovery"];
+  const HTML_ROUTES = [
+    "/",
+    "/blog",
+    `/blog/${SLUG}`,
+    "/search?q=d1",
+    "/phage-discovery",
+    // /colophon has the same `headers` export as home and the Roster page, so
+    // it belongs to the same population: shared-cached for cookieless readers,
+    // and `private, no-store` plus a bypass for anyone carrying a cookie. Both
+    // halves are asserted below.
+    "/colophon",
+  ];
 
   // TWO POPULATIONS, asserted separately, because the whole design turns on
   // treating them differently.
