@@ -15,6 +15,10 @@ export default [
   // /phage-hunters/*, which is a static prefix and not a route; the page prefix
   // and the asset prefix differ on purpose. See the route file.
   route("phage-discovery", "routes/phage-discovery.tsx"),
+  // The colophon. `/colophon` is the IndieWeb convention and is what tooling
+  // expects; the page TITLE carries the legibility ("How this site is built")
+  // because the word is not universally known. Ruled, do not swap them.
+  route("colophon", "routes/colophon.tsx"),
   // Ordered before /search so the Ask endpoint is not read as a search param
   // variant, and kept a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),

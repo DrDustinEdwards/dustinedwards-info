@@ -3,10 +3,17 @@ import { getEnv } from "~/lib/context";
 import { SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/sitemap";
 
-// Static, always-present URLs. /phage-discovery is a hand-built route reading a
-// typed data file rather than a `kind = 'page'` row, so the D1 filter below
-// cannot find it and it is listed here instead.
-const STATIC_PATHS = ["/", "/blog", "/phage-discovery"];
+// Static, always-present URLs. /phage-discovery and /colophon are hand-built
+// routes reading typed data files rather than `kind = 'page'` rows, so the D1
+// filter below cannot find them and they are listed here instead.
+//
+// NOTED, NOT FIXED: this is a hardcoded list MIRRORING routes.ts, which is the
+// shape check:invariants exists to prevent. A public page added there and
+// forgotten here is simply absent from the sitemap, silently, and nothing
+// fails. Deriving it needs a rule for which routes are indexable, since
+// /search is deliberately noindex and the resource routes are not pages at
+// all, and that is a ruling rather than a refactor.
+const STATIC_PATHS = ["/", "/blog", "/phage-discovery", "/colophon"];
 
 export async function loader({ context }: Route.LoaderArgs) {
   const origin = SITE_ORIGIN;
