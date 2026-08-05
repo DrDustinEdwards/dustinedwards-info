@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 14;
+const MINIMUM_GATES = 15;
 
 /**
  * Which gates need something this machine may not have.
@@ -75,6 +75,8 @@ const TIERS = {
   "check:diagrams": "offline",
   "check:admin-ui": "offline",
   "check:urls": "offline",
+  // Reads the tracked example config, package.json and drizzle/. No network.
+  "check:stack": "offline",
   // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
   // `--remote` adds the live database as a third schema source, and check:all
   // passes it. Same shape as check:llms and check:backup.
