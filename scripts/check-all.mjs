@@ -75,7 +75,9 @@ const TIERS = {
   "check:diagrams": "offline",
   "check:admin-ui": "offline",
   "check:urls": "offline",
-  // Bundles with esbuild and runs SQLite in memory. No network, no bindings.
+  // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
+  // `--remote` adds the live database as a third schema source, and check:all
+  // passes it. Same shape as check:llms and check:backup.
   "check:invariants": "offline",
   // Pure by default; the D1 comparison is opt-in behind --local/--remote.
   "check:llms": "offline",
@@ -96,6 +98,10 @@ const REMOTE_ARGS = {
   "check:backup": ["--remote"],
   "check:llms": ["--remote"],
   "check:media": ["--remote"],
+  // Its schema.ts-against-migrations comparison is pure; --remote adds the
+  // third source, the live database, which is where an unapplied migration or a
+  // hand-altered column would show up and nowhere else.
+  "check:invariants": ["--remote"],
 };
 
 const all = process.argv.includes("--all");
