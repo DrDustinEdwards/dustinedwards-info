@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "runtime": {
+    "compatibilityDate": "2026-07-08",
+    "compatibilityFlags": [
+      "nodejs_compat"
+    ],
+    "nodeVersion": "24.14.1"
+  },
+  "bindings": [
+    {
+      "id": "ai_search:AI_SEARCH",
+      "kind": "ai_search",
+      "name": "AI_SEARCH",
+      "settings": "instance_name=dustinedwards",
+      "what": "Retrieval and answer generation for Ask, on built-in storage with uploaded markdown rather than the crawler.",
+      "whyLoadBearing": "It sits above classic search rather than replacing it, because the two fail on OPPOSITE inputs. Measured on the same corpus: classic found 2 things AI retrieval missed, all exact tokens, and AI retrieval found 3 that classic missed, all natural-language questions. Neither layer subsumes the other."
+    },
+    {
+      "id": "assets:ASSETS",
+      "kind": "assets",
+      "name": "ASSETS",
+      "settings": "",
+      "what": "The static files under public/, served without a Worker invocation.",
+      "whyLoadBearing": "The binding has exactly one method, fetch(), so a Worker can serve any path it is given and discover none of them. That is why the media rebuild reads a committed manifest: the one thing it cannot do for itself is find out which static files exist."
+    },
+    {
+      "id": "d1:DB",
+      "kind": "d1",
+      "name": "DB",
+      "settings": "database_name=dustinedwards migrations_dir=drizzle",
+      "what": "SQLite at the edge. Holds every post, the tag graph, the derived search corpus, the media index and the llms.txt row.",
+      "whyLoadBearing": "The media index lives here because R2 paginates in key order and promises nothing else. Sort by date, filter unused, search by name, count by type: each is a query, and building one over a key-ordered iterator means listing the whole bucket per request. A capability decision, not a scale one."
+    },
+    {
+      "id": "durable_object:ASK_BUDGET",
+      "kind": "durable_object",
+      "name": "ASK_BUDGET",
+      "settings": "class_name=AskBudget",
+      "what": "The per-IP burst limit and the site-wide daily ceiling for Ask, on the synchronous SQLite storage API.",
+      "whyLoadBearing": "Both cheaper mechanisms were built first and both leaked. The GA ratelimit binding, configured at 5 per 60 seconds and attacked with 12 concurrent requests, refused 1, then 2, then 9, then 0 across four runs. A Durable Object using async storage.get then storage.put allowed 8 through a ceiling of 3, because a read and a write spanning an await is not atomic. The synchronous API allowed exactly 3, which is why the class is registered as new_sqlite_classes."
+    },
+    {
+      "id": "images:IMAGES",
+      "kind": "images",
+      "name": "IMAGES",
+      "settings": "",
+      "what": "Thumbnail and content-width transforms, computed on request from the original. Nothing is written back.",
+      "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 with Cloudflare error 1042 on this hostname, because transformations there require a zone and this site is served from workers.dev."
+    },
+    {
+      "id": "kv:APP_KV",
+      "kind": "kv",
+      "name": "APP_KV",
+      "settings": "",
+      "what": "Better Auth sessions, and the Ask answer cache keyed by a SHA-256 of the normalised question.",
+      "whyLoadBearing": "The cache sits in front of the daily ceiling rather than behind it, so a repeated question costs nothing and consumes no budget. The ordering is the design: a hit reaches no model."
+    },
+    {
+      "id": "queue_consumer:dustinedwards-media-events",
+      "kind": "queue_consumer",
+      "name": "dustinedwards-media-events",
+      "settings": "max_retries=3 dead_letter_queue=dustinedwards-media-events-dlq max_batch_size=10 max_batch_timeout=5",
+      "what": "R2 event notifications from both buckets, consumed to derive the media index rows.",
+      "whyLoadBearing": "The write path is a notification into a queue, never a dual write. The Worker writes only to R2 and the consumer re-derives the row from the object as it is now, never branching on what the message claimed, which is what makes replay and out-of-order delivery converge."
+    },
+    {
+      "id": "r2:MEDIA",
+      "kind": "r2",
+      "name": "MEDIA",
+      "settings": "bucket_name=dustinedwards-media",
+      "what": "Uploaded originals, content-addressed as sha256(bytes) truncated plus the extension.",
+      "whyLoadBearing": "Content addressing was decided on security, not tidiness. The old key was derivable from public information, so a draft's images were reachable by guessing a slug the sitemap publishes plus eight hex characters."
+    },
+    {
+      "id": "r2:OG",
+      "kind": "r2",
+      "name": "OG",
+      "settings": "bucket_name=dustinedwards-og",
+      "what": "Social cards, one per post, rebuilt by command.",
+      "whyLoadBearing": "A second bucket exists because the two split on LIFECYCLE rather than on what the UI calls them. MEDIA is irreplaceable; OG is regenerable, so it is safe to empty and is deliberately outside the backup path."
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "@codemirror/commands",
+      "range": "^6.10.4"
+    },
+    {
+      "name": "@codemirror/lang-markdown",
+      "range": "^6.5.1"
+    },
+    {
+      "name": "@codemirror/language",
+      "range": "^6.12.4"
+    },
+    {
+      "name": "@codemirror/state",
+      "range": "^6.7.1"
+    },
+    {
+      "name": "@codemirror/view",
+      "range": "^6.43.7"
+    },
+    {
+      "name": "@lezer/highlight",
+      "range": "^1.2.3"
+    },
+    {
+      "name": "better-auth",
+      "range": "^1.6.23"
+    },
+    {
+      "name": "drizzle-orm",
+      "range": "^0.45.2"
+    },
+    {
+      "name": "isbot",
+      "range": "^5.1.36"
+    },
+    {
+      "name": "react",
+      "range": "^19.2.7"
+    },
+    {
+      "name": "react-dom",
+      "range": "^19.2.7"
+    },
+    {
+      "name": "react-router",
+      "range": "8.3.0"
+    }
+  ],
+  "migrations": [
+    "0001_init.sql",
+    "0002_blog_content.sql",
+    "0003_post_toc.sql",
+    "0004_blog_discovery.sql",
+    "0005_og_image.sql",
+    "0006_search_index.sql",
+    "0007_media.sql",
+    "0008_llms_seed.sql",
+    "0009_media_index.sql",
+    "0010_media_role.sql"
+  ],
+  "gates": [
+    "check:admin-ui",
+    "check:backup",
+    "check:charts",
+    "check:config",
+    "check:content",
+    "check:contrast",
+    "check:diagrams",
+    "check:invariants",
+    "check:llms",
+    "check:logo",
+    "check:media",
+    "check:policy",
+    "check:search",
+    "check:stack",
+    "check:urls"
+  ],
+  "notAdopted": [
+    {
+      "name": "Vectorize",
+      "reason": "Rank fusion over two FTS5 indexes answers this corpus in about fifteen lines and no vectors. Zero-result queries are the cheapest content-gap signal the site has, and the only evidence that would justify reopening the question."
+    },
+    {
+      "name": "Images storage",
+      "reason": "Transforms are used; storage is not. It bills in $5 increments per 100,000 stored images, for a library of dozens."
+    },
+    {
+      "name": "Soft delete and a trash prefix",
+      "reason": "A team concern. The audience is one person, and R2 wins every conflict already, so a deleted row that should not have gone is restored by the next rebuild."
+    },
+    {
+      "name": "Media versioning",
+      "reason": "Keys are content-addressed, so a changed image is a different key by construction. Versioning would be a second mechanism for something the addressing already does."
+    },
+    {
+      "name": "Single-flight on Ask",
+      "reason": "Declined with the bound written into the route. Deduplicating identical questions does not lower the worst case: N addresses spend the same N units asking N DIFFERENT questions. The 200 per day ceiling is the real bound and it is exact."
+    },
+    {
+      "name": "Continuous integration",
+      "reason": "Not a refusal so much as an accepted gap, recorded because it has already cost something: with no CI, any gate can be skipped indefinitely, and check:admin-ui was red and unrun for two sessions. The repair built instead was one command that runs every gate and derives the list, so nobody has to remember which ones a change touches."
+    }
+  ]
+}

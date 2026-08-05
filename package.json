@@ -25,6 +25,7 @@
     "build:og": "node scripts/build-og.mjs",
     "build:diagrams": "node scripts/build-diagrams.mjs",
     "build:assets": "node scripts/build-assets.mjs",
+    "build:stack": "node scripts/build-stack.mjs",
     "check:backup": "node scripts/check-backup.mjs",
     "check:media": "node scripts/check-media.mjs",
     "check:diagrams": "node scripts/check-diagrams.mjs",
@@ -35,6 +36,7 @@
     "check:charts": "node scripts/check-charts.mjs",
     "check:admin-ui": "node scripts/check-admin-ui.mjs",
     "check:urls": "node scripts/check-urls.mjs",
+    "check:stack": "node scripts/check-stack.mjs",
     "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {
