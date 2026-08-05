@@ -324,6 +324,19 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               Open in ChatGPT
             </a>
           </nav>
+
+          {/*
+            ONE LINE, in the template, for every post. Ratified in
+            colophon-page.md: not a section, and not per-article text. Twelve
+            post footers each restating what the site runs on is twelve places
+            to update and eleven that go stale, which is the rot the duplication
+            rule exists to prevent, and they would compete with each other for
+            the same search intent besides. The colophon carries the facts; a
+            post carries a pointer to them.
+          */}
+          <p className="muted">
+            Built on the stack described at <Link to="/colophon">/colophon</Link>.
+          </p>
         </article>
 
         {post.related.length > 0 && (

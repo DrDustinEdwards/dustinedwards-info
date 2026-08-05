@@ -1,3 +1,4 @@
+import features from "../../content/features.json";
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -66,6 +67,89 @@ const STATUS_LABEL: Record<string, string> = {
   refused: "Refused",
   "accepted-gap": "Accepted gap",
 };
+
+type Anchor = {
+  kind: string;
+  path?: string;
+  gate?: string;
+  text?: string;
+  id?: string;
+};
+
+/**
+ * Features grouped by component, in the order the data file declares them.
+ *
+ * A Map preserves insertion order, so the grouping is the author's rather than
+ * alphabetical. That is the closest thing this page has to structure, and it is
+ * deliberately all it has: the ruling forbids building the taxonomy before the
+ * data exists, on the grounds that facets over a few dozen entries are
+ * decoration and the right axes will be obvious from having the data.
+ */
+function byComponent() {
+  const groups = new Map<string, typeof features.features>();
+  for (const feature of features.features) {
+    const existing = groups.get(feature.component);
+    if (existing) existing.push(feature);
+    else groups.set(feature.component, [feature]);
+  }
+  return [...groups.entries()];
+}
+
+/**
+ * One anchor, rendered as the thing that proves the claim.
+ *
+ * **This is the page's best property**, per the ruling: every claim links to
+ * its evidence. A route anchor becomes a real link, so a reader can go and see
+ * it. A gate or assertion anchor NAMES the script rather than linking, because
+ * the scripts are not served; the name is enough to find it in the repository,
+ * and `check:features` is what guarantees the name still resolves to something.
+ *
+ * A decision anchor is context and says so. It cannot be verified offline,
+ * which is why the gate refuses to let one stand as a feature's only anchor.
+ */
+function AnchorItem({ anchor }: { anchor: Anchor }) {
+  if (anchor.kind === "route" && anchor.path) {
+    // Only a path with no parameter segment is a URL a reader can follow.
+    // `/blog/:slug` is a declaration, not a destination.
+    const followable = !anchor.path.includes(":") && !anchor.path.includes("*");
+    return (
+      <li>
+        <span className="muted">route </span>
+        {followable ? (
+          <a href={anchor.path}>
+            <code>{anchor.path}</code>
+          </a>
+        ) : (
+          <code>{anchor.path}</code>
+        )}
+      </li>
+    );
+  }
+  if (anchor.kind === "gate") {
+    return (
+      <li>
+        <span className="muted">gate </span>
+        <code>{anchor.gate}</code>
+      </li>
+    );
+  }
+  if (anchor.kind === "assertion") {
+    return (
+      <li>
+        <span className="muted">assertion in </span>
+        <code>{anchor.gate}</code>
+        <span className="muted">: </span>
+        <q>{anchor.text}</q>
+      </li>
+    );
+  }
+  return (
+    <li>
+      <span className="muted">decision </span>
+      <code>{anchor.id}</code>
+    </li>
+  );
+}
 
 export default function Colophon() {
   return (
@@ -162,6 +246,40 @@ export default function Colophon() {
                 </li>
               ))}
             </ul>
+
+            <h2 id="features">What it does</h2>
+            <p>
+              Everything above is generated from configuration. Nothing below
+              can be: a sentence like "the editor refuses a save if the branch
+              moved" is in no config file and never will be. So each entry
+              carries an anchor, and a build gate verifies that the thing the
+              claim is about still exists: the route is still declared, the
+              gate is still there, the exact assertion text is still in its
+              script. That catches most rot, because prose usually goes stale by
+              describing something that was removed or renamed.
+            </p>
+            <p>
+              It does not verify that any sentence here is TRUE. That limit is
+              stated in the gate's own header rather than left implied, and it is
+              the honest boundary of the technique.
+            </p>
+
+            {byComponent().map(([component, entries]) => (
+              <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
+                <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
+                {entries.map((feature) => (
+                  <section key={feature.name}>
+                    <h4>{feature.name}</h4>
+                    <p>{feature.what}</p>
+                    <ul>
+                      {(feature.anchors as Anchor[]).map((anchor, i) => (
+                        <AnchorItem key={i} anchor={anchor} />
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </section>
+            ))}
 
             <h2 id="not-adopted">What was not adopted</h2>
             <p>

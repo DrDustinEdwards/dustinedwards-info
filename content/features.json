@@ -1,0 +1,586 @@
+{
+  "_comment": "The colophon's HAND-WRITTEN half. Nothing here is derivable from config, which is why every entry carries anchors and check:features verifies the anchored thing still EXISTS. It does not and cannot verify the prose. Rule, enforced by the gate: every feature needs at least one anchor of kind route, gate or assertion. A decision anchor is context and may never stand alone, because this gate runs offline and cannot reach Capsid. Every measurement below is transcribed from a spec that ruled it; if a claim cannot be sourced, the feature is left out.",
+  "features": [
+    {
+      "component": "Content pipeline",
+      "name": "Markdown is the source of truth, D1 owns every read",
+      "what": "Posts are markdown files in the repository. A generator renders them into a committed artifact carrying both the source and the rendered HTML, and a sync writes both into D1, which every public read then queries. The artifact is byte-compared against a fresh generation on every build, so a hand-edited row or a stale artifact is a failed build rather than a surprise.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/blog"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        }
+      ]
+    },
+    {
+      "component": "Content pipeline",
+      "name": "One renderer, two writers",
+      "what": "The build scripts and the Worker import the same markdown pipeline module. There is deliberately no second renderer, because the editor commits HTML that the next build has to reproduce exactly.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/blog/:slug"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        }
+      ]
+    },
+    {
+      "component": "Content pipeline",
+      "name": "Every post has a markdown twin",
+      "what": "The same URL with .md appended returns the source the page was rendered from. Requesting the post with an Accept: text/markdown header returns the same bytes.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/blog/:slug.md"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:llms"
+        }
+      ]
+    },
+    {
+      "component": "Charts",
+      "name": "Charts are content, not a widget",
+      "what": "A chart is authored as a container directive over a fenced block of CSV and rendered to SVG at build time into the gated artifact, so a reader with JavaScript disabled sees the same chart as everyone else. Colours are CSS custom properties that resolve per theme, which is why one stored SVG serves light and dark with nothing to flash.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:charts"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:charts",
+          "text": "worker returned a different fixture count"
+        }
+      ]
+    },
+    {
+      "component": "Charts",
+      "name": "Node and Worker must render byte-identical SVG",
+      "what": "The chart module is bundled for workerd and run under miniflare, and every fixture must hash identically to the Node render. Determinism is checked 200 times in-process and across separate processes, because a renderer that is not deterministic would make the byte-comparison gate fail at random. That is not hypothetical: it is what the syntax highlighter's JavaScript regex engine did.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:charts"
+        }
+      ]
+    },
+    {
+      "component": "Diagrams",
+      "name": "Diagrams render at build time, twice",
+      "what": "A diagram needs real font metrics, so it cannot render in a Worker. Two SVGs are produced per diagram, one per theme, and the stylesheet shows one. The asset stays out of the byte-comparison gate while the artifact carries the key and the source, and alt text is mandatory.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:diagrams"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:diagrams",
+          "text": "a diagram with no alt fails"
+        }
+      ]
+    },
+    {
+      "component": "Search",
+      "name": "Two FTS5 indexes over one derived table, fused by rank",
+      "what": "An FTS5 tokenizer is set per table, not per column, so one index cannot serve both exact-token lookup and prose relevance. There are two: unstemmed for titles and tags, Porter-stemmed for bodies. The two ranked lists are merged by reciprocal rank fusion, never by raw score, because scores from two tokenizers over two average document lengths are not comparable on value.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:search"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:search",
+          "text": "phrase: a quoted run becomes one phrase"
+        }
+      ]
+    },
+    {
+      "component": "Search",
+      "name": "Results are section-grained",
+      "what": "One post yields a document record plus one per heading, so a hit deep-links to the heading that answers it rather than to the top of the page.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        }
+      ]
+    },
+    {
+      "component": "Search",
+      "name": "A filter with no text takes a different query path",
+      "what": "A bare year or a tag chip has nothing to give FTS5, so those queries run the filter SQL straight over the derived table, date ordered, document records only. Returning every section of one post for a bare year would present the corpus at several times its real size. The snippet carries no highlight, because nothing was matched and marking anything would claim a match that never happened.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:search"
+        },
+        {
+          "kind": "route",
+          "path": "/search"
+        }
+      ]
+    },
+    {
+      "component": "Search",
+      "name": "The same URL returns JSON under content negotiation",
+      "what": "Requesting the search page with Accept: application/json returns the same query against the same index, with Vary: Accept. It is not a second API. Negotiation runs in middleware, because a document route's loader cannot return a raw Response.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search"
+        }
+      ]
+    },
+    {
+      "component": "Ask",
+      "name": "A streamed AI answer with citations that deep-link",
+      "what": "Retrieval and generation sit strictly above classic search and never block it. Citations map back to heading anchors, and the answer is written with textContent rather than as HTML, because it is generated text and the one thing known about it is that we did not write it.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search/ask"
+        }
+      ]
+    },
+    {
+      "component": "Ask",
+      "name": "The two search layers fail on opposite inputs",
+      "what": "Measured on the same corpus: classic keyword search found two things AI retrieval missed, both single tokens naming a heading almost verbatim, and AI retrieval found three that classic missed, all long natural-language questions. Neither layer subsumes the other, which is the case for keeping classic first and Ask on top rather than replacing one with the other.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search/ask"
+        },
+        {
+          "kind": "route",
+          "path": "/search"
+        }
+      ]
+    },
+    {
+      "component": "Ask",
+      "name": "Three cost gates in front of the only metered endpoint",
+      "what": "A per-IP burst limit, then an answer cache keyed by a hash of the normalised question, then a site-wide daily ceiling. The ordering is load-bearing: the ceiling sits after the cache, so a cache hit costs nothing and consumes no budget. A refusal is a 429 with Retry-After and reaches no model.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search/ask"
+        }
+      ]
+    },
+    {
+      "component": "Ask",
+      "name": "Drafts can never reach the AI index",
+      "what": "The classic index filters drafts at query time. The AI index cannot, because it has no per-item status a query can filter on, so exclusion happens at upload time. A draft uploads nothing and actively removes anything the post already had, because skipping the upload alone would leak on the unpublish path: a post published, indexed, then withdrawn would stay answerable forever.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:policy",
+          "text": "readState distinguishes a withdrawn post from a new draft"
+        }
+      ]
+    },
+    {
+      "component": "Rate limiting",
+      "name": "Durable Objects, because the platform limiter does not count",
+      "what": "Both cheaper mechanisms were built first and both leaked. Cloudflare's GA ratelimit binding, configured at five requests per sixty seconds and attacked with twelve concurrent requests, refused one, then two, then nine, then zero across four runs. It is documented as permissive and eventually consistent: it sheds sustained load rather than counting. A Durable Object using the asynchronous storage API allowed eight through a ceiling of three, because a read and a write spanning an await is not atomic even inside a single-threaded object. The synchronous SQLite API landed on its ceiling exactly, which is the whole reason the class is registered as a SQLite-backed one.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search/ask"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:charts"
+        }
+      ]
+    },
+    {
+      "component": "Admin editor",
+      "name": "A save is one atomic commit, then D1",
+      "what": "A save changes the markdown and the regenerated artifact and lands both as a single commit through the Git Data API, because the simpler Contents API writes one file per call and two commits would leave the byte-comparison gate red in between. D1 is written only after the commit lands. If the repository host is unreachable the save fails whole; there is no database-only write and no reconcile-later queue.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:admin-ui"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        }
+      ]
+    },
+    {
+      "component": "Admin editor",
+      "name": "The editor records the head commit and refuses a conflict",
+      "what": "The editor notes the head commit when it loads and sends it back on save. If the branch moved, the save is refused with the divergence named and no commit is created. The reference update is never forced, so the editor cannot overwrite a change it did not see.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:admin-ui"
+        }
+      ]
+    },
+    {
+      "component": "Admin editor",
+      "name": "Version history restores by writing a new commit",
+      "what": "History lists the commits touching a post's file, shows a diff per commit, and restores by reading the file at an old commit and putting it back through the ordinary save path. A restore is therefore a new commit, never a force push and never a rewrite, and the gates run again on restored content so an old commit cannot bypass a newer rule.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:admin-ui"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        }
+      ]
+    },
+    {
+      "component": "Admin editor",
+      "name": "One feedback slot, four named outcomes",
+      "what": "A first publication used to complete in silence, which is a design failure for the one act the system reserves to a human. The slot names the transition rather than the action: saved, first publication, republished, unpublished. The transition is decided by the publish policy module and not by the interface, because current state cannot tell a first publication from a republication: a post marked draft is either brand new or previously withdrawn.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:admin-ui"
+        }
+      ]
+    },
+    {
+      "component": "Admin editor",
+      "name": "Every form's submitted payload is frozen by a gate",
+      "what": "The admin's pages are rendered with stubbed loaders and reduced to the set of requests each one can submit. A control may move anywhere, but pressing it must send exactly what it sent before. No typecheck can see that, because form field names are strings in markup, and no gate can reach the admin over HTTP because it sits behind a real session.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:admin-ui"
+        }
+      ]
+    },
+    {
+      "component": "Operator API",
+      "name": "Agents write through the same path a human does",
+      "what": "A bearer-token JSON endpoint exposes the editor's save machinery to non-browser callers. It calls the same save and delete functions the browser action calls, so an agent gets the same schema gates, the same style check, the same single atomic commit, the same database sync and the same index sync. Nothing in the operator layer touches the repository, the database or the AI index directly.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/api/operator"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        }
+      ]
+    },
+    {
+      "component": "Operator API",
+      "name": "An agent may not perform a post's first publication",
+      "what": "An operator may create, edit, unpublish and republish. It may not make a post public for the first time; that is refused with a 403 naming the policy. The durable fact lives in frontmatter, is stamped once by the save path, and is read only from the committed file and always overwritten on the way out, because otherwise an agent could publish any draft by asserting the very fact the gate checks.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/api/operator"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:policy",
+          "text": "readState reads a previously published post"
+        }
+      ]
+    },
+    {
+      "component": "Media",
+      "name": "R2 is the store, D1 is a rebuildable index",
+      "what": "R2 holds the bytes and wins every conflict: a row with no object is deleted, an object with no row is backfilled, never the reverse. The index exists in D1 because R2 paginates in key order and promises nothing else, so sorting by date, filtering unused, searching by name and counting by type are each a query, and building those over a key-ordered iterator means listing the whole bucket per request. A capability decision, not a scale one.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/media/*"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:media"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:media",
+          "text": "markdown-image aabbccddeeff0011.png"
+        }
+      ]
+    },
+    {
+      "component": "Media",
+      "name": "Keys are content-addressed and carry their dimensions",
+      "what": "A key is a truncated hash of the bytes plus the extension, which was decided on security rather than tidiness: the old scheme was derivable from a slug the sitemap publishes plus eight hex characters, so a draft's images were guessable. The key also carries the pixel dimensions, so the build and the Worker resolve image sizes from the string rather than from two different stores that could disagree.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/media/*"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:invariants",
+          "text": "the fixture contains both resolvable and unresolvable keys"
+        }
+      ]
+    },
+    {
+      "component": "Media",
+      "name": "Transforms are computed on request and never written back",
+      "what": "One object per image, every size derived from it, which keeps the bucket free of variant sprawl and is why it needs no lifecycle rules. It uses the Images binding and not the URL transform syntax, and that is forced rather than preferred: the URL interface answers 404 with error 1042 on this hostname, because transformations there require a zone and the site is served from a workers.dev address. Thumbnails serve one format unconditionally, after a negotiated version turned out to poison a cache whose key carried no headers.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/media/*"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:media"
+        }
+      ]
+    },
+    {
+      "component": "Theming",
+      "name": "The theme is resolved server-side, so nothing flashes",
+      "what": "The choice lives in a cookie, is read in the root loader, and the correct attribute is written into the first byte of HTML. There is no inline script and nothing is corrected after paint. System preference is the absence of the attribute rather than a third value.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/theme"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:contrast"
+        }
+      ]
+    },
+    {
+      "component": "Theming",
+      "name": "The toggle works with scripting off",
+      "what": "It is a real form posting to a route that sets the cookie and sends the reader back. The client enhancement only removes the round trip. It is deliberately not a radio group, because a real radiogroup owes arrow-key roving focus that cannot be delivered without script.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/theme"
+        }
+      ]
+    },
+    {
+      "component": "Theming",
+      "name": "Every colour pair is recomputed from the shipped stylesheet",
+      "what": "The gate reads the token values back out of the stylesheet and recomputes the whole contrast matrix, so a tuned hex moves one side of the comparison and fails. The pairs and thresholds are transcribed as token names rather than values, so nothing in the gate restates a colour.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:contrast"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:contrast",
+          "text": "dark (prefers-color-scheme)"
+        }
+      ]
+    },
+    {
+      "component": "Brand mark",
+      "name": "The mark is inline SVG, proved against four fixtures",
+      "what": "One component collapses four SVG files into a path list and a viewBox, because the files differ in exactly two ways. The purple paths carry no fill and take a brand custom property instead, which is the entire dark-mode story for the mark. The four files remain as gate fixtures: the expected path data comes from them and the actual from the component, so nothing in the gate restates a path.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:logo"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:logo",
+          "text": "component drives 5 paths from var(--brand)"
+        }
+      ]
+    },
+    {
+      "component": "Machine surfaces",
+      "name": "Feeds, a sitemap, and a map of the site for agents",
+      "what": "RSS and JSON feeds, a sitemap, robots, and a plain-text map of the site with a full-text companion carrying every published post in one document. The map is served from a database row rather than from the file in the repository, and the inlined fallback is imported from that same file so the two cannot drift.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/blog/rss.xml"
+        },
+        {
+          "kind": "route",
+          "path": "/blog/feed.json"
+        },
+        {
+          "kind": "route",
+          "path": "/sitemap.xml"
+        },
+        {
+          "kind": "route",
+          "path": "/llms.txt"
+        },
+        {
+          "kind": "route",
+          "path": "/llms-full.txt"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:llms",
+          "text": "content/llms.txt is LF-only"
+        }
+      ]
+    },
+    {
+      "component": "Machine surfaces",
+      "name": "Search is exposed over the Model Context Protocol",
+      "what": "The same corpus is reachable as an MCP tool, so an agent can search the site without scraping it. It needs no authentication and returns the same section-grained keys the rest of the site uses. It shows the same retrieval characteristic as the AI answer layer: it finds passages that answer a question and misses short exact tokens the keyword index finds immediately, which is stated rather than hidden.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/llms.txt"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:llms"
+        }
+      ]
+    },
+    {
+      "component": "Backups",
+      "name": "Per-table exports, because the platform export is broken here",
+      "what": "The database export command fails outright on a schema containing FTS5 virtual tables and writes nothing, so backups are taken per table with the schema excluded, never touching the virtual tables or their shadow tables. The table list is derived from the migrations directory, and the check fails in both directions. It found a real omission on its first run.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:backup"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:backup",
+          "text": "sqlite_master returned no tables"
+        }
+      ]
+    },
+    {
+      "component": "Backups",
+      "name": "Counting an FTS5 index cannot detect that it is empty",
+      "what": "A count on an external-content FTS5 table reads through to the content table, so it reports rows that the index itself no longer holds. Measured twice: with the index emptied, the count still read seven while the size shadow table read zero and matching returned nothing. An integrity check also passed on the broken index. The shadow table is what gets counted, and the repair for a corrupt index is a rebuild, never a delete.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:backup"
+        }
+      ]
+    },
+    {
+      "component": "Safety rails",
+      "name": "URL protocols are allowlisted in the schema as well as the renderer",
+      "what": "The render-layer guard only walks nodes the body renderer produced, so frontmatter bypassed it entirely: a curated link field took a generic URL validator, which accepts javascript:, and rendered as a live public anchor. Both that field and the cover path now call the same predicate the renderer uses rather than reimplementing it.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:urls"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:urls",
+          "text": "frontmatter blocked cases were exercised"
+        }
+      ]
+    },
+    {
+      "component": "Safety rails",
+      "name": "Rules stated twice are checked against each other",
+      "what": "Some rules cannot be collapsed into one function because they are expressed in two languages: the public visibility predicate exists once as a query-builder condition and once as a hand-written SQL string over a different table. Those are run against a fixture of post states and must admit the same rows. The same gate proves the column schema agrees three ways and that every column named in raw SQL exists, which was added after a statement named a column a migration had renamed and was therefore guaranteed to throw on the one path it existed to protect.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:invariants"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:invariants",
+          "text": "classify.mjs still defines the bucket selection"
+        }
+      ]
+    },
+    {
+      "component": "Safety rails",
+      "name": "The tracked config and the real one must declare the same bindings",
+      "what": "The real Worker config is not in the repository, because it carries account identifiers, and a tracked example with placeholder ids stands in its place. The two are compared binding by binding in both directions. That check exists because an image binding was once added to the real file and not mirrored, so a fresh clone would have built a site whose thumbnails silently fell back to full-resolution originals.",
+      "anchors": [
+        {
+          "kind": "gate",
+          "gate": "check:config"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:config",
+          "text": "the real config declares at least one binding"
+        }
+      ]
+    },
+    {
+      "component": "This page",
+      "name": "The stack half is generated and reconciled both ways",
+      "what": "Every binding, migration, gate and dependency above is emitted from the repository's own configuration and compared against it in both directions. A resource added without regenerating fails the build, and so does a row describing something that no longer exists. Nothing in the generator or on this page restates a name.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/colophon"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:stack"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:stack",
+          "text": "every binding kind in the config can actually be read"
+        }
+      ]
+    },
+    {
+      "component": "This page",
+      "name": "The feature half is anchored, because it cannot be generated",
+      "what": "Sentences like this one are in no configuration file, so each carries an anchor: a route, a gate, or a specific assertion inside a gate. The check verifies the anchored thing still exists. It cannot verify that the sentence is true, which is stated in its header rather than implied, and a claim whose only anchor would be an external decision record is refused outright, because that would be an unverifiable claim wearing the costume of a verified one.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/colophon"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:features"
+        }
+      ]
+    }
+  ]
+}
