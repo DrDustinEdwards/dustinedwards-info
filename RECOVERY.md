@@ -83,13 +83,23 @@ npx wrangler d1 migrations apply dustinedwards --remote
 ```
 
 **The migrations reproduce the live schema exactly, and this was measured rather
-than assumed.** On 2026-08-02 all seven migrations (`0001_init` through
-`0007_media`) were applied to an empty SQLite database and the result compared
-against the live remote schema: **37 of 37 objects match**, 25 tables, 9 indexes
-and 3 triggers, with identical DDL once SQL comments are normalised (D1 strips
-`--` comments from stored DDL; that was the only textual difference). The live
-database carries two additional tables, `d1_migrations` and `_cf_KV`, both created
-by the D1 platform itself rather than by any migration.
+than assumed.** Re-derived 2026-08-04: all **ten** migrations (`0001_init`
+through `0010_media_role`) were applied to an empty SQLite database and the
+result compared against the live remote schema, object by object:
+**57 of 57 objects match**, 27 tables, 27 indexes and 3 triggers, with no object
+on either side that the other lacks.
+
+The live database carries three additional objects created by the D1 platform
+itself rather than by any migration: the tables `d1_migrations` and `_cf_KV`,
+and `sqlite_autoindex_d1_migrations_1`, the auto-index SQLite creates for the
+former's primary key. Excluding the two tables but not that index is what turns
+a clean match into a spurious one-object mismatch, which is worth knowing before
+anyone re-runs this and thinks they have found drift.
+
+The earlier form of this paragraph claimed 37 objects across seven migrations,
+measured 2026-08-02, and had gone stale in both numbers: three migrations landed
+after it (`0008_llms_seed`, `0009_media_index`, `0010_media_role`) and the object
+count moved with them. Finding B005.
 
 `drizzle-kit` is deliberately not a dependency. Migrations are hand-written. Add a
 new numbered file; never edit an applied one.
@@ -115,13 +125,22 @@ regenerated on use, so an empty namespace is a correct starting state.
 
 ---
 
-## 3. R2 bucket
+## 3. R2 buckets
 
 ```sh
 npx wrangler r2 bucket create dustinedwards-media
+npx wrangler r2 bucket create dustinedwards-og
 ```
 
-Binding `MEDIA`. No id is needed; the bucket is referenced by name.
+Bindings `MEDIA` and `OG`. No id is needed; a bucket is referenced by name.
+
+**There are TWO buckets and they are split on LIFECYCLE, not on what the UI
+calls them.** `dustinedwards-media` is irreplaceable: it holds uploaded
+originals, and nothing can regenerate them. `dustinedwards-og` holds social
+cards, every one of which `build:og -- --remote` can rebuild from the artifact,
+so it is safe to empty and is deliberately not in the backup path. Creating only
+the first, which is what this runbook used to say, produces a Worker that fails
+to bind `OG` at deploy. Finding B005.
 
 **Do not enable public access, and do not attach a custom domain.** Verified
 2026-08-02 against the live bucket: `r2.dev` public access is **disabled** and
@@ -131,6 +150,46 @@ immutable cache headers. Enabling public access would create a second, unmanaged
 read path to the same bytes.
 
 Live bucket for reference: location `ENAM`, storage class `Standard`.
+
+---
+
+## 3a. Media events queue, and the notifications that feed it
+
+**Without this the media index is never written.** The module's write path is an
+R2 event notification into a Queue, never a dual write: the Worker writes only to
+R2, the bucket emits, and the consumer derives the D1 row. A rebuild with no
+queue leaves every upload invisible to the library until someone runs the
+backfill by hand, and nothing announces that. It was missing from this runbook
+entirely. Finding B005.
+
+```sh
+npx wrangler queues create dustinedwards-media-events
+npx wrangler queues create dustinedwards-media-events-dlq
+```
+
+Then point BOTH buckets at the first queue. Verified live 2026-08-04: each
+bucket carries one rule, all prefixes, all suffixes, and they share one queue.
+
+```sh
+npx wrangler r2 bucket notification create dustinedwards-media \
+  --queue dustinedwards-media-events \
+  --event-type object-create --event-type object-delete
+npx wrangler r2 bucket notification create dustinedwards-og \
+  --queue dustinedwards-media-events \
+  --event-type object-create --event-type object-delete
+```
+
+The live rules resolve to the event list
+`PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion`.
+Confirm with `wrangler r2 bucket notification list <bucket>` rather than trusting
+the create output. Consumer settings (`max_batch_size` 10, `max_batch_timeout` 5,
+`max_retries` 3, DLQ) live in `wrangler.jsonc` and come from the example file, so
+they need no separate command.
+
+The consumer is idempotent by construction: it re-derives the row from the object
+as it is now and never branches on what the message claimed, so replay and
+out-of-order delivery converge. That is why a dead letter after 3 attempts is a
+signal to read rather than data to reconcile.
 
 ---
 
@@ -405,6 +464,11 @@ Verified on 2026-08-02 against the live account or the installed toolchain
 - Resource names and existence: D1 `dustinedwards`, KV `dustinedwards-app-kv`,
   R2 `dustinedwards-media`, AI Search `dustinedwards`. Read from
   `wrangler d1 list`, `kv namespace list`, `r2 bucket list`, `ai-search get`.
+- **Re-verified 2026-08-04 (finding B005):** R2 `dustinedwards-og` exists, the
+  queues `dustinedwards-media-events` and `dustinedwards-media-events-dlq` exist,
+  and both buckets carry one event notification rule each pointing at the first
+  queue. Read from `wrangler queues list` and
+  `wrangler r2 bucket notification list`. None of these were in this runbook.
 - R2 public access disabled and no custom domains: `r2 bucket dev-url get` and
   `r2 bucket domain list`.
 - Command syntax for `d1 create`, `kv namespace create`, `r2 bucket create`,
@@ -412,8 +476,10 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   `--help` on the installed wrangler 4.107.0.
 - `ai-search create` flags `--type builtin`, `--hybrid-search`, `--reranking`:
   read from `wrangler ai-search create --help` on the same version.
-- Migrations reproduce the schema: measured by applying all seven to an empty
-  database and diffing 37 objects against the live schema.
+- Migrations reproduce the schema: **re-measured 2026-08-04** by applying all
+  **ten** to an empty database with `node:sqlite` and diffing object by object
+  against the live schema. **57 of 57 match**, nothing extra on either side. The
+  previous entry said seven migrations and 37 objects and had gone stale in both.
 - The seven secret names: `wrangler secret list`.
 - The `llms.txt` divergence, since FIXED: the live row was captured byte-exact
   into `content/llms.txt` and is now written by `sync:content` and gated by
