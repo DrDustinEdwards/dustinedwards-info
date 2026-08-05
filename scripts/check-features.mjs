@@ -17,6 +17,22 @@
  * gives the page its best property: every claim links to the thing that proves
  * it.
  *
+ * **Second boundary, and it will bite someone: the route parser collects
+ * DECLARED paths and does NOT compose nested prefixes.** `routes.ts` nests the
+ * admin subtree under `route("admin", ...)`, so its children are declared
+ * relative to it and this gate sees `/posts/:slug/edit`, never
+ * `/admin/posts/:slug/edit`. That is why the four admin features are anchored
+ * to their gates rather than to their routes: those paths are behind a session
+ * and cannot be linked anyway, so the gate anchor is both verifiable and more
+ * useful.
+ *
+ * The consequence to know about BEFORE it happens: the next feature that
+ * anchors to a nested PUBLIC route will fail here, and the failure will read
+ * like rot in the anchors file when it is really this parser's limit. Either
+ * anchor it to the child segment as declared, or teach the parser to compose
+ * prefixes. Do not "fix" it by hardcoding a path list, which is the mirror this
+ * whole family of gates exists to prevent.
+ *
  * Pure: no network, no database, no bindings.
  *
  * ## Why a decision anchor can never stand alone

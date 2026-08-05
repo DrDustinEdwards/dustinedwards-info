@@ -4,8 +4,28 @@
  *   npm run sync:content -- --local
  *   npm run sync:content -- --remote
  *
- * Runs the gate first, so a stale or hand-edited artifact can never reach the
- * database. The database is the read path; these files are the source of truth.
+ * The database is the read path; these files are the source of truth.
+ *
+ * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF
+ * FIRST.** This comment used to claim "runs the gate first, so a stale or
+ * hand-edited artifact can never reach the database", and that was false in
+ * both halves: `main()` reads the artifact directly, and the npm script is a
+ * bare `node` invocation with nothing in front of it. Nothing here has ever
+ * checked the artifact against its source.
+ *
+ * A false safety claim is worse than no claim, because it is read as a reason
+ * not to check. This is the one script in the repo that writes to production
+ * D1, and the failure it falsely promised to prevent, a stale or hand-edited
+ * artifact reaching the database, is exactly the one that matters here: the
+ * bulk path DELETES `search_docs` outright and replaces `media_refs` for
+ * `source_type='post'` wholesale, so a bad artifact does not merely add wrong
+ * rows, it removes right ones.
+ *
+ * Left as an instruction rather than wired in, deliberately. Shelling out to
+ * the gate from here would make the write path depend on the gate's exit code
+ * being read correctly through two layers of npm, and this repo has already
+ * been burned by an exit code masked by a pipe. The gate is one command; the
+ * sequence is `npm run check:content && npm run sync:content -- --remote`.
  *
  * On the bulk path this issues one upsert per post and then rebuilds the FTS
  * index outright, rather than leaning on the three per-row triggers. The
