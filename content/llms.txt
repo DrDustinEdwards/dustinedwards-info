@@ -6,6 +6,14 @@ Personal site of Dustin Edwards.
 
 Writing, projects, and notes.
 
+## Colophon
+
+/colophon describes how this site is built: every Cloudflare binding with the
+measurement that put it there, the schema migrations, the build gates, the
+runtime dependencies, and what was deliberately not adopted and why. The stack
+half is generated from the repository's own configuration and reconciled
+against it by a build gate rather than maintained by hand.
+
 ## Blog
 
 Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.

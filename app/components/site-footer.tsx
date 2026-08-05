@@ -14,10 +14,6 @@ import { Link } from "react-router";
  * gets ignored. As the footer grows, this is the first thing that will get
  * accidentally normalised into just another link. Do not.
  *
- * The colophon is where /stack lands once that page exists. It is NOT linked
- * yet, because it does not exist yet and a footer link to a 404 is worse than
- * no link.
- *
  * The nav carries an aria-label because the header has one too, and two
  * unlabelled navigation landmarks on a page are indistinguishable to a screen
  * reader. The header's gets away with being unlabelled today only because it
@@ -32,10 +28,15 @@ export function SiteFooter() {
           is where a machine looks for an employer. */}
       <p className="muted">© {new Date().getFullYear()} Dustin Edwards</p>
 
-      {/* Plain anchors, not <Link>: both targets are resource routes that
-          return a raw Response, so a client-side navigation would ask the
-          router for a route module that does not exist. */}
+      {/* MIXED ON PURPOSE, and the difference is not a style choice.
+          llms.txt and RSS are RESOURCE routes returning a raw Response, so a
+          client-side navigation would ask the router for a route module that
+          does not exist; they must stay plain anchors. /colophon IS a route
+          module, so it takes <Link> like any other page and gets the client-side
+          navigation. Do not normalise these to match each other in either
+          direction. */}
       <nav className="footer-colophon" aria-label="Colophon">
+        <Link to="/colophon">Colophon</Link>
         <a href="/llms.txt">llms.txt</a>
         <a href="/blog/rss.xml">RSS</a>
       </nav>

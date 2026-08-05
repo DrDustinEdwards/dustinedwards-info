@@ -3,11 +3,26 @@
  *
  *   npm run check:stack
  *
- * OBSERVATION BOUNDARY: it reconciles `content/generated/stack.json` against the
- * sources it was derived from. It cannot tell whether a hand-written
- * `whyLoadBearing` is TRUE, only that the binding it describes still exists.
- * Verifying the prose is the evidence-anchor design in colophon-page.md and is
- * a separate change.
+ * OBSERVATION BOUNDARY, and there are TWO limits, not one.
+ *
+ * **First, it cannot tell whether the prose is TRUE.** A hand-written
+ * `whyLoadBearing` is reconciled against the binding it describes, so the gate
+ * knows the binding still exists and nothing more. Verifying the claim itself
+ * is the evidence-anchor design in colophon-page.md and is a separate change.
+ *
+ * **Second, and easier to miss: this gate reads `wrangler.jsonc.example`, which
+ * is not what is deployed.** The example is the tracked file, so it is the only
+ * one a clone can read, and everything here is derived from it. The single
+ * thing binding it to the Worker that actually runs is `check:config`, which
+ * compares the example against the real `wrangler.jsonc`. That file is
+ * gitignored, so `check:config` can only run where it exists, which is one
+ * machine, and there is no CI behind it. A green `check:stack` therefore says
+ * the artifact matches the example. It says the artifact matches PRODUCTION
+ * only as far as someone remembered to run `check:config` on the machine that
+ * holds the real config.
+ *
+ * That is the same accepted gap this page lists under `notAdopted`, reaching
+ * the gate that describes it.
  *
  * Pure: no network, no database, no bindings.
  *
@@ -208,9 +223,9 @@ ok(
 );
 
 ok(
-  "the deliberately-not-adopted list is not empty",
+  "the not-adopted list is not empty",
   (artifact.notAdopted ?? []).length > 0,
-  "the ruling requires the refusals, which are what make the list credible",
+  "the ruling requires these entries, which are what make the list credible",
 );
 const unreasoned = (artifact.notAdopted ?? []).filter(
   (/** @type {any} */ n) => !n.name || !n.reason,
@@ -219,6 +234,33 @@ ok(
   "every not-adopted entry carries a reason",
   unreasoned.length === 0,
   unreasoned.map((/** @type {any} */ n) => n.name ?? "(unnamed)").join(", "),
+);
+
+/*
+ * `refused` and `accepted-gap` are DIFFERENT CLAIMS and the page states which.
+ *
+ * The list was originally called the refusals throughout, and CI was in it. It
+ * is not a refusal: neither decisions.md nor decisions-vol-1.md carries a
+ * ruling declining CI, and the record files it as a gap that has already cost
+ * something. Calling it a refusal would have published a decision nobody made,
+ * on the one page whose whole subject is what was decided.
+ *
+ * The status is closed rather than free text, because two values a reader can
+ * rely on are worth more than an open vocabulary that drifts into synonyms.
+ */
+const STATUSES = ["refused", "accepted-gap"];
+const badStatus = (artifact.notAdopted ?? []).filter(
+  (/** @type {any} */ n) => !STATUSES.includes(n.status),
+);
+ok(
+  "every not-adopted entry declares refused or accepted-gap",
+  badStatus.length === 0,
+  badStatus
+    .map(
+      (/** @type {any} */ n) =>
+        `${n.name ?? "(unnamed)"} has status ${JSON.stringify(n.status ?? null)}`,
+    )
+    .join("; ") + `. Allowed: ${STATUSES.join(", ")}.`,
 );
 
 /* ------------------------------------------------------- runtime facts */
