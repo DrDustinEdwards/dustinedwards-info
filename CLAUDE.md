@@ -90,6 +90,15 @@ files in the same commit.**
 - `npm run check:charts` gate over chart determinism, Node-vs-Worker byte parity, and the directive's accessibility contract
 - `npm run build:diagrams [-- --force]` render `:::diagram` sources to `public/diagrams/`; skips what is current, prunes what the corpus no longer references
 - `npm run check:diagrams` gate over the diagram contract, asset coverage, and the tokens-only colour audit (pure, no Chromium)
+- `npm run check:policy` gate over the first-publish permission, the Ask-publishability filter and the save outcome (pure)
+- `npm run check:contrast` gate; reads the token values back out of `app/app.css` and recomputes the whole WCAG matrix
+- `npm run check:urls` gate over the protocol allowlist, in the render layer AND the frontmatter schema
+- `npm run check:invariants` gate over rules this repo states twice and cannot merge into one; also verifies the column schema three ways (`-- --remote` adds the live database)
+- `npm run check:admin-ui` gate over what the admin's forms submit; `-- --update` rewrites the baseline and is deliberately loud
+- `npm run check:llms` gate; fails when `content/llms.txt` and the D1 row disagree (`-- --remote` for the live row)
+- `npm run check:media` gate; reconciles D1 against both R2 buckets in both directions. **Network only:** `--local` reads an empty miniflare bucket and would report drift that does not exist
+- `npm run check` the offline tier; `npm run check:all` adds the gates needing a deployed database or bucket
+- `npm run verify-live` the post-deploy sweep against the running site. NOT a gate: it needs a deploy, and its Ask probes are billed
 - `wrangler d1 migrations apply dustinedwards [--local|--remote]`
 - `npm run deploy` (build then `wrangler deploy`). Auto-deploy is not wired, and
   bare `wrangler deploy` is not the deploy path: it would ship whatever `build/`
