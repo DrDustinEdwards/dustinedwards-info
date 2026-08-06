@@ -61,6 +61,13 @@ import {
   pageForPosition,
 } from "../app/lib/blog-listing.mjs";
 
+// The colophon's section list, IMPORTED for the reason POSTS_PER_PAGE is. The
+// completeness sweep in section 12b matches each section's descriptor lead
+// against the rendered page, and a copy of those leads here would be a third
+// mirror to go stale, asserting what this harness remembers rather than what
+// the index carries.
+import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /*
@@ -700,6 +707,235 @@ const ASK_PROBE_LIMIT = 3;
     strip(post.text).includes('href="/colophon"'),
     `post ${post.status}`,
   );
+}
+
+/* --- 12b. The colophon is IN the search corpus, section-grained --------- *
+ *
+ * The `page` records landed with 49b35d5 and reached production D1 on
+ * 2026-08-05, taking search_docs from 93 to 101. Everything below is about the
+ * LIVE index, so no offline gate can carry it: `check:content` proves the
+ * artifact matches a fresh generation and `check:features` proves the section
+ * ids agree, and both are green whether or not a single row was ever synced.
+ *
+ * **The completeness sweep is the assertion that would have caught the
+ * duplication ebde677 fixed**, and it is worth being precise about why. Six of
+ * seven sections rendered their descriptor lead and then repeated it in
+ * different words. Every gate stayed green: the artifact was byte-identical,
+ * the ids reconciled, the types checked. Nothing compared what the INDEX
+ * promises a reader against what the PAGE actually shows them, which is the one
+ * comparison that fails when a record's body and its page drift apart.
+ */
+
+{
+  /**
+   * A section's own slice of the page, from its heading to the next one.
+   *
+   * SCOPED, per the harness rule at the top of this file, and not as a nicety.
+   * Unscoped, `react` matched a modulepreload href in `<head>` and `Ask`
+   * matched the palette's Ask row, so the dependencies and features sweeps
+   * passed on markup that had nothing to do with the section being checked.
+   * Measured before this was scoped: 9 tokens were passing that way.
+   *
+   * @param {string} html @param {string} id
+   */
+  const sectionRegion = (html, id) => {
+    const start = html.indexOf(`<h2 id="${id}"`);
+    if (start === -1) return "";
+    const next = html.indexOf('<h2 id="', start + 1);
+    return html.slice(start, next === -1 ? html.length : next);
+  };
+
+  /**
+   * Element-delimited, so a token cannot pass on a neighbour's substring.
+   *
+   * `react` is a substring of `react-dom` and `react-router`, so a bare
+   * `includes("react")` survives the react entry being dropped entirely. That
+   * is the "token that cannot fail" case, which reads as coverage and is worse
+   * than a missing check. `>react<` is the rendered `<code>` and fails.
+   *
+   * @param {string} v
+   */
+  const el = (v) => `>${v}<`;
+
+  /**
+   * Every discrete fact each section's RECORD BODY was assembled from, in
+   * `colophonPageInput` order.
+   *
+   * Read from the same two JSON files the page renders, never restated here.
+   *
+   * **`notAdopted[].status` is deliberately absent and that is a finding, not
+   * an omission.** The record body carries the raw enum, `(refused)` and
+   * `(accepted-gap)`, while the page renders the human label through
+   * STATUS_LABEL, `(Refused)` and `(Accepted gap)`. For `accepted-gap` the
+   * hyphen means the indexed token appears on the page in no casing at all. So
+   * the index promises a word the page never shows, which is exactly this
+   * sweep's subject. It is reported rather than asserted because the repair is
+   * a ruling: STATUS_LABEL has to move into the descriptor so both readers
+   * share it, the way COLOPHON_SECTIONS already is.
+   *
+   * @param {string} id
+   * @returns {string[]}
+   */
+  const factsFor = (id) => {
+    if (id === "runtime")
+      return [
+        el(stack.runtime.compatibilityDate),
+        ...stack.runtime.compatibilityFlags.map(el),
+        el(stack.runtime.nodeVersion),
+      ];
+    if (id === "bindings")
+      return stack.bindings.flatMap((/** @type {any} */ b) => [
+        el(b.name),
+        `(${b.kind})`,
+        el(b.what),
+        b.whyLoadBearing,
+      ]);
+    if (id === "schema") return stack.migrations.map(el);
+    if (id === "gates") return stack.gates.map(el);
+    if (id === "dependencies")
+      return stack.dependencies.flatMap((/** @type {any} */ d) => [el(d.name), el(d.range)]);
+    if (id === "features")
+      return features.features.flatMap((/** @type {any} */ f) => [
+        el(f.component),
+        el(f.name),
+        el(f.what),
+      ]);
+    if (id === "not-adopted")
+      return stack.notAdopted.flatMap((/** @type {any} */ n) => [`${n.name} <`, el(n.reason)]);
+    // Fail closed, for the reason colophonPageInput does: a section added to
+    // the descriptor with no rule here would be swept as its lead alone, which
+    // passes and proves nothing about the content underneath it.
+    throw new Error(`verify-live has no fact list for colophon section "${id}"`);
+  };
+
+  /**
+   * A term that exists ONLY on the colophon, so a hit cannot come from a post.
+   *
+   * **`Vectorize` was the obvious second candidate and it does NOT work**,
+   * measured rather than assumed. Both terms are absent from all twelve posts
+   * AS WRITTEN, but the prose index stems with porter, so `Vectorize` reduces
+   * to `vector` and retrieves two published posts that discuss vectors. A term
+   * is corpus-unique only AFTER stemming. `1042` is a Cloudflare error number,
+   * survives stemming unchanged, and appears nowhere else on this site.
+   */
+  const UNIQUE = "1042";
+
+  const json = await get(`/search?q=${UNIQUE}`, { accept: "application/json" });
+  /** @type {any} */
+  let payload = null;
+  try {
+    payload = JSON.parse(json.text);
+  } catch {
+    payload = null;
+  }
+  check(`colophon search: "${UNIQUE}" returns parseable JSON`, payload !== null, `status ${json.status}`);
+
+  /** @type {any[]} */
+  const results = payload?.results ?? [];
+  check(
+    `colophon search: "${UNIQUE}" retrieves the page`,
+    results.length > 0,
+    `total ${payload?.total ?? "(none)"}`,
+  );
+  // A POSITIVE count on both sides, so "no foreign hits" cannot mean "no hits".
+  const foreign = results.filter((r) => !new URL(r.url).pathname.startsWith("/colophon"));
+  check(
+    `colophon search: all ${results.length} hit(s) for "${UNIQUE}" are the colophon`,
+    results.length > 0 && foreign.length === 0,
+    foreign.map((r) => r.url).join(", "),
+  );
+
+  // The page as a reader receives it, for the anchor and completeness checks.
+  const { text: colophonHtml, status: colophonStatus } = await get("/colophon");
+  const colophon = unescape(strip(colophonHtml));
+  check("colophon search: the page fetches for comparison", colophonStatus === 200 && colophon.length > 1000);
+
+  /**
+   * A SECTION-GRAINED hit deep-links to a fragment that exists.
+   *
+   * This is the failure the descriptor was built to prevent and it is silent:
+   * a record pointing at a dead fragment still returns a hit, still looks
+   * correct in a result list, and scrolls nowhere. Only the rendered page can
+   * settle it.
+   */
+  const deep = results.filter((r) => r.anchor);
+  check(
+    `colophon search: at least one "${UNIQUE}" hit is section-grained`,
+    deep.length > 0,
+    `${deep.length} of ${results.length} carry an anchor`,
+  );
+  for (const r of deep) {
+    check(
+      `colophon search: anchor #${r.anchor} exists as an id on the page`,
+      colophon.includes(`id="${r.anchor}"`),
+      `${r.url} points at a fragment the page does not render`,
+    );
+    check(
+      `colophon search: the URL for #${r.anchor} carries its fragment`,
+      r.url.endsWith(`#${r.anchor}`),
+      `got ${r.url}`,
+    );
+  }
+
+  /**
+   * The `type` facet stops having one value.
+   *
+   * Before the page records were synced this reported `post` and nothing else,
+   * so a facet with one value is the exact signature of the sync not having
+   * run. The query is broad on purpose: it has to match both types.
+   */
+  const spread = await get("/search?q=cloudflare", { accept: "application/json" });
+  /** @type {any[]} */
+  let types = [];
+  try {
+    types = JSON.parse(spread.text).facets?.types ?? [];
+  } catch {
+    types = [];
+  }
+  check(
+    "colophon search: the type facet reports both post and page, not one value",
+    types.length === 2 &&
+      types.some((t) => t.value === "post" && t.count > 0) &&
+      types.some((t) => t.value === "page" && t.count > 0),
+    `facet types: ${JSON.stringify(types)}`,
+  );
+
+  /**
+   * EVERY FACT THE INDEX CARRIES IS ON THE PAGE THE READER LANDS ON.
+   *
+   * Per section, the descriptor lead as one contiguous substring plus every
+   * discrete value its record body was assembled from. A miss means the index
+   * promises something the page does not show, which is a wrong result rather
+   * than an empty one.
+   */
+  let sweptFacts = 0;
+  for (const section of COLOPHON_SECTIONS) {
+    const region = sectionRegion(colophon, section.id);
+    check(
+      `colophon ${section.id}: the section renders`,
+      region.length > 0,
+      `no <h2 id="${section.id}"> in ${colophon.length} bytes`,
+    );
+    check(
+      `colophon ${section.id}: the descriptor lead is on the page verbatim`,
+      region.includes(section.lead),
+      `lead absent from the ${region.length}-byte region`,
+    );
+
+    const facts = factsFor(section.id);
+    const missing = facts.filter((v) => !region.includes(v));
+    sweptFacts += facts.length;
+    check(
+      `colophon ${section.id}: all ${facts.length} indexed facts are on the page`,
+      facts.length > 0 && missing.length === 0,
+      missing.length > 0
+        ? `${missing.length} missing, first: ${JSON.stringify(missing[0].slice(0, 120))}`
+        : "",
+    );
+  }
+  // The count, printed rather than implied. "0 missing" across seven sections
+  // means nothing without the number of facts that were actually compared.
+  console.log(`  colophon: ${sweptFacts} indexed facts swept across ${COLOPHON_SECTIONS.length} sections`);
 }
 
 /* --- 13. The cache, observed WARM -------------------------------------- */
