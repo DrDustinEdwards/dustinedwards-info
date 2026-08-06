@@ -204,10 +204,7 @@ export default function Colophon() {
             </dl>
 
             <SectionHead id="bindings" />
-            <p>
-              {stack.bindings.length} resources, every one of them Cloudflare.
-              There is no other provider anywhere in the stack.
-            </p>
+            <p>{stack.bindings.length} resources.</p>
             {stack.bindings.map((binding) => (
               <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
                 <h3 id={`binding-${binding.name}`}>
@@ -222,12 +219,7 @@ export default function Colophon() {
             ))}
 
             <SectionHead id="schema" />
-            <p>
-              {stack.migrations.length} hand-written migrations. drizzle-kit is
-              deliberately not a dependency, and because the database export
-              command is broken on this schema, this directory is the only copy
-              of the table definitions that exists anywhere.
-            </p>
+            <p>{stack.migrations.length} migrations.</p>
             <ul>
               {stack.migrations.map((file) => (
                 <li key={file}>
@@ -237,11 +229,7 @@ export default function Colophon() {
             </ul>
 
             <SectionHead id="gates" />
-            <p>
-              {stack.gates.length} checks run before anything ships. The list is
-              derived from the scripts themselves rather than maintained beside
-              them, so a gate that is added and forgotten is not possible.
-            </p>
+            <p>{stack.gates.length} checks.</p>
             <ul>
               {stack.gates.map((gate) => (
                 <li key={gate}>
@@ -251,10 +239,7 @@ export default function Colophon() {
             </ul>
 
             <SectionHead id="dependencies" />
-            <p>
-              {stack.dependencies.length} runtime dependencies. Build tooling is
-              excluded: this is what serves the site, not what assembles it.
-            </p>
+            <p>{stack.dependencies.length} runtime dependencies.</p>
             <ul>
               {stack.dependencies.map((dep) => (
                 <li key={dep.name}>
@@ -264,21 +249,7 @@ export default function Colophon() {
             </ul>
 
             <SectionHead id="features" />
-            <p>
-              Everything above is generated from configuration. Nothing below
-              can be: a sentence like "the editor refuses a save if the branch
-              moved" is in no config file and never will be. So each entry
-              carries an anchor, and a build gate verifies that the thing the
-              claim is about still exists: the route is still declared, the
-              gate is still there, the exact assertion text is still in its
-              script. That catches most rot, because prose usually goes stale by
-              describing something that was removed or renamed.
-            </p>
-            <p>
-              It does not verify that any sentence here is TRUE. That limit is
-              stated in the gate's own header rather than left implied, and it is
-              the honest boundary of the technique.
-            </p>
+            <p>{features.features.length} entries.</p>
 
             {byComponent().map(([component, entries]) => (
               <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
@@ -298,13 +269,7 @@ export default function Colophon() {
             ))}
 
             <SectionHead id="not-adopted" />
-            <p>
-              Anyone can list what they shipped. Two different things are listed
-              here and the difference matters: a <strong>refusal</strong> is a
-              decision that was made and recorded, and an{" "}
-              <strong>accepted gap</strong> is something missing that nobody
-              ruled on, written down so it is not mistaken for a choice.
-            </p>
+            <p>{stack.notAdopted.length} entries.</p>
             <dl>
               {stack.notAdopted.map((entry) => (
                 <div key={entry.name}>
