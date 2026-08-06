@@ -39,6 +39,63 @@ const requestHandler = createRequestHandler(
  */
 const UNCACHED = "private, no-store";
 
+/**
+ * Security headers, on EVERY response. Ratified 2026-08-06 (Phase A).
+ *
+ * Same shape and the same reason as `UNCACHED`: one constant, applied on the
+ * way out, so a route added later is covered without anyone remembering. A
+ * per-route opt-in would mean the next route ships bare, which is exactly how
+ * the site ended up sending none of these at all.
+ *
+ * **PHASE A IS THE STATIC SET ONLY.** There is deliberately no
+ * Content-Security-Policy here. A useful CSP needs a per-response nonce, which
+ * has to exist BEFORE the render so `<Scripts nonce>` can stamp it, so it
+ * cannot be a pure exit-path header the way these are. That is Phase B, its own
+ * ruling and its own commit, and it starts in Report-Only.
+ *
+ * Three of these look tightenable and are not. The reasoning is not recoverable
+ * from the values, so it is written here rather than left for someone to
+ * rediscover by breaking something:
+ *
+ * - **`Cross-Origin-Resource-Policy: cross-origin`, NOT `same-origin`.**
+ *   `same-origin` would block social platforms from fetching `og:image` out of
+ *   `/media/og/*`, and link previews would silently stop working. The failure
+ *   is off-site and invisible from here, which is the worst combination. This
+ *   is the one header where the restrictive value is the WRONG value.
+ *
+ * - **`Cross-Origin-Opener-Policy: same-origin-allow-popups`.** Better Auth's
+ *   Google flow is the only cross-origin window interaction on the site, and it
+ *   was NOT verified whether it is a redirect or a popup, because that needs
+ *   credentials. `allow-popups` is correct either way; plain `same-origin`
+ *   would break the popup case only. Chosen unverified ON PURPOSE, and recorded
+ *   as such so the next person does not tighten it on the assumption that it
+ *   was merely cautious.
+ *
+ * - **No `includeSubDomains`, no `preload` on HSTS.** This is a `workers.dev`
+ *   subdomain whose parent domain we do not own, and asserting a policy for it
+ *   is not ours to make. Revisit for the apex at DNS cutover.
+ *
+ * - **`X-Frame-Options: DENY` is a LEGACY MIRROR of `frame-ancestors`,** which
+ *   does not exist until Phase B ships a CSP. Delete this line only when Phase
+ *   B is enforcing, never before, or the site spends that window framable.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  "Strict-Transport-Security": "max-age=31536000",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "DENY",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+  "Cross-Origin-Resource-Policy": "cross-origin",
+};
+
+/** @param headers the response headers to stamp, mutable or a fresh copy */
+function applySecurityHeaders(headers: Headers) {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(name, value);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
@@ -71,28 +128,47 @@ export default {
     // Scoped by the response's own `Vary`, so it touches only routes that opted
     // in. The feeds and the markdown twins stay publicly cached for every reader
     // because they do not vary on Cookie and do not carry the header.
+    /*
+     * ALL response-level policy, in ONE place with ONE immutable fallback.
+     *
+     * `Response.redirect()` and friends return immutable headers, so a `set`
+     * throws rather than being quietly ignored, and rebuilding is the only way
+     * to stamp them. Rebuilding stays on the catch branch rather than becoming
+     * the general path: routing every response through a new one is pointless
+     * work on the routes that stream.
+     *
+     * **The cookieless downgrade moved INSIDE this block**, and that is not
+     * tidying. It used to run unguarded above, so on an immutable response it
+     * would throw and take the whole request with it, and the security headers
+     * below would never be reached. A security header set that can be skipped
+     * by an exception on the line before it is not applied to every response,
+     * which is the one property this block exists to have. Both halves now
+     * share the fallback: whatever throws, the rebuild applies everything.
+     *
+     * `/admin` returning 302 is the live case, and it carries no `Vary`, so it
+     * reaches only the cache-control default. It is asserted in verify-live
+     * anyway, because it is a DIFFERENT code branch from a 200.
+     */
     const varies = response.headers.get("vary") ?? "";
-    if (request.headers.has("cookie") && /(^|,)\s*cookie\s*(,|$)/i.test(varies)) {
-      response.headers.set("cache-control", UNCACHED);
-    }
+    const downgradeForCookie =
+      request.headers.has("cookie") && /(^|,)\s*cookie\s*(,|$)/i.test(varies);
 
-    if (!response.headers.has("cache-control")) {
-      try {
+    try {
+      if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);
+      applySecurityHeaders(response.headers);
+      if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
-      } catch {
-        // `Response.redirect()` and friends return immutable headers, so the
-        // set above throws rather than being quietly ignored. Rebuilding is the
-        // only way to add the header, and it stays on this branch rather than
-        // becoming the general path: routing every response through a new one
-        // is pointless work on the routes that stream.
-        const headers = new Headers(response.headers);
-        headers.set("cache-control", UNCACHED);
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
       }
+    } catch {
+      const headers = new Headers(response.headers);
+      if (downgradeForCookie) headers.set("cache-control", UNCACHED);
+      applySecurityHeaders(headers);
+      if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
     }
 
     return response;

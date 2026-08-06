@@ -152,6 +152,7 @@
     "check:contrast",
     "check:diagrams",
     "check:features",
+    "check:headers",
     "check:invariants",
     "check:llms",
     "check:logo",

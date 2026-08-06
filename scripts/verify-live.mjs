@@ -1186,6 +1186,70 @@ const ASK_PROBE_LIMIT = 3;
   );
 }
 
+/* --- 14. Security headers, on the wire ---------------------------------- *
+ *
+ * Phase A, ratified 2026-08-06. `check:headers` asserts that `workers/app.ts`
+ * DECLARES the ratified set; this asserts the set actually ARRIVES. Neither
+ * replaces the other: the gate cannot see the wire, and this cannot run without
+ * a deploy.
+ *
+ * **The expected values are PARSED out of `workers/app.ts`, not restated.**
+ * That is deliberate. `check:headers` already binds the source to the
+ * ratification in both directions, so parsing here closes the chain
+ * ratification -> source -> wire without a third hand-maintained copy to go
+ * stale. A literal list here would be exactly the mirror the gate family exists
+ * to prevent.
+ *
+ * TWO SURFACES, and the second is not redundant. A 200 takes the mutable path;
+ * `Response.redirect()` returns IMMUTABLE headers, so `/admin`'s 302 goes
+ * through the rebuild branch instead. A helper called on only one exit would
+ * leave every redirect on the site bare while a 200 looked perfect.
+ */
+
+{
+  const appSource = readFileSync(join(root, "workers", "app.ts"), "utf8")
+    // Comments first: the constant's docblock names headers and values while
+    // explaining them, and the prose would parse before the code.
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  const declBlock = appSource.match(
+    /const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/,
+  );
+  /** @type {[string, string][]} */
+  const expected = declBlock
+    ? [...declBlock[1].matchAll(/"([A-Za-z-]+)"\s*:\s*"([^"]*)"/g)].map((m) => [m[1], m[2]])
+    : [];
+
+  // FAIL CLOSED. If the parse returns nothing every loop below is skipped and
+  // this section would silently assert nothing at all.
+  check(
+    "security: the ratified header set was parsed from workers/app.ts",
+    expected.length > 0,
+    "SECURITY_HEADERS did not parse; the assertions below would examine nothing",
+  );
+
+  /** @type {Array<[string, string, number]>} */
+  const SURFACES = [
+    ["200", "/", 200],
+    ["302", "/admin", 302],
+  ];
+  for (const [label, path, wantStatus] of SURFACES) {
+    const { res, status } = await get(path);
+    check(`security: ${path} still returns ${wantStatus}`, status === wantStatus, `got ${status}`);
+    for (const [name, value] of expected) {
+      const got = res.headers.get(name);
+      check(
+        `security (${label}) ${path}: ${name} is exactly "${value}"`,
+        got === value,
+        `got ${got === null ? "ABSENT" : JSON.stringify(got)}`,
+      );
+    }
+  }
+  console.log(
+    `  security headers: ${expected.length} asserted by exact value on a 200 and the /admin 302`,
+  );
+}
+
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
