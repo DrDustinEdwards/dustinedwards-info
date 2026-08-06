@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { serializeArtifact } from "../app/lib/content/artifact.mjs";
+import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import { withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
@@ -56,7 +57,28 @@ export async function buildArtifact() {
     slugs.add(post.slug);
   }
 
-  return serializeArtifact(withRelated(posts));
+  /*
+   * The page half of the corpus. Ruling 3 of colophon-page.md.
+   *
+   * Read with `readFileSync` rather than imported: a JSON import needs
+   * `with { type: "json" }` for Node, and that attribute is rejected by this
+   * repo's tsc `module` setting, so the two would disagree about whether the
+   * file even compiles. The Worker's copy of this call imports them instead,
+   * which is the same environment split `makeResolveImage` has.
+   *
+   * BUILD ORDER: this now depends on `content/generated/stack.json`, so
+   * `build:stack` runs BEFORE `build:content`. A stale stack.json here produces
+   * page records that the next build will not reproduce, which `check:content`
+   * reports as a byte difference.
+   */
+  const stack = JSON.parse(
+    await readFile(path.join("content", "generated", "stack.json"), "utf8"),
+  );
+  const features = JSON.parse(
+    await readFile(path.join("content", "features.json"), "utf8"),
+  );
+
+  return serializeArtifact(withRelated(posts), colophonPages(stack, features));
 }
 
 /**

@@ -1,0 +1,218 @@
+/**
+ * The colophon's section structure. ONE ordered list, two readers.
+ *
+ * `app/routes/colophon.tsx` RENDERS from this. `recordsForPage` in
+ * `app/lib/search/records.mjs` INDEXES from it. Neither hardcodes the other's
+ * list, and no anchor string is typed in more than one file.
+ *
+ * **Why this module exists rather than literal ids in the page.** For posts,
+ * `splitSections` zips markdown against the pipeline's `toc` BY INDEX and throws
+ * if the counts disagree, because re-deriving anchors would be a second slugger
+ * that drifts from the renderer. This page has no toc: it is hand-built TSX with
+ * literal `id` attributes. Writing those ids into the record emitter as well
+ * would be the same class of defect with none of the same protection, and the
+ * failure would be SILENT: a record pointing at a fragment that no longer exists
+ * still returns a hit, still looks correct in a result list, and scrolls
+ * nowhere. So the list moved here and both sides read it.
+ *
+ * `lead` is the section's own prose. The page renders it as the paragraph under
+ * the heading and the index carries it as the section's body, so the words a
+ * reader searches for are the words they then see. Data-driven content
+ * (bindings, features, refusals) is appended to the indexed body from the same
+ * JSON the page renders, so that is one source too.
+ *
+ * Nothing here reads the clock, the filesystem or git, for the reason
+ * records.mjs states: records must be a pure function of committed data to live
+ * in the gated artifact.
+ */
+
+/** The route. Asserted against `routes.ts` by the gate. */
+export const COLOPHON_URL = "/colophon";
+
+/**
+ * The page's own title, which is deliberately NOT its URL.
+ *
+ * `/colophon` is the IndieWeb convention and is what tooling expects; the title
+ * carries the legibility, because the word is not universally known. Both are
+ * ruled. This is the string the search result shows.
+ */
+export const COLOPHON_TITLE = "How this site is built";
+
+export const COLOPHON_DESCRIPTION =
+  "The stack behind dustinedwards.info: every binding, migration and gate, " +
+  "generated from the repository's own configuration, with what was " +
+  "deliberately not adopted and why.";
+
+/** The lead paragraph above the first section, indexed with the document. */
+export const COLOPHON_INTRO =
+  "Everything below is generated from this repository's own configuration and " +
+  "checked against it in both directions on every build. If a binding is added " +
+  "and this page is not regenerated, the build fails. The one thing no " +
+  "generator can produce is why each piece is load-bearing, so those notes are " +
+  "written by hand and reconciled against the bindings they describe.";
+
+/**
+ * Every section, in document order.
+ *
+ * `id` is the fragment. `title` is the heading text and the search result's
+ * title. `lead` is the prose under the heading.
+ *
+ * ORDER IS THE DOCUMENT ORDER and is load-bearing twice: the page renders in
+ * this order, and record `ordinal` is derived from the index here, so a
+ * reordering changes the artifact and `check:content` sees it.
+ *
+ * @type {ReadonlyArray<{ id: string, title: string, lead: string }>}
+ */
+export const COLOPHON_SECTIONS = /** @type {const} */ ([
+  {
+    id: "runtime",
+    title: "Runtime",
+    lead:
+      "The compatibility date, the flags the Worker runs under, and the Node " +
+      "version the build is pinned to.",
+  },
+  {
+    id: "bindings",
+    title: "Bindings",
+    lead:
+      "Every resource this Worker holds a handle to, with what it is for and " +
+      "the measurement that put it there rather than a logo wall.",
+  },
+  {
+    id: "schema",
+    title: "Schema",
+    lead:
+      "Hand-written migrations, applied in order. drizzle-kit is deliberately " +
+      "not a dependency, and because the database export command is broken on " +
+      "this schema, this directory is the only copy of the table definitions " +
+      "that exists anywhere.",
+  },
+  {
+    id: "gates",
+    title: "Gates",
+    lead:
+      "Checks that run before anything ships. The list is derived from the " +
+      "scripts themselves rather than maintained beside them, so a gate that " +
+      "is added and forgotten is not possible.",
+  },
+  {
+    id: "dependencies",
+    title: "Dependencies",
+    lead:
+      "The runtime dependencies. Build tooling is excluded: this is what " +
+      "serves the site, not what assembles it.",
+  },
+  {
+    id: "features",
+    title: "What it does",
+    lead:
+      "Nothing in this section can be generated from configuration, so each " +
+      "entry carries an anchor and a gate verifies that the thing the claim is " +
+      "about still exists. It does not verify that the sentence is true, which " +
+      "is the honest boundary of the technique.",
+  },
+  {
+    id: "not-adopted",
+    title: "What was not adopted",
+    lead:
+      "Anyone can list what they shipped. Two different things are listed " +
+      "here: a refusal is a decision that was made and recorded, and an " +
+      "accepted gap is something missing that nobody ruled on, written down so " +
+      "it is not mistaken for a choice.",
+  },
+]);
+
+/** Fragment ids, for a gate that needs the set rather than the order. */
+export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
+
+/**
+ * Every hand-authored page, as `recordsForPages` takes them.
+ *
+ * One function both artifact writers call, so the assembly cannot differ between
+ * a build from a clone and a save from the editor. The two callers differ only
+ * in how they LOAD the two JSON files, which is environment-specific for the
+ * same reason `makeResolveImage` is: Node reads the filesystem, the Worker gets
+ * them from the bundle.
+ *
+ * @param {any} stack   content/generated/stack.json
+ * @param {any} features content/features.json
+ */
+export function colophonPages(stack, features) {
+  return [colophonPageInput(stack, features)];
+}
+
+/**
+ * The colophon as the generic page shape `recordsForPage` consumes.
+ *
+ * The section BODIES are assembled here, from the same two JSON files the page
+ * renders, so the index and the page draw on one source. This is the only place
+ * that knows how a colophon section's indexable text is put together.
+ *
+ * Kept out of `records.mjs` deliberately: that module is the generic indexer for
+ * any page and must not learn the colophon's shape, exactly as it does not know
+ * how a post's markdown is produced.
+ *
+ * @param {any} stack   content/generated/stack.json
+ * @param {any} features content/features.json
+ */
+export function colophonPageInput(stack, features) {
+  /** @param {string} id @returns {string} */
+  const contentFor = (id) => {
+    if (id === "runtime") {
+      return [
+        `Compatibility date ${stack.runtime.compatibilityDate}.`,
+        `Compatibility flags ${stack.runtime.compatibilityFlags.join(", ") || "none"}.`,
+        `Node ${stack.runtime.nodeVersion}.`,
+      ].join(" ");
+    }
+    if (id === "bindings") {
+      return stack.bindings
+        .map(
+          (/** @type {any} */ b) =>
+            `${b.name} (${b.kind}). ${b.what} ${b.whyLoadBearing}`,
+        )
+        .join(" ");
+    }
+    if (id === "schema") {
+      return stack.migrations.join(" ");
+    }
+    if (id === "gates") {
+      return stack.gates.join(" ");
+    }
+    if (id === "dependencies") {
+      return stack.dependencies
+        .map((/** @type {any} */ d) => `${d.name} ${d.range}`)
+        .join(" ");
+    }
+    if (id === "features") {
+      return features.features
+        .map((/** @type {any} */ f) => `${f.component}. ${f.name}. ${f.what}`)
+        .join(" ");
+    }
+    if (id === "not-adopted") {
+      return stack.notAdopted
+        .map((/** @type {any} */ n) => `${n.name} (${n.status}). ${n.reason}`)
+        .join(" ");
+    }
+    // Fail closed. A section added to the descriptor with no body rule here
+    // would otherwise be indexed as its lead alone, which reads as a working
+    // record and silently omits everything the section actually shows.
+    throw new Error(
+      `colophonPageInput has no body rule for section "${id}". ` +
+        `Add one, or the section would be indexed without its content.`,
+    );
+  };
+
+  return {
+    url: COLOPHON_URL,
+    uid: "page:colophon",
+    title: COLOPHON_TITLE,
+    description: COLOPHON_DESCRIPTION,
+    intro: COLOPHON_INTRO,
+    sections: COLOPHON_SECTIONS.map((section) => ({
+      anchor: section.id,
+      title: section.title,
+      body: `${section.lead} ${contentFor(section.id)}`,
+    })),
+  };
+}

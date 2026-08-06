@@ -69,6 +69,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { COLOPHON_ANCHORS } from "../app/lib/colophon-sections.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
 const ROUTES_PATH = join(root, "app", "routes.ts");
@@ -151,6 +153,12 @@ if (!existsSync(FEATURES_PATH)) {
 }
 
 const features = JSON.parse(readFileSync(FEATURES_PATH, "utf8")).features ?? [];
+
+/** The gated artifact's records, for the page-record section below. */
+const artifactRecords =
+  JSON.parse(
+    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+  ).records ?? [];
 const routes = declaredRoutes();
 const gates = declaredGates();
 
@@ -276,6 +284,120 @@ ok(
   "verifiable anchors were actually checked",
   verified > 0,
   "every anchor was a decision, so nothing was verified",
+);
+
+/* ---------------------------------- the page's search records, ruling 3 ---- */
+
+/*
+ * Why HERE and not in check:search.
+ *
+ * These assertions need two things this file already has and that one does not:
+ * a parser for `routes.ts`, and the habit of reconciling a hand-written list
+ * against reality in both directions. `check:search` is about the query parser
+ * and rank fusion over synthetic input; it has no notion of routes, of the
+ * artifact, or of what the page renders. Putting a routes parser there would be
+ * a second one, which is the shape check:invariants exists to prevent.
+ */
+
+console.log("\n  page records for /colophon");
+
+const pageRecords = artifactRecords.filter(
+  (/** @type {any} */ r) => r.type === "page",
+);
+const colophonRecords = pageRecords.filter(
+  (/** @type {any} */ r) => r.docUid === "page:colophon",
+);
+
+// FAIL CLOSED. Zero page records is not an empty result set, it is ruling 3 not
+// having happened, and every assertion below would pass vacuously.
+ok(
+  "the artifact carries page records",
+  pageRecords.length > 0,
+  "no type='page' records. Run build:stack then build:content.",
+);
+ok(
+  "the colophon has exactly one document record",
+  colophonRecords.filter((/** @type {any} */ r) => r.anchor === null).length === 1,
+  `found ${colophonRecords.filter((/** @type {any} */ r) => r.anchor === null).length}`,
+);
+
+// Every page record must live at a route that exists. A record pointing at a
+// removed route returns a hit that 404s, which is worse than no hit.
+for (const record of pageRecords) {
+  const path = String(record.url).split("#")[0];
+  ok(
+    `page record ${record.uid} resolves to a declared route: ${path}`,
+    routes.has(path),
+    `routes.ts declares no ${path}`,
+  );
+}
+
+/*
+ * Anchors, both directions against the DESCRIPTOR.
+ *
+ * This is the assertion the whole descriptor exists for. A section record whose
+ * anchor is not a fragment the page renders still returns a hit, still looks
+ * right in a result list, and scrolls nowhere. Nothing else in the repo would
+ * notice.
+ */
+const sectionRecords = colophonRecords.filter(
+  (/** @type {any} */ r) => r.anchor !== null,
+);
+ok(
+  "the colophon has section records, not just a document record",
+  sectionRecords.length > 0,
+  "section-grained records are the point; a document record alone loses every deep link",
+);
+for (const record of sectionRecords) {
+  ok(
+    `section record anchor is in the descriptor: ${record.anchor}`,
+    COLOPHON_ANCHORS.includes(String(record.anchor)),
+    `the descriptor declares ${COLOPHON_ANCHORS.join(", ")}`,
+  );
+}
+const unrecorded = COLOPHON_ANCHORS.filter(
+  (id) => !sectionRecords.some((/** @type {any} */ r) => r.anchor === id),
+);
+ok(
+  "every descriptor section has a record",
+  unrecorded.length === 0,
+  `no record for ${unrecorded.join(", ")}. Regenerate the artifact.`,
+);
+
+/*
+ * The page renders FROM the descriptor, asserted structurally.
+ *
+ * There is no list of ids in the page to compare against, and that is the
+ * property being checked: the only `<h2 id=` in the file is the one inside
+ * `SectionHead`, which takes its id from the descriptor. A literal id
+ * reintroduced anywhere else is a second list, and the next rename splits them.
+ */
+const pageSource = readFileSync(
+  join(root, "app", "routes", "colophon.tsx"),
+  "utf8",
+);
+const literalHeadings = [
+  ...pageSource.matchAll(/<h2\s+id="([^"]+)"/g),
+].map((m) => m[1]);
+ok(
+  "colophon.tsx declares no literal section id",
+  literalHeadings.length === 0,
+  `found ${literalHeadings.join(", ")}. Those ids exist in the descriptor too, ` +
+    `so they are a second list and will drift.`,
+);
+const rendered = [...pageSource.matchAll(/<SectionHead\s+id="([^"]+)"/g)].map(
+  (m) => m[1],
+);
+ok(
+  "the page renders one section per descriptor entry, in order",
+  rendered.length === COLOPHON_ANCHORS.length &&
+    rendered.every((id, i) => id === COLOPHON_ANCHORS[i]),
+  `page renders [${rendered.join(", ")}], descriptor declares [${COLOPHON_ANCHORS.join(", ")}]`,
+);
+
+console.log(
+  `     ${colophonRecords.length} colophon record(s), ${sectionRecords.length} section(s), ` +
+    `${COLOPHON_ANCHORS.length} descriptor anchor(s), ${rendered.length} rendered`,
 );
 
 /* ------------------------------------------------------- the coverage report */

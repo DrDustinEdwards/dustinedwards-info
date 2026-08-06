@@ -17,6 +17,12 @@
 import { imageSize } from "image-size";
 
 import { serializeArtifact } from "~/lib/content/artifact.mjs";
+// The page half of the search corpus. Imported rather than read from disk: this
+// runs in the Worker, where both files come from the bundle. Ruling 3 of
+// colophon-page.md.
+import stackData from "../../../content/generated/stack.json";
+import featuresData from "../../../content/features.json";
+import { colophonPages } from "~/lib/colophon-sections.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
@@ -40,6 +46,19 @@ import { decide, PolicyError, type Actor } from "./publish-policy.mjs";
 
 export { GitHubError, PolicyError };
 export type { Actor };
+
+/**
+ * The page half of the corpus, computed ONCE at module scope.
+ *
+ * A pure function of two committed JSON files, so there is nothing per-request
+ * about it. **Known residual, recorded rather than hidden:** these come from the
+ * bundle, so they are whatever was deployed. If `stack.json` or `features.json`
+ * changes on main and the Worker is not redeployed, a save from the editor
+ * writes page records the next `build:content` will not reproduce, and
+ * `check:content` reports it as a byte difference. Same shape as the social-card
+ * gap, and the repair is the same: deploy.
+ */
+const COLOPHON_PAGES = colophonPages(stackData, featuresData);
 
 const ARTIFACT_PATH = "content/generated/posts.json";
 const postPath = (slug: string) => `content/posts/${slug}.md`;
@@ -251,7 +270,7 @@ export async function savePost(
     message: commitMessage(actor, options.isNew ? "Add" : "Update", record.title),
     changes: [
       { path: postPath(options.slug), content: raw },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next) },
+      { path: ARTIFACT_PATH, content: serializeArtifact(next, COLOPHON_PAGES) },
     ],
   });
 
@@ -327,7 +346,7 @@ export async function deletePost(
     message: commitMessage(actor, "Remove", options.slug),
     changes: [
       { path: postPath(options.slug), content: null },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next) },
+      { path: ARTIFACT_PATH, content: serializeArtifact(next, COLOPHON_PAGES) },
     ],
   });
 
