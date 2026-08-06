@@ -8,7 +8,13 @@ import { prefersType } from "~/lib/negotiate";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import { search, zeroState, type SearchHit } from "~/lib/search/search.server";
-import { HTML_VARY_ACCEPT, PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
+import {
+  HTML_CACHE_CONTROL,
+  HTML_VARY_ACCEPT,
+  PUBLIC_CACHE_CONTROL,
+  SITE,
+  SITE_ORIGIN,
+} from "~/lib/seo";
 import type { Route } from "./+types/search";
 
 const PAGE_SIZE = 10;
@@ -91,8 +97,33 @@ export const middleware: Route.MiddlewareFunction[] = [
       {
         headers: {
           "content-type": "application/json; charset=utf-8",
-          "cache-control": PUBLIC_CACHE_CONTROL,
-          // The body depends on Accept, so caches must key on it.
+          // NEVER STORED, and this is not a performance oversight. Do not
+          // "optimise" this back to PUBLIC_CACHE_CONTROL.
+          //
+          // `/search` sets `Vary: Accept, Cookie`. Measured 2026-08-05 with a
+          // paired control on fresh URLs: with only the HTML representation in
+          // play, a cookie-bearing request correctly BYPASSes and is downgraded
+          // to `private, no-store` by `workers/app.ts`. After ONE request for
+          // this JSON representation, that same request gets a `HIT` and
+          // `public` instead, because the edge answers from the stored
+          // cookieless variant and the Worker never runs. A reader with
+          // `theme=dark` then receives the light document. `Accept` separates
+          // storage correctly; the `Cookie` dimension is what collapses once a
+          // second variant exists under the key.
+          //
+          // A response that is never stored cannot become that second variant.
+          // The fix belongs here rather than on the HTML side, which is
+          // measured correct while it is the only representation.
+          //
+          // The trigger is advertised: llms.txt tells agents this exact URL
+          // returns JSON for `Accept: application/json`.
+          //
+          // Documented repair is a Cache Rule with `bypass` on `Cookie`, which
+          // needs a proxied zone, so it is a DNS-cutover item. Citations in
+          // `media.$.ts`.
+          "cache-control": HTML_CACHE_CONTROL,
+          // Still true and still correct to advertise: the body genuinely
+          // depends on Accept. Inert on a response that is never stored.
           vary: "Accept",
         },
       },

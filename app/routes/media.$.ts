@@ -127,10 +127,30 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   //
   // **A PRECISION THAT MATTERS, because the first write-up of this got it
   // wrong:** the failure was specific to `caches.default`, NOT to `Vary` in
-  // general. Workers Cache honours `Vary` on any request header with no
-  // allowlist, so the outer layer would have keyed correctly. Only the manual
-  // key here could not. Keeping the negotiation was therefore possible, by
-  // dropping this explicit cache and relying on Workers Cache alone.
+  // general. Only the manual key here could not vary at all.
+  //
+  // **CORRECTED 2026-08-05, because the correction was itself wrong.** This
+  // comment used to claim "Workers Cache honours `Vary` on any request header
+  // with no allowlist, so the outer layer would have keyed correctly". That is
+  // not what the docs say and it is half wrong by measurement:
+  //
+  //   - developers.cloudflare.com/workers/cache/cache-keys/ lists the Workers
+  //     Caching key as the target entrypoint, the path and query string, the
+  //     Worker version and `ctx.props`. `Vary` is NOT part of it.
+  //   - developers.cloudflare.com/cache/how-to/cache-rules/settings/#vary makes
+  //     origin `Vary` a Cache Rules setting that is OFF unless configured, and
+  //     Cache Rules need a proxied zone, which workers.dev does not have.
+  //
+  // Measured on this site with a paired control: `Accept` DOES separate stored
+  // variants, but on a response varying on two headers the `Cookie` dimension
+  // collapses once a second variant exists, which is the defect repaired in
+  // `search.tsx` and `markdown-twin.ts`. So "keying correctly" was true for the
+  // header this route cared about and false in general, and relying on it would
+  // have been relying on undocumented behaviour.
+  //
+  // Keeping the negotiation was therefore possible only in the narrow sense
+  // that `Accept` happens to separate. The decision below stands on the
+  // measurement, not on this mechanism.
   //
   // It was still dropped, on the measurement rather than the mechanism: AVIF
   // came in at 21797 bytes against WebP's 22072 for the same source, 275 bytes,
