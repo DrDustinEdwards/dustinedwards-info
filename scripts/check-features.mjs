@@ -69,7 +69,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { COLOPHON_ANCHORS } from "../app/lib/colophon-sections.mjs";
+import { COLOPHON_ANCHORS, STATUS_LABEL } from "../app/lib/colophon-sections.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
@@ -398,6 +398,151 @@ ok(
 console.log(
   `     ${colophonRecords.length} colophon record(s), ${sectionRecords.length} section(s), ` +
     `${COLOPHON_ANCHORS.length} descriptor anchor(s), ${rendered.length} rendered`,
+);
+
+/* ------------------------------------- the not-adopted status labels ------- */
+
+/*
+ * ONE LABEL MAP, TWO READERS, asserted in both directions.
+ *
+ * The defect this section was written for, 2026-08-05: `STATUS_LABEL` lived in
+ * `colophon.tsx`, so the page rendered `(Refused)` and `(Accepted gap)` while
+ * the record body carried the raw enum `(refused)` and `(accepted-gap)`. For
+ * `accepted-gap` the hyphen means the indexed token was on the page in NO
+ * casing, so a reader who searched the word the index advertises would land on
+ * a page that never says it.
+ *
+ * **No gate could see it, and it is worth being precise about why.**
+ * `check:content` byte-compares the artifact against a fresh generation, so it
+ * compares the wrong output to itself and agrees. This gate reconciled section
+ * IDS, not the words inside a section. The comparison that was missing is index
+ * against PAGE, and the three assertions below are the offline half of it: the
+ * label reaches the index, the raw enum does not, and neither reader carries a
+ * literal that could drift from the other.
+ */
+
+console.log("\n  not-adopted status labels");
+
+const stackJson = JSON.parse(
+  readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
+);
+const notAdopted = stackJson.notAdopted ?? [];
+
+// FAIL CLOSED before anything else, so "0 problems" cannot mean "0 entries".
+ok(
+  "stack.json carries not-adopted entries",
+  notAdopted.length > 0,
+  "no entries, so every label assertion below would pass vacuously",
+);
+
+const usedStatuses = [...new Set(notAdopted.map((/** @type {any} */ n) => String(n.status)))];
+
+// Direction 1: every status the data uses has a label.
+for (const status of usedStatuses) {
+  ok(
+    `status "${status}" has a label`,
+    Boolean(STATUS_LABEL[status]),
+    `STATUS_LABEL declares ${Object.keys(STATUS_LABEL).join(", ")}. ` +
+      `Without a label the page and the index would disagree about what it is called.`,
+  );
+}
+// Direction 2: no label for a status nothing declares. An orphan label is the
+// same mirror-going-stale shape, caught before it is the one that matters.
+for (const status of Object.keys(STATUS_LABEL)) {
+  ok(
+    `label "${status}" is used by at least one entry`,
+    usedStatuses.includes(status),
+    `nothing in stack.json declares status "${status}"`,
+  );
+}
+
+/*
+ * The LABEL reaches the index and the RAW ENUM does not.
+ *
+ * Read off the gated artifact rather than recomputed, because the artifact is
+ * what `sync:content` writes into D1 and therefore what a reader's search
+ * actually matches against.
+ */
+const notAdoptedRecord = colophonRecords.find(
+  (/** @type {any} */ r) => r.anchor === "not-adopted",
+);
+ok(
+  "the not-adopted section has a record",
+  Boolean(notAdoptedRecord),
+  "without it the two assertions below would examine nothing",
+);
+if (notAdoptedRecord) {
+  const body = String(notAdoptedRecord.body);
+  for (const status of usedStatuses) {
+    const label = STATUS_LABEL[status];
+    ok(
+      `the index carries the label "(${label})" for status "${status}"`,
+      body.includes(`(${label})`),
+      `the not-adopted record body does not contain "(${label})". Regenerate the artifact.`,
+    );
+    // The parenthesised form, so this cannot fire on a status word that happens
+    // to appear inside a reason sentence.
+    ok(
+      `the index does NOT carry the raw enum "(${status})"`,
+      !body.includes(`(${status})`),
+      `the record body still carries the raw enum, which is the exact defect ` +
+        `this section exists for: the page renders "(${label})".`,
+    );
+  }
+}
+
+/*
+ * Neither reader restates the other's strings.
+ *
+ * Comments are stripped first. Both files' own prose names these values while
+ * explaining the defect, and a scan that read the explanation would report a
+ * literal that is not there. That trap has already been hit by check:logo and
+ * check:contrast, and by the routes parser at the top of this file.
+ */
+const stripComments = (/** @type {string} */ s) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+
+const pageCode = stripComments(pageSource);
+for (const status of usedStatuses) {
+  const label = STATUS_LABEL[status];
+  ok(
+    `colophon.tsx carries no literal status "${status}"`,
+    !pageCode.includes(`"${status}"`) && !pageCode.includes(`'${status}'`),
+    `the page must render through statusLabel(), not its own copy`,
+  );
+  ok(
+    `colophon.tsx carries no literal label "${label}"`,
+    !pageCode.includes(`"${label}"`) && !pageCode.includes(`>${label}<`),
+    `the page must render through statusLabel(), not its own copy`,
+  );
+}
+ok(
+  "colophon.tsx renders the status through statusLabel()",
+  /statusLabel\s*\(/.test(pageCode),
+  "the page does not call statusLabel, so it is getting the word from somewhere else",
+);
+
+/*
+ * And the descriptor declares each label EXACTLY ONCE, which is what makes it
+ * the single source rather than merely one of the places it appears. A second
+ * occurrence would mean the emitter had restated what the map already says.
+ */
+const descriptorCode = stripComments(
+  readFileSync(join(root, "app", "lib", "colophon-sections.mjs"), "utf8"),
+);
+for (const status of usedStatuses) {
+  const label = STATUS_LABEL[status];
+  const occurrences = descriptorCode.split(`"${label}"`).length - 1;
+  ok(
+    `the descriptor declares label "${label}" exactly once`,
+    occurrences === 1,
+    `found ${occurrences}. One is the STATUS_LABEL map; a second is a restatement that will drift.`,
+  );
+}
+
+console.log(
+  `     ${notAdopted.length} entr(ies), ${usedStatuses.length} distinct status(es), ` +
+    `${Object.keys(STATUS_LABEL).length} label(s)`,
 );
 
 /* ------------------------------------------------------- the coverage report */

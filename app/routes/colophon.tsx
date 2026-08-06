@@ -4,6 +4,7 @@ import {
   COLOPHON_INTRO,
   COLOPHON_SECTIONS,
   COLOPHON_TITLE,
+  statusLabel,
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
@@ -84,12 +85,6 @@ function SectionHead({ id }: { id: string }) {
     </>
   );
 }
-
-/** The two states a not-adopted entry may declare, spelled for a reader. */
-const STATUS_LABEL: Record<string, string> = {
-  refused: "Refused",
-  "accepted-gap": "Accepted gap",
-};
 
 type Anchor = {
   kind: string;
@@ -279,9 +274,7 @@ export default function Colophon() {
                       still gets the distinction. */}
                   <dt>
                     {entry.name}{" "}
-                    <span className="muted">
-                      ({STATUS_LABEL[entry.status] ?? entry.status})
-                    </span>
+                    <span className="muted">({statusLabel(entry.status)})</span>
                   </dt>
                   <dd>{entry.reason}</dd>
                 </div>

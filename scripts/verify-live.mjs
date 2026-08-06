@@ -66,7 +66,7 @@ import {
 // against the rendered page, and a copy of those leads here would be a third
 // mirror to go stale, asserting what this harness remembers rather than what
 // the index carries.
-import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
+import { COLOPHON_SECTIONS, statusLabel } from "../app/lib/colophon-sections.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -763,15 +763,14 @@ const ASK_PROBE_LIMIT = 3;
    *
    * Read from the same two JSON files the page renders, never restated here.
    *
-   * **`notAdopted[].status` is deliberately absent and that is a finding, not
-   * an omission.** The record body carries the raw enum, `(refused)` and
-   * `(accepted-gap)`, while the page renders the human label through
-   * STATUS_LABEL, `(Refused)` and `(Accepted gap)`. For `accepted-gap` the
-   * hyphen means the indexed token appears on the page in no casing at all. So
-   * the index promises a word the page never shows, which is exactly this
-   * sweep's subject. It is reported rather than asserted because the repair is
-   * a ruling: STATUS_LABEL has to move into the descriptor so both readers
-   * share it, the way COLOPHON_SECTIONS already is.
+   * **`notAdopted[].status` IS swept, and its absence here is why the defect
+   * survived.** Until 2026-08-05 the record body carried the raw enum,
+   * `(refused)` and `(accepted-gap)`, while the page rendered the label through
+   * a STATUS_LABEL that lived in `colophon.tsx`. For `accepted-gap` the hyphen
+   * meant the indexed token was on the page in no casing at all. The map moved
+   * into the descriptor so both readers share it, and the token is swept
+   * through `statusLabel()` rather than as a literal, so this assertion cannot
+   * drift from what the page renders.
    *
    * @param {string} id
    * @returns {string[]}
@@ -801,7 +800,11 @@ const ASK_PROBE_LIMIT = 3;
         el(f.what),
       ]);
     if (id === "not-adopted")
-      return stack.notAdopted.flatMap((/** @type {any} */ n) => [`${n.name} <`, el(n.reason)]);
+      return stack.notAdopted.flatMap((/** @type {any} */ n) => [
+        `${n.name} <`,
+        `(${statusLabel(n.status)})`,
+        el(n.reason),
+      ]);
     // Fail closed, for the reason colophonPageInput does: a section added to
     // the descriptor with no rule here would be swept as its lead alone, which
     // passes and proves nothing about the content underneath it.

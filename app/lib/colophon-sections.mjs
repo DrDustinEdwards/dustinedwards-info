@@ -126,6 +126,53 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
 
 /**
+ * The two states a not-adopted entry may declare, spelled for a reader.
+ *
+ * ONE map, two readers, for the reason `COLOPHON_SECTIONS` is one list: the
+ * page renders it and `colophonPageInput` indexes it, so the word a reader
+ * searches for is the word they then see.
+ *
+ * **It lived in `colophon.tsx` until 2026-08-05 and the split was a real
+ * defect.** The page rendered `(Refused)` and `(Accepted gap)` while the record
+ * body carried the raw enum, `(refused)` and `(accepted-gap)`. For
+ * `accepted-gap` the hyphen means the indexed token appeared on the page in no
+ * casing at all, so the index promised a word the page never showed. Nothing
+ * caught it: `check:content` byte-compares the artifact against itself and
+ * `check:features` reconciled ids, not labels. It was found by sweeping every
+ * indexed fact against the rendered page.
+ *
+ * @type {Record<string, string>}
+ */
+export const STATUS_LABEL = {
+  refused: "Refused",
+  "accepted-gap": "Accepted gap",
+};
+
+/**
+ * The label for a status, or a throw.
+ *
+ * FAILS CLOSED, and the previous `?? status` fallback is exactly why. A status
+ * with no label silently rendered its raw enum, which is the divergence this
+ * module now exists to prevent, and it would have looked like working output on
+ * the page and in the index at the same time. A build that stops and names the
+ * status is the only safe outcome, and it is the same stance `SectionHead` and
+ * the missing-body-rule branch below already take.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+export function statusLabel(status) {
+  const label = STATUS_LABEL[status];
+  if (!label) {
+    throw new Error(
+      `no label for not-adopted status "${status}". Add one to STATUS_LABEL, ` +
+        `or the page and the search index would disagree about what it is called.`,
+    );
+  }
+  return label;
+}
+
+/**
  * Every hand-authored page, as `recordsForPages` takes them.
  *
  * One function both artifact writers call, so the assembly cannot differ between
@@ -190,8 +237,14 @@ export function colophonPageInput(stack, features) {
         .join(" ");
     }
     if (id === "not-adopted") {
+      // `statusLabel`, never `n.status`. The page renders the label, so the
+      // index has to carry the label or it promises a word the page never
+      // shows. That was the 2026-08-05 defect.
       return stack.notAdopted
-        .map((/** @type {any} */ n) => `${n.name} (${n.status}). ${n.reason}`)
+        .map(
+          (/** @type {any} */ n) =>
+            `${n.name} (${statusLabel(n.status)}). ${n.reason}`,
+        )
         .join(" ");
     }
     // Fail closed. A section added to the descriptor with no body rule here
