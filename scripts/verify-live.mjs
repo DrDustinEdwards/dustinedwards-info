@@ -1053,6 +1053,120 @@ const ASK_PROBE_LIMIT = 3;
     );
   }
 
+  /* CASE B: A SECOND REPRESENTATION MUST NOT COLLAPSE THE COOKIE DIMENSION.
+   *
+   * The defect, measured 2026-08-05 with a paired control on fresh URLs. Both
+   * `/search` and `/blog/:slug` set `Vary: Accept, Cookie`. With only the HTML
+   * representation in play, a cookie-bearing request correctly BYPASSes. After
+   * ONE request for the alternate representation, the same request got a `HIT`
+   * and `public`: the edge answered from the stored cookieless variant, the
+   * Worker never ran, the downgrade in `workers/app.ts` never fired, and a
+   * `theme=dark` reader received the light document.
+   *
+   * Repair B: the alternate representations are `private, no-store`, so they
+   * are never stored and cannot become that second variant.
+   *
+   * **BOTH routes, because the first write-up of this said `/search` was the
+   * only one.** `/blog/:slug` carries the same two-header `Vary` and reproduced
+   * it identically, which means every published post was exposed. A scope claim
+   * that was wrong once is asserted here rather than trusted.
+   *
+   * PAIRED, control and test, so a pass cannot come from the route being
+   * uncacheable for some unrelated reason: the control must still HIT
+   * cookieless, which proves shared caching is alive on that URL.
+   */
+  {
+    /** @param {string} path @param {{cookie?: string, accept?: string}} [opts] */
+    const req = async (path, opts = {}) => {
+      /** @type {Record<string,string>} */
+      const headers = { "user-agent": UA };
+      if (opts.cookie) headers.cookie = opts.cookie;
+      if (opts.accept) headers.accept = opts.accept;
+      const res = await fetch(`${ORIGIN}${path}`, { headers, redirect: "manual" });
+      const body = await res.text();
+      return {
+        res,
+        body,
+        cf: res.headers.get("cf-cache-status") ?? "(none)",
+        cc: res.headers.get("cache-control") ?? "(none)",
+        type: (res.headers.get("content-type") ?? "").split(";")[0],
+      };
+    };
+
+    const bust = () => `${Math.random().toString(36).slice(2)}${Date.now()}`;
+
+    for (const [label, base, accept, altType] of [
+      ["/search", "/search?q=d1", "application/json", "application/json"],
+      [`/blog/:slug`, `/blog/${SLUG}`, "text/markdown", "text/markdown"],
+    ]) {
+      const join = base.includes("?") ? "&" : "?";
+
+      // CONTROL: HTML only. Establishes that this URL really is shared-cached,
+      // so the test below is about the second representation and nothing else.
+      const controlUrl = `${base}${join}vb=c${bust()}`;
+      await req(controlUrl);
+      let control = await req(controlUrl);
+      for (let i = 0; i < 3 && control.cf !== "HIT"; i += 1) control = await req(controlUrl);
+      check(
+        `variant ${label}: control is shared-cached cookieless`,
+        control.cf === "HIT",
+        `cf ${control.cf}. Without this the test below proves nothing.`,
+      );
+      const controlDark = await req(controlUrl, { cookie: "theme=dark" });
+      check(
+        `variant ${label}: control cookie-bearing bypasses`,
+        controlDark.cf !== "HIT" && controlDark.cc.includes("no-store"),
+        `cf ${controlDark.cf}, cache-control ${controlDark.cc}`,
+      );
+
+      // TEST: the alternate representation FIRST, then the same sequence.
+      // Run exactly as it was before the fix, so the only variable is the fix.
+      const testUrl = `${base}${join}vb=t${bust()}`;
+      const alt = await req(testUrl, { accept });
+      check(
+        `variant ${label}: the alternate representation still serves ${altType}`,
+        alt.res.status === 200 && alt.type === altType,
+        `got ${alt.res.status} ${alt.type || "(none)"}`,
+      );
+      check(
+        `variant ${label}: the alternate representation is never stored`,
+        alt.cc.includes("no-store"),
+        `cache-control ${alt.cc}. If this is public it can become a second variant.`,
+      );
+
+      await req(testUrl);
+      let after = await req(testUrl);
+      for (let i = 0; i < 3 && after.cf !== "HIT"; i += 1) after = await req(testUrl);
+      const dark = await req(testUrl, { cookie: "theme=dark" });
+      check(
+        `variant ${label}: cookie-bearing bypasses AFTER the alternate representation`,
+        dark.cf !== "HIT" && dark.cc.includes("no-store"),
+        `cf ${dark.cf}, cache-control ${dark.cc}. This is the 2026-08-05 defect: ` +
+          `a second variant collapsed the Cookie dimension.`,
+      );
+      check(
+        `variant ${label}: renders the requested theme AFTER the alternate representation`,
+        themeOf(dark.body) === "dark",
+        `sent theme=dark, rendered ${themeOf(dark.body)} (cf ${dark.cf})`,
+      );
+    }
+
+    // BOTH ADVERTISED FORMS still reach the markdown twin. llms.txt documents
+    // the path AND the Accept header, so dropping either is a broken published
+    // contract. The path form's bytes are asserted in section 5; this is the
+    // negotiated form, which nothing else covers.
+    const negotiated = await req(`/blog/${SLUG}`, { accept: "text/markdown" });
+    const byPath = await req(`/blog/${SLUG}.md`);
+    check(
+      "variant: the Accept form and the .md path return the same markdown",
+      negotiated.type === "text/markdown" &&
+        byPath.type === "text/markdown" &&
+        negotiated.body === byPath.body &&
+        negotiated.body.length > 100,
+      `accept ${negotiated.type} ${negotiated.body.length}b, path ${byPath.type} ${byPath.body.length}b`,
+    );
+  }
+
   // AND THE CACHE STILL WORKS WHERE IT IS MEANT TO. The fix above made HTML
   // uncacheable; it must not have disabled the cache it was enabled for. A
   // regression that turned caching off site-wide would satisfy every assertion
