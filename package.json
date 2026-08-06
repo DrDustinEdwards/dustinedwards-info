@@ -38,6 +38,7 @@
     "check:urls": "node scripts/check-urls.mjs",
     "check:stack": "node scripts/check-stack.mjs",
     "check:features": "node scripts/check-features.mjs",
+    "check:headers": "node scripts/check-headers.mjs",
     "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {
