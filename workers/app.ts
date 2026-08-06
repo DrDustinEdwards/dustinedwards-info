@@ -63,13 +63,28 @@ const UNCACHED = "private, no-store";
  *   is off-site and invisible from here, which is the worst combination. This
  *   is the one header where the restrictive value is the WRONG value.
  *
- * - **`Cross-Origin-Opener-Policy: same-origin-allow-popups`.** Better Auth's
- *   Google flow is the only cross-origin window interaction on the site, and it
- *   was NOT verified whether it is a redirect or a popup, because that needs
- *   credentials. `allow-popups` is correct either way; plain `same-origin`
- *   would break the popup case only. Chosen unverified ON PURPOSE, and recorded
- *   as such so the next person does not tighten it on the assumption that it
- *   was merely cautious.
+ * - **`Cross-Origin-Opener-Policy: same-origin-allow-popups`. KEPT ON PURPOSE.
+ *   Do not tighten to `same-origin`.** Ruled 2026-08-06, after the question was
+ *   settled rather than while it was open.
+ *
+ *   Better Auth's Google flow is the only cross-origin window interaction on
+ *   the site, and it is a TOP-LEVEL REDIRECT, not a popup: `redirectPlugin` in
+ *   `better-auth/dist/client/fetch-plugins.mjs` sets `window.location.href`,
+ *   there is NO `window.open` anywhere in the client package, and `/login`
+ *   renders a `<button type="button">` whose onClick calls `signIn.social`.
+ *   Established by reading the SHIPPED CLIENT CODE, not by executing sign-in,
+ *   which needs credentials.
+ *
+ *   So `same-origin` would work today, and it is still not what we want. The
+ *   permissive notch is insurance against DEPENDENCY DRIFT: Better Auth can
+ *   move to a popup on a version bump with nobody re-reading `redirectPlugin`,
+ *   and the failure mode would be a silent sign-in break on the one door into
+ *   the private plane. Tightening buys nothing measured here and costs that.
+ *
+ *   **This is a settled question, not an open one.** The earlier note here said
+ *   the flow was unverified; that was true when it was written and is false
+ *   now. Reopening it needs new evidence about the flow, not a fresh reading of
+ *   the same code.
  *
  * - **No `includeSubDomains`, no `preload` on HSTS.** This is a `workers.dev`
  *   subdomain whose parent domain we do not own, and asserting a policy for it
