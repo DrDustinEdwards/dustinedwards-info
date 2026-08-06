@@ -17,6 +17,10 @@
     "app/lib/content/artifact.mjs",
     "app/lib/blog-listing.mjs",
     "app/lib/search/records.mjs",
+    // The colophon's section descriptor. build-content.mjs reads it to emit the
+    // page's search records, and app/routes/colophon.tsx renders from the same
+    // list, which is what stops an anchor existing in two places.
+    "app/lib/colophon-sections.mjs",
     "app/lib/search/query.mjs",
     // What an asset IS. The Worker imports it, build:assets imports it and
     // check:media imports it, on the same principle as query.mjs and

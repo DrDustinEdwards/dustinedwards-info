@@ -1,4 +1,10 @@
 import features from "../../content/features.json";
+import {
+  COLOPHON_DESCRIPTION,
+  COLOPHON_INTRO,
+  COLOPHON_SECTIONS,
+  COLOPHON_TITLE,
+} from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -50,16 +56,33 @@ export function headers() {
  * markup that prose already describes.
  */
 
-const DESCRIPTION =
-  "The stack behind dustinedwards.info: every binding, migration and gate, " +
-  "generated from the repository's own configuration, with what was " +
-  "deliberately not adopted and why.";
-
 export function meta() {
   return [
-    { title: `How this site is built, ${SITE.name}` },
-    { name: "description", content: DESCRIPTION },
+    { title: `${COLOPHON_TITLE}, ${SITE.name}` },
+    { name: "description", content: COLOPHON_DESCRIPTION },
   ];
+}
+
+/**
+ * The heading and lead for a section, BOTH read from the descriptor.
+ *
+ * No `id` or heading text is typed in this file. `recordsForPage` reads the
+ * same list, so a renamed section changes the page and its search records
+ * together, and a record can never point at a fragment the page does not
+ * render. That failure would be silent: the hit still appears and scrolls
+ * nowhere.
+ */
+function SectionHead({ id }: { id: string }) {
+  const section = COLOPHON_SECTIONS.find((s) => s.id === id);
+  // Fail loudly rather than rendering a headless section. An id the descriptor
+  // does not know is a typo here, and the gate asserts the reverse direction.
+  if (!section) throw new Error(`unknown colophon section "${id}"`);
+  return (
+    <>
+      <h2 id={section.id}>{section.title}</h2>
+      <p>{section.lead}</p>
+    </>
+  );
 }
 
 /** The two states a not-adopted entry may declare, spelled for a reader. */
@@ -160,16 +183,9 @@ export default function Colophon() {
           <h1 className="page-title">How this site is built</h1>
 
           <div className="prose">
-            <p>
-              Everything below is generated from this repository's own
-              configuration and checked against it in both directions on every
-              build. If a binding is added and this page is not regenerated, the
-              build fails. The one thing no generator can produce is why each
-              piece is load-bearing, so those notes are written by hand and
-              reconciled against the bindings they describe.
-            </p>
+            <p>{COLOPHON_INTRO}</p>
 
-            <h2 id="runtime">Runtime</h2>
+            <SectionHead id="runtime" />
             <dl>
               <dt>Compatibility date</dt>
               <dd>
@@ -187,7 +203,7 @@ export default function Colophon() {
               </dd>
             </dl>
 
-            <h2 id="bindings">Bindings</h2>
+            <SectionHead id="bindings" />
             <p>
               {stack.bindings.length} resources, every one of them Cloudflare.
               There is no other provider anywhere in the stack.
@@ -205,7 +221,7 @@ export default function Colophon() {
               </section>
             ))}
 
-            <h2 id="schema">Schema</h2>
+            <SectionHead id="schema" />
             <p>
               {stack.migrations.length} hand-written migrations. drizzle-kit is
               deliberately not a dependency, and because the database export
@@ -220,7 +236,7 @@ export default function Colophon() {
               ))}
             </ul>
 
-            <h2 id="gates">Gates</h2>
+            <SectionHead id="gates" />
             <p>
               {stack.gates.length} checks run before anything ships. The list is
               derived from the scripts themselves rather than maintained beside
@@ -234,7 +250,7 @@ export default function Colophon() {
               ))}
             </ul>
 
-            <h2 id="dependencies">Dependencies</h2>
+            <SectionHead id="dependencies" />
             <p>
               {stack.dependencies.length} runtime dependencies. Build tooling is
               excluded: this is what serves the site, not what assembles it.
@@ -247,7 +263,7 @@ export default function Colophon() {
               ))}
             </ul>
 
-            <h2 id="features">What it does</h2>
+            <SectionHead id="features" />
             <p>
               Everything above is generated from configuration. Nothing below
               can be: a sentence like "the editor refuses a save if the branch
@@ -281,7 +297,7 @@ export default function Colophon() {
               </section>
             ))}
 
-            <h2 id="not-adopted">What was not adopted</h2>
+            <SectionHead id="not-adopted" />
             <p>
               Anyone can list what they shipped. Two different things are listed
               here and the difference matters: a <strong>refusal</strong> is a

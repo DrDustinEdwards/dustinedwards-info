@@ -224,3 +224,114 @@ export function recordsForPosts(posts) {
     .sort((a, b) => a.slug.localeCompare(b.slug))
     .flatMap((post) => recordsForPost(post));
 }
+
+/**
+ * Builds every search record for a hand-authored PAGE.
+ *
+ * Ruling 3 of colophon-page.md: a page belongs in the search corpus like any
+ * other content. `RECORD_TYPES` has declared `page` since the index was built
+ * and this is its first population, so there is no schema change and no
+ * migration; the `type` facet simply stops having one value.
+ *
+ * **It lives here, beside `recordsForPost`, because this module's rule is that
+ * there must not be a second indexer.** A page emitter in a build script or in
+ * its own module would be exactly the mirror `check:invariants` exists to
+ * prevent: two things deriving the same record shape, drifting the first time
+ * one gains a column.
+ *
+ * Section-grained for the same reason posts are. A reader searching for
+ * "error 1042" should land on the binding that mentions it, not on the top of a
+ * long page.
+ *
+ * **`publishAt` is null and `status` is "published", and neither is a
+ * workaround.** The visibility predicate is
+ * `status = 'published' AND (publish_at IS NULL OR publish_at <= ?)`, so a null
+ * date is already visible by design. Inventing a publication date to satisfy a
+ * filter that does not need one would put a fact in the index that is not true
+ * of the page.
+ *
+ * @param {{ url: string, uid: string, title: string, description: string,
+ *           intro: string,
+ *           sections: Array<{ anchor: string, title: string, body: string }> }} page
+ * @returns {Array<Record<string, any>>}
+ */
+export function recordsForPage(page) {
+  // Fail closed, twice. A page with no sections would index as a single
+  // document record and quietly lose every deep link, and a duplicate anchor
+  // would make two records share a uid and collide on insert.
+  if (page.sections.length === 0) {
+    throw new Error(
+      `page ${page.url} produced no section records. A page indexed without ` +
+        `its sections loses every deep link, which is not an empty result, it ` +
+        `is a wrong one.`,
+    );
+  }
+  const anchors = new Set(page.sections.map((s) => s.anchor));
+  if (anchors.size !== page.sections.length) {
+    throw new Error(
+      `page ${page.url} has duplicate section anchors, so two records would ` +
+        `share a uid.`,
+    );
+  }
+
+  /** @type {Array<Record<string, any>>} */
+  const records = [
+    {
+      uid: page.uid,
+      url: page.url,
+      type: "page",
+      title: page.title,
+      body: [page.description, page.intro].filter(Boolean).join(" "),
+      // A page carries no tags. The facet is per-post and a page inventing one
+      // would appear under a tag nothing else on the site shares.
+      tags: "",
+      docTags: "",
+      docUid: page.uid,
+      docTitle: page.title,
+      docUrl: page.url,
+      anchor: null,
+      ordinal: 0,
+      status: "published",
+      publishAt: null,
+    },
+  ];
+
+  page.sections.forEach((section, i) => {
+    if (!section.body) return;
+    records.push({
+      uid: `${page.uid}#${section.anchor}`,
+      url: `${page.url}#${section.anchor}`,
+      type: "page",
+      title: section.title,
+      body: section.body,
+      tags: "",
+      docTags: "",
+      docUid: page.uid,
+      docTitle: page.title,
+      docUrl: page.url,
+      anchor: section.anchor,
+      ordinal: i + 1,
+      status: "published",
+      publishAt: null,
+    });
+  });
+
+  return records;
+}
+
+/**
+ * Every record for every page, in a stable order.
+ *
+ * Sorted by uid rather than left in call order, for the reason
+ * `recordsForPosts` sorts by slug: `check:content` byte-compares the artifact,
+ * so an order that depends on how a caller happened to assemble its list would
+ * make the gate fail on unrelated commits.
+ *
+ * @param {any[]} pages page inputs, as `recordsForPage` takes them
+ * @returns {Array<Record<string, any>>}
+ */
+export function recordsForPages(pages) {
+  return [...pages]
+    .sort((a, b) => String(a.uid).localeCompare(String(b.uid)))
+    .flatMap((page) => recordsForPage(page));
+}
