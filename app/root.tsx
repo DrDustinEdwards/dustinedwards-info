@@ -8,6 +8,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { getNonce } from "~/lib/context";
 import { themeAttribute, themeFromRequest } from "~/lib/theme";
 
 import type { Route } from "./+types/root";
@@ -22,8 +23,12 @@ import "./app.css";
  * decides. Cookie parsing only, no binding and no I/O, so it costs nothing on
  * a route that does not care.
  */
-export function loader({ request }: Route.LoaderArgs) {
-  return { theme: themeFromRequest(request) };
+export function loader({ request, context }: Route.LoaderArgs) {
+  // The nonce is generated in `workers/app.ts` BEFORE the render and put in the
+  // request context, because the same value has to appear in the CSP header and
+  // on every script in this document. Carried through the loader because
+  // `Layout` cannot reach the request context directly.
+  return { theme: themeFromRequest(request), nonce: getNonce(context) };
 }
 
 export const links: Route.LinksFunction = () => [
@@ -53,6 +58,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // data means no attribute, which is the system path and always safe.
   const data = useRouteLoaderData<typeof loader>("root");
   const theme = data ? themeAttribute(data.theme) : undefined;
+  /*
+   * No data means the root loader did not run, which is the error-boundary
+   * path, and there is then no nonce to stamp. Under Report-Only that costs a
+   * violation report on an error page and nothing else. It is left UNHANDLED on
+   * purpose rather than papered over with a fallback value: a made-up nonce
+   * would satisfy the markup while matching nothing in the header, which is
+   * worse than an honest report. Revisit before switching to enforcing.
+   */
+  const nonce = data?.nonce;
 
   return (
     <html lang="en" data-theme={theme}>
@@ -68,8 +82,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Skip to content
         </a>
         {children}
-        <ScrollRestoration />
-        <Scripts />
+        {/* React Router propagates the nonce from here to the scripts it
+            generates. The two ld+json blocks are deliberately NOT nonced: see
+            `contentSecurityPolicy` in workers/app.ts, unknown 2. */}
+        <ScrollRestoration nonce={nonce} />
+        <Scripts nonce={nonce} />
       </body>
     </html>
   );

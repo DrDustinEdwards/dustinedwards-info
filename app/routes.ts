@@ -63,6 +63,9 @@ export default [
 
   // API
   route("api/health", "routes/api.health.ts"),
+  // The CSP violation sink. Public and unauthenticated because browsers send
+  // reports without credentials; capped and rate limited in the route file.
+  route("api/csp-report", "routes/api.csp-report.ts"),
   // The operator publish path. Bearer token, not the Better Auth session, so it
   // sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),

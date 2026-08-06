@@ -199,8 +199,129 @@ ok(
   "the Response.redirect() path must be rebuilt, not silently skipped",
 );
 
+/* ------------------------------------------------- the CSP (Phase B, RO) --- */
+
+/*
+ * REPORT-ONLY, and the assertion that matters most here is the one about
+ * `'unsafe-inline'`.
+ *
+ * When a violation report lands, the cheapest way to make it stop is to add
+ * `'unsafe-inline'` to `script-src`. That silences the report, keeps every page
+ * working, and reduces the policy to decoration, because `'unsafe-inline'` is
+ * exactly what an injected `<script>` needs. It is the single most likely wrong
+ * fix during the observation window, it is invisible in review, and nothing
+ * else in the repo would notice. Hence a named assertion rather than trusting
+ * the value comparison to catch it.
+ *
+ * Note `'strict-dynamic'` makes browsers IGNORE `'unsafe-inline'` when both are
+ * present, so a future session could add it, see no behaviour change, and
+ * conclude it was harmless. It is not harmless: it is what the policy falls
+ * back to the moment `'strict-dynamic'` is dropped or a browser does not
+ * support it.
+ */
+
+console.log("\n  content security policy");
+
+const cspFn = code.match(/function\s+contentSecurityPolicy[\s\S]*?\n\}/);
+ok(
+  "a contentSecurityPolicy builder exists",
+  Boolean(cspFn),
+  "not found after stripping comments",
+);
+
+const cspBody = cspFn ? cspFn[0] : "";
+// BOTH quote styles. `script-src` is a TEMPLATE literal because it interpolates
+// the nonce, and a regex that only read double quotes would silently skip the
+// one directive this gate most needs to see. Measured: it did, and reported
+// script-src as missing on a policy that declares it.
+const directives = [...cspBody.matchAll(/[`"]([a-z-]+ [^`"]*)[`"]/g)].map((m) => m[1]);
+ok(
+  "the policy declares directives",
+  directives.length > 0,
+  "parsed zero, so every directive assertion below would pass vacuously",
+);
+
+// The ratified directive names. Values are deliberately NOT all asserted here:
+// the point of Report-Only is that some of them may have to change. The NAMES
+// are asserted so a directive cannot be quietly dropped.
+for (const name of [
+  "default-src",
+  "script-src",
+  "style-src",
+  "style-src-attr",
+  "font-src",
+  "img-src",
+  "connect-src",
+  "object-src",
+  "base-uri",
+  "form-action",
+  "frame-ancestors",
+]) {
+  ok(
+    `the policy declares ${name}`,
+    directives.some((d) => d.startsWith(`${name} `)),
+    `parsed: ${directives.map((d) => d.split(" ")[0]).join(", ") || "(none)"}`,
+  );
+}
+
+const scriptSrc = directives.find((d) => d.startsWith("script-src ")) ?? "";
+ok(
+  "script-src carries a nonce placeholder, not a literal",
+  scriptSrc.includes("${nonce}"),
+  `script-src is ${JSON.stringify(scriptSrc)}. A literal nonce is a static nonce, ` +
+    `which renders correctly and protects nothing.`,
+);
+ok(
+  "script-src carries 'strict-dynamic'",
+  scriptSrc.includes("'strict-dynamic'"),
+  `script-src is ${JSON.stringify(scriptSrc)}`,
+);
+ok(
+  "script-src does NOT carry 'unsafe-inline'",
+  !scriptSrc.includes("'unsafe-inline'"),
+  "adding it is the easy way to silence a violation report and it reduces the " +
+    "policy to decoration. 'strict-dynamic' makes browsers ignore it, so this " +
+    "change would look harmless and would not be.",
+);
+ok(
+  "script-src does NOT carry 'unsafe-eval'",
+  !scriptSrc.includes("'unsafe-eval'"),
+  "nothing on this site evals, and adding it would be silencing a report rather than fixing it",
+);
+
+// PHASE B IS REPORT-ONLY. Switching to enforcing is a separate ruling, and it
+// must not happen as a side effect of some other edit.
+ok(
+  "the CSP is applied as Report-Only, not enforcing",
+  code.includes('"Content-Security-Policy-Report-Only"') &&
+    !/headers\.set\(\s*"Content-Security-Policy"/.test(code),
+  "Phase B ships Report-Only. Enforcing needs its own ruling, and the " +
+    "nonce-with-a-shared-cache question has to be settled first.",
+);
+ok(
+  "the CSP is applied on BOTH exits, like the static set",
+  [...code.matchAll(/Content-Security-Policy-Report-Only/g)].length >= 2,
+  "a redirect that misses it reports nothing, which reads as a clean surface",
+);
+ok(
+  "a report destination is declared (report-to AND the legacy report-uri)",
+  cspBody.includes("report-to ") && cspBody.includes("report-uri "),
+  "a CSP with no report destination is a header nobody reads. Both are sent " +
+    "because report-to is Baseline 2026 and report-uri still carries older browsers.",
+);
+ok(
+  "Reporting-Endpoints is sent alongside report-to",
+  code.includes('"Reporting-Endpoints"'),
+  "report-to names an endpoint that Reporting-Endpoints has to define",
+);
+
 console.log(
-  `  ${Object.keys(declared).length} header(s) declared, ${applications - 1} application site(s)`,
+  `     ${directives.length} directive(s), Report-Only, ` +
+    `${[...code.matchAll(/Content-Security-Policy-Report-Only/g)].length} application site(s)`,
+);
+
+console.log(
+  `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

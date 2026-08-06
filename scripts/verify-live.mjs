@@ -1248,6 +1248,75 @@ const ASK_PROBE_LIMIT = 3;
   console.log(
     `  security headers: ${expected.length} asserted by exact value on a 200 and the /admin 302`,
   );
+
+  /* --- the CSP, Phase B, Report-Only ----------------------------------- *
+   *
+   * **THE STATIC-NONCE ASSERTION IS THE ONE THAT MATTERS HERE.** A nonce that
+   * never changes renders every page correctly, reports nothing, and protects
+   * nothing, because anyone who can read one page learns the value. It is the
+   * failure mode that looks exactly like success, and the wire is the only
+   * place it can be seen: `check:headers` can prove the source interpolates a
+   * variable, not that the variable varies.
+   */
+  {
+    const RO = "content-security-policy-report-only";
+
+    for (const [label, path, wantStatus] of SURFACES) {
+      const { res } = await get(path);
+      const policy = res.headers.get(RO) ?? "";
+      check(`csp (${label}) ${path}: Report-Only header is present`, policy.length > 0, "ABSENT");
+      check(
+        `csp (${label}) ${path}: the ENFORCING header is absent (Phase B is Report-Only)`,
+        res.headers.get("content-security-policy") === null,
+        `got ${JSON.stringify(res.headers.get("content-security-policy"))}. ` +
+          `Enforcing is a separate ruling.`,
+      );
+      check(
+        `csp (${label}) ${path}: Reporting-Endpoints names the sink`,
+        (res.headers.get("reporting-endpoints") ?? "").includes("/api/csp-report"),
+        `got ${JSON.stringify(res.headers.get("reporting-endpoints"))}`,
+      );
+      check(
+        `csp (${label}) ${path}: script-src has no 'unsafe-inline'`,
+        !/script-src[^;]*'unsafe-inline'/.test(policy),
+        "the easy way to silence a report, and it reduces the policy to decoration",
+      );
+      void wantStatus;
+    }
+
+    /*
+     * TWO RESPONSES, BOTH ANSWERED BY THE WORKER.
+     *
+     * A cookie is sent DELIBERATELY. Six HTML routes are shared-cached for
+     * cookieless readers, so two plain requests can both be served the SAME
+     * cached response, header and body together, and their nonces would be
+     * identical for a reason that has nothing to do with the generator. A
+     * cookie-bearing request bypasses the cache and is rendered fresh, which is
+     * the only way to compare two real generations. Removing the cookie here
+     * would make this assertion fail against a perfectly correct site.
+     */
+    const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
+    const first = await get("/", { cookie: "theme=dark" });
+    const second = await get("/", { cookie: "theme=dark" });
+    const n1 = nonceOf(first.res.headers.get(RO) ?? "");
+    const n2 = nonceOf(second.res.headers.get(RO) ?? "");
+
+    check("csp: the header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
+    check(
+      "csp: THE NONCE VARIES between two Worker-rendered responses",
+      n1.length > 0 && n2.length > 0 && n1 !== n2,
+      `both responses carried ${JSON.stringify(n1)}. A static nonce renders perfectly ` +
+        `and protects nothing.`,
+    );
+    // And it must be the nonce the DOCUMENT actually used, or an enforcing
+    // policy would block every script while Report-Only looked healthy.
+    check(
+      "csp: the header nonce matches the one stamped on the document's scripts",
+      n1.length > 0 && first.text.includes(`nonce="${n1}"`),
+      `header nonce ${JSON.stringify(n1)} does not appear as a nonce attribute in the body`,
+    );
+    console.log(`  csp: Report-Only, nonce varies (${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`);
+  }
 }
 
 /* --- Report ------------------------------------------------------------ */

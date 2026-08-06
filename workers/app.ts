@@ -1,6 +1,6 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
-import { cloudflareContext } from "~/lib/context";
+import { cloudflareContext, nonceContext } from "~/lib/context";
 import { handleMediaEvents } from "./media-events";
 
 // Re-exported so the runtime can find the class its binding names. The Ask
@@ -111,10 +111,100 @@ function applySecurityHeaders(headers: Headers) {
   }
 }
 
+/** Where violation reports are POSTed. Also declared in `routes.ts`. */
+const CSP_REPORT_PATH = "/api/csp-report";
+
+/** The `Reporting-Endpoints` name that `report-to` refers to. */
+const CSP_ENDPOINT_NAME = "csp-endpoint";
+
+/**
+ * The Phase B policy, REPORT-ONLY. Ratified 2026-08-06.
+ *
+ * **This header enforces NOTHING.** It is `Content-Security-Policy-Report-Only`
+ * on purpose, and the reason is that three questions could not be answered by
+ * reading and were deliberately left to the browser rather than to argument:
+ *
+ *   1. Whether `'strict-dynamic'` covers ES module STATIC imports. The router's
+ *      inline module script imports every route chunk that way, and MDN does
+ *      not document the case either way. If it does not propagate, an enforcing
+ *      policy takes the whole site's JavaScript with it.
+ *   2. Whether `script-src` gates `<script type="application/ld+json">`. Both
+ *      blocks ship WITHOUT a nonce, deliberately, so a report tells us. If it
+ *      does gate them, that is a finding with GEO consequences and it gets its
+ *      own ruling rather than a quiet nonce.
+ *   3. Whether the nonce plumbing actually lands on every generated script.
+ *
+ * Resolving any of these by guessing before shipping would defeat the point of
+ * the observation window.
+ *
+ * `style-src-attr 'unsafe-inline'` is NOT laziness and must not be "fixed".
+ * Measured: 117 inline `style="--shiki-light:…"` attributes on one live post,
+ * emitted by the highlighting pipeline. Nonces do not apply to style
+ * ATTRIBUTES, and hashing 117 per page is not a real option. CSP Level 3 splits
+ * `style-src-attr` from `style-src` precisely so scripts can stay strict while
+ * attributes are permitted, which is the trade taken here.
+ *
+ * **KNOWN TENSION, not resolved by this commit: a nonce and a SHARED CACHE.**
+ * Six HTML routes are `public, s-maxage=600` for cookieless readers, so the
+ * header and the body are cached together. The nonce stays internally
+ * consistent (the cached header matches the cached body, so the policy still
+ * functions), but one nonce is then served to every cookieless reader for up to
+ * ten minutes rather than being per-response. That weakens the guarantee an
+ * enforcing policy would be relying on. It changes nothing in Report-Only,
+ * which is why it is not being solved here, and it must be ruled on BEFORE this
+ * is switched to enforcing.
+ *
+ * `report-uri` AND `report-to` are both sent, per MDN: "The `report-to`
+ * directive is intended to replace `report-uri`, and browsers that support
+ * `report-to` ignore the `report-uri` directive. However, until `report-to` is
+ * broadly supported you can specify both." `report-to` is Baseline 2026 and
+ * `Reporting-Endpoints` Baseline 2024, so both are recent enough that the
+ * legacy directive is still carrying real browsers.
+ *
+ * @param nonce the per-request nonce, already in the render context
+ */
+function contentSecurityPolicy(nonce: string): string {
+  return [
+    "default-src 'self'",
+    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
+    "style-src 'self' https://fonts.googleapis.com",
+    "style-src-attr 'unsafe-inline'",
+    "font-src https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    `report-uri ${CSP_REPORT_PATH}`,
+    `report-to ${CSP_ENDPOINT_NAME}`,
+  ].join("; ");
+}
+
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
+
+    /*
+     * THE NONCE, GENERATED BEFORE THE RENDER. This is the deviation.
+     *
+     * Everything else in this file is stamped onto a finished response and
+     * needs to know nothing about it. A nonce cannot be: the identical value
+     * has to reach the header AND every `<script>` in the body, so it is
+     * created here, put in the render context, and read back out below to build
+     * the policy. Grounds are on `nonceContext` in `app/lib/context.ts`.
+     *
+     * `crypto.randomUUID()` is fresh per request and never derived from
+     * anything stable. **A static or derived nonce is the failure mode that
+     * looks exactly like success:** every page renders, nothing reports, and
+     * the policy is worth nothing, because an attacker who can read one page
+     * can reuse the value. verify-live asserts two responses differ, which is
+     * the only place that can be seen.
+     */
+    const nonce = crypto.randomUUID();
+    context.set(nonceContext, nonce);
+
     const response = await requestHandler(request, context);
 
     // THE COOKIELESS-ONLY RULE.
@@ -168,9 +258,18 @@ export default {
     const downgradeForCookie =
       request.headers.has("cookie") && /(^|,)\s*cookie\s*(,|$)/i.test(varies);
 
+    // Absolute, because `Reporting-Endpoints` takes a URL and MDN notes that
+    // non-secure endpoints are ignored. Derived from the request so it is
+    // correct on workers.dev today and on the apex after cutover, with nothing
+    // to add to the cutover list.
+    const reportTo = `${CSP_ENDPOINT_NAME}="${new URL(request.url).origin}${CSP_REPORT_PATH}"`;
+    const csp = contentSecurityPolicy(nonce);
+
     try {
       if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);
       applySecurityHeaders(response.headers);
+      response.headers.set("Reporting-Endpoints", reportTo);
+      response.headers.set("Content-Security-Policy-Report-Only", csp);
       if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
       }
@@ -178,6 +277,8 @@ export default {
       const headers = new Headers(response.headers);
       if (downgradeForCookie) headers.set("cache-control", UNCACHED);
       applySecurityHeaders(headers);
+      headers.set("Reporting-Endpoints", reportTo);
+      headers.set("Content-Security-Policy-Report-Only", csp);
       if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
       return new Response(response.body, {
         status: response.status,
