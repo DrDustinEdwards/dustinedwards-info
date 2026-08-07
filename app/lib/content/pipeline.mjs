@@ -147,10 +147,28 @@ export const frontmatterSchema = z.object({
        * The backslash is excluded with it: `/\evil.com` is treated as
        * protocol-relative by some parsers and there is no legitimate path that
        * begins that way.
+       *
+       * BOTH CONSTRAINTS, COMPOSED, and the second one is the rule.
+       *
+       * The site-absolute regex was the whole check here until 2026-08-07, and
+       * it blocked `javascript:` only as a SIDE EFFECT of demanding a leading
+       * slash. The ruling says both frontmatter URL fields call `isAllowedUrl`,
+       * the same predicate the render layer uses, rather than reimplementing
+       * the rule; this field reimplemented it and the audit found the drift.
+       * The outcome was accidentally right and the mechanism was wrong, which
+       * is the harder defect: the next person to relax the path rule for a
+       * legitimate reason would have silently reopened the protocol hole.
+       *
+       * The regex is NOT dropped for it. It is the stricter of the two and it
+       * exists for a different finding (B008, protocol-relative `//evil.com`),
+       * so removing it would trade one hole for another. Zod runs the regex
+       * first and short-circuits, so a blocked protocol still reports the path
+       * message; the refinement is what makes the shared predicate real.
        */
       src: z
         .string()
-        .regex(/^\/(?![/\\])/, "must be a site-absolute path, not //host or a full URL"),
+        .regex(/^\/(?![/\\])/, "must be a site-absolute path, not //host or a full URL")
+        .refine(isAllowedUrl, "protocol is not allowed (https, http, mailto or relative only)"),
       alt: z.string().min(1, "is required when cover is set"),
     })
     .optional(),

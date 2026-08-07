@@ -206,6 +206,84 @@ for (const probe of fixture.frontmatterCases) {
 }
 
 /* -------------------------------------------------------------------------
+ * THE SHARED PREDICATE, asserted on the SOURCE
+ *
+ * Everything above tests BEHAVIOUR, and behaviour is not enough here. The rule
+ * is not "these fields refuse bad protocols", it is "these fields call
+ * `isAllowedUrl`, the same predicate the renderer uses, rather than
+ * reimplementing the rule". Those come apart, and on 2026-08-07 they had:
+ * `cover.src` was a site-absolute regex that blocked `javascript:` only as a
+ * side effect of demanding a leading slash. Every behavioural case above was
+ * green, because every fixture outcome the regex produces is the outcome the
+ * predicate produces. A green gate, a correct outcome, and the wrong mechanism.
+ *
+ * That matters because the mechanism is what survives the next edit. Relax the
+ * path rule for a legitimate reason and the protocol hole reopens silently,
+ * with no fixture case failing. So the property is asserted directly, against
+ * the source text, the way check:headers binds `workers/app.ts` to its
+ * ratification rather than inferring it from a response.
+ *
+ * COMMENTS ARE STRIPPED FIRST. Both docblocks in `pipeline.mjs` discuss
+ * `isAllowedUrl` in prose, one of them saying in so many words that it is the
+ * same predicate called rather than reimplemented. A parser that read the prose
+ * would find the claim instead of the code and pass on a field that does not
+ * call it. That trap has already been hit by check:logo, check:contrast,
+ * check:features and check:headers; it is the default failure here, not an edge
+ * case. Only BLOCK comments are stripped: the line-comment form would truncate
+ * the `//host` inside a message string, and the prose trap is entirely in the
+ * docblocks.
+ * ---------------------------------------------------------------------- */
+
+const PIPELINE = join(root, "app", "lib", "content", "pipeline.mjs");
+const pipelineSource = readFileSync(PIPELINE, "utf8");
+const pipelineCode = pipelineSource.replace(/\/\*[\s\S]*?\*\//g, " ");
+
+// Fail closed on the stripper itself. This phrase lives in the further_reading
+// docblock, so if it survives, the strip did not run and every assertion below
+// could be reading prose.
+assert(
+  "the comment stripper actually ran on pipeline.mjs",
+  pipelineSource.includes("is the SAME predicate") && !pipelineCode.includes("is the SAME predicate"),
+  "the docblock phrase is still present after stripping; the assertions below would read prose",
+);
+
+/** @type {Array<[string, string, RegExp]>} */
+const SCHEMA_FIELDS = [
+  ["cover.src", "cover", /cover:\s*z\s*\.object\(\s*\{([\s\S]*?)\}\s*\)/],
+  [
+    "further_reading[].url",
+    "further_reading",
+    /further_reading:\s*z\s*\.array\(([\s\S]*?)\)\s*\.default\(/,
+  ],
+];
+
+for (const [label, , pattern] of SCHEMA_FIELDS) {
+  const block = pipelineCode.match(pattern);
+  // Fail closed: a block that stopped parsing must not pass as a block with no
+  // problems in it.
+  assert(
+    `schema: the ${label} block was located in pipeline.mjs`,
+    block !== null && block[1].trim().length > 0,
+    "not found after stripping comments; the next assertion would examine nothing",
+  );
+  if (!block) continue;
+  assert(
+    `schema: ${label} calls isAllowedUrl, not a reimplementation`,
+    /\.refine\(\s*isAllowedUrl\b/.test(block[1]),
+    `the block validates the value without calling the shared predicate. ` +
+      `A field that merely happens to refuse bad protocols is not this rule.`,
+  );
+}
+
+// One definition, so "the same predicate" is a fact about the module and not
+// two functions that agree today.
+assert(
+  "isAllowedUrl is defined exactly once in pipeline.mjs",
+  [...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length === 1,
+  `found ${[...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length} definitions`,
+);
+
+/* -------------------------------------------------------------------------
  * Counts, so a green run cannot mean an empty one
  * ---------------------------------------------------------------------- */
 
