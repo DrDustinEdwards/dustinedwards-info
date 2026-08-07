@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 17;
+const MINIMUM_GATES = 18;
 
 /**
  * Which gates need something this machine may not have.
@@ -82,6 +82,10 @@ const TIERS = {
   // Reads workers/app.ts and nothing else. It asserts what the SOURCE declares
   // and cannot see the wire; the deployed headers are verify-live's assertions.
   "check:headers": "offline",
+  // Reads CLAUDE.md as bytes and asserts its SHAPE: that it fits inside the
+  // context-window truncation limit, and that the hard-rules pointer sits early
+  // enough to be read. It cannot tell whether a word of it is true.
+  "check:claude-md": "offline",
   // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
   // `--remote` adds the live database as a third schema source, and check:all
   // passes it. Same shape as check:llms and check:backup.
