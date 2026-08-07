@@ -49,6 +49,33 @@
  * That is hard rule 10 applied to this gate's own assertions: a pass count is
  * not coverage, and the way to know is to plant the violation.
  *
+ * ## LINE ENDINGS, and the second thing this gate got wrong
+ *
+ * The first version matched the literal `"\n## Hard rules\n"`. `core.autocrlf`
+ * is true on this host and CLAUDE.md was not pinned in `.gitattributes`, so the
+ * author's working copy was LF while a fresh clone was CRLF. The needle matched
+ * on disk and matched nothing in a clean extraction of the very same commit.
+ *
+ * **The gate was green locally and RED on every fresh Windows clone**, found by
+ * extracting HEAD into a worktree and running it there, which is backlog item 1
+ * applied by hand to the gate written that morning because of backlog item 1.
+ *
+ * Two changes, and it needs BOTH:
+ *
+ *   1. `.gitattributes` case 5 pins CLAUDE.md to LF, so the file this gate
+ *      measures is the same bytes everywhere. Asserted below, so removing the
+ *      pin fails here rather than silently changing what is measured.
+ *   2. Everything structural is matched against a NORMALIZED copy. That is what
+ *      protects the next file somebody measures before remembering to pin it.
+ *
+ * Normalizing is deliberate rather than relying on `.trim()`. The ordinal check
+ * below survived the CRLF break by accident, because `trim()` happens to strip
+ * the trailing `\r` from a captured heading. Accident is not a mechanism, and
+ * the next assertion written in the same style would not be so lucky.
+ *
+ * SIZE is measured on the RAW bytes, not the normalized copy, because the
+ * truncation limit applies to the file as the machine actually has it.
+ *
  * ## Why this is its own gate rather than a section of check:headers
  *
  * check:headers exists to argue a transcribed ratification against a parse of
@@ -102,23 +129,42 @@ if (!existsSync(PATH)) {
   process.exit(1);
 }
 
-const source = readFileSync(PATH, "utf8");
+/**
+ * RAW is what the machine has and is what the size assertion measures. TEXT is
+ * normalized and is what every structural match runs against, so a needle
+ * written with `\n` cannot silently miss on a CRLF checkout. See the header.
+ */
+const raw = readFileSync(PATH, "utf8");
+const text = raw.replace(/\r\n/g, "\n");
 
 /* ------------------------------------------------------- fail closed first */
 
 ok(
   "CLAUDE.md is not a stub",
-  source.length >= MINIMUM_PLAUSIBLE,
-  `${source.length} characters. Below ${MINIMUM_PLAUSIBLE} every assertion below ` +
+  raw.length >= MINIMUM_PLAUSIBLE,
+  `${raw.length} characters. Below ${MINIMUM_PLAUSIBLE} every assertion below ` +
     `would pass by having nothing to examine.`,
+);
+
+/*
+ * The pin, asserted rather than trusted. `.gitattributes` case 5 exists so this
+ * file is the same bytes on every machine; if it is removed, this fails here
+ * instead of quietly changing what the size assertion measures.
+ */
+ok(
+  "CLAUDE.md is checked out with LF endings (.gitattributes case 5)",
+  !raw.includes("\r\n"),
+  `${(raw.match(/\r\n/g) ?? []).length} CRLF sequence(s) found. The pin is what ` +
+    `makes the character count below mean the same thing on every clone. Without ` +
+    `it this gate measures whichever line ending the machine happens to carry.`,
 );
 
 /* -------------------------------------------------------------- the size */
 
 ok(
   `CLAUDE.md fits in the context window (under ${TRUNCATION_LIMIT} characters)`,
-  source.length < TRUNCATION_LIMIT,
-  `${source.length} characters, which is ${source.length - TRUNCATION_LIMIT} over. ` +
+  raw.length < TRUNCATION_LIMIT,
+  `${raw.length} characters, which is ${raw.length - TRUNCATION_LIMIT} over. ` +
     `Everything past the limit is silently truncated, so it is not merely long, ` +
     `it is absent for every session while still reading as present in the file.`,
 );
@@ -133,7 +179,7 @@ ok(
  * check:contrast, check:logo, check:features, check:headers and check:urls.
  */
 const HEADING = "\n## Hard rules\n";
-const at = source.indexOf(HEADING);
+const at = text.indexOf(HEADING);
 
 ok(
   "CLAUDE.md has a Hard rules section",
@@ -156,7 +202,7 @@ if (at !== -1) {
    * header: on a file this size the character ceiling is slack, so ordering is
    * asserted structurally instead of by offset.
    */
-  const headings = [...source.matchAll(/\n## (.+)/g)].map((m) => m[1].trim());
+  const headings = [...text.matchAll(/\n## (.+)/g)].map((m) => m[1].trim());
   const ordinal = headings.findIndex((h) => h === "Hard rules");
 
   ok(
@@ -173,8 +219,8 @@ if (at !== -1) {
       `thing that has to happen before a session can read the rules at all.`,
   );
 
-  const next = source.indexOf("\n## ", at + HEADING.length);
-  const section = source.slice(at, next === -1 ? source.length : next);
+  const next = text.indexOf("\n## ", at + HEADING.length);
+  const section = text.slice(at, next === -1 ? text.length : next);
 
   ok(
     "the section is not empty",
@@ -203,7 +249,7 @@ if (at !== -1) {
 }
 
 console.log(
-  `  ${source.length} characters of ${TRUNCATION_LIMIT}` +
+  `  ${raw.length} characters of ${TRUNCATION_LIMIT}` +
     (at !== -1 ? `, hard-rules pointer at ${at} of ${POINTER_LIMIT}` : ""),
 );
 
