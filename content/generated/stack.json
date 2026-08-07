@@ -147,6 +147,7 @@
     "check:admin-ui",
     "check:backup",
     "check:charts",
+    "check:claude-md",
     "check:config",
     "check:content",
     "check:contrast",
