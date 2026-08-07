@@ -28,7 +28,22 @@
 #      route inlines the same file, so a CRLF checkout would also have changed
 #      the bytes served when the row is absent.
 
+#   5. `CLAUDE.md` is measured by `check:claude-md`, which asserts it fits under
+#      the context-window truncation limit and that the hard-rules pointer sits
+#      near the top. Both are measurements of the FILE AS THE MACHINE HAS IT, so
+#      without a pin the gate measures whichever line ending that machine
+#      happens to carry. Found 2026-08-07, one commit after the gate shipped: the
+#      author's working copy was LF and a fresh clone was CRLF, so the heading
+#      needle `\n## Hard rules\n` matched on disk and not in a clean extraction.
+#      The gate was green locally and RED on every fresh Windows clone. The
+#      character count moves too, 8,479 against 8,610, which is harmless at this
+#      size and would not be near the limit.
+#      The gate was ALSO made line-ending agnostic in the same commit. Both, not
+#      either: this pin fixes this file, and the normalization fixes the next
+#      unpinned file somebody measures.
+
 content/posts/*.md      text eol=lf
 content/generated/*.json text eol=lf
 content/llms.txt        text eol=lf
 public/diagrams/*.svg   text eol=lf
+CLAUDE.md               text eol=lf
