@@ -1,19 +1,52 @@
-import type { EntryContext } from "react-router";
+import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
+
+import { getNonce } from "~/lib/context";
 
 export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
+  // The FIFTH argument is the request context `workers/app.ts` built, the same
+  // object it set `nonceContext` into. `server.js` calls this function as
+  // `handleDocumentRequestFunction(request, status, headers, entryContext,
+  // loadContext)`, and the default entry shipped by @react-router/dev names it
+  // `_loadContext` for exactly this reason.
+  loadContext: RouterContextProvider,
 ) {
   let shellRendered = false;
   const userAgent = request.headers.get("user-agent");
 
+  /*
+   * THE NONCE PROP, AND WHY ITS ABSENCE WAS A REAL BUG.
+   *
+   * `ServerRouter` does two things with this prop: it puts the value into
+   * `FrameworkContext`, which is the fallback `<Scripts>` reads, AND it passes
+   * it straight to `StreamTransfer`, which stamps it on BOTH of React Router's
+   * streaming scripts (`streamController.enqueue(...)` and `.close()`).
+   *
+   * **Without it those two scripts ship bare on EVERY page**, and under an
+   * enforcing CSP the `enqueue` script is the one carrying the hydration
+   * payload, so the site would render and never hydrate.
+   *
+   * MEASURED, not inferred. The Report-Only observation window on 2026-08-06
+   * produced 10 violation reports, every one `script-src-elem` with
+   * `blockedURL: inline`, and the reported line was the document's LAST line on
+   * every page, which is where those two scripts sit. `<Scripts nonce>` in
+   * root.tsx was already correct and is why the earlier scripts were clean.
+   *
+   * This is a documented, supported prop, not a workaround: see
+   * `ServerRouterProps.nonce` in react-router's types, and PR #15170, "Use the
+   * ServerRouter nonce for nonce-aware SSR components when they don't provide
+   * their own value so strict CSP pages can load them."
+   */
+  const nonce = getNonce(loadContext);
+
   const body = await renderToReadableStream(
-    <ServerRouter context={routerContext} url={request.url} />,
+    <ServerRouter context={routerContext} url={request.url} nonce={nonce} />,
     {
       onError(error: unknown) {
         responseStatusCode = 500;
