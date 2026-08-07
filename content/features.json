@@ -502,7 +502,7 @@
     {
       "component": "Safety rails",
       "name": "URL protocols are allowlisted in the schema as well as the renderer",
-      "what": "The render-layer guard only walks nodes the body renderer produced, so frontmatter bypassed it entirely: a curated link field took a generic URL validator, which accepts javascript:, and rendered as a live public anchor. Both that field and the cover path now call the same predicate the renderer uses rather than reimplementing it.",
+      "what": "The render-layer guard only walks nodes the body renderer produced, so frontmatter bypassed it entirely: a curated link field took a generic URL validator, which accepts javascript:, and rendered as a live public anchor. Both that field and the cover path now call the same predicate the renderer uses rather than reimplementing it. That is asserted against the source, not only through behaviour, because the two come apart: the cover path spent a while refusing bad protocols as a side effect of a stricter rule about paths, which every behavioural case passed and no gate could see.",
       "anchors": [
         {
           "kind": "gate",
@@ -512,6 +512,11 @@
           "kind": "assertion",
           "gate": "check:urls",
           "text": "frontmatter blocked cases were exercised"
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:urls",
+          "text": "schema: ${label} calls isAllowedUrl, not a reimplementation"
         }
       ]
     },

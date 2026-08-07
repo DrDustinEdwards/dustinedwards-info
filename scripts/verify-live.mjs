@@ -977,8 +977,15 @@ const ASK_PROBE_LIMIT = 3;
   const themeOf = (/** @type {string} */ html) =>
     (htmlTag(html).match(/data-theme="(\w+)"/) ?? [])[1] ?? "(none)";
 
-  // Every public HTML surface, including the two with no `headers` export,
-  // which reach `private, no-store` through the Worker default instead.
+  // Every public HTML surface. ALL SIX EXPORT `headers` OF THEIR OWN, so none
+  // of them observes the Worker's no-Cache-Control default; the loop below
+  // requires `cf === "HIT"` for the cookieless population, which a `no-store`
+  // route could never satisfy. This comment used to claim two of them had no
+  // `headers` export and reached the default here. That stopped being true as
+  // routes gained their own, and it left the default with no wire coverage at
+  // all until 2026-08-07. It is asserted on the `/admin` 302 instead, in the
+  // security-headers section, which is the one live surface that still reaches
+  // it.
   const HTML_ROUTES = [
     "/",
     "/blog",
@@ -1242,6 +1249,31 @@ const ASK_PROBE_LIMIT = 3;
         `security (${label}) ${path}: ${name} is exactly "${value}"`,
         got === value,
         `got ${got === null ? "ABSENT" : JSON.stringify(got)}`,
+      );
+    }
+
+    /*
+     * THE CACHE-CONTROL DEFAULT, ON THE WIRE, and this is the only place it is
+     * observable.
+     *
+     * `/admin` exports no `headers` and its 302 carries no `Vary`, so it reaches
+     * the `if (!headers.has("cache-control"))` branch in `workers/app.ts` and
+     * nothing else. Every route in HTML_ROUTES above now sets the header itself,
+     * so that section cannot see this. `check:headers` proves the source
+     * declares the default; per hard rule 7 that is not the same claim as the
+     * default arriving, and a deploy that never happened is invisible to it.
+     *
+     * It rides on the 302 for a second reason: `Response.redirect()` returns
+     * IMMUTABLE headers, so this response is rebuilt on the catch branch. It is
+     * the exit where a default applied on only one path would be missing.
+     */
+    if (label === "302") {
+      const cc = res.headers.get("cache-control");
+      check(
+        `cache: ${path} reaches the Worker's uncached default`,
+        (cc ?? "").includes("no-store") && (cc ?? "").includes("private"),
+        `cache-control ${cc === null ? "ABSENT" : JSON.stringify(cc)}. A response with no ` +
+          `Cache-Control is heuristically cached, and this one is authenticated.`,
       );
     }
   }

@@ -87,10 +87,12 @@ if (!existsSync(APP_PATH)) {
  * find `same-origin` in the sentence saying same-origin is wrong. That trap has
  * already been hit by check:logo, check:contrast and check:features.
  */
+/** @param {string} s */
+const stripComments = (s) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+
 const source = readFileSync(APP_PATH, "utf8");
-const code = source
-  .replace(/\/\*[\s\S]*?\*\//g, " ")
-  .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+const code = stripComments(source);
 
 /* ------------------------------------------------------- fail closed first */
 
@@ -197,6 +199,72 @@ ok(
   /new\s+Headers\s*\(\s*response\.headers\s*\)/.test(code) &&
     /new\s+Response\s*\(\s*response\.body/.test(code),
   "the Response.redirect() path must be rebuilt, not silently skipped",
+);
+
+/* ------------------------------------------- the cache-control DEFAULT ---- */
+
+/*
+ * **THIS IS THE ASSERTION THAT WAS MISSING, AND IT GUARDS AN AUTH BYPASS.**
+ *
+ * Workers Cache is on, and a response carrying no `Cache-Control` is CACHED
+ * under RFC 9111 heuristic freshness, not skipped. The cache key does not
+ * include cookies. `workers/app.ts` therefore stamps `private, no-store` on any
+ * response that did not set the header itself, and that default is the only
+ * thing standing between an authenticated `/admin` render and a shared cache
+ * entry served to anyone who asks for that path for the next two hours.
+ *
+ * Audited 2026-08-07: those lines could be deleted and EVERY gate stayed green.
+ * `check:config` compared the two config files to each other, which passes with
+ * the cache turned off in both. `verify-live` observed only the cookie-downgrade
+ * branch, never the no-header default, because all six routes it sweeps now
+ * export `headers` of their own. Nothing looked at this.
+ *
+ * The value is transcribed from the ruling, like RATIFIED above, so a changed
+ * default moves one side of the comparison. The BOTH-EXITS assertion is the
+ * same shape as the one for applySecurityHeaders and for the same reason: the
+ * immutable rebuild is a separate branch, and `/admin`'s 302 is the live case
+ * that goes through it.
+ */
+
+console.log("\n  cache-control default");
+
+const RATIFIED_UNCACHED = "private, no-store";
+
+const uncached = code.match(/const\s+UNCACHED\s*=\s*"([^"]*)"\s*;/);
+ok(
+  "workers/app.ts declares an UNCACHED constant",
+  Boolean(uncached),
+  "not found after stripping comments. Without it nothing below examines anything.",
+);
+ok(
+  `the uncached default is exactly "${RATIFIED_UNCACHED}"`,
+  uncached !== null && uncached[1] === RATIFIED_UNCACHED,
+  `source has ${JSON.stringify(uncached ? uncached[1] : null)}. ` +
+    `\`private\` alone satisfies Cloudflare's edge; \`no-store\` is what makes ` +
+    `intermediaries and the browser treat it the same way.`,
+);
+
+// Matches both `!response.headers.has(...)` on the mutable exit and
+// `!headers.has(...)` on the rebuilt copy.
+const guards = [...code.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g)];
+ok(
+  "the no-Cache-Control default is applied on BOTH exits (mutable and the immutable rebuild)",
+  guards.length >= 2,
+  `found ${guards.length} guard(s); expected one per exit. A redirect that misses it ` +
+    `is stored in a shared cache, and /admin returns 302.`,
+);
+
+// A guard that tests the condition and then sets something else, or nothing, is
+// worse than no guard: it reads as protection in review.
+let guardsSettingUncached = 0;
+for (const guard of guards) {
+  const after = code.slice(guard.index, guard.index + 160);
+  if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
+}
+ok(
+  "every one of those guards sets UNCACHED",
+  guards.length > 0 && guardsSettingUncached === guards.length,
+  `${guardsSettingUncached} of ${guards.length} guards set it`,
 );
 
 /* ------------------------------------------------- the CSP (Phase B, RO) --- */
@@ -318,6 +386,70 @@ ok(
 console.log(
   `     ${directives.length} directive(s), Report-Only, ` +
     `${[...code.matchAll(/Content-Security-Policy-Report-Only/g)].length} application site(s)`,
+);
+
+/* -------------------------------------- the nonce reaches every script ---- */
+
+/*
+ * TWO SCRIPT CLASSES THAT DO NOT GET THE NONCE FOR FREE, both found by the
+ * browser rather than by reading, and both invisible to every other gate.
+ *
+ * A source-level check only. Whether the attribute reaches the wire is
+ * verify-live's job, and whether the browser accepts it is the browser's. What
+ * this stops is a later edit silently dropping either one, which produces a
+ * page that renders perfectly and would fail closed the moment the policy is
+ * enforced.
+ */
+
+console.log("\n  the nonce reaches every script");
+
+const entryServer = stripComments(
+  readFileSync(join(root, "app", "entry.server.tsx"), "utf8"),
+);
+
+/*
+ * `ServerRouter` passes its `nonce` prop BOTH into FrameworkContext and
+ * directly to `StreamTransfer`, which stamps React Router's two streaming
+ * scripts. Without the prop those ship bare on every page, and the `enqueue`
+ * one carries the hydration payload. Measured 2026-08-06: 10 violation
+ * reports, all script-src-elem/inline, all on the document's last line.
+ */
+ok(
+  "entry.server.tsx passes a nonce to <ServerRouter>",
+  /<ServerRouter[^>]*\snonce=\{/.test(entryServer),
+  "without it StreamTransfer gets none and both streaming scripts ship bare, " +
+    "so an enforcing CSP would stop the hydration payload on every page",
+);
+ok(
+  "entry.server.tsx reads the nonce from the request context, not a literal",
+  /getNonce\s*\(/.test(entryServer),
+  "a literal or derived value here is a static nonce, which renders perfectly and protects nothing",
+);
+ok(
+  "entry.server.tsx accepts the loadContext argument the nonce arrives on",
+  /RouterContextProvider/.test(entryServer),
+  "the fifth argument to handleRequest is the RouterContextProvider; without it there is nothing to read",
+);
+
+/*
+ * `speculationrules` IS gated by script-src while `application/ld+json` is NOT.
+ * Both are non-executable data blocks, so this is counter-intuitive and was
+ * settled by the browser, not by argument. Asserted so nobody "consistently"
+ * removes it.
+ */
+const speculation = stripComments(
+  readFileSync(join(root, "app", "components", "blog-speculation.tsx"), "utf8"),
+);
+ok(
+  "BlogSpeculation stamps a nonce on its speculationrules script",
+  /nonce=\{/.test(speculation),
+  "script-src gates type=\"speculationrules\" (measured), unlike application/ld+json, " +
+    "so this element needs one and the JSON-LD does not",
+);
+ok(
+  "BlogSpeculation takes the nonce from the root loader, not its own source",
+  /useRouteLoaderData/.test(speculation),
+  "one source in workers/app.ts, several readers; a second generator would drift",
 );
 
 console.log(
