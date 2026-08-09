@@ -204,11 +204,11 @@ assert(
   `Found ${exampleKvId ? "a non-placeholder value" : "nothing"}.`,
 );
 assert(
-  exampleDbId !== (real.d1_databases?.[0]?.database_id ?? " "),
+  exampleDbId !== (real.d1_databases?.[0]?.database_id ?? "\u0000"),
   "example's database_id is not the real one",
 );
 assert(
-  exampleKvId !== (real.kv_namespaces?.[0]?.id ?? " "),
+  exampleKvId !== (real.kv_namespaces?.[0]?.id ?? "\u0000"),
   "example's KV id is not the real one",
 );
 
