@@ -43,19 +43,24 @@
 # The gates were also made line-ending agnostic where they parse text, so this
 # file is defence in depth rather than the only thing holding the property up.
 #
-# ## TWO FILES THIS CANNOT REACH, and it is worth knowing which
+# ## RESOLVED 2026-08-09: the two files this could not reach
 #
-# `app/db/index.ts` and `scripts/check-config.mjs` each contain a NUL byte
-# (measured 2026-08-09: byte 30257 of 32337, and byte 8158 of 8559). Git's
-# binary auto-detection therefore classifies them as binary no matter what is
-# written here: they are never normalized, their diffs render as
-# `Bin <n> -> <m> bytes`, and ripgrep skips them unless forced. A change to
-# either rides into a commit unreviewed.
+# `app/db/index.ts` and `scripts/check-config.mjs` each carried NUL bytes, so
+# git's binary auto-detection classified them as binary no matter what was
+# written here. Both now use the six-character escape sequence instead of the
+# literal byte, so both are text and are covered by the rule above.
 #
-# That is a defect in those files, not in this policy, and stripping the bytes
-# is tracked in dustinedwards/gate-backlog.md. Do not try to force them text
-# here: telling git a file with a NUL is text invites it to normalize content
-# that is not line-oriented.
+# The scope of what that cost, stated accurately because an earlier version of
+# this comment overstated it: **git diff and ripgrep were blind; the Node-based
+# gates never were.** Gates read with `readFileSync`, which is NUL-transparent,
+# so `check:invariants` had been scanning `app/db/index.ts` the whole time.
+# What was actually lost was REVIEW and SEARCH: diffs rendered as
+# `Bin <n> -> <m> bytes`, and a directory-scoped ripgrep skipped both files
+# entirely, so the database layer was absent from every `Grep` over `app/`.
+#
+# `scripts/check-config.mjs` had a second, quieter cost: being binary exempted
+# it from LF normalization, so its blob was stored CRLF while every other text
+# file was LF. Removing the byte let the rule above finally reach it.
 
 * text=auto eol=lf
 

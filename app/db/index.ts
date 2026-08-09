@@ -15,6 +15,7 @@ import {
 import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
+import { mediaRefKey } from "../lib/media-ref-key.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
@@ -788,7 +789,8 @@ export async function replaceMediaRefsForSource(
   const seen = new Set<string>();
   const values = [];
   for (const ref of refs) {
-    const id = `${ref.mediaKey} ${ref.form} ${ref.detail ?? ""}`;
+    // Key shape and the collision it prevents: see mediaRefKey.
+    const id = mediaRefKey(ref);
     if (seen.has(id)) continue;
     seen.add(id);
     values.push({
