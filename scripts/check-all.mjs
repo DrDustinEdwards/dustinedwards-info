@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 18;
+const MINIMUM_GATES = 19;
 
 /**
  * Which gates need something this machine may not have.
@@ -86,6 +86,10 @@ const TIERS = {
   // context-window truncation limit, and that the hard-rules pointer sits early
   // enough to be read. It cannot tell whether a word of it is true.
   "check:claude-md": "offline",
+  // node:test over test/. The ONE gate here that asserts BEHAVIOUR rather than
+  // the repo's shape: it imports shipped modules and checks what they do with a
+  // given input. See test/README.md for the three-instrument split.
+  "check:tests": "offline",
   // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
   // `--remote` adds the live database as a third schema source, and check:all
   // passes it. Same shape as check:llms and check:backup.

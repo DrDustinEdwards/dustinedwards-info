@@ -1,49 +1,69 @@
 # Content is byte-stable across platforms.
 #
-# `core.autocrlf=true` on Windows checks files out with CRLF while git stores LF.
-# For source and config that is harmless. For content it is not, for two reasons:
+# `core.autocrlf=true` on Windows checks files out with CRLF while git stores
+# LF. THE WHOLE TREE IS NOW PINNED TO LF, rather than a growing list of paths
+# that turned out to matter. `text=auto` still lets git detect binary content
+# and leave it alone; the exceptions below are belt and braces for the formats
+# actually present in this repo, measured with `git ls-files` rather than
+# guessed.
 #
-#   1. `check:content` compares the committed artifact against a fresh generation
-#      byte for byte. A CRLF checkout makes that comparison fail on every fresh
-#      Windows clone, which turns a real drift gate into noise.
-#   2. The generator embeds the markdown source inside the artifact and then into
-#      D1. A CRLF checkout would put CRLF into the stored post body and into the
-#      markdown served by /blog/:slug.md, so the same commit would produce
-#      different content depending on which machine ran the generator.
+# ## Why this replaced a list of five numbered cases
 #
-# Pinning these paths to LF makes the generator's output depend on the content
-# alone. Scoped deliberately: the rest of the tree keeps the default behaviour.
-
+# The list was reactive. Each entry was added after a CRLF checkout broke
+# something, and the fifth was added the day after the fourth. A rule that
+# grows by one every time it is tested is not a rule, it is a symptom, and the
+# next unpinned path was always going to be found by a gate going red on a
+# fresh clone rather than by anyone reading this file.
+#
+# The five cases are kept below as history, because each names a real failure
+# and the reasoning is worth more than the paths were.
+#
+#   1. `check:content` byte-compares the committed artifact against a fresh
+#      generation. A CRLF checkout fails that on every fresh Windows clone,
+#      turning a real drift gate into noise.
+#   2. The generator embeds markdown source inside the artifact and then into
+#      D1, so a CRLF checkout would put CRLF into the stored post body and into
+#      what `/blog/:slug.md` serves. The same commit would produce different
+#      content depending on which machine ran the generator.
 #   3. `build:diagrams` writes its SVG assets with LF and rewrites them in place
 #      under `--force`. On a CRLF checkout every asset would come back as a diff
-#      the moment anyone forced a rebuild, whether or not the drawing changed,
-#      which is the churn the key is designed to avoid. The four `public/*.svg`
-#      logo fixtures are deliberately NOT pinned: nothing regenerates them, and
-#      `check:logo` is verified against a CRLF checkout.
-
+#      the moment anyone forced a rebuild, whether or not the drawing changed.
 #   4. `content/llms.txt` is the SOURCE of the `llms.txt` settings row and is
 #      compared against that row byte for byte by `check:llms`. The live row is
-#      LF, so a CRLF checkout would fail the gate on every fresh Windows clone
-#      and, worse, would sync CRLF into D1 and change what /llms.txt serves. The
-#      route inlines the same file, so a CRLF checkout would also have changed
-#      the bytes served when the row is absent.
-
+#      LF, so a CRLF checkout would fail the gate AND sync CRLF into D1,
+#      changing what `/llms.txt` serves.
 #   5. `CLAUDE.md` is measured by `check:claude-md`, which asserts it fits under
 #      the context-window truncation limit and that the hard-rules pointer sits
-#      near the top. Both are measurements of the FILE AS THE MACHINE HAS IT, so
-#      without a pin the gate measures whichever line ending that machine
-#      happens to carry. Found 2026-08-07, one commit after the gate shipped: the
-#      author's working copy was LF and a fresh clone was CRLF, so the heading
-#      needle `\n## Hard rules\n` matched on disk and not in a clean extraction.
-#      The gate was green locally and RED on every fresh Windows clone. The
-#      character count moves too, 8,479 against 8,610, which is harmless at this
-#      size and would not be near the limit.
-#      The gate was ALSO made line-ending agnostic in the same commit. Both, not
-#      either: this pin fixes this file, and the normalization fixes the next
-#      unpinned file somebody measures.
+#      near the top. Both measure the FILE AS THE MACHINE HAS IT. Found
+#      2026-08-07, one commit after that gate shipped: the working copy was LF
+#      and a fresh clone was CRLF, so the heading needle matched on disk and
+#      matched nothing in a clean extraction of the same commit. The gate was
+#      green locally and RED on every fresh clone.
+#
+# The gates were also made line-ending agnostic where they parse text, so this
+# file is defence in depth rather than the only thing holding the property up.
+#
+# ## TWO FILES THIS CANNOT REACH, and it is worth knowing which
+#
+# `app/db/index.ts` and `scripts/check-config.mjs` each contain a NUL byte
+# (measured 2026-08-09: byte 30257 of 32337, and byte 8158 of 8559). Git's
+# binary auto-detection therefore classifies them as binary no matter what is
+# written here: they are never normalized, their diffs render as
+# `Bin <n> -> <m> bytes`, and ripgrep skips them unless forced. A change to
+# either rides into a commit unreviewed.
+#
+# That is a defect in those files, not in this policy, and stripping the bytes
+# is tracked in dustinedwards/gate-backlog.md. Do not try to force them text
+# here: telling git a file with a NUL is text invites it to normalize content
+# that is not line-oriented.
 
-content/posts/*.md      text eol=lf
-content/generated/*.json text eol=lf
-content/llms.txt        text eol=lf
-public/diagrams/*.svg   text eol=lf
-CLAUDE.md               text eol=lf
+* text=auto eol=lf
+
+# Binary formats present in this repo, by extension, from `git ls-files`.
+# Listed explicitly so auto-detection is not the only thing standing between a
+# rebuilt font or a photo and a line-ending rewrite.
+*.pdf   binary
+*.png   binary
+*.webp  binary
+*.ico   binary
+*.ttf   binary

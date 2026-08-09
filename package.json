@@ -40,6 +40,9 @@
     "check:features": "node scripts/check-features.mjs",
     "check:headers": "node scripts/check-headers.mjs",
     "check:claude-md": "node scripts/check-claude-md.mjs",
+    "check:tests": "npm test --silent",
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "ship": "node scripts/ship.mjs",
     "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {

@@ -161,6 +161,7 @@
     "check:policy",
     "check:search",
     "check:stack",
+    "check:tests",
     "check:urls"
   ],
   "notAdopted": [
