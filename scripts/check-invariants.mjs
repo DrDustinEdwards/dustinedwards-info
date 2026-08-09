@@ -59,6 +59,8 @@ import { DatabaseSync } from "node:sqlite";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { joinConcatenatedLiterals } from "./lib/sql-literals.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let checks = 0;
@@ -904,16 +906,9 @@ const LOOKS_LIKE_SQL = /\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i;
  *
  * @param {string} source
  */
-function joinConcatenatedLiterals(source) {
-  let previous;
-  let text = source;
-  // Repeated because one pass leaves `a` + `b` + `c` half joined.
-  do {
-    previous = text;
-    text = text.replace(/`\s*\+\s*`/g, "").replace(/'\s*\+\s*'/g, "");
-  } while (text !== previous);
-  return text;
-}
+// joinConcatenatedLiterals moved to scripts/lib/sql-literals.mjs 2026-08-09, so it
+// can be covered by test/sql-literals.test.mjs without importing this gate,
+// which runs its whole suite at module load. Grounds are in that module.
 
 try {
   const columnUniverse = new Map();
@@ -974,6 +969,22 @@ try {
     // Generated ambient types. No SQL, and its doc comments carry URLs that
     // read as qualified names.
     if (relativePath.endsWith(".d.ts")) continue;
+    /*
+     * `test/` holds SQL FIXTURES, which is the same self-reference trap as this
+     * gate's own file one line above and is excluded for the same reason, not
+     * as a convenience.
+     *
+     * Found the moment `test/` was added, 2026-08-09: `test/sql-literals.test.mjs`
+     * replays the `og_titl` defect, so it deliberately contains statements
+     * naming columns that exist nowhere, and this section correctly reported
+     * four of them. A fixture asserting that a MISSPELLED column is rejoined
+     * cannot also be required to name real columns.
+     *
+     * The scope is narrow on purpose. Only `test/` is excluded, not any file
+     * with "test" in its name, and the coverage floor below still applies to
+     * everything else, so this cannot quietly become a way to hide real SQL.
+     */
+    if (relativePath === "test" || relativePath.startsWith("test/")) continue;
     const text = joinConcatenatedLiterals(
       stripComments(readFileSync(file, "utf8")),
     );
