@@ -121,21 +121,45 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  * The Phase B policy, REPORT-ONLY. Ratified 2026-08-06.
  *
  * **This header enforces NOTHING.** It is `Content-Security-Policy-Report-Only`
- * on purpose, and the reason is that three questions could not be answered by
- * reading and were deliberately left to the browser rather than to argument:
+ * on purpose. It shipped that way because three questions could not be answered
+ * by reading and were deliberately left to the browser rather than to argument.
  *
- *   1. Whether `'strict-dynamic'` covers ES module STATIC imports. The router's
- *      inline module script imports every route chunk that way, and MDN does
- *      not document the case either way. If it does not propagate, an enforcing
- *      policy takes the whole site's JavaScript with it.
- *   2. Whether `script-src` gates `<script type="application/ld+json">`. Both
- *      blocks ship WITHOUT a nonce, deliberately, so a report tells us. If it
- *      does gate them, that is a finding with GEO consequences and it gets its
- *      own ruling rather than a quiet nonce.
- *   3. Whether the nonce plumbing actually lands on every generated script.
+ * **ALL THREE ARE NOW ANSWERED. None of them blocks enforcement.** They are kept
+ * here with their answers because the answers are the reason the phase split was
+ * worth its cost, and because two of them are counter-intuitive enough that
+ * somebody will otherwise re-derive them wrongly.
  *
- * Resolving any of these by guessing before shipping would defeat the point of
- * the observation window.
+ *   1. **RESOLVED 2026-08-06: `'strict-dynamic'` DOES cover ES module static
+ *      imports.** The router's nonced `type="module"` script imports every route
+ *      chunk from `/assets/`, MDN documents the case neither way, and if it did
+ *      not propagate an enforcing policy would take the whole site's JavaScript
+ *      with it. The observation window settled it, and it was EXERCISED rather
+ *      than merely silent: no report named an `/assets/` URL, and the app
+ *      demonstrably hydrated, with `/__manifest` fetched, the Ask panel
+ *      streaming and the palette working. Silence alone would not have been
+ *      evidence, because a policy that blocked everything reports once and then
+ *      has nothing left to report.
+ *      **What would reopen it:** a Vite or React Router change to how the entry
+ *      script loads chunks (a dynamic `import()` chain behaves differently from
+ *      a static graph), or a browser dropping `'strict-dynamic'` propagation.
+ *      Re-run the walk; do not re-reason it.
+ *   2. **RESOLVED 2026-08-06: `script-src` does NOT gate
+ *      `<script type="application/ld+json">`, and DOES gate
+ *      `type="speculationrules"`.** Both are non-executable data blocks, so the
+ *      asymmetry is the browser's rather than a mistake here. Established by
+ *      CONTRAST, not absence: `/` carries un-nonced `ld+json` on line 1 and line
+ *      1 was not reported, while `/blog` carries `ld+json` AND speculationrules
+ *      on line 1 and line 1 WAS reported. The JSON-LD stays un-nonced; grounds
+ *      are on `BlogSpeculation`.
+ *   3. **RESOLVED 2026-08-07: the nonce plumbing lands on every generated
+ *      script.** It did not, when this was written: React Router's two streaming
+ *      scripts shipped bare on every page, which is what 10 of the 10 reports
+ *      were. Fixed by passing `nonce` to `<ServerRouter>`; see `entry.server.tsx`.
+ *      Now asserted on the wire.
+ *
+ * **THE ONLY THING BLOCKING ENFORCEMENT IS THE SHARED-CACHE NONCE LIFETIME
+ * BELOW.** Do not cite this list as a reason; it was one until 2026-08-07 and is
+ * not one now.
  *
  * `style-src-attr 'unsafe-inline'` is NOT laziness and must not be "fixed".
  * Measured: 117 inline `style="--shiki-light:…"` attributes on one live post,
@@ -144,15 +168,30 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  * `style-src-attr` from `style-src` precisely so scripts can stay strict while
  * attributes are permitted, which is the trade taken here.
  *
- * **KNOWN TENSION, not resolved by this commit: a nonce and a SHARED CACHE.**
+ * **THE SOLE ENFORCEMENT BLOCKER: a nonce and a SHARED CACHE. MEASURED.**
  * Six HTML routes are `public, s-maxage=600` for cookieless readers, so the
- * header and the body are cached together. The nonce stays internally
- * consistent (the cached header matches the cached body, so the policy still
- * functions), but one nonce is then served to every cookieless reader for up to
- * ten minutes rather than being per-response. That weakens the guarantee an
- * enforcing policy would be relying on. It changes nothing in Report-Only,
- * which is why it is not being solved here, and it must be ruled on BEFORE this
- * is switched to enforcing.
+ * header and the body are cached together.
+ *
+ * Measured on the live site 2026-08-09, which is the half nothing had ever
+ * checked:
+ *
+ *   4 cookieless requests on a cache HIT   ->  1 DISTINCT NONCE
+ *   4 cookie-bearing requests on BYPASS    ->  4 distinct nonces
+ *   the cached body carries the cached header's nonce
+ *
+ * So the per-request generator is working exactly as intended, and the CACHE is
+ * what collapses it. The policy stays internally consistent, which is why
+ * nothing looks wrong and why this is easy to miss, but **on those six routes an
+ * attacker who reads one page holds a valid nonce for up to ten minutes**, which
+ * is precisely the guarantee an enforcing policy would be relying on.
+ *
+ * It changes nothing in Report-Only, which is why it was not solved when found.
+ * It must be RULED ON BEFORE the switch, and there are two acceptable answers:
+ * accept the ten-minute window in writing with the reasoning recorded, or make
+ * those six routes uncacheable and give back the shared-cache benefit. DNS
+ * cutover changes the terms, because a proxied zone brings Cache Rules into
+ * scope. `verify-live` asserts the measurement above so the number cannot drift
+ * unnoticed while the decision is pending.
  *
  * `report-uri` AND `report-to` are both sent, per MDN: "The `report-to`
  * directive is intended to replace `report-uri`, and browsers that support
