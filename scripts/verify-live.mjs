@@ -1348,6 +1348,54 @@ const ASK_PROBE_LIMIT = 3;
       `header nonce ${JSON.stringify(n1)} does not appear as a nonce attribute in the body`,
     );
     console.log(`  csp: Report-Only, nonce varies (${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`);
+
+    /*
+     * THE SOLE ENFORCEMENT BLOCKER, PINNED. This is the other half of the
+     * assertion above and nothing committed measured it until 2026-08-09.
+     *
+     * The block above proves the GENERATOR is per-request, and it has to send a
+     * cookie to do that. On the six shared-cached routes the cache then collapses
+     * it: the header and the body are stored together, so every cookieless
+     * reader gets ONE nonce for up to ten minutes. Measured that day: 4 HITs, 1
+     * distinct nonce, against 4 distinct across 4 BYPASS responses.
+     *
+     * **THIS ASSERTS THE TENSION STILL EXISTS, which means it goes RED when
+     * somebody FIXES it.** That is deliberate and it is the same shape as
+     * check:headers pinning Report-Only: the two decisions are coupled, and
+     * making these routes uncacheable without ruling on enforcement, or
+     * enforcing without making them uncacheable, are both wrong. Whichever is
+     * changed first, this fires and asks for the other.
+     *
+     * It only runs on a genuine HIT. A cold or bypassed edge says nothing about
+     * shared-cache behaviour, and asserting into that would be a check that
+     * passes for the wrong reason.
+     */
+    let warm = await get("/");
+    for (let i = 0; i < 5 && (warm.res.headers.get("cf-cache-status") ?? "") !== "HIT"; i += 1) {
+      warm = await get("/");
+    }
+    const warmCf = warm.res.headers.get("cf-cache-status") ?? "(none)";
+    if (warmCf === "HIT") {
+      const again = await get("/");
+      const c1 = nonceOf(warm.res.headers.get(RO) ?? "");
+      const c2 = nonceOf(again.res.headers.get(RO) ?? "");
+      check(
+        "csp: cookieless readers on a cache HIT SHARE one nonce (the enforcement blocker, pinned)",
+        c1.length > 0 && c1 === c2,
+        `two cookieless HITs carried ${JSON.stringify(c1)} and ${JSON.stringify(c2)}. ` +
+          `If these now DIFFER the shared-cache tension is gone, which is good news and ` +
+          `means the enforcement ruling is unblocked: update workers/app.ts and remove ` +
+          `this assertion in the same commit as the decision.`,
+      );
+      console.log(`  csp: shared-cache nonce reused across cookieless HITs (${c1.slice(0, 8)}…)`);
+    } else {
+      check(
+        "csp: the shared-cache nonce case was actually observed",
+        false,
+        `never reached a cache HIT on / after 6 attempts (last cf-cache-status ${warmCf}). ` +
+          `The blocker assertion examined nothing rather than passing quietly.`,
+      );
+    }
   }
 }
 
