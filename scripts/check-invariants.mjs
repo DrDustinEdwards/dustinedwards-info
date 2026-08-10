@@ -25,7 +25,7 @@
  * beside it. Asserting a single function agrees with itself proves nothing and
  * would be a gate that can never fail.
  *
- * So this file holds five sections, and the first is not a comparison:
+ * So this file holds six sections, and the first is not a comparison:
  *
  *   1. NO SECOND BUCKET SELECTION. Structural. The dedupe is only true while it
  *      stays true, and the failure mode now is a fourth copy appearing in a
@@ -40,6 +40,9 @@
  *   5. EVERY COLUMN NAMED IN RAW SQL EXISTS. Section 4 proves the schema
  *      sources agree with each other; this proves the SQL strings agree with
  *      them, which is the half that actually failed.
+ *   6. EVERY POSTS READER COMPOSES THE VISIBILITY PREDICATE. Section 2 proves
+ *      the two predicates agree; this proves a reader actually uses one, which
+ *      is the half that leaks. Structural, like section 1.
  *
  * Sections 4 and 5 exist because of hard rule 11 and cost a real defect:
  * `claimMediaKeyForDelete` named `media.r2_key`, which `0007` creates and
@@ -1250,6 +1253,174 @@ try {
   );
 } catch (error) {
   fail("the raw SQL column check could not run", String(error));
+}
+
+/* ------------------------- 6. every posts READER composes the predicate */
+
+/*
+ * HARD RULE 1, at the CALLER rather than at the predicate.
+ *
+ * Section 2 proves `publiclyVisible()` and `visibilityClause()` admit the same
+ * rows. It says nothing about whether a reader USES either one, and that is the
+ * half that actually leaks: a new loader selecting from `posts` directly is
+ * invisible to section 2 and would serve drafts and future-dated rows.
+ * Backlog item 3.
+ *
+ * ## TWO ASSERTIONS, and the first is the one section 1's technique gives us
+ *
+ * **The chokepoint.** Every `.from(posts)` in `app/` lives in `app/db/index.ts`.
+ * Measured 2026-08-10: 13 of 13. That single fact is most of the guarantee,
+ * because it means the visibility question is decided in one reviewable file
+ * rather than wherever someone happened to need a query.
+ *
+ * **Per function, inside that file.** Every top-level function that queries
+ * `posts` must compose `publiclyVisible()`, `visibilityClause()` or
+ * `isBlogPost()` (which composes the first), unless it is named below.
+ *
+ * ## THE EXCLUSION IS A FUNCTION, NOT A FILE, and that distinction is the point
+ *
+ * The obvious shape is to exclude the module holding the admin reader. It is
+ * also useless: `app/db/index.ts` holds the admin reader AND all nine public
+ * readers, so a file-level exclusion excludes the entire public read surface
+ * and the section passes while asserting nothing. Measured before writing this.
+ *
+ * ## WRITES ARE OUT OF SCOPE, deliberately
+ *
+ * `publish.server.ts` carries six raw `FROM posts` occurrences and every one is
+ * a DELETE or a subquery resolving an id for a write. A visibility predicate on
+ * a write would be wrong: unpublishing a post must still be able to delete its
+ * rows. Section 5 already binds those statements' column names to the schema.
+ */
+
+console.log("\n  6. every posts reader composes the visibility predicate");
+
+/**
+ * Named functions permitted to query `posts` without the predicate.
+ * Each needs a reason, and the reason needs to survive a reader asking "why is
+ * it safe for THIS one to see drafts?".
+ */
+const VISIBILITY_EXEMPT = {
+  listAllPostsForAdmin:
+    "the admin post list exists to show drafts and future-dated rows; that IS its " +
+    "job. Reached only from /admin routes, which are behind Better Auth.",
+};
+
+try {
+  const QUERY = /\.from\(\s*posts\s*\)/g;
+  const PREDICATE = /\b(publiclyVisible|visibilityClause|isBlogPost)\s*\(/;
+
+  // Chokepoint: which files under app/ query the posts table at all?
+  const queryingFiles = [];
+  let appFilesScanned = 0;
+  for (const file of sourceFiles(join(root, "app"))) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (rel.endsWith(".d.ts")) continue;
+    appFilesScanned += 1;
+    const code = joinConcatenatedLiterals(stripped(readFileSync(file, "utf8")));
+    const hits = (code.match(QUERY) ?? []).length;
+    if (hits > 0) queryingFiles.push({ rel, hits });
+  }
+
+  ok(
+    "the caller scan examined a plausible number of files under app/",
+    appFilesScanned >= 80,
+    `${appFilesScanned} scanned; a green result below would mean nothing`,
+  );
+
+  const CHOKEPOINT = "app/db/index.ts";
+  ok(
+    `every .from(posts) in app/ is in ${CHOKEPOINT}`,
+    queryingFiles.every((f) => f.rel === CHOKEPOINT),
+    queryingFiles
+      .filter((f) => f.rel !== CHOKEPOINT)
+      .map((f) => `${f.rel} queries posts ${f.hits}x, outside the DB layer`)
+      .join("\n        ") +
+      "\n        A reader outside the one reviewable file is how hard rule 1 gets bypassed " +
+      "without anyone deciding to bypass it.",
+  );
+
+  const dbSource = readFileSync(join(root, CHOKEPOINT), "utf8");
+  const dbLines = stripped(dbSource).split("\n");
+
+  /*
+   * Top-level functions in this file close with a brace at column 0. Verified
+   * by accounting: every `.from(posts)` in the file must land inside one of the
+   * extracted bodies, and that count is asserted below rather than assumed. If
+   * the file's style ever changes, the accounting assertion fails rather than
+   * the scan silently missing a function.
+   */
+  const functions = [];
+  for (let i = 0; i < dbLines.length; i += 1) {
+    const m = dbLines[i].match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+    if (!m) continue;
+    let end = dbLines.length;
+    for (let j = i + 1; j < dbLines.length; j += 1) {
+      if (dbLines[j] === "}") { end = j; break; }
+    }
+    functions.push({ name: m[1], body: dbLines.slice(i, end + 1).join("\n") });
+  }
+
+  const queriers = functions.filter((f) => QUERY.test(f.body) || f.body.includes(".from(posts)"));
+  const totalSites = (stripped(dbSource).match(QUERY) ?? []).length;
+  const accounted = queriers.reduce(
+    (sum, f) => sum + ((f.body.match(/\.from\(\s*posts\s*\)/g) ?? []).length),
+    0,
+  );
+
+  ok(
+    "every .from(posts) site was accounted for inside an extracted function",
+    totalSites > 0 && accounted === totalSites,
+    `${accounted} of ${totalSites} landed inside a function body. The function extraction ` +
+      `missed some, so the per-function assertions below do not cover the file.`,
+  );
+
+  // Anti-vacuity floors, set just under the measured 2026-08-10 counts:
+  // 13 sites, 10 querying functions, 9 composing.
+  ok(
+    "the posts-reader scan found a plausible number of query sites",
+    totalSites >= 10,
+    `${totalSites} found; expected at least 10. A broken matcher reports zero violations.`,
+  );
+
+  const composing = queriers.filter((f) => PREDICATE.test(f.body));
+  ok(
+    "at least some readers were seen composing the predicate",
+    composing.length >= 7,
+    `${composing.length} of ${queriers.length} compose it. If this collapses, the ` +
+      `PREDICATE matcher has broken and every reader would read as a violation or none would.`,
+  );
+
+  const bypassing = queriers.filter((f) => !PREDICATE.test(f.body));
+  const unexplained = bypassing.filter((f) => !(f.name in VISIBILITY_EXEMPT));
+  ok(
+    "every posts reader composes the predicate, or is a named exemption",
+    unexplained.length === 0,
+    unexplained
+      .map((f) => `${CHOKEPOINT}::${f.name} queries posts with no visibility predicate`)
+      .join("\n        ") +
+      "\n        Hard rule 1: every public read goes through publiclyVisible(). If this " +
+      "reader is deliberately exempt, add it to VISIBILITY_EXEMPT with the reason.",
+  );
+
+  // The other direction: an exemption naming a function that no longer exists,
+  // or that now composes the predicate, is permission nobody audits.
+  for (const name of Object.keys(VISIBILITY_EXEMPT)) {
+    const fn = queriers.find((f) => f.name === name);
+    ok(
+      `exemption ${name} still names a posts reader that bypasses the predicate`,
+      fn !== undefined && !PREDICATE.test(fn.body),
+      !fn
+        ? `${name} no longer queries posts. Remove the exemption.`
+        : `${name} now composes the predicate, so the exemption is stale. Remove it.`,
+    );
+  }
+
+  console.log(
+    `     ${totalSites} query site(s) in ${CHOKEPOINT}, ${queriers.length} function(s), ` +
+      `${composing.length} composing, ${Object.keys(VISIBILITY_EXEMPT).length} exempt`,
+  );
+} catch (error) {
+  fail("the posts-reader coverage check could not run", String(error));
 }
 
 /* ------------------------------------------------------------------ report */
