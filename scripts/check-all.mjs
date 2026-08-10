@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 20;
+const MINIMUM_GATES = 21;
 
 /**
  * Which gates need something this machine may not have.
@@ -90,6 +90,12 @@ const TIERS = {
   // boundary. It cannot see the emitted bundle, so a secret inlined into a
   // client chunk by a mis-split is invisible here; the header says so.
   "check:secrets": "offline",
+  // Extracts a ref into a throwaway worktree and runs the offline tier THERE.
+  // Offline: git plus a node_modules junction, no network. It is the only gate
+  // that observes a CHECKOUT rather than the disk, so it sees uncommitted work
+  // and line-ending divergence; it cannot see the deployed build, and it
+  // inherits the blindness of the two gates it must exclude.
+  "check:head": "offline",
   // node:test over test/. The ONE gate here that asserts BEHAVIOUR rather than
   // the repo's shape: it imports shipped modules and checks what they do with a
   // given input. See test/README.md for the three-instrument split.
