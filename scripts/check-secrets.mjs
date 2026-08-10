@@ -283,19 +283,72 @@ ok(
   violations.map((v) => `${v.path} reads env.${v.name}`).join("\n        "),
 );
 
+/**
+ * What makes one allowlist entry acceptable. Returns the problems, so the same
+ * rules can be exercised on synthetic input without touching the real list.
+ *
+ * @param {string} name @param {unknown} reason
+ * @returns {string[]} empty when the entry is acceptable
+ */
+function validateAllowlistEntry(name, reason) {
+  const problems = [];
+  if (!SECRETS.includes(name)) problems.push("names something the secret list does not");
+  if (typeof reason !== "string" || reason.length <= 20) {
+    problems.push("carries no stated reason, so it is permission nobody can review");
+  }
+  return problems;
+}
+
 // Every allowlist entry must still be real, or it is permission nobody audits.
 for (const [name, reason] of Object.entries(CLIENT_ALLOWED)) {
-  ok(
-    `allowlisted ${name} is a ratified secret`,
-    SECRETS.includes(name),
-    "the allowlist names something the secret list does not",
-  );
-  ok(
-    `allowlisted ${name} carries a reason`,
-    typeof reason === "string" && reason.length > 20,
-    "an exception with no stated reason is an exception nobody can review",
-  );
+  const problems = validateAllowlistEntry(name, reason);
+  ok(`allowlisted ${name} is acceptable`, problems.length === 0, problems.join("; "));
 }
+
+/*
+ * SELF-TEST, and it runs on EVERY execution regardless of the allowlist.
+ *
+ * THE PROBLEM IT SOLVES. `CLIENT_ALLOWED` is empty, and empty is the CORRECT
+ * state: no client-reachable file needs any of the seven secrets. But an empty
+ * map means the loop above iterates zero times, so its rules have never been
+ * executed and could be inverted, deleted or simply wrong without any run
+ * noticing. "0 failures" from a loop that never ran is indistinguishable from
+ * "0 failures" from a loop that checked something. Hard rule 10.
+ *
+ * The fix is NOT a fixture entry in the real allowlist. That would put a fake
+ * permission in the structure that grants permissions, where the next reader
+ * has to work out that it is a test and not a decision, and where deleting it
+ * to "clean up" silently removes the coverage. Ruled 2026-08-10.
+ *
+ * Instead the rules live in a function, and the function is fed synthetic input
+ * here. The real loop and the self-test call the SAME code, so the assertions
+ * below are evidence about the rules the loop actually applies.
+ */
+const badEntry = validateAllowlistEntry("NOT_A_RATIFIED_SECRET", "short");
+ok(
+  "self-test: an unratified name with a stub reason reports BOTH problems",
+  badEntry.length === 2,
+  `reported ${badEntry.length}: ${JSON.stringify(badEntry)}. The allowlist rules are ` +
+    `not being applied, and the loop above is empty, so nothing else would notice.`,
+);
+ok(
+  "self-test: the unratified NAME is one of the reported problems",
+  badEntry.some((p) => p.includes("secret list")),
+  JSON.stringify(badEntry),
+);
+ok(
+  "self-test: the stub REASON is one of the reported problems",
+  badEntry.some((p) => p.includes("stated reason")),
+  JSON.stringify(badEntry),
+);
+ok(
+  "self-test: a ratified name with an adequate reason reports NO problems",
+  validateAllowlistEntry(
+    SECRETS[0],
+    "a genuine justification long enough to be worth reading by a reviewer",
+  ).length === 0,
+  "the validator rejects an entry it should accept, so a real exception could never be added",
+);
 
 console.log(
   `  ${SECRETS.length} secret(s), ${files.length} file(s) scanned, ` +
