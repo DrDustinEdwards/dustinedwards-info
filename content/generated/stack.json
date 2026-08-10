@@ -160,6 +160,7 @@
     "check:media",
     "check:policy",
     "check:search",
+    "check:secrets",
     "check:stack",
     "check:tests",
     "check:urls"
