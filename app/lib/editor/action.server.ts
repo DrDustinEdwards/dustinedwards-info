@@ -1,6 +1,7 @@
 import { EditorError, GitHubError, currentHead, savePost, validateAndRender } from "./publish.server";
 import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
 import type { SaveOutcome } from "./publish-policy.mjs";
+import { readIntent } from "./intent.mjs";
 
 /**
  * The shared save/preview handler behind both /admin/posts/new and the edit
@@ -26,7 +27,26 @@ export async function handleEditorAction(
 ): Promise<EditorActionResult> {
   const form = await request.formData();
   const fields = fieldsFromForm(form);
-  const intent = String(form.get("intent") ?? "save");
+  /**
+   * NO DEFAULT. An absent intent is REFUSED, not treated as a save.
+   *
+   * This was `String(form.get("intent") ?? "save")`, so a malformed POST that
+   * carried no intent PERFORMED A WRITE: a commit to GitHub and a D1 sync,
+   * from a request that never said what it wanted. Hard rule 13, on the worst
+   * possible surface for it, since the substituted value was an action rather
+   * than a label.
+   *
+   * The only caller that ever relied on the default was the editor's Cmd+S,
+   * which submits with no submitter. It now sends `intent=save` explicitly
+   * through a hidden field it enables for one submit, so nothing legitimate
+   * reaches this branch. Checked against every submit site before the default
+   * was removed: the four save controls, the preview control and the delete
+   * control all name their intent already.
+   *
+   * The read lives in `intent.mjs` so the rule is testable; this file cannot be
+   * imported by `node:test`. Covered in `test/editor-intent.test.mjs`.
+   */
+  const rawIntent = readIntent(form);
   const isNew = form.get("isNew") === "1";
   const submittedHead = String(form.get("headSha") ?? "");
   const raw = serializePost(fields);
@@ -38,6 +58,18 @@ export async function handleEditorAction(
     // Re-read head so a retry after a conflict is against current state.
     headSha: await currentHead(env).catch(() => submittedHead),
   });
+
+  // Refused BEFORE the try, so it cannot be mistaken for a save that failed.
+  // `fail()` returns a problem result rather than throwing: it writes nothing,
+  // names the reason, and keeps the body the author typed.
+  if (rawIntent === null) {
+    return fail(
+      "This form submitted no intent, so nothing was saved. Every control names " +
+        "what it does; a request without one is malformed and is refused rather " +
+        "than assumed to be a save.",
+    );
+  }
+  const intent = rawIntent;
 
   try {
     if (intent === "preview") {
