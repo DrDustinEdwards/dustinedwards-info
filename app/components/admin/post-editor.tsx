@@ -152,6 +152,8 @@ export function PostEditor({
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const draftFieldRef = useRef<HTMLInputElement>(null);
+  /** Enabled for one submit by the Cmd+S handler; see the field and the handler. */
+  const keyboardIntentRef = useRef<HTMLInputElement>(null);
   const autosaveTimer = useRef<number>(0);
   const storageKey = draftKey(fields.slug, headSha);
 
@@ -277,9 +279,20 @@ export function PostEditor({
    *
    * Now it submits the form directly and arms `draft` to the post's CURRENT
    * committed state, so a save preserves publication status rather than
-   * changing it. `requestSubmit()` with no submitter sends no `intent` at all,
-   * and `handleEditorAction` already defaults a missing intent to "save", so
-   * the payload is the same one the Save control sends.
+   * changing it.
+   *
+   * **IT SENDS `intent=save` EXPLICITLY**, by enabling a disabled hidden field
+   * just before submitting, the same mechanism this handler already uses for
+   * `draft`. `requestSubmit()` with no submitter sends no `intent` at all, and
+   * this path used to rely on the server defaulting an absent intent to "save".
+   * That default was removed 2026-08-09: an absent intent on a WRITE path meant
+   * a malformed POST performed a write instead of failing, which is hard rule
+   * 13. The one legitimate caller now says what it means, so the server can
+   * refuse everything else.
+   *
+   * The field is DISABLED at rest, so a normal button submit is unaffected: a
+   * disabled control is not part of the submission set, and the submitter's own
+   * `intent` is the only one sent.
    *
    * The ceremony is now reachable only by pointer or by focusing its trigger
    * and activating it deliberately. No keyboard shortcut opens it.
@@ -292,7 +305,11 @@ export function PostEditor({
       if (!form) return;
       const draftField = draftFieldRef.current;
       if (draftField) draftField.disabled = !fields.draft;
+      const intentField = keyboardIntentRef.current;
+      if (intentField) intentField.disabled = false;
       form.requestSubmit();
+      // Re-disable so a later button submit sends only the submitter's intent.
+      if (intentField) intentField.disabled = true;
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -388,6 +405,26 @@ export function PostEditor({
       >
         <input type="hidden" name="headSha" value={headSha} />
         <input type="hidden" name="isNew" value={isNew ? "1" : "0"} />
+        {/*
+          The keyboard save's intent, DISABLED at rest.
+
+          Cmd+S submits with no submitter, so without this the request would
+          carry no `intent` at all and would depend on the server defaulting a
+          missing one to "save". That default is gone: an absent intent on a
+          write path is refused, per hard rule 13. The shortcut handler enables
+          this field for the duration of one submit.
+
+          Disabled rather than absent so a normal button submit is untouched: a
+          disabled control is not in the submission set, so the submitter's own
+          `intent` remains the only one sent.
+        */}
+        <input
+          ref={keyboardIntentRef}
+          type="hidden"
+          name="intent"
+          value="save"
+          disabled
+        />
         {/*
           Server-owned, carried through only so a browser save PRESERVES it.
           serializePost writes exactly the keys it is handed, so a value this

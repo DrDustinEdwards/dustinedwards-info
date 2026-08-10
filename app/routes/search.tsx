@@ -7,7 +7,12 @@ import { getEnv } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
-import { search, zeroState, type SearchHit } from "~/lib/search/search.server";
+import {
+  search,
+  zeroState,
+  type MatchReason,
+  type SearchHit,
+} from "~/lib/search/search.server";
 import {
   HTML_CACHE_CONTROL,
   HTML_VARY_ACCEPT,
@@ -199,7 +204,21 @@ function pageHref(params: ReturnType<typeof readParams>, page: number) {
   return `/search?${next.toString()}`;
 }
 
-const WHY_LABEL: Record<string, string> = {
+/**
+ * Keyed by the UNION, not by `string`, and there is deliberately no fallback.
+ *
+ * This was `Record<string, string>` with `?? reason` at the call site, which is
+ * byte-for-byte the shape that shipped the colophon defect: a fifth
+ * `MatchReason` would typecheck clean and render the raw enum to readers, and
+ * every surface would agree because every surface read the same wrong value.
+ * Hard rule 13, and it was the last live instance of that class.
+ *
+ * Typed this way, adding a reason to `MatchReason` without adding a label here
+ * is a TYPECHECK failure at the point of the omission. That is strictly better
+ * than a lint or a gate: it cannot be skipped, it names the missing key, and it
+ * fails before anything is built.
+ */
+const WHY_LABEL: Record<MatchReason, string> = {
   title: "title",
   tag: "tag",
   body: "body",
@@ -239,7 +258,7 @@ function Result({ hit }: { hit: SearchHit }) {
         {hit.why.map((reason, i) => (
           <span key={reason}>
             {i > 0 ? ", " : ""}
-            <span className="search-why-field">{WHY_LABEL[reason] ?? reason}</span>
+            <span className="search-why-field">{WHY_LABEL[reason]}</span>
           </span>
         ))}
         {hit.publishAt ? (

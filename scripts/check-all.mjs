@@ -181,6 +181,12 @@ function main() {
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
   for (const name of selected) {
+    // JUSTIFIED SUBSTITUTION (hard rule 13). `REMOTE_ARGS` is DELIBERATELY
+    // PARTIAL: most gates take no remote arguments, and their absence from the
+    // map means exactly that. The empty array is the correct value for a gate
+    // with no extra args, not a stand-in for a missing one, so nothing is being
+    // masked. Contrast WHY_LABEL and STATUS_LABEL, where every key was supposed
+    // to be present and the fallback hid the omission.
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
     // EVERY gate runs, including after a failure. Stopping at the first red hides
