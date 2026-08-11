@@ -40,6 +40,25 @@ export function SiteHeader() {
         <NavLink to="/blog">Blog</NavLink>
         <NavLink to="/phage-discovery">Roster</NavLink>
         <SearchTrigger />
+        {/*
+          JUSTIFIED SUBSTITUTION (hard rule 13). Ruled 2026-08-10,
+          dustinedwards/decisions.md.
+
+          `"system"` is NOT a fabricated stand-in for a value that went missing.
+          It is the DOCUMENTED cookieless default: the absence of a `data-theme`
+          attribute IS system mode, so this renders exactly what a first-time
+          reader with no cookie gets. Contrast `STATUS_LABEL[s] ?? s`, which
+          invented a label that had never been a real one.
+
+          Throwing instead would blank the header on the ERROR-BOUNDARY path,
+          where the root loader legitimately never ran and `data` is absent by
+          design. That trades a recoverable error page for one carrying no
+          navigation.
+
+          The failure this could mask is already visible by other means: a
+          loader that failed renders the error boundary, which is louder than a
+          theme toggle showing its default.
+        */}
         <ThemeToggle theme={data?.theme ?? "system"} />
       </nav>
     </header>
