@@ -16,10 +16,15 @@
  * answered is `verify-live`'s job and needs the wire.
  *
  * **It also inherits every excluded gate's blindness**, and the excluded set is
- * not small. Two of nineteen offline gates cannot run in an extraction at all,
- * for reasons measured rather than assumed (see EXCLUDED below). A green
- * check:head therefore means "the seventeen that CAN run, do", which is a
- * narrower claim than "HEAD is good".
+ * not small. Two of the offline gates cannot run in an extraction at all, for
+ * reasons measured rather than assumed (see EXCLUDED below), and this gate
+ * excludes itself for a third. A green check:head therefore means "the ones
+ * that CAN run, do", which is a narrower claim than "HEAD is good".
+ *
+ * The counts are DELIBERATELY not written here. They were, and they went stale:
+ * this paragraph said "nineteen offline gates" and "the seventeen that CAN run"
+ * while the real numbers were twenty-three and twenty. The gate PRINTS both
+ * every run, which is the copy that cannot drift.
  *
  * ## Why this exists
  *
