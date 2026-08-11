@@ -63,6 +63,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { joinConcatenatedLiterals } from "./lib/sql-literals.mjs";
+import { classifySqliteTables, ftsOwnedTables } from "./lib/sqlite-tables.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -564,27 +565,16 @@ console.log("\n  4. columns agree across schema.ts, the migrations and the datab
  * uses; and `sqlite_%` is reserved by SQLite for its own bookkeeping.
  */
 
-/** @param {{name: string, sql: string | null}[]} tables */
+/**
+ * Lifted to scripts/lib/sqlite-tables.mjs 2026-08-10, so this file, section 7
+ * below and check-backup.mjs all classify by the same rules. The rules were
+ * already identical in all three; identical-by-coincidence is what this repo
+ * keeps converting into one module with several readers.
+ *
+ * @param {{name: string, sql: string | null}[]} tables
+ */
 function classifyTables(tables) {
-  const virtual = tables
-    .filter((t) => /CREATE\s+VIRTUAL\s+TABLE/i.test(t.sql ?? ""))
-    .map((t) => t.name);
-  /** @param {string} name */
-  const isShadow = (name) =>
-    virtual.some((v) => name !== v && name.startsWith(`${v}_`));
-  /** @param {string} name */
-  const isInternal = (name) => name.toLowerCase().startsWith("sqlite_");
-  return {
-    virtual,
-    /** Tables this repo owns and drizzle could in principle model. */
-    real: tables
-      .filter(
-        (t) =>
-          !virtual.includes(t.name) && !isShadow(t.name) && !isInternal(t.name),
-      )
-      .map((t) => t.name)
-      .sort(),
-  };
+  return classifySqliteTables(tables);
 }
 
 /**
@@ -1421,6 +1411,201 @@ try {
   );
 } catch (error) {
   fail("the posts-reader coverage check could not run", String(error));
+}
+
+/* ------------------- 7. nothing DELETEs from an FTS index or counts one */
+
+/*
+ * HARD RULE 2's UNGATED HALF. Backlog item 6.
+ *
+ * `check:backup` derives the table list and excludes fts5 tables from the
+ * export. Nothing stopped code from writing to one. Two ways to corrupt or
+ * misread an fts5 index, both recorded in hard rule 2 and both enforced by
+ * nobody until now:
+ *
+ *   DELETE FROM <index>   corrupts it. The repair is
+ *                         INSERT INTO <index>(<index>) VALUES('rebuild').
+ *   COUNT(*) on <index>   reads THROUGH to the content table on an
+ *                         external-content index, so it can NEVER detect drift.
+ *                         Measured: with the index emptied, COUNT(*) still read
+ *                         7 while the docsize shadow read 0.
+ *
+ * Section 5 explicitly SKIPS virtual tables in its raw-SQL column scan
+ * (`${virtualTables.length} fts5 table(s) skipped`), so an added
+ * `DELETE FROM posts_fts` passes every other gate in this repo.
+ *
+ * ## THE SCAN INVERTS SECTION 5's MACHINERY
+ *
+ * Section 5 STRIPS literals to find code. This scans INSIDE them, because SQL
+ * in this codebase only ever exists as a string. Comments are stripped FIRST so
+ * prose explaining the rule cannot be read as a statement, which is the trap
+ * check:logo, check:contrast, check:features, check:headers, check:urls and
+ * check:secrets have each hit.
+ *
+ * ## THE TABLE LIST IS DERIVED, NEVER NAMED
+ *
+ * From `drizzle/*.sql` replayed into memory, then classified by the shared
+ * `scripts/lib/sqlite-tables.mjs`. It was one index, then two, then three; a
+ * hardcoded list is how the fourth gets missed. Shadows come by prefix, so a
+ * new index brings its own along.
+ */
+
+console.log("\n  7. no DELETE FROM an FTS index, and no COUNT(*) on one");
+
+try {
+  const ftsDb = new DatabaseSync(":memory:");
+  for (const file of readdirSync(join(root, "drizzle"))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
+    ftsDb.exec(readFileSync(join(root, "drizzle", file), "utf8"));
+  }
+  const ftsRows = /** @type {any[]} */ (
+    ftsDb.prepare("SELECT name, sql FROM sqlite_master WHERE type='table'").all()
+  );
+  const classified = classifySqliteTables(ftsRows);
+  const owned = ftsOwnedTables(classified);
+
+  /*
+   * EXACTLY THREE, and this is a tripwire rather than a preference. A fourth
+   * index means the corpus grew and the floors below want re-measuring; zero
+   * means the classifier or the migration replay broke, and a broken classifier
+   * reports zero violations exactly like a clean repo.
+   */
+  ok(
+    "the derived fts5 index list is the three known indexes",
+    classified.virtual.length === 3,
+    `derived ${classified.virtual.length}: ${classified.virtual.join(", ") || "(none)"}. ` +
+      `Zero means the classifier broke. More means a new index landed: re-measure the ` +
+      `floors in this section and confirm its shadows are covered.`,
+  );
+  ok(
+    "each index brought its shadow tables",
+    classified.shadow.length >= classified.virtual.length * 3,
+    `${classified.shadow.length} shadow(s) for ${classified.virtual.length} index(es): ` +
+      `${classified.shadow.join(", ")}`,
+  );
+
+  /** Strip comments, then EXTRACT literals: the inverse of section 5. */
+  const LITERAL = /`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
+  const SQLISH = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|CREATE\s+VIRTUAL)\b/i;
+
+  let filesScanned = 0;
+  let sqlLiterals = 0;
+  let docsizeCounts = 0;
+  /** @type {string[]} */
+  const deleteViolations = [];
+  /** @type {string[]} */
+  const countViolations = [];
+
+  const owningAlternation = owned.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const DELETE_FTS = new RegExp(`\\bDELETE\\s+FROM\\s+(${owningAlternation})\\b`, "i");
+  const COUNT_INDEX = new RegExp(
+    `COUNT\\s*\\(\\s*\\*\\s*\\)\\s*FROM\\s+(${classified.virtual.join("|")})\\b`,
+    "i",
+  );
+
+  for (const dir of ["app", "workers", "scripts"]) {
+    for (const file of sourceFiles(join(root, dir))) {
+      const rel = relative(root, file).split(sep).join("/");
+      // Self-exclusion, same reason as section 1 and section 5: this file's own
+      // failure messages and regexes name the very statements it forbids.
+      if (rel === "scripts/check-invariants.mjs") continue;
+      if (rel.endsWith(".d.ts")) continue;
+      filesScanned += 1;
+
+      const code = joinConcatenatedLiterals(
+        readFileSync(file, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, " ")
+          .replace(/(^|[^:])\/\/[^\n]*/g, "$1 "),
+      );
+      for (const literal of code.match(LITERAL) ?? []) {
+        if (!SQLISH.test(literal)) continue;
+        sqlLiterals += 1;
+        /*
+         * Both guarded on a NON-EMPTY derived list. With zero indexes the
+         * alternation collapses to `()`, which matches the empty string and so
+         * matches EVERY literal: the tripwire above has already failed by then,
+         * and without this the same run also reports every DELETE in the repo
+         * as an FTS violation. Found by the vacuity plant, which produced two
+         * misleading extra failures beside the one it was written to fire.
+         */
+        if (owned.length > 0 && DELETE_FTS.test(literal)) {
+          deleteViolations.push(`${rel}: ${literal.trim().slice(0, 90)}`);
+        }
+        if (classified.virtual.length > 0 && COUNT_INDEX.test(literal)) {
+          countViolations.push(`${rel}: ${literal.trim().slice(0, 90)}`);
+        }
+        /*
+         * MATCHES, not literals. `sync-content.mjs` builds its health check by
+         * concatenating three fragments, and `joinConcatenatedLiterals` merges
+         * them into ONE literal carrying all three counts, so counting literals
+         * reported 1 where the repo has 3. Found by this assertion failing on
+         * its own first run.
+         */
+        docsizeCounts += [
+          ...literal.matchAll(/COUNT\s*\(\s*\*\s*\)\s*FROM\s+\w+_docsize\b/gi),
+        ].length;
+      }
+    }
+  }
+
+  /*
+   * ANTI-VACUITY. Measured 2026-08-10 THROUGH THIS EXACT PIPELINE: 143 files
+   * and 61 SQL-bearing literals. A raw count before comment-stripping and
+   * literal-joining reads 150 and 80, and taking those as the floor would sit
+   * it ABOVE what the gate can actually see. Measure what the gate measures.
+   *
+   * Floors set roughly a quarter under, so ordinary refactoring does not trip
+   * them. A zero means the literal extractor broke, and "0 violations" from a
+   * broken extractor is indistinguishable from a clean repo. Hard rule 10.
+   */
+  ok(
+    "the literal scan examined a plausible number of files",
+    filesScanned >= 110,
+    `${filesScanned} scanned; expected the whole of app, workers and scripts`,
+  );
+  ok(
+    "the literal scan found SQL to examine",
+    sqlLiterals >= 45,
+    `${sqlLiterals} SQL-bearing literal(s) found; expected at least 45. The extractor ` +
+      `is broken, so a green result below would mean nothing.`,
+  );
+
+  ok(
+    "no source literal DELETEs from an fts5 index or its shadows",
+    deleteViolations.length === 0,
+    deleteViolations.join("\n        ") +
+      "\n        DELETE FROM an fts5 table corrupts the index. The repair is " +
+      "INSERT INTO <index>(<index>) VALUES('rebuild').",
+  );
+
+  ok(
+    "no source literal counts rows in an fts5 index directly",
+    countViolations.length === 0,
+    countViolations.join("\n        ") +
+      "\n        COUNT(*) on an external-content index reads THROUGH to the content " +
+      "table and can never detect drift. Count the *_docsize shadow instead.",
+  );
+
+  /*
+   * The companion, and it is the positive half. Enumerated before asserting:
+   * `sync-content.mjs` is the only FTS health check in the repo, and it counts
+   * posts_fts_docsize, search_identity_docsize and search_prose_docsize. If
+   * that disappears, the drift check has gone and nothing else would say so.
+   */
+  ok(
+    "at least one FTS health check counts a *_docsize shadow",
+    docsizeCounts >= 3,
+    `${docsizeCounts} found; sync-content.mjs counts three. If this dropped, the only ` +
+      `check that can detect FTS drift has been removed or rewritten to count the index.`,
+  );
+
+  console.log(
+    `     ${classified.virtual.length} index(es), ${classified.shadow.length} shadow(s), ` +
+      `${filesScanned} file(s), ${sqlLiterals} SQL literal(s), ${docsizeCounts} docsize count(s)`,
+  );
+} catch (error) {
+  fail("the FTS write and count check could not run", String(error));
 }
 
 /* ------------------------------------------------------------------ report */
