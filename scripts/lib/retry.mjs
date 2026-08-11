@@ -30,7 +30,9 @@
  * ## READS ONLY. Never wrap a write.
  *
  * A retried write is a write that may have landed twice. Every call site here
- * is a read: sqlite_master, a D1 SELECT, an R2 list. `sync:content` and the
+ * is a read: sqlite_master, a D1 SELECT, an R2 list, and the per-table export
+ * (it pulls rows and writes a LOCAL temp file, so a retry overwrites its own
+ * output and lands nowhere else). `sync:content` and the
  * publish paths are deliberately not wrapped.
  *
  * A SECOND failure propagates unchanged, with its original error, so the gate
