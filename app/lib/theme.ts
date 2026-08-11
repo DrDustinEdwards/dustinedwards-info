@@ -55,5 +55,5 @@ export function serializeThemeCookie(theme: Theme): string {
   // Path=/ so one choice covers the public plane and the admin plane. Lax is
   // enough: this is a display preference, and it must survive a normal
   // top-level navigation back to the site.
-  return `${THEME_COOKIE}=${theme}; Path=/; Max-Age=${THEME_COOKIE_MAX_AGE}; SameSite=Lax`;
+  return `${THEME_COOKIE}=${theme}; Path=/; Max-Age=${THEME_COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
 }

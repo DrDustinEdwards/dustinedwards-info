@@ -121,11 +121,21 @@ const isoDateTime = z.preprocess(
  * Frontmatter contract. A failure is a build failure at the command line and a
  * rejected save in the editor, both naming the field.
  */
+/**
+ * What a slug may be, as ONE statement of the rule.
+ *
+ * Exported because the operator API needs the same predicate on its READ paths,
+ * and a hand-copied regex there would be a second statement of a rule that can
+ * drift. The write path has always enforced this through the schema below; the
+ * read paths interpolated an unvalidated slug straight into a GitHub API path,
+ * where `encodeURI` leaves `..`, `/` and `?` intact. Found by the external
+ * audit of 2026-08-11.
+ */
+export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "must be lowercase kebab-case"),
+  slug: z.string().regex(SLUG_PATTERN, "must be lowercase kebab-case"),
   date: isoDate,
   tags: z.array(z.string().min(1)).default([]),
   description: z.string().min(1, "must not be empty"),

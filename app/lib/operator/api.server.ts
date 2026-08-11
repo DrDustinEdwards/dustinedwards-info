@@ -27,11 +27,38 @@ import {
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
+import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import { readFile } from "~/lib/editor/github.server";
 
+
 import type { OperatorEnv } from "./auth.server";
+
+/**
+ * A slug, validated against the SAME predicate the write path enforces.
+ *
+ * Every one of these values is interpolated into `content/posts/<slug>.md` and
+ * handed to the GitHub contents API, which builds its URL with `encodeURI`.
+ * `encodeURI` does NOT escape `.`, `/` or `?`, so `../../../../user?` walks out
+ * of the posts directory and truncates the rest into a query string, on a
+ * request that carries the GITHUB_TOKEN bearer header.
+ *
+ * The WRITE path was always safe: renderPost requires the frontmatter slug to
+ * equal the expected one and the schema pins it to kebab-case. The READ paths
+ * had no such check and ran first. Found by the external audit of 2026-08-11.
+ *
+ * SLUG_PATTERN is imported rather than restated, so there is one statement of
+ * the rule and not a copy that can drift from the schema's.
+ */
+function readSlug(args: Record<string, unknown>, tool: string) {
+  const slug = String(args.slug ?? "").trim();
+  if (!slug) return { slug: "", error: `${tool} requires a slug.` };
+  if (!SLUG_PATTERN.test(slug)) {
+    return { slug: "", error: `${tool} requires a lowercase kebab-case slug.` };
+  }
+  return { slug, error: "" };
+}
 
 export type ToolResult =
   | { ok: true; data: unknown }
@@ -149,8 +176,9 @@ async function listPosts(env: OperatorEnv) {
 }
 
 async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
-  const slug = String(args.slug ?? "").trim();
-  if (!slug) return { ok: false, status: 400, error: "get_post requires a slug." };
+  const parsed = readSlug(args, "get_post");
+  if (parsed.error) return { ok: false, status: 400, error: parsed.error };
+  const slug = parsed.slug;
 
   const file = await readFile(env, `content/posts/${slug}.md`);
   if (!file) return { ok: false, status: 404, error: `No post exists with slug "${slug}".` };
@@ -184,9 +212,10 @@ async function savePostTool(
   actor: Actor,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
-  const slug = String(args.slug ?? "").trim();
+  const parsed = readSlug(args, "save_post");
+  if (parsed.error) return { ok: false, status: 400, error: parsed.error };
+  const slug = parsed.slug;
   const raw = typeof args.raw === "string" ? args.raw : "";
-  if (!slug) return { ok: false, status: 400, error: "save_post requires a slug." };
   if (!raw.trim()) {
     return {
       ok: false,
@@ -230,8 +259,9 @@ async function deletePostTool(
   actor: Actor,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
-  const slug = String(args.slug ?? "").trim();
-  if (!slug) return { ok: false, status: 400, error: "delete_post requires a slug." };
+  const parsed = readSlug(args, "delete_post");
+  if (parsed.error) return { ok: false, status: 400, error: parsed.error };
+  const slug = parsed.slug;
 
   const result = await deletePost(env, {
     slug,
