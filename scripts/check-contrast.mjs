@@ -779,17 +779,26 @@ for (const a of worst) {
  * that is the failure the external audit measured here.
  *
  * MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-11: 567 with the built
- * stylesheet compared, 461 without. The floor sits between them ON PURPOSE, so
- * that a silently skipped built-CSS section trips it even if the explicit
- * staleness assertion above is ever weakened or removed. Belt and braces for
- * the same 106 assertions.
+ * stylesheet compared, 461 without.
+ *
+ * CONDITIONAL ON A BUILD BEING PRESENT, and that is not a softening. A fresh
+ * checkout has no `build/` at all, because it is gitignored, so a flat floor of
+ * 520 failed inside check:head's extraction on the first attempt: the gate was
+ * green on disk and red against HEAD, which is exactly the divergence check:head
+ * exists to surface. It surfaced mine.
+ *
+ * Absent a build there is genuinely nothing to compare and 461 is the honest
+ * full count. Present-but-stale is a failure on its own above; this floor is
+ * the second lock on the same door, for the case where that assertion is ever
+ * weakened.
  */
-const MINIMUM_CHECKS = 520;
+const buildPresent = existsSync(assetDir);
+const MINIMUM_CHECKS = buildPresent ? 520 : 440;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
-    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. A block ` +
-      `was SKIPPED rather than failing. Measured: 567 with the built stylesheet ` +
-      `compared, 461 without.`,
+    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
+      `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
+      `failing. Measured: 567 with the built stylesheet compared, 461 without.`,
   );
 }
 

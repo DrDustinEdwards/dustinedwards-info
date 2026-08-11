@@ -15,7 +15,7 @@ import * as authSchema from "~/db/auth-schema";
  * the user.create.before hook rejects any sign-in whose email is not ADMIN_EMAIL.
  */
 export function createAuth(env: Env) {
-  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
+  const adminEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
 
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
@@ -84,7 +84,7 @@ export async function getAdminSession(
     headers: request.headers,
   });
   if (!session) return null;
-  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
+  const adminEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
   if (!adminEmail || session.user.email?.toLowerCase() !== adminEmail) {
     return null;
   }

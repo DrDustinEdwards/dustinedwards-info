@@ -102,7 +102,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   // is logged VERBATIM rather than parsed: both the legacy `report-uri` shape
   // and the `report-to` batch shape land here, and a parser that understood
   // only one would silently drop the other.
-  console.log(`[csp-report] ${body}`);
+  // JSON-encoded, so a body containing newlines cannot forge additional log
+  // lines past the [csp-report] prefix the stream is filtered on. The body stays
+  // UNPARSED, which is deliberate: both the report-uri and report-to shapes land
+  // here and this endpoint is not the place to decide between them.
+  console.log(`[csp-report] ${JSON.stringify(body)}`);
 
   return new Response(null, {
     status: 204,

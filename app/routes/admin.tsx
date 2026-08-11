@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Form, Link, NavLink, Outlet, redirect } from "react-router";
+import { Form, Link, NavLink, Outlet, redirect, useRouteLoaderData } from "react-router";
 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
@@ -8,6 +8,7 @@ import { getEnv } from "~/lib/context";
 import { loadArtifact } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
+import type { loader as rootLoader } from "~/root";
 
 export function meta() {
   return [{ title: "Admin" }, { name: "robots", content: "noindex" }];
@@ -196,6 +197,19 @@ function Glyph({ children }: { children: React.ReactNode }) {
 }
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
+  /*
+   * The CSP nonce, from the root loader through useRouteLoaderData, the same
+   * channel Layout and BlogSpeculation use. Read OPTIONALLY for the reason they
+   * do: on the error boundary path the root loader never ran, and a made-up
+   * fallback nonce would be worse than none.
+   *
+   * The inline script below was UN-NONCED until 2026-08-11, found by the
+   * external audit. workers/app.ts said the shared-cache nonce lifetime was THE
+   * ONLY thing blocking CSP enforcement; this was a second blocker, sitting on
+   * an admin page that a Report-Only window walking public routes would never
+   * have reported.
+   */
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
   /**
    * Mirrors the attribute the inline script already set.
    *
@@ -252,7 +266,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="admin" data-drawer={drawerOpen ? "open" : undefined}>
       {/* Before the sidebar, so the attribute is set before it is painted. */}
-      <script dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
 
       {/*
         THE FULL-WIDTH HEADER, above both columns.
