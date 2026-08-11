@@ -61,6 +61,12 @@
  *
  * FAILS CLOSED. Zero files scanned, or zero assertion sites found, is a
  * failure: a broken matcher reports the same clean sweep as a clean repo.
+ *
+ * ## It also asserts OBSERVATION BOUNDARY presence (gate-backlog item 11)
+ *
+ * Every `scripts/check-*.mjs` and `verify-live.mjs` must state what it cannot
+ * see, in its header. Same file set, read fresh rather than through the lint's
+ * self-exclusion, so this file is not the one gate exempt from the rule.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -369,12 +375,20 @@ for (const { name, path } of files) {
       }
     }
 
-    // (d) RegExp from a joined derived list with no guard nearby
-    if (/new RegExp\([^)]*\.join\(\s*["'`]\|["'`]\s*\)/.test(line)) {
-      const window = lines.slice(Math.max(0, i - 12), i).join("\n");
-      const guarded = /\.length\s*(>|>=|===|!==)/.test(window) || /length\s*>\s*0/.test(line);
-      if (!guarded) record("d:unguarded-derived-regexp");
-    }
+    /*
+     * (d) IS NOT HERE. It runs over the whole source above, because the
+     * constructions span lines.
+     *
+     * The per-line version lived here until 2026-08-11 and was SUPERSEDED, not
+     * kept as a second opinion. It survived this long by accident: the
+     * source-wide rewrite was reverted by a restore during plant 7b and the
+     * re-apply added the new block without removing the old one, so both sat in
+     * the file for a commit. Two implementations of one rule means either a
+     * duplicated finding or, as measured here, a real construction reported
+     * once because the old rule's twelve-line proximity window found an
+     * unrelated `.length` and called it guarded. That window is the heuristic
+     * the rewrite replaced with an exact base-identifier lookup.
+     */
 
     // (e) const-map fallback in a gate. Marker read from RAW lines: it is a
     // comment, and stripped() would have removed it.
@@ -398,6 +412,67 @@ ok(
   `${sitesScanned} check/ok/assert site(s) found; expected at least ${MINIMUM_SITES}. ` +
     `A broken matcher reports the same clean sweep as a clean repo.`,
 );
+
+/* -------------------------------------- OBSERVATION BOUNDARY presence ----- */
+
+/*
+ * Gate-backlog item 11. Every gate script and `verify-live` states what it
+ * CANNOT see, in its header. That has been true by discipline since the
+ * practice started, and discipline is what this file exists to replace.
+ *
+ * Hard rule 7 is the reason: a gate that feeds a module its own stored output
+ * cannot see what the transport does to the input, and a gate that byte-compares
+ * an artifact against a fresh generation compares the wrong output to itself and
+ * agrees. A gate shipped without that note is a gate whose blind spot nobody
+ * wrote down, and the blind spot is the part that bites.
+ *
+ * SCOPE, and why it is not the lint's own file list: the lint above EXCLUDES
+ * check-assertions.mjs, because its failure messages quote every pattern it
+ * forbids. That exclusion must not leak into this assertion, or this file would
+ * be the one gate allowed to ship without a boundary note. Read fresh.
+ *
+ * `check-all.mjs` is a RUNNER rather than a gate and is included anyway: it
+ * carries a note, and the note it carries is a real one (it cannot tell a gate
+ * that passed from one that passed vacuously).
+ */
+
+/** MEASURED 2026-08-11: the deepest occurrence across 25 files is line 7. */
+const HEADER_LINES = 60;
+
+/** Floor. 25 files carry it today; below this the scan has stopped matching. */
+const MINIMUM_BOUNDARY_FILES = 23;
+
+const BOUNDARY_MARKER = "OBSERVATION BOUNDARY";
+
+const boundaryFiles = readdirSync(SCRIPTS)
+  .filter((name) => (name.startsWith("check-") || name === "verify-live.mjs") && name.endsWith(".mjs"))
+  .sort();
+
+ok(
+  "the boundary scan found gate scripts to examine",
+  boundaryFiles.length >= MINIMUM_BOUNDARY_FILES,
+  `${boundaryFiles.length} file(s) matched; expected at least ${MINIMUM_BOUNDARY_FILES}. ` +
+    `An empty list would report every gate compliant by examining none.`,
+);
+
+let boundaryCarrying = 0;
+for (const name of boundaryFiles) {
+  // BYTES first, same reason as the lint above: a file carrying a NUL is
+  // invisible to text tooling, and that is the file most likely to hide one.
+  const header = readFileSync(join(SCRIPTS, name))
+    .toString("utf8")
+    .split("\n")
+    .slice(0, HEADER_LINES)
+    .join("\n");
+  const carries = header.includes(BOUNDARY_MARKER);
+  if (carries) boundaryCarrying += 1;
+  ok(
+    `boundary: ${name} states what it cannot see`,
+    carries,
+    `no ${BOUNDARY_MARKER} note in the first ${HEADER_LINES} lines. Hard rule 7: a gate ` +
+      `that ships without naming its blind spot is a gate whose blind spot nobody wrote down.`,
+  );
+}
 
 /* ------------------------------------------------------------- findings -- */
 

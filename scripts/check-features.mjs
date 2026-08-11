@@ -78,6 +78,9 @@ const ROUTES_PATH = join(root, "app", "routes.ts");
 let checks = 0;
 let failures = 0;
 
+/** CRLF collapsed to LF, so a match is a property of CONTENT, not of a host. */
+const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n");
+
 /**
  * @param {string} label
  * @param {boolean} condition
@@ -252,9 +255,24 @@ for (const feature of features) {
       verified += 1;
       referencedGates.add(anchor.gate);
       const file = gates.get(anchor.gate) ?? "";
+      /*
+       * BOTH SIDES NORMALIZED, the `check:claude-md` and `check:migrations`
+       * form. Gate-backlog item 14.
+       *
+       * `core.autocrlf` is true on this host, so a file git has not rewritten
+       * since `cab1c9e` pinned the tree sits CRLF on disk while its committed
+       * blob is LF. Every anchor today is single line, so this changes nothing
+       * now; the first MULTI-LINE anchor written against a stale-CRLF disk file
+       * would match locally and fail in every fresh checkout and clone. That is
+       * exactly the class that bit `check:migrations` on 2026-08-10, caught by
+       * `check:head`, and it is cheaper to normalize than to diagnose.
+       *
+       * The needle is normalized too: a JSON file edited on this host can carry
+       * CRLF inside a string just as readily as the script can.
+       */
       const present =
         Boolean(file) && existsSync(file)
-          ? readFileSync(file, "utf8").includes(anchor.text)
+          ? normalizeEol(readFileSync(file, "utf8")).includes(normalizeEol(anchor.text))
           : false;
       ok(
         `${label}: ${anchor.gate} still asserts "${anchor.text}"`,
