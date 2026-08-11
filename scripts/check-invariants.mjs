@@ -1802,6 +1802,199 @@ try {
   fail("the FTS write and count check could not run", String(error));
 }
 
+/* --------------- 8. every search_docs READER composes the predicate ------ */
+
+/*
+ * THE OTHER HALF OF HARD RULE 1, and it was uncovered until 2026-08-11.
+ *
+ * Section 6 asserts that every `posts` reader composes the predicate. But the
+ * public search surface does not read `posts`: it reads `search_docs`, in raw
+ * SQL, and section 6's scan is for `.from(<posts binding>)`. So the two
+ * `zeroState` queries restated the visibility rule inline and nothing looked at
+ * them.
+ *
+ * MEASURED BEFORE FIXING: deleting the entire predicate from the zeroState tag
+ * query left check:invariants, check:search, check:content, check:urls and
+ * check:policy ALL GREEN. That is the exact shape of a draft leak on /search's
+ * zero state, invisible to every offline instrument.
+ *
+ * The external audit reported this and gave the wrong reason (it said section 6
+ * should have covered the file, and that the `d.` alias was the obstacle).
+ * Section 6 DOES cover the file: a Drizzle-shaped no-predicate `posts` read
+ * planted there fires by name. The alias was only why the queries could not
+ * CALL the shared function. The real gap is the one this section closes: a
+ * whole TABLE nobody was watching.
+ *
+ * TWO LEVELS, because two of the four readers compose it indirectly:
+ *
+ *   direct    `visibilityClause(...)` in the same function
+ *   indirect  `filters.clause`, the FilterSql that buildFilters assembles
+ *
+ * The indirection is only trustworthy if buildFilters itself composes the
+ * predicate, so that is asserted separately rather than assumed.
+ */
+
+console.log("\n  8. every search_docs reader composes the visibility predicate");
+
+try {
+  const DIRECT = /visibilityClause\s*\(/;
+  const INDIRECT = /\bfilters\s*\.\s*clause\b/;
+
+  /*
+   * CLASSIFIED PER SQL LITERAL, not per function body, and both halves of that
+   * were learned by getting it wrong first.
+   *
+   * `DELETE FROM search_docs` CONTAINS the substring `FROM search_docs`, so a
+   * body-level `FROM` test reported both of publish.server.ts's write helpers
+   * as unpredicated readers. And `runIndex` reaches the table through
+   * `JOIN search_docs d`, never `FROM`, so a `FROM`-only test missed the very
+   * reader most worth checking.
+   *
+   * A literal is a READ when it is a SELECT that names the table in either
+   * position; it is a WRITE when it names it after a write verb. Writes carry
+   * no predicate and must not.
+   */
+  const READS = /\bSELECT\b[\s\S]*?\b(?:FROM|JOIN)\s+search_docs\b/i;
+  const WRITES = /\b(?:INSERT\s+INTO|DELETE\s+FROM|UPDATE)\s+search_docs\b/i;
+  /** Backtick, single- and double-quoted literals, which is where the SQL is. */
+  const LITERALS = /`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
+
+  /** @param {string} source */
+  function topLevelFns(source) {
+    const lines = source.replace(/\r\n/g, "\n").split("\n");
+    const out = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const m = lines[i].match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+      if (!m) continue;
+      let end = lines.length;
+      for (let j = i + 1; j < lines.length; j += 1) {
+        if (lines[j] === "}") { end = j; break; }
+      }
+      out.push({ name: m[1], body: lines.slice(i, end + 1).join("\n") });
+    }
+    return out;
+  }
+
+  const readers = [];
+  let writeSites = 0;
+  let scanned = 0;
+  for (const file of sourceFiles(join(root, "app"))) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (rel.endsWith(".d.ts")) continue;
+    scanned += 1;
+    const code = stripComments(readFileSync(file, "utf8"));
+    if (!/search_docs/.test(code)) continue;
+    for (const fn of topLevelFns(code)) {
+      /*
+       * ONE QUERY, not one function, and the difference is the whole assertion.
+       *
+       * The first version asked whether the FUNCTION composed the predicate.
+       * `zeroState` runs TWO queries, so deleting the predicate from one of
+       * them left the other satisfying the test and the audit's own repro
+       * passed. Per-function granularity is exactly the hole this section
+       * exists to close.
+       *
+       * A `prepare(` argument is one statement. Extracted by counting
+       * parentheses from the call, so an interpolation containing parens does
+       * not truncate it.
+       */
+      for (const call of fn.body.matchAll(/\bprepare\s*\(/g)) {
+        const open = (call.index ?? 0) + call[0].length - 1;
+        let depth = 0;
+        let end = open;
+        for (let i = open; i < fn.body.length; i += 1) {
+          if (fn.body[i] === "(") depth += 1;
+          else if (fn.body[i] === ")") {
+            depth -= 1;
+            if (depth === 0) { end = i; break; }
+          }
+        }
+        let statement = fn.body.slice(open, end + 1);
+
+        /*
+         * `prepare(sql)` where `sql` was assembled above is the dominant shape:
+         * runIndex and runBrowse both build the string first. Resolving the
+         * bare identifier back to its assignment is what makes those two
+         * visible; without it this scan saw 2 readers where there are 3, and
+         * the two it missed were the ones serving actual search results.
+         */
+        const bareArg = statement.match(/^\(\s*([A-Za-z_$][\w$]*)\s*\)$/);
+        if (bareArg) {
+          const assign = fn.body.match(
+            new RegExp(`\\b(?:const|let)\\s+${bareArg[1]}\\s*=\\s*\`(?:\\\\.|[^\`\\\\])*\``),
+          );
+          if (assign) statement = assign[0];
+        }
+
+        const literals = statement.match(LITERALS) ?? [];
+        if (literals.some((l) => WRITES.test(l) && !READS.test(l))) {
+          writeSites += 1;
+          continue;
+        }
+        if (!literals.some((l) => READS.test(l))) continue;
+        readers.push({
+          key: `${rel}::${fn.name}`,
+          direct: DIRECT.test(statement),
+          indirect: INDIRECT.test(statement),
+        });
+      }
+    }
+  }
+
+  ok(
+    "the search_docs reader scan examined a plausible number of files",
+    scanned >= 80,
+    `${scanned} scanned; a green result below would mean nothing`,
+  );
+  /*
+   * NON-EMPTY SCOPE. Zero readers found means the SQL was reworded and this
+   * whole section would report perfect compliance by examining nothing.
+   *
+   * MEASURED THROUGH THIS SCAN: 4 reader QUERIES. runIndex and runBrowse
+   * contribute one each and zeroState contributes two, because the unit here is
+   * a `prepare()` call rather than a function. Tight rather than slack, for the
+   * same reason as check:secrets' three-file workers floor: a set this small
+   * cannot absorb slack without losing the ability to notice one disappearing.
+   */
+  ok(
+    "the scan found search_docs readers at all",
+    readers.length >= 4,
+    `${readers.length} found; expected at least 4 (runIndex, runBrowse, and zeroState's ` +
+      `two). The SELECT shape changed and this scan no longer sees it.`,
+  );
+
+  const bare = readers.filter((r) => !r.direct && !r.indirect);
+  ok(
+    "every search_docs reader composes visibilityClause, directly or via filters.clause",
+    bare.length === 0,
+    bare.map((r) => `${r.key} selects from search_docs with no visibility predicate`).join("\n        ") +
+      "\n        Hard rule 1 reaches the search index too. Compose visibilityClause(), " +
+      "passing NO_ALIAS for an unaliased query.",
+  );
+
+  // The indirection is only worth trusting if its source composes the rule.
+  const searchSrc = stripComments(
+    readFileSync(join(root, "app", "lib", "search", "search.server.ts"), "utf8"),
+  );
+  const buildFilters = topLevelFns(searchSrc).find((f) => f.name === "buildFilters");
+  ok(
+    "buildFilters, which every indirect reader relies on, composes the predicate",
+    Boolean(buildFilters) && DIRECT.test(buildFilters?.body ?? ""),
+    !buildFilters
+      ? "buildFilters no longer exists, so filters.clause is an unverified indirection"
+      : "buildFilters no longer calls visibilityClause, so every reader trusting " +
+        "filters.clause is composing something else",
+  );
+
+  console.log(
+    `     ${readers.length} reader(s): ${readers.filter((r) => r.direct).length} direct, ` +
+      `${readers.filter((r) => !r.direct && r.indirect).length} via filters.clause, ` +
+      `${writeSites} write statement(s) excluded`,
+  );
+} catch (error) {
+  fail("the search_docs reader check could not run", String(error));
+}
+
 /* ------------------------------------------------------------------ report */
 
 rmSync(join(root, "node_modules", ".cache", "check-invariants"), {

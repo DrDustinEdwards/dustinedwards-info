@@ -147,10 +147,41 @@ function truncateWords(value: string, limit: number): string {
  * asserted instead. `check:invariants` runs both against a fixture of post
  * states and fails if they ever admit different rows, which is why this is
  * exported.
+ *
+ * THE ALIAS IS A PARAMETER, since 2026-08-11, and that is the whole point of
+ * this change. `zeroState` below runs two aliasless queries over the same
+ * table, and because this function hardcoded `d.` they could not call it. So
+ * they restated the rule inline, and the codebase carried FOUR statements of
+ * one predicate while only two of them were bound to each other.
+ *
+ * Measured before fixing: deleting the entire predicate from the zeroState tag
+ * query left check:invariants, check:search, check:content, check:urls and
+ * check:policy all green. Section 6 does cover this file (a Drizzle-shaped
+ * no-predicate `posts` read here fires by name), but these queries read
+ * `search_docs`, not `posts`, so nothing looked at them.
+ *
+ * Pass NO_ALIAS for an unaliased query.
  */
-export function visibilityClause(): string {
-  return `d.status = 'published' AND (d.publish_at IS NULL OR d.publish_at <= ?)`;
+export function visibilityClause(alias = "d"): string {
+  const q = alias ? `${alias}.` : "";
+  return `${q}status = 'published' AND (${q}publish_at IS NULL OR ${q}publish_at <= ?)`;
 }
+
+/**
+ * The unaliased argument, as a NAMED CONSTANT rather than a bare `""`.
+ *
+ * This is not style. `check:invariants` section 5 extracts raw SQL string
+ * literals and binds their column names to the schema. Writing
+ * `visibilityClause("")` puts an empty string literal immediately between two
+ * SQL literals, and the extractor then reads across the boundary: it reported
+ * `now` and `tags.get` as columns of `search_docs`, on a query that has
+ * neither. Measured on the first two attempts at this change, in both the
+ * `${...}` and the `+` concatenation forms.
+ *
+ * Passing a named constant keeps every string literal at these call sites SQL,
+ * which is what that scan assumes. Do not inline it back.
+ */
+const NO_ALIAS = "";
 
 interface FilterSql {
   clause: string;
@@ -437,9 +468,16 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
   const needles = [...parsed.terms, ...parsed.phrases].map((t) => t.toLowerCase());
 
   const tagRows = await env.DB.prepare(
-    `SELECT DISTINCT doc_tags FROM search_docs
-     WHERE doc_tags <> '' AND status = 'published'
-       AND (publish_at IS NULL OR publish_at <= ?)`,
+    // The predicate comes from visibilityClause(NO_ALIAS), not from a hand-copy. This
+    // query has no alias, which is why that function now takes one.
+    //
+    // CONCATENATED, not interpolated. check:invariants section 5 extracts raw
+    // SQL string literals to bind their column names to the schema, and a
+    // `${...}` inside the template truncates the literal it can see: the first
+    // attempt made it report `now` and `tags.get` as columns of search_docs.
+    // A `+` keeps the literal whole and parseable.
+    `SELECT DISTINCT doc_tags FROM search_docs WHERE doc_tags <> '' AND ` +
+      visibilityClause(NO_ALIAS),
   )
     .bind(nowSeconds)
     .all<{ doc_tags: string }>();
@@ -459,10 +497,10 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
     .slice(0, 6);
 
   const recent = await env.DB.prepare(
-    `SELECT uid, url, title, publish_at FROM search_docs
-     WHERE anchor IS NULL AND type = 'post' AND status = 'published'
-       AND (publish_at IS NULL OR publish_at <= ?)
-     ORDER BY publish_at DESC LIMIT 5`,
+    `SELECT uid, url, title, publish_at FROM search_docs ` +
+      `WHERE anchor IS NULL AND type = 'post' AND ` +
+      visibilityClause(NO_ALIAS) +
+      ` ORDER BY publish_at DESC LIMIT 5`,
   )
     .bind(nowSeconds)
     .all<{ uid: string; url: string; title: string; publish_at: number | null }>();
