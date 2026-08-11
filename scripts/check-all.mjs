@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 21;
+const MINIMUM_GATES = 22;
 
 /**
  * Which gates need something this machine may not have.
@@ -90,6 +90,11 @@ const TIERS = {
   // boundary. It cannot see the emitted bundle, so a secret inlined into a
   // client chunk by a mis-split is invisible here; the header says so.
   "check:secrets": "offline",
+  // sha256s drizzle/*.sql against drizzle/manifest.json, both directions. Reads
+  // files and nothing else. It proves the files match the manifest, NOT that
+  // the manifest was honest when written and NOT what the live database
+  // applied; that half is check:invariants --remote.
+  "check:migrations": "offline",
   // Extracts a ref into a throwaway worktree and runs the offline tier THERE.
   // Offline: git plus a node_modules junction, no network. It is the only gate
   // that observes a CHECKOUT rather than the disk, so it sees uncommitted work

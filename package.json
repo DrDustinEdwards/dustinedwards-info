@@ -42,6 +42,7 @@
     "check:claude-md": "node scripts/check-claude-md.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:head": "node scripts/check-head.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "check:tests": "npm test --silent",
     "test": "node --test \"test/**/*.test.mjs\"",
     "ship": "node scripts/ship.mjs",
