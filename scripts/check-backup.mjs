@@ -29,6 +29,7 @@
  */
 
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";
+import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
@@ -124,23 +125,22 @@ function actualTables(target) {
   const rows = JSON.parse(match[0])[0].results;
   if (rows.length === 0) throw new Error("sqlite_master returned no tables");
 
-  /** @type {Set<string>} */
-  const virtual = new Set();
-  for (const row of rows) {
-    if (row.sql && /CREATE\s+VIRTUAL\s+TABLE/i.test(row.sql)) virtual.add(row.name);
-  }
-
-  /** @type {Set<string>} */
-  const shadow = new Set();
-  /** @type {Set<string>} */
-  const real = new Set();
-  for (const row of rows) {
-    if (virtual.has(row.name) || PLATFORM_TABLES.has(row.name)) continue;
-    const isShadow = [...virtual].some((v) => row.name.startsWith(`${v}_`));
-    if (isShadow) shadow.add(row.name);
-    else real.add(row.name);
-  }
-  return { real, virtual, shadow };
+  /*
+   * Classified by scripts/lib/sqlite-tables.mjs since 2026-08-10, the same
+   * module check:invariants sections 4, 5 and 7 read. The rules here and there
+   * were already identical, and the comment above this function said so; one
+   * module makes that a fact rather than a coincidence that held twice.
+   *
+   * PLATFORM_TABLES stays HERE. It is a property of where these rows came from,
+   * a live D1 carrying Cloudflare bookkeeping, not a property of SQLite, so the
+   * shared classifier does not know about it and should not.
+   */
+  const classified = classifySqliteTables(rows);
+  return {
+    real: new Set(classified.real.filter((n) => !PLATFORM_TABLES.has(n))),
+    virtual: new Set(classified.virtual),
+    shadow: new Set(classified.shadow.filter((n) => !PLATFORM_TABLES.has(n))),
+  };
 }
 
 /** @param {Set<string>} set */
