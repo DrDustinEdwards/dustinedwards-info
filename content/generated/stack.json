@@ -145,6 +145,7 @@
   ],
   "gates": [
     "check:admin-ui",
+    "check:assertions",
     "check:backup",
     "check:charts",
     "check:claude-md",

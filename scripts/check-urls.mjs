@@ -149,6 +149,7 @@ for (const probe of fixture.cases) {
     // text carrying the offending url, so the author can see what happened.
     assert(
       `render: ${probe.label} renders the source as visible text`,
+      // SCOPED-BY: the whole fragment is the scope. The question is whether the blocked markdown survived as TEXT anywhere in the output, not where.
       html.includes("]("),
       `markup was ${JSON.stringify(html.slice(0, 120))}`,
     );
