@@ -1,0 +1,100 @@
+{
+  "note": "The machine-readable half of the enhancement law (Capsid: progressive-enhancement.md). Hard rule 9: every enhancement on a public reading route declares a NAMED fallback, even when the fallback is nothing. Gated by check:features, which asserts that every file in app/enhance/ appears here, that every entry names a fallback, and that every named selector or route actually exists. It does NOT assert the prose is true, and it cannot see the wire: whether a route is genuinely server-complete with script off is verify-live's job, not a gate's.",
+  "fallbackKinds": {
+    "route": "The fallback is a server-rendered route. It must be declared in app/routes.ts.",
+    "selector": "The fallback is server-rendered markup. Every identifier in the selector must appear in app/ OUTSIDE app/enhance/, because markup an enhancement creates for itself is not a fallback.",
+    "none": "There is deliberately no fallback markup. Requires a why, because an unwritten nothing is an omission and a written one is a decision."
+  },
+  "enhancements": [
+    {
+      "id": "reading-progress",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "A scroll-linked bar across the top of a post showing how far through it you are.",
+      "fallback": "Nothing. The bar is absent and the post is unchanged.",
+      "fallbackKind": "none",
+      "fallbackAt": null,
+      "why": "It is decoration and carries no information the post does not. Writing the nothing down is what makes it a decision rather than an omission."
+    },
+    {
+      "id": "toc-scrollspy",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Highlights the table of contents entry for the section currently on screen.",
+      "fallback": "The table of contents is server-rendered anchor links and navigates either way. Only the highlight is lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".post-toc",
+      "why": null
+    },
+    {
+      "id": "code-copy-and-label",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Adds a copy button and a language label to each code block.",
+      "fallback": "The code is already fully highlighted by the build pipeline, including highlighted line ranges, and is selectable. Only the button is lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": "pre[data-lang]",
+      "why": null
+    },
+    {
+      "id": "heading-copy-link",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Turns each heading's autolink into a click-to-copy for the section URL.",
+      "fallback": "The heading autolinks are ordinary anchors and are already navigable and linkable.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".heading-anchor",
+      "why": null
+    },
+    {
+      "id": "footnote-previews",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Shows a footnote's text in a hover preview card without leaving the paragraph.",
+      "fallback": "Footnotes are ordinary bidirectional links. The jump down and the jump back both work.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".prose .footnotes",
+      "why": null
+    },
+    {
+      "id": "image-lightbox",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Intercepts a click on a post image and opens it full size in an overlay.",
+      "fallback": "The image itself, at its rendered size. Only the zoom is lost.",
+      "fallbackKind": "none",
+      "fallbackAt": null,
+      "why": "The markup wraps nothing: an image is an image, with no surrounding anchor to fall back to. Measured 2026-08-11 against content/generated/posts.json: 6 images across 12 posts, ZERO wrapped in a link. blog.ts's own header table and progressive-enhancement.md both claimed images link to their original; the implementation comment at blog.ts lightbox() is the accurate record and the other two were wrong."
+    },
+    {
+      "id": "copy-as-markdown",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Upgrades the markdown link into a clipboard copy, keeping the link intact.",
+      "fallback": "The control is an ordinary anchor to the post's .md twin, which is a real route and serves the source.",
+      "fallbackKind": "route",
+      "fallbackAt": "/blog/:slug.md",
+      "why": null
+    },
+    {
+      "id": "theme-toggle",
+      "module": "app/enhance/theme.ts",
+      "enhancement": "Applies the theme in place, without a round trip.",
+      "fallback": "The control is a POST form to /theme. The action sets the cookie and the server renders the choice into the first byte. Both paths end at the same cookie.",
+      "fallbackKind": "route",
+      "fallbackAt": "/theme",
+      "why": null
+    },
+    {
+      "id": "command-palette",
+      "module": "app/enhance/palette.ts",
+      "enhancement": "Upgrades the header's search link into a modal command palette with live results.",
+      "fallback": "The header ships an ordinary anchor to /search, which is a full server-rendered search page. If the chunk fails to load, fails to parse, or throws on its first line, the anchor is still an anchor.",
+      "fallbackKind": "route",
+      "fallbackAt": "/search",
+      "why": null
+    },
+    {
+      "id": "ask-answers",
+      "module": "app/enhance/ask.ts",
+      "enhancement": "Streams a generated answer with citations above the classic results, on surfaces that already rendered them.",
+      "fallback": "/search is exactly what it was before Layer 2: classic server-rendered results. Loaded by dynamic import only when the server said the binding exists.",
+      "fallbackKind": "route",
+      "fallbackAt": "/search",
+      "why": null
+    }
+  ]
+}
