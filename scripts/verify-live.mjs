@@ -227,6 +227,7 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
     );
     check(
       "css: theme selectors survived minification",
+      // SCOPED-BY: the whole stylesheet is the scope. These are selectors, which exist only in CSS rule position; there is no narrower region to name.
       css.includes(":root:not([data-theme])") && css.includes("[data-theme=dark]"),
     );
   }
@@ -434,6 +435,7 @@ const ASK_PROBE_LIMIT = 3;
     check("blog: page 2 exists and renders", fetched[1]?.status === 200, `got ${fetched[1]?.status}`);
     check(
       "blog: page 1 links to page 2",
+      // SCOPED-BY: the whole document is the scope. `page=2` is a query parameter that occurs only inside an href, so the document already delimits it.
       fetched[0].text.includes("page=2"),
     );
   }
@@ -593,7 +595,21 @@ const ASK_PROBE_LIMIT = 3;
   // <!-- --> between adjacent text nodes, which silently defeats a naive match.
   const page = strip(text);
 
-  check("roster: the page says Roster", page.includes("Roster"));
+  /*
+   * DELIMITED TO THE HEADING, and the unscoped form could not fail.
+   *
+   * `page.includes("Roster")` matched the word anywhere in the document, and
+   * the site header renders `<NavLink to="/phage-discovery">Roster</NavLink>`
+   * on EVERY page. Deleting the `<h1>` entirely left this assertion green.
+   * Found by the 2026-08-07 audit, fixed here; it is one of the two instances
+   * check:assertions was written to catch, and it flagged this exact line on
+   * its first run.
+   */
+  check(
+    "roster: the page's own heading says Roster",
+    />Roster<\/h1>/.test(page),
+    "the <h1> is missing or renamed; the nav link alone must not satisfy this",
+  );
 
   // All nine cohort years. Asserted individually rather than as a count, so a
   // failure names the year that is missing instead of reporting "8 of 9".
@@ -659,9 +675,17 @@ const ASK_PROBE_LIMIT = 3;
     `${bindingsShown} of ${stack.bindings.length} binding names found`,
   );
 
-  // The hand-written half, which no generator produces.
+  /*
+   * The hand-written half, which no generator produces.
+   *
+   * DELIMITED to the heading element, matching the binding sweep twelve lines
+   * above. The unscoped `page.includes(f.name)` was satisfied by a feature name
+   * appearing ANYWHERE, including inside another feature's prose, and several
+   * of these names are ordinary sentences. Flagged by check:assertions on its
+   * first run; the second of the two instances that gate was written to catch.
+   */
   const featuresShown = features.features.filter((/** @type {any} */ f) =>
-    page.includes(f.name),
+    page.includes(`>${f.name}<`),
   ).length;
   check(
     "colophon: every feature in the anchors file is on the page",
@@ -693,6 +717,7 @@ const ASK_PROBE_LIMIT = 3;
   const llms = await get("/llms.txt");
   check(
     "colophon: the live llms.txt mentions /colophon",
+    // SCOPED-BY: llms.txt is a flat manifest with no elements to scope to. Presence anywhere in it IS the assertion.
     llms.text.includes("/colophon"),
     `llms.txt ${llms.status}, ${llms.text.length} bytes. ` +
       `If this fails, sync:content -- --remote has not run since the file changed.`,
@@ -1402,8 +1427,46 @@ const ASK_PROBE_LIMIT = 3;
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+
+/*
+ * THE FLOOR. Same fail-closed shape as MINIMUM_GATES in check-all.mjs.
+ *
+ * This harness had NO floor on its own pass count until 2026-08-11, so 90 of
+ * its ~100 static sites could have stopped executing and the run would still
+ * report "0 failed" and exit 0. Whole sections sit inside `if` blocks and loops
+ * over fetched data: a route that starts 404ing, an empty corpus, or an early
+ * return skips its assertions silently, and a shrinking pass count at zero
+ * failures is exactly what that looks like from outside.
+ *
+ * Set just under the ~100 static `check()` sites. It is a FLOOR, not a target.
+ * The live count varies legitimately: the Ask rate limit SKIPS probes rather
+ * than failing them, and several loops take their arity from the corpus.
+ * Moving this number is a deliberate edit in the same commit as the change that
+ * moves it.
+ */
+const MINIMUM_CHECKS = 90;
+const executed = passed + failures.length;
+const short = executed < MINIMUM_CHECKS;
+
+/*
+ * THE FAILURE LIST PRINTS FIRST, and the floor never short-circuits it.
+ *
+ * A first draft exited on the floor before reaching this block, so a run that
+ * was both short AND failing would report the count and swallow every failing
+ * assertion's NAME: the diagnostics thrown away by the very check that exists
+ * to make a short run diagnosable. Both conditions are reported, then one exit.
+ */
 if (failures.length > 0) {
   console.error("\nFAILURES:");
   for (const f of failures) console.error(`  - ${f}`);
-  process.exit(1);
 }
+
+if (short) {
+  console.error(
+    `\nREFUSED: only ${executed} assertion(s) executed, expected at least ${MINIMUM_CHECKS}.\n` +
+      `  Sections were SKIPPED rather than failing. A pass count is not coverage:\n` +
+      `  count the assertions that ran, not the ones that passed.`,
+  );
+}
+
+process.exit(failures.length > 0 || short ? 1 : 0);
