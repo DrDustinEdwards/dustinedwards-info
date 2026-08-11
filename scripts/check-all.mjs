@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 22;
+const MINIMUM_GATES = 23;
 
 /**
  * Which gates need something this machine may not have.
@@ -90,6 +90,10 @@ const TIERS = {
   // boundary. It cannot see the emitted bundle, so a secret inlined into a
   // client chunk by a mis-split is invisible here; the header says so.
   "check:secrets": "offline",
+  // Lints the OTHER gate scripts for assertions that cannot fail. Reads source
+  // text under scripts/ and nothing else. It proves an assertion is DELIMITED,
+  // never that the delimitation is the right one; that judgement stays human.
+  "check:assertions": "offline",
   // sha256s drizzle/*.sql against drizzle/manifest.json, both directions. Reads
   // files and nothing else. It proves the files match the manifest, NOT that
   // the manifest was honest when written and NOT what the live database

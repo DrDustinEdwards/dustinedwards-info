@@ -1516,6 +1516,22 @@ try {
   /** @type {string[]} */
   const countViolations = [];
 
+  /*
+   * `owned` is what DELETE_FTS is built from, so it gets its OWN guard rather
+   * than inheriting one. The two assertions above cover `classified.virtual`
+   * and `classified.shadow`, which IMPLY this list is non-empty; an implication
+   * is not a guard, and it is the first thing that would break if
+   * ftsOwnedTables changed what it returns. An empty alternation makes
+   * DELETE_FTS match every `DELETE FROM`, so this section would report zero
+   * violations by matching everything. Found by check:assertions rule (d).
+   */
+  ok(
+    "the fts-owned table list is non-empty before it becomes a RegExp",
+    owned.length > 0,
+    `ftsOwnedTables returned nothing from ${classified.virtual.length} index(es); ` +
+      `an empty alternation would make DELETE_FTS match every DELETE FROM`,
+  );
+
   const owningAlternation = owned.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
   const DELETE_FTS = new RegExp(`\\bDELETE\\s+FROM\\s+(${owningAlternation})\\b`, "i");
   const COUNT_INDEX = new RegExp(

@@ -652,7 +652,21 @@ const raw = (draft, firstPublished) =>
   for (const situation of SITUATIONS) {
     const prior = raw(situation.priorDraft, situation.priorFirst);
     for (const transition of transitionsFor(situation.state, situation.ever)) {
+      /*
+       * ONE assertion whose condition varies, not a pair of literals.
+       *
+       * This was `assert(label, false, …)` in the catch and
+       * `assert(label, true)` on the success path. The success half COULD NOT
+       * FAIL: reaching the line was the entire signal, and the literal made the
+       * assertion count claim coverage it did not have.
+       *
+       * Found by check:assertions on the run immediately after its rule (a) was
+       * fixed to span lines. It is the eighth instance of hard rule 10's class
+       * in this repo and the FIRST found by a machine rather than by a person.
+       */
       let result;
+      /** @type {unknown} */
+      let thrown = null;
       try {
         result = decide({
           actor: { kind: "admin" },
@@ -660,15 +674,15 @@ const raw = (draft, firstPublished) =>
           priorRaw: prior,
         });
       } catch (error) {
-        assert(
-          `weld: ${situation.label} / ${transition.id} is legal under the policy`,
-          false,
-          error instanceof Error ? error.message : String(error),
-        );
-        continue;
+        thrown = error;
       }
 
-      assert(`weld: ${situation.label} / ${transition.id} is legal under the policy`, true);
+      assert(
+        `weld: ${situation.label} / ${transition.id} is legal under the policy`,
+        thrown === null,
+        thrown instanceof Error ? thrown.message : String(thrown),
+      );
+      if (thrown !== null || !result) continue;
       reached.add(result.outcome);
 
       const claimed = CLAIMS[/** @type {keyof typeof CLAIMS} */ (transition.id)];

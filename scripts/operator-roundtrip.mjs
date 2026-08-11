@@ -125,12 +125,28 @@ const draft = (published) =>
 async function publicSurfaces() {
   /** @type {Record<string, any>} */
   const out = {};
-  out.blogIndex = (await pub("/blog")).text.includes(SLUG);
-  out.rss = (await pub("/blog/rss.xml")).text.includes(SLUG);
-  out.sitemap = (await pub("/sitemap.xml")).text.includes(SLUG);
-  out.llms = (await pub("/llms.txt")).text.includes(SLUG);
-  out.llmsFull = (await pub("/llms-full.txt")).text.includes(SLUG);
-  out.feedJson = (await pub("/blog/feed.json")).text.includes(SLUG);
+  /*
+   * SCOPED-BY: the whole document, deliberately, on all six surfaces. A slug
+   * present ANYWHERE on an index, a feed or a manifest is exactly the
+   * propagation being asserted; narrowing to one element would test the
+   * template rather than the propagation.
+   *
+   * Collapsed from six near-identical lines into one loop, so there is ONE
+   * assertion site to annotate. check:assertions reads one line up, and a rule
+   * that scanned far enough to cover a six-line block would let an annotation
+   * drift away from the site it excuses.
+   */
+  for (const [key, path] of /** @type {[string, string][]} */ ([
+    ["blogIndex", "/blog"],
+    ["rss", "/blog/rss.xml"],
+    ["sitemap", "/sitemap.xml"],
+    ["llms", "/llms.txt"],
+    ["llmsFull", "/llms-full.txt"],
+    ["feedJson", "/blog/feed.json"],
+  ])) {
+    // SCOPED-BY: whole-document presence is the assertion; see above.
+    out[key] = (await pub(path)).text.includes(SLUG);
+  }
 
   // Scope the search assertion to the results themselves. The zero state
   // renders a recent-writing list carrying the same links, and a page-wide
@@ -271,6 +287,7 @@ if (PHASE === "b") {
     String(edit.body?.data?.firstPublished),
   );
   const page = await pub(`/blog/${SLUG}`);
+  // SCOPED-BY: the needle is a full distinctive sentence written into the post body for this probe, so it cannot appear in chrome or another post.
   check("the live page shows the edit", page.text.includes("Edited by the operator after publication"));
 
   /* --- 5. Unpublish, then republish ------------------------------------- */
