@@ -77,17 +77,26 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPTS = join(root, "scripts");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-11: 32 scripts
- * and 484 assertion sites, after comment-stripping and self-exclusion. A raw
- * count before stripping reads differently, and taking that would put the floor
- * above what the gate can actually see.
+ * Floors, MEASURED THROUGH THIS GATE'S OWN PIPELINE, after comment-stripping
+ * and self-exclusion. A raw count before stripping reads differently, and
+ * taking that would put a floor above what the gate can actually see.
  *
- * Set well under, because their job is catching a BROKEN SCAN, which reports
- * zero or near-zero, not tracking growth. A tight floor would fail on ordinary
- * refactoring while detecting nothing extra.
+ * MINIMUM_SITES: was 360 against a then-measured 484, RE-MEASURED 595 this
+ * session, now 520 (about 13 percent under).
+ *
+ * The old pair was set "well under" on the reasoning that a floor's job is
+ * catching a scan that returns zero. That reasoning is half right and the half
+ * it misses is the one that bites: 360 against 595 left a 39 percent blind
+ * zone, so a third of the gate scripts could stop being read while the floor
+ * reported itself satisfied. The failure that actually happens is partial, not
+ * total. Same lesson as verify-live's 90-against-206.
+ *
+ * MINIMUM_FILES stays at 24 against 33: the file list is a directory read
+ * rather than a parse, it moves by one when a gate is added, and the count is
+ * printed every run.
  */
 const MINIMUM_FILES = 24;
-const MINIMUM_SITES = 360;
+const MINIMUM_SITES = 520;
 
 let checks = 0;
 let failures = 0;
@@ -370,7 +379,15 @@ for (const { name, path } of files) {
       const [, subject, needle] = varMatch;
       const root = subject.split(".")[0];
       // A bare identifier needle carries no delimiter by construction.
-      if ((docNames.has(root) || DOC_VARS.test(root)) && !/^(?:key|prefix)$/.test(needle)) {
+      /*
+       * NO NEEDLE-NAME EXEMPTION. A draft excused needles literally named `key`
+       * or `prefix`, on the theory that those are keys rather than page text.
+       * The pre-audit sweep tested it by removal and the result was IDENTICAL:
+       * nothing in this repo depended on it. An exclusion that excludes nothing
+       * is surface area, and this one would have silently excused a genuine
+       * unscoped match the day someone named a variable `key`.
+       */
+      if (docNames.has(root) || DOC_VARS.test(root)) {
         record("b:unscoped-document-match");
       }
     }
