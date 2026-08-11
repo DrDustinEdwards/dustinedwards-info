@@ -114,8 +114,8 @@ async function expectedTables() {
 async function actualTables(target) {
   /*
    * RETRIED ONCE. This exact read died with SQLITE_CANTOPEN on 2026-08-05 and
-   * again on 2026-08-11, both times clean on an immediate retry. Reads only:
-   * the export below is not wrapped, and neither is anything that writes.
+   * again on 2026-08-11, both times clean on an immediate retry. The per-table
+   * export below is wrapped too, since 2026-08-11; nothing that WRITES is.
    */
   const result = await retryRead(
     () => {
@@ -207,8 +207,29 @@ async function main() {
   const empty = [];
   for (const name of sorted(real)) {
     const out = path.join(dir, `${name}.sql`);
-    const exported = wrangler(
-      `d1 export ${DB_NAME} ${target} --no-schema --table ${name} --output "${out}"`,
+    /*
+     * RETRIED ONCE, since 2026-08-11. This file's header used to say the export
+     * was deliberately unwrapped, and the pre-audit sweep's `check:all` failed
+     * right here: "per-table export failed for post_tags", clean on an
+     * immediate re-run. That is the SIXTH instance of the transient Cloudflare
+     * read class and the first to land outside retryRead's coverage.
+     *
+     * An export is a READ. It pulls rows and writes a LOCAL temp file, so a
+     * second attempt overwrites its own output and lands nowhere else. Nothing
+     * that writes to D1 or R2 is wrapped, and that stays true.
+     *
+     * The throw is load-bearing: wrangler RETURNS on a failed command rather
+     * than rejecting, so without it retryRead has nothing to catch.
+     */
+    const exported = await retryRead(
+      () => {
+        const r = wrangler(
+          `d1 export ${DB_NAME} ${target} --no-schema --table ${name} --output "${out}"`,
+        );
+        if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 200));
+        return r;
+      },
+      { label: `check:backup per-table export (${name}, ${target})` },
     );
     if (exported.status !== 0) {
       console.error(exported.stdout);
