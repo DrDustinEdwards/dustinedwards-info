@@ -1314,21 +1314,106 @@ const VISIBILITY_EXEMPT = {
     "job. Reached only from /admin routes, which are behind Better Auth.",
 };
 
+/**
+ * What `posts` is CALLED in this file, aliases included.
+ *
+ * THE SCAN USED TO HARDCODE THE NAME, and an import alias walked straight past
+ * it. Measured by the pre-audit sweep of 2026-08-11: a file containing
+ *
+ *     import { posts as postsTable } from "~/db/schema";
+ *     return db.select().from(postsTable);        // no predicate
+ *
+ * left this section reporting 77 checks and 0 failures. The identical file
+ * written `import { posts }` and `.from(posts)` reported 77 and 1, naming it.
+ * The ONLY difference was the alias, and this is hard rule 1's instrument.
+ *
+ * It was not hypothetical. `app/lib/operator/api.server.ts` has imported posts
+ * under an alias since the operator API shipped, with two live query sites this
+ * section had never once looked at.
+ *
+ * Any named import of `posts` counts, from any module path. There is no other
+ * `posts` export in this repo, and scanning a same-named import from somewhere
+ * else would cost a false positive, which is the safe direction.
+ *
+ * @param {string} code comment-stripped source
+ * @returns {string[]} local binding names, always including the plain one
+ */
+function postsBindings(code) {
+  /*
+   * THE MODULE PATH IS ALLOWED TO BE EMPTY, and that is not sloppiness.
+   *
+   * This file's `stripped()` blanks every string literal to `""` so that a
+   * later pass can find SQL literals without tripping over an apostrophe in
+   * prose. By the time this function sees the source,
+   *
+   *     import { posts as postsTable } from "~/db/schema";
+   *
+   * reads `import { posts as postsTable } from "";`. A needle written
+   * `["'][^"']+["']` against the RAW form matched nothing here, and the first
+   * draft of this resolver scored zero aliased imports in a repo that has one.
+   * Measure the needle through the pipeline that feeds it.
+   */
+  const names = new Set(["posts"]);
+  for (const m of code.matchAll(/import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*["'][^"']*["']/g)) {
+    for (const raw of m[1].split(",")) {
+      const spec = raw.trim();
+      const aliased = spec.match(/^posts\s+as\s+(\w+)$/);
+      if (aliased) names.add(aliased[1]);
+    }
+  }
+  // `import * as schema from "./schema"` then `.from(schema.posts)`.
+  for (const m of code.matchAll(/import\s*\*\s*as\s+(\w+)\s*from\s*["'][^"']*["']/g)) {
+    names.add(`${m[1]}.posts`);
+  }
+  return [...names];
+}
+
 try {
-  const QUERY = /\.from\(\s*posts\s*\)/g;
   const PREDICATE = /\b(publiclyVisible|visibilityClause|isBlogPost)\s*\(/;
+
+  /** `.from(<binding>)` for this file's bindings. Guarded non-empty below. */
+  const queryFor = (/** @type {string[]} */ bindings) =>
+    new RegExp(
+      `\\.from\\(\\s*(?:${bindings
+        .map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join("|")})\\s*\\)`,
+      "g",
+    );
 
   // Chokepoint: which files under app/ query the posts table at all?
   const queryingFiles = [];
   let appFilesScanned = 0;
+  let aliasedFiles = 0;
   for (const file of sourceFiles(join(root, "app"))) {
     const rel = relative(root, file).split(sep).join("/");
     if (rel.endsWith(".d.ts")) continue;
     appFilesScanned += 1;
-    const code = joinConcatenatedLiterals(stripped(readFileSync(file, "utf8")));
-    const hits = (code.match(QUERY) ?? []).length;
-    if (hits > 0) queryingFiles.push({ rel, hits });
+    // stripped() ONLY. joinConcatenatedLiterals merges concatenated string
+    // literals across lines, which destroys the column-0 brace structure the
+    // function extractor below depends on. It exists for the SQL-literal passes
+    // and buys nothing here: `.from(posts)` is not a string literal. Using it
+    // scored 18 query sites in a file that has 2, and reported isToolName as a
+    // posts reader.
+    const code = stripped(readFileSync(file, "utf8"));
+    const bindings = postsBindings(code);
+    // NON-EMPTY BY CONSTRUCTION, asserted anyway: an empty alternation
+    // collapses to `()` and would match every `.from()` in the repo.
+    if (bindings.length === 0) {
+      fail(`no posts binding resolved for ${rel}`, "the alternation would match everything");
+      continue;
+    }
+    if (bindings.length > 1) aliasedFiles += 1;
+    const hits = (code.match(queryFor(bindings)) ?? []).length;
+    if (hits > 0) queryingFiles.push({ rel, hits, bindings });
   }
+
+  ok(
+    "the binding resolver is exercised by at least one aliased import",
+    aliasedFiles > 0,
+    `no file under app/ imports posts under an alias or a namespace. The resolver ` +
+      `would then be untested by the repo itself, and a plain-name scan would score ` +
+      `identically. Verify with a plant before trusting a green result here.`,
+  );
 
   ok(
     "the caller scan examined a plausible number of files under app/",
@@ -1337,42 +1422,116 @@ try {
   );
 
   const CHOKEPOINT = "app/db/index.ts";
-  ok(
-    `every .from(posts) in app/ is in ${CHOKEPOINT}`,
-    queryingFiles.every((f) => f.rel === CHOKEPOINT),
-    queryingFiles
-      .filter((f) => f.rel !== CHOKEPOINT)
-      .map((f) => `${f.rel} queries posts ${f.hits}x, outside the DB layer`)
-      .join("\n        ") +
-      "\n        A reader outside the one reviewable file is how hard rule 1 gets bypassed " +
-      "without anyone deciding to bypass it.",
-  );
 
-  const dbSource = readFileSync(join(root, CHOKEPOINT), "utf8");
-  const dbLines = stripped(dbSource).split("\n");
-
-  /*
-   * Top-level functions in this file close with a brace at column 0. Verified
-   * by accounting: every `.from(posts)` in the file must land inside one of the
-   * extracted bodies, and that count is asserted below rather than assumed. If
-   * the file's style ever changes, the accounting assertion fails rather than
-   * the scan silently missing a function.
+  /**
+   * Top-level functions, extracted by the file's own brace style: a `function`
+   * at column 0, closing at a `}` at column 0.
+   *
+   * CRLF IS COLLAPSED FIRST, and that is load-bearing rather than tidy. The
+   * close test is an exact compare against `"}"`, so on a CRLF file every line
+   * reads `"}\r"`, no function ever finds its end, and every body runs to EOF.
+   * Measured 2026-08-11 on app/lib/operator/api.server.ts, which is CRLF on
+   * disk: NINE functions each swallowed the file's TWO query sites and the
+   * accounting read 18 of 2. app/db/index.ts hid this for months by happening
+   * to be LF. The accounting assertion is what surfaced it.
+   *
+   * @param {string} source comment-stripped source
    */
-  const functions = [];
-  for (let i = 0; i < dbLines.length; i += 1) {
-    const m = dbLines[i].match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
-    if (!m) continue;
-    let end = dbLines.length;
-    for (let j = i + 1; j < dbLines.length; j += 1) {
-      if (dbLines[j] === "}") { end = j; break; }
+  function topLevelFunctions(source) {
+    const lines = source.replace(/\r\n/g, "\n").split("\n");
+    const out = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const m = lines[i].match(/^(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+      if (!m) continue;
+      let end = lines.length;
+      for (let j = i + 1; j < lines.length; j += 1) {
+        if (lines[j] === "}") { end = j; break; }
+      }
+      out.push({ name: m[1], body: lines.slice(i, end + 1).join("\n") });
     }
-    functions.push({ name: m[1], body: dbLines.slice(i, end + 1).join("\n") });
+    return out;
   }
 
-  const queriers = functions.filter((f) => QUERY.test(f.body) || f.body.includes(".from(posts)"));
-  const totalSites = (stripped(dbSource).match(QUERY) ?? []).length;
+  /**
+   * Posts readers permitted OUTSIDE the chokepoint file, by FILE AND FUNCTION.
+   *
+   * FUNCTION-SCOPED, never file-scoped, for the reason section 6 was built with
+   * in the first place: a module-scoped exemption would excuse every future
+   * reader anyone adds to that file, which is the vacuous form.
+   *
+   * `syncStatus` was found on 2026-08-11 by fixing the alias blindness above.
+   * It had been outside this section's view since the operator API shipped.
+   */
+  const CHOKEPOINT_EXEMPT = {
+    "app/lib/operator/api.server.ts::syncStatus":
+      "the operator's diagnostic. It reports d1Posts (every row) ALONGSIDE " +
+      "d1PubliclyVisible (the predicate applied), and the whole point is that the " +
+      "two can disagree: comparing them is how store drift is detected. An " +
+      "unpredicated count is the measurement, not a leak. Behind OPERATOR_TOKEN, " +
+      "not a public route, and it returns counts rather than rows.",
+  };
+
+  /** Querying functions outside the chokepoint, file-qualified. */
+  const outsideQueriers = [];
+  for (const f of queryingFiles.filter((q) => q.rel !== CHOKEPOINT)) {
+    const code = stripped(readFileSync(join(root, f.rel), "utf8"));
+    const q = queryFor(f.bindings);
+    for (const fn of topLevelFunctions(code)) {
+      if ((fn.body.match(q) ?? []).length > 0) {
+        outsideQueriers.push({ key: `${f.rel}::${fn.name}`, rel: f.rel, ...fn });
+      }
+    }
+    const accountedHere = topLevelFunctions(code).reduce(
+      (sum, fn) => sum + ((fn.body.match(q) ?? []).length),
+      0,
+    );
+    ok(
+      `every posts query in ${f.rel} landed inside an extracted function`,
+      accountedHere === f.hits,
+      `${accountedHere} of ${f.hits} accounted for. The extraction missed some, so the ` +
+        `exemption assertions below do not cover this file.`,
+    );
+  }
+
+  const unexplainedOutside = outsideQueriers.filter((f) => !(f.key in CHOKEPOINT_EXEMPT));
+  ok(
+    `every .from(posts) outside ${CHOKEPOINT} is a named exemption`,
+    unexplainedOutside.length === 0,
+    unexplainedOutside
+      .map((f) => `${f.key} queries posts outside the DB layer`)
+      .join("\n        ") +
+      "\n        A reader outside the one reviewable file is how hard rule 1 gets bypassed " +
+      "without anyone deciding to bypass it. If it is deliberate, add it to " +
+      "CHOKEPOINT_EXEMPT with the reason.",
+  );
+
+  // The other direction: an exemption naming a reader that no longer exists is
+  // permission nobody audits.
+  for (const key of Object.keys(CHOKEPOINT_EXEMPT)) {
+    ok(
+      `chokepoint exemption ${key} still names a live posts reader`,
+      outsideQueriers.some((f) => f.key === key),
+      `${key} no longer queries posts, or was renamed or moved. Remove the exemption.`,
+    );
+  }
+
+  const dbSource = readFileSync(join(root, CHOKEPOINT), "utf8");
+  const dbCode = stripped(dbSource);
+  const dbBindings = postsBindings(dbCode);
+  const QUERY = queryFor(dbBindings);
+
+  /*
+   * Verified by accounting: every posts query in the file must land inside one
+   * of the extracted bodies, and that count is asserted below rather than
+   * assumed. If the file's style ever changes, the accounting assertion fails
+   * rather than the scan silently missing a function.
+   */
+  const functions = topLevelFunctions(dbCode);
+
+  const queriers = functions.filter((f) => (f.body.match(QUERY) ?? []).length > 0);
+  const totalSites = (dbCode.match(QUERY) ?? []).length;
   const accounted = queriers.reduce(
-    (sum, f) => sum + ((f.body.match(/\.from\(\s*posts\s*\)/g) ?? []).length),
+    (sum, f) => sum + ((f.body.match(QUERY) ?? []).length),
     0,
   );
 
