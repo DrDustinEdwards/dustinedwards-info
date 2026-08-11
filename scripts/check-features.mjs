@@ -82,6 +82,37 @@ let failures = 0;
 const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n");
 
 /**
+ * Comments removed, so a match is a property of CODE rather than of prose.
+ *
+ * ONE implementation, used by BOTH readers in this file. It used to exist only
+ * inside `declaredRoutes()`, and the assertion-anchor match a hundred lines
+ * below ran against raw bytes. The pre-audit sweep defeated that directly:
+ * deleting the assertion `worker returned a different fixture count` from
+ * check-charts.mjs and leaving its text in a comment left this gate reporting
+ * 276 checks and 0 failures. The anchor's entire promise is that a claim on the
+ * colophon links to the thing that PROVES it, and the thing was gone.
+ *
+ * The trap was already named in this file's own header, and the fix already
+ * existed twenty lines away. That is the part worth remembering: the gate knew
+ * about prose matching, applied the cure to one of its two readers, and shipped
+ * the other for a month.
+ *
+ * LINE STRUCTURE IS PRESERVED. A block comment becomes the same number of
+ * newlines it spanned, not a single space, so a MULTI-LINE anchor still matches
+ * across code that had a comment between its lines. check:assertions learned
+ * this the expensive way when collapsing comments moved every reported line.
+ *
+ * The `[^:]` guard on line comments keeps `https://` from being read as one.
+ *
+ * @param {string} source
+ */
+function stripped(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => "\n".repeat((m.match(/\n/g) ?? []).length))
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+}
+
+/**
  * @param {string} label
  * @param {boolean} condition
  * @param {string} [detail]
@@ -113,12 +144,11 @@ function ok(label, condition, detail = "") {
  * avoids.
  */
 function declaredRoutes() {
-  const source = readFileSync(ROUTES_PATH, "utf8")
-    // Comments first: this file's own prose names paths like /phage-discovery
-    // and /colophon, and a scan that read them would report routes that are
-    // only mentioned. Same trap check:logo and check:contrast both hit.
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  // Comments first: this file's own prose names paths like /phage-discovery
+  // and /colophon, and a scan that read them would report routes that are only
+  // mentioned. Same trap check:logo and check:contrast both hit, and the same
+  // one the assertion-anchor match below fell into. One `stripped()` now.
+  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
 
   /** @type {Set<string>} */
   const paths = new Set();
@@ -172,10 +202,21 @@ ok(
   features.length > 0,
   "no features, so every check below would pass vacuously",
 );
+/*
+ * FLOOR: was >= 10, MEASURED 34 this session through declaredRoutes(), now
+ * >= 30 (about 12 percent under).
+ *
+ * The old value could not detect the failure most likely to happen here. The
+ * admin subtree contributes TWELVE nested children; if the parser ever stopped
+ * seeing nested `route()` calls it would return 22, comfortably over 10, and
+ * nothing would say so. The admin features anchor to gates rather than routes,
+ * so no other assertion would have failed either.
+ */
 ok(
   "routes.ts parsed to a plausible number of routes",
-  routes.size >= 10,
-  `parsed ${routes.size}; the parser has probably stopped matching this file's style`,
+  routes.size >= 30,
+  `parsed ${routes.size}; expected at least 30. The parser has stopped matching this ` +
+    `file's style, most likely for the nested children under the admin subtree.`,
 );
 ok(
   "package.json declares gates",
@@ -272,7 +313,7 @@ for (const feature of features) {
        */
       const present =
         Boolean(file) && existsSync(file)
-          ? normalizeEol(readFileSync(file, "utf8")).includes(normalizeEol(anchor.text))
+          ? stripped(normalizeEol(readFileSync(file, "utf8"))).includes(normalizeEol(anchor.text))
           : false;
       ok(
         `${label}: ${anchor.gate} still asserts "${anchor.text}"`,
@@ -682,11 +723,20 @@ const serverSources = serverRenderedSources(join(root, "app"));
 // NON-EMPTY SCOPE. A walk that returned nothing would make every selector
 // assertion below fail closed rather than pass, but the count is asserted so
 // the reason is named rather than inferred from a wall of failures.
+/*
+ * FLOOR: was > 20, MEASURED 105 this session through this gate's own walk, now
+ * >= 92 (about 12 percent under).
+ *
+ * The old value left an 81 percent blind zone: four fifths of app/ could stop
+ * being walked and the selector sweep would still report itself satisfied. A
+ * floor that only catches a walk returning nothing is not catching the failure
+ * that actually happens, which is a walk that stops descending.
+ */
 ok(
-  "the server-rendered source scope is non-empty",
-  serverSources.length > 20,
-  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/; the ` +
-    `walker has stopped matching this tree`,
+  "the server-rendered source scope is non-empty and complete",
+  serverSources.length >= 92,
+  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/; expected at ` +
+    `least 92. The walker has stopped matching this tree, or stopped descending into it.`,
 );
 
 const sourceBlobs = serverSources.map((file) => normalizeEol(readFileSync(file, "utf8")));
@@ -772,6 +822,11 @@ console.log(
 console.log(
   `     kinds: ${kindCounts.route} route, ${kindCounts.selector} selector ` +
     `(${selectorTokensChecked} identifier(s) checked), ${kindCounts.none} deliberate nothing`,
+);
+// The selector sweep's denominator, PRINTED. Its floor is set against this
+// number, and a floor whose subject is invisible cannot be re-measured.
+console.log(
+  `     ${serverSources.length} server-rendered file(s) searched, excluding app/enhance/`,
 );
 console.log(
   `     NOT asserted here: that any route is server-complete with script off. ` +
