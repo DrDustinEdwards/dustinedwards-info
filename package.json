@@ -44,6 +44,7 @@
     "check:head": "node scripts/check-head.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:assertions": "node scripts/check-assertions.mjs",
+    "check:hooks": "node scripts/check-hooks.mjs",
     "check:tests": "npm test --silent",
     "test": "node --test \"test/**/*.test.mjs\"",
     "ship": "node scripts/ship.mjs",
