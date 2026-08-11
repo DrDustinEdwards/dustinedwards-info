@@ -47,6 +47,7 @@ import { spawnSync } from "node:child_process";
 
 import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
+import { retryRead } from "./lib/retry.mjs";
 import { ASSET_MANIFEST_PATH, walkPublic } from "./build-assets.mjs";
 import { bucketNames } from "./lib/wrangler-config.mjs";
 
@@ -205,7 +206,14 @@ async function main() {
   /** @type {Array<{ key: string, size: number, uploaded: string, etag: string }>} */
   const objects = [];
   for (const [binding, bucket] of Object.entries(BUCKETS)) {
-    const listed = await listAllObjects({ bucket, remote: target === "--remote" });
+    // RETRIED ONCE. The R2 list HUNG on 2026-08-07 with a 400 carrying no
+    // CF-R2-Error header, taking check:all past a ten minute timeout, and was
+    // clean on retry at 27s. retryRead wraps a timeout as well as a rejection
+    // precisely for that symptom. Read only.
+    const listed = await retryRead(
+      () => listAllObjects({ bucket, remote: target === "--remote" }),
+      { label: `check:media R2 list (${bucket})` },
+    );
     console.log(`  R2 ${bucket} (${binding}): ${listed.length} object(s)`);
     objects.push(...listed);
   }

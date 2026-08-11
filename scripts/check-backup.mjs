@@ -30,6 +30,7 @@
 
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
+import { retryRead } from "./lib/retry.mjs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
@@ -108,12 +109,26 @@ async function expectedTables() {
  * own shadows along without this script needing an edit.
  *
  * @param {string} target
- * @returns {{ real: Set<string>, virtual: Set<string>, shadow: Set<string> }}
+ * @returns {Promise<{ real: Set<string>, virtual: Set<string>, shadow: Set<string> }>}
  */
-function actualTables(target) {
-  const result = wrangler(
-    `d1 execute ${DB_NAME} ${target} --json --command ` +
-      `"SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;"`,
+async function actualTables(target) {
+  /*
+   * RETRIED ONCE. This exact read died with SQLITE_CANTOPEN on 2026-08-05 and
+   * again on 2026-08-11, both times clean on an immediate retry. Reads only:
+   * the export below is not wrapped, and neither is anything that writes.
+   */
+  const result = await retryRead(
+    () => {
+      const r = wrangler(
+        `d1 execute ${DB_NAME} ${target} --json --command ` +
+          `"SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;"`,
+      );
+      // A non-zero status is the failure here, not a throw, so it is raised
+      // deliberately: retryRead can only see a rejection.
+      if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 200));
+      return r;
+    },
+    { label: `check:backup sqlite_master read (${target})` },
   );
   if (result.status !== 0) {
     console.error(result.stdout);
@@ -153,7 +168,7 @@ async function main() {
   console.log(`check:backup verifying the per-table export path against ${target.slice(2)} D1`);
 
   const expected = await expectedTables();
-  const { real, virtual, shadow } = actualTables(target);
+  const { real, virtual, shadow } = await actualTables(target);
 
   console.log(`  migrations declare ${expected.size}: ${sorted(expected).join(", ")}`);
   console.log(`  database holds     ${real.size}: ${sorted(real).join(", ")}`);
