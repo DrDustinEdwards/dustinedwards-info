@@ -64,6 +64,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { joinConcatenatedLiterals } from "./lib/sql-literals.mjs";
 import { classifySqliteTables, ftsOwnedTables } from "./lib/sqlite-tables.mjs";
+import { retryRead } from "./lib/retry.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -761,9 +762,27 @@ try {
     const command = migrationTables
       .map((t) => `PRAGMA table_info(${t});`)
       .join(" ");
-    const proc = spawnSync(
-      `npx wrangler d1 execute dustinedwards --remote --json --command "${command}"`,
-      { cwd: root, encoding: "utf8", shell: true, maxBuffer: 32 * 1024 * 1024 },
+    /*
+     * RETRIED ONCE. Remote D1 reads have failed with Cloudflare error 10000
+     * twice, both clean immediately after. Read only; nothing here writes.
+     *
+     * THE THROW IS LOAD-BEARING. `spawnSync` RETURNS on a failed command, it
+     * does not reject, so wrapping it directly gives retryRead nothing to
+     * catch and the retry can never fire: an inert wrapper that reads as
+     * protection. Caught in review of this very commit, and it is the same
+     * class check:assertions exists to find. The non-zero status is raised
+     * deliberately so there is a rejection to retry on.
+     */
+    const proc = await retryRead(
+      () => {
+        const r = spawnSync(
+          `npx wrangler d1 execute dustinedwards --remote --json --command "${command}"`,
+          { cwd: root, encoding: "utf8", shell: true, maxBuffer: 32 * 1024 * 1024 },
+        );
+        if (r.status !== 0) throw new Error((r.stderr || r.stdout || "no output").slice(0, 200));
+        return r;
+      },
+      { label: "check:invariants live column schema read (--remote)" },
     );
     const match = (proc.stdout ?? "").match(/\[\s*\{[\s\S]*\}\s*\]/);
     if (!match) {

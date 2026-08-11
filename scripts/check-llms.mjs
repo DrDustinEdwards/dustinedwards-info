@@ -35,6 +35,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { retryRead } from "./lib/retry.mjs";
 import { createHash } from "node:crypto";
 
 const LLMS_PATH = "content/llms.txt";
@@ -119,10 +120,19 @@ const target = process.argv.includes("--remote")
     : null;
 
 if (target) {
-  const result = spawnSync(
-    `npx wrangler d1 execute ${DB_NAME} ${target} --json --command ` +
-      `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
-    { encoding: "utf8", shell: true },
+  // RETRIED ONCE. Remote D1 reads have failed with Cloudflare error 10000
+  // twice, both clean immediately after. Read only.
+  const result = await retryRead(
+    () => {
+      const r = spawnSync(
+        `npx wrangler d1 execute ${DB_NAME} ${target} --json --command ` +
+          `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
+        { encoding: "utf8", shell: true },
+      );
+      if (r.status !== 0) throw new Error((r.stdout || r.stderr || "no output").slice(0, 200));
+      return r;
+    },
+    { label: `check:llms settings row read (${target})` },
   );
   if (result.status !== 0) {
     console.log(`\n  FAIL  wrangler could not read the settings row (${target}).`);
