@@ -146,11 +146,22 @@ function walkAll(dir, out = []) {
 const scanned = NUL_ROOTS.flatMap((r) => (existsSync(join(root, r)) ? walkAll(join(root, r)) : []));
 const nulFiles = scanned.filter((f) => readFileSync(f).includes(0));
 
+/*
+ * FLOOR: was >= 50, MEASURED 158 this session through this walk, now >= 138
+ * (about 13 percent under).
+ *
+ * 50 left a 68 percent blind zone: `scripts/` and `workers/` could both drop
+ * out and `app/` alone would clear it. The class this preflight guards is a
+ * file whose bytes defeat text tooling, so a scan that quietly stops covering
+ * two thirds of the tree is precisely the failure it must not have.
+ */
 ok(
   "the NUL scan examined files",
-  scanned.length >= 50,
-  `${scanned.length} found under ${NUL_ROOTS.join(", ")}; a green result would mean nothing`,
+  scanned.length >= 138,
+  `${scanned.length} found under ${NUL_ROOTS.join(", ")}; expected at least 138. A root ` +
+    `has stopped being walked, or the walk stopped descending.`,
 );
+console.log(`  NUL preflight: ${scanned.length} file(s) under ${NUL_ROOTS.join(", ")}`);
 ok(
   "no source file contains a NUL byte",
   nulFiles.length === 0,

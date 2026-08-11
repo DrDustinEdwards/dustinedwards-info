@@ -107,8 +107,22 @@ const PATH = join(root, "CLAUDE.md");
 const TRUNCATION_LIMIT = 40000;
 const POINTER_LIMIT = 10000;
 
-/** Below this, the file is a stub and every shape assertion below is vacuous. */
-const MINIMUM_PLAUSIBLE = 1000;
+/**
+ * Below this, the file is a stub and every shape assertion below is vacuous.
+ *
+ * FLOOR: was 1000, MEASURED 9199 characters this session through this gate's
+ * own read, now 8000 (about 13 percent under).
+ *
+ * 1000 left an 88 percent blind zone. Nine tenths of this file could be deleted
+ * and every structural assertion below would still find its needle in what
+ * remained, because the needles all sit near the top. This file's whole job is
+ * to be what a session reads FIRST, so a large silent deletion is the failure
+ * most worth catching here, not an edge case.
+ *
+ * It now also detects a large DELIBERATE trim, which is intended: moving this
+ * number belongs in the same commit as the trim.
+ */
+const MINIMUM_PLAUSIBLE = 8000;
 
 let checks = 0;
 let failures = 0;
