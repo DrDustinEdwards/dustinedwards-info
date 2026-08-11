@@ -93,6 +93,7 @@ const TIERS = {
   // Lints the OTHER gate scripts for assertions that cannot fail. Reads source
   // text under scripts/ and nothing else. It proves an assertion is DELIMITED,
   // never that the delimitation is the right one; that judgement stays human.
+  // Also asserts every gate header states its own OBSERVATION BOUNDARY.
   "check:assertions": "offline",
   // Parses .claude/settings.json and asserts the hook wiring. It reads a file:
   // it cannot see whether Claude Code LOADED that file, whether a user-level
