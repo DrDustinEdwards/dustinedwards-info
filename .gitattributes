@@ -61,6 +61,41 @@
 # `scripts/check-config.mjs` had a second, quieter cost: being binary exempted
 # it from LF normalization, so its blob was stored CRLF while every other text
 # file was LF. Removing the byte let the rule above finally reach it.
+#
+# ## EXECUTED 2026-08-11: the working tree was normalized, and autocrlf is off
+#
+# The pin below governs what git STORES and what a fresh clone GETS. It could
+# not reach files already sitting on this disk: anything git had not rewritten
+# since `cab1c9e` kept its CRLF bytes locally while its blob was LF.
+#
+# Measured by the pre-audit sweep: 130 of 274 tracked files differed from their
+# committed blob in line endings ONLY, with zero content differences.
+# `git status` showed NOTHING, because `core.autocrlf=true` applied the same
+# conversion on the way in, so the rot was invisible to the tool most likely to
+# be asked about it.
+#
+# What it cost, measured rather than assumed: `check:invariants` section 6
+# extracts top-level functions by comparing a line to `"}"`. On a CRLF file
+# every line ends with a carriage return, so no function ever found its end and
+# every body ran to EOF. `app/lib/operator/api.server.ts` is one of the 130, and
+# nine of its functions each swallowed the file's two posts queries.
+# `app/db/index.ts` hid this for months by happening to be LF.
+#
+# The repair, once: each of the 130 was rewritten on disk with its own committed
+# blob, byte for byte, and `core.autocrlf` was set to FALSE FOR THIS REPOSITORY
+# ONLY. Global and system settings are untouched, because autocrlf true is the
+# right default for repositories that do not carry the pin below.
+#
+# Rebuilding `.git/index` was part of it and is worth recording. The index
+# stores each file's working-tree SIZE, those sizes were from the CRLF era, and
+# neither `update-index --refresh` nor `--really-refresh` would rewrite them:
+# `git status` reported 130 modified files while `git diff` was empty and every
+# blob SHA matched. The index was rebuilt from HEAD only after proving content
+# equality three ways.
+#
+# THE GATES WERE MADE LINE-ENDING AGNOSTIC ANYWAY. This normalization is the
+# belt and the gates are the braces. Do not let a future gate rely on the disk
+# having been cleaned.
 
 * text=auto eol=lf
 
