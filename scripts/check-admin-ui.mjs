@@ -58,10 +58,10 @@ const update = process.argv.includes("--update");
 
 let checks = 0;
 let failures = 0;
-/** @param {string} message */
-function fail(message) {
+/** @param {string} label */
+function fail(label) {
   failures += 1;
-  console.log(`\n  FAIL  ${message}`);
+  console.log(`\n  FAIL  ${label}`);
 }
 /** @param {string} label @param {boolean} ok @param {string} [detail] */
 function assert(label, ok, detail = "") {

@@ -170,9 +170,9 @@ let checks = 0;
 /** @type {string[]} */
 const failures = [];
 
-/** @param {string} msg */
-function fail(msg) {
-  failures.push(msg);
+/** @param {string} label */
+function fail(label) {
+  failures.push(label);
 }
 
 /**
