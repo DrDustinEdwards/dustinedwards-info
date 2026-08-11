@@ -18,9 +18,24 @@
  * edited after. The live half is `check:invariants --remote`, which compares
  * the migrations replayed into memory against the real schema.
  *
- * It reads bytes, so a line-ending change is a hash change. That is correct:
- * `.gitattributes` pins the whole tree to LF, and a migration whose bytes moved
- * is a migration whose bytes moved.
+ * ## IT HASHES NORMALIZED CONTENT, NOT RAW BYTES, and that was learned the hard
+ * way
+ *
+ * The first version hashed raw bytes on the reasoning that a migration whose
+ * bytes moved is a migration whose bytes moved. That made the manifest
+ * MACHINE-SPECIFIC. `core.autocrlf` is true on this host, so seven of the ten
+ * migrations sit CRLF in the working tree while their committed blobs are LF;
+ * hashes generated from disk therefore failed against every fresh checkout.
+ *
+ * Found by `check:head` on the run immediately after this gate was wired: it
+ * passed on disk in 0.7s and failed inside an extraction of the same commit.
+ * That is precisely the class check:head exists for, catching a defect in a
+ * gate written the same session.
+ *
+ * CRLF is collapsed to LF before hashing, so the hash is a property of the
+ * CONTENT. Nothing is lost: `.gitattributes` pins the whole tree to LF, so line
+ * endings are not a meaningful axis of change here, and a genuine content edit
+ * still moves the hash.
  *
  * ## Why this exists, and the honest note about its testing
  *
@@ -70,9 +85,19 @@ function ok(label, condition, detail = "") {
   }
 }
 
-/** @param {string} file */
+/**
+ * sha256 of the migration's CONTENT, with CRLF collapsed to LF.
+ *
+ * Normalized rather than raw for the reason in the header: with
+ * `core.autocrlf` true, a working tree and its own committed blobs disagree on
+ * line endings, so a raw-byte manifest is only valid on the machine that wrote
+ * it and fails in every checkout.
+ *
+ * @param {string} file
+ */
 function hashOf(file) {
-  return createHash("sha256").update(readFileSync(join(MIGRATIONS, file))).digest("hex");
+  const content = readFileSync(join(MIGRATIONS, file), "utf8").replace(/\r\n/g, "\n");
+  return createHash("sha256").update(content, "utf8").digest("hex");
 }
 
 console.log("\ncheck:migrations\n");

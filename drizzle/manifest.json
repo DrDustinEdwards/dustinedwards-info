@@ -1,14 +1,14 @@
 {
   "note": "sha256 of each migration. check:migrations compares against this. Adding a migration means adding its hash in the same commit.",
   "sha256": {
-    "0001_init.sql": "4edee678f4fae96de306c2bf62187a544e481fb8a1d8ccfff20b69c8e26b6be8",
-    "0002_blog_content.sql": "49def3a123c62e8e8f9adf8e36ae47f296fcbc2e153bb34c5b38d9a7e084d20c",
-    "0003_post_toc.sql": "93c2c092c7ed15b05be9b60422b27a981244171aaf9aa87b55843836eb3e67e1",
-    "0004_blog_discovery.sql": "e0a947626d98d4136a0ba17935fbab6dac22884dde196148f2350af6878d1256",
-    "0005_og_image.sql": "e5bed4e43ec8120348bd5cf31cbe605c990fb9008c76d1c297a98925d4dfbd15",
-    "0006_search_index.sql": "5bdada07d5a1ee065f237c4445734ed873309a2f1e732b7ee2c4d8de4b246888",
+    "0001_init.sql": "8e5137edc0989174b77aecc9298c4484e316c943faa3446463aa7ae8cac6d1c3",
+    "0002_blog_content.sql": "abba6c483bd0b2fd8b492f1d85a8384c55b16a2e730568637e9c5d38e72f9fe3",
+    "0003_post_toc.sql": "66fd963ca371125be8ef80bfe4b69b4bbaa1e1b451806fcfe4d39784a6d6f65c",
+    "0004_blog_discovery.sql": "1fe4af7d62aa8d5f9138cec7af9db5ff356f50c94727024cd05883f687e0fd90",
+    "0005_og_image.sql": "7c1aeed56c13868c24f2196cdebe362008b931621a2be54e6dfca9e7fc5ce8c9",
+    "0006_search_index.sql": "0bcd79fc3294e059fbedb60d2b265b239e5a7f61fc48cd3b8c2038f9b2a295a9",
     "0007_media.sql": "b898e9d5f4d321b51704200c29d9e837cd07627b905feb923e1c55be515690ad",
-    "0008_llms_seed.sql": "f5eebe7727126c2e2c2a2a6a0f7a25208e5e2cb422392e863371be7c3e40bfe6",
+    "0008_llms_seed.sql": "275e1e20bf2186e47c7d0ad560aeeb17effd510c6425fecb7b0666972c9674d2",
     "0009_media_index.sql": "8c41767e7a8b03cfa7df43de4a5e87b81b49536bc969d275a7d6bfb009ce6e50",
     "0010_media_role.sql": "a94f2ccf8f577174a7cd5f5d570dd1359f32b2c1ecebfd2001c357953bb0507d"
   }
