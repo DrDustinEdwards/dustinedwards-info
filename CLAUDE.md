@@ -15,7 +15,7 @@ Do this before touching code. It is not a formality: the recurring failure in th
 
 **The rules are NOT in this file. They are in `dustinedwards/core.md`, one list of fifteen.** Read them there. Restating them here is how they drifted: nineteen rules across two files, four duplicate pairs, three of them false as written. Ruling: `dustinedwards/decisions.md`, 2026-08-07.
 
-**The numbering is FROZEN and append-only.** `scripts/check-invariants.mjs:44` cites "hard rule 11" by number, so renumbering breaks a code comment. New rules take the next number; a retired rule keeps its number and is marked REMOVED.
+**The numbering is FROZEN and append-only.** `scripts/check-invariants.mjs:47` cites "hard rule 11" by number, so renumbering breaks a code comment. New rules take the next number; a retired rule keeps its number and is marked REMOVED.
 
 Each rule is marked ONE-LINER (a gate enforces it, and the gate is the detail) or PROSE (no gate can see it, so read it). What could be gated and is not: `dustinedwards/gate-backlog.md`.
 
@@ -70,6 +70,13 @@ Every script in `package.json`. Counts, timings and what each gate asserts live 
     npm run check:features
     npm run check:headers
     npm run check:claude-md              this file: size, and the hard-rules pointer near the top
+    npm run check:secrets                the secret-handling boundary, by path, both directions
+    npm run check:assertions             lints the other gates for assertions that cannot fail,
+                                         and asserts every gate states its OBSERVATION BOUNDARY
+    npm run check:hooks                  .claude/settings.json wiring. Reads, never writes
+    npm run check:migrations             sha256 of drizzle/*.sql against the manifest, both ways
+    npm run check:tests                  node --test over test/. The one gate asserting BEHAVIOUR
+    npm run check:head                   extracts a ref to a worktree and runs the offline tier THERE
     npm run check:invariants             -- --remote adds the live database
     npm run check:llms                   -- --remote for the live row
     npm run check:backup -- --local|--remote
