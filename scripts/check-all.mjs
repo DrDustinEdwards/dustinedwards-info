@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 23;
+const MINIMUM_GATES = 24;
 
 /**
  * Which gates need something this machine may not have.
@@ -94,6 +94,11 @@ const TIERS = {
   // text under scripts/ and nothing else. It proves an assertion is DELIMITED,
   // never that the delimitation is the right one; that judgement stays human.
   "check:assertions": "offline",
+  // Parses .claude/settings.json and asserts the hook wiring. It reads a file:
+  // it cannot see whether Claude Code LOADED that file, whether a user-level
+  // settings file overrode it, or whether any hook actually ran. A green run is
+  // compatible with enforcement being entirely off. It never writes.
+  "check:hooks": "offline",
   // sha256s drizzle/*.sql against drizzle/manifest.json, both directions. Reads
   // files and nothing else. It proves the files match the manifest, NOT that
   // the manifest was honest when written and NOT what the live database
