@@ -70,7 +70,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -149,10 +149,28 @@ if (!existsSync(SCRIPTS)) {
  * this lint exists to notice things other tools miss; skipping the file class
  * most likely to hide something would be the joke writing itself.
  */
-const files = readdirSync(SCRIPTS)
-  .filter((f) => f.endsWith(".mjs"))
-  .sort()
-  .map((name) => ({ name, path: join(SCRIPTS, name) }))
+/**
+ * RECURSIVE, since 2026-08-11. `scripts/lib/` was outside this lint entirely,
+ * because `readdirSync` does not descend and nobody had said so.
+ *
+ * Ten modules with twenty-two importers sat there unlinted, including
+ * `sqlite-tables.mjs`, the single table classifier that `check:backup` and
+ * `check:invariants` section 7 both depend on. The external audit proved it:
+ * identical unguarded-alternation code was flagged in `check-logo.mjs` and
+ * invisible in `lib/sqlite-tables.mjs`.
+ */
+/** @param {string} dir @param {{name: string, path: string}[]} out */
+function scriptFiles(dir, out = []) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) scriptFiles(path, out);
+    else if (entry.name.endsWith(".mjs")) out.push({ name: relative(SCRIPTS, path).split(sep).join("/"), path });
+  }
+  return out;
+}
+
+const files = scriptFiles(SCRIPTS)
+  .sort((a, b) => a.name.localeCompare(b.name))
   // Self-exclusion: this file's failure messages and regexes name every
   // pattern it forbids. Same shape as check-invariants section 1 and 5.
   .filter((f) => f.name !== "check-assertions.mjs");
@@ -169,7 +187,7 @@ let filesScanned = 0;
  * only check/ok/assert and was therefore blind to that entire file's
  * assertions, which the rule-(a) plant exposed.
  */
-const ASSERTERS = /\b(check|ok|assert|eq)\s*\(/;
+const ASSERTERS = /\b(check|ok|assert|assertThat|eq)\s*\(/;
 
 /**
  * (a) A literal `true` as the CONDITION. Matched across lines.
@@ -191,7 +209,7 @@ const ASSERTERS = /\b(check|ok|assert|eq)\s*\(/;
  * reporting a caught error.
  */
 const LITERAL_TRUE =
-  /\b(?:check|ok|assert|eq)\s*\(\s*(?:(?:"[^"]*"|'[^']*'|`[^`]*`)\s*,\s*)?true\s*[,)]/g;
+  /\b(?:check|ok|assert|assertThat|eq)\s*\(\s*(?:(?:"[^"]*"|'[^']*'|`[^`]*`)\s*,\s*)?true\s*[,)]/g;
 
 /** Whole-document variable names: fetched bodies and whole-file reads. */
 const DOC_VARS =
@@ -430,6 +448,147 @@ ok(
     `A broken matcher reports the same clean sweep as a clean repo.`,
 );
 
+
+/** @type {Map<string, {file: string, params: string}[]>} */
+const signatures = new Map();
+for (const { name, path } of files) {
+  const src = readFileSync(path).toString("utf8").replace(/\r\n/g, "\n");
+  for (const m of src.matchAll(
+    /^(?:export\s+)?(?:function|const)\s+(ok|check|assert|assertThat|eq|fail)\b[^\n]*?\(([^)]*)\)/gm,
+  )) {
+    const first = m[2].split(",")[0].trim().replace(/\s*=.*$/, "");
+    const list = signatures.get(m[1]) ?? [];
+    list.push({ file: name, params: first });
+    signatures.set(m[1], list);
+  }
+}
+
+
+/* ----------------------- (g) a STRING LITERAL in the condition slot -------- */
+
+/*
+ * The other half of the tenth class, and the half the rename does not reach.
+ *
+ * Giving the two shapes two names removes the CAUSE (one name meaning two
+ * things). It does not stop someone hand-writing
+ *
+ *     assert(1 === 2, "AUDIT: a false condition that must fail");
+ *
+ * in a label-first gate. Measured after the rename: still 98 checks, 0
+ * failures. The string lands in the condition slot, is truthy, and the check
+ * count goes UP. Rule (a) matches the literal `true` and never saw it.
+ *
+ * So the condition-position argument is examined directly. Which position that
+ * is comes from the helper's own definition, harvested above, rather than being
+ * assumed: label-first helpers are checked at argument 2, condition-first at
+ * argument 1.
+ */
+
+/** Splits a call's arguments at top level, ignoring commas inside nesting. */
+function topLevelArgs(/** @type {string} */ inner) {
+  const args = [];
+  let depth = 0;
+  let quote = "";
+  let current = "";
+  for (let i = 0; i < inner.length; i += 1) {
+    const c = inner[i];
+    if (quote) {
+      current += c;
+      if (c === quote && inner[i - 1] !== "\\") quote = "";
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") { quote = c; current += c; continue; }
+    if ("([{".includes(c)) depth += 1;
+    if (")]}".includes(c)) depth -= 1;
+    if (c === "," && depth === 0) { args.push(current.trim()); current = ""; continue; }
+    current += c;
+  }
+  if (current.trim()) args.push(current.trim());
+  return args;
+}
+
+/** helper name -> index of the argument that carries the CONDITION. */
+const conditionIndex = new Map();
+for (const [helper, defs] of signatures) {
+  const first = defs[0]?.params ?? "";
+  if (helper === "fail") continue; // reports, takes no condition
+  conditionIndex.set(helper, /^(ok|condition)$/.test(first) ? 0 : 1);
+}
+
+for (const { name, path } of files) {
+  const code = stripped(readFileSync(path).toString("utf8").replace(/\r\n/g, "\n"));
+  for (const m of code.matchAll(/\b(check|ok|assert|assertThat|eq)\s*\(/g)) {
+    const idx = conditionIndex.get(m[1]);
+    if (idx === undefined) continue;
+    const open = (m.index ?? 0) + m[0].length - 1;
+    let depth = 0;
+    let end = open;
+    for (let i = open; i < code.length; i += 1) {
+      if (code[i] === "(") depth += 1;
+      else if (code[i] === ")") { depth -= 1; if (depth === 0) { end = i; break; } }
+    }
+    const arg = topLevelArgs(code.slice(open + 1, end))[idx];
+    if (!arg) continue;
+    if (!/^["'`]/.test(arg)) continue;
+    findings.push({
+      rule: "g:string-literal-condition",
+      file: name,
+      line: (code.slice(0, m.index ?? 0).match(/\n/g) ?? []).length + 1,
+      text: `${m[1]}(...) argument ${idx + 1} is a string literal, which is always truthy`,
+    });
+  }
+}
+
+/* ------------------------------- helper signature consistency (f) --------- */
+
+/*
+ * ONE HELPER NAME, ONE ARGUMENT ORDER. The tenth vacuity class, found by the
+ * external audit of 2026-08-11 and not by anything here.
+ *
+ * `assert()` was defined SEVEN times across the gates with FOUR argument
+ * orders: three took the condition first, four took the label first. An
+ * assertion copied between two of them lands a non-empty STRING in the
+ * condition slot. A string is truthy, so the assertion can never fail, and the
+ * `checks` counter still increments, so the gate reports MORE coverage than
+ * before. Both directions were demonstrated:
+ *
+ *   assert(1 === 2, "must fail")  in a label-first gate  -> 98 checks, 0 failures
+ *   assert("must fail", 1 === 2)  in a condition-first gate -> 7 checks, 0 failures
+ *
+ * Rule (a) did not see either, because it matches the literal `true` and these
+ * conditions are strings.
+ *
+ * THE REPAIR WAS A RENAME, not an argument swap. Swapping 58 call sites at the
+ * end of a long session is exactly the operation that silently inverts an
+ * assertion, which is the failure this whole file exists to prevent. The three
+ * condition-first helpers are now `assertThat`, so the two shapes have two
+ * names and a copy between them is a ReferenceError rather than a silent pass.
+ *
+ * This assertion is what keeps it that way: it does not care WHICH order a name
+ * uses, only that every definition of that name agrees.
+ */
+// NON-EMPTY SCOPE: no helper definitions found means the matcher stopped
+// matching and every consistency claim below would be about nothing.
+ok(
+  "the signature scan found assertion helpers to compare",
+  signatures.size >= 4,
+  `${signatures.size} helper name(s) found across ${files.length} file(s); the ` +
+    `definition matcher has stopped reading this repo's style.`,
+);
+
+for (const [helper, defs] of [...signatures].sort()) {
+  const orders = new Set(defs.map((d) => d.params));
+  ok(
+    `${helper}() takes the same first argument everywhere it is defined`,
+    orders.size === 1,
+    defs.map((d) => `${d.file}: ${helper}(${d.params}, ...)`).join("\n        ") +
+      `\n        ${orders.size} different first arguments for one name. An assertion ` +
+      `copied between these files puts a truthy STRING in the condition slot, can ` +
+      `never fail, and still increments the check count. Give the shapes different ` +
+      `names, or make them agree.`,
+  );
+}
+
 /* -------------------------------------- OBSERVATION BOUNDARY presence ----- */
 
 /*
@@ -502,6 +661,9 @@ const RULES = {
   "d:unguarded-derived-regexp":
     "an empty alternation matches the empty string, so it matches everything. " +
     "Guard the derived list non-empty between derivation and construction",
+  "g:string-literal-condition":
+    "a string literal in the condition slot is always truthy, so the assertion cannot " +
+    "fail while still incrementing the check count. Check the helper argument order",
   "e:const-map-fallback":
     "a substituting fallback on a const map hides a missing key. Type the map by its " +
     "union, or mark the site JUSTIFIED SUBSTITUTION with the reason",

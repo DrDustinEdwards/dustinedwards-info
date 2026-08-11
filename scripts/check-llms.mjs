@@ -50,7 +50,7 @@ let failures = 0;
  * @param {string} label
  * @param {string} [detail]
  */
-function assert(ok, label, detail) {
+function assertThat(ok, label, detail) {
   checks += 1;
   if (ok) return;
   failures += 1;
@@ -75,25 +75,25 @@ const fileText = fileBytes.toString("utf8");
 
 // ---- 1. the file itself -----------------------------------------------------
 
-assert(fileBytes.length > 0, "content/llms.txt is not empty");
+assertThat(fileBytes.length > 0, "content/llms.txt is not empty");
 // An assertion that can pass by reading nothing is not an assertion.
-assert(
+assertThat(
   fileBytes.length > 200,
   "content/llms.txt is long enough to be the real document",
   `Only ${fileBytes.length} bytes. The retired virology seed was 247 bytes; the ` +
     `real document is far longer, so a short file here is the stale copy.`,
 );
-assert(
+assertThat(
   !fileText.includes("\r"),
   "content/llms.txt is LF-only",
   "It is pinned to LF in .gitattributes. CR here would sync CRLF into D1.",
 );
-assert(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
+assertThat(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
 
 // ---- 2. the route does not keep its own copy --------------------------------
 
 const route = readFileSync(ROUTE_PATH, "utf8");
-assert(
+assertThat(
   /import\s+\w+\s+from\s+["']\.\.\/\.\.\/content\/llms\.txt\?raw["']/.test(route),
   "the route imports content/llms.txt",
   "Without the import the fallback is a second copy that will drift.",
@@ -102,7 +102,7 @@ assert(
 // document. One line is fine (`const FALLBACK = llmsTxt;`); sixty is the bug.
 const literals = route.match(/`[^`]*`/g) ?? [];
 const longLiteral = literals.find((l) => l.split("\n").length > 5);
-assert(
+assertThat(
   longLiteral === undefined,
   "the route carries no inline copy of the document",
   longLiteral
@@ -154,14 +154,14 @@ if (target) {
     process.exit(1);
   }
   const rows = parsed?.[0]?.results ?? [];
-  assert(
+  assertThat(
     rows.length === 1,
     `the ${target.slice(2)} database has an llms.txt settings row`,
     `Found ${rows.length}. Run: npm run sync:content -- ${target}`,
   );
   if (rows.length === 1) {
     const rowBytes = Buffer.from(String(rows[0].value), "utf8");
-    assert(
+    assertThat(
       Buffer.compare(rowBytes, fileBytes) === 0,
       `the ${target.slice(2)} row is byte-identical to ${LLMS_PATH}`,
       `file ${fileBytes.length} bytes sha ${sha(fileBytes)}, ` +

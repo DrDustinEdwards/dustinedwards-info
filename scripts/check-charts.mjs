@@ -66,9 +66,9 @@ const CHILD_PROCESSES = 3;
 let passed = 0;
 let failed = 0;
 
-/** @param {boolean} condition @param {string} message */
-function assert(condition, message) {
-  if (condition) {
+/** @param {boolean} ok @param {string} message */
+function assertThat(ok, message) {
+  if (ok) {
     passed += 1;
   } else {
     failed += 1;
@@ -223,7 +223,7 @@ async function main() {
     /** @type {Set<string>} */
     const seen = new Set();
     for (let i = 0; i < IN_PROCESS_RENDERS; i += 1) seen.add(sha(renderFixture(fixture)));
-    assert(
+    assertThat(
       seen.size === 1,
       `${fixture.name}: ${IN_PROCESS_RENDERS} renders produced ${seen.size} distinct outputs, expected 1`,
     );
@@ -236,7 +236,7 @@ async function main() {
     const out = execFileSync(process.execPath, [HERE, "--hashes"], { encoding: "utf8" });
     /** @type {string[]} */
     const childHashes = JSON.parse(out);
-    assert(
+    assertThat(
       childHashes.length === baseline.length &&
         childHashes.every((hash, j) => hash === baseline[j]),
       `child process ${i + 1} produced different hashes than the parent`,
@@ -246,9 +246,9 @@ async function main() {
 
   // 3. Node vs Worker parity, under real workerd.
   const worker = await workerHashes();
-  assert(worker.length === baseline.length, "worker returned a different fixture count");
+  assertThat(worker.length === baseline.length, "worker returned a different fixture count");
   FIXTURES.forEach((fixture, i) => {
-    assert(
+    assertThat(
       worker[i] === baseline[i],
       `${fixture.name}: workerd SHA-256 ${worker[i]?.slice(0, 16)} != node ${baseline[i].slice(0, 16)}`,
     );
@@ -260,8 +260,8 @@ async function main() {
     const html = renderFixture(fixture);
     const multi = fixture.attrs.y.includes(",");
 
-    assert(!/#[0-9a-fA-F]{3,8}\b/.test(html), `${fixture.name}: chart output contains a hex colour literal`);
-    assert(
+    assertThat(!/#[0-9a-fA-F]{3,8}\b/.test(html), `${fixture.name}: chart output contains a hex colour literal`);
+    assertThat(
       /<svg[^>]*\srole="img"/.test(html),
       `${fixture.name}: the SVG is missing role="img"`,
     );
@@ -269,71 +269,71 @@ async function main() {
     // descendants presentational, so naming the figure would hide the caption
     // and the data table from the readers the table exists for.
     const label = html.match(/<svg[^>]*\saria-label="([^"]*)"/)?.[1];
-    assert(
+    assertThat(
       typeof label === "string" && label.length > 0,
       `${fixture.name}: the SVG has no non-empty aria-label`,
     );
-    assert(label === fixture.attrs.alt, `${fixture.name}: aria-label does not carry the alt text`);
-    assert(
+    assertThat(label === fixture.attrs.alt, `${fixture.name}: aria-label does not carry the alt text`);
+    assertThat(
       !/<figure[^>]*\srole="img"/.test(html),
       `${fixture.name}: role="img" is on the figure, which hides the data table from assistive tech`,
     );
-    assert(
+    assertThat(
       /<details class="chart-data"><summary>Data table<\/summary><table>/.test(html),
       `${fixture.name}: the equivalent data table is missing`,
     );
-    assert(
+    assertThat(
       html.indexOf("<details") > html.indexOf("</svg>"),
       `${fixture.name}: the data table must follow the chart, not precede it`,
     );
-    assert(!/swatch|-legend/.test(html), `${fixture.name}: charts label series directly, never with a legend`);
+    assertThat(!/swatch|-legend/.test(html), `${fixture.name}: charts label series directly, never with a legend`);
 
     // The model reshapes data into {x, series, value} internally. Those names
     // are an implementation detail and must never surface as an axis label:
     // Plot's default would print "x" and "value", which names the data
     // structure rather than the thing measured.
     const svg = html.slice(html.indexOf("<svg"), html.indexOf("</svg>"));
-    assert(
+    assertThat(
       !/>\s*[↑→]?\s*value\s*</.test(svg),
       `${fixture.name}: the internal "value" name leaked into an axis label`,
     );
-    assert(!/>\s*x\s*</.test(svg), `${fixture.name}: the internal "x" name leaked into an axis label`);
+    assertThat(!/>\s*x\s*</.test(svg), `${fixture.name}: the internal "x" name leaked into an axis label`);
     // A linear x scale prints the label with a trailing arrow ("run →"); a band
     // scale prints it bare. Both are the label, so the arrow is optional here.
-    assert(
+    assertThat(
       new RegExp(`>\\s*${fixture.attrs.x}\\s*→?\\s*<`).test(svg),
       `${fixture.name}: the x axis is not labelled with the author's column name "${fixture.attrs.x}"`,
     );
     if (!multi) {
-      assert(
+      assertThat(
         new RegExp(`>\\s*↑\\s*${fixture.attrs.y}\\s*<`).test(svg),
         `${fixture.name}: the y axis is not labelled with the author's column name "${fixture.attrs.y}"`,
       );
     }
-    assert(
+    assertThat(
       !/<h[1-6][\s>]/.test(html),
       `${fixture.name}: a heading here would inject the chart title into the post's table of contents`,
     );
     if (multi) {
       // design-tokens.md rule 3: hue is never the sole channel.
       for (const series of ["allowed", "refused"]) {
-        assert(
+        assertThat(
           new RegExp(`>${series}<`).test(html.slice(html.indexOf("<svg"), html.indexOf("</svg>"))),
           `${fixture.name}: series "${series}" has no direct label on the chart`,
         );
       }
-      assert(
+      assertThat(
         html.includes(CHART_SERIES_TOKENS[0]) && html.includes(CHART_SERIES_TOKENS[1]),
         `${fixture.name}: series are not drawn from the ratified palette ladder`,
       );
     } else {
-      assert(html.includes(CHART_SERIES_TOKENS[0]), `${fixture.name}: single series is not the first ladder token`);
+      assertThat(html.includes(CHART_SERIES_TOKENS[0]), `${fixture.name}: single series is not the first ladder token`);
     }
   }
 
   // Every token used is a real chart token from the ratified ladder.
   for (const token of CHART_SERIES_TOKENS) {
-    assert(/^var\(--chart-[a-z]+\)$/.test(token), `palette token "${token}" is not a var(--chart-*) reference`);
+    assertThat(/^var\(--chart-[a-z]+\)$/.test(token), `palette token "${token}" is not a var(--chart-*) reference`);
   }
 
   // 5. The paired negatives. Each is a rule the contract states.
@@ -395,16 +395,16 @@ async function main() {
     ].join("\n"),
     resolveImage: async () => ({ width: 1, height: 1 }),
   });
-  assert(
+  assertThat(
     /<figure class="chart-figure">/.test(inPipeline.html),
     "pipeline: the chart directive did not become a chart figure",
   );
-  assert(!/data-chart/.test(inPipeline.html), "pipeline: the internal data-chart marker leaked into output");
-  assert(
+  assertThat(!/data-chart/.test(inPipeline.html), "pipeline: the internal data-chart marker leaked into output");
+  assertThat(
     /<figcaption><p>A <em>caption<\/em>.<\/p><\/figcaption>/.test(inPipeline.html),
     "pipeline: the caption was not rendered as markdown",
   );
-  assert(inPipeline.toc.length === 0, "pipeline: a chart put an entry in the table of contents");
+  assertThat(inPipeline.toc.length === 0, "pipeline: a chart put an entry in the table of contents");
 
   // 7. Prose that only looks like a directive. The colon-digit bug.
   const prose = await renderBody({
@@ -413,9 +413,9 @@ async function main() {
     resolveImage: async () => ({ width: 1, height: 1 }),
   });
   for (const literal of ["4.5:1", "3:1", "12:30", "localhost:8080"]) {
-    assert(prose.html.includes(literal), `prose: "${literal}" did not survive directive parsing`);
+    assertThat(prose.html.includes(literal), `prose: "${literal}" did not survive directive parsing`);
   }
-  assert(!/<div>/.test(prose.html), "prose: a colon-digit sequence still renders as an empty div");
+  assertThat(!/<div>/.test(prose.html), "prose: a colon-digit sequence still renders as an empty div");
 
   // 8. Unknown directives fail closed (ruled 2026-07-30).
   //
@@ -436,9 +436,9 @@ async function main() {
       console.error(`  FAIL ${label} did not fail the build`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      assert(message.includes(needle), `${label}: the error does not name "${needle}". Got: ${message}`);
-      assert(/on line \d+/.test(message), `${label}: the error does not name a line`);
-      assert(
+      assertThat(message.includes(needle), `${label}: the error does not name "${needle}". Got: ${message}`);
+      assertThat(/on line \d+/.test(message), `${label}: the error does not name a line`);
+      assertThat(
         message.includes(KNOWN_DIRECTIVES.join(", ")),
         `${label}: the error does not list the known directives`,
       );
@@ -448,12 +448,12 @@ async function main() {
   // The escape hatch the error message advertises has to actually work, or the
   // advice in it is wrong.
   const escaped = await render("A note\\:this is important.");
-  assert(escaped.html.includes("note:this"), "an escaped colon did not survive as text");
-  assert(!/<div>/.test(escaped.html), "an escaped colon still produced a div");
+  assertThat(escaped.html.includes("note:this"), "an escaped colon did not survive as text");
+  assertThat(!/<div>/.test(escaped.html), "an escaped colon still produced a div");
 
   // And the known ones still render, so the check is not simply refusing everything.
   const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
-  assert(/<figure><img/.test(known.html), "the figure directive stopped rendering");
+  assertThat(/<figure><img/.test(known.html), "the figure directive stopped rendering");
 
   console.log(`check:charts ${failed === 0 ? "ok" : "FAILED"}. ${passed} assertions passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

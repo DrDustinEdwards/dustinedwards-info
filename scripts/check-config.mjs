@@ -59,7 +59,7 @@ let checks = 0;
  * @param {string} label
  * @param {string} [detail]
  */
-function assert(ok, label, detail) {
+function assertThat(ok, label, detail) {
   checks += 1;
   if (ok) return;
   failures += 1;
@@ -105,7 +105,7 @@ for (const [label, config] of [
   ["wrangler.jsonc.example", example],
 ]) {
   const unreadable = unhandledBindingKinds(config);
-  assert(
+  assertThat(
     unreadable.length === 0,
     `every binding kind in ${label} can be read`,
     `${unreadable.join(", ")} is invisible to this comparison. ` +
@@ -114,20 +114,20 @@ for (const [label, config] of [
 }
 
 // An assertion that can pass by reading nothing is not an assertion.
-assert(
+assertThat(
   realSurface.size > 0,
   "the real config declares at least one binding",
   "surfaceOf() found none, so every comparison below would pass vacuously.",
 );
 
 for (const [key, settings] of realSurface) {
-  assert(
+  assertThat(
     exampleSurface.has(key),
     `example declares ${key}`,
     "It is in wrangler.jsonc but not in the example, so a fresh clone would not get it.",
   );
   if (exampleSurface.has(key)) {
-    assert(
+    assertThat(
       exampleSurface.get(key) === settings,
       `${key} settings match`,
       `real: ${settings || "(none)"} | example: ${exampleSurface.get(key) || "(none)"}`,
@@ -136,7 +136,7 @@ for (const [key, settings] of realSurface) {
 }
 
 for (const key of exampleSurface.keys()) {
-  assert(
+  assertThat(
     realSurface.has(key),
     `real config still declares ${key}`,
     "It is in the example but not in wrangler.jsonc, so the example describes a binding that no longer exists.",
@@ -145,18 +145,18 @@ for (const key of exampleSurface.keys()) {
 
 // Settings that change how the Worker runs and are not account-scoped.
 for (const key of ["name", "main", "compatibility_date", "keep_vars", "upload_source_maps"]) {
-  assert(
+  assertThat(
     JSON.stringify(real[key]) === JSON.stringify(example[key]),
     `${key} matches`,
     `real: ${JSON.stringify(real[key])} | example: ${JSON.stringify(example[key])}`,
   );
 }
-assert(
+assertThat(
   JSON.stringify(real.compatibility_flags ?? []) ===
     JSON.stringify(example.compatibility_flags ?? []),
   "compatibility_flags match",
 );
-assert(
+assertThat(
   JSON.stringify(real.migrations ?? []) === JSON.stringify(example.migrations ?? []),
   "durable object migrations match",
   "A class listed in one and not the other means a clone's DO migration state diverges.",
@@ -164,7 +164,7 @@ assert(
 // Workers Cache is not a binding, so surfaceOf() cannot carry it, but it is
 // exactly the kind of setting this gate exists for: a clone that built without
 // it would re-decode and re-encode every thumbnail and never say so.
-assert(
+assertThat(
   JSON.stringify(real.cache ?? null) === JSON.stringify(example.cache ?? null),
   "cache block matches",
   `real: ${JSON.stringify(real.cache ?? null)} | example: ${JSON.stringify(example.cache ?? null)}`,
@@ -179,7 +179,7 @@ for (const [label, config] of [
   ["real", real],
   ["example", example],
 ]) {
-  assert(
+  assertThat(
     config.cache?.enabled === true,
     `Workers Cache is enabled in the ${label} config`,
     `${label}.cache: ${JSON.stringify(config.cache ?? null)}. If this was turned off ` +
@@ -192,22 +192,22 @@ for (const [label, config] of [
 // that account-scoped identifiers stay out of git.
 const exampleDbId = example.d1_databases?.[0]?.database_id ?? "";
 const exampleKvId = example.kv_namespaces?.[0]?.id ?? "";
-assert(
+assertThat(
   /^0+(-0+)*$/.test(exampleDbId.replace(/-/g, "").replace(/^/, exampleDbId ? "" : "x")) ||
     /^[0-]+$/.test(exampleDbId),
   "example's database_id is still a placeholder",
   `Found ${exampleDbId ? "a non-placeholder value" : "nothing"}.`,
 );
-assert(
+assertThat(
   /^0+$/.test(exampleKvId),
   "example's KV id is still a placeholder",
   `Found ${exampleKvId ? "a non-placeholder value" : "nothing"}.`,
 );
-assert(
+assertThat(
   exampleDbId !== (real.d1_databases?.[0]?.database_id ?? "\u0000"),
   "example's database_id is not the real one",
 );
-assert(
+assertThat(
   exampleKvId !== (real.kv_namespaces?.[0]?.id ?? "\u0000"),
   "example's KV id is not the real one",
 );
