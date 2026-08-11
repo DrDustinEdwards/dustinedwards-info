@@ -658,10 +658,28 @@ if (existsSync(assetDir)) {
     0,
     ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs),
   );
+  /*
+   * A STALE BUILD IS NOW A FAILURE, and an ABSENT one is still not. The
+   * distinction is the whole finding.
+   *
+   * This block used to say "skipped as stale" and pass. The external audit
+   * measured what that costs: `touch app/app.css` and nothing else drops this
+   * gate from 567 checks to 461, EXIT 0. One hundred and six assertions, 18.7
+   * percent, gone in silence.
+   *
+   * And the trigger is the ordinary case. EDITING app.css is what makes it
+   * newer than the build, so the section that verifies the SHIPPED stylesheet
+   * skipped itself on exactly the runs where a token had just changed, which
+   * are the runs it exists for. Absent a build there is genuinely nothing to
+   * compare and reporting is right; present-but-stale means someone changed the
+   * source and this gate would have told them nothing.
+   */
   if (newest < cssMtime) {
-    // A build older than the source proves nothing about the source. Say so
-    // rather than failing, and rather than passing quietly.
-    builtNote = "build is OLDER than app.css, skipped as stale";
+    builtNote = "build is OLDER than app.css";
+    fail(
+      "the built stylesheet is not stale: a build exists but predates app.css, so the " +
+        "shipped-value comparison would silently examine nothing. Run npm run build.",
+    );
     sheets.length = 0;
   }
   const built = sheets.map((f) => readFileSync(join(assetDir, f), "utf8")).join("\n");
@@ -750,6 +768,28 @@ for (const a of worst) {
   const lc = `${a.lc >= 0 ? "+" : ""}${a.lc.toFixed(1)}`;
   console.log(
     `    Lc ${lc.padStart(6)}  ${a.ratio.toFixed(2).padStart(5)}:1  ${a.mode.padEnd(5)} ${a.note}`,
+  );
+}
+
+/*
+ * A FLOOR ON THIS GATE'S OWN EXECUTED ASSERTIONS.
+ *
+ * Every other floor in this repo guards a SCOPE: files walked, sites found. A
+ * scope floor cannot see control flow skipping a block it already reached, and
+ * that is the failure the external audit measured here.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-11: 567 with the built
+ * stylesheet compared, 461 without. The floor sits between them ON PURPOSE, so
+ * that a silently skipped built-CSS section trips it even if the explicit
+ * staleness assertion above is ever weakened or removed. Belt and braces for
+ * the same 106 assertions.
+ */
+const MINIMUM_CHECKS = 520;
+if (checks < MINIMUM_CHECKS) {
+  failures.push(
+    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. A block ` +
+      `was SKIPPED rather than failing. Measured: 567 with the built stylesheet ` +
+      `compared, 461 without.`,
   );
 }
 

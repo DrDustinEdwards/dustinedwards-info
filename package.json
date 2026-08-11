@@ -45,7 +45,7 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:assertions": "node scripts/check-assertions.mjs",
     "check:hooks": "node scripts/check-hooks.mjs",
-    "check:tests": "npm test --silent",
+    "check:tests": "node scripts/check-tests.mjs",
     "test": "node --test \"test/**/*.test.mjs\"",
     "ship": "node scripts/ship.mjs",
     "check:invariants": "node scripts/check-invariants.mjs"
