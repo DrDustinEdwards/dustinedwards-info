@@ -10,11 +10,18 @@
  *   code copy + label   the code is already highlighted and selectable
  *   heading copy-link   the anchors are already navigable
  *   footnote previews   the footnote jump links already work
- *   image lightbox      images already link to their original
+ *   image lightbox      the image itself, at its rendered size
  *   copy as markdown    the button is an anchor to the .md twin
  *
  * Every animation checks prefers-reduced-motion. Nothing here writes to the
  * network or to storage.
+ *
+ * The image row said "images already link to their original" until 2026-08-11
+ * and that was FALSE, contradicted by this file's own comment on lightbox()
+ * below. Measured against content/generated/posts.json: 6 images across 12
+ * posts, ZERO wrapped in an anchor. The same false claim is in Capsid's
+ * progressive-enhancement.md inventory. The machine-readable inventory is
+ * content/enhancements.json, gated by check:features.
  */
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");

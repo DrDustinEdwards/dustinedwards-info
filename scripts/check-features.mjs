@@ -65,7 +65,7 @@
  * nothing are each a failure, so "0 problems" can never mean "0 examined".
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -561,6 +561,221 @@ for (const status of usedStatuses) {
 console.log(
   `     ${notAdopted.length} entr(ies), ${usedStatuses.length} distinct status(es), ` +
     `${Object.keys(STATUS_LABEL).length} label(s)`,
+);
+
+/* ----------------------------------- the enhancement inventory, item 10 ---- */
+
+/*
+ * Hard rule 9's second half, which is the half that gets dropped: every
+ * enhancement declares a NAMED fallback, EVEN WHEN THE FALLBACK IS NOTHING.
+ * All four modules in `app/enhance/` did declare one, in three different
+ * prose formats across two files, and no gate could read any of them.
+ *
+ * BOTH DIRECTIONS. A file in `app/enhance/` with no entry is an enhancement
+ * nobody named a fallback for; an entry naming a module that does not exist is
+ * an inventory describing a repo that no longer exists.
+ *
+ * WHAT THIS CANNOT SEE, and it is the more important half: whether a route is
+ * genuinely server-complete with script off. That is a claim about the WIRE,
+ * hard rule 7 says so, and it belongs in `verify-live`. This gate proves the
+ * fallback was NAMED and that the thing it names EXISTS. It cannot prove the
+ * fallback works, and a lie written confidently into the prose passes here.
+ */
+
+const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
+const ENHANCE_DIR = join(root, "app", "enhance");
+
+/**
+ * EXACTLY FOUR TODAY, tripwired rather than bounded.
+ *
+ * A fifth module is not automatically wrong, but it is an enhancement that
+ * arrived without anyone walking this list, which is the omission hard rule 9
+ * exists about. Moving this number is a deliberate edit in the same commit.
+ */
+const EXPECTED_ENHANCE_MODULES = 4;
+
+/**
+ * Measured THROUGH this gate's own reading on 2026-08-11: 10 entries across the
+ * 4 modules, because `blog.ts` carries seven. Set under, because the job is
+ * catching a file that stopped being read, not tracking growth.
+ */
+const MINIMUM_ENHANCEMENT_ENTRIES = 8;
+
+ok(
+  "content/enhancements.json exists",
+  existsSync(ENHANCEMENTS_PATH),
+  "the inventory is missing, so every assertion below would examine nothing",
+);
+
+/** @type {any[]} */
+let inventory = [];
+if (existsSync(ENHANCEMENTS_PATH)) {
+  inventory = JSON.parse(readFileSync(ENHANCEMENTS_PATH, "utf8")).enhancements ?? [];
+}
+
+/** Every module file that actually exists, read off disk rather than listed. */
+const enhanceFiles = existsSync(ENHANCE_DIR)
+  ? readdirSync(ENHANCE_DIR)
+      .filter((name) => name.endsWith(".ts"))
+      .sort()
+  : [];
+
+ok(
+  "app/enhance/ holds the expected number of modules",
+  enhanceFiles.length === EXPECTED_ENHANCE_MODULES,
+  `found ${enhanceFiles.length} (${enhanceFiles.join(", ") || "none"}), expected ` +
+    `${EXPECTED_ENHANCE_MODULES}. A new enhancement module needs a row in ` +
+    `content/enhancements.json and this number moved in the same commit.`,
+);
+ok(
+  "the enhancement inventory is not empty",
+  inventory.length >= MINIMUM_ENHANCEMENT_ENTRIES,
+  `${inventory.length} entr(ies), expected at least ${MINIMUM_ENHANCEMENT_ENTRIES}; ` +
+    `below that the per-entry assertions stop examining anything`,
+);
+
+const inventoryModules = new Set(
+  inventory.map((/** @type {any} */ e) => String(e.module ?? "")),
+);
+
+// Direction A: every module on disk is named by at least one entry.
+for (const name of enhanceFiles) {
+  const relPath = `app/enhance/${name}`;
+  ok(
+    `enhancements: ${relPath} appears in the inventory`,
+    inventoryModules.has(relPath),
+    `no entry names ${relPath}, so an enhancement shipped without a named fallback`,
+  );
+}
+
+// Direction B: every module named by an entry is on disk.
+for (const modulePath of [...inventoryModules].sort()) {
+  ok(
+    `enhancements: ${modulePath || "(unnamed)"} exists on disk`,
+    Boolean(modulePath) && existsSync(join(root, modulePath)),
+    `the inventory names ${modulePath || "(nothing)"}, which is not in the repo`,
+  );
+}
+
+/**
+ * Every source file under `app/` EXCEPT `app/enhance/`.
+ *
+ * The exclusion is the whole point. A selector that appears only inside the
+ * enhancement module is markup the enhancement CREATES for itself, which is not
+ * a fallback; it would make the assertion agree with itself.
+ */
+function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} */ out = []) {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) {
+      if (full === ENHANCE_DIR) continue;
+      serverRenderedSources(full, out);
+    } else if (/\.(ts|tsx|mjs|css)$/.test(name)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+const serverSources = serverRenderedSources(join(root, "app"));
+
+// NON-EMPTY SCOPE. A walk that returned nothing would make every selector
+// assertion below fail closed rather than pass, but the count is asserted so
+// the reason is named rather than inferred from a wall of failures.
+ok(
+  "the server-rendered source scope is non-empty",
+  serverSources.length > 20,
+  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/; the ` +
+    `walker has stopped matching this tree`,
+);
+
+const sourceBlobs = serverSources.map((file) => normalizeEol(readFileSync(file, "utf8")));
+
+/** Identifiers worth checking, out of a selector. Short ones are too generic. */
+function selectorTokens(/** @type {string} */ selector) {
+  return (selector.match(/[A-Za-z][\w-]{3,}/g) ?? []).filter(
+    (token, index, all) => all.indexOf(token) === index,
+  );
+}
+
+let fallbacksNamed = 0;
+let selectorTokensChecked = 0;
+const kindCounts = { route: 0, selector: 0, none: 0 };
+
+for (const entry of inventory) {
+  const id = String(entry.id ?? "(unnamed)");
+  const kind = String(entry.fallbackKind ?? "");
+
+  ok(
+    `enhancements ${id}: names a fallback`,
+    typeof entry.fallback === "string" && entry.fallback.trim().length > 0,
+    "hard rule 9: an enhancement with no named fallback is a dependency, not an enhancement",
+  );
+  if (typeof entry.fallback === "string" && entry.fallback.trim().length > 0) {
+    fallbacksNamed += 1;
+  }
+
+  ok(
+    `enhancements ${id}: fallbackKind is one this gate can verify`,
+    kind === "route" || kind === "selector" || kind === "none",
+    `${JSON.stringify(kind)} is not route, selector or none`,
+  );
+
+  if (kind === "route") {
+    kindCounts.route += 1;
+    const path = String(entry.fallbackAt ?? "");
+    ok(
+      `enhancements ${id}: the fallback route ${path} is declared`,
+      routes.has(path),
+      `routes.ts declares no ${path}, so the fallback points at nothing`,
+    );
+  } else if (kind === "selector") {
+    kindCounts.selector += 1;
+    const selector = String(entry.fallbackAt ?? "");
+    const tokens = selectorTokens(selector);
+    // A selector that yields no checkable token would pass by examining
+    // nothing, which is the empty-scope failure this family keeps hitting.
+    ok(
+      `enhancements ${id}: the selector ${selector} yields a checkable identifier`,
+      tokens.length > 0,
+      `nothing in ${JSON.stringify(selector)} is long enough to search for without ` +
+        `matching half the tree`,
+    );
+    for (const token of tokens) {
+      selectorTokensChecked += 1;
+      // DELIMITED, so `prose` cannot be satisfied by `proseWidth`.
+      const needle = new RegExp(
+        `(^|[^\\w-])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w-]|$)`,
+      );
+      ok(
+        `enhancements ${id}: ${token} is server-rendered, outside app/enhance/`,
+        sourceBlobs.some((blob) => needle.test(blob)),
+        `no file under app/ except app/enhance/ contains ${token} as a whole token. ` +
+          `Markup the enhancement creates for itself is not a fallback.`,
+      );
+    }
+  } else if (kind === "none") {
+    kindCounts.none += 1;
+    ok(
+      `enhancements ${id}: a fallback of nothing carries its reason`,
+      typeof entry.why === "string" && entry.why.trim().length > 0,
+      "the law requires the nothing to be WRITTEN DOWN, because that is what " +
+        "distinguishes a decision from an omission",
+    );
+  }
+}
+
+console.log(
+  `     ${inventory.length} enhancement(s) over ${inventoryModules.size} module(s), ` +
+    `${fallbacksNamed} fallback(s) named`,
+);
+console.log(
+  `     kinds: ${kindCounts.route} route, ${kindCounts.selector} selector ` +
+    `(${selectorTokensChecked} identifier(s) checked), ${kindCounts.none} deliberate nothing`,
+);
+console.log(
+  `     NOT asserted here: that any route is server-complete with script off. ` +
+    `That is a claim about the wire (hard rule 7).`,
 );
 
 /* ------------------------------------------------------- the coverage report */
