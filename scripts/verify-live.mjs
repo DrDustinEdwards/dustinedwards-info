@@ -1431,20 +1431,39 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
 /*
  * THE FLOOR. Same fail-closed shape as MINIMUM_GATES in check-all.mjs.
  *
- * This harness had NO floor on its own pass count until 2026-08-11, so 90 of
- * its ~100 static sites could have stopped executing and the run would still
- * report "0 failed" and exit 0. Whole sections sit inside `if` blocks and loops
- * over fetched data: a route that starts 404ing, an empty corpus, or an early
- * return skips its assertions silently, and a shrinking pass count at zero
- * failures is exactly what that looks like from outside.
+ * This harness had NO floor on its own pass count until 2026-08-11, so most of
+ * its assertions could have stopped executing and the run would still report
+ * "0 failed" and exit 0. Whole sections sit inside `if` blocks and loops over
+ * fetched data: a route that starts 404ing, an empty corpus, or an early return
+ * skips its assertions silently, and a shrinking pass count at zero failures is
+ * exactly what that looks like from outside.
  *
- * Set just under the ~100 static `check()` sites. It is a FLOOR, not a target.
- * The live count varies legitimately: the Ask rate limit SKIPS probes rather
- * than failing them, and several loops take their arity from the corpus.
- * Moving this number is a deliberate edit in the same commit as the change that
- * moves it.
+ * MEASURED THROUGH A REAL RUN, 2026-08-11: 206 executed, 0 failed, against a
+ * 12 post corpus and 40 assets.
+ *
+ * The first value committed was 90, and it was WRONG in the way this whole
+ * session is about. It was derived by counting 99 static `check()` call sites
+ * in the source and taking a slack ten percent, without ever running the thing.
+ * But the static sites are not the assertions: most sit inside loops over the
+ * corpus, the assets and the colophon's seven sections, so the real count is
+ * 206. A floor of 90 would have let 116 assertions, more than half of them,
+ * vanish in silence while the floor reported itself satisfied.
+ *
+ * That is the same defect as a threshold set outside its input's reachable
+ * range, which is the class check:assertions rule (c) is honest about not being
+ * able to see, and it survived review of the commit that introduced it. Measure
+ * anti-vacuity floors THROUGH the pipeline they guard, not off the source.
+ *
+ * 180 leaves 26 for legitimate downward variance: the Ask rate limit SKIPS
+ * probes rather than failing them, and several loops take their arity from the
+ * corpus. It is a FLOOR, not a target, and it only ever moves on a deliberate
+ * edit in the same commit as the change that moves it.
+ *
+ * ONE data point. If an ordinary run lands near 180 rather than near 206, the
+ * variance is wider than this assumes and the number wants lowering with the
+ * second measurement recorded beside it, not quietly.
  */
-const MINIMUM_CHECKS = 90;
+const MINIMUM_CHECKS = 180;
 const executed = passed + failures.length;
 const short = executed < MINIMUM_CHECKS;
 
