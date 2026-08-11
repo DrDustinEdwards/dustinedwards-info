@@ -1459,9 +1459,17 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
  * corpus. It is a FLOOR, not a target, and it only ever moves on a deliberate
  * edit in the same commit as the change that moves it.
  *
- * ONE data point. If an ordinary run lands near 180 rather than near 206, the
- * variance is wider than this assumes and the number wants lowering with the
- * second measurement recorded beside it, not quietly.
+ * TWO data points now, and they agree exactly:
+ *
+ *   2026-08-11, version c4a9c9db   206 passed, 0 failed
+ *   2026-08-11, version d4fee64b   206 passed, 0 failed
+ *
+ * The first was taken against a 12 post corpus and 40 assets, the second after
+ * six gate repairs, and both read 206 with the Ask probes unthrottled. The
+ * variance this comment worried about did not appear, so 180 stays rather than
+ * being tightened on two identical readings: the downward variance it exists to
+ * absorb is the RATE-LIMITED run, and neither measurement was one. A third
+ * reading taken while Ask is throttled is what would justify moving it.
  */
 const MINIMUM_CHECKS = 180;
 const executed = passed + failures.length;
