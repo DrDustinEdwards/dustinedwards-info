@@ -188,12 +188,24 @@ for (const name of declared) {
 /* ------------------------------------------- 2. the boundary, by path ----- */
 
 const SCAN_ROOTS = ["app", "workers"];
-const SKIP_DIRS = new Set(["node_modules", "build", ".react-router", ".wrangler"]);
+
+/*
+ * NO SKIP_DIRS. There was a set naming node_modules, build, .react-router and
+ * .wrangler, and the pre-audit sweep tested it by emptying it: the result was
+ * IDENTICAL, because none of those four directories exists under app/ or
+ * workers/ and none ever has. They live at the repo root, which this walk never
+ * enters.
+ *
+ * Removed rather than kept as insurance, deliberately. An exclusion nothing
+ * depends on is surface area that reads like protection, and this gate's whole
+ * subject is the difference between the two. If a build artefact ever does land
+ * inside a scan root, the per-root floors below will move and somebody will
+ * look, which is a better outcome than a silent skip.
+ */
 
 /** @param {string} dir @param {string[]} out */
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
-    if (SKIP_DIRS.has(entry)) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
     else if (/\.(ts|tsx|mjs|js|jsx)$/.test(entry) && !entry.endsWith(".d.ts")) out.push(full);
@@ -230,11 +242,54 @@ function isServerOnly(/** @type {string} */ path) {
   return path.startsWith("workers/") || /\.server\.(ts|tsx|mjs|js)$/.test(path);
 }
 
-const files = SCAN_ROOTS.flatMap((r) => (existsSync(join(root, r)) ? walk(join(root, r)) : []));
+/**
+ * A floor PER ROOT, not one on the total.
+ *
+ * The pre-audit sweep dropped `workers` from SCAN_ROOTS and this gate reported
+ * 23 checks and 0 failures: `app/` alone is 108 files, so a total-only floor of
+ * 50 could not tell that an entire root had stopped being scanned. `workers/`
+ * is three files, and it is the Worker entry, the queue consumer and the
+ * Durable Object: the outermost layer of the server boundary this gate exists
+ * to police.
+ *
+ * MEASURED THIS SESSION through this gate's own walk: app 108, workers 3. The
+ * `workers` floor is deliberately tight rather than slack, because three files
+ * cannot absorb slack: any floor below 3 cannot detect the root vanishing,
+ * which is the only thing it is for.
+ *
+ * @type {Record<string, number>}
+ */
+const ROOT_FLOORS = { app: 95, workers: 3 };
+
+/** @type {string[]} */
+const files = [];
+for (const r of SCAN_ROOTS) {
+  const here = existsSync(join(root, r)) ? walk(join(root, r)) : [];
+  files.push(...here);
+  const floor = ROOT_FLOORS[r];
+  ok(
+    `the scan examined ${r}/ at all, and to depth`,
+    floor !== undefined && here.length >= floor,
+    floor === undefined
+      ? `${r}/ has no floor in ROOT_FLOORS. Add one measured through this walk, or the ` +
+        `root can empty out unnoticed.`
+      : `${here.length} file(s) under ${r}/, expected at least ${floor}. Either the walk ` +
+        `stopped matching this tree, or the root was dropped from SCAN_ROOTS.`,
+  );
+}
+
+// The other direction: a floor naming a root nobody scans guards nothing.
+for (const r of Object.keys(ROOT_FLOORS)) {
+  ok(
+    `ROOT_FLOORS entry ${r} still names a scanned root`,
+    SCAN_ROOTS.includes(r),
+    `${r} has a floor but is not in SCAN_ROOTS, so the floor guards nothing.`,
+  );
+}
 
 ok(
-  "the scan examined a plausible number of files",
-  files.length >= 50,
+  "the scan examined a plausible number of files overall",
+  files.length >= 100,
   `${files.length} found under ${SCAN_ROOTS.join(", ")}; expected the whole app`,
 );
 
