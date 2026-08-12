@@ -117,8 +117,10 @@ export async function bundleRoutes(entries) {
 /**
  * Renders one route component at one URL with fabricated loader and action data.
  *
+ * `props` seeds a route's own client state. See the comment at the spread.
+ *
  * @param {{ default: unknown }} mod
- * @param {{ path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string, string> }} options
+ * @param {{ path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string, string>, props?: Record<string, unknown> }} options
  * @returns {Promise<string>}
  */
 export async function renderRoute(mod, options) {
@@ -136,6 +138,25 @@ export async function renderRoute(mod, options) {
           actionData: options.actionData,
           params: options.params ?? {},
           matches: [],
+          /*
+           * DECLARED INITIAL CLIENT STATE, spread last so a state declaration
+           * can seed a route's own `useState`.
+           *
+           * This exists because the harness renders ONE static pass:
+           * `renderToStaticMarkup` never dispatches an event, so any UI behind
+           * client state is invisible no matter how the fixture is
+           * regenerated. Session D shipped bulk actions whose three intents
+           * contributed NO payload for exactly that reason, and an admin
+           * mutation surface the gate cannot see is the search_docs lesson in
+           * UI form.
+           *
+           * The route takes an OPTIONAL prop with a production default, so
+           * React Router never supplies it and shipped behaviour is unchanged.
+           * Seeding from `loaderData` was the alternative and is worse: it
+           * would put a field in the server contract that no loader returns,
+           * and policing that contract is what this gate is for.
+           */
+          ...(options.props ?? {}),
         }),
     },
   ]);

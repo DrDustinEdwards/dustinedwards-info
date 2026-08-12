@@ -197,7 +197,7 @@ const editLoader = (over = {}) => ({
   ...over,
 });
 
-/** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string> }>} */
+/** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string>, props?: Record<string,unknown> }>} */
 const STATES = [
   // ---- posts index --------------------------------------------------------
   {
@@ -241,6 +241,30 @@ const STATES = [
   // link, and a filtered list that matched nothing replaces the table with an
   // empty state carrying a second way out. An empty RESULT is not an empty
   // corpus and the two must not collapse into one scenario.
+  /*
+   * SELECTION IS A STATE, and until 2026-08-12 this gate could not reach it.
+   *
+   * The harness renders one static pass and dispatches no events, so the bulk
+   * bar never mounted and the three bulk intents contributed NO payload: the
+   * most destructive surface in the admin was outside the fixture entirely.
+   * Session D shipped with that stated; this closes it.
+   *
+   * `props` seeds the route's own useState through route-render.mjs. The route
+   * takes an optional prop with a production default, so nothing on the wire
+   * can set it.
+   *
+   * TWO selected rather than one, deliberately: a single selection would render
+   * "1 selected" and hide any plural or count-formatting defect, and the delete
+   * confirmation reads the count.
+   */
+  {
+    name: "posts index, two selected",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
+    props: { initialSelection: [POSTS[0].slug, POSTS[1].slug] },
+  },
   {
     name: "posts index, filtered with matches",
     entry: "app/routes/admin.posts._index.tsx",
@@ -755,6 +779,7 @@ for (const state of STATES) {
       loaderData: state.loaderData,
       actionData: state.actionData,
       params: state.params,
+      props: state.props,
     });
   } catch (error) {
     fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);

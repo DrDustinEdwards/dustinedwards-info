@@ -319,7 +319,23 @@ export async function action({ request, context }: Route.ActionArgs) {
   return { message: null };
 }
 
-export default function AdminPosts({ loaderData, actionData }: Route.ComponentProps) {
+export default function AdminPosts({
+  loaderData,
+  actionData,
+  /**
+   * The selection this page starts with. Empty in production, always: React
+   * Router passes only loaderData, actionData, params and matches, so nothing
+   * on the wire can set this.
+   *
+   * It exists for `check:admin-ui`, which renders one static pass and never
+   * dispatches an event. Without a way to declare an initial selection the bulk
+   * bar never mounts under the harness, and the three bulk intents contribute
+   * no payload at all, which is how session D shipped with that gap stated.
+   * scripts/lib/route-render.mjs spreads declared props last; the reasoning for
+   * a prop over a fabricated loaderData field is recorded there.
+   */
+  initialSelection = [],
+}: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
@@ -333,7 +349,7 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
    * selection is deliberately NOT persisted across a filter change either: the
    * bulk bar can only ever act on what the author can currently see.
    */
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(initialSelection);
   const visible = posts.map((post) => post.slug);
   const chosen = selected.filter((slug) => visible.includes(slug));
   const allShown = chosen.length > 0 && chosen.length === visible.length;

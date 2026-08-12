@@ -26,6 +26,15 @@
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
+  "posts index, two selected": [
+    "GET  | (none) | q,status,tag",
+    "POST /admin/posts | intent=bulk-add-tag | slug,tag",
+    "POST /admin/posts | intent=bulk-delete | slug,tag",
+    "POST /admin/posts | intent=bulk-remove-tag | slug,tag",
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
   "posts index, filtered with matches": [
     "GET  | (none) | q,status,tag",
     "POST /admin/posts?q=live&amp;status=published | (none) | ",
