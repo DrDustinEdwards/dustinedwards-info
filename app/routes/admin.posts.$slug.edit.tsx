@@ -8,7 +8,7 @@ import { handleEditorAction } from "~/lib/editor/action.server";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "~/lib/editor/publish-transition.mjs";
-import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
+import { currentHead, deletePost, postPath, EditorError, GitHubError } from "~/lib/editor/publish.server";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 
@@ -18,7 +18,7 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const file = await readFile(env, `content/posts/${params.slug}.md`);
+  const file = await readFile(env, postPath(params.slug));
   if (!file) throw data("Not found", { status: 404 });
 
   const fields = parsePost(file.content);
@@ -56,7 +56,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // Non-fatal: a GitHub outage must not blank the editor. The drawer simply
     // reports no commits, and writing still works because the save path fails
     // loudly on its own.
-    revisions: await listCommitsForPath(env, `content/posts/${params.slug}.md`).catch(
+    revisions: await listCommitsForPath(env, postPath(params.slug)).catch(
       () => [],
     ),
   };

@@ -61,7 +61,28 @@ export type { Actor };
 const COLOPHON_PAGES = colophonPages(stackData, featuresData);
 
 const ARTIFACT_PATH = "content/generated/posts.json";
-const postPath = (slug: string) => `content/posts/${slug}.md`;
+
+/**
+ * Where a post's source file lives, as ONE statement of the rule.
+ *
+ * Exported since 2026-08-11. It was module-private, and the path was
+ * consequently restated in SEVEN other places, including two more `postPath`
+ * definitions of its own in the history and revisions routes. Measured with an
+ * anchored grep over 92 files before the collapse:
+ *
+ *   publish.server.ts:64          the definition
+ *   operator/api.server.ts:183    get_post
+ *   operator/api.server.ts:236    delete_post
+ *   admin.posts.$slug.edit.tsx:21 and :59
+ *   admin.posts.$slug.history.tsx:32   a second definition
+ *   admin.posts.$slug.revisions.tsx:31 a third definition
+ *   admin.preview.ts:46
+ *
+ * Same class as `visibilityClause` and `SLUG_PATTERN` earlier the same week: N
+ * statements of one rule with only some of them bound to each other. A bulk
+ * retag would have added a ninth.
+ */
+export const postPath = (slug: string) => `content/posts/${slug}.md`;
 
 /** A save rejected by a gate. `field` and `line` are for pointing at the cause. */
 export class EditorError extends Error {

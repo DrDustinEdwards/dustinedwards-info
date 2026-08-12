@@ -21,6 +21,7 @@ import {
   currentHead,
   deletePost,
   loadArtifact,
+  postPath,
   savePost,
   EditorError,
   GitHubError,
@@ -180,7 +181,7 @@ async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise
   if (parsed.error) return { ok: false, status: 400, error: parsed.error };
   const slug = parsed.slug;
 
-  const file = await readFile(env, `content/posts/${slug}.md`);
+  const file = await readFile(env, postPath(slug));
   if (!file) return { ok: false, status: 404, error: `No post exists with slug "${slug}".` };
   const raw = file.content;
 
@@ -233,7 +234,7 @@ async function savePostTool(
       ? args.expectedHeadSha
       : null;
 
-  const existing = await readFile(env, `content/posts/${slug}.md`);
+  const existing = await readFile(env, postPath(slug));
   const isNew = args.isNew === undefined ? existing === null : args.isNew === true;
 
   const result = await savePost(env, { slug, raw, expectedHeadSha, isNew, actor });

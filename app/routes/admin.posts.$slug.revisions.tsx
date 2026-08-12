@@ -3,6 +3,7 @@ import { data } from "react-router";
 import { getEnv } from "~/lib/context";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { getCommitPatch, readFile } from "~/lib/editor/github.server";
+import { postPath } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.posts.$slug.revisions";
 
 /**
@@ -27,8 +28,6 @@ import type { Route } from "./+types/admin.posts.$slug.revisions";
  *   ?sha=<sha>           that commit's diff against its parent
  *   ?sha=<sha>&want=content   that revision's fields, for loading into the editor
  */
-
-const postPath = (slug: string) => `content/posts/${slug}.md`;
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
