@@ -7,7 +7,7 @@ import {
   listCommitsForPath,
   readFile,
 } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
+import { currentHead, postPath } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
 /**
@@ -28,8 +28,6 @@ import type { Route } from "./+types/admin.posts.$slug.history";
  *
  * This page therefore exports NO action at all. A POST here answers 405.
  */
-
-const postPath = (slug: string) => `content/posts/${slug}.md`;
 
 export function meta({ params }: Route.MetaArgs) {
   return [

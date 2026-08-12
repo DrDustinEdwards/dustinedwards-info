@@ -2,7 +2,7 @@ import { renderBody } from "~/lib/content/pipeline.mjs";
 import { getEnv } from "~/lib/context";
 import { ContentError } from "~/lib/content/pipeline.mjs";
 import { normalizeBody } from "~/lib/editor/frontmatter";
-import { EditorError, makeResolveImage } from "~/lib/editor/publish.server";
+import { EditorError, makeResolveImage, postPath } from "~/lib/editor/publish.server";
 import type { Route } from "./+types/admin.preview";
 
 /**
@@ -43,7 +43,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   try {
     const { html, toc } = await renderBody({
-      file: `content/posts/${slug}.md`,
+      file: postPath(slug),
       body,
       resolveImage: makeResolveImage(env),
     });
