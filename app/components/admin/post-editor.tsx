@@ -168,6 +168,14 @@ export function PostEditor({
    * that changes on its own, which is this.
    */
   const [ageNow, setAgeNow] = useState(() => Date.now());
+  /**
+   * Whether a persist has been ATTEMPTED, which `savedAt` alone cannot say.
+   *
+   * `writeBuffer` returns null both before it has ever run and when storage
+   * refuses it (private mode, quota, storage disabled), and its own comment has
+   * always said that saying so beats pretending. Nothing said so until now.
+   */
+  const [bufferTried, setBufferTried] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offer, setOffer] = useState<DraftBuffer | null>(null);
   /**
@@ -200,6 +208,12 @@ export function PostEditor({
   const persist = useCallback(() => {
     const form = formRef.current;
     if (!form) return;
+    // `bufferTried` is the one bit that separates "the net failed" from "the net
+    // has not run yet". Both leave `savedAt` null, and only the first is worth
+    // telling the author about; without this the bar would have to stay silent
+    // through a real storage failure to avoid crying wolf before the first
+    // persist.
+    setBufferTried(true);
     setSavedAt(writeBuffer(storageKey, readForm(form)));
   }, [storageKey]);
 
@@ -624,6 +638,26 @@ export function PostEditor({
             {dirty && savedAt ? (
               <span className="editor-buffer-age" aria-live="polite">
                 last written {bufferAgeLabel(savedAt, ageNow)}
+              </span>
+            ) : dirty && bufferTried ? (
+              /*
+                The crash net FAILED, and an absent safety net must say so. Same
+                principle as the bar's own "Saving unavailable" when there is no
+                headSha: the author is about to trust something that is not
+                there.
+
+                MUTED, not warning, and that is the tint budget rather than a
+                judgement about severity. Its neighbour is already
+                warning-tinted whenever this renders, because this only appears
+                while dirty, and two warning-coloured items side by side read as
+                two problems rather than one fact qualifying another. The weight
+                is carried by "Unsaved changes"; this says what is missing.
+
+                The word "saved" does not appear, deliberately: the buffer never
+                saved anything, and the committed state is the bar's other job.
+              */
+              <span className="editor-buffer-age" aria-live="polite">
+                Not backed up: browser storage unavailable
               </span>
             ) : null}
 
