@@ -3041,6 +3041,18 @@ a:hover {
   background: var(--fill-warning);
 }
 
+/* Ruling 3's buffer age, beside the dirty indicator and deliberately QUIETER
+   than it. --text-muted rather than the warning colour its neighbour takes when
+   dirty: the warning is the state, this only qualifies it with when the crash
+   net last caught the draft, and two warning-coloured items would read as two
+   problems. No new contrast pair, this is the same muted-on-surface pair the
+   bar already carries at rest and check:contrast already measures. */
+.editor-buffer-age {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
 .editor-primary,
 .publish-actions {
   display: flex;
