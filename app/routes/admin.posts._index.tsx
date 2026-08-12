@@ -344,18 +344,36 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
     );
 
   /**
-   * The confirm text names the COUNT and the slugs, matching the single-delete
-   * discipline in the editor. Long selections name the first few and then the
-   * remainder, because a dialog nobody can read is a dialog nobody reads.
+   * TYPE THE COUNT. Bulk delete alone sits at this rung of the friction ladder.
+   *
+   * The disaster this guards is a select-all reflex deleting the corpus in one
+   * gesture, and the operative variable in that disaster is N. So the friction
+   * must VERIFY N rather than merely pause: a confirm() is dismissed by the
+   * same reflex that armed it, while typing the number cannot be satisfied
+   * without reading it.
+   *
+   * Deliberately NOT escalated elsewhere. Single delete keeps its plain
+   * confirm, and so do both retag intents, because a ladder whose every rung is
+   * the same height has no rungs: confirmation used everywhere becomes
+   * background noise and stops being read. Retag is reversible by its own
+   * inverse; a delete is recoverable only through git.
+   *
+   * The count is read from `chosen` INSIDE the handler. React reattaches this
+   * handler on every render, so the closure is current, but reading it here
+   * rather than hoisting it keeps that true if the button is ever memoized.
    */
   const confirmDelete = () => {
+    const n = chosen.length;
     const shown = chosen.slice(0, 5);
-    const rest = chosen.length - shown.length;
+    const rest = n - shown.length;
     const list = shown.join(", ") + (rest > 0 ? `, and ${rest} more` : "");
-    return confirm(
-      `Delete ${chosen.length} post${chosen.length === 1 ? "" : "s"}? ` +
-        `This removes each file and its rows.\n\n${list}`,
+    const typed = prompt(
+      `Delete ${n} post${n === 1 ? "" : "s"}? This removes each file and its rows.\n\n` +
+        `${list}\n\nType ${n} to confirm.`,
     );
+    // Cancel returns null; a mismatch returns the wrong string. Both abort, and
+    // neither reaches the action, so no mutation happens on a miss.
+    return typed !== null && typed.trim() === String(n);
   };
 
   /** What the author actually asked for, in words, for the empty state. */
