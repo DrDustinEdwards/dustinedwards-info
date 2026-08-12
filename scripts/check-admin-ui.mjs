@@ -265,6 +265,39 @@ const STATES = [
     loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
     props: { initialSelection: [POSTS[0].slug, POSTS[1].slug] },
   },
+  /*
+   * FILTERED **AND** SELECTED, the combination D.1 left uncovered and the
+   * decisions log folded into this session.
+   *
+   * Two states existed separately: filtered-with-matches (no selection, so no
+   * bulk bar) and two-selected (unfiltered, so the select-all label reads
+   * "Select all 3" with no "shown"). Neither could see the ruled behaviour,
+   * which only appears where both hold at once: the label must say SHOWN
+   * whenever a filter is active, because select-all reaches only the rows on
+   * screen and a bare "all" would claim the corpus.
+   *
+   * TWO posts visible and ONE selected, deliberately. Two so the count is not
+   * the degenerate 1, and one selected so `allShown` is false, which is the
+   * state where a reader is most likely to mistake the control's reach.
+   *
+   * No new harness seam: this reuses `initialSelection`, so the seam count
+   * stays at ONE against the ruled ceiling of three.
+   */
+  {
+    name: "posts index, filtered and selected",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts?status=published",
+    loaderData: {
+      posts: [POSTS[0], POSTS[1]],
+      ask: ASK_CLEAN,
+      budget: BUDGET,
+      ...NO_FILTERS,
+      filters: { q: "", status: "published", tag: "" },
+      filtered: true,
+    },
+    props: { initialSelection: [POSTS[0].slug] },
+  },
   {
     name: "posts index, filtered with matches",
     entry: "app/routes/admin.posts._index.tsx",
@@ -928,6 +961,34 @@ structural("a republication IS a plain submit", "edit, draft that published befo
 });
 
 // The slug is editable in exactly one place.
+/*
+ * THE RULED SELECT-ALL LABEL, gated because the fixture structurally cannot
+ * see it: the payload baseline records METHOD, intent and field NAMES, and this
+ * is text. A ruled behaviour with no instrument is a behaviour that drifts.
+ *
+ * Both directions, because the positive alone would pass on a label that said
+ * "Select all 2 shown all" or that had grown a second, bare copy elsewhere.
+ * The negative names the exact bare form the ruling forbids, closed with the
+ * element boundary so "Select all 2 shown" cannot satisfy it as a prefix.
+ */
+structural(
+  "a filtered select-all says SHOWN, never bare all",
+  "posts index, filtered and selected",
+  (h) => h.includes("Select all 2 shown"),
+);
+structural(
+  "a filtered select-all carries no bare count label",
+  "posts index, filtered and selected",
+  (h) => !h.includes("Select all 2</span>"),
+);
+/* And the unfiltered case keeps the bare form, so the rule above is a
+   DISTINCTION rather than a blanket rename. */
+structural(
+  "an unfiltered select-all says the plain count",
+  "posts index, two selected",
+  (h) => h.includes("Select all 3</span>") && !h.includes("Select all 3 shown"),
+);
+
 structural("new posts get a slug input", "new post, fresh", (h) => h.includes('id="field-slug"'));
 structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
 
