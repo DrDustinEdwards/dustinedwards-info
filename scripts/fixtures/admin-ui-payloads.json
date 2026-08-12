@@ -1,18 +1,21 @@
 {
   "posts index, clean": [
     "GET  | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask drifted": [
     "GET  | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask disabled": [
     "GET  | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
@@ -25,6 +28,7 @@
   ],
   "posts index, filtered with matches": [
     "GET  | (none) | q,status,tag",
+    "POST /admin/posts?q=live&amp;status=published | (none) | ",
     "POST /admin/posts?q=live&amp;status=published | intent=regenerate | ",
     "POST /admin/posts?q=live&amp;status=published | intent=reset-ask-budget | ",
     "POST /admin/posts?q=live&amp;status=published | intent=sync-ask | "

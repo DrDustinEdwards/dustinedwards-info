@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Form, Link } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
@@ -5,7 +6,15 @@ import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
-import { loadArtifact, regenerateAllFromArtifact } from "~/lib/editor/publish.server";
+import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
+import { readFile } from "~/lib/editor/github.server";
+import {
+  deletePost,
+  loadArtifact,
+  postPath,
+  regenerateAllFromArtifact,
+  savePost,
+} from "~/lib/editor/publish.server";
 import {
   askAvailable,
   askStatusContext,
@@ -201,6 +210,105 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
   }
 
+  /*
+   * BULK OPERATIONS.
+   *
+   * Each one ITERATES the existing per-post write function, serially, one
+   * commit per post. There is no bulk commit variant and no second write path:
+   * `deletePost` and `savePost` stay the only mutators, so every gate, policy
+   * and side effect that guards a single post guards each of these too.
+   *
+   * expectedHeadSha is OMITTED, which `commitFiles` documents as the
+   * no-optimistic-check path (`github.server.ts:190` treats a falsy value as
+   * "do not compare"). That is correct here rather than lax: each successful
+   * commit ADVANCES head, so one captured sha would refuse on iteration two by
+   * construction, and `commitFiles` re-reads head itself on every call
+   * (`:188`), so each iteration already builds on the current tree. Re-reading
+   * `currentHead` per iteration would add a round trip and protect against
+   * nothing a single-admin bulk action can hit.
+   *
+   * PARTIAL FAILURE IS THE DESIGN CENTRE. There is no transaction across
+   * posts, so the loop continues past a failure and reports per slug. That is
+   * safe because each post is an independent commit and `deletePost` throws
+   * before `commitFiles` when the file is missing, so a refused post leaves
+   * nothing half-written.
+   */
+  if (
+    intent === "bulk-delete" ||
+    intent === "bulk-add-tag" ||
+    intent === "bulk-remove-tag"
+  ) {
+    const slugs = form.getAll("slug").map(String).filter(Boolean);
+    if (slugs.length === 0) return { message: "Nothing selected." };
+
+    /** Per-slug failures, so one bad post cannot hide behind a total. */
+    const failed: string[] = [];
+    let done = 0;
+    let skipped = 0;
+
+    if (intent === "bulk-delete") {
+      for (const slug of slugs) {
+        try {
+          await deletePost(env, { slug });
+          done += 1;
+        } catch (error) {
+          failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      return {
+        message:
+          `Deleted ${done} of ${slugs.length}.` +
+          (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+      };
+    }
+
+    // Retag ADDS or REMOVES one tag. It never replaces the set, so a post's
+    // other tags are untouched and a mistake costs one tag rather than all.
+    const wanted = parseTags(String(form.get("tag") ?? ""))[0];
+    if (!wanted) return { message: "Enter a tag first." };
+    const adding = intent === "bulk-add-tag";
+
+    for (const slug of slugs) {
+      try {
+        const file = await readFile(env, postPath(slug));
+        if (!file) {
+          failed.push(`${slug}: no source file`);
+          continue;
+        }
+        const fields = parsePost(file.content);
+        const has = fields.tags.includes(wanted);
+        // A no-op post is SKIPPED rather than committed. Writing it anyway
+        // would cost a commit that changes nothing, and would rewrite the
+        // frontmatter of the two posts whose key order is not yet canonical.
+        if (adding === has) {
+          skipped += 1;
+          continue;
+        }
+        const tags = adding
+          ? [...fields.tags, wanted]
+          : fields.tags.filter((t) => t !== wanted);
+        await savePost(env, {
+          slug,
+          raw: serializePost({ ...fields, tags }),
+          isNew: false,
+        });
+        done += 1;
+      } catch (error) {
+        failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    const verb = adding ? "Tagged" : "Untagged";
+    const why = adding ? "already tagged" : "not tagged";
+    return {
+      message:
+        `${verb} ${done} with "${wanted}"` +
+        (skipped > 0 ? `, skipped ${skipped} ${why}` : "") +
+        "." +
+        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+    };
+  }
+
   if (intent === "reset-ask-budget") {
     if (!askAvailable(env)) return { message: "Ask is not enabled." };
     await resetAskBudget(env);
@@ -215,6 +323,40 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
+
+  /*
+   * Selection lives in the client, which the admin plane is allowed (hard rule
+   * 9 exempts it, and /login with it). The public plane's law is untouched.
+   *
+   * Keyed by slug rather than by row index so a re-render, a sort or a filter
+   * change cannot silently re-point a selection at a different post. The
+   * selection is deliberately NOT persisted across a filter change either: the
+   * bulk bar can only ever act on what the author can currently see.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  const visible = posts.map((post) => post.slug);
+  const chosen = selected.filter((slug) => visible.includes(slug));
+  const allShown = chosen.length > 0 && chosen.length === visible.length;
+
+  const toggle = (slug: string) =>
+    setSelected((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+
+  /**
+   * The confirm text names the COUNT and the slugs, matching the single-delete
+   * discipline in the editor. Long selections name the first few and then the
+   * remainder, because a dialog nobody can read is a dialog nobody reads.
+   */
+  const confirmDelete = () => {
+    const shown = chosen.slice(0, 5);
+    const rest = chosen.length - shown.length;
+    const list = shown.join(", ") + (rest > 0 ? `, and ${rest} more` : "");
+    return confirm(
+      `Delete ${chosen.length} post${chosen.length === 1 ? "" : "s"}? ` +
+        `This removes each file and its rows.\n\n${list}`,
+    );
+  };
 
   /** What the author actually asked for, in words, for the empty state. */
   const askedFor = [
@@ -450,19 +592,95 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
         )
       ) : (
         <div className="posts-card">
-          <table className="posts-table">
-            <thead>
-              <tr>
-                <th scope="col">Status</th>
-                <th scope="col">Title</th>
-                <th scope="col">Publish date</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map((post) => (
-                <tr key={post.slug}>
-                  <td>
+          {/* One Form around the bar AND the table, so the checkboxes are its
+              own controls. Nesting a form inside another is invalid, which is
+              why this sits here rather than wrapping the toolbar above. */}
+          <Form method="post">
+            {chosen.length > 0 ? (
+              <div className="posts-bulk" role="group" aria-label="Bulk actions">
+                <p className="posts-bulk-count" aria-live="polite">
+                  {chosen.length} selected
+                </p>
+
+                <label className="posts-bulk-tag">
+                  <span>Tag</span>
+                  <input
+                    type="text"
+                    name="tag"
+                    list="posts-bulk-tags"
+                    autoComplete="off"
+                    placeholder="tag name"
+                  />
+                </label>
+                {/* The vocabulary the loader already ships, offered rather than
+                    enforced: a new tag is legitimate. */}
+                <datalist id="posts-bulk-tags">
+                  {tagOptions.map((tag) => (
+                    <option key={tag} value={tag} />
+                  ))}
+                </datalist>
+
+                <button type="submit" name="intent" value="bulk-add-tag" className="btn">
+                  Add tag
+                </button>
+                <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
+                  Remove tag
+                </button>
+                <button
+                  type="submit"
+                  name="intent"
+                  value="bulk-delete"
+                  className="btn-danger"
+                  onClick={(event) => {
+                    if (!confirmDelete()) event.preventDefault();
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            ) : null}
+
+            <table className="posts-table">
+              <thead>
+                <tr>
+                  <th scope="col" className="posts-check">
+                    <label className="posts-check-label">
+                      <input
+                        type="checkbox"
+                        checked={allShown}
+                        onChange={() => setSelected(allShown ? [] : visible)}
+                      />
+                      {/* Never the bare word "all" while a filter is active:
+                          this only ever selects what is on screen. */}
+                      <span className="sr-only">
+                        {filtered
+                          ? `Select all ${visible.length} shown`
+                          : `Select all ${visible.length}`}
+                      </span>
+                    </label>
+                  </th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Title</th>
+                  <th scope="col">Publish date</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((post) => (
+                  <tr key={post.slug} data-selected={chosen.includes(post.slug) || undefined}>
+                    <td className="posts-check">
+                      <label className="posts-check-label">
+                        <input
+                          type="checkbox"
+                          name="slug"
+                          value={post.slug}
+                          checked={chosen.includes(post.slug)}
+                          onChange={() => toggle(post.slug)}
+                        />
+                        <span className="sr-only">Select {post.title}</span>
+                      </label>
+                    </td>
+                    <td>
                     {/* Rule 1: the state is a WORD first. Colour separates the
                         three at a glance and border-style separates them again,
                         so the pill still says three different things once
@@ -530,8 +748,9 @@ export default function AdminPosts({ loaderData, actionData }: Route.ComponentPr
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </Form>
 
           {/* Reference, not a demand: the numbers that describe the AI layer's
               condition sit under the thing they describe, quiet, and only the
