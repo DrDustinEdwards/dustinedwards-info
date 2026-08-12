@@ -39,6 +39,8 @@
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+
+import { retryRead } from "./lib/retry.mjs";
 import path from "node:path";
 import os from "node:os";
 
@@ -218,6 +220,63 @@ function wrangler(args) {
   return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
 }
 
+/**
+ * A `d1 execute --file` import, RETRIED ONCE.
+ *
+ * ## THE NAMED EXEMPTION TO WRITES-ARE-NEVER-WRAPPED (ruled 2026-08-12)
+ *
+ * `scripts/lib/retry.mjs` wraps READS only, and its header says so, because a
+ * retried write is a write that may have landed twice. The rule now reads:
+ * writes are never wrapped, EXCEPT writes idempotent BY CONSTRUCTION, with the
+ * argument stated where the wrapper is applied. This is that statement.
+ *
+ * Every file this runs is idempotent, measured rather than asserted:
+ *
+ *   posts    DELETE ... NOT IN (kept slugs), INSERT ... ON CONFLICT(slug) DO
+ *            UPDATE, post_tags and media_refs deleted and rebuilt, then the
+ *            fts index rebuilt with ('rebuild')
+ *   llms     INSERT ... ON CONFLICT(key) DO UPDATE SET value = excluded.value
+ *   search   DELETE FROM search_docs, re-INSERT every record, both fts indexes
+ *            rebuilt
+ *
+ * None appends. A doubled run lands the same corpus, which is not a theory: ship
+ * re-runs this whole sync over the existing corpus on EVERY deploy, and asserts
+ * three-way docsize equality afterwards, so the doubled case is the normal case
+ * and is already gated.
+ *
+ * ## WHY ALL THREE, not just the one that failed
+ *
+ * The seventh transient hit the llms import specifically. All three go through
+ * the same `/d1/database/{id}/import` endpoint with the same exposure and the
+ * same idempotency argument, and wrapping only the one that happened to fail is
+ * the fix that lands in all but one affected site. Nothing else in this script
+ * is wrapped: the verification read at the end is a read, and no other write in
+ * the repo is touched.
+ *
+ * The FINAL result is returned rather than thrown, so each call site keeps its
+ * own error message; those strings are quoted in the canon.
+ *
+ * @param {string} args @param {string} label @returns {Promise<{stdout: string, status: number}>}
+ */
+async function wranglerImport(args, label) {
+  /** @type {{stdout: string, status: number}} */
+  let last = { stdout: "", status: 1 };
+  try {
+    return await retryRead(
+      () => {
+        last = wrangler(args);
+        // retryRead can only see a rejection; wrangler RETURNS on failure.
+        if (last.status !== 0) throw new Error((last.stdout || "no output").slice(0, 200));
+        return last;
+      },
+      { label },
+    );
+  } catch {
+    // Exactly two attempts, and this is the second one's real result.
+    return last;
+  }
+}
+
 async function main() {
   const target = process.argv.includes("--remote") ? "--remote" : "--local";
 
@@ -237,7 +296,10 @@ async function main() {
   await writeFile(sqlPath, buildSql(posts), "utf8");
 
   console.log(`sync:content applying ${posts.length} posts to ${target.slice(2)} D1`);
-  const applied = wrangler(`d1 execute ${DB_NAME} ${target} --file "${sqlPath}" --yes`);
+  const applied = await wranglerImport(
+    `d1 execute ${DB_NAME} ${target} --file "${sqlPath}" --yes`,
+    `sync:content posts import (${target})`,
+  );
   if (applied.status !== 0) {
     console.error(applied.stdout);
     throw new Error("wrangler d1 execute failed");
@@ -269,8 +331,9 @@ async function main() {
     "utf8",
   );
   console.log(`sync:content applying llms.txt (${Buffer.byteLength(llms)} bytes)`);
-  const settingsApplied = wrangler(
+  const settingsApplied = await wranglerImport(
     `d1 execute ${DB_NAME} ${target} --file "${settingsPath}" --yes`,
+    `sync:content llms.txt import (${target})`,
   );
   if (settingsApplied.status !== 0) {
     console.error(settingsApplied.stdout);
@@ -284,7 +347,10 @@ async function main() {
   await writeFile(searchPath, buildSearchSql(records), "utf8");
 
   console.log(`sync:content applying ${records.length} search records`);
-  const indexed = wrangler(`d1 execute ${DB_NAME} ${target} --file "${searchPath}" --yes`);
+  const indexed = await wranglerImport(
+    `d1 execute ${DB_NAME} ${target} --file "${searchPath}" --yes`,
+    `sync:content search index import (${target})`,
+  );
   if (indexed.status !== 0) {
     console.error(indexed.stdout);
     throw new Error("wrangler d1 execute failed for the search index");
