@@ -48,8 +48,35 @@ type LinkTarget = import("./markdown-editor").LinkTarget;
 const TITLE_LIMIT = 70;
 const AUTOSAVE_DELAY_MS = 800;
 const PREVIEW_DELAY_MS = 600;
+/**
+ * How often the buffer age re-renders while dirty.
+ *
+ * Thirty seconds against a value that only ever reads in whole minutes: the
+ * label can therefore lag its own truth by at most half the smallest unit it
+ * shows, and a one-second tick would re-render the bar sixty times to change
+ * the text once.
+ */
+const BUFFER_AGE_TICK_MS = 30_000;
 const FORM_ID = "post-editor";
 const LAYOUT_KEY = "post-editor:layout";
+
+/**
+ * Ruling 3's copy, as a pure function of two inputs so it is readable in one
+ * place and cannot drift into the JSX.
+ *
+ * The wording is the ruling's own, "last written N minutes ago", and it is
+ * rendered ONLY beside "Unsaved changes". That adjacency is what stops it
+ * reading as a save: the buffer is local and uncommitted, the sentence next to
+ * it already says so, and nothing here uses the word saved.
+ *
+ * Under a minute is "just now" rather than "0 minutes ago", which is both the
+ * ruling's phrasing and the honest one for a value that rounds down.
+ */
+function bufferAgeLabel(savedAt: string, now: number): string {
+  const minutes = Math.floor((now - new Date(savedAt).getTime()) / 60_000);
+  if (!Number.isFinite(minutes) || minutes < 1) return "just now";
+  return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+}
 
 /** @see LAYOUT_KEY. Remembered per browser, never on the server. */
 type Layout = "write" | "split" | "preview";
@@ -132,6 +159,15 @@ export function PostEditor({
   const [body, setBody] = useState(fields.body);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  /**
+   * The clock the buffer age is measured against, ticked ONLY while dirty.
+   *
+   * `savedAt` has been set on every persist since the buffer shipped and read by
+   * nothing, so ruling 3's "last written N minutes ago" was the one part of the
+   * autosave mechanism with no surface. A relative time needs a second input
+   * that changes on its own, which is this.
+   */
+  const [ageNow, setAgeNow] = useState(() => Date.now());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offer, setOffer] = useState<DraftBuffer | null>(null);
   /**
@@ -208,6 +244,25 @@ export function PostEditor({
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
+
+  /*
+   * Tick the buffer age, ONLY while dirty.
+   *
+   * A clean editor's bar already reads "Saved <sha>", and adding a second
+   * freshness line there would recreate exactly the overlap the preview pane's
+   * own note records removing: two indicators describing freshness at one
+   * glance, with the reader left to work out which is about the file. So this
+   * runs when there is something uncommitted to qualify, and stops otherwise.
+   *
+   * `savedAt` is a dependency as well as `dirty`, so each persist re-syncs the
+   * clock rather than waiting up to a full interval to catch up.
+   */
+  useEffect(() => {
+    if (!dirty || !savedAt) return;
+    setAgeNow(Date.now());
+    const id = window.setInterval(() => setAgeNow(Date.now()), BUFFER_AGE_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [dirty, savedAt]);
 
   // The layout choice is a browser preference, not a fact about the post, so it
   // lives in localStorage and never reaches the server. Read after mount rather
@@ -553,6 +608,24 @@ export function PostEditor({
                     ? `Saved ${feedback.sha}`
                     : `Saved ${shortHead}`}
             </span>
+
+            {/*
+              Ruling 3's buffer age, QUALIFYING the line above rather than
+              competing with it. It renders only while dirty and only once a
+              persist has actually happened, so the clean state keeps saying
+              "Saved <sha>" alone.
+
+              Nothing renders on the server: `savedAt` starts null and only the
+              client's persist sets it, so the static harness render is
+              unchanged and this adds no submission. That is also the truthful
+              first render, since before the first persist there is no buffer to
+              report an age for.
+            */}
+            {dirty && savedAt ? (
+              <span className="editor-buffer-age" aria-live="polite">
+                last written {bufferAgeLabel(savedAt, ageNow)}
+              </span>
+            ) : null}
 
             {/*
               The zero-JS render, removed the moment CodeMirror takes over, on
