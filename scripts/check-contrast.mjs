@@ -373,6 +373,34 @@ const MATRIX = [
   // No --focus-ring-on-brand against --fill-danger. It measures 1.47:1 in dark,
   // so app.css does not draw that ring and this does not pretend it does.
 
+  // Chrome (v4). The public header and footer are a brand SURFACE, so the text
+  // they carry is measured against the chrome and not against the page canvas.
+  // Nothing here retires an older row: every pair the pre-v4 header shipped
+  // (--brand on --bg for the wordmark, --text-muted on --bg for the nav) is
+  // still shipped elsewhere, by .hero-name and .eyebrow respectively, so the
+  // rows stay for those.
+  ["--on-chrome", "--surface-chrome", TEXT, "wordmark and current nav on chrome"],
+  ["--on-chrome-muted", "--surface-chrome", TEXT, "nav at rest on chrome"],
+  // The mark is a graphical object, not text, so it takes the 1.4.11 floor.
+  ["--mark-on-chrome", "--surface-chrome", UI, "logo mark on chrome"],
+  ["--focus-ring-on-chrome", "--surface-chrome", UI, "focus ring on chrome"],
+  // The INVERTED pair: the pressed theme toggle's icon and the skip link's text,
+  // both sitting on an --on-chrome-muted fill laid over the chrome, plus that
+  // toggle's inset focus ring. WCAG contrast is symmetric, so this row computes
+  // the same ratio as the one two above it and cannot fail alone; it is here
+  // because APCA is NOT symmetric and is reported signed, and because a pair
+  // that ships should be NAMED in the matrix rather than inferred from its
+  // reverse. Read it as documentation with a number attached, not as an
+  // independent assertion.
+  ["--surface-chrome", "--on-chrome-muted", TEXT, "pressed toggle and skip link, inverted"],
+  // There is deliberately NO --border-strong on --surface-chrome row for the
+  // header and footer seam. Measured 1.80:1 light and 3.22:1 dark, and the
+  // ruling is explicit that a surface-to-surface seam carries no 3:1
+  // obligation: the seam separates two backgrounds, it is not a control
+  // boundary. Asserting it would red the gate forever over a value the ruling
+  // already accepted. The dark seam is the one that needed the STRONG border at
+  // all, because chrome-to-canvas there is 1.4:1.
+
   // Danger
   ["--text-danger", "--bg", TEXT, "danger text"],
   ["--text-danger", "--surface", TEXT, "danger text on surface"],
@@ -444,6 +472,53 @@ for (const [mode, block] of MODES) {
           `\n    ${ratio.toFixed(2)}:1, needs ${min}:1`,
       );
     }
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Participation: a declared token that no pair measures is not proven
+ * ---------------------------------------------------------------------- */
+
+// The gap this closes was LIVE AND GREEN. v4's five chrome tokens landed in all
+// three theme blocks; name parity passed, the literal-hex pass passed, the
+// built-CSS pass found all of them, and this gate printed 587 checks and zero
+// failures -- while nothing whatsoever measured the chrome's contrast, because
+// MATRIX is a hand-transcribed list and none of the five was on it.
+//
+// Name parity proves a token is DECLARED twice. It never proved a token is
+// MEASURED once. Every previous amendment happened to add its rows by hand, so
+// the omission had no way to show itself until an amendment forgot.
+//
+// The exemption map is CLOSED and self-policing: an entry naming a token that
+// no longer exists, or one that has since joined the matrix, fails here rather
+// than quietly widening the hole.
+/** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
+const NON_PARTICIPATING = new Map([]);
+
+{
+  const inMatrix = new Set(MATRIX.flatMap(([fg, bg]) => [fg, bg]));
+  const declared = Object.keys(light).filter((n) => n in darkAttr && n in darkMedia);
+
+  // A zero-scope search reports zero violations. Floor it against the doc's
+  // stated 53 purpose-named tokens per mode, so a parser that stopped finding
+  // tokens cannot pass this section by finding nothing to check.
+  assert(
+    `participation scope is non-empty: ${declared.length} tokens declared in all three blocks`,
+    declared.length >= 53,
+  );
+
+  const unproven = declared.filter((n) => !inMatrix.has(n) && !NON_PARTICIPATING.has(n));
+  assert(
+    `every declared token appears in at least one matrix pair` +
+      (unproven.length
+        ? `\n    declared but never measured: ${unproven.join(", ")}`
+        : ""),
+    unproven.length === 0,
+  );
+
+  for (const [name, why] of NON_PARTICIPATING) {
+    assert(`exemption ${name} names a token that is still declared`, declared.includes(name));
+    assert(`exemption ${name} is still outside the matrix (${why})`, !inMatrix.has(name));
   }
 }
 
@@ -778,27 +853,31 @@ for (const a of worst) {
  * scope floor cannot see control flow skipping a block it already reached, and
  * that is the failure the external audit measured here.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-11: 567 with the built
- * stylesheet compared, 461 without.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-13: 599 with the built
+ * stylesheet compared, 483 without. Both re-measured by RUNNING the gate, the
+ * second by renaming build/client/assets aside and restoring it, never by
+ * adding up the sections by hand. Superseded 2026-08-11's 567 and 461: v4 added
+ * five chrome pairs (10 checks across two modes), the participation section (2),
+ * and ten built-CSS value assertions.
  *
  * CONDITIONAL ON A BUILD BEING PRESENT, and that is not a softening. A fresh
- * checkout has no `build/` at all, because it is gitignored, so a flat floor of
- * 520 failed inside check:head's extraction on the first attempt: the gate was
+ * checkout has no `build/` at all, because it is gitignored, so a flat floor
+ * failed inside check:head's extraction on the first attempt: the gate was
  * green on disk and red against HEAD, which is exactly the divergence check:head
  * exists to surface. It surfaced mine.
  *
- * Absent a build there is genuinely nothing to compare and 461 is the honest
+ * Absent a build there is genuinely nothing to compare and 483 is the honest
  * full count. Present-but-stale is a failure on its own above; this floor is
  * the second lock on the same door, for the case where that assertion is ever
  * weakened.
  */
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 520 : 440;
+const MINIMUM_CHECKS = buildPresent ? 550 : 460;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
       `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. Measured: 567 with the built stylesheet compared, 461 without.`,
+      `failing. Measured: 599 with the built stylesheet compared, 483 without.`,
   );
 }
 
