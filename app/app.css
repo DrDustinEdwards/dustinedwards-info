@@ -69,6 +69,26 @@
   --focus-ring: #4f2d7f;
   --focus-ring-on-brand: #f3e3b8;
 
+  /* v4 chrome, PROVISIONAL pending Dustin's visual review (chrome-purple-v4.md,
+     ratified 2026-08-11). The public header and footer become a brand SURFACE,
+     so everything they carry is measured against the chrome rather than against
+     the page canvas. Five role tokens instead of a hex per rule: a rejected
+     review then reverts a token block, not a dozen scattered literals.
+
+     Light pairs on #4f2d7f, all computed in the ruling: --on-chrome 10.4 (the
+     already-shipping white-on-brand pair), --on-chrome-muted 8.7 (tint-brand
+     inverted), --focus-ring-on-chrome 8.2 (the on-brand-fill token).
+
+     --mark-on-chrome is the DARK-MODE brand hex in BOTH themes, by ruling: on
+     purple chrome the light logo variant is the legible one. It is a deliberate
+     variant assignment, so check:logo's bindings move with it at commit time
+     and never silently. */
+  --surface-chrome: #4f2d7f;
+  --on-chrome: #ffffff;
+  --on-chrome-muted: #ede8f5;
+  --mark-on-chrome: #b7a5e0;
+  --focus-ring-on-chrome: #f3e3b8;
+
   /* Danger: crimson. */
   --text-danger: #a1122a;
   --tint-danger: #f7e1e1;
@@ -151,6 +171,18 @@
     --focus-ring: #b7a5e0;
     --focus-ring-on-brand: #4a3d1e;
 
+    /* v4 chrome, provisional. Dark chrome is the ALREADY-RATIFIED hero surface
+       #3d2a5c, so no new surface enters the palette. Pairs on it: --on-chrome
+       10.1, --on-chrome-muted 6.9 (brand-hover), --focus-ring-on-chrome ~10.
+       The focus ring is the LIGHT token here and not --focus-ring-on-brand,
+       because #4a3d1e was measured against a solid brand fill and is invisible
+       on the deep-purple chrome. */
+    --surface-chrome: #3d2a5c;
+    --on-chrome: #ede6dc;
+    --on-chrome-muted: #c9baea;
+    --mark-on-chrome: #b7a5e0;
+    --focus-ring-on-chrome: #f3e3b8;
+
     --text-danger: #ec9aa8;
     --tint-danger: #3a2226;
     --on-tint-danger: #f0aeba;
@@ -223,6 +255,14 @@
   --selection-bg: #4a3a6b;
   --focus-ring: #b7a5e0;
   --focus-ring-on-brand: #4a3d1e;
+
+  /* v4 chrome, provisional. Same values as the block above, written out for the
+     same reason every other token here is. */
+  --surface-chrome: #3d2a5c;
+  --on-chrome: #ede6dc;
+  --on-chrome-muted: #c9baea;
+  --mark-on-chrome: #b7a5e0;
+  --focus-ring-on-chrome: #f3e3b8;
 
   --text-danger: #ec9aa8;
   --tint-danger: #3a2226;
@@ -608,7 +648,22 @@ a:hover {
   fill: var(--brand);
 }
 
-/* Public header */
+/* Public header ------------------------------------------------------------
+ *
+ * v4 (PROVISIONAL, chrome-purple-v4.md): brand surface, both themes. The
+ * complaint that produced it was measured: nav links at --text-muted #5c5248
+ * are an olive-family yellow-brown, and simultaneous contrast beside the
+ * saturated purple wordmark pushed them to read GREEN. Recolouring one link
+ * would have been treating the symptom; the chrome becomes brand instead.
+ *
+ * The seam is --border-strong rather than --border because in dark mode the
+ * chrome-to-canvas step is 1.4:1. That is a design fact and not a failure
+ * (surface seams carry no 3:1 obligation), but it needs the stronger rule to
+ * stay a visible edge. Light does not need it and is not harmed by it.
+ *
+ * Scope: PUBLIC plane only. The admin chrome is deliberately untouched and
+ * gets its own ruling if it ever wants one.
+ */
 .site-header {
   display: flex;
   align-items: center;
@@ -618,7 +673,16 @@ a:hover {
   /* The shared inset. The admin topbar reads the same declaration, which is
      what makes the mark land on the same x on both planes by construction. */
   padding: 1rem var(--site-inset);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+/* The chrome is a fill, so a focus ring on it lands on brand purple, not on the
+   page canvas the default --focus-ring was measured against. Descendant
+   selectors are (0,2,0) and outrank the bare `:focus-visible` at (0,1,0). */
+.site-header :focus-visible,
+.site-footer :focus-visible {
+  outline-color: var(--focus-ring-on-chrome);
 }
 
 /* Rule 2 identity-block exemption, EXTENDED by Dustin's ruling 2026-07-30: an
@@ -631,17 +695,19 @@ a:hover {
  * name is not somewhere the reader has been, it is who the site is, so a visited
  * state is a category error rather than a cosmetic slip.
  *
- * Brand at rest matches `.hero-name`, the site's established identity treatment,
- * so this introduces NO new colour pair: brand-on-bg is ratified at 9.8:1 light
- * and 8.1:1 dark, and `.site-header` sets no background, so the pair really is
- * brand on the page canvas. Hover keeps its feedback.
+ * v4 AMENDED the colour, not the rule. The header now sets a brand background,
+ * so brand-on-canvas is no longer the pair that ships here; the wordmark takes
+ * --on-chrome, which IS the ratified white-on-brand pair (10.4:1 light,
+ * 10.1:1 dark). Hover steps DOWN to --on-chrome-muted rather than up, because
+ * rest is already the lightest measured value on this surface and rule 2 wants
+ * hover feedback, not a brighter maximum.
  *
  * The `:visited` and `:hover` selectors are (0,2,0) and outrank the base
  * pseudo-class rules deliberately. Do not "simplify" them away.
  *
- * The MARK needs no rule of its own: `.site-logo-brand` sets `fill`, not
- * `color`, so no colour pseudo-class can reach it. It shares this anchor and
- * stays brand in every state for that reason.
+ * The MARK is now the one exception to "needs no rule of its own". No colour
+ * pseudo-class can reach it, which is still true, but v4 assigns it the
+ * dark-mode variant on chrome in BOTH themes, and that is a fill.
  */
 .site-header-brand,
 .site-header-brand:visited {
@@ -649,12 +715,18 @@ a:hover {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-  color: var(--brand);
+  color: var(--on-chrome);
   text-decoration: none;
 }
 
 .site-header-brand:hover {
-  color: var(--brand-hover);
+  color: var(--on-chrome-muted);
+}
+
+/* v4 variant assignment. (0,2,0) beats `.site-logo-brand` at (0,1,0), so the
+   login card's mark is untouched and keeps following --brand. */
+.site-header .site-logo-brand {
+  fill: var(--mark-on-chrome);
 }
 
 /* 2rem keeps the brand row inside the header's existing 4rem min-height, so
@@ -691,7 +763,9 @@ a:hover {
   line-height: 1.6;
 }
 
-/* Public footer */
+/* Public footer. Brand surface with the header, per v4: the ruling names the
+   header, the footer, and the nav they carry as one chrome, so a purple header
+   over a canvas-coloured footer would be half an amendment. */
 .site-footer {
   display: flex;
   align-items: center;
@@ -702,7 +776,9 @@ a:hover {
      plane's two horizontal rules at different insets, which is the site
      disagreeing with itself about where its own edge is. */
   padding: 1rem var(--site-inset);
-  border-top: 1px solid var(--border);
+  background: var(--surface-chrome);
+  border-top: 1px solid var(--border-strong);
+  color: var(--on-chrome);
   font-size: 0.8125rem;
 }
 
@@ -710,15 +786,34 @@ a:hover {
   margin: 0;
 }
 
+/* The copyright line carries `.muted`, which is --text-muted at (0,1,0) and
+   olive on purple. (0,2,0) repoints it at the chrome's own muted value. */
+.site-footer .muted {
+  color: var(--on-chrome-muted);
+}
+
+/* v4: the colophon links and Login are chrome nav. Same treatment as the header
+   nav, including the explicit :visited. Login keeps its quieter role by SIZE and
+   position, which is what the component comment says carries it, not by being
+   the only muted thing on the row.
+   Specificity: `.footer-colophon a:visited` is (0,2,1) and `.footer-login:visited`
+   is (0,2,0); the base `a:visited` is (0,1,1). Both win. */
+.footer-colophon a,
+.footer-colophon a:visited,
+.footer-login,
+.footer-login:visited {
+  color: var(--on-chrome-muted);
+}
+
+.footer-colophon a:hover,
+.footer-login:hover {
+  color: var(--on-chrome);
+}
+
 .footer-login {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  color: var(--text-muted);
-}
-
-.footer-login:hover {
-  color: var(--text);
 }
 
 /* Admin cockpit shell */
@@ -1638,9 +1733,20 @@ a:hover {
 
 /* Amended rule 2: nav links render as bare text, so they underline. The base
    `a` rule already does it; this only sets the colour. The icon search control
-   is a sibling of these and opts out on its own rule above. */
-.site-header-nav a {
-  color: var(--text-muted);
+   is a sibling of these and opts out on its own rule above. The underline is
+   deliberately KEPT under v4: the chrome changed, the second channel did not.
+
+   v4 also rules that nav links carry NO :visited state. The grounds are the
+   wordmark saga's, one step further out: persistent wayfinding is not a trail
+   marker, and "have I been to Blog" is not a question the header is answering.
+   That makes it a SPECIFICITY problem exactly like the wordmark's, and the same
+   trap applies: it is invisible in review until /blog is in history, which for a
+   returning reader is always. `.site-header-nav a:visited` is (0,2,1) against
+   the base `a:visited` at (0,1,1), so this wins rather than tying. PROVED with
+   both / and /blog in the dev browser's history, not asserted. */
+.site-header-nav a,
+.site-header-nav a:visited {
+  color: var(--on-chrome-muted);
 }
 
 /* The text link gets the same hit area as the controls beside it, so it is as
@@ -1656,7 +1762,48 @@ a:hover {
 
 .site-header-nav a:hover,
 .site-header-nav a[aria-current="page"] {
-  color: var(--text);
+  color: var(--on-chrome);
+}
+
+/* The two pill controls on the row. Both were drawn against the page canvas:
+   --border and --text-muted vanish on purple, and the --tint-brand hover fill
+   becomes either invisible (light: it IS --on-chrome-muted) or a dark patch on
+   dark purple. On chrome they borrow the chrome's own three values instead, so
+   no unmeasured pair enters.
+
+   Hover is a COLOUR step, not a fill, so that the theme toggle's pressed state
+   stays the only filled thing in the header. Rest, hover and pressed are then
+   three visibly distinct looks built from ratified values alone. */
+.site-header .theme-toggle,
+.site-header-nav .search-trigger {
+  border-color: var(--on-chrome-muted);
+}
+
+.site-header-nav .theme-option {
+  color: var(--on-chrome-muted);
+}
+
+.site-header-nav .theme-option:hover,
+.site-header-nav .search-trigger:hover {
+  color: var(--on-chrome);
+  border-color: var(--on-chrome);
+  background: transparent;
+}
+
+/* v4: the pressed state INVERTS. A brand fill on brand chrome is no state at
+   all, so the fill becomes the light value and the icon becomes the chrome.
+   8.7:1 light and 6.9:1 dark, the same ratified pairs read the other way. */
+.site-header-nav .theme-option[aria-pressed="true"] {
+  background: var(--on-chrome-muted);
+  color: var(--surface-chrome);
+}
+
+/* The inset ring the filled control takes. --focus-ring-on-brand was measured
+   against a brand FILL; this fill is now pale, where #f3e3b8 is ~1.1:1 and
+   simply absent. The chrome purple is the measured counterpart of the fill it
+   sits inside. (0,3,1) beats the base inset rule's (0,2,1). */
+.site-header-nav .theme-option[aria-pressed="true"]:focus-visible {
+  outline-color: var(--surface-chrome);
 }
 
 /* Theme toggle ------------------------------------------------------------
@@ -4553,16 +4700,36 @@ a:hover {
  * readable, and every animation is disabled under prefers-reduced-motion.
  */
 
-/* Skip link. Visible only when focused, which is the point. */
+/* Skip link. Visible only when focused, which is the point.
+ *
+ * v4 CONSEQUENCE, not part of the ruling but forced by it: this is absolutely
+ * positioned at top 0, so the only thing it is ever seen against is the chrome.
+ * A --brand fill was correct while the header sat on the page canvas and is a
+ * purple box on a purple band now, invisible in light mode at exactly the
+ * moment a keyboard reader needs it. It takes the chrome's inverted pair, the
+ * same one the pressed theme toggle takes, so no new pair enters.
+ *
+ * The reading-progress bar was checked for the same collision and does NOT have
+ * it: the header is not sticky, and the bar is scaleX(0) at scroll 0, so it has
+ * width only after the chrome has scrolled away. It keeps --brand.
+ */
 .skip-link {
   position: absolute;
   left: -9999px;
   top: 0;
   z-index: 100;
   padding: 0.6rem 1rem;
-  background: var(--brand);
-  color: var(--on-brand);
+  background: var(--on-chrome-muted);
+  color: var(--surface-chrome);
   border-radius: 0 0 0.375rem 0;
+}
+
+/* And its inset ring, for the reason the pressed toggle needs one: the fill it
+   sits inside is pale now, and #f3e3b8 on it is ~1.1:1. (0,1,1) matches the
+   base inset rule's specificity and wins on order, which is why this must stay
+   below that block. */
+.skip-link:focus-visible {
+  outline-color: var(--surface-chrome);
 }
 
 .skip-link:focus {
