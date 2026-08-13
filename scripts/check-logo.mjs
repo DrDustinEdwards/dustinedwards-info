@@ -2,9 +2,10 @@
  * Gate over the site mark.
  *
  * OBSERVATION BOUNDARY: compares the component's path data against the four SVG
- * fixtures. It does not rasterise anything, so a mark that is geometrically
- * identical and visually broken (a fill token that resolves to the page colour)
- * passes.
+ * fixtures, and the mark's fill BINDINGS in app.css against a closed expected
+ * set. It does not rasterise anything and it does not resolve a token to a hex,
+ * so a mark bound to the right token name where that token has been given the
+ * page colour still passes here. check:contrast owns the resolved values.
  *
  *   npm run check:logo
  *
@@ -26,6 +27,12 @@
  * at all in the component; they take .site-logo-brand, which is var(--brand),
  * and that token already resolves per theme. This gate is what keeps that
  * collapse honest.
+ *
+ * v4 AMENDED that last claim and the amendment is asserted at the foot of this
+ * file, not just described here. --brand is no longer the only fill the class
+ * can take: on the public chrome the mark is bound to --mark-on-chrome, the
+ * dark-mode variant, in BOTH themes. The component is untouched, because the
+ * override is a CSS binding and not a path.
  *
  * It fails in BOTH directions: a path hand-edited in the component, and an asset
  * regenerated from the spec that the component did not follow.
@@ -187,6 +194,68 @@ for (const { file, purple, viewBox } of FIXTURES) {
   }
 }
 
+/* --- Where the five purple paths actually get their colour -----------------
+ *
+ * NEW at v4, and it closes a hole rather than adding ceremony. Everything above
+ * this line compares GEOMETRY: the component's path data and literal fills
+ * against the fixtures'. Nothing had ever looked at the CSS BINDING, so this
+ * file's own header could go on saying ".site-logo-brand is var(--brand), and
+ * that token resolves per theme" for as long as anyone left it there, and it
+ * would have kept passing after that stopped being the whole truth.
+ *
+ * v4 binds the mark ON THE PUBLIC CHROME to --mark-on-chrome in BOTH themes,
+ * because on a purple surface the light variant is the legible one. That is a
+ * deliberate variant assignment, and this assertion is what makes it
+ * deliberate: it names both bindings by VALUE, and the set is CLOSED, so a
+ * third rule setting fill on this class fails here rather than quietly becoming
+ * the one that wins the cascade.
+ *
+ * It does NOT resolve the tokens to hexes. check:contrast owns that, and now
+ * measures --mark-on-chrome against --surface-chrome in both modes.
+ */
+
+/** Selector, normalised, to the fill it binds. The COMPLETE set. */
+const EXPECTED_FILL_BINDINGS = [
+  [".site-logo-brand", "var(--brand)"],
+  [".site-header .site-logo-brand", "var(--mark-on-chrome)"],
+];
+
+{
+  const css = stripComments(readFileSync(join(ROOT, "app", "app.css"), "utf8"));
+
+  /** @type {Array<[string, string]>} */
+  const found = [];
+  for (const m of css.matchAll(/([^{}]*\.site-logo-brand[^{}]*)\{([^}]*)\}/g)) {
+    const fill = /(?:^|[;\s])fill\s*:\s*([^;]+)/.exec(m[2]);
+    if (!fill) continue;
+    found.push([m[1].replace(/\s+/g, " ").trim(), fill[1].trim()]);
+  }
+
+  // A zero-scope search reports zero violations. The class must be found at all
+  // before its bindings mean anything.
+  eq("app.css binds fill on .site-logo-brand somewhere", found.length > 0, true);
+
+  eq(
+    `app.css has exactly ${EXPECTED_FILL_BINDINGS.length} fill bindings for the mark` +
+      `\n    found: ${found.map(([s, f]) => `${s} -> ${f}`).join(" | ")}`,
+    found.length,
+    EXPECTED_FILL_BINDINGS.length,
+  );
+
+  // Both directions. Every expected binding ships, and nothing else does.
+  for (const [selector, fill] of EXPECTED_FILL_BINDINGS) {
+    const got = found.find(([s]) => s === selector);
+    eq(`app.css binds ${selector}`, got?.[1] ?? "(no such rule)", fill);
+  }
+  for (const [selector, fill] of found) {
+    eq(
+      `app.css declares no unexpected mark binding: ${selector}`,
+      EXPECTED_FILL_BINDINGS.some(([s, f]) => s === selector && f === fill),
+      true,
+    );
+  }
+}
+
 // --- Report ---------------------------------------------------------------
 
 if (failures.length > 0) {
@@ -196,5 +265,6 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures, 0 failures.`,
+  `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures ` +
+    `and ${EXPECTED_FILL_BINDINGS.length} CSS bindings, 0 failures.`,
 );
