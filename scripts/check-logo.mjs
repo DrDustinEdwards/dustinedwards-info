@@ -2,10 +2,15 @@
  * Gate over the site mark.
  *
  * OBSERVATION BOUNDARY: compares the component's path data against the four SVG
- * fixtures, and the mark's fill BINDINGS in app.css against a closed expected
- * set. It does not rasterise anything and it does not resolve a token to a hex,
- * so a mark bound to the right token name where that token has been given the
- * page colour still passes here. check:contrast owns the resolved values.
+ * fixtures, the mark's fill BINDINGS in app.css against a closed expected set,
+ * and the shipped icon suite's CONTAINER SHAPE, dimensions and one tile pixel
+ * against a ruled manifest. It does not resolve a token to a hex, so a mark
+ * bound to the right token name where that token has been given the page colour
+ * still passes; check:contrast owns the resolved values. And it reads ONE pixel
+ * per raster: an icon whose tile is right and whose mark is upside down,
+ * clipped, or drawn in the wrong purple passes every assertion here. Nothing in
+ * this repo looks at the shape of a rendered raster. Eyes remain the instrument
+ * for that, and the contact sheet is how they get used.
  *
  *   npm run check:logo
  *
@@ -44,6 +49,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { Resvg } from "@resvg/resvg-js";
+
+import { icoPayload, pngCornerPixel, pngSize, readIco } from "./lib/raster.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -256,6 +265,164 @@ const EXPECTED_FILL_BINDINGS = [
   }
 }
 
+/* --- The rendered icon suite ----------------------------------------------
+ *
+ * WHERE THIS LIVES AND WHY IT IS NOT IN check:media. The ruling puts these
+ * assertions with the gate that owns the assets manifest, which is check:media.
+ * check:media is NETWORK tier: it lists R2 and queries D1, so folding them
+ * there would make the icon suite unchecked on `npm run check`, unchecked
+ * inside check:head, and unchecked on a plane. The ruling anticipated that and
+ * said to put the section in the offline path and say where. This is where.
+ *
+ * check:logo is the right offline home on its own merits: the icon suite IS
+ * this mark rasterised, and the relationship is the one this file already has
+ * with the four SVG fixtures. `scripts/fixtures/icon-suite.json` carries the
+ * ruled shape; the files carry what actually shipped; nothing here restates a
+ * number. check:media still owns the PATH manifest, and `assets.json` stays
+ * paths-only for the reason build-assets.mjs gives.
+ *
+ * TWO FAILURE SHAPES, and structure alone catches only one. A regenerator that
+ * drops a size changes the container; a regenerator pointed at the wrong tile
+ * changes nothing structural at all and produces a file that is correct in
+ * every respect a header can see. So each raster also gets one colour probe.
+ *
+ * THE PROBE POINT IS DERIVED, not chosen. Every tile is emitted by
+ * build-icons.mjs as a full-bleed rect with the mark CENTRED and fitted by its
+ * longer ink dimension inside a padded box, so the mark occupies at most the
+ * central (1 - 2p) of the canvas and never comes within p of an edge. Pixel
+ * (0, 0) is therefore outside the mark for any padding p > 0. It is also
+ * outside the maskable safe circle, which is inscribed: the corner sits at
+ * 0.707 of the half-diagonal from centre against the circle's 0.4 radius. So
+ * the probe survives any future revision that moves, rescales or redraws the
+ * mark, as long as the tile stays a tile. That is the property worth having.
+ */
+
+const checksBeforeIcons = checks;
+const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-suite.json"), "utf8"));
+
+// --- The hand-rolled readers test themselves, against a third party encoder -
+//
+// A parser and a fixture built on the same assumptions can agree about a format
+// both got wrong. resvg ENCODES the PNG here; scripts/lib/raster.mjs decodes it.
+// Two implementations, neither derived from the other.
+{
+  const KNOWN = "#E0A428"; // an existing palette hex, so it is not a magic value
+  const solid = new Resvg(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4">` +
+      `<rect width="4" height="4" fill="${KNOWN}"/></svg>`,
+    { fitTo: { mode: "width", value: 4 } },
+  )
+    .render()
+    .asPng();
+
+  eq("raster self-test: PNG reader returns the encoded colour", pngCornerPixel(solid), KNOWN);
+  eq("raster self-test: PNG reader returns the encoded size", pngSize(solid), { width: 4, height: 4 });
+
+  // And an ICO wrapped around that same PNG, so the container reader is tested
+  // on a payload whose contents are already known rather than on itself.
+  const dir = Buffer.alloc(16);
+  dir[0] = 4;
+  dir[1] = 4;
+  dir.writeUInt16LE(1, 4);
+  dir.writeUInt16LE(32, 6);
+  dir.writeUInt32LE(solid.length, 8);
+  dir.writeUInt32LE(22, 12);
+  const head = Buffer.alloc(6);
+  head.writeUInt16LE(1, 2);
+  head.writeUInt16LE(1, 4);
+  const synthetic = Buffer.concat([head, dir, solid]);
+
+  const parsed = readIco(synthetic);
+  eq("raster self-test: ICO reader finds one entry", parsed.length, 1);
+  eq("raster self-test: ICO reader reports the entry's size", parsed[0].size, 4);
+  eq("raster self-test: ICO reader detects PNG encoding", parsed[0].encoding, "PNG");
+  eq(
+    "raster self-test: ICO payload round-trips to the same colour",
+    pngCornerPixel(icoPayload(synthetic, parsed[0])),
+    KNOWN,
+  );
+}
+
+// --- The ICO container, parsed from the file rather than trusted -----------
+
+{
+  const buf = readFileSync(join(ROOT, icons.ico.file));
+  const entries = readIco(buf);
+
+  eq(`${icons.ico.file} declares ${icons.ico.sizes.length} images`, entries.length, icons.ico.sizes.length);
+  eq(
+    `${icons.ico.file} carries exactly the ruled sizes`,
+    entries.map((e) => e.size).sort((a, b) => a - b),
+    [...icons.ico.sizes].sort((a, b) => a - b),
+  );
+
+  for (const entry of entries) {
+    eq(`${icons.ico.file} ${entry.size}px is square`, entry.height, entry.width);
+    eq(`${icons.ico.file} ${entry.size}px is ${icons.ico.encoding} encoded`, entry.encoding, icons.ico.encoding);
+    eq(`${icons.ico.file} ${entry.size}px is ${icons.ico.bpp}bpp`, entry.bpp, icons.ico.bpp);
+    // The embedded PNG's own IHDR must agree with the directory entry. A
+    // container claiming 32px around a 16px image is a real corruption and the
+    // directory alone cannot see it.
+    const payload = icoPayload(buf, entry);
+    eq(`${icons.ico.file} ${entry.size}px payload size agrees with its entry`, pngSize(payload), {
+      width: entry.width,
+      height: entry.height,
+    });
+    eq(`${icons.ico.file} ${entry.size}px sits on the tile`, pngCornerPixel(payload), icons.tile);
+  }
+}
+
+// --- Every raster: dimensions and one tile probe ---------------------------
+
+// A zero-scope loop asserts nothing. The manifest must actually list rasters
+// before any of the assertions inside the loop mean anything.
+eq("the icon manifest lists rasters to check", icons.rasters.length >= 5, true);
+
+for (const raster of icons.rasters) {
+  const buf = readFileSync(join(ROOT, raster.file));
+  eq(`${raster.file} dimensions`, pngSize(buf), { width: raster.width, height: raster.height });
+  eq(`${raster.file} sits on the tile`, pngCornerPixel(buf), icons.tile);
+}
+
+// --- favicon.svg answers both schemes --------------------------------------
+//
+// This is the ONE asset that can decide for itself, so the assertion is that
+// both answers are present and that the dark one is inside a media query rather
+// than merely somewhere in the file. Comments are stripped first, on this
+// file's own established rule: the header above names both hexes in prose.
+
+{
+  const svg = stripComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));
+  eq(`${icons.svg.file} carries the light fill`, new RegExp(`fill:\\s*${icons.svg.light}\\b`, "i").test(svg), true);
+  eq(
+    `${icons.svg.file} carries the dark fill inside a prefers-color-scheme query`,
+    new RegExp(`@media[^{]*prefers-color-scheme:\\s*dark[^{]*\\{[^}]*fill:\\s*${icons.svg.dark}\\b`, "i").test(svg),
+    true,
+  );
+  eq(`${icons.svg.file} declares no raster tile of its own`, /<rect[^>]*fill=/i.test(svg), false);
+}
+
+// --- Executed-count floor for this section ---------------------------------
+//
+// MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-13: the icon section
+// executes 37 assertions. Counted by RUNNING it, not by adding up the blocks;
+// the first estimate written here was 40 and it was wrong.
+//
+// Floored at 34, the ~8% margin the other gates use. Not scope-floored: losing
+// the self-test block (6), the raster loop (11) or the ICO block (17) each
+// drops the count below this and is named as a SKIPPED block rather than
+// passing quietly. The SVG block is 3 and sits inside the margin, which is
+// deliberate rather than overlooked: its three assertions are explicit and
+// would fail on their own before a count could notice they had gone.
+const ICON_CHECKS = checks - checksBeforeIcons;
+const MINIMUM_ICON_CHECKS = 34;
+if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
+  failures.push(
+    `the icon section executed only ${ICON_CHECKS} assertions, expected at least ` +
+      `${MINIMUM_ICON_CHECKS}. A block was SKIPPED rather than failing. Measured: 37.`,
+  );
+}
+
 // --- Report ---------------------------------------------------------------
 
 if (failures.length > 0) {
@@ -265,6 +432,7 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures ` +
-    `and ${EXPECTED_FILL_BINDINGS.length} CSS bindings, 0 failures.`,
+  `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures, ` +
+    `${EXPECTED_FILL_BINDINGS.length} CSS bindings and the icon suite ` +
+    `(${ICON_CHECKS} of them), 0 failures.`,
 );

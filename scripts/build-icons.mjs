@@ -3,10 +3,14 @@
  *
  * OBSERVATION BOUNDARY: this is a GENERATOR, not a gate. It renders; it asserts
  * nothing about what is already on disk. What proves its output is committed is
- * `check:media` against the `build:assets` manifest, and what proves the mark's
- * geometry is `check:logo` against the four SVG fixtures. Neither of those reads
- * a PNG's pixels, so nothing in this repo can see a render that is geometrically
- * right and visually wrong. Eyes are still the instrument for that.
+ * `check:media` against the `build:assets` manifest, and what proves the output
+ * itself is `check:logo`, which since 2026-08-13 parses the ICO container,
+ * checks every raster's dimensions against `scripts/fixtures/icon-suite.json`
+ * and probes one tile pixel per raster.
+ *
+ * What still nothing sees: the SHAPE of a rendered raster. An icon whose tile is
+ * right and whose mark is clipped, mirrored or drawn in the wrong purple passes
+ * every assertion in this repo. Eyes remain the instrument for that.
  *
  *   node scripts/build-icons.mjs --out <dir>
  *
