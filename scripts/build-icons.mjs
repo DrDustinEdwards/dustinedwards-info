@@ -24,14 +24,14 @@
  *
  * THE V4 IDENTITY. logo-spec.md says favicons and manifest icons "intentionally
  * stay on the light mark: they render in browser chrome and third-party cards
- * whose backgrounds the theme does not control". v4 solves that same problem
- * the other way round, and supersedes it:
+ * whose backgrounds the theme does not control". v4 agrees with the diagnosis
+ * and supersedes the remedy: nothing here depends on a background it does not
+ * own, because every one of these assets brings its own brand-purple tile.
  *
- *   - favicon.svg CAN adapt, so it does, via an embedded prefers-color-scheme
- *     media query. Deep purple on light tab bars, lavender on dark.
- *   - Everything raster CANNOT adapt, so it stops depending on a background it
- *     does not own and brings its own: a brand-purple tile with the lavender
- *     mark. That is the same reasoning, applied to a format that cannot query.
+ * That now includes favicon.svg. It briefly shipped an embedded
+ * prefers-color-scheme query instead, on the theory that the one asset which
+ * CAN adapt should. It cannot: see faviconSvg below for the variable it was
+ * actually keyed on, and why that was the wrong one.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -42,8 +42,12 @@ import { Resvg } from "@resvg/resvg-js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** The ratified purples. Transcribed from logo-spec.md, as check:logo does. */
-const LIGHT = "#4F2D7F";
+/**
+ * The ratified dark-mode purple. Transcribed from logo-spec.md, as check:logo
+ * does. Its light twin #4F2D7F is not a separate constant here: since favicon
+ * .svg became a tile, every use of that hex in this file is the TILE, and two
+ * names for one value is how they drift apart.
+ */
 const DARK = "#B7A5E0";
 /** The chrome tile. --surface-chrome light, which is brand. */
 const TILE = "#4F2D7F";
@@ -139,24 +143,27 @@ function ogCard({ width = 1200, height = 630, mark = DARK, tile = TILE } = {}) {
 }
 
 /**
- * favicon.svg, the ONE asset that can answer the question itself.
+ * favicon.svg, a TILE like everything else. Ruled 2026-08-13, superseding the
+ * media-query version this file shipped for one day.
  *
- * The media query lives inside the file because a favicon is rendered by the
- * browser's chrome, where no stylesheet of ours is in scope. The geometry and
- * the ratified crop are untouched; only the fill mechanism changes, so this is
- * still the same mark and not a variation.
+ * WHAT WAS WRONG WITH IT, and it was not a detail. The embedded
+ * `prefers-color-scheme` query keyed on the OPERATING SYSTEM's colour scheme.
+ * The thing it was trying to survive is the TAB STRIP's colour, which is set by
+ * the BROWSER THEME, and no media query can see that. The two are independent,
+ * so the query answered a question nobody asked. Demonstrated live: a purple
+ * Chrome theme on a light-scheme OS resolved the query to LIGHT and painted the
+ * deep-purple mark onto a purple tab strip.
+ *
+ * A tile has no such dependency. It brings its own background, which is the
+ * same argument that put every raster on a tile, and it applies here for a
+ * reason that turns out to be stronger rather than weaker: an SVG favicon
+ * renders at roughly 16px, so it takes the ICO's small-size treatment.
+ *
+ * Same padding geometry as the raster tiles, from the same helper, so the SVG
+ * and the ICO cannot drift apart.
  */
 function faviconSvg() {
-  const body = PATHS.map(([fill, d]) =>
-    fill === BRAND ? `<path class="b" d="${d}"/>` : `<path fill="${fill}" d="${d}"/>`,
-  ).join("\n  ");
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="19.5 5.5 348 348">\n` +
-    `  <style>\n` +
-    `    .b { fill: ${LIGHT} }\n` +
-    `    @media (prefers-color-scheme: dark) { .b { fill: ${DARK} } }\n` +
-    `  </style>\n  ${body}\n</svg>\n`
-  );
+  return `${square({ size: 512, mark: ICO_MARK, tile: TILE, pad: 0.1 })}\n`;
 }
 
 /** @param {string} svg @param {number} size */

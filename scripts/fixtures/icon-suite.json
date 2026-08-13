@@ -31,7 +31,6 @@
   ],
   "svg": {
     "file": "public/favicon.svg",
-    "light": "#4F2D7F",
-    "dark": "#B7A5E0"
+    "mark": "#EDE8F5"
   }
 }

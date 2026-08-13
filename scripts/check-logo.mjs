@@ -384,22 +384,38 @@ for (const raster of icons.rasters) {
   eq(`${raster.file} sits on the tile`, pngCornerPixel(buf), icons.tile);
 }
 
-// --- favicon.svg answers both schemes --------------------------------------
+// --- favicon.svg is a tile, like everything else ---------------------------
 //
-// This is the ONE asset that can decide for itself, so the assertion is that
-// both answers are present and that the dark one is inside a media query rather
-// than merely somewhere in the file. Comments are stripped first, on this
-// file's own established rule: the header above names both hexes in prose.
+// SUPERSEDES the assertion that stood here for one day, which required both
+// prefers-color-scheme values to be present. That was policing a mechanism that
+// could not work: the query reads the OPERATING SYSTEM's colour scheme, while
+// the thing the icon has to survive is the TAB STRIP's colour, which comes from
+// the browser THEME and is invisible to any media query. A purple Chrome theme
+// on a light-scheme OS resolved it to light and put a deep-purple mark on a
+// purple strip.
+//
+// So the assertion is now the opposite in one direction: the query must be
+// ABSENT, because its presence would mean the superseded design came back.
+// Comments are stripped first, on this file's own established rule, and the
+// prose above names both the hex and the query.
 
 {
   const svg = stripComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));
-  eq(`${icons.svg.file} carries the light fill`, new RegExp(`fill:\\s*${icons.svg.light}\\b`, "i").test(svg), true);
   eq(
-    `${icons.svg.file} carries the dark fill inside a prefers-color-scheme query`,
-    new RegExp(`@media[^{]*prefers-color-scheme:\\s*dark[^{]*\\{[^}]*fill:\\s*${icons.svg.dark}\\b`, "i").test(svg),
+    `${icons.svg.file} is a full-bleed ${icons.tile} tile`,
+    new RegExp(`<rect[^>]*fill="${icons.tile}"`, "i").test(svg),
     true,
   );
-  eq(`${icons.svg.file} declares no raster tile of its own`, /<rect[^>]*fill=/i.test(svg), false);
+  eq(
+    `${icons.svg.file} draws the mark in ${icons.svg.mark}`,
+    new RegExp(`fill="${icons.svg.mark}"`, "i").test(svg),
+    true,
+  );
+  eq(
+    `${icons.svg.file} carries no prefers-color-scheme query`,
+    /prefers-color-scheme/i.test(svg),
+    false,
+  );
 }
 
 // --- Executed-count floor for this section ---------------------------------
