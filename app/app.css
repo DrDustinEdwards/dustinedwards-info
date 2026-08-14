@@ -1765,6 +1765,87 @@ a:hover {
   margin: 0;
 }
 
+/* -------------------------------------------------------------------------
+ * The origin-requests panel.
+ *
+ * Tokens only, and no colour carries meaning on its own: the error is a
+ * sentence, the bar is a magnitude that the adjacent number states in words.
+ * ---------------------------------------------------------------------- */
+
+/* Visible and boring, per rule 1: the words carry it and the border is the
+   second channel. Not a toast, not a colour alone. */
+.panel-error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-danger);
+  border-radius: 0.5rem;
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
+  font-size: 0.9375rem;
+}
+
+/* Wide content scrolls in its own box; the panel never scrolls sideways. */
+.origin-table-scroll {
+  overflow-x: auto;
+}
+
+.origin-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9375rem;
+}
+
+.origin-table caption {
+  margin: 0 0 0.75rem;
+  max-width: 44rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.origin-table th,
+.origin-table td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.origin-table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.origin-table tbody th {
+  font-weight: 400;
+  word-break: break-all;
+}
+
+.origin-count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The bar column takes the slack so the two data columns stay compact. */
+.origin-bar-cell {
+  width: 40%;
+  min-width: 6rem;
+}
+
+.origin-bar {
+  display: block;
+  height: 0.5rem;
+  min-width: 1px;
+  border-radius: 0.25rem;
+  background: var(--brand);
+}
+
+.origin-remainder {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
 /* Content sections */
 .content-sections {
   display: flex;

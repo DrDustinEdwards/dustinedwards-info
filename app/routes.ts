@@ -47,6 +47,11 @@ export default [
   route("admin", "routes/admin.tsx", [
     index("routes/admin._index.tsx"),
     route("sites", "routes/admin.sites.tsx"),
+    // Per-path origin requests, read from Analytics Engine. The PATH says
+    // origin-requests rather than traffic because a URL is something a reader
+    // sees, and the panel spends a caption explaining that these are not reads.
+    // A URL making the looser claim would undo that in the address bar.
+    route("origin-requests", "routes/admin.origin-requests.tsx"),
     route("content", "routes/admin.content.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
