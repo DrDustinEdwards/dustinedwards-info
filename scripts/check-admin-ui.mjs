@@ -1163,6 +1163,29 @@ structural(
 
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate BUNDLES and RENDERS routes, so its failure mode is a whole state
+ * dropping out: a route that stops bundling, a render that throws and is
+ * caught, a STATES entry quietly removed. Those already fail individually, but
+ * the total is the only witness to a structural block that stopped running over
+ * states that all still render.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 185.
+ * Never summed. Floored at 170, roughly 8 percent: the count moves in steps of
+ * a few per state, and the three origin-requests states added 34 at once, so
+ * the slack has to absorb a state being added mid-session without hiding one
+ * being lost.
+ */
+const MINIMUM_CHECKS = 170;
+if (checks < MINIMUM_CHECKS) {
+  fail(
+    `this gate executed its assertions: only ${checks} ran, expected at least ` +
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 185.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);

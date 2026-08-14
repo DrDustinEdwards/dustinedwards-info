@@ -295,5 +295,28 @@ assertThat(
 console.log(
   `  ${realSurface.size} binding(s) compared: ${[...realSurface.keys()].join(", ")}`,
 );
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate is the only thing binding the tracked example to the config that
+ * actually runs, and the real file is gitignored. If either parse returned an
+ * empty surface, every comparison below would iterate nothing and report the
+ * two files in perfect agreement.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 55.
+ * Never summed. Floored at 50, roughly 9 percent: the count steps by two or
+ * three per binding and per var, so a single added binding moves it visibly
+ * and a deleted one should be a deliberate diff.
+ */
+const MINIMUM_CHECKS = 50;
+if (checks < MINIMUM_CHECKS) {
+  assertThat(
+    false,
+    "this gate executed its assertions",
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 55.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);

@@ -320,6 +320,28 @@ console.log(
     `${fixture.obfuscationCases.length} obfuscation(s)`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * Every case here comes from a committed fixture, which is exactly the shape
+ * that fails quietly: a fixture that parsed to an empty list would run zero
+ * cases and report a clean sweep of the protocol allowlist, which is hard rule
+ * 6's enforcement.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 97.
+ * Never summed. Floored at 92, roughly 5 percent: the count is a fixed function
+ * of the fixture's case lists, so it moves only when a case is added.
+ */
+const MINIMUM_CHECKS = 92;
+if (checks < MINIMUM_CHECKS) {
+  assert(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 97.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);

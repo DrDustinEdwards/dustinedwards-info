@@ -260,10 +260,27 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-// An assertion count that can never be zero. A gate that silently ran nothing
-// reports success indistinguishable from a gate that checked everything.
-if (checks < 30) {
-  console.error(`check:search failed. Only ${checks} assertions ran, which cannot be right.`);
+/*
+ * EXECUTED-COUNT FLOOR, TIGHTENED 2026-08-14 from a bare literal 30.
+ *
+ * The old value was set to catch a run that did NOTHING, and it did that. What
+ * it could not catch is the failure that actually happens, which is partial:
+ * against a measured 48, a floor of 30 left 37 percent of this gate free to
+ * stop running while the floor reported itself satisfied. Same lesson as
+ * check:assertions moving 360 to 520 against 595, and verify-live's 90 against
+ * 206.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 48.
+ * Never summed. Floored at 45, roughly 6 percent: every assertion here is a
+ * pure parser or fusion case over inline fixtures, so the count moves only when
+ * a case is written.
+ */
+const MINIMUM_CHECKS = 45;
+if (checks < MINIMUM_CHECKS) {
+  console.error(
+    `check:search failed. Only ${checks} assertions ran, expected at least ` +
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 48.`,
+  );
   process.exit(1);
 }
 
