@@ -225,6 +225,29 @@ console.log(
     `sha256 compared both directions`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * MINIMUM_MIGRATIONS above floors the SCOPE, which is a different question: it
+ * catches a directory that stopped being read. This catches an assertion block
+ * that stopped running over a directory that is still full, and neither can see
+ * the other's bug.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 33.
+ * Never summed. Floored at 30, slack of three: the count steps by a fixed
+ * amount per migration, and migrations are append-only by hard rule 14, so it
+ * only ever grows.
+ */
+const MINIMUM_CHECKS = 30;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 33.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);

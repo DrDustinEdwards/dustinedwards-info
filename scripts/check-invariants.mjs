@@ -2077,5 +2077,29 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
   force: true,
 });
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate is EIGHT sections, several of which are wrapped in try blocks that
+ * report a failure and continue, and two of which change shape with --remote.
+ * A section that stops running is therefore the most available failure here,
+ * and it is invisible: the remaining sections still pass and the total is the
+ * only witness.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 84
+ * offline. Never summed. Floored at 80, slack of four: the offline count is
+ * stable across runs, and --remote only ADDS, so a floor set on the offline
+ * figure holds for both tiers.
+ */
+const MINIMUM_CHECKS = 80;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
+      `rather than failing. Measured: 84 offline.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

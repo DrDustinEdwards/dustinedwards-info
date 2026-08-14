@@ -137,5 +137,30 @@ ok(
     `whole reason this floor exists.`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS.
+ *
+ * MINIMUM_TESTS above floors the tests NODE ran, which is the important number
+ * and not this one. This floors the handful of assertions this gate makes ABOUT
+ * that run: discovery, the exit code, the reported totals. If those stopped
+ * running, the test floor above would stop being consulted and nothing would
+ * say so.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 5.
+ * Never summed. Floored at 5, slack of ZERO, which is justified here and almost
+ * nowhere else: this gate asserts a fixed set of properties about one run, so a
+ * drop is a removed assertion rather than natural movement, and a rise arrives
+ * in the commit that adds one.
+ */
+const MINIMUM_CHECKS = 5;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 5.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

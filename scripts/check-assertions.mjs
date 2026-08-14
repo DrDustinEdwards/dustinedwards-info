@@ -683,6 +683,33 @@ console.log(
     `${findings.length} finding(s), rule (c) skipped by design`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR, and this gate is the one that most needs one.
+ *
+ * MINIMUM_SITES and MINIMUM_FILES above floor the SCOPE: how much source was
+ * read. This floors how much was ASSERTED about it, and the two catch different
+ * bugs. Measured while retrofitting this floor: emptying the per-file scan loop
+ * left `checks` at 41, unchanged, because the scan feeds the scope counters
+ * rather than the assertion counter. The scope floors caught that plant
+ * correctly, and this floor would not have. The reverse case, an assertion
+ * block that stops running over a scope that is still full, is the one only
+ * this can see.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 41.
+ * Never summed. Floored at 38, slack of three: most of the count is the
+ * per-file OBSERVATION BOUNDARY assertion, so it steps by one when a gate
+ * script is added.
+ */
+const MINIMUM_CHECKS = 38;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 41.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);
