@@ -190,13 +190,23 @@ export function toMatchExpression(parsed, prefix = false) {
  * automatically beat being second in both. 60 is the value from the original
  * RRF paper and the constant the architecture ratified.
  *
+ * `ranks` and `contributions` are RECORDED RATHER THAN RECOMPUTED. Both were
+ * already computed here as per-iteration locals and thrown away; keeping them is
+ * what lets `/playground`'s search anatomy show the k=60 arithmetic without a
+ * second implementation of fusion anywhere. They are positionally parallel to
+ * `sources`, so `sources[i]`, `ranks[i]` and `contributions[i]` describe the same
+ * appearance of the item in one list, and `contributions` sums to `score`.
+ *
+ * Additive on purpose: no existing field changed meaning or position, so every
+ * current caller reads exactly what it read before.
+ *
  * @template {{ uid: string }} T
  * @param {T[][]} lists
  * @param {number} [k]
- * @returns {Array<{ item: T, score: number, sources: number[] }>}
+ * @returns {Array<{ item: T, score: number, sources: number[], ranks: number[], contributions: number[] }>}
  */
 export function fuse(lists, k = RRF_K) {
-  /** @type {Map<string, { item: T, score: number, sources: number[] }>} */
+  /** @type {Map<string, { item: T, score: number, sources: number[], ranks: number[], contributions: number[] }>} */
   const scores = new Map();
 
   lists.forEach((list, listIndex) => {
@@ -207,8 +217,16 @@ export function fuse(lists, k = RRF_K) {
       if (existing) {
         existing.score += contribution;
         existing.sources.push(listIndex);
+        existing.ranks.push(rank);
+        existing.contributions.push(contribution);
       } else {
-        scores.set(item.uid, { item, score: contribution, sources: [listIndex] });
+        scores.set(item.uid, {
+          item,
+          score: contribution,
+          sources: [listIndex],
+          ranks: [rank],
+          contributions: [contribution],
+        });
       }
     });
   });
