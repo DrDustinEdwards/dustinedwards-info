@@ -156,6 +156,48 @@ assertThat(
     JSON.stringify(example.compatibility_flags ?? []),
   "compatibility_flags match",
 );
+
+/*
+ * PLAIN VARS, BOTH DIRECTIONS, keys and values.
+ *
+ * `surfaceOf()` carries BINDINGS, and a var is not a binding, so before this
+ * block the `vars` object was compared by nothing at all: a var added to
+ * wrangler.jsonc and forgotten in the example would reach the running Worker
+ * and be absent from every clone, which is the exact drift this gate exists to
+ * catch for everything else. Found 2026-08-14 while adding the first var.
+ *
+ * VALUES are compared, not just names, and that is deliberate. A var is by
+ * definition not a credential (a credential goes in `wrangler secret`), so the
+ * example can carry the real value and there is nothing to redact. A var whose
+ * value legitimately differs per clone would be a new decision, and it should
+ * arrive as a change to this assertion with the reason attached rather than as
+ * a silent divergence.
+ */
+{
+  const realVars = /** @type {Record<string, unknown>} */ (real.vars ?? {});
+  const exampleVars = /** @type {Record<string, unknown>} */ (example.vars ?? {});
+  for (const key of Object.keys(realVars)) {
+    assertThat(
+      Object.hasOwn(exampleVars, key),
+      `example declares the var ${key}`,
+      "It is in wrangler.jsonc and not in the example, so a fresh clone runs without it.",
+    );
+    if (Object.hasOwn(exampleVars, key)) {
+      assertThat(
+        JSON.stringify(realVars[key]) === JSON.stringify(exampleVars[key]),
+        `var ${key} matches`,
+        `real: ${JSON.stringify(realVars[key])} | example: ${JSON.stringify(exampleVars[key])}`,
+      );
+    }
+  }
+  for (const key of Object.keys(exampleVars)) {
+    assertThat(
+      Object.hasOwn(realVars, key),
+      `real config still declares the var ${key}`,
+      "It is in the example but not in wrangler.jsonc, so the example describes a var that no longer exists.",
+    );
+  }
+}
 assertThat(
   JSON.stringify(real.migrations ?? []) === JSON.stringify(example.migrations ?? []),
   "durable object migrations match",
