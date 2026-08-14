@@ -5923,3 +5923,279 @@ a:hover {
   max-height: 40vh;
   overflow-y: auto;
 }
+
+/* -------------------------------------------------------------------------
+ * /playground
+ *
+ * Each demo is a section on the page canvas whose CONTROLS and RESULT sit on
+ * `--surface`. That is binding rule 7 read correctly rather than stretched: the
+ * prose stays on the canvas and the distinct surfaces are interruptions, the
+ * same standing code blocks and figures have inside an article.
+ *
+ * No colour here carries meaning on its own (rule 1). Pass and fail are words,
+ * the error block is a word plus a border, and nothing is distinguished by hue.
+ * ---------------------------------------------------------------------- */
+
+.playground-demo {
+  margin: 3.5rem 0 0;
+  padding: 0 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.playground-demo-title {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.playground-demo-lede {
+  margin: 0.5rem 0 0;
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
+.playground-demo-runs {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* The form is a row that wraps on its own, so a narrow viewport needs no
+   breakpoint and no script. */
+.playground-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.playground-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.playground-field-wide {
+  flex: 1 1 18rem;
+}
+
+.playground-field label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.playground-field input {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  /* 24px minimum target, WCAG 2.2 2.5.8. */
+  min-height: 2.25rem;
+}
+
+.playground-form button {
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: var(--brand);
+  color: var(--on-brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 2.25rem;
+}
+
+.playground-form button:hover {
+  background: var(--brand-hover);
+}
+
+.playground-fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+}
+
+.playground-fieldset legend {
+  padding: 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.playground-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.5rem;
+}
+
+/* The cap is stated in the UI, not just enforced in the loader. It takes the
+   whole row so it reads as a note about the form rather than a field label. */
+.playground-cap {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* Ratified pairs, as ordinary links: each one is a real URL for that result, so
+   they are shareable and work with scripting off like everything else here. */
+.playground-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.playground-error {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-danger);
+  border-radius: 0.375rem;
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
+}
+
+.playground-result {
+  margin: 1.5rem 0 0;
+}
+
+.playground-note {
+  margin: 1rem 0 0;
+  max-width: 42rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* The only element on the site whose colours are legitimately inline: they are
+   the reader's own input, so no token could name them. */
+.playground-sample {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+}
+
+.playground-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+}
+
+.playground-metrics div {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.playground-metrics dt {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.playground-metrics dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+}
+
+/* Wide content scrolls in its own box; the page body never scrolls sideways. */
+.playground-table-scroll {
+  margin: 1.25rem 0 0;
+  overflow-x: auto;
+}
+
+.playground-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9375rem;
+}
+
+.playground-table caption {
+  margin: 0 0 0.75rem;
+  max-width: 42rem;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.playground-table th,
+.playground-table td {
+  /* Tightened from 0.75rem: at the 48rem measure the six columns overflowed the
+     container by 26px, which clipped the fused total, the one number the table
+     exists to show. It still scrolls if a title forces it to. */
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.playground-table th:first-child,
+.playground-table td:first-child {
+  padding-left: 0;
+}
+
+.playground-row-parent {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.playground-table thead th {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.playground-table tbody th {
+  font-weight: 400;
+  white-space: normal;
+  min-width: 14rem;
+}
+
+.playground-deferred {
+  margin: 3.5rem 0 0;
+}
+
+.playground-deferred h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.playground-deferred p {
+  margin: 0.5rem 0 0;
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
+.playground-deferred dl {
+  margin: 1.25rem 0 0;
+}
+
+.playground-deferred dt {
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+.playground-deferred dd {
+  margin: 0.25rem 0 0;
+  max-width: 42rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}

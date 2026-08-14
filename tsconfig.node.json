@@ -26,6 +26,11 @@
     // app/routes/projects.tsx renders the card anchors from the same
     // `projectAnchor`, so a record cannot cite a fragment the page omits.
     "app/lib/projects-page.mjs",
+    // The playground's page descriptor, on the same footing as the two above:
+    // build-content.mjs emits /playground's search records from it and
+    // app/routes/playground.tsx renders the demo anchors from the same
+    // `demoAnchor`, so a record cannot cite a fragment the page omits.
+    "app/lib/playground-page.mjs",
     "app/lib/search/query.mjs",
     // The colour maths. check:contrast computes with it and the playground's
     // contrast lab renders with it, on the same principle as query.mjs: the gate

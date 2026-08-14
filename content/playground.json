@@ -1,0 +1,137 @@
+{
+  "$comment": "The /playground demo roster. Hand-authored, and reconciled BOTH DIRECTIONS against the rendered route by check:features, on the content/features.json and content/projects.json precedent. A demo here that the page does not render is a lie in the manifest; a demo the page renders that is absent here is an unindexed section. The enum value sets are deliberately restated here so the gate can argue them against the module that owns them (CHART_TYPES in app/lib/content/chart.mjs, RRF_K in app/lib/search/query.mjs): two sources that must agree, not one source copied.",
+  "demos": [
+    {
+      "slug": "contrast",
+      "title": "Contrast lab",
+      "lede": "Two colours in, the conformance number out. This is the same arithmetic the build gate runs over every ratified pair in the palette.",
+      "realPath": "app/lib/contrast.mjs, imported by scripts/check-contrast.mjs and by this page",
+      "homeArticle": {
+        "slug": "a-color-palette-that-can-prove-itself",
+        "title": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
+      },
+      "inputs": [
+        {
+          "name": "fg",
+          "kind": "hex",
+          "label": "Foreground",
+          "cap": "a 3 or 6 digit hex colour",
+          "default": "#2B2320"
+        },
+        {
+          "name": "bg",
+          "kind": "hex",
+          "label": "Background",
+          "cap": "a 3 or 6 digit hex colour",
+          "default": "#FAF7F2"
+        }
+      ],
+      "outputs": ["WCAG 2.2 contrast ratio", "AA pass or fail at each size", "APCA Lc"]
+    },
+    {
+      "slug": "search-anatomy",
+      "title": "Search anatomy",
+      "lede": "One query, run through the real search path, showing what each index ranked and how reciprocal rank fusion combined the two.",
+      "realPath": "app/lib/search/search.server.ts and app/lib/search/query.mjs, the same code /search runs",
+      "homeArticle": {
+        "slug": "site-search-fts5-rank-fusion",
+        "title": "SQLite FTS5 Search on Cloudflare D1: 6 ms with Rank Fusion"
+      },
+      "inputs": [
+        {
+          "name": "q",
+          "kind": "text",
+          "label": "Query",
+          "cap": "up to 100 characters",
+          "maxLength": 100,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        "rank in search_identity",
+        "rank in search_prose",
+        "1/(k + rank) per layer",
+        "fused total"
+      ],
+      "constants": { "k": 60 }
+    },
+    {
+      "slug": "chart-options",
+      "title": "Chart options",
+      "lede": "A fixed dataset rendered to SVG on the server by the same Observable Plot pipeline that draws the charts in the articles.",
+      "realPath": "app/lib/content/chart.mjs, imported by the build, the editor preview and this page",
+      "homeArticle": {
+        "slug": "observable-plot-cloudflare-workers",
+        "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts"
+      },
+      "inputs": [
+        {
+          "name": "mark",
+          "kind": "enum",
+          "label": "Mark type",
+          "cap": "one of four",
+          "values": ["bar", "line", "dot", "area"],
+          "default": "bar"
+        },
+        {
+          "name": "data",
+          "kind": "enum",
+          "label": "Dataset",
+          "cap": "one of two",
+          "values": ["limiter", "corpus"],
+          "default": "limiter"
+        }
+      ],
+      "outputs": ["server-rendered SVG", "the generated data table"]
+    }
+  ],
+  "$swatchComment": "Ratified palette pairs the contrast lab opens on, and the gate's behavioural fixtures. They live here rather than in the route so check:features can compute the expected ratio through app/lib/contrast.mjs and compare it against the pair the page actually offers. A pair here that the page does not render, or a preset on the page that is not here, fails reconciliation.",
+  "swatches": [
+    { "label": "Body text on page", "fg": "#2B2320", "bg": "#FAF7F2", "ratio": 14.4 },
+    { "label": "Muted text on page", "fg": "#5C5248", "bg": "#FAF7F2", "ratio": 7.1 },
+    { "label": "Disabled text on page", "fg": "#93887A", "bg": "#FAF7F2", "ratio": 3.3 },
+    { "label": "White on brand purple", "fg": "#FFFFFF", "bg": "#4F2D7F", "ratio": 10.4 },
+    { "label": "Dark body on dark canvas", "fg": "#E3DBD0", "bg": "#1A1614", "ratio": 13.1 },
+    { "label": "Dark border on canvas", "fg": "#746A5F", "bg": "#1A1614", "ratio": 3.4 }
+  ],
+  "$datasetComment": "The chart demo's fixed datasets. REAL RECORDED DATA, per the chart directive's own rule: both are lifted from measurements already published on this site. They live here rather than in the route so the gate renders the identical SVG through app/lib/content/chart.mjs. The keys must equal the chart demo's dataset enum, asserted both directions.",
+  "datasets": {
+    "limiter": {
+      "label": "Rate limiter, three mechanisms",
+      "x": "mechanism",
+      "y": "allowed,ceiling",
+      "labels": "Allowed,Ceiling",
+      "title": "Requests allowed against the ceiling each mechanism was given",
+      "alt": "Comparison of allowed requests against the ceiling for three rate limiting mechanisms. The GA ratelimit binding allowed 11 against a limit of 5. A Durable Object using async storage allowed 8 against a ceiling of 3. A Durable Object using the synchronous SQLite API allowed exactly 3 against a ceiling of 3.",
+      "csv": "mechanism,allowed,ceiling\nGA ratelimit,11,5\nasync DO storage,8,3\nsync SQLite DO,3,3\n",
+      "note": "Categorical x, two series. The x scale is a band and the series take the first two colours of the chart ladder."
+    },
+    "corpus": {
+      "label": "Search corpus growth",
+      "x": "posts",
+      "y": "records",
+      "labels": "",
+      "title": "Search records against published posts",
+      "alt": "Search index size against post count at four recorded points: 7 records from 1 post, 47 from 6 posts, 84 from 11 posts and 93 from 12 posts. Records grow faster than posts because each heading is indexed separately.",
+      "csv": "posts,records\n1,7\n6,47\n11,84\n12,93\n",
+      "note": "Numeric x, one series. Every x value parses as a number, so the scale is inferred as linear rather than a band."
+    }
+  },
+  "deferred": [
+    {
+      "slug": "cvd-simulation",
+      "title": "Colour vision deficiency simulation",
+      "reason": "No shared implementation exists yet. Simulating protanopia and deuteranopia here before the build gate does it would be a second answer to a question the gate is supposed to own. Queued as its own session, with Vienot and libDaltonLens reference fixtures already decided."
+    },
+    {
+      "slug": "markdown-pipeline",
+      "title": "Markdown through the pipeline",
+      "reason": "Arbitrary text into the highlighter and the diagram renderer is a compute and sanitization surface that needs its own threat model first."
+    },
+    {
+      "slug": "ask",
+      "title": "Ask internals",
+      "reason": "Every Ask probe is billed, so an unauthenticated demo of it is a spend decision rather than a design one."
+    }
+  ]
+}

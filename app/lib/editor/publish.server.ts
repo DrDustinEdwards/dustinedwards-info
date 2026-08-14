@@ -23,7 +23,9 @@ import { serializeArtifact } from "~/lib/content/artifact.mjs";
 import stackData from "../../../content/generated/stack.json";
 import featuresData from "../../../content/features.json";
 import projectsData from "../../../content/projects.json";
+import playgroundData from "../../../content/playground.json";
 import { colophonPages } from "~/lib/colophon-sections.mjs";
+import { playgroundPages } from "~/lib/playground-page.mjs";
 import { projectsPages } from "~/lib/projects-page.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
@@ -69,6 +71,7 @@ export type { Actor };
 const PAGE_INPUTS = [
   ...colophonPages(stackData, featuresData),
   ...projectsPages(projectsData),
+  ...playgroundPages(playgroundData),
 ];
 
 const ARTIFACT_PATH = "content/generated/posts.json";
