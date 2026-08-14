@@ -67,10 +67,31 @@ const SETTINGS_PATH = join(root, ".claude", "settings.json");
  * records which tool each guard is supposed to watch. The script name is a
  * SUBSTRING of the command, so the path form and the quoting can change without
  * touching this.
+ *
+ * TWO DIFFERENT QUESTIONS, TWO CHECKS. `requires` is the enforcement floor: the
+ * tools that MUST be watched, whatever else is. `matcher` is the exact string
+ * currently recorded in the protected file. Before 2026-08-14 there was one
+ * check doing both by string equality, and when `ef6be97` widened the matcher
+ * from "Write|Edit" to "Write|Edit|Bash" it reported the guard as UNGUARDED
+ * while the guard had in fact been WIDENED. That is hard rule 10's spelling
+ * versus binding class, and it is why coverage is now computed by membership.
+ *
+ * Canon requires the Bash arm: capsid/conventions.md records the no-em-dash hook
+ * as covering Write, Edit and Bash, including `git commit -m` and heredocs.
  */
 const EXPECTED_HOOKS = [
-  { matcher: "Write|Edit", script: "no-em-dash.sh", guards: "em and en dashes in written content" },
-  { matcher: "Bash", script: "scoped-git-add.sh", guards: "unscoped git add" },
+  {
+    matcher: "Write|Edit|Bash",
+    requires: ["Write", "Edit", "Bash"],
+    script: "no-em-dash.sh",
+    guards: "em and en dashes in written content",
+  },
+  {
+    matcher: "Bash",
+    requires: ["Bash"],
+    script: "scoped-git-add.sh",
+    guards: "unscoped git add",
+  },
 ];
 
 /** The script package.json is expected to own, which the Stop hook must call. */
@@ -137,17 +158,69 @@ function commandOf(entry) {
   return String(hooks[0]?.command ?? "");
 }
 
-for (const expected of EXPECTED_HOOKS) {
-  const entry = preToolUse.find((/** @type {any} */ e) => e?.matcher === expected.matcher);
-  const label = `PreToolUse ${expected.matcher}`;
+/**
+ * The tools a matcher string watches. Claude Code splits it on "|".
+ *
+ * @param {unknown} matcher
+ * @returns {string[]}
+ */
+function toolsOf(matcher) {
+  return String(matcher ?? "")
+    .split("|")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
+for (const expected of EXPECTED_HOOKS) {
+  /*
+   * Looked up by the SCRIPT it runs, not by its matcher string. The script is
+   * the guard's identity; the matcher is a property of it that this gate then
+   * asserts twice. Looking up by matcher is what made a widening indistinguish-
+   * able from a removal.
+   */
+  const entry = preToolUse.find((/** @type {any} */ e) =>
+    commandOf(e).includes(expected.script),
+  );
+  const label = `PreToolUse ${expected.script}`;
+  const tools = toolsOf(entry?.matcher);
+  const missing = expected.requires.filter((t) => !tools.includes(t));
+
+  /*
+   * COVERAGE. The enforcement question, and the ONLY check here entitled to the
+   * word UNGUARDED: it fails when a tool that must be watched is not watched,
+   * whether because the entry is absent or because the tool was dropped from
+   * the matcher. Membership, not string equality, so widening the matcher can
+   * never read as removing the guard.
+   */
   ok(
-    `${label}: the matcher is declared`,
-    Boolean(entry),
-    `nothing matches ${JSON.stringify(expected.matcher)}, so ${expected.guards} is UNGUARDED. ` +
-      `Declared matchers: ${preToolUse.map((/** @type {any} */ e) => JSON.stringify(e?.matcher)).join(", ") || "(none)"}`,
+    `${label}: COVERAGE, every required tool is watched`,
+    Boolean(entry) && missing.length === 0,
+    entry
+      ? `the matcher is ${JSON.stringify(entry.matcher)}, which watches ${JSON.stringify(tools)}, ` +
+        `so ${expected.guards} is UNGUARDED for ${JSON.stringify(missing)}.`
+      : `no PreToolUse entry runs ${expected.script}, so ${expected.guards} is UNGUARDED entirely. ` +
+        `Declared matchers: ${preToolUse.map((/** @type {any} */ e) => JSON.stringify(e?.matcher)).join(", ") || "(none)"}`,
   );
   if (!entry) continue;
+
+  /*
+   * TRIPWIRE. A different question: has the protected file moved at all. It
+   * carries no enforcement claim, because a matcher can drift (reordered, or
+   * widened again) while coverage is still complete. It exists so a change to
+   * `.claude/settings.json`, which hard rule 15 puts off limits without explicit
+   * instruction, cannot land unnoticed. Its message must never say unguarded:
+   * saying so is what sent a previous session looking for a hole that was not
+   * there.
+   */
+  ok(
+    `${label}: TRIPWIRE, the recorded matcher is unchanged`,
+    entry.matcher === expected.matcher,
+    `protected-file drift: .claude/settings.json matcher differs from the recorded ` +
+      `expectation. Recorded ${JSON.stringify(expected.matcher)}, found ` +
+      `${JSON.stringify(entry.matcher)}. Coverage is asserted separately and is not ` +
+      `what this check is about. If the change was intended, update EXPECTED_HOOKS ` +
+      `in the same commit and say why.`,
+  );
 
   const hooks = entry.hooks ?? [];
   ok(
@@ -157,12 +230,6 @@ for (const expected of EXPECTED_HOOKS) {
   );
 
   const command = commandOf(entry);
-  // The BINDING. Existence alone would pass with the two commands swapped.
-  ok(
-    `${label}: runs ${expected.script}, so ${expected.guards} is what it guards`,
-    command.includes(expected.script),
-    `its command is ${JSON.stringify(command)}, which does not name ${expected.script}`,
-  );
 
   /*
    * The path is taken OUT of the command rather than rebuilt from the expected
