@@ -78,6 +78,14 @@ const SETTINGS_PATH = join(root, ".claude", "settings.json");
  *
  * Canon requires the Bash arm: capsid/conventions.md records the no-em-dash hook
  * as covering Write, Edit and Bash, including `git commit -m` and heredocs.
+ *
+ * A NOTE ON THE WORDING BELOW. Prose in this file must not read as raw SQL.
+ * `check:invariants` section 5 matches its `LOOKS_LIKE_SQL` constant against the
+ * whole file, then resolves the token after a row-write keyword as a table name,
+ * so an ordinary English sentence can become a phantom statement and fail the
+ * gate naming a column that never existed. Measured 2026-08-14: the first draft
+ * of the drift message said "u" plus "pdate EXPECTED_HOOKS" and did exactly
+ * that. The extractor is correctly broad, so the prose gives way, not the guard.
  */
 const EXPECTED_HOOKS = [
   {
@@ -218,8 +226,8 @@ for (const expected of EXPECTED_HOOKS) {
     `protected-file drift: .claude/settings.json matcher differs from the recorded ` +
       `expectation. Recorded ${JSON.stringify(expected.matcher)}, found ` +
       `${JSON.stringify(entry.matcher)}. Coverage is asserted separately and is not ` +
-      `what this check is about. If the change was intended, update EXPECTED_HOOKS ` +
-      `in the same commit and say why.`,
+      `what this check is about. If the change was intended, record the new matcher ` +
+      `in EXPECTED_HOOKS in the same commit and say why.`,
   );
 
   const hooks = entry.hooks ?? [];
