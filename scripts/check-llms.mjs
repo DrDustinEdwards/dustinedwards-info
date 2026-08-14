@@ -177,5 +177,24 @@ if (target) {
 console.log(
   `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
 );
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 6 in
+ * the pure offline tier. Never summed. Floored at 6, slack of ZERO, and the
+ * zero is the point: this gate is SMALL, so one skipped assertion is a sixth of
+ * it and there is no natural movement to absorb. The remote tier only ADDS the
+ * D1 row comparison, so a floor set on the offline figure holds for both.
+ */
+const MINIMUM_CHECKS = 6;
+if (checks < MINIMUM_CHECKS) {
+  assertThat(
+    false,
+    "this gate executed its assertions",
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 6 offline.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);
