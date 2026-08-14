@@ -1554,5 +1554,32 @@ console.log(
     `${playgroundRecords.length} artifact record(s), ${playgroundChecks} assertion(s)`,
 );
 
+/*
+ * WHOLE-GATE EXECUTED-COUNT FLOOR.
+ *
+ * The projects and playground sections already floor THEMSELVES, and that is
+ * not the same guarantee: a section floor cannot see a DIFFERENT section
+ * stopping, and this gate has several unfloored ones ahead of them (the feature
+ * roster, the anchors, the enhancement inventory, the colophon page records).
+ * Each section floor is a local witness; this is the global one.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 583.
+ * Never summed, and the habit of summing is why: 91 was guessed against 154
+ * measured for the projects section in this very file.
+ *
+ * Floored at 540, roughly 7 percent. More slack than the small gates get,
+ * because this count moves with the CORPUS: posts, tags, projects and demos all
+ * feed it, so ordinary content work shifts it by tens.
+ */
+const MINIMUM_CHECKS = 540;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
+      `rather than failing. Measured: 583.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
