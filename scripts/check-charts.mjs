@@ -455,6 +455,28 @@ async function main() {
   const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
   assertThat(/<figure><img/.test(known.html), "the figure directive stopped rendering");
 
+  /*
+   * EXECUTED-COUNT FLOOR.
+   *
+   * This gate is ASYNC and spawns a bundler and a Miniflare worker. That is the
+   * shape most able to skip silently: an await that resolves to an empty
+   * fixture list, a parity block that returns early, a determinism loop that
+   * runs zero renders. All of them leave `failed` at zero.
+   *
+   * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 181.
+   * Never summed. Floored at 170, roughly 6 percent: the count is a fixed
+   * function of the eight fixtures crossed with the mark types and the planted
+   * negatives, so it moves only when a fixture or a rule is added.
+   */
+  const MINIMUM_PASSED = 170;
+  if (passed < MINIMUM_PASSED) {
+    failed += 1;
+    console.error(
+      `  FAIL  only ${passed} assertions executed, expected at least ${MINIMUM_PASSED}. ` +
+        `A block was SKIPPED rather than failing. Measured: 181.`,
+    );
+  }
+
   console.log(`check:charts ${failed === 0 ? "ok" : "FAILED"}. ${passed} assertions passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);
 }
