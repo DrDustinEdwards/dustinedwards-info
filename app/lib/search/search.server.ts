@@ -11,6 +11,7 @@
  */
 
 import {
+  RRF_K,
   fuse,
   hasFilters,
   parseQuery,
@@ -81,6 +82,44 @@ export interface SearchFacets {
   years: Array<{ value: number; count: number }>;
 }
 
+/**
+ * One fused result, decomposed into what each index contributed.
+ *
+ * There is deliberately NO score field. Within a layer the ordering comes from
+ * bm25, but bm25 values from two differently-tokenized indexes are not
+ * comparable, which is exactly why fusion is over ranks. Surfacing a per-layer
+ * score would invite a reader to compare two numbers that do not share a scale,
+ * so the value never leaves SQL: `bm25()` appears only in ORDER BY.
+ */
+export interface SearchExplainRow {
+  uid: string;
+  title: string;
+  /**
+   * The parent document's title. Records are SECTION-GRAINED, so a row's own
+   * title is frequently a bare heading ("Limitations") that means nothing on its
+   * own. Carrying the parent is what makes the table readable.
+   */
+  docTitle: string;
+  url: string;
+  /** Rank in each layer, or null where that layer did not return the row. */
+  identityRank: number | null;
+  proseRank: number | null;
+  /** 1/(k + rank) per layer, recorded by fuse() rather than recomputed here. */
+  identityContribution: number | null;
+  proseContribution: number | null;
+  /** The sum of the contributions above. Identical to the hit's score. */
+  score: number;
+}
+
+export interface SearchExplain {
+  k: number;
+  /** Layer names, in the order fuse() received the lists. */
+  layers: string[];
+  identityCount: number;
+  proseCount: number;
+  rows: SearchExplainRow[];
+}
+
 export interface SearchResult {
   parsed: ParsedQuery;
   hits: SearchHit[];
@@ -92,6 +131,11 @@ export interface SearchResult {
   truncated: boolean;
   /** Wall-clock milliseconds spent in D1. */
   tookMs: number;
+  /**
+   * Present only when `SearchOptions.explain` is set, which only the playground
+   * route sets. Absent otherwise, so the ordinary search payload is unchanged.
+   */
+  explain?: SearchExplain;
 }
 
 interface RawRow {
@@ -305,6 +349,16 @@ export interface SearchOptions {
   /** Prefix-match the last term. Used by the palette while typing. */
   prefix?: boolean;
   now?: Date;
+  /**
+   * Attach the per-layer rank decomposition to the result. Set by the
+   * playground's search anatomy demo and by nothing else.
+   *
+   * It changes no query, no ordering and no hit. The values are read off what
+   * `fuse()` already recorded, so the flag cannot make the demo and the real
+   * search disagree: with it off, every other field is byte-identical to what
+   * the same call produced before this option existed.
+   */
+  explain?: boolean;
 }
 
 export async function search(env: Env, options: SearchOptions): Promise<SearchResult> {
@@ -424,6 +478,35 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     facets: buildFacets(hits),
     truncated,
     tookMs,
+    // Read off what fuse() recorded. Nothing is recomputed and no scoring rule
+    // is restated: `sources` says which lists the row appeared in and `ranks`
+    // and `contributions` are positionally parallel to it.
+    ...(options.explain
+      ? {
+          explain: {
+            k: RRF_K,
+            layers: ["search_identity", "search_prose"],
+            identityCount: identityRows.length,
+            proseCount: proseRows.length,
+            rows: fused.map(({ item, score, sources, ranks, contributions }) => {
+              const at = (list: number) => sources.indexOf(list);
+              const i = at(0);
+              const p = at(1);
+              return {
+                uid: item.uid,
+                title: item.title,
+                docTitle: item.doc_title,
+                url: item.url,
+                identityRank: i === -1 ? null : ranks[i],
+                proseRank: p === -1 ? null : ranks[p],
+                identityContribution: i === -1 ? null : contributions[i],
+                proseContribution: p === -1 ? null : contributions[p],
+                score,
+              };
+            }),
+          },
+        }
+      : {}),
   };
 }
 
