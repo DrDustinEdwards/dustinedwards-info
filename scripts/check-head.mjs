@@ -324,6 +324,30 @@ console.log(
     `${Object.keys(EXCLUDED).length} excluded (${Object.keys(EXCLUDED).join(", ")})`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS.
+ *
+ * MINIMUM_EXECUTED above floors the GATES that ran inside the extraction, which
+ * is the headline number and not this one. This floors the assertions this gate
+ * makes AROUND that run: the preflight, the extraction, the NUL scan, the
+ * exclusions and the per-gate verdicts. If those stopped running, the gate floor
+ * above would stop being consulted and the run would still report clean.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 30,
+ * with 20 gates executed and 3 excluded. Never summed. Floored at 27, slack of
+ * three: most of the count is one assertion per gate run, so it steps by one
+ * when a gate is added and by more only when the tier is re-tiered.
+ */
+const MINIMUM_CHECKS = 27;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 30.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);
