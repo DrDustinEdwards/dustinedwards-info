@@ -12,14 +12,32 @@ import type { loader as rootLoader } from "~/root";
  * It grows when there is a page to add, not in anticipation, so there is still
  * no disclosure widget and no mobile menu machinery.
  *
- * THIS IS THE THIRD LINK, which the previous version of this comment named as
- * the point to look again. Looked: three text links plus the search control and
- * the theme pill still fit the row without wrapping, and the nav is a flex row
- * with `gap`, so a narrow viewport wraps it rather than overflowing. A
- * disclosure widget would be client state on a page that has none, so it stays
- * refused until the row actually breaks. The FOURTH link is the next place to
- * check, and by then measuring the wrap on a real narrow viewport is the
- * decision, not counting links.
+ * THIS IS THE FOURTH LINK, and the previous comment said the fourth is where
+ * counting links stops and measuring starts. Measured 2026-08-14, and the
+ * numbers are why Playground is here rather than in the footer:
+ *
+ *   header no-wrap threshold   3 links 537px   4 links 619px
+ *   320px to 480px             identical: header 81px, wordmark on two lines
+ *   nav overflow, page x-scroll   none at any width down to 320px
+ *
+ * The 619px figure is measured against THIS nav. A prediction of 629px was made
+ * first from a probe anchor injected into the row, and it was 10px wide because
+ * the probe rendered slightly broader than a real NavLink (nav content 413px
+ * against the real 403px). Recorded because it is the general case: a simulated
+ * element is not the element, so the threshold is re-measured after the link
+ * actually lands, not before.
+ *
+ * The header is `flex-wrap: nowrap` and the only media query touching it is
+ * `print`, so nothing here is breakpoint-dependent. At every real phone width
+ * the header was ALREADY two lines with three links, so the fourth costs
+ * nothing there; it only moves the wordmark's two-line threshold from 537px to
+ * 629px. That band is accepted (ruled 2026-08-14). A disclosure widget would be
+ * client state on a page that has none, so it stays refused: the row still does
+ * not break, it reflows.
+ *
+ * The FIFTH link is the next place to look, and the same measurement decides
+ * it. Re-measure rather than reasoning from these numbers: they are a property
+ * of the current label widths, and a longer word moves them.
  *
  * Roster's LABEL and its PATH deliberately disagree. The path is
  * /phage-discovery because that is the indexed legacy URL the Worker takes over
@@ -46,6 +64,7 @@ export function SiteHeader() {
       <nav className="site-header-nav">
         <NavLink to="/blog">Blog</NavLink>
         <NavLink to="/projects">Projects</NavLink>
+        <NavLink to="/playground">Playground</NavLink>
         <NavLink to="/phage-discovery">Roster</NavLink>
         <SearchTrigger />
         {/*

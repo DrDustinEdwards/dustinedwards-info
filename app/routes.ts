@@ -23,6 +23,10 @@ export default [
   // technical and "projects" is what they call the thing, while "portfolio" is
   // what this workspace calls the repo fleet, a different object.
   route("projects", "routes/projects.tsx"),
+  // The interactive index of the site's own machinery. Every demo is a GET form
+  // rendered server-side, so the page has no client state and every result is a
+  // shareable URL.
+  route("playground", "routes/playground.tsx"),
   // Ordered before /search so the Ask endpoint is not read as a search param
   // variant, and kept a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),

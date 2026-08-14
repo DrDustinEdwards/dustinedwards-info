@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { serializeArtifact } from "../app/lib/content/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
+import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
 import { withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
@@ -83,9 +84,14 @@ export async function buildArtifact() {
     await readFile(path.join("content", "projects.json"), "utf8"),
   );
 
+  const playground = JSON.parse(
+    await readFile(path.join("content", "playground.json"), "utf8"),
+  );
+
   return serializeArtifact(withRelated(posts), [
     ...colophonPages(stack, features),
     ...projectsPages(projects),
+    ...playgroundPages(playground),
   ]);
 }
 
