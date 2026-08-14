@@ -50,6 +50,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -118,6 +119,50 @@ console.log("  clean.");
 const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" });
 const sha = (head.stdout ?? "").trim();
 console.log(`  HEAD is ${sha}`);
+
+/* ------------------------------------------------- 1b. unmeasured placeholders */
+
+/*
+ * NO STATED-ABSENCE PLACEHOLDER MAY REACH A DEPLOY.
+ *
+ * The origin-requests panel owes its caption a sentence about whether a cached
+ * serve is counted, and that sentence has to come from `npm run ae-probe`
+ * rather than from reasoning. Until it does, the panel carries a named
+ * placeholder so the gap is visible in the product and asserted by
+ * `check:admin-ui`.
+ *
+ * HERE RATHER THAN IN check:head, deliberately. check:head runs inside the
+ * ordinary offline tier, so putting this there would fail every run TODAY,
+ * while the placeholder is doing its job correctly. The rule is not "this text
+ * must never exist", it is "this text must never SHIP", and ship is the only
+ * step that can tell the difference. Smaller diff, and the only one that says
+ * the true thing.
+ *
+ * Removing the placeholder without writing the measured sentence fails
+ * check:admin-ui instead, so neither direction is silent.
+ */
+const PLACEHOLDERS = [
+  {
+    token: "CACHE_SENTENCE_PENDING_PROBE",
+    file: "app/lib/admin/origin-requests.mjs",
+    remedy:
+      "Run `npm run ae-probe`, write the measured sentence into the caption, and " +
+      "delete the constant. The panel must not go live saying the question is " +
+      "unanswered.",
+  },
+];
+for (const placeholder of PLACEHOLDERS) {
+  const path = join(root, placeholder.file);
+  if (!existsSync(path)) continue;
+  if (readFileSync(path, "utf8").includes(placeholder.token)) {
+    refuse(
+      `${placeholder.file} still declares ${placeholder.token}, which is an ` +
+        "unmeasured claim standing in for a measured one",
+      placeholder.remedy,
+    );
+  }
+}
+console.log(`  no unmeasured placeholders (${PLACEHOLDERS.length} checked).`);
 
 /* --------------------------------------------------------------- 2. build */
 
