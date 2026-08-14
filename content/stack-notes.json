@@ -25,6 +25,10 @@
       "what": "The per-IP burst limit and the site-wide daily ceiling for Ask, on the synchronous SQLite storage API.",
       "whyLoadBearing": "Both cheaper mechanisms were built first and both leaked. The GA ratelimit binding, configured at 5 per 60 seconds and attacked with 12 concurrent requests, refused 1, then 2, then 9, then 0 across four runs. A Durable Object using async storage.get then storage.put allowed 8 through a ceiling of 3, because a read and a write spanning an await is not atomic. The synchronous API allowed exactly 3, which is why the class is registered as new_sqlite_classes."
     },
+    "analytics_engine:ANALYTICS": {
+      "what": "Per-path traffic, one row per HTML response, written server-side from the Worker's response path. Path, referrer host, country and a coarse mobile bit. No cookie, no IP, no client identifier of any kind, so nothing joins two requests together.",
+      "whyLoadBearing": "It is here because the alternative was worse. Cloudflare Web Analytics reports the same per-path data for free, but its beacon is a third-party script, and this site's CSP carries strict-dynamic, under which host allowlists are ignored: the script would have to be handed the per-request nonce and connect-src would have to gain a new host. Measured against that, writing the row server-side costs the security boundary nothing and ships no client JavaScript. Workers metrics cannot substitute, because that dataset has no path dimension at all, and the invocation logs that did carry one are now off: they persisted cf-connecting-ip and the session cookie for seven days and no setting redacts a field."
+    },
     "images:IMAGES": {
       "what": "Thumbnail and content-width transforms, computed on request from the original. Nothing is written back.",
       "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 with Cloudflare error 1042 on this hostname, because transformations there require a zone and this site is served from workers.dev."

@@ -17,6 +17,14 @@
       "whyLoadBearing": "It sits above classic search rather than replacing it, because the two fail on OPPOSITE inputs. Measured on the same corpus: classic found 2 things AI retrieval missed, all exact tokens, and AI retrieval found 3 that classic missed, all natural-language questions. Neither layer subsumes the other."
     },
     {
+      "id": "analytics_engine:ANALYTICS",
+      "kind": "analytics_engine",
+      "name": "ANALYTICS",
+      "settings": "dataset=dustinedwards_traffic",
+      "what": "Per-path traffic, one row per HTML response, written server-side from the Worker's response path. Path, referrer host, country and a coarse mobile bit. No cookie, no IP, no client identifier of any kind, so nothing joins two requests together.",
+      "whyLoadBearing": "It is here because the alternative was worse. Cloudflare Web Analytics reports the same per-path data for free, but its beacon is a third-party script, and this site's CSP carries strict-dynamic, under which host allowlists are ignored: the script would have to be handed the per-request nonce and connect-src would have to gain a new host. Measured against that, writing the row server-side costs the security boundary nothing and ships no client JavaScript. Workers metrics cannot substitute, because that dataset has no path dimension at all, and the invocation logs that did carry one are now off: they persisted cf-connecting-ip and the session cookie for seven days and no setting redacts a field."
+    },
+    {
       "id": "assets:ASSETS",
       "kind": "assets",
       "name": "ASSETS",
