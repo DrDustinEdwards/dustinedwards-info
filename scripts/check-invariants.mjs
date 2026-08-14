@@ -969,6 +969,37 @@ try {
 
   let statementsScanned = 0;
   let namesChecked = 0;
+  /*
+   * Counted and PRINTED, so "0 unknown columns" can never quietly mean "every
+   * statement was skipped". The same discipline the diagram gate uses for
+   * unreachable rules: an exclusion that reports nothing is indistinguishable
+   * from an exclusion that swallowed everything.
+   */
+  let analyticsStatementsSkipped = 0;
+  /**
+   * Analytics Engine dataset names, from the TRACKED example config.
+   *
+   * The real wrangler.jsonc is gitignored and absent from check:head's
+   * extracted worktree, and `check:config` asserts the dataset name matches in
+   * both files, so reading the example is the portable half of one gated pair
+   * rather than a weaker source.
+   *
+   * @type {string[]}
+   */
+  const ANALYTICS_DATASETS = (() => {
+    try {
+      const raw = readFileSync(join(root, "wrangler.jsonc.example"), "utf8");
+      const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      const names = (JSON.parse(stripped).analytics_engine_datasets ?? [])
+        .map((/** @type {any} */ ae) => ae.dataset)
+        .filter(Boolean);
+      return names;
+    } catch {
+      // FAIL CLOSED. An unreadable config means no exclusion, so an Analytics
+      // Engine statement is reported rather than silently skipped.
+      return [];
+    }
+  })();
   let unresolved = 0;
   /** @type {string[]} */
   const unknown = [];
@@ -1050,6 +1081,48 @@ try {
         .replace(/\$\{[^}]*\}/g, " ? ");
       if (!LOOKS_LIKE_SQL.test(statement)) continue;
       if (!/\b(FROM|INTO|UPDATE|SET)\b/i.test(statement)) continue;
+
+      /*
+       * ANALYTICS ENGINE IS NOT D1, so its statements are out of scope here.
+       *
+       * This section asserts that every column named in raw SQL exists in
+       * `app/db/schema.ts`. Analytics Engine is a different system with a fixed
+       * schema we do not own: `blob1`, `double1`, `timestamp` and
+       * `_sample_interval` are its columns and will never appear in ours.
+       * Checking them against the D1 universe asks a question with no true
+       * answer, which is what it did on first contact with the traffic panel.
+       *
+       * TWO DISCRIMINATORS, because one of them does not survive this scanner.
+       * The dataset name is the obvious signal, but the callers build the FROM
+       * by interpolation and the loop above rewrites every `${...}` to `?`, so
+       * the name is gone by the time the text arrives here. Measured, after the
+       * name-only version skipped zero statements and reported the failure
+       * unchanged.
+       *
+       * So `_sample_interval` carries it. That column is Analytics Engine's
+       * sampling weight, it is not a name this schema has or could have, and
+       * every query against the dataset must reference it: counting without it
+       * undercounts the moment sampling engages, which is the panel's whole
+       * correctness argument. The dataset name is kept as the second signal for
+       * statements that spell it out, and it is resolved from the config rather
+       * than typed here so renaming the dataset moves this with it.
+       *
+       * An Analytics Engine statement that references neither would be checked
+       * against the D1 schema and reported. That is the safe direction: loud
+       * and wrong, rather than quiet and unchecked.
+       *
+       * SCOPED TO THE STATEMENT, never to the file. A D1 statement sitting in
+       * the same module is still checked, which is why this is not an exemption
+       * list of paths.
+       */
+      const namesDataset = ANALYTICS_DATASETS.some((d) =>
+        new RegExp(`\\bFROM\\s+${d}\\b`, "i").test(statement),
+      );
+      if (namesDataset || /\b_sample_interval\b/.test(statement)) {
+        analyticsStatementsSkipped += 1;
+        continue;
+      }
+
       statementsScanned += 1;
 
       // (a) INSERT INTO <table> ( ... ), scoped to that table.
@@ -1258,7 +1331,9 @@ try {
   console.log(
     `     ${statementsScanned} raw statement(s), ${namesChecked} column reference(s) ` +
       `checked, ${unresolved} qualifier(s) unresolved, ` +
-      `${virtualTables.length} fts5 table(s) skipped`,
+      `${virtualTables.length} fts5 table(s) skipped, ` +
+      `${analyticsStatementsSkipped} analytics engine statement(s) out of scope ` +
+      `(${ANALYTICS_DATASETS.join(", ") || "no dataset resolved"})`,
   );
 } catch (error) {
   fail("the raw SQL column check could not run", String(error));
