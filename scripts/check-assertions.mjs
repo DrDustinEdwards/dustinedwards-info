@@ -205,8 +205,15 @@ const ASSERTERS = /\b(check|ok|assert|assertThat|eq)\s*\(/;
  * itself. It now scans the whole source and maps the match index to a line.
  *
  * ONLY `true`. A literal `false` is an unconditional FAILURE report, the
- * opposite of vacuous, and both sites in this repo sit in a catch block
- * reporting a caught error.
+ * opposite of vacuous.
+ *
+ * There were two such sites when this was written, both in catch blocks
+ * reporting a caught error. The executed-count floor retrofit of 2026-08-14
+ * added roughly twenty more, all of the same shape: an `if` decides, and the
+ * helper is called with `false` to record the verdict through the gate's own
+ * counter. Recorded because the old wording named a count that has since moved,
+ * and a comment asserting a stale number is the thing this gate exists to
+ * dislike.
  */
 const LITERAL_TRUE =
   /\b(?:check|ok|assert|assertThat|eq)\s*\(\s*(?:(?:"[^"]*"|'[^']*'|`[^`]*`)\s*,\s*)?true\s*[,)]/g;
