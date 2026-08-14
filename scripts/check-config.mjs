@@ -188,6 +188,44 @@ for (const [label, config] of [
   );
 }
 
+// Observability, on the cache block's reasoning and for a sharper reason.
+//
+// `observability` is not a binding, so surfaceOf() cannot carry it, and nothing
+// compared it until now. It stopped being a debugging preference on 2026-08-14:
+// an invocation log is enriched with the request context, which measurably
+// included `request.headers.cookie` and `cf-connecting-ip`, so leaving those
+// records on persists full reader IPs and session cookies for 7 days. There is
+// no field-level redaction, so `invocation_logs: false` IS the mechanism.
+//
+// Parity is not the property here either. Both files could be flipped back
+// together and stay consistent, so the VALUE is asserted in each, and `enabled`
+// is asserted true alongside it: turning observability off wholesale would also
+// satisfy an invocation_logs check while silently ending error visibility.
+assertThat(
+  JSON.stringify(real.observability ?? null) === JSON.stringify(example.observability ?? null),
+  "observability block matches",
+  `real: ${JSON.stringify(real.observability ?? null)} | ` +
+    `example: ${JSON.stringify(example.observability ?? null)}`,
+);
+for (const [label, config] of [
+  ["real", real],
+  ["example", example],
+]) {
+  assertThat(
+    config.observability?.enabled === true,
+    `observability is enabled in the ${label} config`,
+    `${label}.observability: ${JSON.stringify(config.observability ?? null)}. Our own console ` +
+      `output and thrown errors ride on this; only the invocation record is meant to be off.`,
+  );
+  assertThat(
+    config.observability?.logs?.invocation_logs === false,
+    `invocation logs are off in the ${label} config`,
+    `${label}.observability: ${JSON.stringify(config.observability ?? null)}. Turning these on ` +
+      `persists request.headers.cookie and cf-connecting-ip for 7 days, and no setting redacts ` +
+      `them. If that is wanted, it needs a ruling, not a config edit.`,
+  );
+}
+
 // The example must NOT carry real ids: it is committed, and the convention is
 // that account-scoped identifiers stay out of git.
 const exampleDbId = example.d1_databases?.[0]?.database_id ?? "";

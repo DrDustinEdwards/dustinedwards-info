@@ -75,6 +75,14 @@ const READERS = {
   images: (config, out) => {
     if (config.images?.binding) out.set(`images:${config.images.binding}`, "");
   },
+  // The dataset NAME is compared, not omitted as account-scoped, because it is
+  // not an account-scoped id: it is the table the SQL API reads. Two files
+  // disagreeing about it would have the Worker writing where nothing queries.
+  analytics_engine_datasets: (config, out) => {
+    for (const ae of config.analytics_engine_datasets ?? []) {
+      out.set(`analytics_engine:${ae.binding}`, `dataset=${ae.dataset}`);
+    }
+  },
   assets: (config, out) => {
     if (config.assets?.binding) out.set(`assets:${config.assets.binding}`, "");
   },

@@ -220,6 +220,74 @@ function contentSecurityPolicy(nonce: string): string {
   ].join("; ");
 }
 
+/**
+ * One traffic row per HTML response, into Analytics Engine.
+ *
+ * NO CLIENT IDENTIFIER, and that is structural rather than a promise. There is
+ * no cookie read, no IP, no user agent string, and nothing derived from any of
+ * them. Four coarse strings go in and nothing joins two requests together, so
+ * the dataset cannot answer "who" even if someone later wants it to.
+ *
+ * WHY THIS CANNOT FAIL A RESPONSE. Two independent guards, because one is not
+ * enough. `writeDataPoint` is documented to return immediately with the runtime
+ * writing in the background, so it is never awaited and adds no latency; but
+ * "returns immediately" is not "never throws", and a missing binding or a
+ * malformed point would throw SYNCHRONOUSLY into the request path. The whole
+ * body is therefore wrapped, and the catch is deliberately silent: a failed
+ * analytics write must never turn a good page into an error, and must never
+ * become log noise on every request either.
+ *
+ * The REFERER is reduced to its host before it is stored. A full referer URL
+ * carries paths and query strings from other people's sites, which is exactly
+ * the kind of incidental personal data this site has no reason to hold.
+ *
+ * The DEVICE hint is a single bit off a header the browser volunteers, not a
+ * measurement of the client. It is not a fingerprint and cannot be one.
+ *
+ * @param request  the incoming request
+ * @param response the finished response, read for status and content type
+ * @param env      the Worker environment carrying the ANALYTICS binding
+ * @param url      already parsed by the caller, so this parses nothing twice
+ */
+function recordTraffic(request: Request, response: Response, env: Env, url: URL) {
+  try {
+    // HTML only. Assets, the feeds, the markdown twins, /media and the API
+    // routes are all traffic, and none of them is a page view.
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.includes("text/html")) return;
+    // Errors and redirects are not reads.
+    if (response.status !== 200) return;
+    // THE OPERATOR IS NOT AN AUDIENCE. The admin plane is one string compare
+    // away on a URL the caller already parsed, so it is skipped at write time
+    // rather than left for a query to filter later. A panel that counts its own
+    // author is worse than no panel.
+    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return;
+
+    let refererHost = "";
+    const referer = request.headers.get("referer");
+    if (referer) {
+      try {
+        refererHost = new URL(referer).hostname;
+      } catch {
+        refererHost = "";
+      }
+    }
+
+    const mobile = request.headers.get("sec-ch-ua-mobile");
+    const device = mobile === "?1" ? "mobile" : mobile === "?0" ? "desktop" : "unknown";
+
+    env.ANALYTICS.writeDataPoint({
+      blobs: [url.pathname, refererHost, (request.cf?.country as string) ?? "", device],
+      doubles: [1],
+      // Indexes are the SAMPLING KEY. Path is the right one: it keeps the
+      // per-path counts this exists to produce meaningful under sampling.
+      indexes: [url.pathname],
+    });
+  } catch {
+    /* Analytics must never cost a reader their page. */
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
@@ -301,8 +369,21 @@ export default {
     // non-secure endpoints are ignored. Derived from the request so it is
     // correct on workers.dev today and on the apex after cutover, with nothing
     // to add to the cutover list.
-    const reportTo = `${CSP_ENDPOINT_NAME}="${new URL(request.url).origin}${CSP_REPORT_PATH}"`;
+    const url = new URL(request.url);
+    const reportTo = `${CSP_ENDPOINT_NAME}="${url.origin}${CSP_REPORT_PATH}"`;
     const csp = contentSecurityPolicy(nonce);
+
+    /*
+     * ONE call site, ABOVE the header block, and both of those are deliberate.
+     *
+     * Below it there are TWO returns: the normal path and the immutable-headers
+     * rebuild in the catch. Calling from each would be two places to forget.
+     * Everything this reads (status, content-type) is already final here, so
+     * placing it above means every response is counted exactly once no matter
+     * which branch returns, and the header block below is reached identically
+     * whether this ran or not.
+     */
+    recordTraffic(request, response, env, url);
 
     try {
       if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);

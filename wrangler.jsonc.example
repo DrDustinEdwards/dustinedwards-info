@@ -11,8 +11,28 @@
 	"main": "./workers/app.ts",
 	"compatibility_flags": ["nodejs_compat"],
 	"keep_vars": true,
+	// INVOCATION LOGS ARE OFF, and that is a PRIVACY setting rather than a cost
+	// one. An invocation log is "enriched with information available to
+	// Cloudflare in the context of the invocation", which measurably included
+	// `request.headers.cookie` and `cf-connecting-ip`: full reader IPs and
+	// session cookies were persisted for 7 days at a 100% sampling rate.
+	//
+	// There is NO field-level redaction. The documented configuration surface is
+	// `enabled`, `head_sampling_rate` and `logs.invocation_logs`; nothing masks
+	// or excludes an individual request header, so the only mechanism that drops
+	// those two fields is dropping the record that carries them.
+	//
+	// `enabled` STAYS TRUE deliberately. Our own console output and thrown
+	// errors are not invocation logs and keep flowing, so visibility into
+	// anything the code says about itself is unchanged. What is traded is the
+	// automatic per-request record, which was also the only per-path source.
+	// Analytics Engine now owns that job, carrying no IP and no cookie by
+	// construction.
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"logs": {
+			"invocation_logs": false
+		}
 	},
 	"upload_source_maps": true,
 	// Workers Cache, in front of the Worker. Added for the Images binding: its
@@ -68,6 +88,24 @@
 	// it needs a customer zone. Carries no id, so this line is complete as
 	// written rather than a placeholder.
 	"images": { "binding": "IMAGES" },
+	// Per-path traffic, written from the response path in workers/app.ts.
+	//
+	// It is here rather than in Web Analytics because the beacon would have to
+	// pass a CSP carrying `strict-dynamic`, under which host allowlists are
+	// IGNORED: the third-party script would need the per-request nonce, and
+	// `connect-src` would need a new host. This costs the security boundary
+	// nothing, runs server-side, and ships no client JavaScript at all.
+	//
+	// 3-month retention, and free at this site's volume. Reads go through the
+	// SQL API; the write path returns immediately and is never awaited.
+	//
+	// No account-scoped id, so this line is complete as written.
+	"analytics_engine_datasets": [
+		{
+			"binding": "ANALYTICS",
+			"dataset": "dustinedwards_traffic"
+		}
+	],
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
 	// the Worker writes ONLY to R2, so the two systems cannot diverge silently.
