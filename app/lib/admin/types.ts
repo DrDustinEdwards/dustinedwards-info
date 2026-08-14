@@ -60,6 +60,36 @@ export interface ContentSection {
   status: HealthStatus;
 }
 
+/**
+ * One row of the origin-requests panel.
+ *
+ * ORIGIN REQUESTS, not reads. Analytics Engine is written from the Worker's
+ * response path, and with the Workers cache on, an edge HIT can serve a reader
+ * without the Worker running at all. The number is therefore a count of times
+ * the origin was reached, which is a floor under readership rather than a
+ * measure of it, and every label on this panel says so.
+ *
+ * `originRequests` is SAMPLING WEIGHTED: it is `SUM(_sample_interval)`, not a
+ * row count. Analytics Engine samples under load and a raw count silently
+ * undercounts once it does. `rows` carries the unweighted count purely as the
+ * diagnostic that shows whether sampling is engaged yet.
+ */
+export interface TrafficRow {
+  path: string;
+  originRequests: number;
+  rows: number;
+}
+
+/** What the origin-requests panel renders. */
+export interface TrafficReport {
+  windowDays: number;
+  rows: TrafficRow[];
+  /** Sum across every path in the window, so the top N can state its remainder. */
+  totalOriginRequests: number;
+  /** How many paths the query returned, before the display cap. */
+  pathsReturned: number;
+}
+
 /** One admin-side control on the tools panel. */
 export interface AdminTool {
   id: string;

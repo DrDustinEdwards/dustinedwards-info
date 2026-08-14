@@ -114,6 +114,19 @@ const ICONS = {
     </>
   ),
   /**
+   * Ascending bars on a baseline, which is what the panel draws.
+   *
+   * Chosen against the six already here: Content is a document, Posts is a
+   * stack of lines, Sites is a globe, Media is a picture and Tools is a slider
+   * row. A bar chart shares no silhouette with any of them at 20px.
+   */
+  traffic: (
+    <>
+      <path d="M4 20h16" />
+      <path d="M7 20v-5M12 20v-9M17 20v-13" />
+    </>
+  ),
+  /**
    * A picture: frame, horizon, sun.
    *
    * Chosen against the five already here rather than in isolation. Overview is
@@ -160,6 +173,11 @@ const NAV = [
   // no item even marked itself active while the page was open, so the library
   // was reachable only by typing the URL.
   { to: "/admin/media", label: "Media", icon: ICONS.media },
+  // Reading rather than editing, so it sits after the content items and before
+  // the controls. The label matches the panel heading exactly: this counts
+  // origin requests, and calling the nav item anything shorter would put a
+  // claim in the sidebar that the page spends a caption correcting.
+  { to: "/admin/origin-requests", label: "Origin requests", icon: ICONS.traffic },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
 ];
 
