@@ -27,6 +27,10 @@
     // `projectAnchor`, so a record cannot cite a fragment the page omits.
     "app/lib/projects-page.mjs",
     "app/lib/search/query.mjs",
+    // The colour maths. check:contrast computes with it and the playground's
+    // contrast lab renders with it, on the same principle as query.mjs: the gate
+    // must not check a ratio the page derived by some other rule.
+    "app/lib/contrast.mjs",
     // What an asset IS. The Worker imports it, build:assets imports it and
     // check:media imports it, on the same principle as query.mjs and
     // check:search: there must never be a second answer to "what kind of thing
