@@ -409,6 +409,27 @@ permits("admin may create an already published post", () =>
 
 // --- Report ---------------------------------------------------------------
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate is what stands between an operator and the one operation reserved
+ * for the human, so a version of it that quietly stopped asserting would be
+ * expensive: the policy module would keep its shape while nothing tested the
+ * transitions through it.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 45.
+ * Never summed. Floored at 42, slack of three: every case is an inline state
+ * fixture driven through the real decide(), so the count moves only when a
+ * transition is added to the table.
+ */
+const MINIMUM_CHECKS = 42;
+if (checks < MINIMUM_CHECKS) {
+  failures.push(
+    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
+      `A block was SKIPPED rather than failing. Measured: 45.`,
+  );
+}
+
 if (failures.length > 0) {
   console.error(`check:policy FAILED, ${failures.length} of ${checks} checks:\n`);
   for (const f of failures) console.error(`  ${f}\n`);

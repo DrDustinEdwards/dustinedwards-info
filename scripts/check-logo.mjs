@@ -441,6 +441,29 @@ if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
 
 // --- Report ---------------------------------------------------------------
 
+/*
+ * WHOLE-GATE EXECUTED-COUNT FLOOR.
+ *
+ * MINIMUM_ICON_CHECKS above floors the ICON SECTION only, and it shipped with
+ * that section by rule. This is the floor for everything else: the geometry,
+ * the fixtures and the two CSS fill bindings, none of which had one. A section
+ * floor cannot see a different section stopping.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 123.
+ * Never summed, and summing is exactly what went wrong here once already: the
+ * icon section was recorded as 40 against a measured 37.
+ *
+ * Floored at 115, roughly 6 percent: the count is a fixed function of the
+ * fixture list and the raster manifest, so it steps when an asset is added.
+ */
+const MINIMUM_CHECKS = 115;
+if (checks < MINIMUM_CHECKS) {
+  failures.push(
+    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
+      `A block was SKIPPED rather than failing. Measured: 123.`,
+  );
+}
+
 if (failures.length > 0) {
   console.error(`check:logo FAILED, ${failures.length} of ${checks} checks:\n`);
   for (const f of failures) console.error(`  ${f}\n`);

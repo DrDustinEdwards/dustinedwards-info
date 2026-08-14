@@ -320,6 +320,27 @@ if (!existsSync(ARTIFACT)) {
   );
 }
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate walks committed SVG assets and audits the colours reachable through
+ * the cascade. Almost every assertion sits inside a loop over a discovered set,
+ * so an empty discovery, a changed extension or a renamed directory all report
+ * a clean audit of nothing.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 409.
+ * Never summed. Floored at 380, roughly 7 percent: the count scales with the
+ * committed diagrams and the rules reachable inside each, so it steps sharply
+ * when a diagram is added and should not drift otherwise.
+ */
+const MINIMUM_CHECKS = 380;
+if (checks < MINIMUM_CHECKS) {
+  failures.push(
+    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
+      `A block was SKIPPED rather than failing. Measured: 409.`,
+  );
+}
+
 if (failures.length > 0) {
   console.error(`check:diagrams FAILED ${failures.length} of ${checks} assertions\n`);
   for (const failure of failures) console.error(`  ${failure}`);
