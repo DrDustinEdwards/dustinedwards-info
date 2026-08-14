@@ -106,6 +106,21 @@
 			"dataset": "dustinedwards_traffic"
 		}
 	],
+	// The account the Analytics Engine SQL API is queried against. The WRITE path
+	// above needs no account id, because the binding already knows where it lives;
+	// the READ path is plain HTTPS to api.cloudflare.com and the account is part of
+	// the URL.
+	//
+	// A VAR RATHER THAN A SECRET, deliberately. An account id is an identifier, not
+	// a credential: it is already published in the Capsid core doc and it grants
+	// nothing on its own. Putting it in `wrangler secret` would make check:secrets
+	// police a value that is not sensitive, which costs that gate its signal.
+	//
+	// Stated ONCE, here. Anything needing the value reads it off the env rather
+	// than restating the digits, so there is no second copy to drift.
+	"vars": {
+		"CLOUDFLARE_ACCOUNT_ID": "f852925ce701e6c56f6feae83f0eb2d3"
+	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
 	// the Worker writes ONLY to R2, so the two systems cannot diverge silently.

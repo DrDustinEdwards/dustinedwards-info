@@ -29,8 +29,44 @@ declare global {
      * found it on its first run, before any plant.
      */
     OPERATOR_TOKEN?: string;
+    /**
+     * Cloudflare API token for READING Analytics Engine over the SQL API, scoped
+     * to Account, Account Analytics, Read. The cockpit's origin-requests panel is
+     * its only reader.
+     *
+     * OPTIONAL BY CONTRACT, on the OPERATOR_TOKEN precedent above rather than as
+     * an oversight. It is deliberately not provisioned yet, and a local dev
+     * machine will never have it, so the panel must treat absence as an ordinary
+     * state: the loader returns its error state and the rest of the cockpit
+     * renders untouched. Not configured means not readable, never a thrown
+     * loader.
+     *
+     * The WRITE path needs nothing here. `env.ANALYTICS.writeDataPoint` is a
+     * binding and carries its own authorization; only the read path is HTTPS to
+     * api.cloudflare.com and only the read path needs a credential.
+     */
+    ANALYTICS_READ_TOKEN?: string;
   }
 }
+
+/*
+ * WHY THERE IS NO VARS BLOCK HERE, and why adding one would be a defect.
+ *
+ * `CLOUDFLARE_ACCOUNT_ID` is a plain var in wrangler.jsonc, not a secret, so
+ * `wrangler types` already generates it into `__BaseEnv_Env` in
+ * worker-configuration.d.ts, AS A STRING LITERAL carrying the id itself.
+ * Declaring it again in this file would put the value in a second place and
+ * hand a future edit two copies to keep in step, which is the drift the
+ * config gate exists to prevent.
+ *
+ * Measured 2026-08-14 rather than assumed: the generated interface was read
+ * back after `wrangler types` and it carries the binding.
+ *
+ * The rule this file enforces is about SECRETS, which wrangler cannot see
+ * because they are set with `wrangler secret put` and are absent from the
+ * config. Vars are the opposite case: wrangler owns them, so this file stays
+ * out of the way.
+ */
 
 /**
  * The Cloudflare Vite plugin resolves a `.wasm` import to an already-compiled
