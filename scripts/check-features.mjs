@@ -70,9 +70,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { COLOPHON_ANCHORS, STATUS_LABEL } from "../app/lib/colophon-sections.mjs";
+import { PROJECTS_URL, projectAnchor } from "../app/lib/projects-page.mjs";
+import { isAllowedUrl } from "../app/lib/content/pipeline.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
+const PROJECTS_PATH = join(root, "content", "projects.json");
+const PROJECTS_ROUTE_PATH = join(root, "app", "routes", "projects.tsx");
 const ROUTES_PATH = join(root, "app", "routes.ts");
 
 let checks = 0;
@@ -856,6 +860,211 @@ if (unreferenced.length > 0) {
 } else {
   console.log("  every gate is referenced by at least one feature");
 }
+
+/* --- The projects roster ---------------------------------------------------
+ *
+ * WHY HERE AND NOT IN check:content. The spec guessed check:content; measured,
+ * that gate byte-compares the GENERATED posts.json against a fresh generation
+ * from content/posts, so it has nothing to regenerate a HAND-AUTHORED file
+ * from and a projects section there would be structurally foreign. This gate is
+ * already the owner of hand-authored content data: it reads content/, parses
+ * routes.ts, knows the gate list, and already reconciles the colophon's page
+ * records. The roster is the same kind of object as features.json.
+ *
+ * BOTH DIRECTIONS, and the pairs are the point. Schema and vocabulary catch a
+ * malformed entry; the artifact parity below catches the defect that actually
+ * happens, which is editing the roster and forgetting to rebuild, leaving the
+ * search index describing projects the page no longer lists or missing ones it
+ * does.
+ */
+console.log("\n  projects roster");
+
+const projectsDoc = JSON.parse(readFileSync(PROJECTS_PATH, "utf8"));
+const projects = projectsDoc.projects ?? [];
+const vocabulary = projectsDoc.stackVocabulary ?? [];
+const projectsChecksBefore = checks;
+
+// FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
+const MINIMUM_PROJECTS = 4;
+ok(
+  "the roster is non-empty",
+  projects.length >= MINIMUM_PROJECTS,
+  `${projects.length} project(s), expected at least ${MINIMUM_PROJECTS}; ` +
+    `a shorter list means the file was truncated, not curated.`,
+);
+ok(
+  "the stack vocabulary is non-empty",
+  vocabulary.length > 0,
+  "an empty vocabulary would make every tag check pass vacuously",
+);
+
+// The route the roster describes must exist, and it must be the one the page
+// module names, not a string typed here.
+ok(
+  `routes.ts declares ${PROJECTS_URL}`,
+  routes.has(PROJECTS_URL),
+  `parsed routes: ${[...routes].join(", ")}`,
+);
+
+const REQUIRED = ["slug", "name", "oneLiner", "description", "role", "status", "stack", "metric"];
+const STATUSES = ["live", "building", "internal"];
+const seenSlugs = new Set();
+
+for (const project of projects) {
+  const id = project.slug ?? "(no slug)";
+
+  for (const field of REQUIRED) {
+    ok(
+      `${id} declares ${field}`,
+      project[field] !== undefined && project[field] !== null && project[field] !== "",
+      `missing or empty`,
+    );
+  }
+
+  ok(`${id} has a unique slug`, !seenSlugs.has(project.slug), "duplicated in the roster");
+  seenSlugs.add(project.slug);
+
+  ok(
+    `${id} status is one of ${STATUSES.join(", ")}`,
+    STATUSES.includes(project.status),
+    `got ${project.status}`,
+  );
+
+  // `url` and `repo` are NULLABLE by design: the unlinked tier is a real state,
+  // not a gap. What is checked is that a value, when present, is a URL the
+  // pipeline's rule-6 allowlist would accept. The predicate is IMPORTED rather
+  // than restated, so this cannot drift from what the renderer permits.
+  for (const field of ["url", "repo"]) {
+    const value = project[field];
+    if (value === null || value === undefined) continue;
+    ok(
+      `${id} ${field} passes the URL protocol allowlist`,
+      isAllowedUrl(String(value)),
+      `${value} is not an allowed protocol (rule 6)`,
+    );
+  }
+
+  const stack = Array.isArray(project.stack) ? project.stack : [];
+  ok(`${id} declares at least one stack tag`, stack.length > 0);
+  for (const tag of stack) {
+    ok(
+      `${id} stack tag is in the closed vocabulary: ${tag}`,
+      vocabulary.includes(tag),
+      `not in stackVocabulary`,
+    );
+  }
+
+  // THE METRIC IS THE PAGE'S WHOLE ARGUMENT, so it is checked hardest. A value
+  // without a date is the failure this asserts against: an undated number rots
+  // silently and keeps looking authoritative.
+  const metric = project.metric ?? {};
+  ok(`${id} metric has a label`, typeof metric.label === "string" && metric.label.length > 0);
+  ok(`${id} metric has a value`, typeof metric.value === "string" && metric.value.length > 0);
+  ok(
+    `${id} metric carries an ISO asOf date`,
+    typeof metric.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metric.asOf),
+    `got ${JSON.stringify(metric.asOf)}; a number without a date is the thing this page refuses`,
+  );
+}
+
+// The vocabulary is closed in BOTH directions. An entry nothing uses is a term
+// that can quietly stop meaning anything, which is how a "closed" list becomes
+// a suggestion.
+for (const term of vocabulary) {
+  ok(
+    `vocabulary term is used by at least one project: ${term}`,
+    projects.some((/** @type {any} */ p) => (p.stack ?? []).includes(term)),
+    `nothing declares it`,
+  );
+}
+
+/*
+ * THE PAGE RENDERS FROM THIS FILE, asserted at the source.
+ *
+ * The colophon can compare literal `<SectionHead id="...">` against its
+ * descriptor because it hand-writes each one. This page MAPS over the roster,
+ * so there are no literal ids to compare and the equivalent guarantee is
+ * structural: the route must read the roster and derive its anchors from the
+ * shared helper. If it ever stops doing either, parity becomes a coincidence.
+ */
+const projectsSource = stripped(readFileSync(PROJECTS_ROUTE_PATH, "utf8"));
+ok(
+  "the page imports the roster rather than restating it",
+  /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/.test(projectsSource),
+  "app/routes/projects.tsx must read content/projects.json",
+);
+ok(
+  "the page derives card anchors from projectAnchor",
+  /projectAnchor\(/.test(projectsSource) &&
+    /from\s+["']~\/lib\/projects-page\.mjs["']/.test(projectsSource),
+  "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
+);
+
+/*
+ * Artifact parity, both directions. THIS is the assertion that catches the real
+ * defect: a roster edited without `npm run build:content`, leaving the search
+ * index and the page describing different sets of projects.
+ */
+const projectRecords = artifactRecords.filter(
+  (/** @type {any} */ r) => r.docUid === "page:projects",
+);
+ok(
+  "the artifact carries project page records",
+  projectRecords.length > 0,
+  "none found. Run build:content.",
+);
+ok(
+  "the projects page has exactly one document record",
+  projectRecords.filter((/** @type {any} */ r) => r.anchor === null).length === 1,
+);
+
+const recordAnchors = new Set(
+  projectRecords
+    .filter((/** @type {any} */ r) => r.anchor !== null)
+    .map((/** @type {any} */ r) => String(r.anchor)),
+);
+for (const project of projects) {
+  ok(
+    `${project.slug} has a section record in the artifact`,
+    recordAnchors.has(projectAnchor(project.slug)),
+    `no record anchored ${projectAnchor(project.slug)}. The roster changed without a rebuild.`,
+  );
+}
+const rosterAnchors = new Set(projects.map((/** @type {any} */ p) => projectAnchor(p.slug)));
+for (const anchor of recordAnchors) {
+  ok(
+    `artifact record ${anchor} corresponds to a project in the roster`,
+    rosterAnchors.has(anchor),
+    `the index describes a project the roster no longer lists`,
+  );
+}
+
+/*
+ * Executed-count floor, MEASURED THROUGH THIS GATE'S OWN PIPELINE on
+ * 2026-08-14 by RUNNING it: this section executes 154 assertions over a
+ * six-project roster with a fifteen-term vocabulary. The first number written
+ * here was 91, guessed by adding up the loops, and it was wrong by two thirds.
+ * Floored at 140, the ~8% margin the other gates use.
+ *
+ * Not scope-floored. The roster length gates most of the loops above, so a
+ * truncated file trips `the roster is non-empty` first; this catches the case
+ * where a whole BLOCK stops running, which a length assertion cannot see.
+ */
+const projectsChecks = checks - projectsChecksBefore;
+const MINIMUM_PROJECT_CHECKS = 140;
+if (projectsChecks < MINIMUM_PROJECT_CHECKS) {
+  ok(
+    "the projects section executed its assertions",
+    false,
+    `only ${projectsChecks} ran, expected at least ${MINIMUM_PROJECT_CHECKS}. ` +
+      `A block was SKIPPED rather than failing. Measured: 154.`,
+  );
+}
+
+console.log(
+  `  ${projects.length} project(s), ${vocabulary.length} vocabulary term(s), ` +
+    `${projectRecords.length} artifact record(s), ${projectsChecks} assertion(s)`,
+);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
