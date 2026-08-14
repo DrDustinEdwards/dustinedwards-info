@@ -282,5 +282,27 @@ console.log(
     `${(artifact.notAdopted ?? []).length} refusal(s) reconciled\n`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate reconciles a GENERATED artifact against its sources, which is the
+ * shape most able to pass by checking nothing: if the artifact parsed to an
+ * empty roster, every loop below would iterate zero times and report green.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 24.
+ * Never summed. Floored at 22, slack of two: the count tracks the colophon's
+ * declared bindings, gates, migrations and dependencies, so it grows with the
+ * stack rather than wandering.
+ */
+const MINIMUM_CHECKS = 22;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 24.`,
+  );
+}
+
 console.log(`${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

@@ -267,6 +267,29 @@ console.log(
     (at !== -1 ? `, hard-rules pointer at ${at} of ${POINTER_LIMIT}` : ""),
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * A pass count is not coverage. Every assertion above can stop running without
+ * failing: an early return, a guard that silently skips, a loop over a list
+ * that became empty. All of those report green, and a green run with nothing in
+ * it is indistinguishable from a green run that checked everything.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 10.
+ * Never summed. Floored at 9, slack of one: this gate reads one committed file
+ * and asserts fixed properties of it, so the count moves only when an assertion
+ * is added or removed deliberately.
+ */
+const MINIMUM_CHECKS = 9;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 10.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);

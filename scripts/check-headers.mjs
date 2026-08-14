@@ -455,5 +455,27 @@ ok(
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * A pass count is not coverage. An assertion block that stops running reports
+ * green, and a green run with nothing in it looks exactly like a green run that
+ * checked everything.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 66.
+ * Never summed. Floored at 62, roughly 6 percent: the count tracks the header
+ * set declared in workers/app.ts and its application sites, so it moves when a
+ * header is added, which should be a deliberate diff rather than drift.
+ */
+const MINIMUM_CHECKS = 62;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 66.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
