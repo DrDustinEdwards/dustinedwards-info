@@ -423,6 +423,29 @@ console.log(
     `${readsFound} read(s), ${Object.keys(CLIENT_ALLOWED).length} allowlisted`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * The per-root scans here already refuse an empty scope, but that is a floor on
+ * what was READ. This is the floor on what was ASSERTED, and the two fail on
+ * different bugs: a scope check cannot see an assertion block that stopped
+ * running over a scope that is still full.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 29.
+ * Never summed. Floored at 27, slack of two: the count is driven by the secret
+ * list and the per-root pairs, so it steps by a known amount when a secret is
+ * added, as it did going from seven to eight.
+ */
+const MINIMUM_CHECKS = 27;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 29.`,
+  );
+}
+
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
   process.exit(1);

@@ -416,5 +416,27 @@ console.log(
   `  ${TYPECHECK_SCRIPT} parses to ${fragments.length} fragment(s), each checked for restatement`,
 );
 
+/*
+ * EXECUTED-COUNT FLOOR.
+ *
+ * This gate matters most when it is quietly doing nothing: it reads a protected
+ * file it must never write, and a parse that returned an empty hook list would
+ * pass every loop below it by iterating none of them.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 36.
+ * Never summed. Floored at 34, slack of two: the count is a fixed function of
+ * the two registered hooks and the Stop command, all of which are asserted by
+ * value, so it does not drift on its own.
+ */
+const MINIMUM_CHECKS = 34;
+if (checks < MINIMUM_CHECKS) {
+  ok(
+    "this gate executed its assertions",
+    false,
+    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
+      `rather than failing. Measured: 36.`,
+  );
+}
+
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
