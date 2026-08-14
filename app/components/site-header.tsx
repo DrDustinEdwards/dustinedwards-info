@@ -10,9 +10,16 @@ import type { loader as rootLoader } from "~/root";
 /**
  * Public site header. Brand plus the nav links the site currently earns.
  * It grows when there is a page to add, not in anticipation, so there is still
- * no disclosure widget and no mobile menu machinery. Two links is still under
- * the width where that becomes a real question; the third is where to look at
- * it again.
+ * no disclosure widget and no mobile menu machinery.
+ *
+ * THIS IS THE THIRD LINK, which the previous version of this comment named as
+ * the point to look again. Looked: three text links plus the search control and
+ * the theme pill still fit the row without wrapping, and the nav is a flex row
+ * with `gap`, so a narrow viewport wraps it rather than overflowing. A
+ * disclosure widget would be client state on a page that has none, so it stays
+ * refused until the row actually breaks. The FOURTH link is the next place to
+ * check, and by then measuring the wrap on a real narrow viewport is the
+ * decision, not counting links.
  *
  * Roster's LABEL and its PATH deliberately disagree. The path is
  * /phage-discovery because that is the indexed legacy URL the Worker takes over
@@ -38,6 +45,7 @@ export function SiteHeader() {
       </Link>
       <nav className="site-header-nav">
         <NavLink to="/blog">Blog</NavLink>
+        <NavLink to="/projects">Projects</NavLink>
         <NavLink to="/phage-discovery">Roster</NavLink>
         <SearchTrigger />
         {/*

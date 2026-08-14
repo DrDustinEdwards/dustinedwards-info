@@ -22,7 +22,9 @@ import { serializeArtifact } from "~/lib/content/artifact.mjs";
 // colophon-page.md.
 import stackData from "../../../content/generated/stack.json";
 import featuresData from "../../../content/features.json";
+import projectsData from "../../../content/projects.json";
 import { colophonPages } from "~/lib/colophon-sections.mjs";
+import { projectsPages } from "~/lib/projects-page.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
@@ -50,15 +52,24 @@ export type { Actor };
 /**
  * The page half of the corpus, computed ONCE at module scope.
  *
- * A pure function of two committed JSON files, so there is nothing per-request
- * about it. **Known residual, recorded rather than hidden:** these come from the
- * bundle, so they are whatever was deployed. If `stack.json` or `features.json`
- * changes on main and the Worker is not redeployed, a save from the editor
- * writes page records the next `build:content` will not reproduce, and
- * `check:content` reports it as a byte difference. Same shape as the social-card
- * gap, and the repair is the same: deploy.
+ * A pure function of three committed JSON files, so there is nothing
+ * per-request about it. **Known residual, recorded rather than hidden:** these
+ * come from the bundle, so they are whatever was deployed. If `stack.json`,
+ * `features.json` or `projects.json` changes on main and the Worker is not
+ * redeployed, a save from the editor writes page records the next
+ * `build:content` will not reproduce, and `check:content` reports it as a byte
+ * difference. Same shape as the social-card gap, and the repair is the same:
+ * deploy. `npm run ship` does both, which is why a roster change is a deploy
+ * AND a sync rather than either alone.
+ *
+ * The ORDER matches `scripts/build-content.mjs`. It does not have to, because
+ * `recordsForPages` sorts by uid before emitting, but two callers assembling
+ * the same list differently is a difference waiting to become a defect.
  */
-const COLOPHON_PAGES = colophonPages(stackData, featuresData);
+const PAGE_INPUTS = [
+  ...colophonPages(stackData, featuresData),
+  ...projectsPages(projectsData),
+];
 
 const ARTIFACT_PATH = "content/generated/posts.json";
 
@@ -291,7 +302,7 @@ export async function savePost(
     message: commitMessage(actor, options.isNew ? "Add" : "Update", record.title),
     changes: [
       { path: postPath(options.slug), content: raw },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next, COLOPHON_PAGES) },
+      { path: ARTIFACT_PATH, content: serializeArtifact(next, PAGE_INPUTS) },
     ],
   });
 
@@ -367,7 +378,7 @@ export async function deletePost(
     message: commitMessage(actor, "Remove", options.slug),
     changes: [
       { path: postPath(options.slug), content: null },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next, COLOPHON_PAGES) },
+      { path: ARTIFACT_PATH, content: serializeArtifact(next, PAGE_INPUTS) },
     ],
   });
 

@@ -1,0 +1,94 @@
+{
+  "_comment": "The portfolio roster. Hand-authored, the features.json pattern, gated both directions. EVERY metric is a number measured or read from the project's own surface on its asOf date; where a real number is not reachable read-only, the value says 'measured at next touch' and the label still says what it counts. Never write a number here from memory. Stack tags are drawn from the closed vocabulary below and the gate rejects anything outside it.",
+  "stackVocabulary": [
+    "Cloudflare Workers",
+    "D1",
+    "R2",
+    "KV",
+    "Durable Objects",
+    "AI Search",
+    "Analytics Engine",
+    "React Router",
+    "TypeScript",
+    "Drizzle",
+    "SQLite FTS5",
+    "Better Auth",
+    "Stripe",
+    "MCP",
+    "Astro"
+  ],
+  "projects": [
+    {
+      "slug": "dustinedwards-info",
+      "name": "dustinedwards.info",
+      "oneLiner": "This site, and the reference implementation for everything else here.",
+      "description": "A personal publishing platform on Cloudflare Workers: server-rendered React Router, posts in D1 with an FTS5 index, media in R2, and a single admin cockpit that commits to git rather than to a database. It demonstrates the discipline the rest of this list is built with, because every claim the site makes about itself is reconciled against the repository by a gate that fails the build when the two disagree.",
+      "role": "Sole author",
+      "status": "live",
+      "url": "https://dustinedwards.dustin-edwards.workers.dev",
+      "repo": null,
+      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Durable Objects", "AI Search", "Analytics Engine", "Drizzle", "SQLite FTS5", "Better Auth"],
+      "metric": { "label": "verification gates in the build", "value": "24", "asOf": "2026-08-14" }
+    },
+    {
+      "slug": "capsid",
+      "name": "Capsid",
+      "oneLiner": "A namespaced document graph with typed edges, served over MCP.",
+      "description": "A knowledge store on Workers and D1 that holds versioned markdown canon in per-project namespaces, with typed edges between documents, FTS5 search, an attributed audit log and integrity linting. It demonstrates that an agent's long-term memory can be a governed database with a schema and a review trail rather than a folder of notes, and it is the store this site's own specifications and rulings live in.",
+      "role": "Sole author",
+      "status": "live",
+      "url": null,
+      "repo": "https://github.com/DrDustinEdwards/capsid-mcp",
+      "stack": ["Cloudflare Workers", "D1", "SQLite FTS5", "MCP", "TypeScript"],
+      "metric": { "label": "project namespaces in the store", "value": "8", "asOf": "2026-08-14" }
+    },
+    {
+      "slug": "dustinedwards-mcp",
+      "name": "Operator MCP wrapper",
+      "oneLiner": "A thin MCP server over this site's operator API that contains no policy of its own.",
+      "description": "An MCP server exposing this site's publishing operations to an agent, deliberately built as a transport with no rules in it: every constraint, including the refusal to let an operator perform a post's first publication, is enforced by the site's API and not by the wrapper. It demonstrates the boundary that makes agent-facing tooling safe to expose, which is that the surface an agent talks to should never be the thing deciding what is allowed.",
+      "role": "Sole author",
+      "status": "live",
+      "url": null,
+      "repo": "https://github.com/DrDustinEdwards/dustinedwards-mcp",
+      "stack": ["Cloudflare Workers", "MCP", "TypeScript"],
+      "metric": { "label": "operations exposed to the agent", "value": "5", "asOf": "2026-08-14" }
+    },
+    {
+      "slug": "foxhound",
+      "name": "Foxhound",
+      "oneLiner": "Recovery for failed Stripe subscription payments, priced on what it actually recovers.",
+      "description": "A revenue-recovery layer over Stripe that retries failed recurring charges on a schedule and then escalates to drafted customer sequences when a retry will not fix the underlying decline. It demonstrates a pricing model aligned with the outcome rather than with seats, taking a share only of revenue that was recovered and billing nothing until those funds have been held long enough to be real.",
+      "role": "Sole author",
+      "status": "live",
+      "url": "https://foxhoundapp.com",
+      "repo": null,
+      "stack": ["Cloudflare Workers", "D1", "Stripe", "TypeScript"],
+      "metric": { "label": "pricing: share of recovered revenue", "value": "20%", "asOf": "2026-08-14" }
+    },
+    {
+      "slug": "foxing",
+      "name": "Foxing",
+      "oneLiner": "A reader and reading-social product built on the public domain.",
+      "description": "A reading application carrying a curated public-domain library from Standard Ebooks and Project Gutenberg, with progress tracking and social features around what people are reading. It demonstrates that a content product can be assembled from freely licensed sources and still feel deliberate, because the work is in the curation, the typography and the reading state rather than in owning the catalogue.",
+      "role": "Sole author",
+      "status": "live",
+      "url": "https://foxing.app",
+      "repo": null,
+      "stack": ["Cloudflare Workers", "D1", "R2", "TypeScript"],
+      "metric": { "label": "public-domain titles offered, per its own catalogue", "value": "1,400+", "asOf": "2026-08-14" }
+    },
+    {
+      "slug": "germomics",
+      "name": "Germomics",
+      "oneLiner": "A microbiology and history publication with an accompanying podcast.",
+      "description": "A publication pairing written pieces on microbiology and its history with a podcast distributed through the usual directories. It demonstrates the editorial half of this portfolio rather than the infrastructural one: a subject-matter publication that has to earn attention on the writing, with the platform staying out of the way.",
+      "role": "Author and host",
+      "status": "live",
+      "url": "https://germomics.com",
+      "repo": null,
+      "stack": ["Astro", "Cloudflare Workers"],
+      "metric": { "label": "pages in its published sitemap", "value": "24", "asOf": "2026-08-14" }
+    }
+  ]
+}

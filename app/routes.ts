@@ -19,6 +19,10 @@ export default [
   // expects; the page TITLE carries the legibility ("How this site is built")
   // because the word is not universally known. Ruled, do not swap them.
   route("colophon", "routes/colophon.tsx"),
+  // The portfolio index. `/projects` rather than `/portfolio`: the audience is
+  // technical and "projects" is what they call the thing, while "portfolio" is
+  // what this workspace calls the repo fleet, a different object.
+  route("projects", "routes/projects.tsx"),
   // Ordered before /search so the Ask endpoint is not read as a search param
   // variant, and kept a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),

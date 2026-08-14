@@ -21,6 +21,11 @@
     // page's search records, and app/routes/colophon.tsx renders from the same
     // list, which is what stops an anchor existing in two places.
     "app/lib/colophon-sections.mjs",
+    // The projects roster's page descriptor, on exactly the same footing:
+    // build-content.mjs emits /projects' search records from it and
+    // app/routes/projects.tsx renders the card anchors from the same
+    // `projectAnchor`, so a record cannot cite a fragment the page omits.
+    "app/lib/projects-page.mjs",
     "app/lib/search/query.mjs",
     // What an asset IS. The Worker imports it, build:assets imports it and
     // check:media imports it, on the same principle as query.mjs and
