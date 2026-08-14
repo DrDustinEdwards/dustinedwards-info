@@ -36,78 +36,24 @@ import { fileURLToPath } from "node:url";
 // the gate cannot drift from the renderer by checking a theme nothing uses.
 import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
 
+// The colour maths, on exactly the footing query.mjs has with check:search: the
+// Worker imports this module and so does this gate, so /playground's contrast
+// lab cannot compute a ratio by a different rule than the one gated here. The
+// functions moved out of this file unchanged; the keystone-vector check below
+// and the matrix recomputation are what prove the move was lossless.
+//
+// This does NOT weaken the two-independent-sources design. The hexes still come
+// from the shipped stylesheet and the pairs and thresholds are still transcribed
+// here from design-tokens.md. Only the arithmetic is shared, and arithmetic is
+// not one of the two sources.
+// Only the two the gate calls directly. `channels` and `luminance` are exercised
+// through them, exactly as they were when all four lived in this file.
+import { apca, contrast } from "../app/lib/contrast.mjs";
+
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CSS_PATH = join(root, "app", "app.css");
-
-/* -------------------------------------------------------------------------
- * Colour maths
- * ---------------------------------------------------------------------- */
-
-/** @param {string} hex */
-function channels(hex) {
-  const h = hex.trim().replace("#", "");
-  const full =
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h;
-  if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`not a hex colour: ${hex}`);
-  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
-}
-
-/** WCAG 2.x relative luminance. @param {string} hex */
-function luminance(hex) {
-  const [r, g, b] = channels(hex).map((c) =>
-    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
-  );
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-/** WCAG 2.x contrast ratio, 1 to 21. @param {string} a @param {string} b */
-function contrast(a, b) {
-  const la = luminance(a);
-  const lb = luminance(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
-
-/**
- * APCA (SAPC) lightness contrast, W3C draft 0.1.9 constants.
- *
- * Advisory only. It is reported because the dark-mode fills rule was decided on
- * it: the dark semantic pastels clear WCAG comfortably and APCA still rates
- * them around Lc 57 to 60, which is why interactive semantics take fills.
- * Sign carries polarity; magnitude is what is compared.
- *
- * @param {string} textHex
- * @param {string} bgHex
- */
-function apca(textHex, bgHex) {
-  /** @param {string} hex */
-  const Y = (hex) => {
-    const [r, g, b] = channels(hex);
-    return 0.2126729 * r ** 2.4 + 0.7151522 * g ** 2.4 + 0.072175 * b ** 2.4;
-  };
-  /** @param {number} y */
-  const clampBlack = (y) => (y < 0.022 ? y + (0.022 - y) ** 1.414 : y);
-
-  const Ytxt = clampBlack(Y(textHex));
-  const Ybg = clampBlack(Y(bgHex));
-  if (Math.abs(Ybg - Ytxt) < 0.0005) return 0;
-
-  let out;
-  if (Ybg > Ytxt) {
-    const sapc = (Ybg ** 0.56 - Ytxt ** 0.57) * 1.14;
-    out = sapc < 0.1 ? 0 : sapc - 0.027;
-  } else {
-    const sapc = (Ybg ** 0.65 - Ytxt ** 0.62) * 1.14;
-    out = sapc > -0.1 ? 0 : sapc + 0.027;
-  }
-  return out * 100;
-}
 
 /* -------------------------------------------------------------------------
  * Reading the tokens back out of the stylesheet that ships
