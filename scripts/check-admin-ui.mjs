@@ -197,6 +197,44 @@ const editLoader = (over = {}) => ({
   ...over,
 });
 
+/*
+ * The origin-requests panel's three SourceResult shapes.
+ *
+ * Hand-authored rather than produced by the source module, per rule 10's
+ * fixture-independence clause: a gate whose expected values come out of the
+ * code under test is a mirror. `originRequests` differs from `rows` in the live
+ * fixture on purpose, so the sampling-weighted path is the one exercised.
+ */
+const TRAFFIC_LIVE = {
+  status: "live",
+  fetchedAt: "2026-08-14T12:00:00.000Z",
+  data: {
+    windowDays: 7,
+    totalOriginRequests: 940,
+    pathsReturned: 23,
+    rows: [
+      { path: "/", originRequests: 412, rows: 412 },
+      { path: "/blog", originRequests: 168, rows: 168 },
+      { path: "/playground", originRequests: 96, rows: 48 },
+      { path: "/colophon", originRequests: 41, rows: 41 },
+    ],
+  },
+};
+
+const TRAFFIC_EMPTY = {
+  status: "live",
+  fetchedAt: "2026-08-14T12:00:00.000Z",
+  data: { windowDays: 7, totalOriginRequests: 0, pathsReturned: 0, rows: [] },
+};
+
+const TRAFFIC_ERROR = {
+  status: "error",
+  data: null,
+  message:
+    "No Analytics Engine read token is configured, so this panel has nothing to " +
+    "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn it on.",
+};
+
 /** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string>, props?: Record<string,unknown> }>} */
 const STATES = [
   // ---- posts index --------------------------------------------------------
@@ -542,6 +580,34 @@ const STATES = [
     url: "/admin/posts/a-post/edit",
     params: { slug: "a-post" },
     loaderData: editLoader({ headSha: "" }),
+  },
+
+  // ---- origin requests ----------------------------------------------------
+  //
+  // Three states, and the ERROR one is not hypothetical: the read token is
+  // optional by contract and a development machine never carries it, so the
+  // error is what this route renders locally every single time. It is covered
+  // first for that reason rather than last.
+  {
+    name: "origin requests, loaded",
+    entry: "app/routes/admin.origin-requests.tsx",
+    path: "/admin/origin-requests",
+    url: "/admin/origin-requests",
+    loaderData: { result: TRAFFIC_LIVE },
+  },
+  {
+    name: "origin requests, empty",
+    entry: "app/routes/admin.origin-requests.tsx",
+    path: "/admin/origin-requests",
+    url: "/admin/origin-requests",
+    loaderData: { result: TRAFFIC_EMPTY },
+  },
+  {
+    name: "origin requests, error",
+    entry: "app/routes/admin.origin-requests.tsx",
+    path: "/admin/origin-requests",
+    url: "/admin/origin-requests",
+    loaderData: { result: TRAFFIC_ERROR },
   },
 ];
 
@@ -991,6 +1057,109 @@ structural(
 
 structural("new posts get a slug input", "new post, fresh", (h) => h.includes('id="field-slug"'));
 structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
+
+/* -------------------------------------------------------------------------
+ * The origin-requests panel: the copy law, asserted on the RENDERED PAGE.
+ *
+ * ASSERTED AGAINST MARKUP, NOT SOURCE, and the distinction is the whole point.
+ * The module is named `traffic.server.ts`, the type is `TrafficRow` and the
+ * stylesheet uses `.traffic-table`, so a grep for the forbidden word over the
+ * source finds nine hits and every one of them is an identifier no reader ever
+ * sees. The law is about what the page SAYS. Rendering the route and reading
+ * the output is the only form of this check that means anything, and it is
+ * strictly stronger: it would also catch the word arriving from a component
+ * this route merely imports.
+ *
+ * The needles are word-anchored so "traffic" cannot be matched inside a longer
+ * token, and each is validated against a decoy below so a typo in the pattern
+ * cannot make the absence vacuous.
+ * ---------------------------------------------------------------------- */
+
+const FORBIDDEN_COPY = ["visits", "visitors", "traffic", "page views"];
+const TRAFFIC_STATES = ["origin requests, loaded", "origin requests, empty", "origin requests, error"];
+
+for (const word of FORBIDDEN_COPY) {
+  const pattern = new RegExp(`\\b${word}\\b`, "i");
+  // A NEEDLE THAT CANNOT MATCH PROVES NOTHING. Validated against a decoy first,
+  // so the absence assertions below are known to be capable of failing.
+  assert(
+    `copy law: the needle for "${word}" can match`,
+    pattern.test(`a sample ${word} here`),
+    "the pattern never matches anything, so every absence check using it is vacuous",
+  );
+  for (const state of TRAFFIC_STATES) {
+    structural(`copy law: "${word}" never appears in ${state}`, state, (h) => !pattern.test(h));
+  }
+}
+
+// The required half. An absence check alone would pass on a blank page.
+for (const state of TRAFFIC_STATES) {
+  structural(`copy law: ${state} says origin requests`, state, (h) =>
+    /origin requests/i.test(h),
+  );
+}
+
+/* The three states are genuinely different pages, not one page three times. */
+structural(
+  "loaded state renders a row per path",
+  "origin requests, loaded",
+  (h) => h.includes("/playground") && h.includes("origin-bar"),
+);
+structural(
+  "loaded state states the sampling-weighted definition",
+  "origin requests, loaded",
+  (h) => h.includes("sampling") && h.includes("sum of the sampling interval"),
+);
+structural(
+  "loaded state rolls up the paths it does not show",
+  "origin requests, loaded",
+  (h) => h.includes("Top 4 of 23 paths"),
+);
+/* The empty state is a SENTENCE, not a dash. */
+structural(
+  "empty state is a real sentence",
+  "origin requests, empty",
+  (h) => h.includes("No origin requests recorded in this window."),
+);
+structural(
+  "empty state renders no table",
+  "origin requests, empty",
+  (h) => !h.includes("<table"),
+);
+/* The error state is visible prose, and the rest of the panel survives it. */
+structural(
+  "error state renders the message as visible prose",
+  "origin requests, error",
+  (h) => h.includes("No Analytics Engine read token is configured"),
+);
+structural(
+  "error state still renders the panel frame",
+  "origin requests, error",
+  (h) => h.includes("Origin requests") && h.includes("chip-error"),
+);
+structural(
+  "error state renders no table and no empty state",
+  "origin requests, error",
+  (h) => !h.includes("<table") && !h.includes("empty-state"),
+);
+
+/*
+ * THE PENDING CAPTION SENTENCE IS A STATED ABSENCE.
+ *
+ * The caption owes a sentence about whether a cached serve is counted, and it
+ * has to be measured by `npm run ae-probe` rather than reasoned. Until then the
+ * placeholder is REQUIRED to be present, so the gap is visible in the product
+ * and in this gate rather than being quietly forgotten.
+ *
+ * This assertion INVERTS on ship day: the deploy gate refuses the placeholder,
+ * so the panel cannot go live still saying the question is unanswered. See
+ * `scripts/check-head.mjs`.
+ */
+structural(
+  "the unmeasured cache sentence is still declared as a stated absence",
+  "origin requests, loaded",
+  (h) => h.includes("has not been measured yet"),
+);
 
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
 

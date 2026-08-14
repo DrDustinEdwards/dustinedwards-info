@@ -129,5 +129,8 @@
     "POST /admin/posts/a-post/edit | intent=delete | headSha=",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
-  ]
+  ],
+  "origin requests, loaded": [],
+  "origin requests, empty": [],
+  "origin requests, error": []
 }
