@@ -21,6 +21,8 @@
  * the two previous incidents did not have.
  */
 
+import { folderFor, folderRank } from "./folders.mjs";
+
 /** Grid or list. LIST is the default; see `DEFAULTS`. */
 export const VIEWS = ["list", "grid"];
 
@@ -37,6 +39,19 @@ export const DIRS = ["desc", "asc"];
 export const SIZES = ["s", "m", "l"];
 
 /**
+ * THE QUALITY LENSES, which are the questions somebody actually has.
+ *
+ * These replaced the role chips (Content / Generated / Brand / Icons) as the
+ * primary row. Role is the SYSTEM'S classification and, once every section
+ * carries a folder heading, it says the same thing twice. A lens says something
+ * the headings cannot: which files nothing references, which are duplicates of
+ * each other, which are missing alt text, which are big.
+ *
+ * `all` is the absence of a lens rather than a value, so it is not a member.
+ */
+export const LENSES = ["unattached", "duplicates", "no-alt", "large"];
+
+/**
  * The defaults, which are also what `Reset to defaults` links back to.
  *
  * **LIST, NOT GRID, and that is a measurement rather than a taste.** 31 of the
@@ -48,13 +63,22 @@ export const SIZES = ["s", "m", "l"];
  */
 export const DEFAULTS = {
   view: "list",
-  group: "flat",
+  /*
+   * FOLDER IS THE DEFAULT, and it is the design's spine rather than a
+   * preference. A flat wall of tiles cannot say why a file exists; a section
+   * heading with a note can, and the note is what stops somebody deleting nine
+   * cohort photographs because a post-level tracker called them unreferenced.
+   * Flat is still one click away for when you want the whole page at once.
+   */
+  group: "folder",
   sort: "added",
   dir: "desc",
   size: "m",
   role: "content",
   q: "",
   tag: "",
+  /** A quality lens, or "" for all. See LENSES. */
+  lens: "",
   page: 1,
   trash: false,
   /**
@@ -108,6 +132,7 @@ export function readView(params) {
       : DEFAULTS.role,
     q: (params.get("q") ?? "").trim(),
     tag: (params.get("tag") ?? "").trim().toLowerCase(),
+    lens: oneOf(params.get("lens"), LENSES, DEFAULTS.lens),
     page: Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1,
     trash: params.get("trash") === "1",
     // NOT trimmed or lowercased: a media key is an exact string, 58 of them are
@@ -202,24 +227,49 @@ export function isModified(state) {
  * @template {{ key: string, uploaded?: string | null }} T
  * @param {T[]} rows already sorted
  * @param {string} group one of GROUPS
- * @returns {Array<{ label: string, rows: T[] }>} one entry when group is flat
+ * @returns {Array<{ label: string, note: string, rows: T[] }>} one entry when flat
  */
 export function groupRows(rows, group) {
-  if (group !== "folder" && group !== "month") return [{ label: "", rows }];
+  if (group !== "folder" && group !== "month") return [{ label: "", note: "", rows }];
 
   /** @type {Map<string, T[]>} */
   const buckets = new Map();
   for (const row of rows) {
-    const label = group === "folder" ? folderOf(row.key) : monthOf(row.uploaded);
+    const label = group === "folder" ? folderFor(row.key).prefix : monthOf(row.uploaded);
     const bucket = buckets.get(label);
     if (bucket) bucket.push(row);
     else buckets.set(label, [row]);
   }
-  return [...buckets.entries()].map(([label, bucketRows]) => ({ label, rows: bucketRows }));
+
+  const out = [...buckets.entries()].map(([label, bucketRows]) => {
+    if (group !== "folder") return { label, note: "", rows: bucketRows };
+    // THE NOTE TRAVELS WITH THE SECTION. It is the whole reason the grouping
+    // exists, so it is part of the group rather than something the component
+    // has to look up and might forget to render.
+    const folder = folderFor(bucketRows[0].key);
+    return { label: folder.title, note: folder.note, rows: bucketRows };
+  });
+
+  /*
+   * FOLDER SECTIONS RENDER IN THE TABLE'S ORDER, not in first-row order.
+   *
+   * The table is written so the sections a reader most often wants come first,
+   * and root files last. Month grouping keeps first-row order, because there
+   * the SORT is the meaning and reordering would fight it.
+   */
+  if (group !== "folder") return out;
+  return out.sort(
+    (a, b) =>
+      folderRank(folderFor(a.rows[0].key).prefix) - folderRank(folderFor(b.rows[0].key).prefix),
+  );
 }
 
 /**
- * The folder a key lives in.
+ * The folder a key lives in, as a bare prefix.
+ *
+ * SUPERSEDED for grouping by `folderFor`, which also carries the title and the
+ * note. Kept because it is the honest answer to "what directory is this in",
+ * which the tests still ask, and because `folderFor` falls back through it.
  *
  * A static asset's key IS a path, so it has a real directory. An uploaded key
  * is content-addressed and has none, which is a fact about the key rather than
