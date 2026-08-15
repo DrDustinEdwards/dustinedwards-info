@@ -134,6 +134,42 @@ const MEDIA_SHELL = (over = {}) => ({
   scanFailed: [],
   counts: [{ storage: "r2", kind: "image", n: 1 }],
   roleCounts: [{ role: "content", n: 1 }],
+  /* The v1 library's additions. `q` is echoed so the search input, the chips
+   * and the pager all carry it; `unusedCount` is the chip's number, from the
+   * same predicate the filter uses; `detail` is the `?key=` view, which is
+   * where alt editing and delete moved to; `uploaded` and `uploadError` are the
+   * flash the upload route redirects back with. */
+  q: "",
+  unusedCount: 0,
+  detail: null,
+  uploaded: null,
+  uploadError: null,
+  ...over,
+});
+
+/** The `?key=` view's loader shape, overridable per scenario. */
+const MEDIA_DETAIL = (over = {}) => ({
+  found: true,
+  key: "1234abcd5678ef90.png",
+  url: "/media/1234abcd5678ef90.png",
+  thumb: "/media/1234abcd5678ef90.png?w=640",
+  viewable: true,
+  deletable: true,
+  originalName: "a-picture.png",
+  role: "content",
+  storage: "r2",
+  kind: "image",
+  mime: "image/png",
+  bytes: 51234,
+  width: 1200,
+  height: 630,
+  alt: "",
+  caption: "",
+  uploadedAt: "2026-08-01T10:00:00.000Z",
+  placeholder: "data:image/webp;base64,UklGRg==",
+  refs: [],
+  citations: [],
+  scanComplete: true,
   ...over,
 });
 
@@ -367,10 +403,14 @@ const STATES = [
 
   // ---- media library ------------------------------------------------------
   //
-  // Three states, because they render different controls: an object nothing
-  // cites offers a delete, an object a post cites still offers it (the refusal
-  // is the ACTION's job, server side, never the UI's), and a failed scan
-  // replaces every usage label and is the state ruling 4 turns on.
+  // The grid states render the same controls as each other now: the v1 redesign
+  // moved alt editing and delete OUT of the tiles and into the `?key=` detail
+  // view, so what a grid state proves is the search form, the upload form and
+  // the maintenance menu, and what a DETAIL state proves is the two per-asset
+  // mutations. Both matter: a regression that put a delete button back on
+  // seventy tiles would change every grid state's payload set and fail here.
+  //
+  // A failed scan is still its own state, because it is what ruling 4 turns on.
   {
     name: "media, unused object",
     entry: "app/routes/admin.media._index.tsx",
@@ -472,6 +512,111 @@ const STATES = [
         }),
       ],
       roleCounts: [{ role: "brand", n: 1 }],
+    }),
+  },
+  {
+    // SEARCH WITH RESULTS. `q` is echoed back, so the input renders its value,
+    // the chips carry it and the pager carries it; the Clear link only exists
+    // in this state.
+    name: "media, search with results",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?q=picture",
+    loaderData: MEDIA_SHELL({ q: "picture", objects: [MEDIA_OBJECT()], unusedCount: 1 }),
+  },
+  {
+    // SEARCH THAT FOUND NOTHING. A different empty state from an empty bucket:
+    // it offers to widen the group or clear the search rather than to upload.
+    name: "media, search with nothing found",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?q=zzzz",
+    loaderData: MEDIA_SHELL({ q: "zzzz", objects: [] }),
+  },
+  {
+    // THE DETAIL VIEW, where set-alt and delete now live. Both mutations must
+    // appear HERE and nowhere else, which is exactly what comparing this
+    // scenario against the grid ones asserts.
+    name: "media, detail open",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: MEDIA_DETAIL({
+        refs: [
+          { sourceType: "post", sourceId: "a-post", form: "markdown-image", detail: "line 12" },
+        ],
+        citations: [
+          { type: "post", id: "a-post", title: "A post", form: "markdown-image", detail: "line 12" },
+        ],
+      }),
+    }),
+  },
+  {
+    // A DETAIL for a STATIC row. It is not deletable through the UI, so the
+    // page stops OFFERING the control and explains why instead. The action
+    // refuses it regardless; this proves the offer is gone, so a regression
+    // that put the button back changes this payload set.
+    name: "media, detail for a static row",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=/logo.svg",
+    loaderData: MEDIA_SHELL({
+      filter: "brand",
+      objects: [],
+      roleCounts: [{ role: "brand", n: 1 }],
+      detail: MEDIA_DETAIL({
+        key: "/logo.svg",
+        url: "/logo.svg",
+        thumb: "/logo.svg",
+        storage: "static",
+        role: "brand",
+        mime: "image/svg+xml",
+        originalName: null,
+        placeholder: null,
+        width: null,
+        height: null,
+        uploadedAt: null,
+        deletable: false,
+      }),
+    }),
+  },
+  {
+    // A KEY THE INDEX DOES NOT HAVE, which is what a bookmarked detail link
+    // becomes after the object is deleted. It must render a way back rather
+    // than a blank panel or a crash.
+    name: "media, detail for a missing key",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=gone.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: { found: false, key: "gone.png" },
+    }),
+  },
+  {
+    // UPLOAD ACCEPTED. The form itself renders in every state; this is the one
+    // where the route's redirect has landed, so the flash and its link render.
+    name: "media, upload accepted",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?uploaded=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      uploaded: "1234abcd5678ef90.png",
+    }),
+  },
+  {
+    // UPLOAD REFUSED. The route redirects with a CODE and the loader turns it
+    // into the sentence; the page renders whatever it was handed.
+    name: "media, upload refused",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?upload-error=too-large",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      uploadError: "That image is over the 10 MB limit.",
     }),
   },
 
@@ -1172,17 +1317,21 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 185.
- * Never summed. Floored at 170, roughly 8 percent: the count moves in steps of
- * a few per state, and the three origin-requests states added 34 at once, so
- * the slack has to absorb a state being added mid-session without hiding one
- * being lost.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 199.
+ * Never summed. It was 185 against a floor of 170 until the media library's v1
+ * redesign added seven states, and the seven were counted by running the gate
+ * rather than by adding up what they looked like they would contribute.
+ *
+ * Floored at 187, roughly 94 percent: the count moves in steps of a few per
+ * state, and the three origin-requests states once added 34 at once, so the
+ * slack has to absorb a state being added mid-session without hiding one being
+ * lost.
  */
-const MINIMUM_CHECKS = 170;
+const MINIMUM_CHECKS = 187;
 if (checks < MINIMUM_CHECKS) {
   fail(
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 185.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 199.`,
   );
 }
 
