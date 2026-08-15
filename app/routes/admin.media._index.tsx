@@ -1621,7 +1621,24 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                       className="media-name"
                       title={object.key}
                     >
-                      {middleTruncate(name)}
+                      {/*
+                        THE CLAMP IS THE GRID'S, AND ONLY THE GRID'S.
+
+                        Found by LOOKING at the list view rather than by
+                        measuring it: with a 13 character middle clamp applied
+                        to a full-width row, `microscope-plate-2019.png` and
+                        `microscope-plate-2020.png` both render as
+                        "mic...-2019.png" style stubs and the reader cannot tell
+                        two files apart in a view with 1200px of empty space
+                        beside the name.
+
+                        The clamp exists because every truncation cuts the END,
+                        which is the half that distinguishes, and a narrow tile
+                        genuinely has no room. A list row does. So the clamp is
+                        applied per LAYOUT rather than per name, and the list
+                        shows the whole thing.
+                      */}
+                      {view.view === "list" ? name : middleTruncate(name)}
                     </Link>
                     <CopyButton value={object.url} label={name} />
                   </div>
