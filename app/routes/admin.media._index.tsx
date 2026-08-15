@@ -466,12 +466,79 @@ function formatBytes(size: number) {
 }
 
 /**
- * THE PAGE'S ONE JOB, as one button.
+ * THE LAST SEGMENT, because a directory is the part these names SHARE.
+ *
+ * Measured on the rendered page: a tile showed `/phage-hunters/2024-cohort-gro`
+ * with the rest cut off. The nine roster photos share every character of that
+ * prefix and differ only at the end, so nine tiles rendered as nine copies of
+ * one string while the distinguishing half was the half thrown away.
+ *
+ * Dropping the directory rather than de-emphasising it, because a de-emphasised
+ * prefix still spends horizontal space on the segment that fails to tell these
+ * rows apart, and at 109px of room there is none to spend. The full key stays a
+ * hover away in the `title` and a click away in the detail view, which is also
+ * the no-script route to the address.
+ *
+ * A content-addressed key has no directory, so this returns it unchanged. What
+ * remains is still too long for the tile, which `middleTruncate` below handles.
+ */
+function displayName(object: { originalName: string | null; key: string }) {
+  if (object.originalName) return object.originalName;
+  const last = object.key.split("/").pop();
+  return last && last.length > 0 ? last : object.key;
+}
+
+/**
+ * TRUNCATION FROM THE MIDDLE, because both ends carry meaning and the tail
+ * carries more of it.
+ *
+ * Measured in a browser, and NO line clamp fixes this. Two lines at 13px cut a
+ * 39-character roster name; three lines at 12px still cut a 58-character
+ * document name. The cut always lands on the end, which is exactly where these
+ * names differ: `...session-01` against `...session-02`, `...paper-1` against
+ * `...paper-2`.
+ *
+ * So the middle goes and both ends stay, with the tail given the larger share.
+ *
+ * THE CAP IS 13 BECAUSE THE NAME GETS 109px, and every number here was read off
+ * a rendered page rather than estimated. The tile is 153px, the body pads 8 each
+ * side, the icon takes 22 and the gap 4, which leaves 109 for the name. At the
+ * page's own font that holds 13 characters: cap 14 measured 110px and clipped 7
+ * of 24 tiles by one pixel, cap 16 measured 125, cap 20 measured 144 to 156, and
+ * cap 22 measured 158 to 169. That progression is also why the control beside it
+ * is a glyph rather than the word Copy: the word cost 41px and left the name 104,
+ * so the browser ellipsised the END again and undid this function in the same
+ * commit that added it.
+ *
+ * Character-based rather than pixel-based, for the same reason the social card's
+ * title cap is: this renders on a server that cannot measure a font, and the CSS
+ * ellipsis stays on as the backstop for a name that is short in characters and
+ * wide in pixels.
+ */
+function middleTruncate(name: string, max = 13, tail = 9) {
+  if (name.length <= max) return name;
+  return `${name.slice(0, max - tail - 1)}…${name.slice(-tail)}`;
+}
+
+/**
+ * THE PAGE'S ONE JOB, as one small button beside the name it copies.
  *
  * The clipboard needs script, which is why the filename beside it links to the
  * detail view where the same string sits in a readonly input. Feedback is a data
  * attribute rather than component state: the page holds no client state by
  * ruling, and a copy button with no acknowledgement reads as broken.
+ *
+ * AN ICON RATHER THAN THE WORD, and the reason is measured rather than
+ * fashionable. It shipped as a full-width block under every tile, which at 24
+ * tiles is 24 slabs competing with the pictures they belong to. Compacting it
+ * to the WORD "Copy" beside the name was measured next: the word cost 41px of a
+ * 131px row and left the name 85, which the browser then ellipsised from the
+ * end, undoing the truncation fix in the same commit that made it. The glyph
+ * costs 22 and leaves the name 109.
+ *
+ * `title` carries the address for a pointer, and the visually hidden span
+ * carries the accessible name for everything else. An icon with neither is a
+ * button that says nothing to a screen reader.
  */
 function CopyButton({ value, label }: { value: string; label: string }) {
   return (
@@ -494,7 +561,25 @@ function CopyButton({ value, label }: { value: string; label: string }) {
           });
       }}
     >
-      Copy<span className="sr-only"> the address for {label}</span>
+      {/* Two rounded rectangles, one behind the other: the copy glyph every
+          admin surface uses, drawn in currentColor so it takes the button's
+          own token and adds no colour of its own. */}
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+      <span className="sr-only">Copy the address for {label}</span>
     </button>
   );
 }
@@ -881,7 +966,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
         // page is the nav label above and aria-current on the active chip.
         <ul className="media-grid">
           {objects.map((object) => {
-            const name = object.originalName ?? object.key;
+            const name = displayName(object);
             const cited = object.citations.length > 0 || object.refCount > 0;
             return (
               <li key={object.key} className="media-card">
@@ -914,6 +999,11 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                         : undefined
                     }
                     data-placeholder={object.placeholder ? "lqip" : "none"}
+                    // A DOCUMENT GETS A SHORTER BOX. There is nothing to look
+                    // at, so it must not claim the same height as a picture:
+                    // 31 of the 70 rows are PDFs and at full tile height they
+                    // read as a wall of failed loads.
+                    data-kind={object.viewable ? "image" : "document"}
                   >
                     {/* A PDF has no thumbnail to show, so it gets a label rather
                         than an <img> pointed at something that cannot render one.
@@ -938,24 +1028,31 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                 </Link>
 
                 <div className="media-card-body">
-                  {/* The original filename first when there is one, and it is
-                      the LINK to the detail view, which is also the no-script
-                      route to the address. A content-addressed key is an
-                      ADDRESS and reads as noise, so the name the author gave
-                      the file is what identifies it to a human; the key is one
-                      click away rather than in a tooltip only. */}
-                  <Link
-                    to={viewParams({ key: object.key })}
-                    className="media-name"
-                    title={object.key}
-                  >
-                    {name}
-                  </Link>
+                  {/* NAME AND COPY ON ONE ROW. The button was a full-width
+                      block, which at 24 tiles is 24 stacked slabs competing
+                      with the pictures they belong to. It is the page's one
+                      job, so it stays visible on every tile, but it is a
+                      control beside the name rather than a bar under it. */}
+                  <div className="media-name-row">
+                    {/* The LAST SEGMENT, linking to the detail view, which is
+                        also the no-script route to the address. A
+                        content-addressed key is an ADDRESS and reads as noise,
+                        so the name the author gave the file identifies it to a
+                        human; the full key stays in the title and in the
+                        detail view. */}
+                    <Link
+                      to={viewParams({ key: object.key })}
+                      className="media-name"
+                      title={object.key}
+                    >
+                      {middleTruncate(name)}
+                    </Link>
+                    <CopyButton value={object.url} label={name} />
+                  </div>
                   <p className="media-meta">
                     <span className="chip">{object.role}</span> {formatBytes(object.size)}
                     {scanComplete ? (cited ? " · used" : " · unused") : ""}
                   </p>
-                  <CopyButton value={object.url} label={name} />
                 </div>
               </li>
             );
