@@ -68,6 +68,11 @@ import {
 // the index carries.
 import { COLOPHON_SECTIONS, statusLabel } from "../app/lib/colophon-sections.mjs";
 
+// The card key, DERIVED with the same function the sync and the uploader use.
+// A literal key here survived exactly until the day the hash set changed; see
+// the media-cache block for what it cost.
+import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /*
@@ -1203,9 +1208,41 @@ const ASK_PROBE_LIMIT = 3;
   // uncacheable; it must not have disabled the cache it was enabled for. A
   // regression that turned caching off site-wide would satisfy every assertion
   // above and would be invisible without this one.
-  const THUMB = "/media/og/ai-answer-layer-ask-mode-9933971b.png?w=320";
+  /*
+   * THE KEY IS DERIVED, NOT WRITTEN DOWN, and this cost a run to learn.
+   *
+   * It was the literal `og/ai-answer-layer-ask-mode-9933971b.png`. On
+   * 2026-08-15 the ship window changed what `ogImageKey` hashes, every card key
+   * moved, and `build:og --remote` pruned that object minutes after the deploy
+   * that made it an orphan. This block then fetched a key nothing has served
+   * since, got the Worker's 404, and reported `cf-cache-status BYPASS` and
+   * `cache-control private, no-store`.
+   *
+   * BOTH FAILURES WERE TRUE AND BOTH POINTED AT THE WRONG SUBSYSTEM. Nothing
+   * had happened to the cache; a 404 is uncacheable and private, which is
+   * correct behaviour. The harness said "caching is broken" when the fact was
+   * "this key is gone", and a diagnosis naming the wrong subsystem costs more
+   * than a silent pass does.
+   *
+   * So the key now comes from `ogImageKey` over the artifact, the same function
+   * the sync writes into D1 and `build:og` uploads under, and the first
+   * assertion checks the response IS the picture before the other two say
+   * anything about the cache.
+   */
+  const thumbPost = JSON.parse(
+    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+  ).posts.find((/** @type {any} */ p) => !p.cover);
+  const THUMB = `/media/${ogImageKey(thumbPost)}?w=320`;
   await warm(THUMB, "");
   const cachedThumb = await warm(THUMB, "");
+  check(
+    "cache: the /media/* probe is fetching an object that exists",
+    cachedThumb.res.status === 200 &&
+      (cachedThumb.res.headers.get("content-type") ?? "").startsWith("image/"),
+    `${THUMB} answered ${cachedThumb.res.status} ` +
+      `${cachedThumb.res.headers.get("content-type")}. A missing object makes the two ` +
+      `cache assertions below fail for a reason that has nothing to do with the cache.`,
+  );
   check(
     "cache: /media/* still HITs on a second request",
     cachedThumb.cf === "HIT",
