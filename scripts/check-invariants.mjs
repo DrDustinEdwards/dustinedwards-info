@@ -2327,6 +2327,43 @@ try {
     "a guard that refuses every key would satisfy the assertion above vacuously",
   );
 
+  /*
+   * **EVERY BULK DELETE PATH ACTUALLY CALLS THE GUARD.**
+   *
+   * FOUND BY A PLANT, and the plant is the only reason this exists. Replacing
+   * the call inside Empty trash with `const claimed = true` left this entire
+   * gate GREEN: the assertions above prove the guard is still written
+   * correctly, and nothing proved anybody still uses it. A guarded function
+   * nobody calls is a guard with no subject, and Empty trash is precisely the
+   * path where skipping it removes many objects at once.
+   *
+   * Source level, over the media route, because `check:admin-ui` cannot see
+   * this: it stubs every `.server` import, so the action never runs there.
+   */
+  const mediaRoute = stripComments(
+    readFileSync(join(root, "app", "routes", "admin.media._index.tsx"), "utf8"),
+  );
+  const emptyBranch = mediaRoute.match(/intent\s*===\s*"empty-trash"[\s\S]*?\n  \}/);
+  ok(
+    "the media route has an empty-trash branch to examine",
+    Boolean(emptyBranch),
+    "not found after stripping comments, so the two assertions below would be vacuous",
+  );
+  ok(
+    "Empty trash claims each key through the refcount guard",
+    /claimMediaKeyForDelete\s*\(/.test(emptyBranch?.[0] ?? ""),
+    "the bulk delete must iterate the EXISTING guarded delete. A loop that " +
+      "removed objects directly would delete files a published post cites, and " +
+      "iterating the guarded delete IS the ruling this feature was built under.",
+  );
+  ok(
+    "Empty trash deletes the object only AFTER the claim succeeds",
+    /claimMediaKeyForDelete[\s\S]{0,400}?deleteMediaObject/.test(emptyBranch?.[0] ?? ""),
+    "the claim comes first: deleting the row is what reserves the key, and " +
+      "removing the object before claiming it reopens the TOCTOU the single " +
+      "statement was written to close",
+  );
+
   console.log(
     `     3 fixture row(s), predicate ${JSON.stringify(clause)}`,
   );
@@ -2350,17 +2387,17 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
  * and it is invisible: the remaining sections still pass and the total is the
  * only witness.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 99
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 102
  * offline. Never summed. It was 84 against a floor of 80, then 85 when the
- * draft preview reader took a second visibility exemption, then 99 when
+ * draft preview reader took a second visibility exemption, then 102 when
  * section 9 landed with the media trash predicate, its restore round trip and
  * the permanent-delete guard.
  *
- * Floored at 94, slack of five: the offline count is stable across runs, and
+ * Floored at 97, slack of five: the offline count is stable across runs, and
  * --remote only ADDS, so a floor set on the offline figure holds for both
  * tiers.
  */
-const MINIMUM_CHECKS = 94;
+const MINIMUM_CHECKS = 97;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

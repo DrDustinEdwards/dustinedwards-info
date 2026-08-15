@@ -57,6 +57,15 @@ export const DEFAULTS = {
   tag: "",
   page: 1,
   trash: false,
+  /**
+   * The inspector's key, and it belongs in the state rather than beside it.
+   *
+   * It is a page parameter like any other, so it has to travel like any other:
+   * an inspector that closed itself every time the reader changed a sort would
+   * be the same evaporation bug wearing different clothes. Closing it is
+   * `hrefWith(view, { key: "" })`, which is explicit.
+   */
+  key: "",
 };
 
 /**
@@ -101,6 +110,9 @@ export function readView(params) {
     tag: (params.get("tag") ?? "").trim().toLowerCase(),
     page: Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1,
     trash: params.get("trash") === "1",
+    // NOT trimmed or lowercased: a media key is an exact string, 58 of them are
+    // paths, and normalising one would make a bookmarked inspector link miss.
+    key: params.get("key") ?? "",
   };
 }
 

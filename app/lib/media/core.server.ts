@@ -62,6 +62,8 @@ export type MediaObject = {
   height: number | null;
   alt: string;
   caption: string;
+  /** The delimited storage form. The route parses it; nothing else reads it raw. */
+  tags: string;
   placeholder: string | null;
   /** False for a static asset, which is removed by a commit and not by the UI. */
   deletable: boolean;
@@ -155,6 +157,7 @@ export async function listMedia(
       height: row.height,
       alt: row.alt,
       caption: row.caption,
+      tags: row.tags,
       placeholder: row.placeholder,
       deletable: row.storage !== "static",
     })),

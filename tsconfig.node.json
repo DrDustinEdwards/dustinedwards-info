@@ -16,6 +16,11 @@
     "app/lib/content/diagram.mjs",
     "app/lib/content/artifact.mjs",
     "app/lib/blog-listing.mjs",
+    // The media library's view state. check:admin-ui derives its
+    // parameter-evaporation needles from PARAM_NAMES rather than restating
+    // them, because a hand-written list drifting from the real one is exactly
+    // what the two previous evaporation incidents were.
+    "app/lib/media/view.mjs",
     "app/lib/search/records.mjs",
     // The colophon's section descriptor. build-content.mjs reads it to emit the
     // page's search records, and app/routes/colophon.tsx renders from the same
