@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Gate over rules this repo states TWICE and cannot merge into one.
  *
  *   npm run check:invariants
@@ -2080,6 +2080,260 @@ try {
   fail("the search_docs reader check could not run", String(error));
 }
 
+/* ------------------- 9. trash hides an asset from the library, not from R2 -- */
+
+/*
+ * **BEHAVIOURAL, not structural, and that is what makes it worth having.**
+ *
+ * Sections 6 and 8 assert that a reader COMPOSES a predicate. This one asserts
+ * what the predicate DOES, by applying the real migrations to an empty SQLite
+ * database, inserting a media fixture, and running the predicate `notTrashed()`
+ * renders to. The second opinion is not another function, which would be a
+ * mirror; it is the DATABASE.
+ *
+ * It exists because trash on this table is counter-intuitive by design and the
+ * two halves fail in opposite directions:
+ *
+ *   TOO NARROW   a library view that forgets the predicate offers a trashed
+ *                asset back to the author, and the role chip that led them
+ *                there counted it.
+ *   TOO WIDE     a RECONCILIATION reader that applies it sees an object in R2
+ *                with no row, and `check:media` backfills the row, which is
+ *                trash undone by a gate on the next reconcile. The object is
+ *                untouched by trashing, so this direction is not hypothetical.
+ *
+ * Both directions are asserted, and the anti-vacuity control runs the same
+ * queries WITHOUT the predicate first, so a fixture that accidentally contained
+ * no trashed row could not report compliance.
+ */
+
+console.log("\n  9. trash hides an asset from the library and not from reconciliation");
+
+try {
+  const dbModule = await bundle(
+    join(root, "app", "db", "index.ts"),
+    "db-trash.mjs",
+    /^~\/(lib\/context|lib\/auth|lib\/timing)/,
+  );
+  const { SQLiteSyncDialect } = await import("drizzle-orm/sqlite-core");
+  const clause = new SQLiteSyncDialect().sqlToQuery(dbModule.notTrashed()).sql;
+
+  ok(
+    "notTrashed() renders to SQL naming the trashed_at column",
+    /trashed_at/.test(clause),
+    `rendered ${JSON.stringify(clause)}. If the column were renamed and the ` +
+      `predicate not, every assertion below would still pass against a fixture ` +
+      `built by this gate, so the NAME is checked before the behaviour.`,
+  );
+
+  const dbSourceForTrash = stripComments(
+    readFileSync(join(root, "app", "db", "index.ts"), "utf8"),
+  );
+
+  const trashDb = new DatabaseSync(":memory:");
+  for (const file of readdirSync(join(root, "drizzle"))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
+    trashDb.exec(readFileSync(join(root, "drizzle", file), "utf8"));
+  }
+
+  /*
+   * THREE ROWS, and the two brand rows are the point.
+   *
+   * One live content row, one live brand row and one TRASHED brand row. A
+   * fixture with a trashed row of a role nothing else carries would let a
+   * broken role count pass, because the role would simply vanish rather than
+   * report the wrong number. Two rows sharing a role is what makes the count
+   * assertion able to read 2 when it should read 1.
+   */
+  const insert = trashDb.prepare(
+    `INSERT INTO media (key, storage, kind, role, alt, caption, tags, trashed_at)
+     VALUES (?, 'r2', 'image', ?, '', '', ?, ?)`,
+  );
+  insert.run("live-content.png", "content", ",alpha,", null);
+  insert.run("live-brand.svg", "brand", "", null);
+  insert.run("trashed-brand.svg", "brand", "", "2026-08-15 12:00:00");
+
+  /** @param {string} where @returns {number} */
+  const countWhere = (where) =>
+    Number(
+      /** @type {any} */ (
+        trashDb.prepare(`SELECT count(*) AS n FROM media WHERE ${where}`).get()
+      ).n,
+    );
+  /** @param {string} where @returns {number} */
+  const brandWhere = (where) =>
+    Number(
+      /** @type {any} */ (
+        trashDb
+          .prepare(`SELECT count(*) AS n FROM media WHERE role = 'brand' AND ${where}`)
+          .get()
+      ).n,
+    );
+
+  /* ANTI-VACUITY FIRST. Without the predicate the fixture must show all three
+   * and both brand rows, or the assertions below prove nothing about it. */
+  ok(
+    "the fixture actually contains a trashed row",
+    countWhere("1=1") === 3 && brandWhere("1=1") === 2,
+    `unfiltered listing ${countWhere("1=1")} of 3, unfiltered brand ${brandWhere("1=1")} of 2. ` +
+      `The fixture is wrong and every assertion below would be vacuous.`,
+  );
+
+  ok(
+    "a trashed row is absent from the default listing",
+    countWhere(clause) === 2,
+    `the listing predicate returned ${countWhere(clause)} row(s), expected 2. A trashed ` +
+      `asset is being offered back to the author.`,
+  );
+  ok(
+    "a trashed row is absent from its role count",
+    brandWhere(clause) === 1,
+    `the brand role count returned ${brandWhere(clause)}, expected 1. The chip would lead ` +
+      `to a grid with fewer rows than the number promised.`,
+  );
+  ok(
+    "the Trash view sees exactly the trashed rows",
+    countWhere("trashed_at IS NOT NULL") === 1,
+    `the trash predicate returned ${countWhere("trashed_at IS NOT NULL")}, expected 1`,
+  );
+  /* THE OTHER DIRECTION. Reconciliation must still see it, or check:media
+   * backfills the row and undoes the trash on the next reconcile. */
+  ok(
+    "reconciliation still sees the trashed row",
+    countWhere("1=1") === 3,
+    `an unfiltered read returned ${countWhere("1=1")}, expected 3. listMediaRecords, ` +
+      `mediaRecordsFor, existingMediaKeys and mediaRecord must NOT filter, because ` +
+      `the R2 object is untouched by trashing.`,
+  );
+
+  /*
+   * RESTORE PUTS THE ROW BACK IN ITS ROLE COUNT, asserted as a round trip
+   * rather than as a second predicate.
+   *
+   * Trash and restore are one mechanism read in two directions, and the failure
+   * worth catching is the asymmetric one: a restore that clears the flag but
+   * leaves the row out of the count, which would look to the author like the
+   * asset came back and the chip did not. Done by mutating the fixture and
+   * re-reading, so it exercises the column rather than a predicate about it.
+   */
+  trashDb.exec(`UPDATE media SET trashed_at = NULL WHERE key = 'trashed-brand.svg'`);
+  ok(
+    "a restored row returns to the default listing",
+    countWhere(clause) === 3,
+    `after restore the listing predicate returned ${countWhere(clause)}, expected 3`,
+  );
+  ok(
+    "a restored row returns to its role count",
+    brandWhere(clause) === 2,
+    `after restore the brand role count returned ${brandWhere(clause)}, expected 2. ` +
+      `Restore cleared the flag without the count following it back.`,
+  );
+  ok(
+    "the Trash view is empty once the last trashed row is restored",
+    countWhere("trashed_at IS NOT NULL") === 0,
+    `the trash predicate returned ${countWhere("trashed_at IS NOT NULL")}, expected 0`,
+  );
+  // Put it back, so the tag assertions below read the fixture as built.
+  trashDb.exec(
+    `UPDATE media SET trashed_at = '2026-08-15 12:00:00' WHERE key = 'trashed-brand.svg'`,
+  );
+
+  /* The tags column, asserted here because the migration is what creates it and
+   * this is the only place the migration is actually executed. */
+  ok(
+    "the tags column exists and stores the delimiter-wrapped form",
+    /** @type {any} */ (
+      trashDb.prepare(`SELECT tags FROM media WHERE key = 'live-content.png'`).get()
+    ).tags === ",alpha,",
+    "the wrapping is what makes an exact tag match possible with LIKE",
+  );
+  ok(
+    "an exact tag needle separates a tag from a longer tag containing it",
+    Number(
+      /** @type {any} */ (
+        trashDb
+          .prepare(`SELECT count(*) AS n FROM media WHERE tags LIKE '%,alpha,%'`)
+          .get()
+      ).n,
+    ) === 1 &&
+      Number(
+        /** @type {any} */ (
+          trashDb
+            .prepare(`SELECT count(*) AS n FROM media WHERE tags LIKE '%,alph,%'`)
+            .get()
+        ).n,
+      ) === 0,
+    "this is the property the storage form was chosen for, asserted in SQLite " +
+      "rather than only in the unit test's LIKE emulation",
+  );
+
+  /*
+   * THE PERMANENT DELETE STILL REFUSES A CITED OBJECT.
+   *
+   * Trash does not go near this path and must not: Delete permanently runs the
+   * EXISTING refcount-guarded claim, and the whole safety argument of the media
+   * library rests on that one statement staying atomic and staying guarded. The
+   * risk this section is written against is a later trash-shaped refactor
+   * folding `trashed_at` into `claimMediaKeyForDelete` and dropping the
+   * `NOT EXISTS` while rewriting the WHERE.
+   *
+   * TWO ASSERTIONS, and their boundaries differ, which is why they are not one:
+   *
+   *   STRUCTURAL, over the shipped source. The guard is still composed inside
+   *   the claim. This is the one that would catch the refactor.
+   *
+   *   BEHAVIOURAL, over the fixture. The SQL below is written HERE and is
+   *   therefore a MODEL of the guard rather than the guard itself, which is a
+   *   weaker claim than the trash assertions above and is stated as such: it
+   *   proves the refcount semantics do what the library relies on, not that
+   *   this exact statement ships.
+   */
+  const claim = dbSourceForTrash.match(
+    /export async function claimMediaKeyForDelete[\s\S]*?\n\}/,
+  );
+  ok(
+    "claimMediaKeyForDelete still composes the NOT EXISTS refcount guard",
+    Boolean(claim) && /NOT EXISTS[\s\S]*?mediaRefs/.test(claim?.[0] ?? ""),
+    "the permanent delete's refusal is one statement, and it is the only thing " +
+      "standing between Delete permanently and a published page rendering a " +
+      "broken image. Trash must not be folded into it.",
+  );
+
+  trashDb.exec(
+    `CREATE TABLE IF NOT EXISTS fixture_refs (media_key TEXT NOT NULL)`,
+  );
+  trashDb.exec(`INSERT INTO fixture_refs (media_key) VALUES ('live-content.png')`);
+  /** @param {string} key @returns {number} */
+  const claimable = (key) =>
+    Number(
+      /** @type {any} */ (
+        trashDb
+          .prepare(
+            `SELECT count(*) AS n FROM media WHERE key = ?
+               AND NOT EXISTS (SELECT 1 FROM fixture_refs WHERE media_key = ?)`,
+          )
+          .get(key, key)
+      ).n,
+    );
+  ok(
+    "a CITED asset cannot be claimed for permanent deletion",
+    claimable("live-content.png") === 0,
+    "the refcount guard would let a delete through while a post cites the asset",
+  );
+  ok(
+    "an UNCITED asset can be claimed, so the guard is not refusing everything",
+    claimable("trashed-brand.svg") === 1,
+    "a guard that refuses every key would satisfy the assertion above vacuously",
+  );
+
+  console.log(
+    `     3 fixture row(s), predicate ${JSON.stringify(clause)}`,
+  );
+} catch (error) {
+  fail("the trash predicate check could not run", String(error));
+}
+
 /* ------------------------------------------------------------------ report */
 
 rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
@@ -2090,18 +2344,23 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
 /*
  * EXECUTED-COUNT FLOOR.
  *
- * This gate is EIGHT sections, several of which are wrapped in try blocks that
+ * This gate is NINE sections, several of which are wrapped in try blocks that
  * report a failure and continue, and two of which change shape with --remote.
  * A section that stops running is therefore the most available failure here,
  * and it is invisible: the remaining sections still pass and the total is the
  * only witness.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 84
- * offline. Never summed. Floored at 80, slack of four: the offline count is
- * stable across runs, and --remote only ADDS, so a floor set on the offline
- * figure holds for both tiers.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 99
+ * offline. Never summed. It was 84 against a floor of 80, then 85 when the
+ * draft preview reader took a second visibility exemption, then 99 when
+ * section 9 landed with the media trash predicate, its restore round trip and
+ * the permanent-delete guard.
+ *
+ * Floored at 94, slack of five: the offline count is stable across runs, and
+ * --remote only ADDS, so a floor set on the offline figure holds for both
+ * tiers.
  */
-const MINIMUM_CHECKS = 80;
+const MINIMUM_CHECKS = 94;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
