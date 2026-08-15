@@ -124,6 +124,8 @@ export async function listMedia(
     insertableOnly?: boolean;
     role?: string;
     unusedOnly?: boolean;
+    /** Free text. Which columns it matches is `matchesQuery`'s business. */
+    q?: string;
   } = {},
 ): Promise<MediaPage> {
   const { rows, page, hasMore } = await listMediaPage(env, {
@@ -132,6 +134,7 @@ export async function listMedia(
     insertableOnly: options.insertableOnly,
     role: options.role,
     unusedOnly: options.unusedOnly,
+    q: options.q,
   });
 
   return {

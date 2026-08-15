@@ -436,6 +436,41 @@ export async function listMediaRecords(env: Env) {
 }
 
 /**
+ * "Nothing the renderer emitted cites this", as ONE predicate with two readers.
+ *
+ * The filter and the chip's COUNT have to mean the same thing or the library
+ * says "3 unused" and lists five. Written once here rather than twice, which is
+ * the same rule the picker's `insertable` clause below is written under.
+ *
+ * It is narrower than "unused" and the page says so: `media_refs` records what
+ * the PIPELINE emitted, so an asset a route references in code, rather than a
+ * post referencing it in markdown, is uncited by this definition and cited by
+ * no other one available here.
+ */
+function uncited() {
+  return sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`;
+}
+
+/**
+ * The library's free-text filter, over the four columns a human has words for.
+ *
+ * `original_name` is what they called the file, `key` is what they pasted into a
+ * post, and `alt` and `caption` are the two sentences they wrote. Nothing else
+ * on the row is language.
+ *
+ * `coalesce` on the nullable one, because `lower(NULL) LIKE ...` is NULL rather
+ * than false, and a row with no original name would then drop out of an OR that
+ * another column satisfies.
+ */
+function matchesQuery(q: string) {
+  const needle = `%${q.toLowerCase()}%`;
+  return sql`(lower(coalesce(${media.originalName}, '')) LIKE ${needle}
+    OR lower(${media.key}) LIKE ${needle}
+    OR lower(${media.alt}) LIKE ${needle}
+    OR lower(${media.caption}) LIKE ${needle})`;
+}
+
+/**
  * One page of the library, newest first.
  *
  * **This is the query the whole index was ruled in to make possible.** Listing
@@ -463,6 +498,7 @@ export async function listMediaPage(
     insertableOnly?: boolean;
     role?: string;
     unusedOnly?: boolean;
+    q?: string;
   } = {},
 ) {
   const limit = options.limit ?? 24;
@@ -487,17 +523,18 @@ export async function listMediaPage(
   const clauses = [];
   if (options.insertableOnly) clauses.push(insertable);
   if (options.role) clauses.push(eq(media.role, options.role));
-  if (options.unusedOnly) {
-    // NOT EXISTS against media_refs, which is what the PIPELINE recorded. The
-    // resolver scan is a second and more conservative opinion and cannot be
-    // expressed here, so it still runs per page and the card's own usage line
-    // remains the authority. This filter therefore means "nothing the renderer
-    // emitted cites it", which is narrower than "unused" and is why the chip
-    // carries that wording rather than a bare claim.
-    clauses.push(
-      sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`,
-    );
-  }
+  // NOT EXISTS against media_refs, which is what the PIPELINE recorded. The
+  // resolver scan is a second and more conservative opinion and cannot be
+  // expressed here, so it still runs per page and the card's own usage line
+  // remains the authority. This filter therefore means "nothing the renderer
+  // emitted cites it", which is narrower than "unused" and is why the chip
+  // carries that wording rather than a bare claim.
+  if (options.unusedOnly) clauses.push(uncited());
+  // SEARCH IN SQL, and this is the one place the library deliberately diverges
+  // from the posts list. That page filters an in-memory array of the whole
+  // corpus; this one PAGINATES at 24, so a filter applied after the page was
+  // fetched would search one page and report a total for another.
+  if (options.q) clauses.push(matchesQuery(options.q));
   const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
@@ -554,6 +591,33 @@ export async function mediaRoleCounts(env: Env) {
     .select({ role: media.role, n: count() })
     .from(media)
     .groupBy(media.role);
+}
+
+/**
+ * How many rows nothing the renderer emitted cites.
+ *
+ * The Unused chip was the only one without a number, and that was not a cost
+ * decision: the chips take their counts from `mediaRoleCounts`, `unused` is not
+ * a role, so the lookup missed and the span was skipped. This is the query that
+ * gives it one, and it SHARES `uncited()` with the filter so the count and the
+ * page it leads to can never disagree.
+ */
+export async function mediaUnusedCount(env: Env) {
+  const [row] = await getDb(env).select({ n: count() }).from(media).where(uncited());
+  return Number(row?.n ?? 0);
+}
+
+/**
+ * One row by key, for the detail view.
+ *
+ * A separate read rather than a search through the current page: the detail
+ * view is reachable by URL, so the row it names may be on any page or on none,
+ * and finding it in `objects` would make a bookmarked link work only from the
+ * page it was copied on.
+ */
+export async function mediaRecord(env: Env, key: string) {
+  const [row] = await getDb(env).select().from(media).where(eq(media.key, key)).limit(1);
+  return row ?? null;
 }
 
 /**
