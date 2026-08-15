@@ -1,5 +1,6 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
+import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
 import { handleMediaEvents } from "./media-events";
 
@@ -228,6 +229,13 @@ function contentSecurityPolicy(nonce: string): string {
  * them. Four coarse strings go in and nothing joins two requests together, so
  * the dataset cannot answer "who" even if someone later wants it to.
  *
+ * **THAT CLAIM WAS FALSE FOR ONE ROUTE AND THE CORRECTION IS BELOW.** A preview
+ * URL carries a capability in its PATH, so `url.pathname` was a per-reviewer
+ * identifier and two requests holding the same link did join. Found on
+ * production 2026-08-15, on the first real use. The path is redacted before the
+ * write now; the sentence above is true again, and it is written down here as a
+ * claim that already aged once.
+ *
  * WHY THIS CANNOT FAIL A RESPONSE. Two independent guards, because one is not
  * enough. `writeDataPoint` is documented to return immediately with the runtime
  * writing in the background, so it is never awaited and adds no latency; but
@@ -276,12 +284,38 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
     const mobile = request.headers.get("sec-ch-ua-mobile");
     const device = mobile === "?1" ? "mobile" : mobile === "?0" ? "desktop" : "unknown";
 
+    /*
+     * THE PATH IS REDACTED BEFORE THE WRITE, and this is the one line in the
+     * capture that is a security control rather than a data choice.
+     *
+     * `/preview/<token>` puts a 43-character CAPABILITY in the URL. Writing
+     * `url.pathname` verbatim stored it in Analytics Engine and printed it in
+     * full on `/admin/origin-requests`, which is exactly what the drawer's
+     * six-character truncation exists to prevent. Measured on production
+     * 2026-08-15, on the first real use of the feature.
+     *
+     * **AE ROWS ARE IMMUTABLE.** Rows written before this landed cannot be
+     * redacted, deleted or rewritten; they age out with the dataset's
+     * retention. The exposure is bounded on two sides and accepted on that
+     * basis in decisions vol 6: a token stops working after its seven day TTL
+     * whatever the dataset still remembers, and reading the dataset at all
+     * needs ANALYTICS_READ_TOKEN, which is a Worker secret.
+     *
+     * One row per request is unchanged. Only the identifier goes.
+     */
+    const path = analyticsPath(url.pathname);
+
     env.ANALYTICS.writeDataPoint({
-      blobs: [url.pathname, refererHost, (request.cf?.country as string) ?? "", device],
+      blobs: [path, refererHost, (request.cf?.country as string) ?? "", device],
       doubles: [1],
       // Indexes are the SAMPLING KEY. Path is the right one: it keeps the
       // per-path counts this exists to produce meaningful under sampling.
-      indexes: [url.pathname],
+      //
+      // The REDACTED path, necessarily. A distinct index per token also
+      // fragmented the sampling key space into values that each appeared a
+      // handful of times, which is the worst possible shape for a sampling key,
+      // so this is the same edit paying twice.
+      indexes: [path],
     });
   } catch {
     /* Analytics must never cost a reader their page. */
