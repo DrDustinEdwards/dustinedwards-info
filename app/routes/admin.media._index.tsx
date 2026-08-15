@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import { Form, Link } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
@@ -24,8 +26,8 @@ import {
 } from "~/db";
 import { getEnv } from "~/lib/context";
 import { storageOf } from "~/lib/media/classify.mjs";
-import { parseTags } from "~/lib/media/tags.mjs";
-import { displaySummary, hrefWith, isModified, readView } from "~/lib/media/view.mjs";
+import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
+import { displaySummary, groupRows, hrefWith, isModified, readView } from "~/lib/media/view.mjs";
 import {
   MEDIA_PAGE_SIZE,
   deleteMediaObject,
@@ -388,6 +390,71 @@ export async function action({ request, context }: Route.ActionArgs) {
    * legitimately carry organisational labels; what `isManagedKey` protects is
    * WRITING TO THE BUCKET, and this writes only to the index.
    */
+  /*
+   * BULK TAGGING. The bulk-actions ruling applied UNCHANGED, deliberately.
+   *
+   * This is the posts index's grammar, verbatim, down to the intent names and
+   * the shape of the message: ADD or REMOVE one tag, never replace the set, so
+   * a mistake costs one tag rather than all of them; skip a row already in the
+   * target state and NAME BOTH COUNTS, because "12 tagged" when nine were
+   * already tagged is a different fact from "12 tagged" when none were;
+   * continue past failures and report per key.
+   *
+   * It ITERATES `setMediaTags`, the same per-row writer the inspector uses.
+   * There is no bulk SQL path and there must not be: a second writer would be a
+   * second author of the delimiter rule, and the whole reason that rule lives
+   * in a pure module is that this table has already been bitten by two writers
+   * disagreeing about a join character.
+   */
+  if (intent === "bulk-add-tag" || intent === "bulk-remove-tag") {
+    const keys = form.getAll("key").map(String).filter(Boolean);
+    if (keys.length === 0) return { message: "Nothing selected." };
+
+    // ONE tag, normalised by the module that owns the rule. An input that
+    // normalises to nothing is refused rather than treated as a clear.
+    const wanted = normaliseTags(String(form.get("tag") ?? ""))[0];
+    if (!wanted) return { message: "Enter a tag first." };
+    const adding = intent === "bulk-add-tag";
+
+    const failed: string[] = [];
+    let done = 0;
+    let skipped = 0;
+
+    for (const key of keys) {
+      try {
+        const row = await mediaRecord(env, key);
+        if (!row) {
+          failed.push(`${key}: no row`);
+          continue;
+        }
+        const current = parseTags(row.tags);
+        const has = current.includes(wanted);
+        // Already in the target state: SKIPPED, not rewritten. Writing anyway
+        // would touch updated_at on rows nothing changed about.
+        if (adding === has) {
+          skipped += 1;
+          continue;
+        }
+        await setMediaTags(
+          env,
+          key,
+          adding ? [...current, wanted] : current.filter((t) => t !== wanted),
+        );
+        done += 1;
+      } catch (error) {
+        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    return {
+      message:
+        `${adding ? "Tagged" : "Untagged"} ${done} of ${keys.length}` +
+        (skipped > 0 ? `, ${skipped} already ${adding ? "tagged" : "untagged"}` : "") +
+        "." +
+        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+    };
+  }
+
   if (intent === "set-tags") {
     const key = String(form.get("key") ?? "");
     const saved = await setMediaTags(env, key, String(form.get("tags") ?? ""));
@@ -730,6 +797,86 @@ function middleTruncate(name: string, max = 13, tail = 9) {
  * would need an onChange to navigate, which is the one thing this page has
  * never required.
  */
+
+/**
+ * Drop a file anywhere on the page to load it into the upload form.
+ *
+ * LAYERED OVER THE FORM, never instead of it. It sets the EXISTING input's
+ * `files` and does not submit, so what happens next is what has always happened
+ * next: the author sees the filename in the field and presses Upload. That is
+ * the whole enhancement, and it is why it degrades perfectly: with script off
+ * the form is untouched and the page behaves exactly as it did before this
+ * existed.
+ *
+ * It deliberately DOES NOT auto-submit. A drop is easy to do by accident, an
+ * upload writes to R2, and the friction ladder puts a deliberate press in front
+ * of every write on this page.
+ *
+ * KEYBOARD REACHABILITY is not this control's job and it does not claim any: it
+ * renders no focusable element and adds no shortcut. The file input beside it
+ * is the keyboard path and always was, which is why this can be a pure
+ * convenience rather than a second way in that has to be made accessible.
+ *
+ * CLIENT STATE ADDED: one boolean, `over`, purely to draw the target. It is
+ * initialised false so the hydration render matches the server's.
+ */
+function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | null> }) {
+  const [over, setOver] = useState(false);
+
+  useEffect(() => {
+    /* A COUNTER, not a boolean, because dragenter and dragleave fire for every
+       nested element the pointer crosses and a naive boolean flickers off the
+       moment the cursor moves between two tiles. */
+    let depth = 0;
+    const stop = (event: DragEvent) => {
+      event.preventDefault();
+    };
+    const enter = (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes("Files")) return;
+      depth += 1;
+      setOver(true);
+    };
+    const leave = () => {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setOver(false);
+    };
+    const drop = (event: DragEvent) => {
+      depth = 0;
+      setOver(false);
+      const files = event.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      event.preventDefault();
+      const input = inputRef.current;
+      if (!input) return;
+      // ONE file, because the form takes one and inventing a queue here would
+      // be a second upload path with none of the server's contract.
+      const one = new DataTransfer();
+      one.items.add(files[0]);
+      input.files = one.files;
+      input.focus();
+    };
+
+    window.addEventListener("dragover", stop);
+    window.addEventListener("dragenter", enter);
+    window.addEventListener("dragleave", leave);
+    window.addEventListener("drop", drop);
+    return () => {
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("dragenter", enter);
+      window.removeEventListener("dragleave", leave);
+      window.removeEventListener("drop", drop);
+    };
+  }, [inputRef]);
+
+  if (!over) return null;
+  return (
+    <p className="media-drop-hint" role="status">
+      Drop to load it into the upload form. Nothing uploads until you press
+      Upload.
+    </p>
+  );
+}
+
 function MediaDisplayGroup({
   label,
   options,
@@ -804,7 +951,22 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-export default function AdminMedia({ loaderData, actionData }: Route.ComponentProps) {
+export default function AdminMedia({
+  loaderData,
+  actionData,
+  /*
+   * HARNESS SEAM, per admin queue ruling 8: an OPTIONAL PROP with a production
+   * default, never loaderData, which is the server contract the gate polices.
+   *
+   * `check:admin-ui` renders one static pass and dispatches no events, so
+   * without this the bulk bar never mounts and the two bulk intents contribute
+   * NO payload, which is exactly how the posts index left its most destructive
+   * surface outside the fixture for a session. Defaulted, wire-unreachable by
+   * construction, and this is the SECOND such seam against the ruled ceiling of
+   * three: the posts index has the other one, with the same name.
+   */
+  initialSelection = [],
+}: Route.ComponentProps & { initialSelection?: string[] }) {
   if (loaderData.picker) return null;
   const {
     objects,
@@ -825,6 +987,61 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
     tagCounts,
     usageNote,
   } = loaderData;
+
+  /*
+   * SELECTION, and it is the ONLY client state this page has ever carried.
+   *
+   * Everything else here is a URL: the view, the sort, the filters, the open
+   * inspector. Selection is not, and deliberately: it is transient, it means
+   * nothing after a navigation, and putting twelve keys in a query string would
+   * make every link on the page unreadable and every back button surprising.
+   *
+   * With script off there is no bulk bar and no checkboxes render as useful, so
+   * the page degrades to exactly what it did before this landed: per-row
+   * controls in the inspector. Nothing that only works with script is the only
+   * way to do anything here.
+   */
+  const [selected, setSelected] = useState<string[]>(initialSelection);
+  const visible = objects.map((o) => o.key);
+  /** Selection survives a filter change only for rows still on screen. */
+  const chosen = selected.filter((key) => visible.includes(key));
+  const allShown = visible.length > 0 && chosen.length === visible.length;
+  const toggle = (key: string) =>
+    setSelected((was) => (was.includes(key) ? was.filter((k) => k !== key) : [...was, key]));
+
+  /*
+   * SHIFT-RANGE. The last row the reader touched, so shift-click can span.
+   *
+   * A REF rather than state, and that is the whole point: it is remembered
+   * between events and never rendered, so it cannot cause a re-render and
+   * cannot differ between the server render and the hydrated one. The seam this
+   * enhancement adds to the page is therefore zero new rendered state.
+   *
+   * Degrades to nothing. Without script no checkbox toggles at all, and a plain
+   * click without shift behaves exactly as it did before this existed.
+   */
+  const anchor = useRef<string | null>(null);
+  /** The real file input, so the drop enhancement fills it rather than a copy. */
+  const fileRef = useRef<HTMLInputElement>(null);
+  const selectRange = (key: string, shift: boolean) => {
+    const from = anchor.current;
+    anchor.current = key;
+    if (!shift || !from || from === key) {
+      toggle(key);
+      return;
+    }
+    const a = visible.indexOf(from);
+    const b = visible.indexOf(key);
+    if (a < 0 || b < 0) {
+      toggle(key);
+      return;
+    }
+    const span = visible.slice(Math.min(a, b), Math.max(a, b) + 1);
+    // ADDS the span rather than replacing the selection, which is what every
+    // file manager does and what makes two separate ranges possible.
+    setSelected((was) => [...new Set([...was, ...span])]);
+  };
+
   const total = counts.reduce((sum, row) => sum + Number(row.n), 0);
   const byRole = new Map(roleCounts.map((row) => [row.role, Number(row.n)]));
   const active = FILTERS.find((f) => f.id === filter);
@@ -877,7 +1094,14 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
           <label className="media-upload-label" htmlFor="media-file">
             Upload an image
           </label>
-          <input id="media-file" type="file" name="file" accept="image/*" />
+          <input
+            ref={fileRef}
+            id="media-file"
+            type="file"
+            name="file"
+            accept="image/*"
+          />
+          <DropAnywhere inputRef={fileRef} />
           {/* The intent rides on the SUBMIT BUTTON rather than in a hidden
               field, and the difference is what a gate can see: check:admin-ui
               reduces a form to `METHOD action | intent | fields`, so a hidden
@@ -1540,12 +1764,118 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
           same submissions instead of the layout being unable to change them.
           Tile size is a class exactly as ruled, never an inline style.
         */
+        <Form method="post">
+      {/*
+        THE BULK BAR, and the FORM WRAPS THE GRID so the checkboxes are part of
+        the same submission. Nesting this inside the toolbar above would put a
+        form inside a form, which the browser drops; the posts index solved it
+        the same way and this is that solution, not a new one.
+
+        Rendered only when something is selected, which is also why the two
+        bulk intents appear in the fixture only under the seeded-selection
+        state: an unselected page genuinely cannot issue them.
+      */}
+        {chosen.length > 0 ? (
+          <div className="posts-bulk" role="group" aria-label="Bulk actions">
+            <p className="posts-bulk-count" aria-live="polite">
+              {chosen.length} selected
+            </p>
+            <label className="posts-bulk-tag">
+              <span>Tag</span>
+              <input
+                type="text"
+                name="tag"
+                list="media-bulk-tags"
+                autoComplete="off"
+                placeholder="tag name"
+              />
+            </label>
+            {/* The vocabulary already in use, offered rather than enforced: a
+                new tag is legitimate. */}
+            <datalist id="media-bulk-tags">
+              {tagCounts.map((t) => (
+                <option key={t.tag} value={t.tag} />
+              ))}
+            </datalist>
+            <button type="submit" name="intent" value="bulk-add-tag" className="btn">
+              Add tag
+            </button>
+            <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
+              Remove tag
+            </button>
+          </div>
+        ) : null}
+
+        {/* SELECT ALL SHOWN. Never the bare word "all" while a filter is
+            active: this only ever reaches the rows on screen, and the posts
+            index has a ruled assertion about exactly this wording. */}
+        {objects.length > 0 ? (
+          <label className="media-select-all">
+            <input
+              type="checkbox"
+              checked={allShown}
+              onChange={() => setSelected(allShown ? [] : visible)}
+            />
+            <span>
+              {view.tag || q || filter !== "all"
+                ? `Select all ${visible.length} shown`
+                : `Select all ${visible.length}`}
+            </span>
+          </label>
+        ) : null}
+
+        /*
+          GROUPED PAGE-LOCAL. Each page buckets the rows IT HAS; a group never
+          spans a page boundary. That is a ruling, not a shortcut, and the
+          grounds are on `groupRows`: fetching the whole library to group
+          globally is fine at 70 rows and wrong at 700, and letting a group
+          resume on page two reads as a bug to everyone who sees it.
+
+          The heading therefore counts THIS PAGE and says so, because a count
+          that looked like a library total would be the over-promise again.
+        */
+        {groupRows(objects, view.group).map((bucket) => (
+        <section key={bucket.label || "ungrouped"} className="media-group">
+          {bucket.label ? (
+            <h3 className="media-group-heading">
+              {bucket.label}
+              <span className="media-group-count">
+                {bucket.rows.length} on this page
+              </span>
+            </h3>
+          ) : null}
         <ul className="media-grid" data-view={view.view} data-size={view.size}>
-          {objects.map((object) => {
+          {bucket.rows.map((object) => {
             const name = displayName(object);
             const cited = object.citations.length > 0 || object.refCount > 0;
             return (
-              <li key={object.key} className="media-card">
+              <li
+                key={object.key}
+                className="media-card"
+                data-selected={chosen.includes(object.key) || undefined}
+              >
+                {/* The checkbox carries `key`, which is what the bulk action
+                    reads with form.getAll("key"). Same shape as the posts
+                    index's `slug`, so the two bulk surfaces are one grammar. */}
+                <label className="media-check-label">
+                  <input
+                    type="checkbox"
+                    name="key"
+                    value={object.key}
+                    checked={chosen.includes(object.key)}
+                    onChange={(event) =>
+                      selectRange(
+                        object.key,
+                        // `nativeEvent` carries the modifier a change event
+                        // does not expose directly. Keyboard activation reports
+                        // shiftKey false, so Space still toggles one row, which
+                        // is the behaviour a keyboard reader expects.
+                        (event.nativeEvent as MouseEvent | undefined)?.shiftKey === true,
+                      )
+                    }
+                  />
+                  <span className="sr-only">Select {name}</span>
+                </label>
                 {/* A FIXED BOX, declared as aspect-ratio on the wrapper rather
                     than left to the image.
 
@@ -1651,6 +1981,9 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
             );
           })}
         </ul>
+        </section>
+        ))}
+        </Form>
       )}
 
       {/* PAGE NUMBERS, in the URL, so a page of the library is linkable and

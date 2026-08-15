@@ -820,6 +820,95 @@ const STATES = [
     }),
   },
 
+  /* ---- media v6 session 3: grouping and bulk tagging ---------------------- */
+  {
+    // GROUPED BY FOLDER. Two rows in one folder and one in another, so a
+    // grouper that emitted one bucket per ROW would render three headings and
+    // this state would fail rather than merely look odd.
+    name: "media, grouped by folder",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?group=folder",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({ key: "/publications/a.pdf", url: "/publications/a.pdf", storage: "static", kind: "document", deletable: false }),
+        MEDIA_OBJECT({ key: "/publications/b.pdf", url: "/publications/b.pdf", storage: "static", kind: "document", deletable: false }),
+        MEDIA_OBJECT(),
+      ],
+      view: { ...MEDIA_SHELL().view, group: "folder" },
+      modified: true,
+    }),
+  },
+  {
+    // GROUPED BY MONTH, including a row with NO upload date, which gets its own
+    // bucket rather than being folded into the nearest month.
+    name: "media, grouped by month",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?group=month",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({ uploaded: "2026-03-02T10:00:00.000Z" }),
+        MEDIA_OBJECT({ key: "second.png", url: "/media/second.png", uploaded: "2026-03-19T10:00:00.000Z" }),
+        MEDIA_OBJECT({ key: "/logo.svg", url: "/logo.svg", storage: "static", uploaded: null, deletable: false }),
+      ],
+      view: { ...MEDIA_SHELL().view, group: "month" },
+      modified: true,
+    }),
+  },
+  {
+    /*
+     * TWO SELECTED, which is the only state that can issue the bulk intents.
+     *
+     * Seeded through `initialSelection`, the optional prop with a production
+     * default, per queue ruling 8. The harness renders one static pass and
+     * dispatches no events, so without this seam the bulk bar never mounts and
+     * the two bulk intents contribute NO payload, which is exactly how the
+     * posts index left its most destructive surface outside the fixture for a
+     * session.
+     *
+     * TWO rather than one: a single selection renders "1 selected" and hides
+     * any plural or count-formatting defect.
+     */
+    name: "media, two selected",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?role=all",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT(),
+        MEDIA_OBJECT({ key: "second.png", url: "/media/second.png" }),
+      ],
+      // role=all is what makes this genuinely UNFILTERED. The default view is
+      // filtered to content, so the bare select-all label only ever appears
+      // here, which is the distinction the two assertions below pin.
+      filter: "all",
+      view: { ...MEDIA_SHELL().view, role: "all" },
+      modified: true,
+      tagCounts: [{ tag: "roster", n: 9 }],
+    }),
+    props: { initialSelection: ["1234abcd5678ef90.png", "second.png"] },
+  },
+  {
+    // FILTERED AND SELECTED. The select-all label must say SHOWN whenever a
+    // filter is active, because it only ever reaches the rows on screen. Same
+    // ruled wording the posts index carries, asserted structurally below.
+    name: "media, filtered and selected",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?tag=roster",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({ tags: ["roster"] }),
+        MEDIA_OBJECT({ key: "second.png", url: "/media/second.png", tags: ["roster"] }),
+      ],
+      view: { ...MEDIA_SHELL().view, tag: "roster" },
+      modified: true,
+      tagCounts: [{ tag: "roster", n: 9 }],
+    }),
+    props: { initialSelection: ["1234abcd5678ef90.png"] },
+  },
+
   // ---- new post -----------------------------------------------------------
   {
     name: "new post, fresh",
@@ -1600,6 +1689,210 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 }
 
 /* -------------------------------------------------------------------------
+ * MEDIA v6: THE PARAMETER THAT MUST NOT EVAPORATE.
+ *
+ * **THIS IS THE INSTRUMENT THE TWO PREVIOUS INCIDENTS DID NOT HAVE.** `q` fell
+ * off the pagination links once and `role` fell off the chips once. Neither was
+ * visible to this gate, and that is structural rather than an oversight: the
+ * payload baseline records METHOD, action and field names, and every one of
+ * these links is a `GET` with no fields at all. `GET /admin/media` is the tuple
+ * whether the href carries ten parameters or one.
+ *
+ * So this reads the rendered HREFS instead. It takes a state where every
+ * parameter is set, renders the page, and asserts that each internal link back
+ * to this page carries the whole set. A link built by hand, outside `hrefWith`,
+ * fails here by name.
+ *
+ * The needle set is DERIVED from the module's own PARAM_NAMES rather than typed
+ * again, because a hand-written list of parameters going stale against the real
+ * one is precisely what both incidents were.
+ * ---------------------------------------------------------------------- */
+
+{
+  const { DEFAULTS, PARAM_NAMES } = await import("../app/lib/media/view.mjs");
+
+  /** Every parameter non-default, so every one MUST appear in every link. */
+  const FULL_VIEW = {
+    view: "grid",
+    group: "folder",
+    sort: "size",
+    dir: "asc",
+    size: "l",
+    role: "brand",
+    q: "logo",
+    tag: "roster",
+    page: 2,
+    trash: false,
+    key: "",
+  };
+
+  assert(
+    "the evaporation needle set is derived, not hand-written",
+    PARAM_NAMES.length >= 10 && PARAM_NAMES.every((n) => n in DEFAULTS),
+    `${PARAM_NAMES.length} names. A hand-written list going stale against the real ` +
+      `one is what both previous incidents actually were.`,
+  );
+
+  const state = {
+    name: "media, every parameter set",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid&group=folder&sort=size&dir=asc&size=l&role=brand&q=logo&tag=roster&page=2",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      q: "logo",
+      filter: "brand",
+      page: 2,
+      hasMore: true,
+      view: FULL_VIEW,
+      modified: true,
+      tagCounts: [{ tag: "roster", n: 9 }],
+      roleCounts: [{ role: "brand", n: 6 }],
+    }),
+  };
+
+  const mod = modules.get(state.entry);
+  assert(
+    "the media route bundled for the evaporation scan",
+    Boolean(mod),
+    "without it the scan would examine an empty string and pass",
+  );
+  let html = "";
+  try {
+    html = await renderRoute(/** @type {{ default: unknown }} */ (mod), {
+      path: state.path,
+      url: state.url,
+      loaderData: state.loaderData,
+    });
+  } catch (error) {
+    fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  /* Every href pointing back at this page, which is the set that has to carry
+   * the state. External links and the upload endpoint are not view links. */
+  const hrefs = [...html.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
+    m[1].replace(/&amp;/g, "&"),
+  );
+
+  // NON-EMPTY SCOPE FIRST. Zero links found would make every assertion below
+  // pass by examining nothing, which is this repo's most-repeated defect class.
+  assert(
+    "the evaporation scan found view links to examine",
+    hrefs.length >= 8,
+    `${hrefs.length} link(s) back to /admin/media. A green result below would mean nothing.`,
+  );
+
+  /**
+   * Parameters a link is ALLOWED to drop, with the reason.
+   *
+   * @type {Record<string, string>}
+   */
+  const MAY_DROP = {
+    // A chip goes back to page one, deliberately: page 3 of one filter is not
+    // page 3 of another. So `page` may be absent from any link.
+    page: "a filter change resets to page one",
+    // The parameter each control OWNS is the one it changes, and changing it to
+    // the default legitimately removes it from the query.
+    view: "the view toggle owns it",
+    group: "the Display popover owns it",
+    sort: "the Display popover owns it",
+    dir: "the Display popover owns it",
+    size: "the Display popover owns it",
+    role: "the role chips own it",
+    tag: "the tag chips own it",
+    trash: "the Trash lens owns it",
+    key: "the inspector owns it, and closing it is an explicit empty",
+  };
+
+  /*
+   * THE ASSERTION, and it is deliberately about `q` above all.
+   *
+   * `q` is the one parameter NO control on this page owns: nothing here is a
+   * "clear the search" link except the explicit one, so a link that drops it is
+   * always the bug. The other parameters each have exactly one owner and are
+   * checked as a set instead: at least one link must carry each, which catches
+   * a parameter that vanished from the page entirely.
+   */
+  const withoutQ = hrefs.filter((h) => !new URLSearchParams(h.split("?")[1]).has("q"));
+  assert(
+    "every view link carries the search, which no control on this page owns",
+    withoutQ.length === 0,
+    `${withoutQ.length} link(s) dropped q:\n    ${withoutQ.slice(0, 6).join("\n    ")}`,
+  );
+
+  for (const name of PARAM_NAMES) {
+    if (name === "q") continue;
+    const carried = hrefs.filter((h) => new URLSearchParams(h.split("?")[1]).has(name));
+    assert(
+      `at least one view link carries ${name} (${MAY_DROP[name]})`,
+      carried.length > 0 || name === "key" || name === "trash",
+      `no link on the page carries ${name}, so it cannot survive any navigation`,
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * MEDIA v6 session 3: grouping headings and the ruled select-all wording.
+ *
+ * The payload fixture cannot see either. Headings are text, and the select-all
+ * label is text; both are ruled behaviour, and a ruled behaviour with no
+ * instrument drifts.
+ * ---------------------------------------------------------------------- */
+
+structural(
+  "grouping by folder renders one heading per folder, not one per row",
+  "media, grouped by folder",
+  (h) => {
+    const headings = [...h.matchAll(/class="media-group-heading"/g)].length;
+    return headings === 2;
+  },
+);
+structural(
+  "the folder headings name the folders, and content-addressed keys say Uploads",
+  "media, grouped by folder",
+  (h) => h.includes("/publications") && h.includes("Uploads"),
+);
+structural(
+  "grouping by month buckets an undated row separately",
+  "media, grouped by month",
+  (h) => h.includes("March 2026") && h.includes("No upload date"),
+);
+/*
+ * THE COUNT IS PAGE-LOCAL AND SAYS SO. This is the assertion that stops the
+ * over-promise coming back: a heading count that read as a library total would
+ * be the same defect session 2 shipped and this session was called to close.
+ */
+structural(
+  "a group heading counts THIS PAGE in words",
+  "media, grouped by folder",
+  (h) => h.includes("on this page"),
+);
+/* Flat renders NO heading at all, which is what makes the heading a signal. */
+structural(
+  "the flat view renders no group heading",
+  "media, list view",
+  (h) => !h.includes("media-group-heading"),
+);
+
+structural(
+  "a filtered select-all says SHOWN, never bare all",
+  "media, filtered and selected",
+  (h) => h.includes("Select all 2 shown"),
+);
+structural(
+  "a filtered select-all carries no bare count label",
+  "media, filtered and selected",
+  (h) => !h.includes("Select all 2<"),
+);
+/* And the unfiltered case keeps the bare form, so the rule above is a
+   DISTINCTION rather than a blanket rename. */
+structural(
+  "an unfiltered select-all says the plain count",
+  "media, two selected",
+  (h) => h.includes("Select all 2<") && !h.includes("Select all 2 shown"),
+);
+
+/* -------------------------------------------------------------------------
  * Draft preview links: the two rulings the payload fixture cannot see.
  *
  * The baseline records METHOD, intent and field NAMES. It can see that a
@@ -1830,7 +2123,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 249.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 280.
  * Never summed. It was 185 against a floor of 170 until the media library's v1
  * redesign added seven states, and the seven were counted by running the gate
  * rather than by adding up what they looked like they would contribute. The
@@ -1844,6 +2137,12 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   after   215 checks, 37 state(s), 128 submission(s)   floor 202
  *   then    218 checks, 37 state(s), 128 submission(s)   floor 204
  *   v6      249 checks, 46 state(s), 169 submission(s)   floor 234
+ *   v6.3    280 checks, 50 state(s), 204 submission(s)   floor 263
+ *
+ * The v6.3 line is grouping, bulk tagging and the selection surface. The
+ * submission jump is real payload: every media state gained the wrapping bulk
+ * form, and the two seeded-selection states gained bulk-add-tag and
+ * bulk-remove-tag, which are the intents the harness seam exists to reach.
  *
  * The v6 line is the media page rebuilt to the mockup's structure: nine new
  * states plus the evaporation section. Submissions moved 128 to 169 because the
@@ -1861,7 +2160,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 234;
+const MINIMUM_CHECKS = 263;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -1870,7 +2169,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 249.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 280.`,
   );
 }
 
