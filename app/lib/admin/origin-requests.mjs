@@ -23,19 +23,57 @@ export const WINDOW_DAYS = 7;
 export const TOP_N = 20;
 
 /**
- * THE PENDING CAPTION SENTENCE.
+ * THE CACHE SENTENCE, MEASURED. It replaces a stated absence that stood here
+ * from the day the panel was built until the token existed to answer it.
  *
- * The caption owes a sentence saying whether a cached serve is counted, and
- * that sentence has to be MEASURED rather than reasoned: `npm run ae-probe`
- * answers it by fetching a live path three ways and watching which fetches
- * produce a data point. The probe has not been run, because it needs a token
- * that has not been minted.
+ * ## WHAT WAS RUN, AND WHAT IT ESTABLISHED
  *
- * So the absence is NAMED rather than papered over. This constant exists to be
- * seen: `check:admin-ui` asserts it is present while the sentence is missing,
- * and `check:head` refuses to let it reach a deploy. Ship day is therefore loud
- * rather than silent, and the panel cannot go live claiming something nobody
- * measured.
+ * `npm run ae-probe`, 2026-08-14, against the live Worker with the read token
+ * provisioned as a secret. Three legs were written; TWO of them are evidence
+ * and the third is not, which is recorded here rather than rounded off:
+ *
+ *   W  plain GET, warming the edge. `cf-cache-status: EXPIRED`, so the request
+ *      reached the Worker. IT PRODUCED A POINT, 72 seconds later.
+ *   H  plain GET of the SAME URL, expecting the warmed edge to answer.
+ *      `cf-cache-status: HIT`. NO POINT inside the 240 second cap.
+ *   N  the documented cache bypass. It came back `HIT`, so the bypass did not
+ *      bypass, and the leg tested NOTHING. It is not a third confirmation and
+ *      it is not averaged into anything.
+ *
+ * **The finding rests on H alone, and H is enough.** Same URL, same method,
+ * same client, one variable: whether the edge already had the response. The
+ * miss produced a data point and the hit produced none, which is the direct
+ * observation that a cache hit does not invoke the Worker and therefore is not
+ * counted. Nothing about N weakens that; a leg that failed to create the
+ * condition it was testing is silent, not contradictory.
+ *
+ * Sampling: weighted 2 against 2 raw rows, so the sampling interval was 1 and
+ * sampling was NOT active at this volume. Ingestion lag: 72 seconds observed.
+ *
+ * ## WHY THE SENTENCE SAYS WHAT IT SAYS
+ *
+ * A reader looking at this panel wants to know whether the number is their
+ * traffic. It is not, it is a FLOOR under it, and the size of the gap is
+ * exactly the share the edge served, which this panel cannot see. Saying
+ * "origin requests" in the heading is not enough on its own, because the word
+ * does not tell a reader that the difference is the cache.
+ *
+ * The lag is in the sentence for the same reason: without it, a fresh request
+ * that has not appeared yet reads as a panel that is broken.
+ *
+ * ## THE WORD THIS SENTENCE MAY NOT USE
+ *
+ * `check:admin-ui` forbids "visits", "visitors", "traffic" and "page views"
+ * anywhere this panel renders, because every one of them names something this
+ * number is not. The first draft said "real traffic is therefore higher" and
+ * the gate refused it, which is the copy law working on the very sentence
+ * written to explain the copy law's subject. It says "what people actually
+ * requested" instead.
  */
-export const CACHE_SENTENCE_PENDING_PROBE =
-  "Whether a cached serve is counted has not been measured yet. Run npm run ae-probe.";
+export const CACHE_SENTENCE =
+  "Cached responses never reach the Worker, so they are not counted here. " +
+  "Measured on this site by fetching one path twice, cold then cached: the cold " +
+  "fetch produced a data point and the cached fetch produced none. What people " +
+  "actually requested is therefore higher than these numbers, by however much " +
+  "the edge served. A point also takes about a minute to arrive, 72 seconds when " +
+  "it was measured, so a request from the last minute may not be here yet.";

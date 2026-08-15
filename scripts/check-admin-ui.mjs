@@ -1289,21 +1289,27 @@ structural(
 );
 
 /*
- * THE PENDING CAPTION SENTENCE IS A STATED ABSENCE.
+ * THE CACHE SENTENCE, AND THE DAY THIS ASSERTION INVERTED.
  *
- * The caption owes a sentence about whether a cached serve is counted, and it
- * has to be measured by `npm run ae-probe` rather than reasoned. Until then the
- * placeholder is REQUIRED to be present, so the gap is visible in the product
- * and in this gate rather than being quietly forgotten.
+ * It read "the unmeasured cache sentence is still declared as a stated
+ * absence" and required the placeholder to be PRESENT, so the gap was visible
+ * in the product and here rather than quietly forgotten. `scripts/ship.mjs`
+ * refused to deploy while it was there, which made ship day loud.
  *
- * This assertion INVERTS on ship day: the deploy gate refuses the placeholder,
- * so the panel cannot go live still saying the question is unanswered. See
- * `scripts/check-head.mjs`.
+ * `npm run ae-probe` ran on 2026-08-14 and the sentence is now measured, so
+ * the assertion turns over: the answer must be present and the placeholder's
+ * wording must be gone. BOTH halves, because either alone is satisfiable by a
+ * page that says nothing at all.
  */
 structural(
-  "the unmeasured cache sentence is still declared as a stated absence",
+  "the caption answers whether a cached serve is counted",
   "origin requests, loaded",
-  (h) => h.includes("has not been measured yet"),
+  (h) => h.includes("Cached responses never reach the Worker"),
+);
+structural(
+  "the stated-absence placeholder is gone from the caption",
+  "origin requests, loaded",
+  (h) => !h.includes("has not been measured yet"),
 );
 
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
@@ -1317,10 +1323,12 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 199.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 200.
  * Never summed. It was 185 against a floor of 170 until the media library's v1
  * redesign added seven states, and the seven were counted by running the gate
- * rather than by adding up what they looked like they would contribute.
+ * rather than by adding up what they looked like they would contribute. The
+ * cache sentence inverting from one assertion into two took it to 200; the
+ * floor stays at 187, which is where 94 percent of that lands.
  *
  * Floored at 187, roughly 94 percent: the count moves in steps of a few per
  * state, and the three origin-requests states once added 34 at once, so the
@@ -1331,7 +1339,7 @@ const MINIMUM_CHECKS = 187;
 if (checks < MINIMUM_CHECKS) {
   fail(
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 199.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 200.`,
   );
 }
 

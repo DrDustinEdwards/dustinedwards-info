@@ -125,32 +125,27 @@ console.log(`  HEAD is ${sha}`);
 /*
  * NO STATED-ABSENCE PLACEHOLDER MAY REACH A DEPLOY.
  *
- * The origin-requests panel owes its caption a sentence about whether a cached
- * serve is counted, and that sentence has to come from `npm run ae-probe`
- * rather than from reasoning. Until it does, the panel carries a named
- * placeholder so the gap is visible in the product and asserted by
- * `check:admin-ui`.
- *
  * HERE RATHER THAN IN check:head, deliberately. check:head runs inside the
- * ordinary offline tier, so putting this there would fail every run TODAY,
- * while the placeholder is doing its job correctly. The rule is not "this text
- * must never exist", it is "this text must never SHIP", and ship is the only
- * step that can tell the difference. Smaller diff, and the only one that says
- * the true thing.
+ * ordinary offline tier, so putting this there would fail every run while a
+ * placeholder is doing its job correctly. The rule is not "this text must never
+ * exist", it is "this text must never SHIP", and ship is the only step that can
+ * tell the difference.
  *
- * Removing the placeholder without writing the measured sentence fails
- * check:admin-ui instead, so neither direction is silent.
+ * **THE LIST IS EMPTY, AND THAT IS A RESULT RATHER THAN AN OVERSIGHT.** It
+ * carried exactly one entry, `CACHE_SENTENCE_PENDING_PROBE`, from the day the
+ * origin-requests panel was built until 2026-08-14, when `npm run ae-probe` was
+ * finally run with a provisioned token and the measured sentence replaced it.
+ * The mechanism stays because the NEXT stated absence should be one line here
+ * rather than a rediscovery of why ship day needs a gate of its own.
+ *
+ * An empty list checks nothing, so this says so out loud rather than printing a
+ * reassuring "0 checked" that reads like a pass. Removing a placeholder without
+ * writing the measured thing fails `check:admin-ui`, which asserts the answer is
+ * present AND that the placeholder wording is gone, so neither direction is
+ * silent.
  */
-const PLACEHOLDERS = [
-  {
-    token: "CACHE_SENTENCE_PENDING_PROBE",
-    file: "app/lib/admin/origin-requests.mjs",
-    remedy:
-      "Run `npm run ae-probe`, write the measured sentence into the caption, and " +
-      "delete the constant. The panel must not go live saying the question is " +
-      "unanswered.",
-  },
-];
+/** @type {Array<{ token: string, file: string, remedy: string }>} */
+const PLACEHOLDERS = [];
 for (const placeholder of PLACEHOLDERS) {
   const path = join(root, placeholder.file);
   if (!existsSync(path)) continue;
@@ -162,7 +157,11 @@ for (const placeholder of PLACEHOLDERS) {
     );
   }
 }
-console.log(`  no unmeasured placeholders (${PLACEHOLDERS.length} checked).`);
+console.log(
+  PLACEHOLDERS.length === 0
+    ? "  no stated-absence placeholders are declared, so nothing was checked here."
+    : `  no unmeasured placeholders (${PLACEHOLDERS.length} checked).`,
+);
 
 /* --------------------------------------------------------------- 2. build */
 
