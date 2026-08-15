@@ -1,7 +1,17 @@
+import { redirect } from "react-router";
+
 import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
 import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
+import {
+  ALLOWED,
+  MAX_BYTES,
+  isFormUpload,
+  uploadErrorBody,
+  uploadRedirectTo,
+  uploadSuccessBody,
+} from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media.upload";
 
 /**
@@ -33,16 +43,10 @@ import type { Route } from "./+types/admin.media.upload";
  * label, and the filename the author chose survives in D1 where it belongs.
  */
 
-const ALLOWED = new Map([
-  ["image/webp", "webp"],
-  ["image/png", "png"],
-  ["image/jpeg", "jpg"],
-  ["image/avif", "avif"],
-  ["image/gif", "gif"],
-  ["image/svg+xml", "svg"],
-]);
-
-const MAX_BYTES = 10 * 1024 * 1024;
+/* The accepted types, the size limit and the reply shapes live in
+ * `upload-contract.mjs`, which is a plain module with no imports so `node:test`
+ * can assert them. Two editors read the JSON this route returns and neither may
+ * change, so the contract is a tested object rather than a convention. */
 
 /* `slugifyName` lived here to build the human-readable half of a key. Content
  * addressing removed the only caller: the key is a digest now, and the filename
@@ -58,29 +62,55 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function action({ request, context }: Route.ActionArgs) {
   if (request.method !== "POST") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
+    return Response.json(uploadErrorBody("Method not allowed"), { status: 405 });
   }
 
   const env = getEnv(context);
   const form = await request.formData();
   const file = form.get("file");
 
+  /*
+   * WHICH CALLER IS THIS, decided by an EXPLICIT FIELD and by nothing else.
+   *
+   * The library posts a form and navigates; the two editors `fetch` and read
+   * JSON. The library declares itself with a hidden `intent=upload-form`, so
+   * the editors keep the JSON path by SENDING NOTHING NEW, which is the whole
+   * point: their contract cannot be moved by a header default changing under
+   * them. `isFormUpload` is an equality against one token, asserted in
+   * test/upload-contract.test.mjs against "1", "true", "" and undefined.
+   */
+  const asForm = isFormUpload(form.get("intent"));
+
+  /**
+   * One refusal, answered in the caller's own language.
+   *
+   * @param {string} code a key of UPLOAD_ERRORS, carried in the redirect
+   * @param {string} message the sentence the editors show verbatim
+   * @param {number} status
+   */
+  const refuse = (code: string, message: string, status: number) =>
+    asForm
+      ? redirect(uploadRedirectTo({ ok: false, code }))
+      : Response.json(uploadErrorBody(message), { status });
+
   if (!(file instanceof File)) {
-    return Response.json({ error: "No file was submitted." }, { status: 400 });
+    return refuse("no-file", "No file was submitted.", 400);
   }
 
   const extension = ALLOWED.get(file.type);
   if (!extension) {
-    return Response.json(
-      { error: `Unsupported image type "${file.type || "unknown"}".` },
-      { status: 415 },
+    return refuse(
+      "unsupported-type",
+      `Unsupported image type "${file.type || "unknown"}".`,
+      415,
     );
   }
 
   if (file.size > MAX_BYTES) {
-    return Response.json(
-      { error: `Image is ${Math.round(file.size / 1024)} kB, over the 10 MB limit.` },
-      { status: 413 },
+    return refuse(
+      "too-large",
+      `Image is ${Math.round(file.size / 1024)} kB, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
+      413,
     );
   }
 
@@ -167,5 +197,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     console.error("media record write failed after upload", error);
   }
 
-  return Response.json({ url: `/media/${key}`, key });
+  // The library navigates back to itself carrying the key; the editors get the
+  // two-key body they have always read. Same upload, two answers, one branch.
+  return asForm
+    ? redirect(uploadRedirectTo({ ok: true, key }))
+    : Response.json(uploadSuccessBody(key));
 }
