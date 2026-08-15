@@ -4928,6 +4928,109 @@ a:hover {
   white-space: nowrap;
 }
 
+/* THE UPLOAD CONTROL, one thing in the page head.
+ *
+ * The file input is visually folded into its label so the head shows a single
+ * button rather than a bare picker plus a submit. It is NOT display:none: a
+ * hidden input is unreachable by keyboard, and the whole point of layering an
+ * enhancement over a working form is that the form keeps working. Clipped to a
+ * pixel, the standard sr-only technique, so it stays focusable and its focus
+ * ring still lands on the label. */
+.media-upload input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.media-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.media-upload-label {
+  padding: 0.4375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.media-upload:focus-within .media-upload-label {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* MEDIA v6: the design's own structure.
+ *
+ * THE SECTION HEADING IS THE SPINE. Small caps, a count, and the note right
+ * aligned and quiet. Every value below resolves to a token that clears its
+ * floor: the mockup's #A79C8A muted label measures 2.34 to 1 and its #F3EEE3
+ * divider 1.16, so neither ships. Quietness comes from SIZE, WEIGHT and
+ * TRACKING, and separation from FILL, which is the rule the arc established. */
+.media-group-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.media-group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* --text-heading, the strongest text token: the heading is the spine and
+     should read as structure rather than as a caption. */
+  color: var(--text-heading);
+}
+
+.media-group-count {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* THE NOTE. Right aligned, per the mockup, and the reason the grouping exists.
+   --text-muted rather than the mockup's grey: it is the quietest token that
+   still clears 4.5 to 1, which is the floor a sentence someone must READ has
+   to meet. */
+.media-group-note {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ONE WIDE SEARCH BAR. No label block, no adjacent button. */
+.media-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.media-search-input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+}
+
+.media-search-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
 /* MEDIA v6 session 3: group headings, selection, and the drop hint.
  *
  * Same rule as the rest of the arc: no hairline that fails a floor. The heading

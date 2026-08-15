@@ -15,6 +15,7 @@ import {
   // gone (v6 ruling 2) and the function has no other caller. Left in `~/db`
   // rather than deleted, because the predicate it shares with the filter is
   // still the definition the usage note describes.
+  mediaLensCounts,
   mediaTagCounts,
   mediaTrashedCount,
   mediaTwins,
@@ -116,6 +117,32 @@ const FILTERS = [
 
 const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 
+/**
+ * THE QUALITY LENSES, with the sentence each one is asking.
+ *
+ * The hints are the mockup's own framing carried over: a lens is a question,
+ * and the answer needs a caveat more often than not. `unattached` gets the
+ * longest one because it is the lens most likely to be read as permission to
+ * delete, and the mockup says so in as many words.
+ */
+const LENS_CHIPS = [
+  {
+    id: "unattached",
+    label: "Unattached",
+    hint:
+      "No post cites these. Not the same as unused: an asset placed by page code, " +
+      "like the roster photographs, is unattached by this measure and is live. " +
+      "Verify before deleting.",
+  },
+  {
+    id: "duplicates",
+    label: "Duplicates",
+    hint: "Files with byte-identical twins, matched on content hash alone.",
+  },
+  { id: "no-alt", label: "No alt text", hint: "Images with no alt text written yet." },
+  { id: "large", label: "Over 1 MB", hint: "Files over one mebibyte." },
+] as const;
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
@@ -156,7 +183,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     // The reader's Display choices, straight through. The picker branch below
     // ignores them, because the picker is a fixed insertion surface rather than
     // a view somebody configured.
-    ...(picker ? {} : { sort: view.sort, dir: view.dir, tag: view.tag, trashed: view.trash }),
+    ...(picker
+      ? {}
+      : {
+          sort: view.sort,
+          dir: view.dir,
+          tag: view.tag,
+          trashed: view.trash,
+          lens: view.lens,
+        }),
     // THE PICKER FILTER, applied in SQL rather than in the map below, so an
     // excluded row never crosses the wire. An OG card is 1200x630 of branded
     // chrome built for a social feed; inserting one into a post body would be
@@ -289,9 +324,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const uploaded = url.searchParams.get("uploaded");
   const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
+  /*
+   * THE DUPLICATES LENS IS APPLIED HERE, after the read, and deliberately.
+   *
+   * Exact content identity is read off the content-addressed key by
+   * `mediaTwins`, in JS. Approximating it in SQL to keep the filter uniform
+   * with the other three lenses would be a SECOND definition of twin, and this
+   * table has already been bitten once by two definitions of one join rule.
+   *
+   * The cost, stated: this filters the page AFTER pagination, so a duplicates
+   * page can hold fewer rows than the page size. At 70 rows and 0 twins that is
+   * invisible; it is the first thing to fix if the corpus grows.
+   */
+  const shown =
+    view.lens === "duplicates"
+      ? listed.objects.filter((o) => (twins.get(o.key) ?? []).length > 0)
+      : listed.objects;
+
   return {
     picker: false as const,
-    objects: listed.objects.map((object) => ({
+    objects: shown.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
       /**
@@ -354,6 +406,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * by binned assets does not offer a chip leading to an empty grid.
      */
     tagCounts: await mediaTagCounts(env),
+
+    /**
+     * THE LENS COUNTS, one query, sharing the filters' own predicates.
+     *
+     * `duplicates` is added HERE from `mediaTwins` rather than in SQL, because
+     * exact content identity is read off the content-addressed key in JS and a
+     * SQL approximation would be a second definition of twin.
+     */
+    lensCounts: {
+      ...(await mediaLensCounts(env)),
+      duplicates: (await mediaTwins(env)).size,
+    },
 
     /**
      * THE UNUSED CHIP IS GONE, and the honest sentence it stood for is not.
@@ -985,8 +1049,10 @@ export default function AdminMedia({
     modified,
     trashedCount,
     tagCounts,
+    lensCounts,
     usageNote,
   } = loaderData;
+  const activeLens = LENS_CHIPS.find((l) => l.id === view.lens);
 
   /*
    * SELECTION, and it is the ONLY client state this page has ever carried.
@@ -1073,7 +1139,13 @@ export default function AdminMedia({
       // Written for someone looking for a picture, and it now describes the
       // control the page actually has. The previous line told the reader to copy
       // a filename beside tiles that showed a name and offered no copy button.
-      description="Every picture, card and file the site knows about. Search it, copy an address, and paste that into a post."
+      /*
+        A COUNT LINE, which is what the mockup has, not a sentence of prose.
+        "31 files, 0 in trash" tells the reader the size of the thing they are
+        about to search; the old sentence told them what a media library is,
+        which they knew.
+      */
+      description={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
     >
       <div className="posts-toolbar">
         {/*
@@ -1091,8 +1163,22 @@ export default function AdminMedia({
           encType="multipart/form-data"
           className="media-upload"
         >
+          {/*
+            ONE BUTTON, top right, not a bare file input in the content flow.
+
+            The label IS the affordance and it names the enhancement that
+            already exists: "Drop files anywhere, or browse". The file input is
+            still there and still the keyboard path; it is visually folded into
+            the label so the control reads as one thing.
+          */}
+          {/*
+            ONE CONTROL. The label is the button and the file input is folded
+            inside it, so the head shows a single affordance that names the
+            enhancement rather than a bare "Choose File" widget in the content
+            flow. The input is still a real input and still the keyboard path.
+          */}
           <label className="media-upload-label" htmlFor="media-file">
-            Upload an image
+            Drop files anywhere, or browse
           </label>
           <input
             ref={fileRef}
@@ -1145,24 +1231,44 @@ export default function AdminMedia({
         The role rides along as a hidden field so searching does not silently
         widen the group the reader chose.
       */}
-      <form method="get" className="posts-filters" role="search">
-        <div className="posts-filter-field">
-          <label htmlFor="media-q">Search</label>
-          <input
-            id="media-q"
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Filename, key, alt or caption"
-            className="posts-filter-input"
-          />
-        </div>
-        <input type="hidden" name="role" value={filter} />
-        <button type="submit" className="btn-ghost posts-filter-submit">
-          Search
-        </button>
+      {/*
+        ONE WIDE BAR. No separate SEARCH label block and no adjacent Search
+        button, because the mockup has neither and both were noise: a search
+        input needs no label when its placeholder is the instruction, and Enter
+        already submits.
+
+        THE PLACEHOLDER CARRIES THE COUNT, which is the mockup's move and a good
+        one: it tells you how big the haystack is before you type. The count is
+        the library's, from the loader, not a guess.
+
+        NO Cmd+K AFFORDANCE IS RENDERED. The mockup shows one; this page has no
+        such shortcut, and the earlier ruling against documenting absent
+        shortcuts applies unchanged. It goes in when the shortcut does.
+      */}
+      <form method="get" className="media-search" role="search">
+        <input
+          id="media-q"
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder={`Search ${lensCounts.all} files`}
+          aria-label={`Search ${lensCounts.all} files by name, address, alt text or caption`}
+          className="media-search-input"
+        />
+        {/* Every other axis rides along as hidden fields, or searching would
+            silently drop the reader out of the lens and folder they chose. This
+            is the evaporation rule applied to a form rather than a link. */}
+        <input type="hidden" name="lens" value={view.lens} />
+        <input type="hidden" name="group" value={view.group} />
+        <input type="hidden" name="view" value={view.view} />
+        <input type="hidden" name="sort" value={view.sort} />
+        <input type="hidden" name="dir" value={view.dir} />
+        <input type="hidden" name="size" value={view.size} />
+        <input type="hidden" name="role" value={view.role} />
+        <input type="hidden" name="tag" value={view.tag} />
+        <input type="hidden" name="trash" value={view.trash ? "1" : ""} />
         {q ? (
-          <Link to={chipHref(filter)} className="btn-ghost posts-filter-clear">
+          <Link to={linkTo({ q: "", page: 1 })} className="btn-ghost">
             Clear
           </Link>
         ) : null}
@@ -1177,33 +1283,54 @@ export default function AdminMedia({
           that does not exist and conclude the page is broken. Saying it once
           here costs a phrase and closes that. */}
       <div className="media-facet">
-        <span className="media-facet-label" id="media-facet-role">
-          Role
+        {/*
+          THE QUALITY LENSES, which replaced the role chips as the primary row.
+
+          Role was the SYSTEM'S classification (Content / Generated / Brand /
+          Icons), and once every section carries a folder heading it says the
+          same thing twice. A lens says what a heading cannot: which files
+          nothing references, which duplicate each other, which have no alt
+          text, which are large. Those are the questions somebody actually has.
+
+          Role stays reachable by URL (?role=brand) and is no longer a row.
+        */}
+        <span className="media-facet-label" id="media-facet-lens">
+          Show
         </span>
-        <nav aria-labelledby="media-facet-role" className="media-filters">
+        <nav aria-labelledby="media-facet-lens" className="media-filters">
           <Link
-            to={chipHref("all")}
-            className={`search-chip${filter === "all" ? " is-active" : ""}`}
-            aria-current={filter === "all" ? "page" : undefined}
+            to={linkTo({ lens: "", trash: false, page: 1 })}
+            className={`search-chip${!view.lens && !view.trash ? " is-active" : ""}`}
+            aria-current={!view.lens && !view.trash ? "page" : undefined}
           >
-            All <span className="search-chip-count">{total}</span>
+            All <span className="search-chip-count">{lensCounts.all}</span>
           </Link>
-          {FILTERS.map((f) => (
+          {LENS_CHIPS.map((lens) => (
             <Link
-              key={f.id}
-              to={chipHref(f.id)}
-              className={`search-chip${filter === f.id ? " is-active" : ""}`}
-              aria-current={filter === f.id ? "page" : undefined}
-              title={f.hint}
+              key={lens.id}
+              to={linkTo({ lens: lens.id, trash: false, page: 1 })}
+              className={`search-chip${view.lens === lens.id ? " is-active" : ""}`}
+              aria-current={view.lens === lens.id ? "page" : undefined}
+              title={lens.hint}
             >
-              {f.label}
-              {count(f.id) === undefined ? null : (
-                <span className="search-chip-count">{count(f.id)}</span>
-              )}
+              {lens.label}{" "}
+              <span className="search-chip-count">
+                {lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id]}
+              </span>
             </Link>
           ))}
+          {/* Trash sits in the same row in the mockup, because it is the same
+              kind of question: which files are in which state. */}
+          <Link
+            to={linkTo({ trash: !view.trash, lens: "", page: 1, key: "" })}
+            className={`search-chip${view.trash ? " is-active" : ""}`}
+            aria-current={view.trash ? "page" : undefined}
+            title="A library view, not a takedown. A trashed file keeps its address and any page using it is unchanged."
+          >
+            Trash <span className="search-chip-count">{trashedCount}</span>
+          </Link>
         </nav>
-        <span className="media-facet-hint">assigned by the system</span>
+        <span className="media-facet-hint">{activeLens ? activeLens.hint : "everything the library knows about"}</span>
       </div>
 
       {/*
@@ -1316,19 +1443,10 @@ export default function AdminMedia({
           </div>
         </details>
 
-        {/*
-          THE TRASH LENS. It says what trash IS, in the title, every time.
-          Ruling 3: a trashed file keeps serving, so nothing here may read as a
-          takedown.
-        */}
-        <Link
-          to={linkTo({ trash: !view.trash, page: 1, key: "" })}
-          className={`search-chip${view.trash ? " is-active" : ""}`}
-          aria-current={view.trash ? "page" : undefined}
-          title="The bin is a library view. A trashed file keeps its address and any page using it is unchanged."
-        >
-          Trash <span className="search-chip-count">{trashedCount}</span>
-        </Link>
+        {/* Trash MOVED to the lens row, where the mockup has it: it is the
+            same kind of question as the other lenses, which files are in which
+            state. Two Trash chips on one page was the duplicate this pass
+            found by looking. */}
       </div>
 
       {/*
@@ -1384,19 +1502,13 @@ export default function AdminMedia({
           "nothing uses these", which is stronger than the query can support:
           media_refs records what the RENDERER emitted, so an asset referenced
           by a route rather than by a post is uncited here. */}
-      <p className="muted media-summary">
-        {q
-          ? `${objects.length} match${objects.length === 1 ? "" : "es"} for "${q}"` +
-            `${active ? ` in ${active.label.toLowerCase()}` : " across every group"}.`
-          : active
-            ? `Showing ${objects.length} ${active.label.toLowerCase()} item` +
-              `${objects.length === 1 ? "" : "s"}` +
-              `${count(filter) !== undefined && count(filter) !== objects.length ? ` of ${count(filter)}` : ""}. ` +
-              `${active.hint}.`
-            : `Showing all ${total} items: ${byRole.get("content") ?? 0} content, ` +
-              `${byRole.get("generated") ?? 0} generated, ${byRole.get("brand") ?? 0} brand, ` +
-              `${byRole.get("icon") ?? 0} icons.`}
-      </p>
+      {/*
+        THE ROLE-SHAPED SUMMARY LINE IS GONE. It read "Showing 20 content items
+        of 16" and described an axis that is no longer the primary one, using
+        counts that no longer agree with the lens row. The count line in the
+        page head says the true thing once, and the section headings say the
+        rest.
+      */}
 
       {/*
         THE USAGE HONESTY LINE. The Unused chip went; this did not.
@@ -1844,10 +1956,23 @@ export default function AdminMedia({
         <section key={bucket.label || "ungrouped"} className="media-group">
           {bucket.label ? (
             <h3 className="media-group-heading">
-              {bucket.label}
+              <span className="media-group-title">{bucket.label}</span>
               <span className="media-group-count">
                 {bucket.rows.length} on this page
               </span>
+              {/*
+                THE NOTE, right-aligned and quiet, and it is the reason this
+                grouping exists. "Placed by the roster page template" is the
+                sentence that stops somebody deleting nine photographs because
+                a post-level tracker called them unreferenced.
+
+                Quiet by SIZE and WEIGHT, never by an unreadable grey: the
+                mockup's #A79C8A measures 2.34 to 1 and does not ship. This
+                resolves to --text-muted.
+              */}
+              {bucket.note ? (
+                <span className="media-group-note">{bucket.note}</span>
+              ) : null}
             </h3>
           ) : null}
         <ul className="media-grid" data-view={view.view} data-size={view.size}>
