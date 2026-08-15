@@ -3,14 +3,23 @@
  *
  * OBSERVATION BOUNDARY: compares the component's path data against the four SVG
  * fixtures, the mark's fill BINDINGS in app.css against a closed expected set,
- * and the shipped icon suite's CONTAINER SHAPE, dimensions and one tile pixel
- * against a ruled manifest. It does not resolve a token to a hex, so a mark
- * bound to the right token name where that token has been given the page colour
- * still passes; check:contrast owns the resolved values. And it reads ONE pixel
- * per raster: an icon whose tile is right and whose mark is upside down,
- * clipped, or drawn in the wrong purple passes every assertion here. Nothing in
- * this repo looks at the shape of a rendered raster. Eyes remain the instrument
- * for that, and the contact sheet is how they get used.
+ * the shipped icon suite's CONTAINER SHAPE, dimensions and one tile pixel
+ * against a ruled manifest, and the mark AS RENDERED into a social card against
+ * a rasterisation of the committed fixture, every pixel of it.
+ *
+ * It does not check CONTRAST, and it resolves exactly one token to a hex,
+ * `--mark-on-chrome`, on both sides of that render comparison, so a retuned
+ * token moves them together and the comparison stays about shape. A mark bound
+ * to the right token name where the token has been given the page colour still
+ * passes here; check:contrast owns resolved values.
+ *
+ * THE ICON SUITE is still read ONE pixel per raster: an icon whose tile is
+ * right and whose mark is upside down, clipped or drawn in the wrong purple
+ * passes every assertion about it. That gap is now bounded rather than total,
+ * because the same mark is compared pixel for pixel in the render section, and
+ * the icons are rendered from the same paths; what is unasserted is each icon
+ * FILE, not the shape it was cut from. Eyes remain the instrument for the
+ * suite, and the contact sheet is how they get used.
  *
  *   npm run check:logo
  *
@@ -51,8 +60,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
+import satori from "satori";
 
+import { markElement, readMark } from "./lib/mark.mjs";
 import { icoPayload, pngCornerPixel, pngSize, readIco } from "./lib/raster.mjs";
+import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -439,6 +451,211 @@ if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
   );
 }
 
+/* --- The mark as it is RENDERED, not as it is written ----------------------
+ *
+ * CLOSES THE HOLE THIS FILE'S OWN BOUNDARY NAMED. Everything above compares
+ * TEXT: path data against path data, a fill binding against a closed set, one
+ * corner pixel of a raster nobody looks at the middle of. So a change that
+ * leaves every string intact and ruins the picture passes: the social card
+ * embeds the mark through satori, which URL-encodes it into an `<image>` for
+ * resvg to draw, and a satori or resvg release that re-fitted, resampled or
+ * letterboxed that embed would move no character in this repo.
+ *
+ * It was proved by hand once, on 2026-08-14, and a proof that exists in a
+ * session transcript is not a gate. This is the same method, standing:
+ *
+ *   ACTUAL    the node `build:og` puts in the card, from scripts/lib/mark.mjs,
+ *             rendered by satori and rasterised by resvg
+ *   EXPECTED  the committed fixture's own paths, drawn into the same box by
+ *             resvg directly, with no satori in the path
+ *
+ * The two sides share a rasteriser and nothing else. EXPECTED never reads a
+ * stored PNG, never reads anything build:og wrote, and never reads the module
+ * under test for geometry: the paths come from `readFixture`, this file's own
+ * reader, and the framing is a plain nested `<svg>`, which is what makes the
+ * aspect-padding in mark.mjs falsifiable rather than assumed. Remove that
+ * padding and resvg letterboxes the embed while the nested svg does not, and
+ * this comparison finds it.
+ *
+ * ONE TOKEN IS RESOLVED HERE, which the boundary above now says. The brand fill
+ * on both sides comes from `--mark-on-chrome` in app.css, so a retuned token
+ * moves both together and this stays a geometry assertion. It is still an
+ * assertion about WHICH token: paint the card from --brand and EXPECTED keeps
+ * --mark-on-chrome and the deltas fire.
+ *
+ * WHAT IT DOES NOT SEE. It renders the mark on its own chrome ground, not a
+ * whole card: the card's own layout, its type and its bands are check:head's
+ * and the sample renders' business. satori lays this box out at the origin,
+ * where the card puts it at x=72 y=34; both are integers, which is the only
+ * property the comparison depends on.
+ */
+
+const checksBeforeRender = checks;
+{
+  const { chrome: CHROME, mark: MARK_ON_CHROME } = resolveTokens(
+    { chrome: "--surface-chrome", mark: "--mark-on-chrome" },
+    tokenBlock("check:logo", THEME_SELECTORS.light),
+    "check:logo",
+  );
+
+  const mark = readMark();
+  const fixture = readFixture("public/logo-header-dark.svg");
+
+  // ACTUAL. The font is required by satori and never used: the mark is paths.
+  // The cast is the same one build-og.mjs makes for the same reason: satori's
+  // types want a ReactNode, and these are the plain element objects it actually
+  // accepts, built without JSX so no caller needs a build step.
+  const svg = await satori(
+    /** @type {any} */ ({
+      type: "div",
+      props: {
+        style: { width: "100%", height: "100%", display: "flex", background: CHROME },
+        children: markElement(),
+      },
+    }),
+    {
+      width: mark.width,
+      height: mark.height,
+      fonts: [
+        {
+          name: "Inter",
+          weight: 400,
+          style: "normal",
+          data: readFileSync(join(ROOT, "assets", "fonts", "Inter-Regular.ttf")),
+        },
+      ],
+    },
+  );
+
+  const image = svg.match(
+    /<image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" href="([^"]+)"/,
+  );
+
+  // A parse that found nothing must fail here rather than skip the block and
+  // let the count floor explain it three sections later.
+  eq("satori still embeds the mark as one <image>", Boolean(image), true);
+
+  if (image) {
+    const inner = decodeURIComponent(image[5].replace(/^data:image\/svg\+xml;utf8,/, ""));
+    const embedded = [...inner.matchAll(/<path fill="(#[0-9A-Fa-f]{6})" d="([^"]+)">/g)].map(
+      (m) => ({ fill: m[1].toUpperCase(), d: m[2] }),
+    );
+
+    // The geometry that reaches the rasteriser, before anything is drawn.
+    eq(`the embedded mark carries ${PATH_COUNT} paths`, embedded.length, PATH_COUNT);
+    eq(
+      "the embedded path data is the fixture's, verbatim",
+      embedded.map((p) => p.d),
+      fixture.paths.map((p) => p.d),
+    );
+    eq(
+      "the embedded mark is painted in --mark-on-chrome",
+      embedded.filter((p) => p.fill === MARK_ON_CHROME.toUpperCase()).length,
+      BRAND_PATH_COUNT,
+    );
+    eq(
+      "the embedded warm paths keep the fixture's own fills",
+      embedded.filter((p) => p.fill !== MARK_ON_CHROME.toUpperCase()).map((p) => p.fill),
+      fixture.paths.filter((p) => p.fill !== DARK).map((p) => p.fill),
+    );
+
+    const actual = new Resvg(svg, { fitTo: { mode: "width", value: mark.width } }).render();
+
+    // EXPECTED. The fixture's paths, its OWN viewBox, and the brand purple
+    // swapped for the token the card paints with. No satori, no padding.
+    const expected = new Resvg(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${mark.width}" height="${mark.height}" ` +
+        `viewBox="0 0 ${mark.width} ${mark.height}">` +
+        `<rect width="${mark.width}" height="${mark.height}" fill="${CHROME}"/>` +
+        `<svg x="0" y="0" width="${mark.width}" height="${mark.height}" viewBox="${fixture.viewBox}">` +
+        fixture.paths
+          .map(
+            (p) =>
+              `<path fill="${p.fill === DARK ? MARK_ON_CHROME : p.fill}" d="${p.d}"/>`,
+          )
+          .join("") +
+        `</svg></svg>`,
+      { fitTo: { mode: "width", value: mark.width } },
+    ).render();
+
+    eq(
+      "both rasters are the same box",
+      { width: actual.width, height: actual.height },
+      { width: expected.width, height: expected.height },
+    );
+
+    let differing = 0;
+    let maxDelta = 0;
+    let ink = 0;
+    const ground = [1, 3, 5].map((i) => parseInt(CHROME.slice(i, i + 2), 16));
+    for (let i = 0; i < expected.pixels.length; i += 4) {
+      const delta = Math.max(
+        Math.abs(expected.pixels[i] - actual.pixels[i]),
+        Math.abs(expected.pixels[i + 1] - actual.pixels[i + 1]),
+        Math.abs(expected.pixels[i + 2] - actual.pixels[i + 2]),
+      );
+      if (delta > maxDelta) maxDelta = delta;
+      if (delta > 0) differing += 1;
+      const fromGround =
+        Math.abs(expected.pixels[i] - ground[0]) +
+        Math.abs(expected.pixels[i + 1] - ground[1]) +
+        Math.abs(expected.pixels[i + 2] - ground[2]);
+      if (fromGround > 24) ink += 1;
+    }
+
+    // Two blank rasters compare equal and prove nothing, so the expected one
+    // has to be a picture before the comparison means anything. A quarter of
+    // the box is a floor, not a measurement: the mark inks 1363 of 2880.
+    const MINIMUM_INK = Math.round((mark.width * mark.height) / 4);
+    eq(
+      `the expected raster is a picture (${ink} inked of ${mark.width * mark.height})`,
+      ink >= MINIMUM_INK,
+      true,
+    );
+
+    /*
+     * TOLERANCE IS ZERO, and zero is the honest number rather than a strict one.
+     *
+     * Both sides are the same vector geometry, at the same size, through the
+     * same resvg in the same process. Nothing here is a photograph, a
+     * compression artefact or a font: there is no source of noise for a
+     * tolerance to absorb. A resvg upgrade moves both sides identically, so it
+     * cannot drift this apart; only satori changing how it hands the mark over
+     * can, which is precisely what this exists to catch.
+     *
+     * Measured 0 over all 2880 pixels. Both numbers below were taken by
+     * breaking the thing on purpose and running this gate: remove the aspect
+     * padding from mark.mjs and 348 pixels differ at a max delta of 45; shift
+     * the embedded geometry by half a pixel and 408 differ at 77. A tolerance
+     * loose enough to feel "safe" would have to be blind to the first of those,
+     * which is a defect this repo has already had once.
+     */
+    eq("the rendered mark differs from the fixture in no pixel", differing, 0);
+    eq("the rendered mark's max channel delta", maxDelta, 0);
+  }
+}
+
+/* --- Executed-count floor for the render section --------------------------
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 9 assertions.
+ * Counted, never summed, on this file's own established rule. The whole gate
+ * moved from 123 to 132 in the same run, which is the same nine.
+ *
+ * Floored at 8. The `<image>` parse is a real branch: if satori stops emitting
+ * an `<image>` the block runs one assertion and stops, and both this and that
+ * assertion fail, which is correct, because the first line to read is the one
+ * naming what changed. Every other way for this section to go quiet, an
+ * exception swallowed or the block commented out, drops it to 0 or 1.
+ */
+const RENDER_CHECKS = checks - checksBeforeRender;
+const MINIMUM_RENDER_CHECKS = 8;
+if (RENDER_CHECKS < MINIMUM_RENDER_CHECKS) {
+  failures.push(
+    `the render section executed only ${RENDER_CHECKS} assertions, expected at least ` +
+      `${MINIMUM_RENDER_CHECKS}. A block was SKIPPED rather than failing. Measured: 9.`,
+  );
+}
+
 // --- Report ---------------------------------------------------------------
 
 /*
@@ -449,18 +666,19 @@ if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
  * the fixtures and the two CSS fill bindings, none of which had one. A section
  * floor cannot see a different section stopping.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 123.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 132.
  * Never summed, and summing is exactly what went wrong here once already: the
- * icon section was recorded as 40 against a measured 37.
+ * icon section was recorded as 40 against a measured 37. It was 123 against a
+ * floor of 115 until the render section landed and RAN, adding nine.
  *
- * Floored at 115, roughly 6 percent: the count is a fixed function of the
+ * Floored at 124, roughly 6 percent: the count is a fixed function of the
  * fixture list and the raster manifest, so it steps when an asset is added.
  */
-const MINIMUM_CHECKS = 115;
+const MINIMUM_CHECKS = 124;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 123.`,
+      `A block was SKIPPED rather than failing. Measured: 132.`,
   );
 }
 
@@ -472,6 +690,6 @@ if (failures.length > 0) {
 
 console.log(
   `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures, ` +
-    `${EXPECTED_FILL_BINDINGS.length} CSS bindings and the icon suite ` +
-    `(${ICON_CHECKS} of them), 0 failures.`,
+    `${EXPECTED_FILL_BINDINGS.length} CSS bindings, the icon suite ` +
+    `(${ICON_CHECKS} of them) and the rendered mark (${RENDER_CHECKS}), 0 failures.`,
 );

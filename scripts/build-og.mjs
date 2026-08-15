@@ -35,6 +35,7 @@ import satori from "satori";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
+import { markElement } from "./lib/mark.mjs";
 import { listForPrune } from "./lib/r2.mjs";
 import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
 import { bucketFor } from "./lib/wrangler-config.mjs";
@@ -85,7 +86,6 @@ const {
   chrome: CHROME,
   onChrome: ON_CHROME,
   onChromeMuted: ON_CHROME_MUTED,
-  mark: MARK,
   fg: FG,
   bg: BG,
 } = resolveTokens(
@@ -93,7 +93,6 @@ const {
     chrome: "--surface-chrome",
     onChrome: "--on-chrome",
     onChromeMuted: "--on-chrome-muted",
-    mark: "--mark-on-chrome",
     fg: "--text",
     bg: "--bg",
   },
@@ -145,111 +144,6 @@ function siteName() {
 }
 
 const SITE_NAME = siteName();
-
-/**
- * THE REAL MARK, READ FROM THE RATIFIED ASSETS. No path data is stated here.
- *
- * The first draft of this band drew a filled round in `--mark-on-chrome` and
- * called it the mark. It was a placeholder, and it never shipped: the site's
- * identity in a feed would have been a circle nothing else in the repo draws.
- *
- * The mark's single source is `app/components/site-logo.tsx`, which the Worker
- * renders, and the four `public/*.svg` are the fixtures `check:logo` derives
- * from and compares it against IN BOTH DIRECTIONS. A Node script cannot import
- * the .tsx module without a build step, so it reads the fixtures the gate
- * already binds that module to. That is the same source one hop along a link
- * something else keeps honest, not a second copy: hand-edit either side and
- * `check:logo` fails before this script is ever run.
- *
- * WHICH PATHS ARE THE BRAND PATHS IS DERIVED, NOT LISTED. The light and dark
- * fixtures are identical except for the fills on the five purple paths, so the
- * paths whose fill DIFFERS between the two files are exactly the ones that take
- * a brand colour, and the three warm ones (identical in both) keep the fill the
- * asset gives them. Nothing here restates a hex or a path index, and the brand
- * fill substituted in is `--mark-on-chrome` resolved above, the token the real
- * header binds the mark to on brand surface.
- *
- * It fails closed on every way the fixtures could stop agreeing: a different
- * viewBox, a different path count, a path whose geometry differs between the
- * variants, or no differing fill at all (which would mean the brand paths were
- * no longer identifiable and would silently paint the mark in asset colours).
- *
- * @returns {{ viewBox: string, width: number, height: number, paths: Array<{ fill: string, d: string }> }}
- */
-function readMark() {
-  /** @param {string} file */
-  const parse = (file) => {
-    const source = readFileSync(path.join("public", file), "utf8");
-    const viewBox = source.match(/viewBox="([^"]+)"/)?.[1];
-    if (!viewBox) throw new Error(`build:og: ${file} has no viewBox`);
-    const paths = [
-      ...source.matchAll(/<path fill="(#[0-9A-Fa-f]{6})" d="([^"]+)"\s*\/>/g),
-    ].map((m) => ({ fill: m[1].toUpperCase(), d: m[2] }));
-    if (paths.length === 0) throw new Error(`build:og: ${file} has no paths`);
-    return { file, viewBox, paths };
-  };
-
-  // The HEADER crop, 78 15 232 328, because this band is the header. The square
-  // master would sit in a 132px band surrounded by its own whitespace.
-  const light = parse("logo-header.svg");
-  const dark = parse("logo-header-dark.svg");
-  if (light.viewBox !== dark.viewBox) {
-    throw new Error(`build:og: ${light.file} and ${dark.file} disagree on the viewBox`);
-  }
-  if (light.paths.length !== dark.paths.length) {
-    throw new Error(
-      `build:og: ${light.file} has ${light.paths.length} paths, ` +
-        `${dark.file} has ${dark.paths.length}`,
-    );
-  }
-
-  const paths = light.paths.map((p, i) => {
-    if (p.d !== dark.paths[i].d) {
-      throw new Error(`build:og: path ${i} differs in geometry between the two fixtures`);
-    }
-    return { fill: p.fill === dark.paths[i].fill ? p.fill : MARK, d: p.d };
-  });
-  const branded = paths.filter((p) => p.fill === MARK).length;
-  if (branded === 0) {
-    throw new Error("build:og: no path changes fill between the fixtures, so none is the brand");
-  }
-
-  /*
-   * SIZED FROM THE viewBox, AND THE viewBox PADDED TO THE BOX, never guessed.
-   *
-   * A width that is not the viewBox's aspect times the height is a squashed
-   * mark, and satori will not say so. The subtler failure is the one measured
-   * here: satori LAYS OUT at integer pixels but writes the embedded svg at the
-   * viewBox's exact aspect, so 232x328 at 64px tall gives a 45.27px-wide image
-   * inside a 45px-wide box, and resvg letterboxes the difference. The mark then
-   * renders 0.4% short and 0.2px off centre, which is invisible and is also
-   * enough to stop the render matching the fixture pixel for pixel, which is
-   * how this mark is proved.
-   *
-   * So the CROP is padded, symmetrically, until its aspect is exactly the
-   * integer box's. Only the empty margin around the mark moves; no path is
-   * touched, and the padding here is 1.96 viewBox units, under a fifth of a
-   * rendered pixel.
-   */
-  const [x, y, boxWidth, boxHeight] = light.viewBox.split(/\s+/).map(Number);
-  const height = 64;
-  const width = Math.round((height * boxWidth) / boxHeight);
-  const want = width / height;
-  const grow =
-    boxWidth / boxHeight > want
-      ? { dx: 0, dy: boxWidth / want - boxHeight }
-      : { dx: boxHeight * want - boxWidth, dy: 0 };
-  const viewBox = [
-    x - grow.dx / 2,
-    y - grow.dy / 2,
-    boxWidth + grow.dx,
-    boxHeight + grow.dy,
-  ].join(" ");
-
-  return { viewBox, width, height, paths };
-}
-
-const SITE_MARK = readMark();
 
 /**
  * The card layout, as satori's element objects rather than JSX so this file
@@ -351,22 +245,15 @@ function card(post) {
       el(
         "div",
         { style: { display: "flex", alignItems: "center" } },
-        // The mark itself, from `readMark` above. satori takes an inline `svg`
-        // node and emits it as an `<image>` whose href is the same markup
-        // URL-encoded, so the path data reaches resvg VERBATIM: no re-fitting,
-        // no simplification, no reinterpretation of the arcs. Measured on
-        // satori 0.29.0, and the sample renders are compared against a direct
-        // resvg rasterisation of the fixture rather than looked at.
-        el(
-          "svg",
-          {
-            width: SITE_MARK.width,
-            height: SITE_MARK.height,
-            viewBox: SITE_MARK.viewBox,
-            style: { marginRight: 24 },
-          },
-          ...SITE_MARK.paths.map((p) => el("path", { fill: p.fill, d: p.d })),
-        ),
+        // The mark itself, from `scripts/lib/mark.mjs`, which reads the
+        // ratified fixtures and owns how the mark is drawn. This file owns only
+        // where it sits, which is the 24px of air before the wordmark.
+        //
+        // That module is a SEAM, not a convenience: `check:logo` renders this
+        // same node and compares the result against a rasterisation of the
+        // committed fixture, so the shape this card embeds is asserted rather
+        // than assumed.
+        markElement({ marginRight: 24 }),
         // The wordmark is the NAME, from `siteName()` above rather than a
         // string spelled again here.
         //
