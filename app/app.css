@@ -1486,6 +1486,20 @@ a:hover {
 
 .admin-content {
   flex: 1;
+  /* THE SCROLLER IS ALSO A CONTAINING BLOCK, which fixes the whole admin plane
+     at one site rather than one control at a time.
+
+     An absolutely positioned descendant with no positioned ancestor resolves
+     against the INITIAL containing block: it is laid out in DOCUMENT
+     coordinates and this element's overflow does not clip it. `.sr-only` is
+     `position: absolute`, so every visually hidden label inside this scroller
+     was a candidate. Measured on the media library: 24 of them dragged the
+     document's scroll height to 1685px inside a 598px shell, which is a second
+     scrollbar inside the page's own and a screen of dead space below the grid.
+     That was repaired on the one button carrying them; this is the repair for
+     the plane, so the next `.sr-only` to land in an admin scroller cannot do it
+     again. */
+  position: relative;
   width: 100%;
   max-width: 72rem;
   min-height: 0;
