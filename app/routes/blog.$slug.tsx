@@ -5,6 +5,7 @@ import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
+import { blogPostView } from "~/lib/blog-view";
 import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
@@ -44,65 +45,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw data("Not found", { status: 404 });
   }
 
-  /** @see drizzle/0003_post_toc.sql */
-  let toc: Array<{ depth: number; id: string; text: string }> = [];
-  if (post.toc) {
-    try {
-      toc = JSON.parse(post.toc);
-    } catch {
-      // A malformed toc costs the reader a contents list, not the page.
-      toc = [];
-    }
-  }
-
-  /** JSON columns. A malformed one costs a section, never the page. */
-  const parseJson = (value: string | null, fallback: unknown) => {
-    if (!value) return fallback;
-    try {
-      return JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  };
-
   const seriesParts = post.series
     ? await listSeriesParts(getEnv(context), post.series)
     : [];
 
-  return data(
-    {
-    toc,
-    seriesParts,
-    post: {
-      slug: post.slug,
-      title: post.title,
-      description: post.description,
-      html: post.html ?? "",
-      publishAt: post.publishAt,
-      updatedAt: post.updatedAt,
-      coverImage: post.coverImage,
-      coverAlt: post.coverAlt,
-      ogImage: post.ogImage,
-      readingTimeMinutes: post.readingTimeMinutes,
-      tags: post.tags,
-      previous: post.previous,
-      next: post.next,
-      series: post.series,
-      part: post.part,
-      ogTitle: post.ogTitle,
-      ogDescription: post.ogDescription,
-      related: parseJson(post.related, []) as Array<{
-        slug: string;
-        title: string;
-      }>,
-      furtherReading: parseJson(post.furtherReading, []) as Array<{
-        title: string;
-        url: string;
-      }>,
-      },
-    },
-    { headers: { Link: linkToMarkdown(post.slug) } },
-  );
+  // The projection moved to `blogPostView` when /preview/:token landed, so the
+  // two routes that render a post cannot drift in what they hand the component.
+  // Output-neutral here by construction: this route's payload is unchanged.
+  return data(blogPostView(post, seriesParts), {
+    headers: { Link: linkToMarkdown(post.slug) },
+  });
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {

@@ -182,6 +182,47 @@ export async function readPreviewRecord(
   return parseRecord(await env.APP_KV.get(tokenKey(token)));
 }
 
+/**
+ * Requests one IP may make to the preview path inside {@link PREVIEW_RATE_WINDOW_SECONDS}.
+ *
+ * 30 per minute, which is loose for a human opening a link and reloading it and
+ * tight against anything enumerating. It is NOT the reason the token space is
+ * safe: 256 bits is. This is here so the traffic such an attempt would make
+ * stops, rather than because the attempt could otherwise succeed.
+ */
+export const PREVIEW_RATE_LIMIT = 30;
+
+/** The window the limit is counted over. */
+export const PREVIEW_RATE_WINDOW_SECONDS = 60;
+
+/**
+ * The per-IP burst limit on the preview path.
+ *
+ * THE ASK LIMITER'S DURABLE OBJECT, and the same shape: one instance per IP,
+ * `hit()` doing a synchronous read-and-write so the count cannot be raced. The
+ * measurements that ruled out both the `ratelimit` binding and a KV counter are
+ * in `workers/ask-budget.ts` and are not restated here.
+ *
+ * FAILS CLOSED when the binding is absent, exactly as `checkAskRate` does. An
+ * unprotected public path that serves unpublished content must not serve: a
+ * guard that silently passes because it could not run is the failure mode this
+ * project has been caught by three times.
+ */
+export async function checkPreviewRate(
+  env: Env,
+  ip: string,
+): Promise<{ ok: boolean; retryAfter: number }> {
+  if (!env.ASK_BUDGET) {
+    return { ok: false, retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
+  }
+  // Keyed `preview:` rather than `ip:`, so a reviewer opening preview links is
+  // not spending the same counter as an Ask caller from the same address. Two
+  // limits on two surfaces, not one shared allowance.
+  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`preview:${ip}`));
+  const { ok } = await limiter.hit(PREVIEW_RATE_LIMIT, PREVIEW_RATE_WINDOW_SECONDS);
+  return { ok, retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
+}
+
 /** @param token @param record */
 function toLink(token: string, record: PreviewRecord): PreviewLink {
   return {
