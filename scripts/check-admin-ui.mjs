@@ -154,7 +154,7 @@ const MEDIA_SHELL = (over = {}) => ({
    * the natural call. */
   view: {
     view: "list",
-    group: "flat",
+    group: "folder",
     sort: "added",
     dir: "desc",
     size: "m",
@@ -168,6 +168,7 @@ const MEDIA_SHELL = (over = {}) => ({
   modified: false,
   trashedCount: 0,
   tagCounts: [],
+  lensCounts: { all: 1, unattached: 1, noAlt: 1, large: 0, duplicates: 0 },
   usageNote:
     "Usage counts what the renderer emitted for a post. An asset referenced " +
     "only by route code, like the roster photos, has no citation here and is " +
@@ -708,6 +709,19 @@ const STATES = [
     loaderData: MEDIA_SHELL({ objects: [MEDIA_OBJECT()] }),
   },
   {
+    // FLAT, which is now the non-default. It renders no heading at all, which
+    // is what makes a heading a signal when grouping is on.
+    name: "media, flat view",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?group=flat",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, group: "flat" },
+      modified: true,
+    }),
+  },
+  {
     name: "media, grid view",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -833,7 +847,9 @@ const STATES = [
       objects: [
         MEDIA_OBJECT({ key: "/publications/a.pdf", url: "/publications/a.pdf", storage: "static", kind: "document", deletable: false }),
         MEDIA_OBJECT({ key: "/publications/b.pdf", url: "/publications/b.pdf", storage: "static", kind: "document", deletable: false }),
-        MEDIA_OBJECT(),
+        // The roster photograph, which is the row whose NOTE is the whole
+        // reason this grouping exists.
+        MEDIA_OBJECT({ key: "/phage-hunters/2019/a.jpg", url: "/phage-hunters/2019/a.jpg", storage: "static", deletable: false }),
       ],
       view: { ...MEDIA_SHELL().view, group: "folder" },
       modified: true,
@@ -1625,9 +1641,22 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
     fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  /* Every href pointing back at this page, which is the set that has to carry
-   * the state. External links and the upload endpoint are not view links. */
-  const hrefs = [...html.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
+  /*
+   * Every href pointing back at this page, which is the set that has to carry
+   * the state. External links and the upload endpoint are not view links.
+   *
+   * THE SEARCH FORM IS CUT OUT FIRST, and that is a real exemption rather than
+   * a convenience: the form OWNS `q`, so the Clear control inside it is the one
+   * link on the page whose whole job is to drop it. Scanning it would make the
+   * assertion below forbid the only correct way to clear a search.
+   *
+   * Found when the clear control started working: before this design pass the
+   * Clear link was built from the role chip helper and CARRIED q, so pressing
+   * Clear did not clear. The assertion caught the fix, which is the right way
+   * round.
+   */
+  const outsideSearch = html.replace(/<form[^>]*role="search"[\s\S]*?<\/form>/g, "");
+  const hrefs = [...outsideSearch.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
     m[1].replace(/&amp;/g, "&"),
   );
 
@@ -1768,9 +1797,22 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
     fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  /* Every href pointing back at this page, which is the set that has to carry
-   * the state. External links and the upload endpoint are not view links. */
-  const hrefs = [...html.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
+  /*
+   * Every href pointing back at this page, which is the set that has to carry
+   * the state. External links and the upload endpoint are not view links.
+   *
+   * THE SEARCH FORM IS CUT OUT FIRST, and that is a real exemption rather than
+   * a convenience: the form OWNS `q`, so the Clear control inside it is the one
+   * link on the page whose whole job is to drop it. Scanning it would make the
+   * assertion below forbid the only correct way to clear a search.
+   *
+   * Found when the clear control started working: before this design pass the
+   * Clear link was built from the role chip helper and CARRIED q, so pressing
+   * Clear did not clear. The assertion caught the fix, which is the right way
+   * round.
+   */
+  const outsideSearch = html.replace(/<form[^>]*role="search"[\s\S]*?<\/form>/g, "");
+  const hrefs = [...outsideSearch.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
     m[1].replace(/&amp;/g, "&"),
   );
 
@@ -1847,10 +1889,24 @@ structural(
     return headings === 2;
   },
 );
+/*
+ * THE HEADING IS A TITLE AND THE NOTE IS THE POINT.
+ *
+ * It used to assert the raw prefix appeared. That was the shipped page's
+ * behaviour and it was the thing Dustin's verdict was about: a heading reading
+ * `/phage-hunters` explains nothing, and "Cohort photographs, placed by the
+ * roster page template" explains everything. So the assertion moved with the
+ * design rather than being deleted.
+ */
 structural(
-  "the folder headings name the folders, and content-addressed keys say Uploads",
+  "folder headings are TITLES from the table, not raw prefixes",
   "media, grouped by folder",
-  (h) => h.includes("/publications") && h.includes("Uploads"),
+  (h) => h.includes("Publications") && !h.includes(">/publications<"),
+);
+structural(
+  "the roster section carries the note that stops a wrong delete",
+  "media, grouped by folder",
+  (h) => h.includes("Placed by the roster page template"),
 );
 structural(
   "grouping by month buckets an undated row separately",
@@ -1870,7 +1926,7 @@ structural(
 /* Flat renders NO heading at all, which is what makes the heading a signal. */
 structural(
   "the flat view renders no group heading",
-  "media, list view",
+  "media, flat view",
   (h) => !h.includes("media-group-heading"),
 );
 
@@ -2123,7 +2179,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 280.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 285.
  * Never summed. It was 185 against a floor of 170 until the media library's v1
  * redesign added seven states, and the seven were counted by running the gate
  * rather than by adding up what they looked like they would contribute. The
@@ -2138,6 +2194,13 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   then    218 checks, 37 state(s), 128 submission(s)   floor 204
  *   v6      249 checks, 46 state(s), 169 submission(s)   floor 234
  *   v6.3    280 checks, 50 state(s), 204 submission(s)   floor 263
+ *   v6.4    285 checks, 51 state(s), 208 submission(s)   floor 267
+ *
+ * v6.4 is the design pass: folder grouping as the default with its notes, the
+ * quality lenses replacing the role chips, and one wide search bar. Submissions
+ * moved because the search form now carries EVERY view parameter as a hidden
+ * field rather than just `role`, which is the evaporation rule applied to a
+ * form instead of a link.
  *
  * The v6.3 line is grouping, bulk tagging and the selection surface. The
  * submission jump is real payload: every media state gained the wrapping bulk
@@ -2160,7 +2223,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 263;
+const MINIMUM_CHECKS = 267;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -2169,7 +2232,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 280.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 285.`,
   );
 }
 
