@@ -17,7 +17,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import { mediaRefKey } from "../lib/media-ref-key.mjs";
-import { parseTags, serialiseTags } from "../lib/media/tags.mjs";
+import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
@@ -552,6 +552,49 @@ export function notTrashed() {
 }
 
 /**
+ * The ORDER BY for a listing, minus the stable tie-break the caller appends.
+ *
+ * Extracted so the sort is one expression with one fallback rather than a
+ * conditional chain inside the query builder. `usage` orders by the citation
+ * count from `media_refs`, computed as a correlated subquery: it is the one
+ * sort key that is not a column, and it is the one an author actually asks
+ * ("what is nothing using?"), so it is worth the subquery at this row count.
+ *
+ * @param options the listing options, read for sort, dir and trashed
+ */
+function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
+  // MOST RECENTLY TRASHED FIRST in the Trash view, whatever the sort says. What
+  // an author wants back is almost always what they just threw away, and the
+  // Display control is about the library rather than about the bin.
+  if (options.trashed) return [desc(media.trashedAt)];
+
+  const descending = options.dir !== "asc";
+  const way = <T extends Parameters<typeof desc>[0]>(column: T) =>
+    descending ? desc(column) : asc(column);
+
+  switch (options.sort) {
+    case "name":
+      // The NAME a human reads, falling back to the key for a static asset that
+      // has none. Ordering by `original_name` alone would sort 58 NULLs into a
+      // block, which is not "A to Z" by any reading.
+      return [way(sql`lower(coalesce(${media.originalName}, ${media.key}))`)];
+    case "size":
+      return [way(media.bytes)];
+    case "usage":
+      return [
+        way(
+          sql`(SELECT count(*) FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`,
+        ),
+      ];
+    default:
+      return [
+        sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
+        way(media.uploadedAt),
+      ];
+  }
+}
+
+/**
  * One page of the library, newest first.
  *
  * **This is the query the whole index was ruled in to make possible.** Listing
@@ -580,6 +623,12 @@ export async function listMediaPage(
     role?: string;
     unusedOnly?: boolean;
     q?: string;
+    /** An exact tag, already normalised by the caller. */
+    tag?: string;
+    /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
+    sort?: string;
+    /** 'asc' | 'desc'. */
+    dir?: string;
     /**
      * THE TRASH VIEW. The one caller that wants trashed rows and only those.
      *
@@ -633,6 +682,19 @@ export async function listMediaPage(
   // corpus; this one PAGINATES at 24, so a filter applied after the page was
   // fetched would search one page and report a total for another.
   if (options.q) clauses.push(matchesQuery(options.q));
+  /*
+   * THE EXACT TAG FILTER, and the needle comes from `exactTagNeedle` rather
+   * than being built here.
+   *
+   * The delimiter wrapping is the whole reason an exact match is possible with
+   * LIKE, and a needle assembled at the call site is exactly how the two would
+   * drift. A tag that normalises to nothing yields null, and null means NO
+   * FILTER rather than a `%,,%` needle, which would match every tagged row.
+   */
+  if (options.tag) {
+    const needle = exactTagNeedle(options.tag);
+    if (needle) clauses.push(sql`lower(${media.tags}) LIKE ${needle}`);
+  }
   const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
@@ -651,18 +713,23 @@ export async function listMediaPage(
     // So content sorts first as a rank, and only then by date. A CASE rather
     // than a second column: the ordering is a property of this VIEW, not of the
     // asset, and storing a sort key would be storing a UI decision in the index.
-    .orderBy(
-      // MOST RECENTLY TRASHED FIRST in the Trash view, because the thing an
-      // author wants back is almost always the thing they just threw away. The
-      // role rank below is a browsing aid and answers no question here.
-      ...(options.trashed
-        ? [desc(media.trashedAt)]
-        : [
-            sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
-            desc(media.uploadedAt),
-          ]),
-      asc(media.key),
-    )
+    /*
+     * THE SORT, chosen by the reader, with the role rank kept as the DEFAULT
+     * rather than as a permanent prefix.
+     *
+     * The rank exists because `uploaded_at DESC` alone put every static row
+     * last (a build-time asset has no upload event and SQLite sorts NULL below
+     * everything), which buried the only insertable images on pages two and
+     * three. That reasoning applies to the DEFAULT ordering and to nothing
+     * else: a reader who asked for "largest first" wants the largest file, not
+     * the largest content file followed by the largest brand file.
+     *
+     * So the rank rides along with `added` and is dropped for every explicit
+     * sort. `key ASC` always breaks the tie, because an unstable sort makes
+     * offset pagination skip and repeat rows, and that is true of every column
+     * here: `bytes` and `uploaded_at` both have duplicates in this corpus.
+     */
+    .orderBy(...orderFor(options), asc(media.key))
     .limit(limit + 1)
     .offset(offset);
 
@@ -723,6 +790,62 @@ export async function mediaUnusedCount(env: Env) {
     // and the page it leads to still cannot disagree now that there are two.
     .where(and(notTrashed(), uncited()));
   return Number(row?.n ?? 0);
+}
+
+/**
+ * TWINS: rows whose bytes are identical, found by CONTENT HASH ALONE.
+ *
+ * **EXACT IDENTITY ONLY, and this is a boundary rather than a first pass.** Two
+ * rows are twins when the hash embedded in their keys is the same, which means
+ * the bytes are the same. There is no perceptual comparison, no resize
+ * detection, no similarity score, and none is coming: a "these look alike"
+ * feature would put a judgement call in front of a delete button, and the whole
+ * safety argument of this library is that deletion decisions are answerable
+ * from facts.
+ *
+ * The hash is READ OFF THE KEY, never recomputed. Keys are content-addressed,
+ * so the hash is already there; recomputing would mean reading every object out
+ * of R2 to learn something the filename states.
+ *
+ * WHY THIS IS NOT A DUPLICATE-DELETION FEATURE. Two rows sharing bytes are two
+ * separate objects at two separate public URLs, and either may be cited. The
+ * page offers to TRASH one, which changes what the library shows and leaves
+ * both URLs serving. Anything stronger runs through the ordinary guarded
+ * delete, with its refcount refusal intact.
+ *
+ * Static rows are excluded: their keys are paths rather than hashes, so any
+ * grouping over them would be grouping over the wrong string.
+ */
+export async function mediaTwins(env: Env) {
+  const rows = await getDb(env)
+    .select({ key: media.key, originalName: media.originalName, storage: media.storage })
+    .from(media)
+    .where(and(notTrashed(), sql`${media.storage} <> 'static'`));
+
+  /** The 16 hex characters an upload key begins with, or null. */
+  const hashOf = (key: string) => /^([0-9a-f]{16,})\./.exec(key)?.[1] ?? null;
+
+  const byHash = new Map<string, { key: string; originalName: string | null }[]>();
+  for (const row of rows) {
+    const hash = hashOf(row.key);
+    if (!hash) continue;
+    const bucket = byHash.get(hash) ?? [];
+    bucket.push({ key: row.key, originalName: row.originalName });
+    byHash.set(hash, bucket);
+  }
+
+  /** key -> the OTHER rows carrying the same bytes. */
+  const twins = new Map<string, { key: string; originalName: string | null }[]>();
+  for (const bucket of byHash.values()) {
+    if (bucket.length < 2) continue;
+    for (const row of bucket) {
+      twins.set(
+        row.key,
+        bucket.filter((other) => other.key !== row.key),
+      );
+    }
+  }
+  return twins;
 }
 
 /**
