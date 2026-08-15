@@ -4234,8 +4234,19 @@ a:hover {
  * record and it is only as fresh as the last time someone rendered the page. */
 .media-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 0.75rem;
+  /* `min(100%, ...)` is the mockup's form and is a correctness fix rather than a
+     density one: a bare minimum cannot shrink below itself, so a viewport
+     narrower than one tile plus its padding overflows instead of yielding one
+     column. It is also the form this stylesheet already uses twice elsewhere.
+
+     THE MOCKUP'S 124px TILE IS NOT ADOPTED, and this is the one place the
+     approved look loses to a measurement. At 124px the grid renders SEVEN
+     columns at a 1280 viewport and the tile body drops to 131px, at which 18 of
+     24 filenames are cut by CSS from the END again: the exact defect the
+     middle-elision was built to repair, reintroduced by density. 9.5rem holds
+     six columns and no name is cut. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: 0.625rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -4324,15 +4335,72 @@ a:hover {
   letter-spacing: 0.08em;
 }
 
+/* THE FACET ROW, from the ratified mockup: a fixed-width mono label, the chips,
+   and a hint saying who owns the axis. The hint is the design's whole argument,
+   so it is copy rather than decoration and it lives in the markup.
+
+   The label column is a fixed width so the row reads as a label and a set
+   rather than as a sentence that happens to start with a word. */
+.media-facet {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--border);
+}
+
+.media-facet-label {
+  flex: none;
+  width: 4.625rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* "assigned by the system". Mono and muted, so it reads as an annotation on the
+   row rather than as another control in it. --text-muted and not a lighter
+   tertiary: the mockup's #8B8274 measures 3.55:1 on the page, under the 4.5
+   floor this repo enforces for text, and this is text a reader is meant to
+   read. */
+.media-facet-hint {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+}
+
 .media-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin: 0;
 }
 
 .media-summary {
+  margin: 0.75rem 0 0.5rem;
+}
+
+/* THE USAGE HONESTY LINE, from the mockup, and the reason it is a tinted box
+   rather than a muted sentence: it is the one thing on this page that stops a
+   reader deleting a file the site is serving. It sits on the accent tint, which
+   is the surface the palette already has for "read this before acting". */
+.media-usage-note {
   margin: 0 0 1rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.media-usage-note strong {
+  color: var(--text);
 }
 
 /* The disclosure. Closed by default, so seventy cards carry seventy closed rows
@@ -4556,6 +4624,12 @@ a:hover {
 /* The Copy button in the detail row is beside an input, not filling a tile. */
 .media-detail-address-row .media-copy {
   width: auto;
+}
+
+/* The owner line above each inspector group: who writes this, the system or
+   you. Sits tight to the group it labels rather than floating between two. */
+.media-detail-owner {
+  margin: 0 0 -0.25rem;
 }
 
 .media-detail-list {

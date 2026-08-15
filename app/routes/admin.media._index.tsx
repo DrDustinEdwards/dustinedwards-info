@@ -727,29 +727,43 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
         ) : null}
       </form>
 
-      <nav aria-label="Filter media by group" className="media-filters">
-        <Link
-          to={chipHref("all")}
-          className={`search-chip${filter === "all" ? " is-active" : ""}`}
-          aria-current={filter === "all" ? "page" : undefined}
-        >
-          All <span className="search-chip-count">{total}</span>
-        </Link>
-        {FILTERS.map((f) => (
+      {/* THE FACET ROW, from the ratified mockup: a label, the chips, and a
+          hint that says who owns this axis.
+
+          "assigned by the system" is the line the mockup was approved for, and
+          it is doing real work: `role` is DERIVED by `roleOf()` from the key,
+          so a reader who thinks it is an editable label will look for an editor
+          that does not exist and conclude the page is broken. Saying it once
+          here costs a phrase and closes that. */}
+      <div className="media-facet">
+        <span className="media-facet-label" id="media-facet-role">
+          Role
+        </span>
+        <nav aria-labelledby="media-facet-role" className="media-filters">
           <Link
-            key={f.id}
-            to={chipHref(f.id)}
-            className={`search-chip${filter === f.id ? " is-active" : ""}`}
-            aria-current={filter === f.id ? "page" : undefined}
-            title={f.hint}
+            to={chipHref("all")}
+            className={`search-chip${filter === "all" ? " is-active" : ""}`}
+            aria-current={filter === "all" ? "page" : undefined}
           >
-            {f.label}
-            {count(f.id) === undefined ? null : (
-              <span className="search-chip-count">{count(f.id)}</span>
-            )}
+            All <span className="search-chip-count">{total}</span>
           </Link>
-        ))}
-      </nav>
+          {FILTERS.map((f) => (
+            <Link
+              key={f.id}
+              to={chipHref(f.id)}
+              className={`search-chip${filter === f.id ? " is-active" : ""}`}
+              aria-current={filter === f.id ? "page" : undefined}
+              title={f.hint}
+            >
+              {f.label}
+              {count(f.id) === undefined ? null : (
+                <span className="search-chip-count">{count(f.id)}</span>
+              )}
+            </Link>
+          ))}
+        </nav>
+        <span className="media-facet-hint">assigned by the system</span>
+      </div>
 
       {/* ONE LINE, in words, and it states ONCE what Unused actually means.
           The chip now carries a number, and a number invites the reading
@@ -770,6 +784,24 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
               `${byRole.get("icon") ?? 0} icons.`}{" "}
         {unusedCount} of {total} are cited by nothing the renderer emitted.
       </p>
+
+      {/* THE USAGE HONESTY LINE, the sentence the mockup was approved for, and
+          the one thing on this page that stands between a reader and deleting a
+          file the site is serving.
+
+          It is shown when the count says EVERYTHING is uncited, because that is
+          the state the reader will misread: a tracker reporting 70 of 70 unused
+          looks like a library nobody uses, and it is actually a tracker that
+          only sees what the markdown pipeline emitted. The roster photographs
+          are placed by page code, which media_refs cannot see. */}
+      {scanComplete && unusedCount === total && total > 0 ? (
+        <p className="media-usage-note">
+          No post references an image yet, so the tracker reports every file as
+          unreferenced. The roster photographs <em>are</em> live: they are placed by
+          page code, which the tracker cannot see.{" "}
+          <strong>Treat not referenced as unknown, not as safe to delete.</strong>
+        </p>
+      ) : null}
 
       {actionData?.message ? (
         <p className="editor-notice" role="status">
@@ -840,6 +872,16 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                     <CopyButton value={detail.url} label={detail.originalName ?? detail.key} />
                   </div>
 
+                  {/* DERIVED, and the inspector says so. The mockup made this
+                      distinction with a Role row marked "assigned by the
+                      system" and a Tags row marked "yours to edit"; this page
+                      has no tags column, so the same honesty lands on the two
+                      groups it does have. Everything in this list is
+                      recomputable from the object by `rebuildMediaIndex`, and
+                      an edit here would be overwritten by the next rebuild. */}
+                  <p className="media-facet-hint media-detail-owner">
+                    assigned by the system
+                  </p>
                   <dl className="media-detail-list">
                     <dt>Key</dt>
                     <dd className="media-key">{detail.key}</dd>
@@ -861,6 +903,10 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                     <dd>{detail.uploadedAt ? detail.uploadedAt.slice(0, 10) : "ships with the repo"}</dd>
                   </dl>
 
+                  {/* AUTHORED, and the only field on this panel that is. A
+                      rebuild preserves it precisely because nothing can
+                      recompute it. */}
+                  <p className="media-facet-hint media-detail-owner">yours to edit</p>
                   <Form method="post" className="media-alt-form">
                     <input type="hidden" name="key" value={detail.key} />
                     <label htmlFor="detail-alt">Alt text</label>
