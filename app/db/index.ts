@@ -781,6 +781,22 @@ export async function mediaRoleCounts(env: Env) {
  * a role, so the lookup missed and the span was skipped. This is the query that
  * gives it one, and it SHARES `uncited()` with the filter so the count and the
  * page it leads to can never disagree.
+ *
+ * **DELIBERATELY UNREFERENCED SINCE THE v6 REBUILD. DO NOT TIDY IT AWAY.**
+ *
+ * The Unused chip was dropped (v6 ruling 2) because it read "70 of 70": it
+ * selected everything, narrowed nothing, and sat permanently lit, and an alarm
+ * that never stops is not a signal. This function lost its only caller then.
+ *
+ * It is kept because `uncited()` is the DEFINITION the page's usage note
+ * describes, and that note is the one thing standing between a reader and
+ * deleting a file the site serves. Keeping the query that counts the predicate
+ * beside the predicate is what makes the note checkable the day somebody asks
+ * "how many is that actually". Deleting it would leave the sentence with no
+ * executable meaning.
+ *
+ * If the chip is never coming back and nobody has asked that question in a
+ * year, delete it then, on purpose, rather than as tidying.
  */
 export async function mediaUnusedCount(env: Env) {
   const [row] = await getDb(env)

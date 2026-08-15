@@ -2364,6 +2364,60 @@ try {
       "statement was written to close",
   );
 
+  /*
+   * **TAGS HAVE EXACTLY ONE WRITER, AND EVERY BULK PATH GOES THROUGH IT.**
+   *
+   * FOUND BY A PLANT, the second time this session's technique has paid:
+   * replacing the call inside bulk tagging with a direct
+   * `upsertMediaRecord({ tags: ... })` left every gate green. The unit tests
+   * prove `serialiseTags` is correct and nothing proved anybody still calls it,
+   * so a bulk path could write `,alpha,` by hand, get the wrapping subtly wrong
+   * on the empty case, and silently produce rows no tag needle matches.
+   *
+   * This table has ALREADY been bitten by exactly this shape: `media_refs` is
+   * deduplicated with space-joined keys by two shipped writers and NUL by the
+   * tested helper, unreachable today only because `form` is a spaceless enum.
+   * One writer, gated, is the repair for the class rather than for the instance.
+   */
+  const bulkTagBranch = mediaRoute.match(
+    /intent\s*===\s*"bulk-add-tag"[\s\S]*?\n  \}/,
+  );
+  ok(
+    "the media route has a bulk-tag branch to examine",
+    Boolean(bulkTagBranch),
+    "not found after stripping comments, so the assertions below would be vacuous",
+  );
+  ok(
+    "bulk tagging writes through setMediaTags, the single tag writer",
+    /setMediaTags\s*\(/.test(bulkTagBranch?.[0] ?? ""),
+    "a bulk path that writes the column directly is a SECOND author of the " +
+      "delimiter rule. The wrapping is what makes an exact tag match possible " +
+      "with LIKE, and a hand-built value that gets the empty case wrong produces " +
+      "rows no needle matches.",
+  );
+  /*
+   * A THIRD ASSERTION WAS WRITTEN HERE AND REMOVED, deliberately, and the
+   * removal is itself the finding.
+   *
+   * It read: no writer in this route sets the `tags` column directly. With the
+   * plant in place that expression is demonstrably TRUE when evaluated against
+   * the same file with the same comment strip, so the assertion should have
+   * failed. In the gate it passed, and I could not account for the difference
+   * within the session.
+   *
+   * Hard rule 10 settles what to do about that. An assertion whose firing
+   * cannot be demonstrated is worse than no assertion: it reports coverage it
+   * does not have and increments the executed count while doing it. So it is
+   * removed rather than shipped unproven.
+   *
+   * The assertion above IS proven, by a plant whose firing line is in the
+   * session report, and it catches the same defect from the other direction:
+   * bulk tagging must CALL the single writer.
+   *
+   * OWED: find why the two evaluations disagree, then restore it with a plant
+   * that fires.
+   */
+
   console.log(
     `     3 fixture row(s), predicate ${JSON.stringify(clause)}`,
   );
