@@ -45,21 +45,24 @@ const TEST_DIR = join(root, "test");
 
 /**
  * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-15 by RUNNING
- * it: 8 files, 57 tests. Never summed.
+ * it: 9 files, 78 tests. Never summed.
  *
  * They were 6 and 43, measured 2026-08-11, and they drifted: `upload-contract`
  * and `traffic-source` landed without anyone moving the numbers, so 57 tests
  * were being floored at a number 14 below them. A floor that far under the
- * measurement cannot see a file leave.
+ * measurement cannot see a file leave. They were 8 and 53 for one commit,
+ * against a measurement of 57, and moved here when `preview-token` landed with
+ * its 21 tests: the file was added and the numbers re-measured in the same
+ * commit rather than left to drift a second time.
  *
  * Tight rather than slack, deliberately. These move UP when someone adds a
  * test, which is a one-line edit in the same commit, and the whole point is to
- * notice the set SHRINKING. 53 is 94 percent of 57, which is the margin the
+ * notice the set SHRINKING. 73 is 94 percent of 78, which is the margin the
  * other gates use and is narrow enough that losing the smallest test file, 4
  * tests, still trips it.
  */
-const MINIMUM_FILES = 8;
-const MINIMUM_TESTS = 53;
+const MINIMUM_FILES = 9;
+const MINIMUM_TESTS = 73;
 
 let checks = 0;
 let failures = 0;

@@ -1,0 +1,268 @@
+/**
+ * Draft preview links: the token shape, the key shapes, and the verdict.
+ *
+ * These are the rules that decide whether a stranger holding a URL sees an
+ * unpublished post. Every one of them is a pure function of its arguments, so
+ * every one of them is exercised here rather than only on a deployed Worker.
+ *
+ * TWO OF THE PLANTS FROM THE RATIFIED SPEC LIVE HERE, and they are tests rather
+ * than gate assertions because the state they describe cannot be reached by
+ * editing a file:
+ *
+ *   (b) THE ORPHANED INDEX ENTRY. `preview:token:<t>` and
+ *       `preview:post:<slug>:<t>` are written together and deleted together, but
+ *       KV expiry is per key and the two are not transactional. An index entry
+ *       whose authority record is gone must resolve to nothing and must be
+ *       SKIPPED by the drawer's list, never rendered as a live link.
+ *
+ *   (c) THE STATUS FLIP. A save that publishes a post revokes its tokens. That
+ *       revocation is a write, and writes fail. The read path therefore re-asks
+ *       the database on every request instead of trusting that it happened, so a
+ *       token that survives publication still stops working.
+ *
+ * @see app/lib/preview-token.mjs
+ */
+
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  PREVIEW_TTL_SECONDS,
+  POST_PREFIX,
+  TOKEN_BYTES,
+  TOKEN_LENGTH,
+  TOKEN_PREFIX,
+  base64url,
+  expiresAt,
+  isWellFormedToken,
+  makeRecord,
+  mintToken,
+  parseRecord,
+  postIndexKey,
+  postIndexPrefix,
+  previewUrl,
+  resolvePreview,
+  tokenFromIndexKey,
+  tokenKey,
+  truncateToken,
+} from "../app/lib/preview-token.mjs";
+
+const RECORD = makeRecord({
+  slug: "a-draft",
+  createdAt: "2026-08-15T10:00:00.000Z",
+  createdBy: "dustin",
+  note: "for review",
+});
+
+const DRAFT = { slug: "a-draft", status: "draft" };
+
+/* ---------------------------------------------------------------- the token */
+
+test("a token is 32 bytes of randomness, base64url, 43 characters", () => {
+  assert.equal(TOKEN_BYTES, 32);
+  assert.equal(TOKEN_LENGTH, 43, "32 bytes is 43 unpadded base64 characters");
+  const token = mintToken();
+  assert.equal(token.length, 43);
+  assert.match(token, /^[A-Za-z0-9_-]+$/, "base64url alphabet only");
+  assert.ok(!token.includes("="), "padding is stripped");
+});
+
+test("tokens do not repeat", () => {
+  // Not a randomness test, which this cannot be. It catches the failure that
+  // has actually happened to people: a generator that returns a constant, or
+  // one seeded once per process.
+  const seen = new Set();
+  for (let i = 0; i < 200; i += 1) seen.add(mintToken());
+  assert.equal(seen.size, 200);
+});
+
+test("base64url uses the URL alphabet, not the standard one", () => {
+  // 0xFB 0xFF encodes to +/8= in standard base64. Both substitutions and the
+  // padding strip are visible in one vector.
+  assert.equal(base64url(new Uint8Array([0xfb, 0xff, 0xfe])), "-__-");
+});
+
+test("the well-formed check is anchored and length-exact", () => {
+  const token = mintToken();
+  assert.ok(isWellFormedToken(token));
+
+  assert.ok(!isWellFormedToken(`${token}x`), "longer must be refused");
+  assert.ok(!isWellFormedToken(token.slice(0, 42)), "shorter must be refused");
+  assert.ok(!isWellFormedToken(`${token.slice(0, 42)}+`), "a non-URL character must be refused");
+  assert.ok(!isWellFormedToken(`${token.slice(0, 42)}/`), "a slash must be refused");
+  assert.ok(!isWellFormedToken(`${token.slice(0, 42)}.`), "a dot must be refused");
+  assert.ok(!isWellFormedToken(""), "empty must be refused");
+  assert.ok(!isWellFormedToken(null));
+  assert.ok(!isWellFormedToken(undefined));
+  assert.ok(!isWellFormedToken(42));
+});
+
+test("the truncation shown in the drawer is six characters of the token", () => {
+  const token = mintToken();
+  assert.equal(truncateToken(token), token.slice(0, 6));
+  assert.equal(truncateToken(token).length, 6);
+  assert.ok(token.startsWith(truncateToken(token)), "the truncation is a prefix of the token");
+});
+
+/* ------------------------------------------------------------- the key shapes */
+
+test("the two keys are written from the same token and are distinguishable", () => {
+  const token = mintToken();
+  assert.equal(tokenKey(token), `preview:token:${token}`);
+  assert.equal(postIndexKey("a-draft", token), `preview:post:a-draft:${token}`);
+  assert.notEqual(tokenKey(token), postIndexKey("a-draft", token));
+  assert.ok(tokenKey(token).startsWith(TOKEN_PREFIX));
+  assert.ok(postIndexKey("a-draft", token).startsWith(POST_PREFIX));
+});
+
+test("the index prefix scopes a list to exactly one slug", () => {
+  const prefix = postIndexPrefix("a-draft");
+  assert.ok(postIndexKey("a-draft", mintToken()).startsWith(prefix));
+  // The trailing colon is what stops `a-draft` listing `a-draft-two`'s tokens,
+  // which would revoke another post's links on publish.
+  assert.ok(!postIndexKey("a-draft-two", mintToken()).startsWith(prefix));
+});
+
+test("a token is recovered from its index key, and a foreign key is refused", () => {
+  const token = mintToken();
+  assert.equal(tokenFromIndexKey(postIndexKey("a-draft", token), "a-draft"), token);
+  assert.equal(
+    tokenFromIndexKey(postIndexKey("other", token), "a-draft"),
+    null,
+    "a key for another slug names no token for this one",
+  );
+  assert.equal(
+    tokenFromIndexKey(`${postIndexPrefix("a-draft")}not-a-token`, "a-draft"),
+    null,
+    "a malformed tail is not a token",
+  );
+  assert.equal(tokenFromIndexKey("something:else", "a-draft"), null);
+});
+
+/* ---------------------------------------------------------------- the record */
+
+test("a record round-trips through the store's text form", () => {
+  const parsed = parseRecord(JSON.stringify(RECORD));
+  assert.deepEqual(parsed, RECORD);
+});
+
+test("FAILS CLOSED: an unreadable record is indistinguishable from no record", () => {
+  assert.equal(parseRecord("not json"), null);
+  assert.equal(parseRecord(""), null);
+  assert.equal(parseRecord(null), null);
+  assert.equal(parseRecord(undefined), null);
+  assert.equal(parseRecord("null"), null);
+  assert.equal(parseRecord("[]"), null, "an array carries no slug");
+  assert.equal(parseRecord(JSON.stringify({ createdBy: "dustin" })), null, "no slug, no record");
+  assert.equal(parseRecord(JSON.stringify({ slug: "   " })), null, "a blank slug is no slug");
+});
+
+test("the missing fields of a partial record become empty strings, never undefined", () => {
+  const parsed = parseRecord(JSON.stringify({ slug: "a-draft" }));
+  assert.deepEqual(parsed, { slug: "a-draft", createdAt: "", createdBy: "", note: "" });
+});
+
+test("expiry is seven days after minting, and unreadable dates say so", () => {
+  assert.equal(PREVIEW_TTL_SECONDS, 604800);
+  assert.equal(expiresAt("2026-08-15T10:00:00.000Z"), "2026-08-22T10:00:00.000Z");
+  assert.equal(expiresAt("not a date"), "", "an unreadable date must not become a plausible one");
+  assert.equal(expiresAt(""), "");
+});
+
+test("the URL is absolute and carries the whole token", () => {
+  const token = mintToken();
+  assert.equal(previewUrl("https://example.com", token), `https://example.com/preview/${token}`);
+  assert.equal(
+    previewUrl("https://example.com/", token),
+    `https://example.com/preview/${token}`,
+    "a trailing slash must not produce a double slash",
+  );
+});
+
+/* --------------------------------------------------------------- the verdict */
+
+test("the whole story: a live token on a draft resolves", () => {
+  const verdict = resolvePreview({ token: mintToken(), record: RECORD, post: DRAFT });
+  assert.deepEqual(verdict, { ok: true, reason: "ok" });
+});
+
+test("PLANT (b): an ORPHANED INDEX ENTRY resolves to nothing", () => {
+  // The state: `preview:post:a-draft:<token>` still exists, its authority
+  // record `preview:token:<token>` does not. That is what a partial revoke or
+  // an unlucky expiry ordering leaves behind. The lister hands the verdict a
+  // null record, and the verdict must refuse.
+  const verdict = resolvePreview({ token: mintToken(), record: null, post: DRAFT });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "unknown");
+});
+
+test("PLANT (b), the other half: a listing SKIPS an orphaned entry", () => {
+  // What the drawer does with the same state, modelled the way the loader
+  // does it: index keys in, records fetched, entries with no record dropped.
+  const live = mintToken();
+  const orphan = mintToken();
+  const keys = [postIndexKey("a-draft", live), postIndexKey("a-draft", orphan)];
+  const store = new Map([[tokenKey(live), JSON.stringify(RECORD)]]);
+
+  const listed = keys
+    .map((key) => tokenFromIndexKey(key, "a-draft"))
+    .filter((token) => token !== null)
+    .map((token) => ({ token, record: parseRecord(store.get(tokenKey(token))) }))
+    .filter((entry) => entry.record !== null);
+
+  assert.equal(listed.length, 1, "the orphan must not be listed");
+  assert.equal(listed[0].token, live);
+});
+
+test("PLANT (c): a token on a post that LEFT DRAFT stops working", () => {
+  // The revoke-on-publish path is a write and writes fail. This is the reason
+  // the read path re-asks the database rather than trusting the revocation.
+  for (const status of ["published", "scheduled", "archived", ""]) {
+    const verdict = resolvePreview({
+      token: mintToken(),
+      record: RECORD,
+      post: { slug: "a-draft", status },
+    });
+    assert.equal(verdict.ok, false, `status ${JSON.stringify(status)} must not preview`);
+    assert.equal(verdict.reason, "not-draft");
+  }
+});
+
+test("a malformed token is refused before anything is looked up", () => {
+  const verdict = resolvePreview({ token: "short", record: RECORD, post: DRAFT });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "malformed");
+});
+
+test("a token whose post is gone is refused", () => {
+  const verdict = resolvePreview({ token: mintToken(), record: RECORD, post: null });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "missing-post");
+});
+
+test("a record naming a different slug than the row is refused", () => {
+  const verdict = resolvePreview({
+    token: mintToken(),
+    record: RECORD,
+    post: { slug: "some-other-draft", status: "draft" },
+  });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.reason, "mismatch");
+});
+
+test("EVERY failure is a failure: no reason is accidentally permissive", () => {
+  // The route collapses all of these into one identical 404. This asserts the
+  // collapse is safe, by proving nothing but "ok" carries ok: true.
+  const cases = [
+    { token: "nope", record: RECORD, post: DRAFT },
+    { token: mintToken(), record: null, post: DRAFT },
+    { token: mintToken(), record: RECORD, post: null },
+    { token: mintToken(), record: RECORD, post: { slug: "elsewhere", status: "draft" } },
+    { token: mintToken(), record: RECORD, post: { slug: "a-draft", status: "published" } },
+  ];
+  for (const input of cases) {
+    const verdict = resolvePreview(input);
+    assert.equal(verdict.ok, false);
+    assert.notEqual(verdict.reason, "ok");
+  }
+});
