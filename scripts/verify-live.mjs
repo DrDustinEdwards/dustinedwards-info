@@ -1602,21 +1602,28 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
  * absorb is the RATE-LIMITED run, and neither measurement was one. A third
  * reading taken while Ask is throttled is what would justify moving it.
  *
- * **DELIBERATELY NOT MOVED for the draft preview section (2026-08-15), and the
- * refusal is the rule rather than an oversight.** Section 15 adds SEVEN static
- * assertion sites, none of them inside a loop, so the next clean run should read
- * 213. That is arithmetic, not a measurement, and this file's own history is the
- * argument against committing one: the first floor here was 90, derived by
- * counting call sites without running anything, against a real count of 206.
+ * **MOVED TO 201 ON 2026-08-15, AND THE REFUSAL THAT PRECEDED IT WAS RIGHT.**
  *
- * Raising this to 187 now would encode a number nobody has observed, on the one
- * instrument that needs a deploy to observe anything. The session that builds a
- * feature and the session that ships it are not the same session here. So the
- * floor stays at 180, which still catches a collapse, and MOVING IT IS THE NEXT
- * SHIP WINDOW'S JOB: run it, read the count, set the floor to 94 percent of what
- * was read, in that order.
+ * The build session added section 15 and deliberately left this at 180, writing
+ * down that seven new static sites SHOULD read 213 but that 213 was arithmetic
+ * rather than a measurement. Ship window 4 ran it:
+ *
+ *   2026-08-15, version 2bf564fa   214 passed, 0 failed
+ *
+ * **214, not 213.** The arithmetic was wrong, and it was wrong for the dullest
+ * possible reason: it added seven to 206, the figure carried in this comment,
+ * while the last clean run before it read 207. A floor committed from that sum
+ * would have been one low and nobody would ever have found out, because a floor
+ * that is slightly too loose has no symptom. That is the whole argument for
+ * measuring, reproduced in miniature on the one file that already documents
+ * having made the same mistake at 90 against 206.
+ *
+ * Floored at 201, which is 94 percent of 214. The 13 of slack absorbs the
+ * RATE-LIMITED run, where Ask probes are skipped rather than failed, which
+ * remains the only downward variance ever hypothesised here and still has never
+ * been observed.
  */
-const MINIMUM_CHECKS = 180;
+const MINIMUM_CHECKS = 201;
 const executed = passed + failures.length;
 const short = executed < MINIMUM_CHECKS;
 
