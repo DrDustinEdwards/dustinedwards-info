@@ -395,6 +395,20 @@ const MATRIX = [
   ["--chart-sage", "--bg", UI, "chart sage"],
   ["--chart-gold", "--bg", UI, "chart gold"],
   ["--chart-rust", "--bg", UI, "chart rust"],
+
+  /*
+   * DESTRUCTIVE, the v6 rust. A REVERSIBLE removal, not the danger family.
+   *
+   * Measured on all three surfaces it actually lands on in the media library:
+   * the page background under the Trash heading, the card surface under a
+   * trashed row, and the popover under the confirm dialog. Its own tint is
+   * measured as a ground too, because the hover state puts the two together and
+   * a token only ever measured against --bg would miss that pair entirely.
+   */
+  ["--text-destructive", "--bg", TEXT, "destructive text"],
+  ["--text-destructive", "--surface", TEXT, "destructive text on a card"],
+  ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
+  ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 ];
 
 /** @type {Array<{mode: string, note: string, lc: number, ratio: number}>} */
@@ -816,9 +830,24 @@ for (const a of worst) {
  * full count. Present-but-stale is a failure on its own above; this floor is
  * the second lock on the same door, for the case where that assertion is ever
  * weakened.
+ *
+ * **RE-MEASURED 2026-08-15 with the build present: 615**, after
+ * `--text-destructive` and `--tint-destructive` were minted for the media v6
+ * arc and put on four matrix pairs. The build-present floor moves to 578, which
+ * is 94 percent of the measurement.
+ *
+ * **THE NO-BUILD FLOOR IS DELIBERATELY NOT MOVED, and this is the honest
+ * version of that.** Renaming `build/` aside to measure the second tier was
+ * refused by the filesystem on this host, twice, so the run that was supposed
+ * to produce the second number silently measured the first one again and read
+ * 615 both times. The arithmetic answer is 491, and this arc has already twice
+ * caught arithmetic being wrong about a floor: verify-live's predicted 213
+ * measured 214. So 460 stays until somebody can actually run the tier, which is
+ * loose rather than false, and a loose floor is the safe direction. The
+ * measurement is owed, not the number.
  */
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 550 : 460;
+const MINIMUM_CHECKS = buildPresent ? 578 : 460;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
