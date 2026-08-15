@@ -9,6 +9,16 @@ export default [
   route("blog/feed.json", "routes/blog.feed[.json].ts"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
+  /*
+   * Draft previews, TOP LEVEL and never a branch of the post route.
+   *
+   * The placement is the security design, not a filing preference. The post
+   * route exports public cache headers, Workers Cache does not key on cookies,
+   * and a reviewer holding a preview link is cookieless, so the downgrade in
+   * workers/app.ts never fires for them. Sharing a route would put an
+   * unpublished post into a shared cache entry. Full grounds in the route file.
+   */
+  route("preview/:token", "routes/preview.$token.tsx"),
   // Roster, at the LEGACY URL. /phage-discovery is the address the old
   // WordPress page holds and the one that is indexed, so the Worker takes it
   // over at cutover rather than redirecting it. The nine photo assets stay at
