@@ -41,13 +41,14 @@ const params = (entries) => ({ get: (n) => (n in entries ? entries[n] : null) })
 /** A state where EVERY field differs from its default. */
 const FULLY_SET = {
   view: "grid",
-  group: "folder",
+  group: "month",
   sort: "size",
   dir: "asc",
   size: "l",
   role: "brand",
   q: "logo",
   tag: "icon",
+  lens: "unattached",
   page: 3,
   trash: true,
   key: "1234abcd5678ef90.png",
@@ -86,7 +87,7 @@ test("every override still carries all the others", () => {
 test("a pagination link keeps the whole view", () => {
   const search = new URLSearchParams(hrefWith(FULLY_SET, { page: 4 }).split("?")[1]);
   assert.equal(search.get("page"), "4");
-  for (const name of ["view", "group", "sort", "dir", "size", "role", "q", "tag", "trash", "key"]) {
+  for (const name of ["view", "group", "sort", "dir", "size", "role", "q", "tag", "lens", "trash", "key"]) {
     assert.ok(search.has(name), `pagination dropped ${name}`);
   }
 });
@@ -175,7 +176,7 @@ test("the option lists are non-empty and their defaults are members", () => {
 });
 
 test("the display summary names all three settings it hides", () => {
-  assert.equal(displaySummary(DEFAULTS), "Flat · Newest · M");
+  assert.equal(displaySummary(DEFAULTS), "Folder · Newest · M");
   assert.equal(
     displaySummary({ ...DEFAULTS, group: "folder", sort: "size", size: "l" }),
     "Folder · Largest · L",
@@ -214,23 +215,59 @@ test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches nothi
 
 test("flat is one group with no heading, so the component renders no header", () => {
   const rows = [{ key: "a.png", uploaded: null }];
-  assert.deepEqual(groupRows(rows, "flat"), [{ label: "", rows }]);
+  assert.deepEqual(groupRows(rows, "flat"), [{ label: "", note: "", rows }]);
   // An unrecognised value falls back to flat rather than producing no groups,
   // which would render an empty page for a hand-edited URL.
-  assert.deepEqual(groupRows(rows, "galaxy"), [{ label: "", rows }]);
+  assert.deepEqual(groupRows(rows, "galaxy"), [{ label: "", note: "", rows }]);
 });
 
-test("SORT ORDER SURVIVES GROUPING, within a group and between groups", () => {
-  // The rows arrive sorted by SQL. Grouping must not resort them, or the
-  // reader's chosen sort silently stops applying the moment they group.
+test("SORT ORDER SURVIVES GROUPING, within a group", () => {
+  // The rows arrive sorted by SQL. Grouping must not resort them WITHIN a
+  // section, or the reader's chosen sort silently stops applying.
   const rows = [
     { key: "/b/3.png", uploaded: null },
     { key: "/a/2.png", uploaded: null },
     { key: "/b/1.png", uploaded: null },
   ];
   const out = groupRows(rows, "folder");
-  assert.deepEqual(out.map((g) => g.label), ["/b", "/a"], "groups appear in first-row order");
+  assert.deepEqual(out.map((g) => g.label), ["B", "A"], "derived titles, sentence case");
   assert.deepEqual(out[0].rows.map((r) => r.key), ["/b/3.png", "/b/1.png"], "order within a group");
+});
+
+test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping", () => {
+  const out = groupRows(
+    [
+      { key: "/publications/a.pdf", uploaded: null },
+      { key: "/phage-hunters/x.jpg", uploaded: null },
+    ],
+    "folder",
+  );
+  const roster = out.find((g) => g.label === "Cohort photographs");
+  assert.ok(roster, "the roster section is titled from the table");
+  assert.equal(roster.note, "Placed by the roster page template");
+  // The sentence that stops somebody deleting nine photographs.
+  assert.ok(roster.note.length > 0);
+});
+
+test("folder sections render in TABLE order, roster before publications", () => {
+  // Not first-row order: the table is written so the sections a reader wants
+  // most come first, and the render honours that.
+  const out = groupRows(
+    [
+      { key: "/publications/a.pdf", uploaded: null },
+      { key: "/phage-hunters/x.jpg", uploaded: null },
+    ],
+    "folder",
+  );
+  assert.deepEqual(out.map((g) => g.label), ["Cohort photographs", "Publications"]);
+});
+
+test("an unknown folder is titled from its own directory, never mislabelled", () => {
+  // Sweeping unknown folders into the root section would be the design's own
+  // failure mode: a confident wrong label over files it does not describe.
+  const out = groupRows([{ key: "/case-studies/x.png", uploaded: null }], "folder");
+  assert.equal(out[0].label, "Case studies");
+  assert.equal(out[0].note, "", "no invented explanation");
 });
 
 test("folders: a static path has one, a content-addressed key says so", () => {
