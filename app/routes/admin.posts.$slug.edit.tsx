@@ -1,8 +1,17 @@
 import { Form, Link, data, redirect } from "react-router";
 
 import { PostEditor } from "~/components/admin/post-editor";
+import {
+  CREATE_FORM_ID,
+  PreviewLinks,
+  revokeFormId,
+  type PreviewLinkView,
+} from "~/components/admin/preview-links";
 import { listBlogTags } from "~/db";
+import { adminSessionContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
+import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/preview-links.server";
+import { expiresAt, previewUrl } from "~/lib/preview-token.mjs";
 import { loadLinkTargets } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
@@ -22,6 +31,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!file) throw data("Not found", { status: 404 });
 
   const fields = parsePost(file.content);
+  // Hoisted out of the returned object because two properties now depend on it:
+  // the transition table's state, and whether this post has preview links at all.
+  const state = stateOf(fields, Date.now());
+  const origin = new URL(request.url).origin;
 
   return {
     fields,
@@ -34,7 +47,28 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // index derives its pill in its loader: `stateOf` reads the clock, and a
     // component that recomputed it would render one word on the server and
     // hydrate a different one for a post scheduled seconds away.
-    state: stateOf(fields, Date.now()),
+    state,
+    /**
+     * Live preview links, and the EMPTY ARRAY IS A DECISION on a post that is
+     * not a draft.
+     *
+     * A published post has none: the publish path revoked them. A scheduled post
+     * is `draft: false` too, so it also has none, and this does not ask. What
+     * the empty array then does is stop the section rendering at all, which is
+     * how "a published post offers NEITHER intent" is held.
+     *
+     * Non-fatal: a KV outage costs the drawer a list, not the editor. The same
+     * stance the revision list takes, and for the same reason.
+     */
+    previewLinks:
+      state === "draft"
+        ? (await listPreviewLinks(env, params.slug).catch(() => [])).map((link) => ({
+            ...link,
+            // Built HERE because only a request knows the origin, and a link
+            // that a reviewer cannot paste into a browser is not a link.
+            url: previewUrl(origin, link.token),
+          }))
+        : [],
     // The one fact the transition table needs that current state cannot give:
     // a draft is either brand new or previously withdrawn, and only
     // `first_published` in the committed file tells them apart. It is the same
@@ -67,7 +101,94 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const clone = request.clone();
   const form = await clone.formData();
 
-  if (form.get("intent") === "delete") {
+  const intent = form.get("intent");
+
+  /*
+   * THE TWO PREVIEW-LINK INTENTS, handled here rather than in
+   * `handleEditorAction`.
+   *
+   * That module is the SHARED save path behind this route and /admin/posts/new,
+   * and both of these are edit-only: a post that does not exist yet cannot be
+   * previewed. Putting them there would put two intents on the new-post route
+   * that the new-post route can never legally use. Delete is here for the same
+   * reason and by the same argument.
+   *
+   * Neither of them writes to GitHub, D1 or the artifact. They are KV only.
+   */
+  if (intent === "preview-link" || intent === "revoke-preview-link") {
+    const problem = async (message: string) => ({
+      kind: "problem" as const,
+      fields: parsePost(String(form.get("body") ?? "")),
+      // `conflict` is stated rather than omitted so every problem this route can
+      // return has one shape. An optional property on one arm of the union is
+      // how the component's `actionData.problem.conflict` read stops compiling.
+      problem: { message, conflict: false },
+      headSha: await currentHead(env).catch(() => ""),
+    });
+
+    if (intent === "preview-link") {
+      /*
+       * THE DRAFT CHECK IS SERVER SIDE, and it is not redundant with the UI.
+       *
+       * The drawer does not render the control on a published post, so nothing
+       * on the page can send this. That is a statement about the page, and this
+       * is an action: it is reachable by anyone holding the admin session and a
+       * curl command. Minting a capability is exactly the operation that must
+       * not trust the absence of a button.
+       *
+       * The COMMITTED FILE is the authority, re-read here rather than taken from
+       * the submitted form, because the form is the author's unsaved draft of
+       * what the post should become and this question is about what it IS.
+       */
+      const committed = await readFile(env, postPath(params.slug));
+      if (!committed) return problem(`No post file exists for "${params.slug}".`);
+      if (parsePost(committed.content).draft !== true) {
+        return problem(
+          "Preview links are only for drafts. This post is already public, so " +
+            "its URL is the link.",
+        );
+      }
+
+      try {
+        const link = await createPreviewLink(env, {
+          slug: params.slug,
+          createdBy: context.get(adminSessionContext).user.email,
+        });
+        return {
+          kind: "preview-link" as const,
+          url: previewUrl(new URL(request.url).origin, link.token),
+          expiresAt: link.expiresAt,
+        };
+      } catch (error) {
+        return problem(
+          `The preview link could not be created: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    /*
+     * REVOKE IS NOT DRAFT-GATED, and the asymmetry is deliberate.
+     *
+     * Creating on a published post is refused because it mints something. Taking
+     * one away is a delete: it can only ever reduce what exists, it is
+     * idempotent, and refusing it would strand a row in a drawer that a
+     * concurrent publish had already emptied. The one operation that must never
+     * be blocked by a stale page is the one that removes access.
+     */
+    try {
+      await revokePreviewLink(env, {
+        slug: params.slug,
+        token: String(form.get("token") ?? ""),
+      });
+      return { kind: "preview-link-revoked" as const };
+    } catch (error) {
+      return problem(
+        `The preview link could not be revoked: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  if (intent === "delete") {
     try {
       await deletePost(env, {
         slug: params.slug,
@@ -98,8 +219,18 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 }
 
 export default function EditPost({ loaderData, actionData }: Route.ComponentProps) {
-  const fields = actionData && "fields" in actionData ? actionData.fields : loaderData.fields;
-  const headSha = actionData && "headSha" in actionData ? actionData.headSha : loaderData.headSha;
+  /*
+   * Narrowed by KIND rather than by `"fields" in actionData`.
+   *
+   * The `in` form stopped narrowing once this route's action grew arms that
+   * carry no fields at all: TypeScript widened the result to `PostFields |
+   * undefined` and the editor's required prop went red. Naming the two arms that
+   * DO carry them is the same behaviour and says which they are.
+   */
+  const problemData = actionData?.kind === "problem" ? actionData : null;
+  const previewData = actionData?.kind === "preview" ? actionData : null;
+  const fields = problemData?.fields ?? previewData?.fields ?? loaderData.fields;
+  const headSha = problemData?.headSha ?? previewData?.headSha ?? loaderData.headSha;
 
   // Persistent until the NEXT action, and the next action is whatever produced
   // an actionData: a failure replaces the message, and a preview clears it,
@@ -120,6 +251,32 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
   // The transition must describe what is COMMITTED, so it stays the loader's.
   const state = loaderData.state;
 
+  /*
+   * THE SECTION EXISTS ONLY FOR A DRAFT, and `undefined` is how that is said.
+   *
+   * The drawer renders the section when it is handed a node and renders nothing
+   * when it is not, so on a published post there is no create control and no
+   * revoke control anywhere in the markup. That is the ruling held structurally
+   * rather than by a disabled button, which sends nothing but still looks like
+   * an offer.
+   *
+   * The state is the LOADER'S, so an unsaved edit toggling the draft checkbox
+   * does not conjure the section: what a preview link previews is the committed
+   * file, and offering one against unsaved intent would promise the reviewer
+   * something they would not see.
+   */
+  const previewLinkSlot =
+    state === "draft" ? (
+      <PreviewLinks
+        links={loaderData.previewLinks as PreviewLinkView[]}
+        created={
+          actionData?.kind === "preview-link"
+            ? { url: actionData.url, expiresAt: actionData.expiresAt }
+            : null
+        }
+      />
+    ) : undefined;
+
   return (
     <>
       <PostEditor
@@ -133,6 +290,7 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         tagOptions={loaderData.tagOptions}
         linkTargets={loaderData.linkTargets}
         revisions={loaderData.revisions}
+        previewLinkSlot={previewLinkSlot}
         historySlot={
           <>
             <p className="muted">
@@ -183,6 +341,40 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
       >
         <input type="hidden" name="headSha" value={headSha} />
       </Form>
+
+      {/*
+        THE PREVIEW-LINK FORMS, outside the editing form for the same reason the
+        delete form is: the drawer that holds their buttons is a <dialog> nested
+        inside it, and a form inside a form is dropped by the browser.
+
+        They render only for a draft, so a published post has no form to submit
+        to either. `previewLinkSlot` is the same condition, so the buttons and
+        the forms they point at cannot exist without each other.
+
+        ONE REVOKE FORM PER LINK, each carrying its own token as a hidden field.
+        The alternative, one form and a `name="token"` on every button, works
+        identically for a browser and worse for the gate: it would put the token
+        into the submission tuple, so a post with two links would record a
+        different payload set from a post with one, and the fixture would be
+        describing the data rather than the request surface.
+      */}
+      {state === "draft" ? (
+        <>
+          {/* No fields at all: the button carries the intent, and the slug is
+              already in the URL this posts to. */}
+          <Form id={CREATE_FORM_ID} method="post" className="editor-delete-form" />
+          {loaderData.previewLinks.map((link) => (
+            <Form
+              key={link.token}
+              id={revokeFormId(link.token)}
+              method="post"
+              className="editor-delete-form"
+            >
+              <input type="hidden" name="token" value={link.token} />
+            </Form>
+          ))}
+        </>
+      ) : null}
     </>
   );
 }

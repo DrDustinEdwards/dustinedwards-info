@@ -42,6 +42,7 @@ export function SettingsDrawer({
   publishAt,
   onPublishAtChange,
   previewPost,
+  previewLinkSlot,
   historySlot,
   dangerSlot,
 }: {
@@ -64,6 +65,16 @@ export function SettingsDrawer({
   onPublishAtChange: (value: string) => void;
   /** Live editor state, for the SERP and social-card previews. */
   previewPost: PreviewPost;
+  /**
+   * The draft preview-link section, or nothing.
+   *
+   * ABSENT is the whole contract. A published post is handed no slot, so the
+   * section does not render, so neither the create control nor any revoke
+   * control exists on the page. The ruling says a published post offers NEITHER
+   * intent, and the way that is held is by there being nothing to press rather
+   * than by a disabled button, which submits nothing but still reads as an offer.
+   */
+  previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
 }) {
@@ -177,6 +188,13 @@ export function SettingsDrawer({
           publishAt={publishAt}
           onPublishAtChange={onPublishAtChange}
         />
+
+        {previewLinkSlot ? (
+          <section className="drawer-section">
+            <h3>Preview links</h3>
+            {previewLinkSlot}
+          </section>
+        ) : null}
 
         {historySlot ? (
           <section className="drawer-section">

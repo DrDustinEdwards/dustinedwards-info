@@ -119,6 +119,7 @@ export function PostEditor({
   linkTargets = [],
   revisions = [],
   existingSlugs = [],
+  previewLinkSlot,
   historySlot,
   dangerSlot,
 }: {
@@ -137,6 +138,8 @@ export function PostEditor({
   revisions?: Revision[];
   /** Slugs already taken, so the new-post flow can say so before the save does. */
   existingSlugs?: string[];
+  /** The drawer's draft preview-link section. Absent on a published post. */
+  previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
 }) {
@@ -951,6 +954,7 @@ export function PostEditor({
             setDirty(true);
           }}
           previewPost={{ slug, title, description, coverSrc, coverAlt }}
+          previewLinkSlot={previewLinkSlot}
           historySlot={
             revisions.length > 0 ? (
               <RevisionList slug={fields.slug} revisions={revisions} onRestore={applyRevision} />
