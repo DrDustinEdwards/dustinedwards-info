@@ -547,6 +547,14 @@ function matchesQuery(q: string) {
  * they filtered, the gate would see an object with no row and back it straight
  * into the library, which is trash undone by a gate on the next reconcile.
  */
+/**
+ * What counts as a large file, from the mockup's own `BIG`.
+ *
+ * One mebibyte. Stated once so the lens, its count and its label cannot
+ * disagree about the number, which is the shape the Unused chip failed in.
+ */
+export const LARGE_FILE_BYTES = 1048576;
+
 export function notTrashed() {
   return isNull(media.trashedAt);
 }
@@ -625,6 +633,14 @@ export async function listMediaPage(
     q?: string;
     /** An exact tag, already normalised by the caller. */
     tag?: string;
+    /**
+     * A QUALITY LENS, which is a question a person actually has, as opposed to
+     * `role`, which is the system's own classification.
+     *
+     * 'unattached' | 'duplicates' | 'no-alt' | 'large'. Anything else is no
+     * filter, because a hand-edited URL should show a library.
+     */
+    lens?: string;
     /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
     sort?: string;
     /** 'asc' | 'desc'. */
@@ -695,6 +711,19 @@ export async function listMediaPage(
     const needle = exactTagNeedle(options.tag);
     if (needle) clauses.push(sql`lower(${media.tags}) LIKE ${needle}`);
   }
+
+  /*
+   * THE LENSES. Each is one predicate, and each answers a question somebody
+   * asks out loud.
+   *
+   * `duplicates` is deliberately NOT here: exact content identity is computed
+   * from the content-addressed key in JS by `mediaTwins`, not in SQL, so the
+   * route filters that lens after the read. Putting a fake SQL predicate here
+   * to keep the shape uniform would be a second definition of twin.
+   */
+  if (options.lens === "unattached") clauses.push(uncited());
+  if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
+  if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
   const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
@@ -862,6 +891,36 @@ export async function mediaTwins(env: Env) {
     }
   }
   return twins;
+}
+
+/**
+ * Every lens count, in one query, for the chip row.
+ *
+ * ONE ROUND TRIP rather than four, and the counts share the predicates the
+ * filters use, so a chip and the page it leads to cannot disagree. That
+ * agreement is the property the Unused chip lost when its count came from the
+ * role histogram while its filter came from `uncited()`.
+ *
+ * `duplicates` is absent and the caller adds it: twins are computed from the
+ * key in JS, and inventing a SQL approximation here would be a second
+ * definition of a rule that already has one.
+ */
+export async function mediaLensCounts(env: Env) {
+  const [row] = await getDb(env)
+    .select({
+      all: count(),
+      unattached: sql<number>`sum(CASE WHEN NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key}) THEN 1 ELSE 0 END)`,
+      noAlt: sql<number>`sum(CASE WHEN ${media.alt} = '' THEN 1 ELSE 0 END)`,
+      large: sql<number>`sum(CASE WHEN ${media.bytes} > ${LARGE_FILE_BYTES} THEN 1 ELSE 0 END)`,
+    })
+    .from(media)
+    .where(notTrashed());
+  return {
+    all: Number(row?.all ?? 0),
+    unattached: Number(row?.unattached ?? 0),
+    noAlt: Number(row?.noAlt ?? 0),
+    large: Number(row?.large ?? 0),
+  };
 }
 
 /**
