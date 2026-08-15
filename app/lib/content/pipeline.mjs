@@ -351,25 +351,41 @@ export function setWasmLoader(loader) {
  * thing standing between a retuned token and a fleet of immutable cards still
  * serving the old one.
  *
- * ONE INPUT LEFT THE CARD AND ANOTHER IS ON IT WITHOUT BEING KEYED, and neither
- * is fixed here because changing what the key hashes is a ruling, not a tidy-up.
- * The description is still hashed below and no longer appears on the card, so
- * editing one now writes a new object identical to the old. The tags DO appear
- * on the card and are not hashed, so retagging a post changes what the card
- * should say and leaves the immutable object nobody will re-request. The second
- * one is a defect; it predates this template and survives it.
+ * THE HASH SET WAS PUT RIGHT IN THE SAME WINDOW, ruled 2026-08-14. The v3 note
+ * above recorded the drift and left it, because changing what the key hashes is
+ * a ruling rather than a tidy-up: the description was hashed and not rendered,
+ * and the tags were rendered and not hashed. Both are fixed below. The version
+ * is NOT bumped again for it, because changing the inputs already moves every
+ * key, and nothing has ever been served at 3.
  */
 const OG_TEMPLATE_VERSION = 3;
 
 /**
  * The R2 key for a post's generated social image.
  *
- * Deterministic from the post, which is what makes generation idempotent and
- * lets the object be served immutable. It was written to be deterministic from
- * the content that APPEARS on the card, so that the key changed exactly when
- * the card would look different and never otherwise; read the v3 note above
- * before repeating that claim, because the inputs and the card have drifted
- * apart in both directions and the fix is a ruling rather than an edit.
+ * DETERMINISTIC FROM WHAT THE CARD RENDERS, which is the property that makes
+ * generation idempotent and lets the object be served immutable. The key must
+ * change exactly when the card would look different and never otherwise, and
+ * until 2026-08-14 it did neither:
+ *
+ *   DESCRIPTION was hashed and is not drawn. The v3 template removed it from
+ *   the card, so editing a description minted a new key for a byte-identical
+ *   picture and abandoned the old object. Wasted work in one direction.
+ *
+ *   TAGS are drawn, on the chrome band, and were not hashed. Retagging a post
+ *   changed what the card should say while the key stood still, so the
+ *   immutable object nobody would re-request stayed correct forever and wrong
+ *   forever. A stale card in the other direction, which is the worse half.
+ *
+ * So the input is the template version, the slug, the title, and THE TAGS THE
+ * CARD ACTUALLY DRAWS. `slice(0, 3)` mirrors the template rather than hashing
+ * every tag: a fourth tag changes nothing on the picture, so it must not move
+ * the key. The separator is a comma because tags are slugs, `[a-z0-9-]+`, so no
+ * tag can contain one and no two tag lists can collide.
+ *
+ * The slug stays in the input even though it is not drawn. It costs nothing,
+ * the key template puts it in the object name anyway, and dropping it would be
+ * a second change riding along with a ruling that did not ask for one.
  *
  * FNV-1a rather than a crypto hash: pure JS, identical in Node and in a Worker,
  * no imports, and this is a cache-busting key rather than a security boundary.
@@ -379,13 +395,14 @@ const OG_TEMPLATE_VERSION = 3;
  * thing that varies between runs, and the shiki engine incident showed what a
  * byte-comparison gate does with a non-deterministic input.
  *
- * The TEMPLATE is an input too, via OG_TEMPLATE_VERSION below.
+ * The TEMPLATE is an input too, via OG_TEMPLATE_VERSION above.
  *
- * @param {{ slug: string, title: string, description: string }} post
+ * @param {{ slug: string, title: string, tags?: string[] }} post
  */
 
 export function ogImageKey(post) {
-  const input = `${OG_TEMPLATE_VERSION}\n${post.slug}\n${post.title}\n${post.description}`;
+  const tags = (post.tags ?? []).slice(0, 3).join(",");
+  const input = `${OG_TEMPLATE_VERSION}\n${post.slug}\n${post.title}\n${tags}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
