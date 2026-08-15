@@ -9,11 +9,23 @@ import {
   mediaRecord,
   mediaRefsFor,
   mediaRoleCounts,
-  mediaUnusedCount,
+  // `mediaUnusedCount` is no longer imported: the Unused chip is
+  // gone (v6 ruling 2) and the function has no other caller. Left in `~/db`
+  // rather than deleted, because the predicate it shares with the filter is
+  // still the definition the usage note describes.
+  mediaTagCounts,
+  mediaTrashedCount,
+  mediaTwins,
+  restoreMediaRecord,
+  setMediaTags,
+  trashMediaRecord,
+  trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
 import { getEnv } from "~/lib/context";
 import { storageOf } from "~/lib/media/classify.mjs";
+import { parseTags } from "~/lib/media/tags.mjs";
+import { displaySummary, hrefWith, isModified, readView } from "~/lib/media/view.mjs";
 import {
   MEDIA_PAGE_SIZE,
   deleteMediaObject,
@@ -85,7 +97,19 @@ const FILTERS = [
   { id: "generated", label: "Generated", hint: "Social cards and diagrams, rebuilt by command" },
   { id: "brand", label: "Brand", hint: "Logos and marks the site code references" },
   { id: "icon", label: "Icons", hint: "Favicons and touch icons the browser asks for" },
-  { id: "unused", label: "Unused", hint: "Nothing the renderer emitted cites these" },
+  /*
+   * THE UNUSED CHIP IS GONE, v6 ruling 2, and it is worth saying why rather
+   * than just deleting a line.
+   *
+   * It read "70 of 70". The corpus has zero image references, so the chip
+   * selected everything, narrowed nothing, and sat there permanently lit. A
+   * filter that never filters is furniture, and an alarm that never stops is
+   * not a signal.
+   *
+   * What was TRUE about it survives as the usage note, because the limitation
+   * is real: usage means "the renderer emitted a citation", so an asset placed
+   * by route code reads as uncited. Dropping the chip must not drop the caveat.
+   */
 ] as const;
 
 const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
@@ -104,17 +128,33 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // `?role=all` is how the reader asks for everything. Anything unrecognised
   // falls back to the default rather than erroring, because a bad URL should
   // show a library rather than a stack trace.
+  /*
+   * THE WHOLE VIEW STATE, PARSED ONCE, by the module that also builds every
+   * link on the page.
+   *
+   * The parameters used to be read here one at a time and rebuilt in the
+   * component one at a time, which is how `q` fell off the pagination links and
+   * `role` fell off the chips. One parse and one `hrefWith` is the repair, and
+   * it is structural: a link that drops a parameter now has to be written by
+   * NOT calling the only function that builds links.
+   */
+  const view = readView(url.searchParams);
+
   const requested = url.searchParams.get("role");
-  const filter = requested === "all" || (requested && (ROLE_IDS.has(requested) || requested === "unused"))
+  const filter = requested === "all" || (requested && ROLE_IDS.has(requested))
     ? requested
     : "content";
 
   /** Free text. Trimmed once here so every reader downstream sees the same q. */
-  const q = (url.searchParams.get("q") ?? "").trim();
+  const q = view.q;
 
   const listed = await listMedia(env, {
     page,
     limit: picker ? 200 : MEDIA_PAGE_SIZE,
+    // The reader's Display choices, straight through. The picker branch below
+    // ignores them, because the picker is a fixed insertion surface rather than
+    // a view somebody configured.
+    ...(picker ? {} : { sort: view.sort, dir: view.dir, tag: view.tag, trashed: view.trash }),
     // THE PICKER FILTER, applied in SQL rather than in the map below, so an
     // excluded row never crosses the wire. An OG card is 1200x630 of branded
     // chrome built for a social feed; inserting one into a post body would be
@@ -128,8 +168,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ...(picker
       ? {}
       : {
-          ...(ROLE_IDS.has(filter) ? { role: filter } : {}),
-          ...(filter === "unused" ? { unusedOnly: true } : {}),
+          // THE ROLE FILTER IS SUSPENDED IN THE TRASH VIEW. The bin holds
+          // whatever was thrown away, and narrowing it by role would hide rows
+          // an author is looking for from a view whose whole job is to find
+          // them again.
+          ...(!view.trash && ROLE_IDS.has(filter) ? { role: filter } : {}),
           ...(q ? { q } : {}),
         }),
   });
@@ -156,9 +199,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // it will count a mention inside a code fence that the renderer never turned
   // into a link. Neither subsumes the other, and for a delete decision the
   // union is what fails closed.
-  const [resolution, refs] = await Promise.all([
+  const [resolution, refs, twins] = await Promise.all([
     resolveCitations(env, keys),
     mediaRefsFor(env, keys),
+    // Exact content identity only. See `mediaTwins` for why nothing perceptual
+    // is coming.
+    mediaTwins(env),
   ]);
 
   /*
@@ -212,6 +258,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         /** The artifact scan, which is the conservative superset. */
         citations: detailResolution.citations.get(row.key) ?? [],
         scanComplete: detailResolution.complete,
+        tags: parseTags(row.tags ?? ""),
+        trashedAt: row.trashedAt,
+        /**
+         * The CONTENT HASH, read off the key and never recomputed.
+         *
+         * Keys are content-addressed, so the hash is already in the filename. A
+         * static row's key is a path rather than a hash, so it has none and the
+         * inspector says nothing rather than showing a truncated path as if it
+         * were a digest.
+         */
+        hash: /^([0-9a-f]{16,})\./.exec(row.key)?.[1] ?? null,
+        /** Rows carrying identical bytes. Exact identity only. */
+        twins: (await mediaTwins(env)).get(row.key) ?? [],
       };
     } else {
       detail = { found: false as const, key: detailKey };
@@ -247,6 +306,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       citations: resolution.citations.get(object.key) ?? [],
       /** Rows the pipeline wrote. The refcount that makes a shared blob safe. */
       refCount: (refs.get(object.key) ?? []).length,
+      /** Parsed HERE, so the component never sees the delimited storage form. */
+      tags: parseTags(object.tags ?? ""),
+      /** How many other rows carry the same bytes. Zero for almost everything. */
+      twinCount: (twins.get(object.key) ?? []).length,
     })),
     page,
     hasMore: listed.hasMore,
@@ -269,13 +332,42 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * session.
      */
     roleCounts: await mediaRoleCounts(env),
+
     /**
-     * The Unused chip's number, from the SAME predicate the filter uses, so the
-     * chip and the page it leads to cannot disagree. It was the one chip with no
-     * count, because the counts came from the role histogram and `unused` is not
-     * a role.
+     * THE VIEW STATE, echoed whole so the component can build links from it.
+     *
+     * Not spread into the payload as loose fields: the component calls
+     * `hrefWith(view, {one: override})`, and handing it the object is what makes
+     * that the easy thing to do.
      */
-    unusedCount: await mediaUnusedCount(env),
+    view,
+    /** Whether `Reset to defaults` has anything to reset. */
+    modified: isModified(view),
+    /** How many rows are in the bin, for the Trash lens. */
+    trashedCount: await mediaTrashedCount(env),
+    /**
+     * Tags in use, with counts, for the filter chips.
+     *
+     * From `mediaTagCounts`, which excludes trashed rows, so a tag carried only
+     * by binned assets does not offer a chip leading to an empty grid.
+     */
+    tagCounts: await mediaTagCounts(env),
+
+    /**
+     * THE UNUSED CHIP IS GONE, and the honest sentence it stood for is not.
+     *
+     * It read "70 of 70" against a corpus with zero image references, so it
+     * filtered nothing, narrowed nothing, and alarmed. A permanent alarm is not
+     * a signal. What was TRUE about it survives as `usageNote` below, because
+     * the limitation is real and dropping the chip must not drop the caveat:
+     * usage here means "the renderer emitted a citation", so an asset a route
+     * references in CODE reads as uncited by this definition and by no other one
+     * available. The nine roster photos are exactly that case.
+     */
+    usageNote:
+      "Usage counts what the renderer emitted for a post. An asset referenced " +
+      "only by route code, like the roster photos, has no citation here and is " +
+      "not therefore unused.",
   };
 }
 
@@ -283,6 +375,95 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
   const form = await request.formData();
   const intent = form.get("intent");
+
+  /*
+   * TAGS. Written through `setMediaTags`, which owns the storage form.
+   *
+   * The action does NOT serialise: it hands over what the human typed and the
+   * db function decides what is stored. A route that pre-serialised would be a
+   * second author of the delimiter rule, which is the defect that rule exists
+   * to prevent.
+   *
+   * Not gated by `isManagedKey`, unlike alt. A static asset has a row and can
+   * legitimately carry organisational labels; what `isManagedKey` protects is
+   * WRITING TO THE BUCKET, and this writes only to the index.
+   */
+  if (intent === "set-tags") {
+    const key = String(form.get("key") ?? "");
+    const saved = await setMediaTags(env, key, String(form.get("tags") ?? ""));
+    return {
+      message: saved.length
+        ? `Tags saved for ${key}: ${saved.join(", ")}.`
+        : `Tags cleared for ${key}.`,
+    };
+  }
+
+  /*
+   * TRASH AND RESTORE. **NEITHER TOUCHES R2 AND NEITHER TOUCHES A PUBLIC URL.**
+   *
+   * The messages say so, in full, every time. Ruling 3 of this arc: if any copy
+   * could be read as a takedown, rewrite it. An author who trashes an asset and
+   * then finds the image still loading on a published post must not conclude
+   * the button failed.
+   */
+  if (intent === "trash") {
+    const key = String(form.get("key") ?? "");
+    const { moved } = await trashMediaRecord(env, key);
+    return {
+      message: moved
+        ? `${key} moved to the trash. Its address still works and any page using it is unchanged; this hides it from the library.`
+        : `${key} was already in the trash.`,
+    };
+  }
+
+  if (intent === "restore") {
+    const key = String(form.get("key") ?? "");
+    const { restored } = await restoreMediaRecord(env, key);
+    return {
+      message: restored
+        ? `${key} restored to the library.`
+        : `${key} was not in the trash.`,
+    };
+  }
+
+  /*
+   * EMPTY TRASH. Iterates the EXISTING guarded delete, one key at a time.
+   *
+   * Per the bulk ruling: continue past failures and report per key. A cited
+   * asset is refused by `claimMediaKeyForDelete` in the same single statement
+   * that protects a one-off delete, so emptying the bin cannot become a way
+   * around the refcount guard. The friction ladder is unchanged: the confirm
+   * lives on the control, and this is the same delete it has always been.
+   */
+  if (intent === "empty-trash") {
+    const keys = await trashedMediaKeys(env);
+    const deleted: string[] = [];
+    const refused: string[] = [];
+    for (const key of keys) {
+      // Static rows have no object to remove, so emptying leaves them binned
+      // rather than pretending to delete a file the site ships.
+      if (!isManagedKey(key)) {
+        refused.push(`${key} (static, nothing to delete)`);
+        continue;
+      }
+      const claimed = await claimMediaKeyForDelete(env, key);
+      if (!claimed) {
+        refused.push(`${key} (something cites it)`);
+        continue;
+      }
+      try {
+        await deleteMediaObject(env, key);
+        deleted.push(key);
+      } catch (error) {
+        refused.push(`${key} (${error instanceof Error ? error.message : String(error)})`);
+      }
+    }
+    return {
+      message:
+        `Emptied ${deleted.length} of ${keys.length}.` +
+        (refused.length ? ` Kept: ${refused.join("; ")}.` : ""),
+    };
+  }
 
   if (intent === "set-alt") {
     const key = String(form.get("key") ?? "");
@@ -540,6 +721,45 @@ function middleTruncate(name: string, max = 13, tail = 9) {
  * carries the accessible name for everything else. An icon with neither is a
  * button that says nothing to a screen reader.
  */
+/**
+ * One labelled row of segmented links inside the Display popover.
+ *
+ * LINKS, not buttons, and not a `<select>`. Every one of these is a different
+ * URL, so making them links is what lets the whole display state be shared,
+ * bookmarked and restored by the back button with no script at all. A select
+ * would need an onChange to navigate, which is the one thing this page has
+ * never required.
+ */
+function MediaDisplayGroup({
+  label,
+  options,
+  current,
+  hrefFor,
+}: {
+  label: string;
+  options: Array<[string, string]>;
+  current: string;
+  hrefFor: (id: string) => string;
+}) {
+  return (
+    <div className="media-display-group">
+      <span className="media-display-label">{label}</span>
+      <nav className="media-display-options" aria-label={label}>
+        {options.map(([id, text]) => (
+          <Link
+            key={id}
+            to={hrefFor(id)}
+            className={`search-chip${current === id ? " is-active" : ""}`}
+            aria-current={current === id ? "true" : undefined}
+          >
+            {text}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
 function CopyButton({ value, label }: { value: string; label: string }) {
   return (
     <button
@@ -599,39 +819,36 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
     scanFailed,
     counts,
     roleCounts,
-    unusedCount,
+    view,
+    modified,
+    trashedCount,
+    tagCounts,
+    usageNote,
   } = loaderData;
   const total = counts.reduce((sum, row) => sum + Number(row.n), 0);
   const byRole = new Map(roleCounts.map((row) => [row.role, Number(row.n)]));
   const active = FILTERS.find((f) => f.id === filter);
 
-  /**
-   * Every link on this page is THIS view with one thing changed.
+  /*
+   * EVERY LINK ON THIS PAGE IS `hrefWith(view, {one override})`.
    *
-   * Written once because the alternative is what the old pager did: it carried
-   * `role` and would have dropped `q`, so paging out of a search silently
-   * widened it back to the whole group. A chip drops the page number, because
-   * page 3 of one filter is not page 3 of another.
+   * This replaced a hand-rolled merge that listed the parameters it carried,
+   * which is precisely how the two evaporation incidents happened: the list in
+   * the builder and the set of parameters the page actually had drifted apart,
+   * silently, because a missing query parameter is not a payload difference and
+   * no gate could see it.
+   *
+   * `hrefWith` starts from the WHOLE state and overrides one field, and its
+   * parameter list is derived from the defaults rather than typed again. There
+   * is no longer a place to forget one.
    */
-  const viewParams = (over: Record<string, string | number | null> = {}) => {
-    const merged: Record<string, string | number | null> = {
-      role: filter,
-      q,
-      page: page > 1 ? page : null,
-      ...over,
-    };
-    const params = new URLSearchParams();
-    for (const [name, value] of Object.entries(merged)) {
-      if (value === null || value === undefined || value === "") continue;
-      params.set(name, String(value));
-    }
-    const search = params.toString();
-    return search ? `/admin/media?${search}` : "/admin/media";
-  };
+  const linkTo = (over: Parameters<typeof hrefWith>[1] = {}) => hrefWith(view, over);
 
-  /** A chip is its own filter, unfiltered by page, carrying any search. */
-  const chipHref = (role: string) => viewParams({ role, page: null, key: null });
-  const count = (id: string) => (id === "unused" ? unusedCount : byRole.get(id));
+  /** A chip is its own filter, back at page one, carrying everything else. */
+  const chipHref = (role: string) => linkTo({ role, page: 1 });
+  /** A tag chip toggles: pressing the active one clears it. */
+  const tagHref = (tag: string) => linkTo({ tag: view.tag === tag ? "" : tag, page: 1 });
+  const count = (id: string) => byRole.get(id);
 
   return (
     <Panel
@@ -765,6 +982,179 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
         <span className="media-facet-hint">assigned by the system</span>
       </div>
 
+      {/*
+        TAG CHIPS, beside the roles rather than inside the Display popover.
+        Tags are NAVIGATION: they narrow what you are looking at, exactly as a
+        role does. Group, sort and tile size are SETTINGS, which is why they sit
+        behind one control instead of competing with these. That split is the
+        mockup's own reasoning and it is the reason the toolbar reads calmly.
+
+        Rendered only when tags exist, so an untagged library is not given an
+        empty facet to wonder about.
+      */}
+      {tagCounts.length > 0 ? (
+        <div className="media-facet">
+          <span className="media-facet-label" id="media-facet-tag">
+            Tags
+          </span>
+          <nav aria-labelledby="media-facet-tag" className="media-filters">
+            {tagCounts.map((t) => (
+              <Link
+                key={t.tag}
+                to={tagHref(t.tag)}
+                className={`search-chip${view.tag === t.tag ? " is-active" : ""}`}
+                aria-current={view.tag === t.tag ? "page" : undefined}
+              >
+                {t.tag} <span className="search-chip-count">{t.n}</span>
+              </Link>
+            ))}
+          </nav>
+          <span className="media-facet-hint">yours, in the inspector</span>
+        </div>
+      ) : null}
+
+      {/*
+        THE DISPLAY BAR: the view toggle, the Display popover, and the Trash
+        lens. Every control here is a LINK, so the whole thing works with no
+        script and every state is a URL somebody can share or bookmark.
+
+        `<details>` carries the popover rather than a button and a state hook,
+        for the same reason the drawer is a real `<dialog>`: the open and close
+        behaviour, the Escape key and the summary semantics are the platform's.
+      */}
+      <div className="media-display-bar">
+        <nav className="media-view-toggle" aria-label="Layout">
+          {[
+            ["list", "List"],
+            ["grid", "Grid"],
+          ].map(([id, label]) => (
+            <Link
+              key={id}
+              to={linkTo({ view: id })}
+              className={`search-chip${view.view === id ? " is-active" : ""}`}
+              aria-current={view.view === id ? "page" : undefined}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        <details className="media-display">
+          <summary className="row-action">Display: {displaySummary(view)}</summary>
+          <div className="media-display-panel">
+            <MediaDisplayGroup
+              label="Group by"
+              options={[
+                ["flat", "Flat"],
+                ["folder", "Folder"],
+                ["month", "Month"],
+              ]}
+              current={view.group}
+              hrefFor={(id) => linkTo({ group: id, page: 1 })}
+            />
+            <MediaDisplayGroup
+              label="Sort"
+              options={[
+                ["added", "Newest"],
+                ["name", "A to Z"],
+                ["size", "Largest"],
+                ["usage", "Usage"],
+              ]}
+              current={view.sort}
+              hrefFor={(id) => linkTo({ sort: id, page: 1 })}
+            />
+            <MediaDisplayGroup
+              label="Direction"
+              options={[
+                ["desc", "Descending"],
+                ["asc", "Ascending"],
+              ]}
+              current={view.dir}
+              hrefFor={(id) => linkTo({ dir: id, page: 1 })}
+            />
+            <MediaDisplayGroup
+              label="Tile size"
+              options={[
+                ["s", "S"],
+                ["m", "M"],
+                ["l", "L"],
+              ]}
+              current={view.size}
+              hrefFor={(id) => linkTo({ size: id })}
+            />
+            {/* A LINK to the bare URL, not a button. Resetting is navigation to
+                the default view, and the default view has an address. */}
+            {modified ? (
+              <Link to="/admin/media" className="row-action">
+                Reset to defaults
+              </Link>
+            ) : null}
+          </div>
+        </details>
+
+        {/*
+          THE TRASH LENS. It says what trash IS, in the title, every time.
+          Ruling 3: a trashed file keeps serving, so nothing here may read as a
+          takedown.
+        */}
+        <Link
+          to={linkTo({ trash: !view.trash, page: 1, key: "" })}
+          className={`search-chip${view.trash ? " is-active" : ""}`}
+          aria-current={view.trash ? "page" : undefined}
+          title="The bin is a library view. A trashed file keeps its address and any page using it is unchanged."
+        >
+          Trash <span className="search-chip-count">{trashedCount}</span>
+        </Link>
+      </div>
+
+      {/*
+        THE TRASH EXPLANATION, shown WHENEVER the bin is open rather than only
+        when it has rows. An author arriving at an empty bin still needs to know
+        what putting something in it would do.
+      */}
+      {view.trash ? (
+        <p className="media-usage-note">
+          This is a library view, not a takedown. A trashed file keeps its
+          address, and any published page using it is unchanged. Restore puts it
+          back in the library.{" "}
+          <strong>Only Empty trash deletes anything, and it still refuses
+          anything a post cites.</strong>
+        </p>
+      ) : null}
+
+      {/*
+        EMPTY TRASH, the one control on this page that is a real delete, so it
+        takes the friction the ladder assigns to a BULK delete: TYPE THE COUNT,
+        exactly as bulk post deletion does. Not a plain confirm, because it
+        removes many objects at once and the count is the thing a distracted
+        person gets wrong.
+
+        The ladder is UNCHANGED by this arc, which is the point: this reuses it
+        rather than inventing a fourth level of ceremony.
+      */}
+      {view.trash && trashedCount > 0 ? (
+        <Form
+          method="post"
+          className="media-empty-trash"
+          onSubmit={(event) => {
+            const typed = prompt(
+              `Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"} from R2? ` +
+                `Anything a post cites will be kept. Type ${trashedCount} to confirm.`,
+            );
+            if (typed === null || typed.trim() !== String(trashedCount)) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <button type="submit" name="intent" value="empty-trash" className="btn-danger">
+            Empty trash
+          </button>
+          <span className="media-facet-hint">
+            Deletes the objects. Anything a post cites is kept and named.
+          </span>
+        </Form>
+      ) : null}
+
       {/* ONE LINE, in words, and it states ONCE what Unused actually means.
           The chip now carries a number, and a number invites the reading
           "nothing uses these", which is stronger than the query can support:
@@ -781,24 +1171,23 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
               `${active.hint}.`
             : `Showing all ${total} items: ${byRole.get("content") ?? 0} content, ` +
               `${byRole.get("generated") ?? 0} generated, ${byRole.get("brand") ?? 0} brand, ` +
-              `${byRole.get("icon") ?? 0} icons.`}{" "}
-        {unusedCount} of {total} are cited by nothing the renderer emitted.
+              `${byRole.get("icon") ?? 0} icons.`}
       </p>
 
-      {/* THE USAGE HONESTY LINE, the sentence the mockup was approved for, and
-          the one thing on this page that stands between a reader and deleting a
-          file the site is serving.
+      {/*
+        THE USAGE HONESTY LINE. The Unused chip went; this did not.
 
-          It is shown when the count says EVERYTHING is uncited, because that is
-          the state the reader will misread: a tracker reporting 70 of 70 unused
-          looks like a library nobody uses, and it is actually a tracker that
-          only sees what the markdown pipeline emitted. The roster photographs
-          are placed by page code, which media_refs cannot see. */}
-      {scanComplete && unusedCount === total && total > 0 ? (
+        It is the one thing on this page standing between a reader and deleting
+        a file the site is serving, and it is now UNCONDITIONAL rather than
+        appearing only when the uncited count happened to equal the total. That
+        condition was a coincidence of the current corpus: the moment one post
+        cites one image, the caveat would have vanished while remaining exactly
+        as true, and the roster photographs would still have been invisible to
+        the tracker.
+      */}
+      {scanComplete ? (
         <p className="media-usage-note">
-          No post references an image yet, so the tracker reports every file as
-          unreferenced. The roster photographs <em>are</em> live: they are placed by
-          page code, which the tracker cannot see.{" "}
+          {usageNote}{" "}
           <strong>Treat not referenced as unknown, not as safe to delete.</strong>
         </p>
       ) : null}
@@ -811,7 +1200,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
 
       {uploaded ? (
         <p className="editor-notice" role="status">
-          Uploaded {uploaded}. <Link to={viewParams({ key: uploaded })}>Open it</Link>.
+          Uploaded {uploaded}. <Link to={linkTo({ key: uploaded })}>Open it</Link>.
         </p>
       ) : null}
       {uploadError ? (
@@ -838,7 +1227,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
             <>
               <header className="media-detail-head">
                 <h3>{detail.originalName ?? detail.key}</h3>
-                <Link to={viewParams({ key: null })} className="btn-ghost">
+                <Link to={linkTo({ key: "" })} className="btn-ghost">
                   Close
                 </Link>
               </header>
@@ -922,6 +1311,106 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                     </button>
                   </Form>
 
+                  {/*
+                    TAGS. A comma separated text field, which is the same shape
+                    the post editor's tag field submits, so an author who has
+                    tagged a post already knows how this behaves.
+
+                    The field carries the PARSED list joined back with commas,
+                    never the delimiter-wrapped storage form. Nothing outside
+                    `tags.mjs` should ever see `,alpha,beta,`.
+                  */}
+                  <Form method="post" className="media-alt-form">
+                    <input type="hidden" name="key" value={detail.key} />
+                    <label htmlFor="detail-tags">Tags</label>
+                    <input
+                      id="detail-tags"
+                      name="tags"
+                      defaultValue={detail.tags.join(", ")}
+                      placeholder="photo, roster, 2019"
+                      className="media-alt-input"
+                    />
+                    <button type="submit" name="intent" value="set-tags" className="btn-ghost">
+                      Save tags
+                    </button>
+                  </Form>
+
+                  {/*
+                    THE ADDRESS, in the three forms an author actually pastes.
+
+                    All THREE are the same string, so there is no second source
+                    for the address and no endpoint behind any of them: the
+                    markdown and HTML variants are `object.url` wrapped in
+                    punctuation, built here. The alt text rides along, because a
+                    snippet with an empty alt is a snippet somebody ships with
+                    an empty alt.
+                  */}
+                  <div className="media-detail-copy">
+                    <h4>Copy</h4>
+                    <CopyButton value={detail.url} label="Address" />
+                    <CopyButton
+                      value={`![${detail.alt}](${detail.url})`}
+                      label="Markdown"
+                    />
+                    <CopyButton
+                      value={`<img src="${detail.url}" alt="${detail.alt}">`}
+                      label="HTML"
+                    />
+                  </div>
+
+                  {/*
+                    TWINS: rows carrying IDENTICAL BYTES, found by content hash.
+                    Exact identity only, never a similarity score.
+
+                    The copy is careful, because this is the one place the page
+                    offers to remove something on the strength of a comparison:
+                    trashing a twin hides it from the library and BOTH addresses
+                    keep working, so nothing here can cost a published page its
+                    image.
+                  */}
+                  {detail.twins.length > 0 ? (
+                    <div className="media-detail-twins">
+                      <h4>Identical files</h4>
+                      <p className="muted">
+                        {detail.twins.length === 1 ? "One other file has" : `${detail.twins.length} other files have`}{" "}
+                        exactly these bytes. Trashing one hides it from the
+                        library; every address keeps working and no page changes.
+                      </p>
+                      <ul className="media-detail-refs">
+                        {detail.twins.map((twin) => (
+                          <li key={twin.key}>
+                            <Link to={linkTo({ key: twin.key })}>
+                              {twin.originalName ?? twin.key}
+                            </Link>
+                            <Form method="post" className="media-twin-form">
+                              <input type="hidden" name="key" value={twin.key} />
+                              <button
+                                type="submit"
+                                name="intent"
+                                value="trash"
+                                className="media-destructive"
+                              >
+                                Keep this one, trash that one
+                              </button>
+                            </Form>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {/*
+                    THE CONTENT HASH, shown and never recomputed: the key already
+                    carries it. A static row has a path rather than a hash, so it
+                    gets nothing rather than a truncated path dressed as a digest.
+                  */}
+                  {detail.hash ? (
+                    <p className="media-detail-hash">
+                      <span className="media-display-label">sha256</span>
+                      <code>{detail.hash}</code>
+                    </p>
+                  ) : null}
+
                   {/* USAGE, both halves, labelled as what each one is. */}
                   <div className="media-detail-usage">
                     <h4>Usage</h4>
@@ -955,6 +1444,39 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                     )}
                   </div>
 
+                  {/*
+                    TRASH AND RESTORE, and NEITHER carries a confirm.
+
+                    That is the friction ladder working, not a gap in it.
+                    Trashing is reversible and changes nothing a reader can see,
+                    so a confirm on it would be ceremony, and ceremony that is
+                    always harmless is ceremony people learn to click through.
+                    The confirm is spent where it buys something: on Delete
+                    below, which is irreversible.
+
+                    Offered on a static row too, unlike delete. Trashing tidies
+                    the library and touches no file, which is exactly the thing a
+                    static asset can safely have done to it.
+                  */}
+                  {detail.trashedAt ? (
+                    <Form method="post" className="media-trash-form">
+                      <input type="hidden" name="key" value={detail.key} />
+                      <button type="submit" name="intent" value="restore" className="btn-ghost">
+                        Restore to the library
+                      </button>
+                    </Form>
+                  ) : (
+                    <Form method="post" className="media-trash-form">
+                      <input type="hidden" name="key" value={detail.key} />
+                      <button type="submit" name="intent" value="trash" className="media-destructive">
+                        Move to trash
+                      </button>
+                      <span className="media-facet-hint">
+                        Hides it here. The address keeps working.
+                      </span>
+                    </Form>
+                  )}
+
                   {/* A static asset shows WHY it cannot be deleted rather than
                       simply lacking a button. The action refuses it regardless;
                       this is so the page explains the refusal instead of
@@ -983,7 +1505,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
           ) : (
             <p className="muted">
               Nothing in the index has the key {detail.key}. It may have been deleted.{" "}
-              <Link to={viewParams({ key: null })}>Back to the library</Link>.
+              <Link to={linkTo({ key: "" })}>Back to the library</Link>.
             </p>
           )}
         </section>
@@ -994,7 +1516,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
           {q ? (
             <>
               Nothing matches &ldquo;{q}&rdquo; here. Try{" "}
-              <Link to={viewParams({ role: "all", page: null })}>every group</Link>, or{" "}
+              <Link to={linkTo({ role: "all", page: 1 })}>every group</Link>, or{" "}
               <Link to={chipHref(filter)}>clear the search</Link>.
             </>
           ) : (
@@ -1010,7 +1532,15 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
         // container width, and directional navigation does not help anyone find
         // a specific picture. Semantic elements first; the only ARIA on this
         // page is the nav label above and aria-current on the active chip.
-        <ul className="media-grid">
+        /*
+          ONE MARKUP TREE, TWO LAYOUTS, selected by data attributes.
+          The list view is CSS over the same elements rather than a second
+          branch of JSX: a second tree is a second place for a control to go
+          missing, and check:admin-ui would then have to prove both carry the
+          same submissions instead of the layout being unable to change them.
+          Tile size is a class exactly as ruled, never an inline style.
+        */
+        <ul className="media-grid" data-view={view.view} data-size={view.size}>
           {objects.map((object) => {
             const name = displayName(object);
             const cited = object.citations.length > 0 || object.refCount > 0;
@@ -1025,7 +1555,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                     explicit ratio on the wrapper reserves the space before the
                     image arrives, so a lazily-loaded tile cannot reflow the rows
                     below it as it lands. */}
-                <Link to={viewParams({ key: object.key })} className="media-thumb-link">
+                <Link to={linkTo({ key: object.key })} className="media-thumb-link">
                   <span
                     className="media-thumb-box"
                     // LQIP as a CSS background BEHIND the real image. The element
@@ -1087,7 +1617,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
                         human; the full key stays in the title and in the
                         detail view. */}
                     <Link
-                      to={viewParams({ key: object.key })}
+                      to={linkTo({ key: object.key })}
                       className="media-name"
                       title={object.key}
                     >
@@ -1118,13 +1648,13 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
       {hasMore || page > 1 ? (
         <p className="posts-toolbar">
           {page > 1 ? (
-            <Link to={viewParams({ page: page - 1 })} className="btn-ghost">
+            <Link to={linkTo({ page: page - 1 })} className="btn-ghost">
               Previous
             </Link>
           ) : null}
           <span className="muted">Page {page}</span>
           {hasMore ? (
-            <Link to={viewParams({ page: page + 1 })} className="btn-ghost">
+            <Link to={linkTo({ page: page + 1 })} className="btn-ghost">
               Next
             </Link>
           ) : null}

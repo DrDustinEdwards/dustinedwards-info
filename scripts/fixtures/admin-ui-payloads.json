@@ -102,13 +102,17 @@
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
-    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key"
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
   ],
   "media, detail for a static row": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=/logo.svg | intent=rebuild | ",
-    "POST /admin/media?key=/logo.svg | intent=set-alt | alt,key"
+    "POST /admin/media?key=/logo.svg | intent=set-alt | alt,key",
+    "POST /admin/media?key=/logo.svg | intent=set-tags | key,tags",
+    "POST /admin/media?key=/logo.svg | intent=trash | key"
   ],
   "media, detail for a missing key": [
     "GET  | (none) | q,role",
@@ -124,6 +128,61 @@
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?upload-error=too-large | intent=rebuild | "
+  ],
+  "media, list view": [
+    "GET  | (none) | q,role",
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media/upload | intent=upload-form | file"
+  ],
+  "media, grid view": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?view=grid | intent=rebuild | "
+  ],
+  "media, grouped and sorted": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?group=folder&amp;sort=size&amp;dir=asc&amp;size=l | intent=rebuild | "
+  ],
+  "media, trash view": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?trash=1 | intent=empty-trash | ",
+    "POST /admin/media?trash=1 | intent=rebuild | "
+  ],
+  "media, trash view empty": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?trash=1 | intent=rebuild | "
+  ],
+  "media, tag filter active": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?tag=roster | intent=rebuild | "
+  ],
+  "media, tag filter with no results": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?tag=nothing-here | intent=rebuild | "
+  ],
+  "media, detail with a twin": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
+  ],
+  "media, detail for a trashed row": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=empty-trash | ",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=restore | key",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-tags | key,tags"
   ],
   "new post, fresh": [
     "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",

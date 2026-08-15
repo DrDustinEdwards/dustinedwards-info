@@ -47,6 +47,7 @@ const FULLY_SET = {
   tag: "icon",
   page: 3,
   trash: true,
+  key: "1234abcd5678ef90.png",
 };
 
 test("THE DEFECT: every non-default parameter survives a link", () => {
@@ -82,7 +83,7 @@ test("every override still carries all the others", () => {
 test("a pagination link keeps the whole view", () => {
   const search = new URLSearchParams(hrefWith(FULLY_SET, { page: 4 }).split("?")[1]);
   assert.equal(search.get("page"), "4");
-  for (const name of ["view", "group", "sort", "dir", "size", "role", "q", "tag", "trash"]) {
+  for (const name of ["view", "group", "sort", "dir", "size", "role", "q", "tag", "trash", "key"]) {
     assert.ok(search.has(name), `pagination dropped ${name}`);
   }
 });

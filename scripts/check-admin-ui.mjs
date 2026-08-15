@@ -113,6 +113,10 @@ const MEDIA_OBJECT = (over = {}) => ({
   viewable: true,
   citations: [],
   refCount: 0,
+  /** Parsed by the loader, so the component never sees the delimited form. */
+  tags: [],
+  /** Rows carrying identical bytes. Exact content identity only. */
+  twinCount: 0,
   ...over,
 });
 
@@ -140,10 +144,34 @@ const MEDIA_SHELL = (over = {}) => ({
    * where alt editing and delete moved to; `uploaded` and `uploadError` are the
    * flash the upload route redirects back with. */
   q: "",
-  unusedCount: 0,
   detail: null,
   uploaded: null,
   uploadError: null,
+  /* ---- media v6 --------------------------------------------------------
+   * The whole view state, echoed by the loader so the component can build
+   * every link from it. Handed over as an OBJECT rather than spread, because
+   * that is what the component receives and what makes `hrefWith(view, ...)`
+   * the natural call. */
+  view: {
+    view: "list",
+    group: "flat",
+    sort: "added",
+    dir: "desc",
+    size: "m",
+    role: "content",
+    q: "",
+    tag: "",
+    page: 1,
+    trash: false,
+    key: "",
+  },
+  modified: false,
+  trashedCount: 0,
+  tagCounts: [],
+  usageNote:
+    "Usage counts what the renderer emitted for a post. An asset referenced " +
+    "only by route code, like the roster photos, has no citation here and is " +
+    "not therefore unused.",
   ...over,
 });
 
@@ -170,6 +198,10 @@ const MEDIA_DETAIL = (over = {}) => ({
   refs: [],
   citations: [],
   scanComplete: true,
+  tags: [],
+  trashedAt: null,
+  hash: "1234abcd5678ef90",
+  twins: [],
   ...over,
 });
 
@@ -657,6 +689,134 @@ const STATES = [
     loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
       uploadError: "That image is over the 10 MB limit.",
+    }),
+  },
+
+  /* ---- media v6: the new structure ---------------------------------------
+   *
+   * Each of these renders a DIFFERENT CONTROL SET, which is this gate's
+   * admission test. A view mode changes a data attribute and no submissions, so
+   * the two layout states are here to prove exactly that: one markup tree, two
+   * layouts, payload identical. If a future refactor split the list into its
+   * own JSX branch, one of the two would drift and the fixture would say so.
+   * ---------------------------------------------------------------------- */
+  {
+    name: "media, list view",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({ objects: [MEDIA_OBJECT()] }),
+  },
+  {
+    name: "media, grid view",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, view: "grid" },
+      modified: true,
+    }),
+  },
+  {
+    name: "media, grouped and sorted",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?group=folder&sort=size&dir=asc&size=l",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, group: "folder", sort: "size", dir: "asc", size: "l" },
+      // The Reset link exists ONLY when something is modified, which is what
+      // makes this a state rather than a variant of the default one.
+      modified: true,
+    }),
+  },
+  {
+    name: "media, trash view",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?trash=1",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT({ key: "trashed.png", url: "/media/trashed.png" })],
+      view: { ...MEDIA_SHELL().view, trash: true },
+      modified: true,
+      trashedCount: 1,
+    }),
+  },
+  {
+    // A trash view with NOTHING in it. Empty trash must not be offered, and the
+    // explanation must still appear: an author arriving at an empty bin still
+    // needs to know what putting something in it would do.
+    name: "media, trash view empty",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?trash=1",
+    loaderData: MEDIA_SHELL({
+      objects: [],
+      view: { ...MEDIA_SHELL().view, trash: true },
+      modified: true,
+      trashedCount: 0,
+    }),
+  },
+  {
+    name: "media, tag filter active",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?tag=roster",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT({ tags: ["roster"] })],
+      view: { ...MEDIA_SHELL().view, tag: "roster" },
+      modified: true,
+      tagCounts: [
+        { tag: "roster", n: 9 },
+        { tag: "diagram", n: 2 },
+      ],
+    }),
+  },
+  {
+    // A tag that matched nothing. A different empty state from an empty bucket
+    // and from an empty search, and it must offer a way out that is not
+    // "upload something".
+    name: "media, tag filter with no results",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?tag=nothing-here",
+    loaderData: MEDIA_SHELL({
+      objects: [],
+      view: { ...MEDIA_SHELL().view, tag: "nothing-here" },
+      modified: true,
+      tagCounts: [{ tag: "roster", n: 9 }],
+    }),
+  },
+  {
+    // TWINS PRESENT. The only state that offers to remove something on the
+    // strength of a comparison, so it is the only one where that copy renders.
+    name: "media, detail with a twin",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT({ twinCount: 1 })],
+      detail: MEDIA_DETAIL({
+        twins: [{ key: "aaaabbbbccccdddd.png", originalName: "a-copy.png" }],
+      }),
+      view: { ...MEDIA_SHELL().view, key: "1234abcd5678ef90.png" },
+      modified: true,
+    }),
+  },
+  {
+    // A TRASHED row open in the inspector. It offers Restore and must NOT offer
+    // Move to trash, which is the pair this fixture pins.
+    name: "media, detail for a trashed row",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png&trash=1",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: MEDIA_DETAIL({ trashedAt: "2026-08-15 12:00:00" }),
+      view: { ...MEDIA_SHELL().view, trash: true, key: "1234abcd5678ef90.png" },
+      modified: true,
+      trashedCount: 1,
     }),
   },
 
@@ -1297,6 +1457,149 @@ structural("new posts get a slug input", "new post, fresh", (h) => h.includes('i
 structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
 
 /* -------------------------------------------------------------------------
+ * MEDIA v6: THE PARAMETER THAT MUST NOT EVAPORATE.
+ *
+ * **THIS IS THE INSTRUMENT THE TWO PREVIOUS INCIDENTS DID NOT HAVE.** `q` fell
+ * off the pagination links once and `role` fell off the chips once. Neither was
+ * visible to this gate, and that is structural rather than an oversight: the
+ * payload baseline records METHOD, action and field names, and every one of
+ * these links is a `GET` with no fields at all. `GET /admin/media` is the tuple
+ * whether the href carries ten parameters or one.
+ *
+ * So this reads the rendered HREFS instead. It takes a state where every
+ * parameter is set, renders the page, and asserts that each internal link back
+ * to this page carries the whole set. A link built by hand, outside `hrefWith`,
+ * fails here by name.
+ *
+ * The needle set is DERIVED from the module's own PARAM_NAMES rather than typed
+ * again, because a hand-written list of parameters going stale against the real
+ * one is precisely what both incidents were.
+ * ---------------------------------------------------------------------- */
+
+{
+  const { DEFAULTS, PARAM_NAMES } = await import("../app/lib/media/view.mjs");
+
+  /** Every parameter non-default, so every one MUST appear in every link. */
+  const FULL_VIEW = {
+    view: "grid",
+    group: "folder",
+    sort: "size",
+    dir: "asc",
+    size: "l",
+    role: "brand",
+    q: "logo",
+    tag: "roster",
+    page: 2,
+    trash: false,
+    key: "",
+  };
+
+  assert(
+    "the evaporation needle set is derived, not hand-written",
+    PARAM_NAMES.length >= 10 && PARAM_NAMES.every((n) => n in DEFAULTS),
+    `${PARAM_NAMES.length} names. A hand-written list going stale against the real ` +
+      `one is what both previous incidents actually were.`,
+  );
+
+  const state = {
+    name: "media, every parameter set",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid&group=folder&sort=size&dir=asc&size=l&role=brand&q=logo&tag=roster&page=2",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      q: "logo",
+      filter: "brand",
+      page: 2,
+      hasMore: true,
+      view: FULL_VIEW,
+      modified: true,
+      tagCounts: [{ tag: "roster", n: 9 }],
+      roleCounts: [{ role: "brand", n: 6 }],
+    }),
+  };
+
+  const mod = modules.get(state.entry);
+  assert(
+    "the media route bundled for the evaporation scan",
+    Boolean(mod),
+    "without it the scan would examine an empty string and pass",
+  );
+  let html = "";
+  try {
+    html = await renderRoute(/** @type {{ default: unknown }} */ (mod), {
+      path: state.path,
+      url: state.url,
+      loaderData: state.loaderData,
+    });
+  } catch (error) {
+    fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  /* Every href pointing back at this page, which is the set that has to carry
+   * the state. External links and the upload endpoint are not view links. */
+  const hrefs = [...html.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
+    m[1].replace(/&amp;/g, "&"),
+  );
+
+  // NON-EMPTY SCOPE FIRST. Zero links found would make every assertion below
+  // pass by examining nothing, which is this repo's most-repeated defect class.
+  assert(
+    "the evaporation scan found view links to examine",
+    hrefs.length >= 8,
+    `${hrefs.length} link(s) back to /admin/media. A green result below would mean nothing.`,
+  );
+
+  /**
+   * Parameters a link is ALLOWED to drop, with the reason.
+   *
+   * @type {Record<string, string>}
+   */
+  const MAY_DROP = {
+    // A chip goes back to page one, deliberately: page 3 of one filter is not
+    // page 3 of another. So `page` may be absent from any link.
+    page: "a filter change resets to page one",
+    // The parameter each control OWNS is the one it changes, and changing it to
+    // the default legitimately removes it from the query.
+    view: "the view toggle owns it",
+    group: "the Display popover owns it",
+    sort: "the Display popover owns it",
+    dir: "the Display popover owns it",
+    size: "the Display popover owns it",
+    role: "the role chips own it",
+    tag: "the tag chips own it",
+    trash: "the Trash lens owns it",
+    key: "the inspector owns it, and closing it is an explicit empty",
+  };
+
+  /*
+   * THE ASSERTION, and it is deliberately about `q` above all.
+   *
+   * `q` is the one parameter NO control on this page owns: nothing here is a
+   * "clear the search" link except the explicit one, so a link that drops it is
+   * always the bug. The other parameters each have exactly one owner and are
+   * checked as a set instead: at least one link must carry each, which catches
+   * a parameter that vanished from the page entirely.
+   */
+  const withoutQ = hrefs.filter((h) => !new URLSearchParams(h.split("?")[1]).has("q"));
+  assert(
+    "every view link carries the search, which no control on this page owns",
+    withoutQ.length === 0,
+    `${withoutQ.length} link(s) dropped q:\n    ${withoutQ.slice(0, 6).join("\n    ")}`,
+  );
+
+  for (const name of PARAM_NAMES) {
+    if (name === "q") continue;
+    const carried = hrefs.filter((h) => new URLSearchParams(h.split("?")[1]).has(name));
+    assert(
+      `at least one view link carries ${name} (${MAY_DROP[name]})`,
+      carried.length > 0 || name === "key" || name === "trash",
+      `no link on the page carries ${name}, so it cannot survive any navigation`,
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
  * Draft preview links: the two rulings the payload fixture cannot see.
  *
  * The baseline records METHOD, intent and field NAMES. It can see that a
@@ -1527,7 +1830,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 215.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 249.
  * Never summed. It was 185 against a floor of 170 until the media library's v1
  * redesign added seven states, and the seven were counted by running the gate
  * rather than by adding up what they looked like they would contribute. The
@@ -1540,6 +1843,12 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   before  200 checks, 34 state(s), 111 submission(s)   floor 187
  *   after   215 checks, 37 state(s), 128 submission(s)   floor 202
  *   then    218 checks, 37 state(s), 128 submission(s)   floor 204
+ *   v6      249 checks, 46 state(s), 169 submission(s)   floor 234
+ *
+ * The v6 line is the media page rebuilt to the mockup's structure: nine new
+ * states plus the evaporation section. Submissions moved 128 to 169 because the
+ * page genuinely gained intents (set-tags, trash, restore, empty-trash), which
+ * is the one kind of payload growth this baseline exists to record loudly.
  *
  * The third line is the revocation-sentence assertions. **STATES AND
  * SUBMISSIONS DID NOT MOVE, and that is the correct result rather than a
@@ -1552,7 +1861,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 204;
+const MINIMUM_CHECKS = 234;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -1561,7 +1870,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 218.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 249.`,
   );
 }
 
