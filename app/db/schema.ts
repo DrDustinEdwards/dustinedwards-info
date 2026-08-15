@@ -137,6 +137,35 @@ export const media = sqliteTable(
     focalX: real("focal_x"),
     focalY: real("focal_y"),
 
+    /**
+     * Admin organisational labels, DELIMITER-WRAPPED: `,alpha,beta,` or "".
+     *
+     * A column rather than the posts pattern, and the four-point basis is in
+     * `drizzle/0011_media_trash_tags.sql`. The wrapping is what lets an exact
+     * tag match use LIKE without `art` also matching `chart`. Never written
+     * raw: `serialiseTags()` in `app/lib/media/tags.mjs` owns the form, and it
+     * strips the delimiter and both LIKE wildcards out of every part.
+     */
+    tags: text("tags").notNull().default(""),
+
+    /**
+     * When the LIBRARY stopped showing this asset. NULL means not trashed.
+     *
+     * A LIBRARY STATE, NOT AN OBJECT STATE. R2 and the public URL are untouched
+     * by trashing: keys are content-addressed and may already be cited, so a
+     * trashed asset a post cites keeps rendering for every reader while the
+     * library stops offering it to the author.
+     *
+     * One nullable timestamp rather than a boolean plus a date, because two
+     * columns can disagree and one cannot.
+     *
+     * **Reconciliation is blind to it on purpose.** `check:media` compares rows
+     * against R2 in both directions and the object still exists, so the
+     * reconciliation readers keep seeing trashed rows. Only library views
+     * filter.
+     */
+    trashedAt: text("trashed_at"),
+
     /** LQIP as a base64 data URI. Renders with no script, per the zero-JS rule. */
     placeholder: text("placeholder"),
     uploadedAt: text("uploaded_at"),
@@ -148,6 +177,12 @@ export const media = sqliteTable(
     index("media_storage_idx").on(t.storage),
     index("media_kind_idx").on(t.kind),
     index("media_role_idx").on(t.role),
+    /* Partial in the migration (`WHERE trashed_at IS NOT NULL`), because the
+       only question asked of it is which rows ARE trashed. Drizzle models the
+       index; the partial predicate lives in the SQL, which is the source that
+       runs. Section 4 of check:invariants compares columns, not index
+       predicates, so this asymmetry is invisible to it and is stated here. */
+    index("media_trashed_idx").on(t.trashedAt),
   ],
 );
 

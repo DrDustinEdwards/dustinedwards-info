@@ -10,6 +10,7 @@
     "0007_media.sql": "b898e9d5f4d321b51704200c29d9e837cd07627b905feb923e1c55be515690ad",
     "0008_llms_seed.sql": "275e1e20bf2186e47c7d0ad560aeeb17effd510c6425fecb7b0666972c9674d2",
     "0009_media_index.sql": "8c41767e7a8b03cfa7df43de4a5e87b81b49536bc969d275a7d6bfb009ce6e50",
-    "0010_media_role.sql": "a94f2ccf8f577174a7cd5f5d570dd1359f32b2c1ecebfd2001c357953bb0507d"
+    "0010_media_role.sql": "a94f2ccf8f577174a7cd5f5d570dd1359f32b2c1ecebfd2001c357953bb0507d",
+    "0011_media_trash_tags.sql": "8513941f1b0cf9f7366a506d68758c3a7b2c9720f827fc8adbe1baa66c764a79"
   }
 }
