@@ -74,10 +74,31 @@ export function PreviewLinks({
 }) {
   return (
     <>
+      {/*
+        THE REVOKE CLAUSE IS A MEASURED BOUND, NOT A FIGURE OF SPEECH.
+        MEASURED on production 2026-08-15, on the first real use: a revoked link
+        was still serving the draft on the first check after the revoke landed,
+        and was refusing by the next check about a minute later.
+
+        The mechanism is KV, and it is not a defect to fix here. `APP_KV.get`
+        takes a default 60 second edge read cache, and KV is eventually
+        consistent besides, so a colo that has already read the record keeps
+        serving it until that cache lapses. Sub-minute global revocation is not
+        purchasable on KV at any price, so the mechanism stays and the SENTENCE
+        changes. It said "the moment you revoke it", which was measurably false
+        by up to a minute.
+
+        PUBLICATION IS STILL IMMEDIATE and the asymmetry is worth knowing rather
+        than smoothing away. Publishing revokes the tokens, but that is not what
+        makes it instant: the read path re-asks D1 for `status = 'draft'` on
+        every request, and that read is not KV-cached. So a published post stops
+        previewing at once even if the KV record is still warm somewhere. That
+        is exactly the belt the read path was built with, doing its job.
+      */}
       <p className="muted">
         A preview link shows this draft to anyone who has it, with no sign-in. It
-        stops working seven days after it is created, the moment you revoke it,
-        or the moment this post is published, whichever comes first.
+        stops working seven days after it is created, within a minute of you
+        revoking it, or the moment this post is published, whichever comes first.
       </p>
 
       {created ? (
