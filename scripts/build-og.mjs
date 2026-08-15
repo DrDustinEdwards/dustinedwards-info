@@ -102,6 +102,51 @@ const {
 );
 
 /**
+ * THE WORDMARK, READ OUT OF `app/lib/seo.ts`. The string is not spelled here.
+ *
+ * `SITE.name` is what the site header renders beside this same mark, and a card
+ * that disagrees with the page it opens is two identities. So the card takes
+ * the value from the module that owns it, the way the colours take theirs from
+ * `app.css` and the mark takes its geometry from the ratified fixtures.
+ *
+ * READ AS TEXT, NOT IMPORTED, and the reason is measured rather than assumed.
+ * Node loads `seo.ts` directly: it imports nothing, and type stripping has been
+ * on by default since 22.18 against this package's declared `node >=22.22.0`
+ * floor. TypeScript is the one that refuses. `npx tsc -b` on
+ * `import { SITE } from "../app/lib/seo.ts"` fails twice, TS5097 for the `.ts`
+ * specifier without `allowImportingTsExtensions`, and TS6307 because `seo.ts`
+ * belongs to the app project and not to `tsconfig.node.json`. Fixing that means
+ * turning on a compiler flag for every script and pulling app sources into the
+ * node project's file list, which is a much larger change than one wordmark
+ * justifies. Bundling it through esbuild, as `check:invariants` does to
+ * `schema.ts`, would put a bundler on the card path to read one string.
+ *
+ * So it is parsed, and it fails closed three ways: the declaration renamed, the
+ * block shaped differently, or `name` given anything but a plain string.
+ *
+ * @returns {string}
+ */
+function siteName() {
+  const source = readFileSync(path.join("app", "lib", "seo.ts"), "utf8").replace(
+    /\/\*[\s\S]*?\*\//g,
+    "",
+  );
+  const at = source.indexOf("export const SITE = {");
+  if (at === -1) {
+    throw new Error("build:og: app/lib/seo.ts no longer declares `export const SITE = {`");
+  }
+  const close = source.indexOf("};", at);
+  if (close === -1) throw new Error("build:og: app/lib/seo.ts: unterminated SITE block");
+  const name = source.slice(at, close).match(/\bname:\s*"([^"]+)"/);
+  if (!name) {
+    throw new Error("build:og: SITE.name is not a plain string literal in app/lib/seo.ts");
+  }
+  return name[1];
+}
+
+const SITE_NAME = siteName();
+
+/**
  * THE REAL MARK, READ FROM THE RATIFIED ASSETS. No path data is stated here.
  *
  * The first draft of this band drew a filled round in `--mark-on-chrome` and
@@ -322,21 +367,22 @@ function card(post) {
           },
           ...SITE_MARK.paths.map((p) => el("path", { fill: p.fill, d: p.d })),
         ),
-        // The wordmark is the DOMAIN, not the person, which is what v2 put in
-        // its foot and what the previous draft of this band replaced with the
-        // name. A card in a feed is doing attribution, and the thing a reader
-        // can act on is the address; the person is already attached to every
-        // one of these posts as the author, in the same markup that carries
-        // this image.
+        // The wordmark is the NAME, from `siteName()` above rather than a
+        // string spelled again here.
         //
-        // It does NOT match the site header, which renders SITE.name, "Dustin
-        // Edwards", beside the same mark (app/lib/seo.ts). That divergence is
-        // deliberate and one-directional: a header is read by someone already
-        // on the site, where the domain is in the address bar.
+        // The card briefly said `dustinedwards.info`, on the reasoning that a
+        // feed is doing attribution and the address is the actionable thing.
+        // Researched and reversed: every platform that renders one of these
+        // previews already prints the domain beneath it, from the URL, so the
+        // card was spending its only line of chrome type on the one string the
+        // reader was getting anyway, while the name appeared nowhere in the
+        // preview at all. And this band is the header: same mark, so the same
+        // wordmark beside it. A card that says something different from the
+        // page it opens is two identities, not one.
         el(
           "div",
           { style: { color: ON_CHROME, fontWeight: 700, fontSize: 32 } },
-          "dustinedwards.info",
+          SITE_NAME,
         ),
       ),
       el(
