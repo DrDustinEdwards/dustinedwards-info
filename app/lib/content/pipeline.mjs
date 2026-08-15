@@ -341,15 +341,35 @@ export function setWasmLoader(loader) {
  *
  * 2: the Hill Country tokens, 2026-07-28. Background, body and muted moved off
  * the old cool neutrals onto caliche and mesquite; brand purple is unchanged.
+ *
+ * 3: purple chrome v4, 2026-08-14. The card gains a brand-surface band carrying
+ * the real mark, the wordmark and the tags, matching what the site header
+ * became at v4; the title stays on the canvas per binding rule 7, at 72px, and
+ * it is now the only thing on the canvas. The description was dropped rather
+ * than shortened, for the reasons recorded in build-og.mjs. The colours are now
+ * RESOLVED from app.css rather than restated there, so this number is the only
+ * thing standing between a retuned token and a fleet of immutable cards still
+ * serving the old one.
+ *
+ * ONE INPUT LEFT THE CARD AND ANOTHER IS ON IT WITHOUT BEING KEYED, and neither
+ * is fixed here because changing what the key hashes is a ruling, not a tidy-up.
+ * The description is still hashed below and no longer appears on the card, so
+ * editing one now writes a new object identical to the old. The tags DO appear
+ * on the card and are not hashed, so retagging a post changes what the card
+ * should say and leaves the immutable object nobody will re-request. The second
+ * one is a defect; it predates this template and survives it.
  */
-const OG_TEMPLATE_VERSION = 2;
+const OG_TEMPLATE_VERSION = 3;
 
 /**
  * The R2 key for a post's generated social image.
  *
- * Deterministic from the content that appears on the card, so the key changes
- * exactly when the card would look different and never otherwise. That is what
- * makes generation idempotent and lets the object be served immutable.
+ * Deterministic from the post, which is what makes generation idempotent and
+ * lets the object be served immutable. It was written to be deterministic from
+ * the content that APPEARS on the card, so that the key changed exactly when
+ * the card would look different and never otherwise; read the v3 note above
+ * before repeating that claim, because the inputs and the card have drifted
+ * apart in both directions and the fix is a ruling rather than an edit.
  *
  * FNV-1a rather than a crypto hash: pure JS, identical in Node and in a Worker,
  * no imports, and this is a cache-busting key rather than a security boundary.
