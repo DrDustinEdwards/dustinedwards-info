@@ -1312,6 +1312,38 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 
 const [PREVIEW_A, PREVIEW_B] = PREVIEW_TOKENS;
 
+/*
+ * THE REVOCATION SENTENCE, gated because it carries a MEASURED BOUND.
+ *
+ * The payload fixture records METHOD, intent and field names, so it cannot see
+ * copy at all. This sentence is not decoration: it tells the author how long a
+ * revoked link keeps working, and the number in it was measured on production
+ * 2026-08-15 rather than chosen. A ruled behaviour with no instrument drifts,
+ * and the specific drift to fear here is somebody tightening the prose back to
+ * "the moment you revoke it" because it reads better.
+ *
+ * BOTH DIRECTIONS. The positive alone passes on a page that says both things;
+ * the negative alone passes on a page that says neither. The forbidden phrase
+ * is the exact wording that shipped and was measurably false.
+ */
+structural(
+  "the revoke clause states the measured within-a-minute bound",
+  "edit, draft with no preview links",
+  (h) => h.includes("within a minute of you revoking it"),
+);
+structural(
+  "the revoke clause no longer claims revocation is instant",
+  "edit, draft with no preview links",
+  (h) => !h.includes("the moment you revoke it"),
+);
+/* Publication IS immediate, because the read path re-asks D1, so that clause
+   must survive the correction rather than being softened alongside it. */
+structural(
+  "the publication clause still claims the moment, because that one is true",
+  "edit, draft with no preview links",
+  (h) => h.includes("the moment this post is published"),
+);
+
 structural(
   "a draft with no links still offers to create one",
   "edit, draft with no preview links",
@@ -1507,13 +1539,20 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *
  *   before  200 checks, 34 state(s), 111 submission(s)   floor 187
  *   after   215 checks, 37 state(s), 128 submission(s)   floor 202
+ *   then    218 checks, 37 state(s), 128 submission(s)   floor 204
+ *
+ * The third line is the revocation-sentence assertions. **STATES AND
+ * SUBMISSIONS DID NOT MOVE, and that is the correct result rather than a
+ * suspicious one:** the payload baseline records METHOD, intent and field
+ * names, and a corrected sentence changes none of them. A copy change that DID
+ * move the submission count would mean the copy was carried in a form field.
  *
  * Floored at 202, roughly 94 percent: the count moves in steps of a few per
  * state, and the three origin-requests states once added 34 at once, so the
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 202;
+const MINIMUM_CHECKS = 204;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -1522,7 +1561,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 215.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 218.`,
   );
 }
 
