@@ -5151,7 +5151,11 @@ a:hover {
 
 .media-grid[data-view="list"] .media-card {
   display: grid;
-  grid-template-columns: 3rem 1fr auto;
+  /* FOUR tracks since the selection checkbox landed: check, thumb, name, copy.
+     It was three, and the extra child pushed the name into the `auto` track and
+     right-aligned it against the copy control with a page of empty space
+     between. Caught by looking; no gate renders this with a stylesheet. */
+  grid-template-columns: auto 3rem 1fr auto;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.625rem;
@@ -5168,6 +5172,23 @@ a:hover {
 .media-grid[data-view="list"] .media-thumb-box {
   aspect-ratio: 1;
   width: 3rem;
+}
+
+/* THE NAME WRAPS, IT DOES NOT CLIP.
+ *
+ * The list shows the whole filename because it has the room, and at narrow
+ * widths it stops having the room. Clipping with an ellipsis would cut the END,
+ * which is the half that distinguishes and the entire reason `middleTruncate`
+ * exists for the grid. Wrapping keeps both halves visible and spends vertical
+ * space, which a list has and a tile does not.
+ *
+ * `min-width: 0` on the track is what makes it possible at all: a grid item's
+ * default min-width is auto, so the name refuses to shrink below its content
+ * and pushes the row wider than its container instead. Measured at 390px of
+ * content width: the row overflowed by 8px before this. */
+.media-grid[data-view="list"] .media-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* DRAFT PREVIEW LINKS, in the drawer.
