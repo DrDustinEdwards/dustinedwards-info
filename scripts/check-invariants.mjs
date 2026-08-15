@@ -1387,6 +1387,16 @@ const VISIBILITY_EXEMPT = {
   listAllPostsForAdmin:
     "the admin post list exists to show drafts and future-dated rows; that IS its " +
     "job. Reached only from /admin routes, which are behind Better Auth.",
+  getDraftPostForPreview:
+    "draft preview links (feature G). The ONLY exempt reader reachable without a " +
+    "session, so the reason has to be stronger than the one above. It does not " +
+    "DROP the predicate, it inverts and narrows it: `status = 'draft'`, which is " +
+    "the strict complement of publiclyVisible()'s status half, so a published, " +
+    "scheduled or archived row returns null. The slug it is asked about comes out " +
+    "of a KV record named by a 32-byte token, never off the URL, so a caller " +
+    "cannot ask about a post they were not given a link to. /preview/:token " +
+    "declares private, no-store with no public branch and returns the post " +
+    "route's byte-identical 404 on every failure.",
 };
 
 /**

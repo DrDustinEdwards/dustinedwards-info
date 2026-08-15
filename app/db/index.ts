@@ -374,11 +374,71 @@ export async function getBlogPost(env: Env, slug: string) {
 }
 
 /**
+ * ONE DRAFT, by slug, for a preview link. Returns null for anything else.
+ *
+ * **This is the second read in this file that does not compose
+ * `publiclyVisible()`, and it is the only one reachable without a session.** It
+ * is therefore worth being exact about what it can and cannot hand back.
+ *
+ * `status = 'draft'` is not the absence of the visibility predicate, it is its
+ * COMPLEMENT, narrowed. `publiclyVisible()` is `status = 'published' AND
+ * (publish_at IS NULL OR publish_at <= now)`, so a scheduled post satisfies the
+ * status half and fails the date half. This reads neither half loosely: a post
+ * that is published, or scheduled, or archived, or absent, produces null. There
+ * is no argument to this function that returns a row a reader could have got
+ * some other way, and no argument that returns a row the author has not
+ * explicitly held back.
+ *
+ * WHY IT IS SAFE TO CALL FROM A PUBLIC ROUTE. Reaching it requires a 32-byte
+ * random token that the author minted for this exact slug, that has not been
+ * revoked, and that has not expired. The token is checked BEFORE the slug is
+ * known, because the slug comes out of the token's record rather than out of the
+ * URL: there is no way to ask this function about a post you were not given a
+ * link to.
+ *
+ * The route is `/preview/:token`, its headers carry no public branch, and its
+ * 404 is byte-identical to the post route's, so a token that resolves to
+ * nothing tells a caller nothing.
+ *
+ * Named in `VISIBILITY_EXEMPT` in `scripts/check-invariants.mjs` with this
+ * reason, which is the only way a reader gets to skip the predicate.
+ */
+export async function getDraftPostForPreview(env: Env, slug: string) {
+  const db = getDb(env);
+  const rows = await db
+    .select()
+    .from(posts)
+    .where(and(eq(posts.slug, slug), eq(posts.kind, "post"), eq(posts.status, "draft")))
+    .limit(1);
+
+  const post = rows[0];
+  if (!post) return null;
+
+  const tagMap = await tagsForPosts(db, [post.id]);
+
+  // NO NEIGHBOURS, and that is deliberate rather than an omission. `getBlogPost`
+  // computes previous and next under the visibility gate; a draft has no place
+  // in that sequence, and a preview offering links onward would invite a
+  // reviewer to navigate out of the one page the link was for. Both are null,
+  // which is a shape the component already renders every day: it is what the
+  // oldest and newest posts carry.
+  return {
+    ...post,
+    tags: tagMap.get(post.id) ?? [],
+    previous: null as { slug: string; title: string } | null,
+    next: null as { slug: string; title: string } | null,
+  };
+}
+
+/**
  * Every blog post for the admin list, drafts and future-dated included.
  *
- * The one read in this file that deliberately does NOT apply publiclyVisible().
- * It is reachable only behind the admin middleware, and an editor that could not
- * see drafts would be useless.
+ * One of two reads in this file that deliberately do NOT apply
+ * publiclyVisible(). It is reachable only behind the admin middleware, and an
+ * editor that could not see drafts would be useless. The other is
+ * `getDraftPostForPreview`, which is reachable without a session and pays for
+ * that with a much narrower predicate; the sentence here used to say "the one"
+ * and went false the moment that landed.
  */
 export async function listAllPostsForAdmin(env: Env) {
   return getDb(env)
