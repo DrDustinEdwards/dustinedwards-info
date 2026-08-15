@@ -590,6 +590,138 @@ if (existsSync(PREVIEW_PATH)) {
   );
 }
 
+/* ------------------------------- the analytics capture (feature F.1 + G) --- */
+
+/*
+ * **NOTHING GATED THIS UNTIL 2026-08-15, and the belief that something did is
+ * itself worth recording.**
+ *
+ * F.1 proved the capture's exclusions by querying the LIVE DATASET after a
+ * deploy: admin 0, assets 0, query strings 0, referer paths 0. That is a strong
+ * measurement and it is not a gate. It ran once, against one deploy, and
+ * nothing has re-asserted it since; deleting the `/admin` skip would have left
+ * every gate in this repo green while the operator's own page views started
+ * flowing into the panel that exists to exclude them.
+ *
+ * This section lives in `check:headers` because this is the only gate that
+ * parses `workers/app.ts`, and the capture is in `workers/app.ts`. The name is
+ * a poor fit and the alternative was worse: a new gate would have to be tiered
+ * in `check-all.mjs` and would duplicate this file's whole parsing setup to
+ * read the same source. The OBSERVATION BOUNDARY at the top of this file
+ * already says what it can and cannot see, and it covers this identically.
+ *
+ * SOURCE-LEVEL ONLY. It sees what the capture DECLARES. Whether a row reaches
+ * the dataset is `ae-probe`'s question and needs a deploy plus a read token.
+ */
+
+console.log("\n  the analytics capture");
+
+const capture = code.match(/function\s+recordTraffic[\s\S]*?\n\}/);
+ok(
+  "workers/app.ts declares a recordTraffic capture",
+  Boolean(capture),
+  "not found after stripping comments. Without it nothing below examines anything.",
+);
+
+const captureBody = capture ? capture[0] : "";
+
+ok(
+  "the capture body is not empty",
+  captureBody.length > 200,
+  `parsed ${captureBody.length} characters, so every assertion below would be vacuous`,
+);
+
+/*
+ * THE THREE EXCLUSIONS F.1 RULED, each named individually rather than left to
+ * one "does it look right" check, because a failure that says WHICH exclusion
+ * went is worth more than one that says the function changed.
+ */
+ok(
+  "the capture excludes the /admin plane",
+  /pathname\s*===\s*"\/admin"/.test(captureBody) &&
+    /pathname\.startsWith\(\s*"\/admin\/"\s*\)/.test(captureBody),
+  "THE OPERATOR IS NOT AN AUDIENCE. Both forms are needed: the bare /admin and " +
+    "the subtree. A panel that counts its own author is worse than no panel.",
+);
+ok(
+  "the capture records HTML responses only",
+  /text\/html/.test(captureBody),
+  "assets, feeds, markdown twins, /media and the API routes are traffic and none " +
+    "of them is a page view",
+);
+ok(
+  "the capture records 200s only",
+  /status\s*!==\s*200/.test(captureBody),
+  "errors and redirects are not reads",
+);
+ok(
+  "the referer is reduced to a hostname before it is stored",
+  /\.hostname/.test(captureBody),
+  "a full referer URL carries paths and query strings from other people's sites",
+);
+
+/*
+ * **THE REDACTION, AND IT IS AN ACCESS CONTROL RATHER THAN A DATA CHOICE.**
+ *
+ * `/preview/<token>` carries a 43-character capability in its PATH. Writing
+ * `url.pathname` verbatim stored it in Analytics Engine and rendered it in full
+ * on /admin/origin-requests, defeating the drawer's six-character truncation.
+ * Measured on production 2026-08-15 on the first real use of the feature.
+ *
+ * BOTH SLOTS, asserted separately. The path is written twice: into `blobs` and
+ * into `indexes`, which is the sampling key. Redacting one and not the other
+ * leaves the token in the dataset, and the `indexes` slot is the easier of the
+ * two to forget because it is three lines further down behind a comment.
+ *
+ * Asserted as the ABSENCE of the raw expression as well as the presence of the
+ * redacted one. Presence alone passes on a capture that computes `path` and
+ * then writes `url.pathname` anyway.
+ */
+ok(
+  "the capture imports the analyticsPath redaction",
+  /\banalyticsPath\b/.test(code.split("function recordTraffic")[0] ?? ""),
+  "the helper must be imported at module scope; a local copy would drift from " +
+    "the unit-tested rule in app/lib/analytics-path.mjs",
+);
+ok(
+  "the capture computes a redacted path",
+  /=\s*analyticsPath\(\s*url\.pathname\s*\)/.test(captureBody),
+  "the preview token must be stripped before anything is written",
+);
+
+const writeCall = captureBody.match(/writeDataPoint\(\{[\s\S]*?\}\)/);
+ok(
+  "the capture calls writeDataPoint",
+  Boolean(writeCall),
+  "not found, so the two slot assertions below would be vacuous",
+);
+
+const writeBody = writeCall ? writeCall[0] : "";
+ok(
+  "blobs carries the redacted path, not url.pathname",
+  /blobs:\s*\[\s*path\b/.test(writeBody) && !/blobs:\s*\[\s*url\.pathname/.test(writeBody),
+  `blobs is ${JSON.stringify(writeBody.match(/blobs:\s*\[[^\]]*\]/)?.[0] ?? "(unparsed)")}. ` +
+    `A preview URL carries a capability in its path.`,
+);
+ok(
+  "indexes carries the redacted path, not url.pathname",
+  /indexes:\s*\[\s*path\s*\]/.test(writeBody) && !/indexes:\s*\[\s*url\.pathname/.test(writeBody),
+  `indexes is ${JSON.stringify(writeBody.match(/indexes:\s*\[[^\]]*\]/)?.[0] ?? "(unparsed)")}. ` +
+    `This is the SAMPLING KEY, and it is the slot most easily left behind.`,
+);
+ok(
+  "url.pathname is not written into the data point at all",
+  writeBody.length > 0 && !/url\.pathname/.test(writeBody),
+  "the raw pathname must not appear inside writeDataPoint in any slot. Computing " +
+    "a redacted path and then writing the raw one is the shape this catches.",
+);
+
+console.log(
+  `     ${[...captureBody.matchAll(/\breturn;/g)].length} exclusion(s), path redacted in ${
+    [...writeBody.matchAll(/\bpath\b/g)].length
+  } slot(s)`,
+);
+
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
@@ -600,17 +732,20 @@ console.log(
  * green, and a green run with nothing in it looks exactly like a green run that
  * checked everything.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 82.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 94.
  * Never summed. It was 66 against a floor of 62 until the draft preview route's
- * section landed, and the 16 that section adds were counted by RUNNING the gate
- * rather than by adding up what they looked like they would contribute.
+ * section landed, then 82 against 77, and the analytics capture section took it
+ * to 94. Every one of those steps was counted by RUNNING the gate rather than
+ * by adding up what the new block looked like it would contribute, which is the
+ * discipline verify-live's floor proved the value of on this same feature: the
+ * arithmetic there was one low against the measurement.
  *
- * Floored at 77, roughly 6 percent: the count tracks the header sets declared
- * in workers/app.ts and in the preview route plus their application sites, so
- * it moves when a header is added, which should be a deliberate diff rather
- * than drift.
+ * Floored at 88, roughly 6 percent: the count tracks the header sets declared
+ * in workers/app.ts and in the preview route, their application sites, and now
+ * the capture's exclusions, so it moves when one is added, which should be a
+ * deliberate diff rather than drift.
  */
-const MINIMUM_CHECKS = 77;
+const MINIMUM_CHECKS = 88;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
