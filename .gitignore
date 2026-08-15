@@ -38,5 +38,13 @@
 worker-configuration.d.ts
 wrangler.jsonc
 
+# Social card review renders, written by `build:og -- --out og-samples`.
+# Untracked because the PNG bytes are not deterministic and are deliberately
+# kept out of the gated artifact, and IGNORED rather than merely untracked
+# because `npm run ship` refuses on any dirty tree, untracked files included:
+# without this line every ship window needs the directory moved out of the repo
+# by hand, which is what happened on 2026-08-14.
+/og-samples/
+
 !.dev.vars.example
 !.env.example
