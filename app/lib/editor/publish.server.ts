@@ -47,6 +47,7 @@ import {
   GitHubError,
 } from "./github.server";
 import { decide, PolicyError, type Actor } from "./publish-policy.mjs";
+import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 
 export { GitHubError, PolicyError };
 export type { Actor };
@@ -312,6 +313,36 @@ export async function savePost(
   // Only now, with the commit landed, does the database change.
   await syncPostToD1(env, record);
 
+  /*
+   * DRAFT PREVIEW LINKS DIE WHEN THE POST STOPS BEING A DRAFT. Feature G.
+   *
+   * `decision.published` is the incoming file's `draft: false`, so this fires on
+   * a first publication, on a republication, AND on an ordinary save of a post
+   * that is already live. The last of those revokes nothing because there is
+   * nothing to revoke, and asking costs one KV list.
+   *
+   * AFTER the D1 sync, deliberately. The read path decides by asking the
+   * database for `status = 'draft'`, so revoking BEFORE the row moved would open
+   * a window in which the token is already gone and the row still says draft.
+   * This order has no window in the direction that matters.
+   *
+   * IT DOES NOT THROW, and that is safe rather than convenient. A surviving
+   * token is INERT: `/preview/:token` re-asks the database on every request
+   * rather than trusting that this ran, so a failed revocation costs the author
+   * a stale row in the drawer's list, not a leak. That is the same asymmetry the
+   * Ask sync below is built on, and it is why the read path re-checks at all.
+   */
+  let previewLinksRevoked: number | null = null;
+  if (decision.published) {
+    try {
+      previewLinksRevoked = await revokeAllPreviewLinks(env, options.slug);
+    } catch (error) {
+      // null already means "not attempted", so a failure needs its own value.
+      console.error("preview link revocation failed after publish", error);
+      previewLinksRevoked = -1;
+    }
+  }
+
   // The AI index is downstream of D1 and MUST NOT be able to fail a save.
   // A post that is committed, rendered and searchable but briefly missing from
   // Ask is a degraded enhancement; a save that fails after the commit landed
@@ -323,6 +354,14 @@ export async function savePost(
     commitSha,
     record,
     askSync,
+    /**
+     * How many preview links this save revoked. `null` when the post did not
+     * move out of draft and nothing was attempted, `-1` when the attempt threw.
+     * Three states rather than a count, because "0 revoked" and "never asked"
+     * and "asked and failed" are different facts and a bare number tells them
+     * apart only by accident.
+     */
+    previewLinksRevoked,
     firstPublished: decision.firstPublished,
     published: decision.published,
     // What the save DID, for the editor to report. Named by the policy module
