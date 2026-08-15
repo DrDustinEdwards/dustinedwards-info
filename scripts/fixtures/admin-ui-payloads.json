@@ -59,16 +59,19 @@
   ],
   "media, unused object": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, cited object": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, reference scan failed": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
@@ -79,17 +82,20 @@
   ],
   "media, document row": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, static row": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, search with results": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?q=picture | (none) | ",
     "POST /admin/media?q=picture | intent=rebuild | "
   ],
   "media, search with nothing found": [
@@ -100,6 +106,7 @@
   "media, detail open": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
@@ -117,36 +124,43 @@
   "media, detail for a missing key": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=gone.png | (none) | ",
     "POST /admin/media?key=gone.png | intent=rebuild | "
   ],
   "media, upload accepted": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?uploaded=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?uploaded=1234abcd5678ef90.png | intent=rebuild | "
   ],
   "media, upload refused": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?upload-error=too-large | (none) | ",
     "POST /admin/media?upload-error=too-large | intent=rebuild | "
   ],
   "media, list view": [
     "GET  | (none) | q,role",
+    "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, grid view": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?view=grid | (none) | ",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, grouped and sorted": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?group=folder&amp;sort=size&amp;dir=asc&amp;size=l | (none) | ",
     "POST /admin/media?group=folder&amp;sort=size&amp;dir=asc&amp;size=l | intent=rebuild | "
   ],
   "media, trash view": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?trash=1 | (none) | ",
     "POST /admin/media?trash=1 | intent=empty-trash | ",
     "POST /admin/media?trash=1 | intent=rebuild | "
   ],
@@ -158,6 +172,7 @@
   "media, tag filter active": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?tag=roster | (none) | ",
     "POST /admin/media?tag=roster | intent=rebuild | "
   ],
   "media, tag filter with no results": [
@@ -168,6 +183,7 @@
   "media, detail with a twin": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
@@ -177,12 +193,39 @@
   "media, detail for a trashed row": [
     "GET  | (none) | q,role",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=empty-trash | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=restore | key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-alt | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-tags | key,tags"
+  ],
+  "media, grouped by folder": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?group=folder | (none) | ",
+    "POST /admin/media?group=folder | intent=rebuild | "
+  ],
+  "media, grouped by month": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?group=month | (none) | ",
+    "POST /admin/media?group=month | intent=rebuild | "
+  ],
+  "media, two selected": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?role=all | intent=bulk-add-tag | key,tag",
+    "POST /admin/media?role=all | intent=bulk-remove-tag | key,tag",
+    "POST /admin/media?role=all | intent=rebuild | "
+  ],
+  "media, filtered and selected": [
+    "GET  | (none) | q,role",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?tag=roster | intent=bulk-add-tag | key,tag",
+    "POST /admin/media?tag=roster | intent=bulk-remove-tag | key,tag",
+    "POST /admin/media?tag=roster | intent=rebuild | "
   ],
   "new post, fresh": [
     "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
