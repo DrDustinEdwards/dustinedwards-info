@@ -1824,7 +1824,7 @@ export default function AdminMedia({
           </label>
         ) : null}
 
-        /*
+        {/*
           GROUPED PAGE-LOCAL. Each page buckets the rows IT HAS; a group never
           spans a page boundary. That is a ruling, not a shortcut, and the
           grounds are on `groupRows`: fetching the whole library to group
@@ -1833,7 +1833,13 @@ export default function AdminMedia({
 
           The heading therefore counts THIS PAGE and says so, because a count
           that looked like a library total would be the over-promise again.
-        */
+
+          BRACED. Without the braces this is JSX CHILDREN TEXT, not a comment,
+          and the whole paragraph renders on the page. It did, and it was
+          caught by looking rather than by any gate: check:admin-ui reads
+          submissions and structure, and a comment leaking into the document
+          changes neither.
+        */}
         {groupRows(objects, view.group).map((bucket) => (
         <section key={bucket.label || "ungrouped"} className="media-group">
           {bucket.label ? (
