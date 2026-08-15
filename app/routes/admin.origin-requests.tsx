@@ -3,7 +3,7 @@ import { EmptyState, Panel } from "~/components/admin/panel";
 // component renders on the client too, where a .server import is stubbed out
 // and every value from it arrives undefined: that shipped "Top NaN of 23
 // paths" until check:admin-ui rendered the route and read the markup back.
-import { CACHE_SENTENCE_PENDING_PROBE, TOP_N } from "~/lib/admin/origin-requests.mjs";
+import { CACHE_SENTENCE, TOP_N } from "~/lib/admin/origin-requests.mjs";
 import { fetchTraffic } from "~/lib/admin/traffic.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin.origin-requests";
@@ -82,8 +82,10 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
                   `figure is the sum of the sampling interval rather than a row count. ` +
                   (sampling
                     ? "Sampling is active in this window, so these are estimates. "
-                    : "Sampling is not active at this volume, so these are exact. ") +
-                  CACHE_SENTENCE_PENDING_PROBE}
+                    : "Sampling is not active at this volume, so these are exact counts; " +
+                      "under heavier load they become estimates and this panel looks " +
+                      "exactly the same. ") +
+                  CACHE_SENTENCE}
               </caption>
               <thead>
                 <tr>
