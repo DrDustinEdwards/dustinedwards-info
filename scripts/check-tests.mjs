@@ -44,16 +44,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-11: 6 files,
- * 43 tests.
+ * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-15 by RUNNING
+ * it: 8 files, 57 tests. Never summed.
+ *
+ * They were 6 and 43, measured 2026-08-11, and they drifted: `upload-contract`
+ * and `traffic-source` landed without anyone moving the numbers, so 57 tests
+ * were being floored at a number 14 below them. A floor that far under the
+ * measurement cannot see a file leave.
  *
  * Tight rather than slack, deliberately. These move UP when someone adds a
  * test, which is a one-line edit in the same commit, and the whole point is to
- * notice the set SHRINKING. A slack floor here would reproduce the defect it
- * exists to close.
+ * notice the set SHRINKING. 53 is 94 percent of 57, which is the margin the
+ * other gates use and is narrow enough that losing the smallest test file, 4
+ * tests, still trips it.
  */
-const MINIMUM_FILES = 6;
-const MINIMUM_TESTS = 43;
+const MINIMUM_FILES = 8;
+const MINIMUM_TESTS = 53;
 
 let checks = 0;
 let failures = 0;
