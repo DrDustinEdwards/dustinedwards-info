@@ -125,6 +125,26 @@
   --text-accent-lifted: #8a4a1b;
   --tint-accent: #f3e5dc;
 
+  /* DESTRUCTIVE: a REVERSIBLE removal. Not the danger family, and the
+     distinction is one the media library actually makes rather than a shade.
+
+     `--*-danger` marks the irreversible act: Delete post, Delete permanently.
+     It is the loudest thing in the palette and it should stay rare, or it
+     stops meaning anything.
+
+     This marks the REVERSIBLE act: Trash, Empty trash, "keep this and trash
+     the other one". The asset is still served, the row is still there, and
+     Restore puts it back. Giving those the danger red would teach an author
+     that trash is as final as delete, which is exactly the misreading ruling 3
+     of the v6 arc exists to prevent.
+
+     Ratified from the v6 mockup, where it is the only red-ish value and every
+     pair it forms clears its floor: 7.62 on --bg, 6.87 on --surface, 6.34 on
+     --surface-popover. That is a peer of --text-danger (7.46 on --bg), not a
+     weaker sibling, so it carries the same weight while reading differently. */
+  --text-destructive: #8a3324;
+  --tint-destructive: #f5e8e4;
+
   /* Search highlight. Text on it is --text. */
   --mark-bg: #f3e3b8;
 
@@ -214,6 +234,12 @@
     --text-accent-lifted: #e0996a;
     --tint-accent: #362317;
 
+    /* The rust, lifted for dark. Chosen to MIRROR the light ratios rather than
+       to look similar: 7.59 / 6.80 / 5.94 against 7.62 / 6.87 / 6.34, so the
+       control reads with the same weight in both modes. */
+    --text-destructive: #e5947f;
+    --tint-destructive: #3a201b;
+
     --mark-bg: #4a3d1e;
 
     --chart-cadet: #5887b5;
@@ -294,6 +320,12 @@
   --text-accent: #ce7f44;
   --text-accent-lifted: #e0996a;
   --tint-accent: #362317;
+
+  /* Mirrors the media-query dark block above. Both are required: one serves the
+     explicit toggle, the other the OS preference, and check:contrast measures
+     all three declarations. */
+  --text-destructive: #e5947f;
+  --tint-destructive: #3a201b;
 
   --mark-bg: #4a3d1e;
 
