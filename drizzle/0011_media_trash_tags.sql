@@ -1,0 +1,92 @@
+-- Trash and tags for the media library. Media v6 arc, session 1.
+--
+-- TWO COLUMNS, ONE MIGRATION, because they land together in one page rebuild and
+-- splitting them would put two unapplied migrations in front of one feature.
+--
+-- ============================================================================
+-- `trashed_at`: TRASH IS A LIBRARY STATE, NOT AN OBJECT STATE.
+-- ============================================================================
+--
+-- This is the ruling the column exists to encode, and it is the opposite of
+-- what "trash" usually means, so it is written here rather than inferred.
+--
+-- Trashing an asset DOES NOT TOUCH R2 AND DOES NOT TOUCH THE PUBLIC URL. Keys
+-- are content-addressed, they may already be cited by a published post, and a
+-- reader fetching `/media/<key>` is served by the object rather than by this
+-- table. So trashing changes what the LIBRARY SHOWS and nothing else. A trashed
+-- asset that a post cites keeps rendering for every reader, correctly, and the
+-- library stops offering it to the author. Those are different questions and
+-- this column answers only the second.
+--
+-- The consequence worth stating: TRASH IS NOT A SAFETY MECHANISM FOR READERS.
+-- It cannot be, because it deliberately does not affect what is served. The
+-- thing that protects a published page is the refcount guard on the permanent
+-- delete, which is unchanged by this migration.
+--
+-- NULLABLE, and NULL means "not trashed". A boolean plus a timestamp would be
+-- two columns that can disagree; one nullable timestamp cannot. It also gives
+-- the Trash view its ordering and an eventual retention sweep its predicate for
+-- free, neither of which a boolean would.
+--
+-- NO DATA MIGRATION. Every existing row is not trashed, which is exactly what
+-- NULL already says, so there is nothing to backfill.
+--
+-- RECONCILIATION IS DELIBERATELY BLIND TO THIS COLUMN. `check:media` compares
+-- rows against R2 and `public/` in both directions, and the object still exists
+-- while the row is trashed, so the reconciliation readers must keep seeing
+-- trashed rows or the gate would report an object with no row and backfill it
+-- straight back into the library. Only the LIBRARY views filter.
+ALTER TABLE media ADD COLUMN trashed_at TEXT;
+
+-- Partial, because the only question ever asked of it is "which rows are
+-- trashed", and that is a handful of rows against seventy. A full index would
+-- be mostly NULLs and would serve the negative case, which every ordinary view
+-- asks and which is answered better by the table scan the planner already does.
+CREATE INDEX IF NOT EXISTS media_trashed_idx ON media (trashed_at) WHERE trashed_at IS NOT NULL;
+
+-- ============================================================================
+-- `tags`: A COLUMN, NOT THE POSTS PATTERN.
+-- ============================================================================
+--
+-- Posts carry `tags` plus `post_tags`, two tables and a join. Media does not.
+-- The basis, recorded so a later session can overturn it on evidence:
+--
+--   1. THERE IS NO PUBLIC TAXONOMY. A post tag has a slug, a display name, a
+--      count and an archive page at `/blog?tag=`. A media tag is an admin
+--      organisational label with no page and no reader. The join table exists
+--      to make a tag a first-class ADDRESSABLE thing; nothing addresses these.
+--   2. SEARCH DECIDES IT. The library filter is one SQL OR chain over
+--      original_name, key, alt and caption, and tags must join that chain. As a
+--      column that is one more LIKE. As a join table it is a correlated
+--      subquery inside an OR, on the one query that also paginates, which is
+--      where this page has already been caught taking its total and its page
+--      from different predicates.
+--   3. THE ROW IS DERIVED AND REBUILT. `alt` and `caption` are the authored
+--      columns "recoverable from nothing", which is what makes a rebuild a
+--      merge rather than a truncate. Tags are the same kind of fact and are
+--      preserved by the same mechanism. A second table would need its own
+--      answer to what a rebuild does to it.
+--   4. SCALE. Seventy rows. Dedup, rename and counts are the join table's
+--      payoff and none is worth a table here.
+--
+-- What WOULD overturn this: a public media tag page, because that needs a
+-- canonical row per tag and this shape has none.
+--
+-- STORED DELIMITER-WRAPPED: `,alpha,beta,` rather than `alpha,beta`, and the
+-- empty list as the EMPTY STRING rather than as a bare comma. The wrapping is
+-- what makes an exact-tag match possible with LIKE at all:
+--
+--     exact  `art`   LIKE '%,art,%'   matches ,art,   and not ,chart,
+--     free   `art`   LIKE '%art%'     matches both, correct for a search box
+--
+-- Without it, only the second match is available and an exact filter for `art`
+-- silently includes `chart`. A comma may not appear inside a tag and neither
+-- may `%` or `_`, because a stored wildcard turns a value into a pattern. All
+-- of that is enforced by `app/lib/media/tags.mjs`, which is pure and unit
+-- tested; this repo has already been bitten by an unruled join delimiter in
+-- this very table, on `media_refs`.
+--
+-- NOT NULL DEFAULT '' so every existing row is immediately valid and no reader
+-- has to handle NULL. `coalesce` in the search clause would otherwise be a
+-- fifth thing to remember.
+ALTER TABLE media ADD COLUMN tags TEXT NOT NULL DEFAULT '';
