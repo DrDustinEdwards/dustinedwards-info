@@ -27,8 +27,11 @@ import {
   SORTS,
   VIEWS,
   displaySummary,
+  folderOf,
+  groupRows,
   hrefWith,
   isModified,
+  monthOf,
   readView,
 } from "../app/lib/media/view.mjs";
 
@@ -189,4 +192,74 @@ test("house style: no wide dash reaches the summary separator", () => {
       assert.ok(!displaySummary(state).includes(dash));
     }
   }
+});
+
+/* ---------------------------------------------------------------- grouping */
+
+test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches nothing", () => {
+  // The contract, asserted as a property rather than described: every input row
+  // appears exactly once across the groups, and no row appears that was not in
+  // the input. A grouper that reached for more data would break the first half;
+  // one that dropped a row would break the second.
+  const rows = [
+    { key: "/publications/a.pdf", uploaded: null },
+    { key: "aaaa000000000000.png", uploaded: "2026-03-02T10:00:00.000Z" },
+    { key: "/publications/b.pdf", uploaded: null },
+  ];
+  const out = groupRows(rows, "folder");
+  const flat = out.flatMap((g) => g.rows);
+  assert.equal(flat.length, rows.length);
+  assert.deepEqual(new Set(flat.map((r) => r.key)), new Set(rows.map((r) => r.key)));
+});
+
+test("flat is one group with no heading, so the component renders no header", () => {
+  const rows = [{ key: "a.png", uploaded: null }];
+  assert.deepEqual(groupRows(rows, "flat"), [{ label: "", rows }]);
+  // An unrecognised value falls back to flat rather than producing no groups,
+  // which would render an empty page for a hand-edited URL.
+  assert.deepEqual(groupRows(rows, "galaxy"), [{ label: "", rows }]);
+});
+
+test("SORT ORDER SURVIVES GROUPING, within a group and between groups", () => {
+  // The rows arrive sorted by SQL. Grouping must not resort them, or the
+  // reader's chosen sort silently stops applying the moment they group.
+  const rows = [
+    { key: "/b/3.png", uploaded: null },
+    { key: "/a/2.png", uploaded: null },
+    { key: "/b/1.png", uploaded: null },
+  ];
+  const out = groupRows(rows, "folder");
+  assert.deepEqual(out.map((g) => g.label), ["/b", "/a"], "groups appear in first-row order");
+  assert.deepEqual(out[0].rows.map((r) => r.key), ["/b/3.png", "/b/1.png"], "order within a group");
+});
+
+test("folders: a static path has one, a content-addressed key says so", () => {
+  assert.equal(folderOf("/publications/a-paper.pdf"), "/publications");
+  assert.equal(folderOf("/logo.svg"), "Uploads", "a root-level path has no meaningful folder");
+  assert.equal(folderOf("1234abcd5678ef90.png"), "Uploads");
+  assert.equal(folderOf("/phage-hunters/2019/x.jpg"), "/phage-hunters/2019");
+});
+
+test("months are UTC, so two readers never disagree about the heading", () => {
+  // 23:30 UTC on the last day of a month is the case that moves under a local
+  // timezone, and two people describing the same library must not disagree.
+  assert.equal(monthOf("2026-03-31T23:30:00.000Z"), "March 2026");
+  assert.equal(monthOf("2026-01-01T00:00:00.000Z"), "January 2026");
+});
+
+test("a row with no upload date gets its own bucket, not the nearest month", () => {
+  assert.equal(monthOf(null), "No upload date");
+  assert.equal(monthOf(undefined), "No upload date");
+  assert.equal(monthOf("not a date"), "No upload date");
+  const out = groupRows(
+    [{ key: "a.png", uploaded: null }, { key: "b.png", uploaded: "2026-03-02T00:00:00.000Z" }],
+    "month",
+  );
+  assert.equal(out.length, 2);
+  assert.ok(out.some((g) => g.label === "No upload date"));
+});
+
+test("an empty page groups to nothing rather than to one empty heading", () => {
+  assert.deepEqual(groupRows([], "folder"), []);
+  assert.deepEqual(groupRows([], "month"), []);
 });

@@ -174,6 +174,94 @@ export function isModified(state) {
 }
 
 /**
+ * Buckets the rows of ONE PAGE under headings.
+ *
+ * **PAGE-LOCAL, ALWAYS, AND THAT IS A RULING RATHER THAN A LIMITATION.** A
+ * group never spans a page boundary. Do not "fix" this.
+ *
+ * The two alternatives were both considered and both are worse:
+ *
+ *   FETCH THE WHOLE LIBRARY and group globally. Fine at 70 rows and wrong at
+ *   700, and the page paginates precisely so it does not have to hold the
+ *   corpus. Adopting it would trade a correct page for a page that is fast
+ *   until it silently is not.
+ *
+ *   LET A GROUP SPAN PAGES. Page one ends inside "March" and page two opens
+ *   with a second "March" heading. That reads as a bug to everybody who sees
+ *   it, and it is indistinguishable from one.
+ *
+ * So the contract is small and honest: these are the rows on this page,
+ * arranged. The heading counts describe the page, not the library, and the
+ * component says so beside them.
+ *
+ * ORDER IS PRESERVED. The rows arrive already sorted by SQL, and grouping must
+ * not resort them: it walks them once and appends to whichever bucket each one
+ * belongs to, so within a group the reader's chosen sort still holds and the
+ * groups themselves appear in the order their first row did.
+ *
+ * @template {{ key: string, uploaded?: string | null }} T
+ * @param {T[]} rows already sorted
+ * @param {string} group one of GROUPS
+ * @returns {Array<{ label: string, rows: T[] }>} one entry when group is flat
+ */
+export function groupRows(rows, group) {
+  if (group !== "folder" && group !== "month") return [{ label: "", rows }];
+
+  /** @type {Map<string, T[]>} */
+  const buckets = new Map();
+  for (const row of rows) {
+    const label = group === "folder" ? folderOf(row.key) : monthOf(row.uploaded);
+    const bucket = buckets.get(label);
+    if (bucket) bucket.push(row);
+    else buckets.set(label, [row]);
+  }
+  return [...buckets.entries()].map(([label, bucketRows]) => ({ label, rows: bucketRows }));
+}
+
+/**
+ * The folder a key lives in.
+ *
+ * A static asset's key IS a path, so it has a real directory. An uploaded key
+ * is content-addressed and has none, which is a fact about the key rather than
+ * a missing value, so it gets a name that says so instead of an empty heading.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+export function folderOf(key) {
+  const at = key.lastIndexOf("/");
+  if (at <= 0) return "Uploads";
+  return key.slice(0, at);
+}
+
+/**
+ * The month something was uploaded, as a heading.
+ *
+ * UTC, so the heading does not move with the reader's timezone: a file uploaded
+ * at 23:30 UTC must not appear under a different month for somebody in Sydney
+ * than for somebody in Denver, because then two people describing the library
+ * disagree.
+ *
+ * A static asset has no upload event and NULL is the honest value, so it gets
+ * its own bucket rather than being folded into whatever month is nearest.
+ *
+ * @param {string | null | undefined} uploaded ISO 8601
+ * @returns {string}
+ */
+export function monthOf(uploaded) {
+  if (!uploaded) return "No upload date";
+  const at = Date.parse(uploaded);
+  if (Number.isNaN(at)) return "No upload date";
+  const d = new Date(at);
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
  * The one-line summary the Display control shows when closed.
  *
  * The mockup's own reasoning, kept: group, sort and tile size are SETTINGS
