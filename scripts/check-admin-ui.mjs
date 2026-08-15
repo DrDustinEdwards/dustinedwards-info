@@ -204,6 +204,35 @@ const fields = (over = {}) => ({
 
 const HEAD = "abc1234def5678";
 
+/*
+ * TWO PREVIEW LINKS, hand-authored. Feature G.
+ *
+ * The tokens are 43 base64url characters, which is what `mintToken` produces,
+ * and they are WRITTEN OUT rather than minted here. Rule 10's fixture
+ * independence: a gate whose expected values come from the code under test is a
+ * mirror, and a randomly minted token would also make the payload baseline
+ * non-deterministic.
+ *
+ * Their first six characters DIFFER, deliberately. The list prints six and the
+ * whole point of printing six is telling two links apart; a pair sharing a
+ * prefix would pass a truncation assertion while proving nothing about it.
+ */
+const TOKEN_TAIL = "0123456789012345678901234567890123456";
+const PREVIEW_TOKENS = [`AbCdEf${TOKEN_TAIL}`, `ZyXwVu${TOKEN_TAIL}`];
+
+/** The origin the loader builds absolute preview URLs against. */
+const PREVIEW_ORIGIN = "https://example.test";
+
+const PREVIEW_LINKS = PREVIEW_TOKENS.map((token, i) => ({
+  token,
+  short: token.slice(0, 6),
+  url: `${PREVIEW_ORIGIN}/preview/${token}`,
+  createdAt: `2026-08-1${i + 2}T10:00:00.000Z`,
+  expiresAt: `2026-08-${19 + i}T10:00:00.000Z`,
+  createdBy: "dustin@example.test",
+  note: "",
+}));
+
 /** Everything the edit route's loader hands its component. */
 const editLoader = (over = {}) => ({
   fields: fields(),
@@ -230,6 +259,17 @@ const editLoader = (over = {}) => ({
   ],
   everPublished: false,
   state: "draft",
+  /*
+   * Live preview links. EMPTY by default, which is the state a draft is in
+   * until somebody makes one, and the state a published post is permanently in
+   * because the publish path revoked them.
+   *
+   * The loader supplies this and the component decides the section from
+   * `state`, not from the array's length: an empty array on a draft still
+   * renders the section, with the create control and a sentence saying there
+   * are none. Only a non-draft loses the section entirely.
+   */
+  previewLinks: [],
   ...over,
 });
 
@@ -727,6 +767,59 @@ const STATES = [
     loaderData: editLoader({ headSha: "" }),
   },
 
+  /* ---- draft preview links (feature G) ------------------------------------
+   *
+   * THREE states, and they are three because the feature has exactly three
+   * shapes and each renders a different control set:
+   *
+   *   a draft with NO links      the create control and a sentence
+   *   a draft WITH links         the create control plus one revoke per link
+   *   a published post           NEITHER control, which is the ruling
+   *
+   * The middle one carries TWO links rather than one. One link would render a
+   * revoke control and prove the tuple exists; two also proves the tuple is the
+   * SAME for both, which is the property the per-link form design was chosen
+   * for. If the token ever leaked into the submission set, two links would
+   * produce two tuples and this state would fail while a one-link state passed.
+   *
+   * The published state duplicates "edit, published" in loader shape and is kept
+   * separate on purpose: that state exists to prove the publish transitions, and
+   * folding a second claim into it would mean a failure there could be either.
+   * ---------------------------------------------------------------------- */
+  {
+    name: "edit, draft with no preview links",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({ previewLinks: [] }),
+  },
+  {
+    name: "edit, draft with two preview links",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({ previewLinks: PREVIEW_LINKS }),
+  },
+  {
+    name: "edit, published offers no preview links",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ draft: false, firstPublished: "2026-06-01" }),
+      everPublished: true,
+      state: "published",
+      // The loader would hand back [] for a published post regardless. Handing
+      // it the TWO links instead is the stronger fixture: it proves the section
+      // is gated on state and not on emptiness, so a future edit that started
+      // rendering the list whenever it is non-empty fails here.
+      previewLinks: PREVIEW_LINKS,
+    }),
+  },
+
   // ---- origin requests ----------------------------------------------------
   //
   // Three states, and the ERROR one is not hypothetical: the read token is
@@ -1204,6 +1297,84 @@ structural("new posts get a slug input", "new post, fresh", (h) => h.includes('i
 structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
 
 /* -------------------------------------------------------------------------
+ * Draft preview links: the two rulings the payload fixture cannot see.
+ *
+ * The baseline records METHOD, intent and field NAMES. It can see that a
+ * published post issues neither request, because that is a payload difference.
+ * It CANNOT see that the list prints six characters rather than the whole
+ * token, because that is text, and a token is a capability: printing it is the
+ * difference between a list you can screen-share and one you cannot.
+ *
+ * Every absence assertion below is PAIRED with the positive that proves its
+ * needle can match, on a state where the thing is present. An absence check
+ * whose needle is a typo passes on every page ever rendered.
+ * ---------------------------------------------------------------------- */
+
+const [PREVIEW_A, PREVIEW_B] = PREVIEW_TOKENS;
+
+structural(
+  "a draft with no links still offers to create one",
+  "edit, draft with no preview links",
+  (h) => h.includes("Create a preview link"),
+);
+structural(
+  "a draft with no links says so, rather than rendering an empty list",
+  "edit, draft with no preview links",
+  (h) => h.includes("No preview links for this draft."),
+);
+structural(
+  "a draft with no links renders no revoke control",
+  "edit, draft with no preview links",
+  (h) => !h.includes("Revoke"),
+);
+
+structural(
+  "the list prints the six-character truncation of each token",
+  "edit, draft with two preview links",
+  (h) => h.includes(`${PREVIEW_A.slice(0, 6)}...`) && h.includes(`${PREVIEW_B.slice(0, 6)}...`),
+);
+structural(
+  "the list offers a revoke control once the links exist",
+  "edit, draft with two preview links",
+  (h) => h.includes("Revoke"),
+);
+/*
+ * THE CAPABILITY IS NOT PRINTED. The absolute URL appears in the markup only
+ * on the response that minted it, which is an actionData state and not this
+ * one; here it lives in the copy control's handler and nowhere a reader or a
+ * screen recording can see it.
+ *
+ * The token itself IS in the markup, once, as the revoke form's hidden field.
+ * That is unavoidable: revoking has to name what it revokes. So this asserts
+ * the absence of the URL, which is the thing somebody could paste, rather than
+ * the absence of the token, which would be a false claim.
+ */
+structural(
+  "the absolute preview URL is never printed in the list",
+  "edit, draft with two preview links",
+  (h) => !h.includes(`${PREVIEW_ORIGIN}/preview/`),
+);
+// The needle validated against the state where it MUST match, so the absence
+// above is known to be capable of failing.
+assert(
+  "preview URL needle: the fixture's own URL contains the pattern",
+  PREVIEW_LINKS[0].url.includes(`${PREVIEW_ORIGIN}/preview/`),
+  "the absence assertion above would be vacuous",
+);
+
+/* The ruling, both halves. */
+structural(
+  "a published post offers NEITHER preview-link intent",
+  "edit, published offers no preview links",
+  (h) => !h.includes("Create a preview link") && !h.includes("Revoke"),
+);
+structural(
+  "a published post renders no preview-link section at all",
+  "edit, published offers no preview links",
+  (h) => !h.includes("Preview links") && !h.includes(PREVIEW_A),
+);
+
+/* -------------------------------------------------------------------------
  * The origin-requests panel: the copy law, asserted on the RENDERED PAGE.
  *
  * ASSERTED AGAINST MARKUP, NOT SOURCE, and the distinction is the whole point.
@@ -1222,6 +1393,7 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 
 const FORBIDDEN_COPY = ["visits", "visitors", "traffic", "page views"];
 const TRAFFIC_STATES = ["origin requests, loaded", "origin requests, empty", "origin requests, error"];
+
 
 for (const word of FORBIDDEN_COPY) {
   const pattern = new RegExp(`\\b${word}\\b`, "i");
@@ -1323,23 +1495,34 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * the total is the only witness to a structural block that stopped running over
  * states that all still render.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 200.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 215.
  * Never summed. It was 185 against a floor of 170 until the media library's v1
  * redesign added seven states, and the seven were counted by running the gate
  * rather than by adding up what they looked like they would contribute. The
- * cache sentence inverting from one assertion into two took it to 200; the
- * floor stays at 187, which is where 94 percent of that lands.
+ * cache sentence inverting from one assertion into two took it to 200, floored
+ * at 187. Feature G's three preview-link states and their structural
+ * assertions took it to 215, measured the same way.
  *
- * Floored at 187, roughly 94 percent: the count moves in steps of a few per
+ * BEFORE and AFTER, both run rather than reasoned:
+ *
+ *   before  200 checks, 34 state(s), 111 submission(s)   floor 187
+ *   after   215 checks, 37 state(s), 128 submission(s)   floor 202
+ *
+ * Floored at 202, roughly 94 percent: the count moves in steps of a few per
  * state, and the three origin-requests states once added 34 at once, so the
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 187;
+const MINIMUM_CHECKS = 202;
 if (checks < MINIMUM_CHECKS) {
   fail(
+    // The measurement is stated in the message as well as in the comment above,
+    // and it went STALE here first: plant (d) raised the floor to 202, fired
+    // correctly, and printed "Measured: 200" while the docblock said 215. A
+    // number a failure prints is an instrument, and this one was reporting the
+    // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 200.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 215.`,
   );
 }
 

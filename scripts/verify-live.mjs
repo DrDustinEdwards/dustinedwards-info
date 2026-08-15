@@ -1461,6 +1461,100 @@ const ASK_PROBE_LIMIT = 3;
   }
 }
 
+/* --- 15. The draft preview route, on the wire --------------------------- *
+ *
+ * ONE HALF OF THIS FEATURE IS WIRE-ASSERTABLE AND THE OTHER IS NOT. Stating the
+ * gap is the point of this comment, and papering it would be worse than leaving
+ * it open.
+ *
+ * WHAT IS ASSERTED: a well-formed token that was never minted returns the boring
+ * 404, and that response is `private, no-store`. That covers the failure path,
+ * which is the path every stranger who guesses a URL takes, and it covers the
+ * cache header on the response a shared cache would most cheaply store.
+ *
+ * WHAT IS NOT, AND CANNOT BE FROM HERE: the SUCCESS path. Reaching a 200 needs a
+ * live token, and minting one means either a signed-in admin session, which this
+ * harness does not have and must not carry, or writing directly into production
+ * KV, which would be this harness creating a capability against the live site to
+ * check that capabilities work. Neither is acceptable, so the 200 is verified on
+ * a local dev server against local KV and local D1, and NOT here.
+ *
+ * The consequence, stated plainly: **`verify-live` cannot see the preview
+ * route's own `headers()` at all.** The 404 below is thrown from the loader, so
+ * React Router renders the error boundary and the route's headers export never
+ * runs; the `private, no-store` this asserts is the Worker's fail-closed default
+ * from `workers/app.ts`, which is a different mechanism reaching the same value.
+ * MEASURED on a dev server 2026-08-15, not assumed. `check:headers` reads the
+ * route's declaration in source and this reads the wire, and on this route
+ * neither one is observing what the other does.
+ */
+
+{
+  console.log("\n  draft preview links");
+
+  // A well-formed token from the right alphabet and the right length, and one
+  // nobody minted. It has to be well formed: a malformed one is refused on
+  // shape before anything is looked up, so it would prove only that the regex
+  // runs, not that an unknown token is refused.
+  const UNMINTED = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
+  check(
+    "the probe token is the shape a real one has",
+    UNMINTED.length === 43 && /^[A-Za-z0-9_-]+$/.test(UNMINTED),
+    `${UNMINTED.length} characters. A malformed token is refused on shape, which ` +
+      `would make the assertions below prove something weaker than they claim.`,
+  );
+
+  const preview = await get(`/preview/${UNMINTED}`);
+  check(
+    "an unminted preview token is a 404",
+    preview.status === 404,
+    `status ${preview.status}`,
+  );
+  check(
+    "the preview 404 is the post route's boring one",
+    // Delimited by the element boundaries the error boundary renders it inside,
+    // so a match cannot come from prose elsewhere on the document.
+    preview.text.includes(">The requested page could not be found.<"),
+    "a distinguishable 404 tells a caller whether a token ever existed",
+  );
+  check(
+    "the preview 404 is private, no-store",
+    (preview.res.headers.get("cache-control") ?? "").includes("no-store"),
+    `cache-control is ${JSON.stringify(preview.res.headers.get("cache-control"))}. ` +
+      `Workers Cache does not key on cookies, so a cacheable response on this ` +
+      `path is a draft in a shared cache entry.`,
+  );
+  check(
+    "the preview 404 is not publicly cacheable",
+    !/public/i.test(preview.res.headers.get("cache-control") ?? ""),
+    "a copy-paste of blog.$slug.tsx's headers() is the exact edit this catches",
+  );
+
+  // robots.txt, which is hygiene rather than the control, asserted because it
+  // was ratified and because a line nobody checks is a line that gets dropped.
+  const robots = await get("/robots.txt");
+  /*
+   * SCOPED-BY the newlines around the directive. robots.txt has no elements to
+   * delimit with, so the `>needle<` form has nothing to bite on; a whole line
+   * bounded by newlines is the equivalent delimitation in a line-oriented
+   * document, and it is what stops `Disallow: /preview` matching inside a
+   * longer path such as `Disallow: /preview-of-something`.
+   */
+  check(
+    "robots.txt disallows /preview",
+    // SCOPED-BY the newlines bounding one whole directive line.
+    robots.text.includes("\nDisallow: /preview\n"),
+    "advisory, not the control. The header is the control.",
+  );
+  check(
+    "robots.txt still disallows /admin",
+    // SCOPED-BY the newlines bounding one whole directive line.
+    robots.text.includes("\nDisallow: /admin\n"),
+    "the paired assertion: a robots.txt that lost both would satisfy neither, and " +
+      "an added line is the likeliest way to break the existing one",
+  );
+}
+
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
@@ -1507,6 +1601,20 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
  * being tightened on two identical readings: the downward variance it exists to
  * absorb is the RATE-LIMITED run, and neither measurement was one. A third
  * reading taken while Ask is throttled is what would justify moving it.
+ *
+ * **DELIBERATELY NOT MOVED for the draft preview section (2026-08-15), and the
+ * refusal is the rule rather than an oversight.** Section 15 adds SEVEN static
+ * assertion sites, none of them inside a loop, so the next clean run should read
+ * 213. That is arithmetic, not a measurement, and this file's own history is the
+ * argument against committing one: the first floor here was 90, derived by
+ * counting call sites without running anything, against a real count of 206.
+ *
+ * Raising this to 187 now would encode a number nobody has observed, on the one
+ * instrument that needs a deploy to observe anything. The session that builds a
+ * feature and the session that ships it are not the same session here. So the
+ * floor stays at 180, which still catches a collapse, and MOVING IT IS THE NEXT
+ * SHIP WINDOW'S JOB: run it, read the count, set the floor to 94 percent of what
+ * was read, in that order.
  */
 const MINIMUM_CHECKS = 180;
 const executed = passed + failures.length;

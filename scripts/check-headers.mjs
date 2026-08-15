@@ -452,6 +452,144 @@ ok(
   "one source in workers/app.ts, several readers; a second generator would drift",
 );
 
+/* ------------------------------- the draft preview route (feature G) ------ */
+
+/*
+ * **THE ONE ROUTE WHOSE HEADERS ARE THE ACCESS CONTROL.**
+ *
+ * `/preview/:token` serves an UNPUBLISHED post to a caller with no session.
+ * Workers Cache is in front of this Worker and its key does not include
+ * cookies; the cookieless downgrade in `workers/app.ts` is what keeps the
+ * public post route safe, and a preview reviewer is exactly the request shape
+ * that downgrade never fires for. So the route's own `Cache-Control` is not a
+ * performance choice, it is the thing standing between a draft and a shared
+ * cache entry.
+ *
+ * The failure this is written for is SPECIFIC and it is a copy-paste:
+ * `blog.$slug.tsx` sits next to it in the same directory, exports a `headers()`
+ * of the same shape, and sets `PUBLIC_CACHE_CONTROL`. Someone reaching for the
+ * neighbouring file's version of this function would produce a route that
+ * renders perfectly, passes every other gate, and publishes drafts to anyone
+ * who asks for the path.
+ *
+ * Two independent sources argue, as above: RATIFIED_PREVIEW is transcribed from
+ * the ruling and the actual set is parsed out of the route. The parse accepts an
+ * IDENTIFIER as a value as well as a string literal, deliberately: had it only
+ * matched quoted values, swapping in `PUBLIC_CACHE_CONTROL` would have read as
+ * "Cache-Control is not declared" rather than as the wrong value, and the
+ * failure would name the wrong problem on the one edit most likely to happen.
+ */
+
+console.log("\n  the draft preview route");
+
+const PREVIEW_PATH = join(root, "app", "routes", "preview.$token.tsx");
+
+/** Transcribed from the feature G ratification. NOT read from the route. */
+const RATIFIED_PREVIEW = {
+  "Cache-Control": "private, no-store",
+  "X-Robots-Tag": "noindex, nofollow",
+  Vary: "Cookie",
+};
+
+ok(
+  "app/routes/preview.$token.tsx exists",
+  existsSync(PREVIEW_PATH),
+  "the route that serves drafts is gone, or was renamed. Nothing below examines anything.",
+);
+
+if (existsSync(PREVIEW_PATH)) {
+  const previewSource = readFileSync(PREVIEW_PATH, "utf8");
+  const preview = stripComments(previewSource);
+
+  const previewBlock = preview.match(/const\s+PREVIEW_HEADERS\s*(?::[^=]*)?=\s*\{([\s\S]*?)\}\s*;/);
+  ok(
+    "the route declares a PREVIEW_HEADERS constant",
+    Boolean(previewBlock),
+    "not found after stripping comments. Without it every value assertion below is vacuous.",
+  );
+
+  /**
+   * Name to raw value text. The value may be a string literal OR a bare
+   * identifier, and both are captured so a swapped-in constant is reported as a
+   * WRONG VALUE rather than as an absent header.
+   *
+   * @type {Record<string, string>}
+   */
+  const previewDeclared = {};
+  if (previewBlock) {
+    for (const m of previewBlock[1].matchAll(
+      /(?:"([A-Za-z-]+)"|([A-Za-z][A-Za-z-]*))\s*:\s*(?:"([^"]*)"|([A-Za-z_$][\w$]*))/g,
+    )) {
+      previewDeclared[m[1] ?? m[2]] = m[3] !== undefined ? m[3] : `<identifier ${m[4]}>`;
+    }
+  }
+
+  ok(
+    "PREVIEW_HEADERS is not empty",
+    Object.keys(previewDeclared).length > 0,
+    "parsed to zero entries, so every value assertion would pass vacuously",
+  );
+  ok(
+    `PREVIEW_HEADERS declares all ${Object.keys(RATIFIED_PREVIEW).length} ratified headers`,
+    Object.keys(previewDeclared).length === Object.keys(RATIFIED_PREVIEW).length,
+    `declares ${Object.keys(previewDeclared).length}: ${Object.keys(previewDeclared).join(", ") || "(none)"}`,
+  );
+
+  for (const [name, expected] of Object.entries(RATIFIED_PREVIEW)) {
+    ok(
+      `preview route declares ${name}`,
+      name in previewDeclared,
+      "the feature G ratification includes it and the route does not",
+    );
+    if (name in previewDeclared) {
+      ok(
+        `preview route's ${name} carries its ratified value`,
+        previewDeclared[name] === expected,
+        `expected ${JSON.stringify(expected)}, source has ${JSON.stringify(previewDeclared[name])}`,
+      );
+    }
+  }
+
+  // The other direction: a header on this route that nobody ratified.
+  for (const name of Object.keys(previewDeclared)) {
+    ok(
+      `${name} is a ratified preview header`,
+      name in RATIFIED_PREVIEW,
+      "the route declares it and the ratification does not. Add it here in the same commit, or remove it.",
+    );
+  }
+
+  /*
+   * NO PUBLIC BRANCH, named rather than left to the value comparison.
+   *
+   * The value check above catches `"Cache-Control": PUBLIC_CACHE_CONTROL`. This
+   * catches the subtler shape: the constant staying correct while a conditional
+   * somewhere else in the file hands back the public value on some path. The
+   * rule is that the identifier does not appear in this file AT ALL.
+   */
+  ok(
+    "the preview route never references PUBLIC_CACHE_CONTROL",
+    !/\bPUBLIC_CACHE_CONTROL\b/.test(preview),
+    "blog.$slug.tsx is the neighbouring file and exports a headers() of the same " +
+      "shape using it. On this route it would put an unpublished post into a " +
+      "shared cache entry keyed by path alone.",
+  );
+  ok(
+    "the preview route's headers() returns the declared constant",
+    /export\s+function\s+headers\s*\([^)]*\)\s*\{[^}]*PREVIEW_HEADERS/.test(preview),
+    "headers() must hand back PREVIEW_HEADERS, or the constant is documentation",
+  );
+  ok(
+    "the preview route also declares noindex in the markup",
+    /"?robots"?\s*[,:]/.test(preview) && preview.includes("noindex, nofollow"),
+    "the header is the control and the meta tag is the belt; both were ratified",
+  );
+
+  console.log(
+    `     ${Object.keys(previewDeclared).length} header(s) declared on /preview/:token`,
+  );
+}
+
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
@@ -462,12 +600,17 @@ console.log(
  * green, and a green run with nothing in it looks exactly like a green run that
  * checked everything.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 66.
- * Never summed. Floored at 62, roughly 6 percent: the count tracks the header
- * set declared in workers/app.ts and its application sites, so it moves when a
- * header is added, which should be a deliberate diff rather than drift.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 82.
+ * Never summed. It was 66 against a floor of 62 until the draft preview route's
+ * section landed, and the 16 that section adds were counted by RUNNING the gate
+ * rather than by adding up what they looked like they would contribute.
+ *
+ * Floored at 77, roughly 6 percent: the count tracks the header sets declared
+ * in workers/app.ts and in the preview route plus their application sites, so
+ * it moves when a header is added, which should be a deliberate diff rather
+ * than drift.
  */
-const MINIMUM_CHECKS = 62;
+const MINIMUM_CHECKS = 77;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

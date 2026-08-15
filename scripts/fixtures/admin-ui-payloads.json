@@ -140,11 +140,13 @@
   "edit, draft that never published": [
     "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft that published before": [
     "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, published": [
@@ -160,17 +162,38 @@
   "edit, with a cover set": [
     "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, save refused": [
     "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, saving unavailable": [
     "POST /admin/posts/a-post/edit | intent=delete | headSha=",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
+  "edit, draft with no preview links": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
+  "edit, draft with two preview links": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
+    "POST /admin/posts/a-post/edit | intent=revoke-preview-link | token",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
+  "edit, published offers no preview links": [
+    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "origin requests, loaded": [],
   "origin requests, empty": [],
