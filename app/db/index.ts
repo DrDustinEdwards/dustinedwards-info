@@ -6,6 +6,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -16,6 +17,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import { mediaRefKey } from "../lib/media-ref-key.mjs";
+import { parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
@@ -527,7 +529,26 @@ function matchesQuery(q: string) {
   return sql`(lower(coalesce(${media.originalName}, '')) LIKE ${needle}
     OR lower(${media.key}) LIKE ${needle}
     OR lower(${media.alt}) LIKE ${needle}
-    OR lower(${media.caption}) LIKE ${needle})`;
+    OR lower(${media.caption}) LIKE ${needle}
+    OR lower(${media.tags}) LIKE ${needle})`;
+}
+
+/**
+ * NOT IN THE TRASH. The predicate every ordinary library view composes.
+ *
+ * Written once with two readers, exactly as `uncited()` is and for the same
+ * reason: the listing and the counts have to mean the same thing, or the chips
+ * say seventy and the grid shows sixty-eight.
+ *
+ * **Deliberately NOT applied by the reconciliation readers.** `check:media`
+ * compares rows against R2 and `public/` in both directions and the object is
+ * untouched by trashing, so `listMediaRecords`, `mediaRecordsFor`,
+ * `existingMediaKeys` and `mediaRecord` must all keep seeing trashed rows. If
+ * they filtered, the gate would see an object with no row and back it straight
+ * into the library, which is trash undone by a gate on the next reconcile.
+ */
+export function notTrashed() {
+  return isNull(media.trashedAt);
 }
 
 /**
@@ -559,6 +580,14 @@ export async function listMediaPage(
     role?: string;
     unusedOnly?: boolean;
     q?: string;
+    /**
+     * THE TRASH VIEW. The one caller that wants trashed rows and only those.
+     *
+     * A separate flag rather than a `role` value, because trash is orthogonal
+     * to role: a trashed brand asset is still brand, and folding it into the
+     * role chips would make the counts lie about what roles exist.
+     */
+    trashed?: boolean;
   } = {},
 ) {
   const limit = options.limit ?? 24;
@@ -581,6 +610,15 @@ export async function listMediaPage(
   /* The library's own filters, as SQL rather than as a post-filter, so a page is
    * a full page and the pagination means what it says. */
   const clauses = [];
+  /*
+   * TRASH FIRST, and it is not optional in either direction.
+   *
+   * Every ordinary view excludes trashed rows and the Trash view includes only
+   * those, so this is a branch rather than a conditional push: there is no
+   * caller that legitimately wants both, and leaving the unfiltered case
+   * reachable is how a trashed asset reappears in the picker.
+   */
+  clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
   if (options.insertableOnly) clauses.push(insertable);
   if (options.role) clauses.push(eq(media.role, options.role));
   // NOT EXISTS against media_refs, which is what the PIPELINE recorded. The
@@ -614,8 +652,15 @@ export async function listMediaPage(
     // than a second column: the ordering is a property of this VIEW, not of the
     // asset, and storing a sort key would be storing a UI decision in the index.
     .orderBy(
-      sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
-      desc(media.uploadedAt),
+      // MOST RECENTLY TRASHED FIRST in the Trash view, because the thing an
+      // author wants back is almost always the thing they just threw away. The
+      // role rank below is a browsing aid and answers no question here.
+      ...(options.trashed
+        ? [desc(media.trashedAt)]
+        : [
+            sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
+            desc(media.uploadedAt),
+          ]),
       asc(media.key),
     )
     .limit(limit + 1)
@@ -633,6 +678,10 @@ export async function mediaCounts(env: Env) {
   const rows = await getDb(env)
     .select({ storage: media.storage, kind: media.kind, n: count() })
     .from(media)
+    // Trashed rows are out, so this number and the grid agree. It is the
+    // rebuild's report as well as the library's chips, and the rebuild's
+    // question is "what does the library hold", not "how many rows exist".
+    .where(notTrashed())
     .groupBy(media.storage, media.kind);
   return rows;
 }
@@ -650,6 +699,10 @@ export async function mediaRoleCounts(env: Env) {
   return getDb(env)
     .select({ role: media.role, n: count() })
     .from(media)
+    // Trashed rows are out of every role count, which is what makes the chip
+    // numbers add up to what the grid shows. A trashed brand asset is still
+    // brand, so without this the Brand chip would count six and list five.
+    .where(notTrashed())
     .groupBy(media.role);
 }
 
@@ -663,8 +716,112 @@ export async function mediaRoleCounts(env: Env) {
  * page it leads to can never disagree.
  */
 export async function mediaUnusedCount(env: Env) {
-  const [row] = await getDb(env).select({ n: count() }).from(media).where(uncited());
+  const [row] = await getDb(env)
+    .select({ n: count() })
+    .from(media)
+    // Both predicates, in the same order the filter composes them, so the chip
+    // and the page it leads to still cannot disagree now that there are two.
+    .where(and(notTrashed(), uncited()));
   return Number(row?.n ?? 0);
+}
+
+/**
+ * How many rows are in the trash. The Trash lens needs a number of its own.
+ *
+ * Deliberately NOT `mediaRoleCounts` with a `trashed` pseudo-role. Trash is
+ * orthogonal to role, and inventing a role for it would make the role counts
+ * describe something that is not a role.
+ */
+export async function mediaTrashedCount(env: Env) {
+  const [row] = await getDb(env)
+    .select({ n: count() })
+    .from(media)
+    .where(isNotNull(media.trashedAt));
+  return Number(row?.n ?? 0);
+}
+
+/**
+ * Moves an asset into the library's trash. R2 IS NOT TOUCHED.
+ *
+ * The object, its public URL and every published page citing it are unaffected;
+ * this changes what the library shows and nothing else. Grounds are on the
+ * column in `drizzle/0011_media_trash_tags.sql`.
+ *
+ * IDEMPOTENT BY GUARD rather than by overwrite: trashing an already-trashed row
+ * leaves the ORIGINAL timestamp alone, because "when did this go in the trash"
+ * must not be reset by a second click on a stale page. Returns whether a row
+ * moved, so a bulk caller can report per key.
+ */
+export async function trashMediaRecord(env: Env, key: string) {
+  const result = await getDb(env)
+    .update(media)
+    .set({ trashedAt: sql`(datetime('now'))`, updatedAt: sql`(datetime('now'))` })
+    .where(and(eq(media.key, key), notTrashed()))
+    .run();
+  return { moved: (result.meta?.changes ?? 0) > 0 };
+}
+
+/** Puts it back. Clears the flag; nothing else about the row changes. */
+export async function restoreMediaRecord(env: Env, key: string) {
+  const result = await getDb(env)
+    .update(media)
+    .set({ trashedAt: null, updatedAt: sql`(datetime('now'))` })
+    .where(and(eq(media.key, key), isNotNull(media.trashedAt)))
+    .run();
+  return { restored: (result.meta?.changes ?? 0) > 0 };
+}
+
+/** Every key currently in the trash, for Empty trash to iterate. */
+export async function trashedMediaKeys(env: Env) {
+  const rows = await getDb(env)
+    .select({ key: media.key })
+    .from(media)
+    .where(isNotNull(media.trashedAt))
+    .orderBy(desc(media.trashedAt), asc(media.key));
+  return rows.map((r) => r.key);
+}
+
+/**
+ * Writes an asset's tags. The ONLY writer, so the storage form has one author.
+ *
+ * The caller hands over whatever the human typed; `serialiseTags` decides what
+ * is stored. Passing a raw string through to the column here would be the
+ * defect the delimiter rule exists to prevent, so this function does not accept
+ * a pre-serialised value and there is no variant that does.
+ */
+export async function setMediaTags(env: Env, key: string, input: string[] | string) {
+  await getDb(env)
+    .update(media)
+    .set({ tags: serialiseTags(input), updatedAt: sql`(datetime('now'))` })
+    .where(eq(media.key, key))
+    .run();
+  return parseTags(serialiseTags(input));
+}
+
+/**
+ * Every tag in use, with a count, for the filter chips.
+ *
+ * Assembled in JS rather than in SQL, and the reason is the storage form: the
+ * tags live in one delimited column, so counting them in SQLite would mean a
+ * recursive CTE splitting a string. At seventy rows reading the column and
+ * counting here is clearer and costs nothing measurable. Trashed rows are
+ * excluded, so a tag that only trashed assets carry does not offer a chip that
+ * leads to an empty grid.
+ */
+export async function mediaTagCounts(env: Env) {
+  const rows = await getDb(env)
+    .select({ tags: media.tags })
+    .from(media)
+    .where(notTrashed());
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    for (const tag of parseTags(row.tags)) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, n]) => ({ tag, n }))
+    .sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag));
 }
 
 /**
