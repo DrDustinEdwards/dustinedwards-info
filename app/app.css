@@ -8748,7 +8748,14 @@ a:hover {
   align-items: center;
   gap: 0.625rem;
   width: max-content;
-  max-width: min(56rem, calc(100vw - 2rem));
+  /* 64rem, not 56. The mockup's bar carries four controls; this one also
+     carries the ruled bulk TAGGING controls, which the mockup has no equivalent
+     for. At 56rem the extra width tipped it into wrapping: measured 896x161, a
+     four-row block floating over the grid. At 64rem the same content is 991x85.
+     It still takes two rows at a 1280 viewport, and that is the honest residue
+     of having more controls than the drawing did, not a layout to fix by
+     hiding one. */
+  max-width: min(64rem, calc(100vw - 2rem));
   padding: 0.625rem 0.75rem 0.625rem 1.125rem;
   background: var(--scrim);
   color: var(--on-scrim);
