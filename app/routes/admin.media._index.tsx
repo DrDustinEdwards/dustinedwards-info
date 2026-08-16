@@ -26,7 +26,18 @@ import {
   upsertMediaRecord,
 } from "~/db";
 import { getEnv } from "~/lib/context";
+import templateRefs from "../../content/generated/template-refs.json";
 import { storageOf } from "~/lib/media/classify.mjs";
+import {
+  copySnippetsFor,
+  flagsFor,
+  lensNoteFor,
+  suggestedAlt,
+  suggestedTags,
+  tileFlagFor,
+  usageDescriptor,
+  usageStateOf,
+} from "~/lib/media/usage.mjs";
 import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
 import {
   displaySummary,
@@ -151,6 +162,23 @@ const LENS_CHIPS = [
   { id: "large", label: "Over 1 MB", hint: "Files over one mebibyte." },
 ] as const;
 
+/**
+ * WHICH ASSETS THE REPOSITORY ITSELF PLACES, read once at module scope.
+ *
+ * A BUILD-TIME IMPORT, exactly as the colophon reads `stack.json`, and the only
+ * shape that works: the scan needs a filesystem, and neither a request nor
+ * `rebuildMediaIndex` has one, because both run inside the Worker. The artifact
+ * ships in the bundle, so the answer cannot drift from the code that produced
+ * it, and `check:content` byte-compares it against a fresh scan in the offline
+ * tier and again inside ship.
+ *
+ * `TEMPLATE_REF_KEYS` is the SQL side of it: the `unattached` lens has to
+ * exclude these rows, and it excludes them in the query rather than after the
+ * read so pagination and the chip count stay honest.
+ */
+const TEMPLATE_REFS: Record<string, string[]> = templateRefs.refs;
+const TEMPLATE_REF_KEYS = Object.keys(TEMPLATE_REFS);
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
@@ -199,6 +227,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           tag: view.tag,
           trashed: view.trash,
           lens: view.lens,
+          // The unattached lens means "no post cites it AND no repository code
+          // references it". Applied in SQL, so a page of 24 is 24 genuinely
+          // unattached rows rather than 24 minus however many the roster places.
+          templateKeys: TEMPLATE_REF_KEYS,
         }),
     // THE PICKER FILTER, applied in SQL rather than in the map below, so an
     // excluded row never crosses the wire. An OG card is 1200x630 of branded
@@ -316,6 +348,27 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         hash: /^([0-9a-f]{16,})\./.exec(row.key)?.[1] ?? null,
         /** Rows carrying identical bytes. Exact identity only. */
         twins: (await mediaTwins(env)).get(row.key) ?? [],
+        /** The third state, from the same three pieces of evidence as a tile. */
+        usage: usageStateOf({
+          postRefs: (detailRefs.get(row.key) ?? []).length,
+          citations: (detailResolution.citations.get(row.key) ?? []).length,
+          templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
+        }),
+        /** The source files that place it, repo-relative. */
+        templateRefs: TEMPLATE_REFS[row.key] ?? [],
+        /**
+         * SUGGESTED ALT TEXT, computed here and never applied.
+         *
+         * The loader offers it; a button accepts it. Writing it automatically
+         * would fill the corpus with alt text nobody read, which is worse than
+         * an empty field because an empty field is visibly a defect and a
+         * filename dressed as a description is not.
+         */
+        altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
+        /** Tags the path implies, minus the ones already applied. */
+        tagSuggestions: suggestedTags(row.key).filter(
+          (t) => !parseTags(row.tags ?? "").includes(t),
+        ),
       };
     } else {
       detail = { found: false as const, key: detailKey };
@@ -372,6 +425,28 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       tags: parseTags(object.tags ?? ""),
       /** How many other rows carry the same bytes. Zero for almost everything. */
       twinCount: (twins.get(object.key) ?? []).length,
+      /**
+       * THE THIRD STATE, decided in the loader from three pieces of evidence.
+       *
+       * Two of them are per-post and already here; the third is the repository
+       * scan. `usageStateOf` owns the precedence so the tile, the row, the lens
+       * and the inspector cannot each decide it slightly differently, which is
+       * how a page ends up saying "unattached" in one place and "used" in
+       * another about one file.
+       */
+      usage: usageStateOf({
+        postRefs: (refs.get(object.key) ?? []).length,
+        citations: (resolution.citations.get(object.key) ?? []).length,
+        templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
+      }),
+      /**
+       * WHICH SOURCE FILES PLACE IT. Empty for everything but the seventeen the
+       * scan found. The inspector prints these rather than the mockup's prose
+       * labels ("Phage Hunters roster, page template"), because those were
+       * authored strings in a fixture and a repo-relative path is a fact the
+       * reader can open.
+       */
+      templateRefs: TEMPLATE_REFS[object.key] ?? [],
     })),
     page,
     hasMore: listed.hasMore,
@@ -423,7 +498,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * SQL approximation would be a second definition of twin.
      */
     lensCounts: {
-      ...(await mediaLensCounts(env)),
+      // THE SAME LIST THE LISTING GOT. The chip and the grid disagreeing is the
+      // exact defect the Unused chip shipped with, and passing one array to both
+      // readers is what makes agreement structural rather than remembered.
+      ...(await mediaLensCounts(env, TEMPLATE_REF_KEYS)),
       duplicates: (await mediaTwins(env)).size,
     },
 
@@ -1536,20 +1614,27 @@ export default function AdminMedia({
           >
             All <span className="search-chip-count">{lensCounts.all}</span>
           </Link>
-          {LENS_CHIPS.map((lens) => (
-            <Link
-              key={lens.id}
-              to={linkTo({ lens: lens.id, trash: false, page: 1 })}
-              className={`search-chip${view.lens === lens.id ? " is-active" : ""}`}
-              aria-current={view.lens === lens.id ? "page" : undefined}
-              title={lens.hint}
-            >
-              {lens.label}{" "}
-              <span className="search-chip-count">
-                {lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id]}
-              </span>
-            </Link>
-          ))}
+          {LENS_CHIPS.map((lens) => {
+            const n = lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id];
+            return (
+              <Link
+                key={lens.id}
+                to={linkTo({ lens: lens.id, trash: false, page: 1 })}
+                className={`search-chip${view.lens === lens.id ? " is-active" : ""}`}
+                aria-current={view.lens === lens.id ? "page" : undefined}
+                title={lens.hint}
+              >
+                {/* THE DOT, only when the count is non-zero, which is the
+                    mockup's own rule and a good one: a coloured dot beside a
+                    zero is an alarm about nothing. Decoration over a number and
+                    a word that both already say it, so it is hidden. */}
+                {n > 0 ? (
+                  <span className="media-lens-dot" data-lens={lens.id} aria-hidden="true" />
+                ) : null}
+                {lens.label} <span className="search-chip-count">{n}</span>
+              </Link>
+            );
+          })}
           {/* Trash sits in the same row in the mockup, because it is the same
               kind of question: which files are in which state. */}
           <Link
@@ -1561,7 +1646,9 @@ export default function AdminMedia({
             Trash <span className="search-chip-count">{trashedCount}</span>
           </Link>
         </nav>
-        <span className="media-facet-hint">{activeLens ? activeLens.hint : "everything the library knows about"}</span>
+        <span className="media-facet-hint">
+          {activeLens ? activeLens.hint : "everything the library knows about"}
+        </span>
       </div>
 
       {/*
@@ -1690,6 +1777,29 @@ export default function AdminMedia({
             state. Two Trash chips on one page was the duplicate this pass
             found by looking. */}
       </div>
+
+      {/*
+        THE LENS NOTE, as its own banner, and it is the thing that stops a lens
+        being read as an accusation.
+
+        A narrowed view makes a CLAIM: these files are unattached, these are
+        duplicates. Each claim has a boundary, and the boundary is what the
+        reader needs before acting on it. The unattached note is the one that
+        matters most and the one that could only be written truthfully once the
+        repository scan existed: before this session, "no reference was found in
+        posts or in repository code" would have described a check nothing ran.
+
+        `Show everything` is a LINK to the unnarrowed view, not a button. The
+        lens is a URL, so leaving it is navigation.
+      */}
+      {!view.trash && lensNoteFor(view.lens) ? (
+        <div className="media-lens-note">
+          <p>{lensNoteFor(view.lens)}</p>
+          <Link to={linkTo({ lens: "", page: 1 })} className="media-lens-clear">
+            Show everything
+          </Link>
+        </div>
+      ) : null}
 
       {/*
         THE TRASH EXPLANATION, shown WHENEVER the bin is open rather than only
@@ -1874,20 +1984,64 @@ export default function AdminMedia({
                       rebuild preserves it precisely because nothing can
                       recompute it. */}
                   <p className="media-facet-hint media-detail-owner">yours to edit</p>
-                  <Form method="post" className="media-alt-form">
-                    <input type="hidden" name="key" value={detail.key} />
-                    <label htmlFor="detail-alt">Alt text</label>
-                    <input
-                      id="detail-alt"
-                      name="alt"
-                      defaultValue={detail.alt}
-                      placeholder="Describe this image"
-                      className="media-alt-input"
-                    />
-                    <button type="submit" name="intent" value="set-alt" className="btn-ghost">
-                      Save alt
-                    </button>
-                  </Form>
+                  {/*
+                    ALT TEXT, FOR IMAGES ONLY.
+
+                    A document does not take alt text, so offering the field on
+                    one invents an obligation the author cannot discharge. 31 of
+                    the 70 rows are documents, and the field was on all of them.
+                  */}
+                  {detail.viewable ? (
+                    <Form method="post" className="media-alt-form">
+                      <input type="hidden" name="key" value={detail.key} />
+                      <label htmlFor="detail-alt">Alt text</label>
+                      <input
+                        id="detail-alt"
+                        name="alt"
+                        defaultValue={detail.alt}
+                        placeholder="Describe this image"
+                        className="media-alt-input"
+                        data-missing={detail.alt.trim() ? undefined : "yes"}
+                      />
+                      <button type="submit" name="intent" value="set-alt" className="btn-ghost">
+                        Save alt
+                      </button>
+                      {/*
+                        THE SUGGESTION, AS A SUBMIT BUTTON CARRYING ITS VALUE.
+
+                        One press writes it, through the SAME `set-alt` intent
+                        the field above submits, so the server keeps one writer
+                        and check:admin-ui sees no new payload shape. The value
+                        rides on the button rather than in a hidden field for the
+                        reason the upload intent does: a button name and value
+                        pin the token, a hidden field lands in the field list as
+                        a bare name.
+
+                        Offered only while the field is EMPTY. A suggestion
+                        beside text somebody has already written is an invitation
+                        to overwrite their sentence with a filename.
+
+                        A FORM, not a click handler that fills the input, so it
+                        works with scripting off like everything else here.
+                      */}
+                      {!detail.alt.trim() && detail.altSuggestion ? (
+                        <button
+                          type="submit"
+                          name="alt"
+                          value={detail.altSuggestion}
+                          className="media-suggestion"
+                          aria-label={`Use suggested alt text: ${detail.altSuggestion}`}
+                        >
+                          Use suggested: {detail.altSuggestion}
+                        </button>
+                      ) : null}
+                    </Form>
+                  ) : (
+                    <p className="muted">
+                      A document takes no alt text. Its link text is what a
+                      reader hears, and that lives in the post.
+                    </p>
+                  )}
 
                   {/*
                     TAGS. A comma separated text field, which is the same shape
@@ -1914,26 +2068,81 @@ export default function AdminMedia({
                   </Form>
 
                   {/*
-                    THE ADDRESS, in the three forms an author actually pastes.
+                    THE APPLIED TAGS AS CHIPS, each with a remove control, and
+                    the SUGGESTIONS the path implies beside them.
 
-                    All THREE are the same string, so there is no second source
-                    for the address and no endpoint behind any of them: the
-                    markdown and HTML variants are `object.url` wrapped in
-                    punctuation, built here. The alt text rides along, because a
-                    snippet with an empty alt is a snippet somebody ships with
-                    an empty alt.
+                    Every one of these is a submit button on the SAME `set-tags`
+                    intent, carrying the WHOLE resulting list as its value. That
+                    is deliberate: `setMediaTags` stays the one writer and the one
+                    author of the delimiter rule, so a chip cannot become a second
+                    way to write a tag that formats it differently. This table has
+                    already been bitten once by two writers disagreeing about a
+                    join character.
+
+                    It also means every chip works with scripting off, which a
+                    click handler mutating a text field would not.
+
+                    A dashed outline on a suggestion and a solid one on an applied
+                    tag, so the two differ by SHAPE and not only by a plus sign.
+                  */}
+                  {detail.tags.length > 0 || detail.tagSuggestions.length > 0 ? (
+                    <Form method="post" className="media-tag-chips">
+                      <input type="hidden" name="key" value={detail.key} />
+                      <input type="hidden" name="intent" value="set-tags" />
+                      {detail.tags.map((tag) => (
+                        <button
+                          key={`applied-${tag}`}
+                          type="submit"
+                          name="tags"
+                          value={detail.tags.filter((t) => t !== tag).join(", ")}
+                          className="media-tag-chip"
+                          aria-label={`Remove tag ${tag}`}
+                          title={`Remove tag ${tag}`}
+                        >
+                          {tag} <span aria-hidden="true">&times;</span>
+                        </button>
+                      ))}
+                      {detail.tagSuggestions.map((tag) => (
+                        <button
+                          key={`suggested-${tag}`}
+                          type="submit"
+                          name="tags"
+                          value={[...detail.tags, tag].join(", ")}
+                          className="media-tag-suggestion"
+                          aria-label={`Add suggested tag ${tag}`}
+                        >
+                          <span aria-hidden="true">+</span> {tag}
+                        </button>
+                      ))}
+                    </Form>
+                  ) : null}
+
+                  {/*
+                    THE ADDRESS, in the three forms an author actually pastes,
+                    and THE LABELS CHANGE WITH THE FILE.
+
+                    An image goes into a post as `![alt](src)` and a document
+                    goes in as `[title](href)`, so a control labelled HTML has to
+                    produce a different thing for each. It produced an `<img>`
+                    tag for all seventy rows, which for the 31 documents is a
+                    snippet that renders a broken image where a link was wanted.
+                    The label is what stops somebody pressing it: "HTML tag" for a
+                    picture, "HTML link" for a paper.
+
+                    `copySnippetsFor` owns both the label and the value, so the
+                    two cannot disagree, and it is unit tested with the document
+                    case asserting that no `<img>` ever reaches one.
                   */}
                   <div className="media-detail-copy">
                     <h4>Copy</h4>
-                    <CopyButton value={detail.url} label="Address" />
-                    <CopyButton
-                      value={`![${detail.alt}](${detail.url})`}
-                      label="Markdown"
-                    />
-                    <CopyButton
-                      value={`<img src="${detail.url}" alt="${detail.alt}">`}
-                      label="HTML"
-                    />
+                    {copySnippetsFor({
+                      url: detail.url,
+                      viewable: detail.viewable,
+                      alt: detail.alt,
+                      base: detail.originalName ?? detail.key.split("/").pop() ?? detail.key,
+                    }).map((snippet) => (
+                      <CopyButton key={snippet.id} value={snippet.value} label={snippet.label} />
+                    ))}
                   </div>
 
                   {/*
@@ -1949,17 +2158,26 @@ export default function AdminMedia({
                   {detail.twins.length > 0 ? (
                     <div className="media-detail-twins">
                       <h4>Identical files</h4>
-                      <p className="muted">
-                        {detail.twins.length === 1 ? "One other file has" : `${detail.twins.length} other files have`}{" "}
-                        exactly these bytes. Trashing one hides it from the
-                        library; every address keeps working and no page changes.
-                      </p>
                       <ul className="media-detail-refs">
                         {detail.twins.map((twin) => (
                           <li key={twin.key}>
-                            <Link to={linkTo({ key: twin.key })}>
-                              {twin.originalName ?? twin.key}
-                            </Link>
+                            {/*
+                              THE SENTENCE THE MOCKUP WRITES, per twin, because
+                              it is the one that makes the offer safe to accept.
+
+                              "Byte-identical" says the comparison was exact, not
+                              a similarity score. "Both addresses resolve to the
+                              same content" says what a reader most needs before
+                              trashing one: the surviving address serves the same
+                              bytes, so no published page changes. Naming the twin
+                              in the button is the other half; "trash that one"
+                              was ambiguous on a panel showing two files.
+                            */}
+                            <p className="media-twin-note">
+                              Byte-identical to{" "}
+                              <Link to={linkTo({ key: twin.key })}>{twin.key}</Link>, both
+                              addresses resolve to the same content.
+                            </p>
                             <Form method="post" className="media-twin-form">
                               <input type="hidden" name="key" value={twin.key} />
                               <button
@@ -1968,12 +2186,16 @@ export default function AdminMedia({
                                 value="trash"
                                 className="media-destructive"
                               >
-                                Keep this one, trash that one
+                                Keep this, trash {twin.originalName ?? twin.key.split("/").pop() ?? twin.key}
                               </button>
                             </Form>
                           </li>
                         ))}
                       </ul>
+                      <p className="muted">
+                        Trashing one hides it from the library. Every address
+                        keeps working and no page changes.
+                      </p>
                     </div>
                   ) : null}
 
@@ -1989,36 +2211,82 @@ export default function AdminMedia({
                     </p>
                   ) : null}
 
-                  {/* USAGE, both halves, labelled as what each one is. */}
-                  <div className="media-detail-usage">
+                  {/*
+                    USAGE, IN THREE STATES, each with its title, its sentence and
+                    the evidence behind it.
+
+                    This section used to have two outcomes and the second one was
+                    a confession: "an asset a route references in code would look
+                    the same here". It was true, it was written by somebody who
+                    knew the answer was incomplete, and it appeared on nine
+                    photographs the site serves on every visit.
+
+                    Now the third state has evidence of its own and the panel
+                    names it. The heading is the CLAIM, the sentence is its
+                    BOUNDARY, and the list underneath is what was actually found:
+                    posts for `used`, source files for `in template`.
+                  */}
+                  <div className="media-detail-usage" data-usage={detail.usage}>
                     <h4>Usage</h4>
                     {!detail.scanComplete ? (
                       <p className="muted">The reference scan failed, so usage is unknown.</p>
-                    ) : detail.refs.length === 0 && detail.citations.length === 0 ? (
-                      <p className="muted">
-                        Nothing the renderer emitted cites this. An asset a route
-                        references in code would look the same here.
-                      </p>
                     ) : (
-                      <ul className="media-detail-refs">
-                        {detail.refs.map((ref) => (
-                          <li key={`ref-${ref.sourceId}-${ref.form}-${ref.detail ?? ""}`}>
-                            <Link to={`/admin/posts/${ref.sourceId}/edit`}>{ref.sourceId}</Link>{" "}
-                            <span className="muted">
-                              {ref.form}
-                              {ref.detail ? `, ${ref.detail}` : ""}
-                            </span>
-                          </li>
-                        ))}
-                        {detail.citations.map((citation) => (
-                          <li key={`cite-${citation.id}-${citation.form}-${citation.detail}`}>
-                            <Link to={`/admin/posts/${citation.id}/edit`}>{citation.title}</Link>{" "}
-                            <span className="muted">
-                              {citation.form}, {citation.detail}, from the artifact scan
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <>
+                        <p className="media-usage-claim">
+                          <span
+                            className="media-usage-dot"
+                            data-usage={detail.usage}
+                            aria-hidden="true"
+                          />
+                          <strong>{usageDescriptor(detail.usage).title}.</strong>{" "}
+                          {usageDescriptor(detail.usage).note}
+                        </p>
+
+                        {/* THE POSTS, which is what `used` is evidence of. */}
+                        {detail.refs.length > 0 || detail.citations.length > 0 ? (
+                          <ul className="media-detail-refs">
+                            {detail.refs.map((ref) => (
+                              <li key={`ref-${ref.sourceId}-${ref.form}-${ref.detail ?? ""}`}>
+                                <Link to={`/admin/posts/${ref.sourceId}/edit`}>{ref.sourceId}</Link>{" "}
+                                <span className="muted">
+                                  {ref.form}
+                                  {ref.detail ? `, ${ref.detail}` : ""}
+                                </span>
+                              </li>
+                            ))}
+                            {detail.citations.map((citation) => (
+                              <li key={`cite-${citation.id}-${citation.form}-${citation.detail}`}>
+                                <Link to={`/admin/posts/${citation.id}/edit`}>{citation.title}</Link>{" "}
+                                <span className="muted">
+                                  {citation.form}, {citation.detail}, from the artifact scan
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+
+                        {/*
+                          THE SOURCE FILES, which is what `in template` is
+                          evidence of, and the whole reason the state exists.
+
+                          Repo-relative paths rather than the mockup prose labels
+                          ("Phage Hunters roster, page template"): those were
+                          authored strings in a fixture, and a path is a fact the
+                          reader can open and check. Not links, because the admin
+                          has no source browser and a link to nothing is worse
+                          than text.
+                        */}
+                        {detail.templateRefs.length > 0 ? (
+                          <ul className="media-detail-refs media-template-refs">
+                            {detail.templateRefs.map((file) => (
+                              <li key={`tpl-${file}`}>
+                                <code>{file}</code>{" "}
+                                <span className="muted">references this address</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </>
                     )}
                   </div>
 
@@ -2090,20 +2358,63 @@ export default function AdminMedia({
       ) : null}
 
       {objects.length === 0 ? (
-        <p className="muted">
-          {q ? (
+        /*
+          THREE EMPTY STATES, NOT ONE, because they mean three different things
+          and the reader needs a different next step from each.
+
+          The page had one muted sentence for all of them, which is the shape
+          that tells somebody with an empty library to "try all media" and
+          somebody with a typo to do the same thing.
+
+            LIBRARY EMPTY   nothing has ever been here. Explain what the library
+                            is FOR and offer the one action that fills it. This
+                            is the only state that gets a heading and a button,
+                            because it is the only one where the reader has
+                            nothing to undo.
+
+            SEARCH MISS     the query matched nothing. Name the query back, say
+                            what was searched so the reader can tell a typo from
+                            a wrong assumption, and offer to clear it.
+
+            LENS EMPTY      the lens found nothing, which is GOOD NEWS and reads
+                            as an error unless it says so. "Every file passes
+                            this check" is the mockup's line and it is the right
+                            one.
+        */
+        <div className="media-empty" data-empty={q ? "search" : lensCounts.all === 0 ? "library" : "lens"}>
+          {lensCounts.all === 0 && !q ? (
             <>
-              Nothing matches &ldquo;{q}&rdquo; here. Try{" "}
-              <Link to={linkTo({ role: "all", page: 1 })}>every group</Link>, or{" "}
-              <Link to={chipHref(filter)}>clear the search</Link>.
+              <p className="media-empty-title">Nothing here yet</p>
+              <p className="media-empty-body">
+                Files you upload get a content-hashed address you can paste into
+                any post. Anything committed to the repository shows up
+                automatically after a deploy.
+              </p>
+              <label className="btn media-empty-action" htmlFor="media-file">
+                Upload the first file
+              </label>
+            </>
+          ) : q ? (
+            <>
+              <p className="media-empty-title">
+                Nothing matches &ldquo;{q}&rdquo;
+              </p>
+              <p className="media-empty-body">
+                Searched paths, names, alt text and tags.{" "}
+                <Link to={linkTo({ q: "", page: 1 })}>Clear the search</Link>, or
+                look in <Link to={linkTo({ q: "", role: "all", lens: "", page: 1 })}>every group</Link>.
+              </p>
             </>
           ) : (
             <>
-              Nothing in this group. Try <Link to={chipHref("all")}>all media</Link>, or upload
-              an image above.
+              <p className="media-empty-title">Nothing in this view</p>
+              <p className="media-empty-body">
+                Every file passes this check.{" "}
+                <Link to={linkTo({ lens: "", role: "all", page: 1 })}>Show everything</Link>.
+              </p>
             </>
           )}
-        </p>
+        </div>
       ) : (
         // A plain list. NOT role="grid": positional information is meaningless
         // to a screen reader here, because the number of columns depends on the
@@ -2236,6 +2547,25 @@ export default function AdminMedia({
             const name = displayName(object);
             const cited = object.citations.length > 0 || object.refCount > 0;
             /*
+             * THE THREE-STATE DESCRIPTOR AND THE PER-ROW FLAGS, from the pure
+             * module. The row does not decide either: `usage` arrives from the
+             * loader, and `flagsFor` is the one definition of what a flag is, so
+             * the lens that selects rows and the badge that labels them cannot
+             * drift.
+             */
+            const usage = usageDescriptor(object.usage);
+            const flags = flagsFor({
+              viewable: object.viewable,
+              alt: object.alt,
+              size: object.size,
+              twinCount: object.twinCount,
+            });
+            const tileFlag = tileFlagFor({
+              flags,
+              usage: object.usage,
+              twin: object.twinCount > 0 ? name : null,
+            });
+            /*
              * WHETHER THIS TILE WEARS THE CAPTION BAR.
              *
              * **NO NEW CLIENT STATE.** Both halves already exist and neither is
@@ -2362,6 +2692,24 @@ export default function AdminMedia({
                 </Link>
 
                 {/*
+                  THE CORNER FLAG, one dot, on the tile.
+
+                  `tileFlagFor` picks the single most urgent of the row's flags
+                  rather than stacking three on a 150px tile. Its `title` is the
+                  sentence; the dot is the glance. Rendered outside the caption
+                  so a selected tile shows both.
+                */}
+                {tileFlag ? (
+                  <span
+                    className="media-tile-flag"
+                    data-flag={tileFlag.id}
+                    title={tileFlag.title}
+                  >
+                    <span className="sr-only">{tileFlag.title}</span>
+                  </span>
+                ) : null}
+
+                {/*
                   THE CAPTION BAR, over the picture, on the tile the reader has
                   picked out. Filename, size and dimensions, and the page's one
                   job in the corner of it.
@@ -2470,13 +2818,33 @@ export default function AdminMedia({
                   and every SVG have no dimensions, and printing 0x0 or an empty
                   cell would both read as a value rather than as an absence.
                 */}
+                {/*
+                  THE USAGE CELL, three states rather than two, with its flags
+                  underneath. `used` and `unattached` were the whole vocabulary
+                  and it could not express the roster photographs, which the site
+                  places on every visit and no post cites.
+
+                  The dot is a SECOND CHANNEL beside a word, never the signal
+                  itself, so a reader who cannot separate the hues loses nothing.
+                */}
                 <span className="media-col media-col-usage">
-                  <span
-                    className="media-usage-dot"
-                    data-cited={scanComplete ? (cited ? "yes" : "no") : "unknown"}
-                    aria-hidden="true"
-                  />
-                  {scanComplete ? (cited ? "used" : "unattached") : "unknown"}
+                  <span className="media-usage-line">
+                    <span
+                      className="media-usage-dot"
+                      data-usage={scanComplete ? object.usage : "unknown"}
+                      aria-hidden="true"
+                    />
+                    <span title={scanComplete ? usage.title : undefined}>
+                      {scanComplete ? usage.label : "unknown"}
+                    </span>
+                  </span>
+                  {/* duplicate, no alt, over 1 MB. A file can carry all three,
+                      which is why this is a list and not a badge. */}
+                  {flags.length > 0 ? (
+                    <span className="media-row-flags">
+                      {flags.map((f) => f.label).join(" · ")}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="media-col media-col-dims">
                   {formatDims(object.width, object.height)}
