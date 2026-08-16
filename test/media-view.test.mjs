@@ -26,13 +26,16 @@ import {
   SIZES,
   SORTS,
   VIEWS,
+  SORT_DEFAULT_DIR,
   displaySummary,
+  docTitle,
   folderOf,
   groupRows,
   hrefWith,
   isModified,
   monthOf,
   readView,
+  sortHref,
 } from "../app/lib/media/view.mjs";
 
 /** A stand-in for URLSearchParams with the one method readView uses. */
@@ -299,4 +302,143 @@ test("a row with no upload date gets its own bucket, not the nearest month", () 
 test("an empty page groups to nothing rather than to one empty heading", () => {
   assert.deepEqual(groupRows([], "folder"), []);
   assert.deepEqual(groupRows([], "month"), []);
+});
+
+/* -------------------------------------------------------------------------
+ * SORT DIRECTION, and the two controls that must not disagree about it.
+ *
+ * The list header and the Display popover are two link builders aimed at one
+ * destination. They agreed by accident before there was a header at all; the
+ * moment there are two, "they agree" is a property that needs asserting rather
+ * than assuming, and it is asserted HERE on the pure function and again in
+ * check:admin-ui over the rendered hrefs. Two instruments, because this one
+ * cannot see whether the component actually calls it.
+ * ---------------------------------------------------------------------- */
+
+test("every sort key declares a default direction, and no key is invented", () => {
+  // BOTH DIRECTIONS. A missing entry would silently fall back to the state's
+  // current direction, which is the defect this table exists to remove, and an
+  // orphaned entry would be a column nobody can reach.
+  assert.deepEqual(
+    Object.keys(SORT_DEFAULT_DIR).sort(),
+    [...SORTS].sort(),
+    "SORT_DEFAULT_DIR and SORTS must name the same set, both ways",
+  );
+  for (const [key, dir] of Object.entries(SORT_DEFAULT_DIR)) {
+    assert.ok(DIRS.includes(dir), `${key} declares ${dir}, which is not a direction`);
+  }
+});
+
+test("the mockup's directions, verified in its source, are the ones shipped", () => {
+  // Read out of the mockup's own `column(key, label, align, dir)` calls and its
+  // sortOpts table, not from the prompt describing them.
+  assert.equal(SORT_DEFAULT_DIR.name, "asc");
+  assert.equal(SORT_DEFAULT_DIR.usage, "asc");
+  assert.equal(SORT_DEFAULT_DIR.size, "desc");
+  assert.equal(SORT_DEFAULT_DIR.added, "desc");
+});
+
+/**
+ * READ THE URL BACK THROUGH `readView`, never off the query string.
+ *
+ * `hrefWith` OMITS a parameter equal to its default, deliberately, so the bare
+ * `/admin/media` stays meaningful as "the default view". `dir=desc` IS the
+ * default and is therefore absent from a descending link. Asserting on the
+ * spelling would have made a correct URL fail; this test found that, which is
+ * the right way round.
+ *
+ * So the property is the direction the link MEANS, which is what the loader
+ * will see, and the round trip is the only honest way to ask.
+ *
+ * @param {string} href
+ */
+const resolve = (href) => readView(new URLSearchParams(href.split("?")[1] ?? ""));
+
+test("a sort choice carries its direction, so Largest is never the smallest", () => {
+  // The state is ASCENDING and sorted by name. Asking for size must not inherit
+  // that ascending, or the reader presses Largest and gets the smallest file.
+  const state = { ...DEFAULTS, sort: "name", dir: "asc", q: "bio" };
+  const got = resolve(sortHref(state, "size"));
+  assert.equal(got.sort, "size");
+  assert.equal(got.dir, "desc", "Largest must mean descending");
+  assert.equal(got.q, "bio", "and the search still travels");
+});
+
+test("the header toggles the column already sorted, and only that one", () => {
+  const state = { ...DEFAULTS, sort: "size", dir: "desc" };
+  assert.equal(
+    resolve(sortHref(state, "size", { toggle: true })).dir,
+    "asc",
+    "pressing the active column reverses it",
+  );
+
+  // A DIFFERENT column ignores the toggle and takes its own default, because
+  // "reverse it" is meaningless for a column you are not sorted by.
+  const other = resolve(sortHref(state, "name", { toggle: true }));
+  assert.equal(other.dir, "asc", "name's own default, not size's reversal");
+  assert.equal(other.sort, "name");
+
+  // And the reverse toggle, so the assertion above cannot pass on a function
+  // that always returns "asc".
+  const ascending = { ...DEFAULTS, sort: "size", dir: "asc" };
+  assert.equal(resolve(sortHref(ascending, "size", { toggle: true })).dir, "desc");
+});
+
+test("header and popover produce IDENTICAL urls for any column not sorted", () => {
+  // This is the property the prompt names, asserted mechanically over every
+  // key rather than spot-checked on one. The popover does not toggle; the
+  // header does, so they can only differ on the ACTIVE key.
+  const state = { ...DEFAULTS, sort: "added", dir: "desc", q: "phage", tag: "roster", page: 4 };
+  let compared = 0;
+  for (const key of SORTS) {
+    if (key === state.sort) continue;
+    assert.equal(
+      sortHref(state, key, { toggle: true }),
+      sortHref(state, key),
+      `${key}: the header and the popover must land on one url`,
+    );
+    compared += 1;
+  }
+  // SCOPE, so a SORTS that shrank to one entry cannot make this pass by
+  // comparing nothing.
+  assert.ok(compared >= 3, `only ${compared} column(s) compared`);
+});
+
+test("a sort choice always returns to page one", () => {
+  const state = { ...DEFAULTS, sort: "name", page: 7 };
+  for (const key of SORTS) {
+    const got = new URLSearchParams(sortHref(state, key).split("?")[1]);
+    assert.equal(got.has("page"), false, `${key} kept a page number from another sort`);
+  }
+});
+
+/* -------------------------------------------------------------------------
+ * THE DOCUMENT TITLE. 31 of 70 rows are PDFs and they currently read as
+ * damage: five cards showing `edw...omics.pdf`, `edw...lysis.pdf` and so on,
+ * which is the middle-elision doing its job on a string that should never have
+ * been shown whole in the first place.
+ * ---------------------------------------------------------------------- */
+
+test("a document title is the words, without the slug punctuation or extension", () => {
+  assert.equal(docTitle("edwards-2024-phage-genomics.pdf"), "edwards 2024 phage genomics");
+  assert.equal(docTitle("syllabus-fall-2026.pdf"), "syllabus fall 2026");
+  assert.equal(docTitle("poster_rubric.pdf"), "poster rubric");
+});
+
+test("the title is NOT capitalised, because casing a filename asserts authorship", () => {
+  const out = docTitle("edwards-2024-phage-genomics.pdf");
+  assert.equal(out, out.toLowerCase(), "title casing would guess at proper nouns");
+});
+
+test("a document title survives the shapes a real key comes in", () => {
+  // No extension at all.
+  assert.equal(docTitle("readme"), "readme");
+  // Repeated separators collapse rather than leaving a double space.
+  assert.equal(docTitle("a--b__c.pdf"), "a b c");
+  // A dotted name keeps its interior dots: only the trailing extension goes.
+  assert.equal(docTitle("v1.2-notes.pdf"), "v1.2 notes");
+  // Empty in, empty out, and no crash: a row with a pathological key must
+  // render a card rather than throw the page away.
+  assert.equal(docTitle(""), "");
+  assert.equal(docTitle(".pdf"), "");
 });

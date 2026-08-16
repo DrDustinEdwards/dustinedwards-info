@@ -44,10 +44,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-15 by RUNNING
- * it: 13 files, 138 tests. Never summed. It read 9 and 78, then 10 and 88, then
+ * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-16 by RUNNING
+ * it: 13 files, 147 tests. Never summed. It read 9 and 78, then 10 and 88, then
  * 11 and 102, all the same day, as `analytics-path`, `media-tags` and then
- * `media-view` landed.
+ * `media-view` landed, and 13 and 138 the day after.
  *
  * They were 6 and 43, measured 2026-08-11, and they drifted: `upload-contract`
  * and `traffic-source` landed without anyone moving the numbers, so 57 tests
@@ -59,12 +59,18 @@ const TEST_DIR = join(root, "test");
  *
  * Tight rather than slack, deliberately. These move UP when someone adds a
  * test, which is a one-line edit in the same commit, and the whole point is to
- * notice the set SHRINKING. 129 is 94 percent of 138, which is the margin the
+ * notice the set SHRINKING. 138 is 94 percent of 147, which is the margin the
  * other gates use and is narrow enough that losing the smallest test file, 4
  * tests, still trips it.
+ *
+ * 147 since the media sort and document-title tests landed: `SORT_DEFAULT_DIR`
+ * has to name exactly the keys `SORTS` does, in both directions, and the list
+ * header and the Display popover have to build ONE url per column. Both are
+ * properties two callers can drift apart on, which is why they are tests rather
+ * than a comment.
  */
 const MINIMUM_FILES = 13;
-const MINIMUM_TESTS = 129;
+const MINIMUM_TESTS = 138;
 
 let checks = 0;
 let failures = 0;

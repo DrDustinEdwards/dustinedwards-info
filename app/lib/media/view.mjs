@@ -35,6 +35,37 @@ export const SORTS = ["added", "name", "size", "usage"];
 /** Sort direction. */
 export const DIRS = ["desc", "asc"];
 
+/**
+ * THE DIRECTION EACH SORT KEY MEANS WHEN YOU FIRST ASK FOR IT.
+ *
+ * A sort key is not direction-neutral. "Largest" descending is what the words
+ * say; "Largest" ascending is the smallest files under a label promising the
+ * opposite, and that is what the page shipped: the Sort group set `sort` alone
+ * and left whatever `dir` happened to be in the URL. Choosing Largest while
+ * ascending gave you the smallest file first, from a control labelled Largest.
+ *
+ * So a sort choice carries its direction, and BOTH controls that make one read
+ * it from here. That is the whole reason this is a table rather than two
+ * literals: the Display popover and the list header must produce the SAME URL
+ * for the same column, and the only way to guarantee that is to give them one
+ * source for the pair. `check:admin-ui` asserts the two URLs are identical, per
+ * key, over the rendered markup.
+ *
+ * The values are the mockup's own, verified in its source (`sortOpts` and the
+ * `column(key, label, align, dir)` calls): name ascending, usage ascending,
+ * size descending, added descending. Alphabetical wants A first; a quantity
+ * wants the big end first, because the question is always "what is biggest" and
+ * never "what is smallest".
+ *
+ * @type {Record<string, string>}
+ */
+export const SORT_DEFAULT_DIR = {
+  added: "desc",
+  name: "asc",
+  size: "desc",
+  usage: "asc",
+};
+
 /** Tile size, applied as a class and never as an inline style. */
 export const SIZES = ["s", "m", "l"];
 
@@ -310,6 +341,65 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+/**
+ * THE URL A SORT CHOICE PRODUCES, and there is exactly one of them per key.
+ *
+ * Both the Display popover's Sort group and the list view's column headers call
+ * this, which is what makes "clicking Size and choosing Largest land on the same
+ * page" true by construction rather than by two implementations agreeing.
+ *
+ * TOGGLING IS THE ONE ASYMMETRY, and it belongs to the column that is already
+ * sorted. Pressing the active column reverses it, which is what every table in
+ * the world does and what the mockup does; pressing any other column asks for
+ * that column at ITS default direction. So the popover and a header differ only
+ * on the key the reader is already sorted by, and that difference is the
+ * toggle, not a drift between two link builders.
+ *
+ * Back to page one, always. Page 3 of a name sort is not page 3 of a size sort,
+ * and landing there would show a reader rows they did not ask for under a
+ * heading they did.
+ *
+ * @param {typeof DEFAULTS} state
+ * @param {string} key one of SORTS
+ * @param {{ toggle?: boolean }} [options] toggle when the key is already active
+ * @returns {string}
+ */
+export function sortHref(state, key, options = {}) {
+  const active = state.sort === key;
+  const dir =
+    options.toggle && active
+      ? state.dir === "asc"
+        ? "desc"
+        : "asc"
+      : SORT_DEFAULT_DIR[key] ?? DEFAULTS.dir;
+  return hrefWith(state, { sort: key, dir, page: 1 });
+}
+
+/**
+ * A DOCUMENT'S TITLE, from its key, because a filename is not a title.
+ *
+ * `edwards-2024-phage-genomics.pdf` and `edwards-2023-cluster-analysis.pdf` are
+ * the same string to a reader scanning a grid: the extension is noise on a card
+ * that already says PDF, and the hyphens are a slug's punctuation rather than
+ * anything a person wrote. Dropping both leaves the words, which is the part
+ * that distinguishes one paper from another.
+ *
+ * NOT CAPITALISED, and that is the mockup's own choice rather than an omission.
+ * Its `titleize` strips the extension, swaps hyphens for spaces and stops. Title
+ * casing a filename means guessing which words are proper nouns, and it would
+ * render `edwards 2024 phage genomics` as `Edwards 2024 Phage Genomics`, which
+ * asserts an authorship the key does not carry. The words as typed are honest.
+ *
+ * The directory is already gone by the time this is called: the caller passes
+ * the last segment, because the folder heading above the card says the folder.
+ *
+ * @param {string} base a filename, no directory
+ * @returns {string}
+ */
+export function docTitle(base) {
+  return base.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim();
+}
 
 /**
  * The one-line summary the Display control shows when closed.
