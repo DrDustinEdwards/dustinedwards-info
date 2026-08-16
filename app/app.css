@@ -5739,11 +5739,28 @@ a:hover {
   border: 0;
   border-radius: 0;
   font-size: 0.8125rem;
+  /* **THE RESET IS THE FIX, AND ITS ABSENCE WAS A SHIPPED DEFECT.**
+     `.media-card` sets `background: var(--surface)` on every card for the grid,
+     and the list block never took it back, so the `:nth-child(odd)` rule below
+     was painting --surface onto rows that were already --surface. Measured in a
+     browser: four consecutive rows all rgb(241,235,225), adjacent-row contrast
+     1.00:1, which is not banding, it is one solid slab. The comment beside that
+     rule said "rows separate by TINT" and had been describing something that
+     never happened since the list view shipped. */
+  background: transparent;
 }
 
-/* Rows separate by TINT rather than by a hairline, unchanged from the previous
-   pass and for the same reason: every hairline in the mockup failed its floor,
-   and a filled alternate row needs no line at all. */
+/* Rows separate by TINT rather than by a hairline: every hairline in the mockup
+   failed its floor (#f3eee3 is 1.16:1), and a filled alternate row needs no
+   line at all.
+
+   The measured difference is --surface against the canvas, 1.11:1, which is in
+   the same range as the hairline it replaces and is not held to it: this is a
+   surface-to-surface seam, and the palette law is explicit that such a seam
+   carries no 3:1 obligation (the chrome ruling makes the same call about the
+   header seam at 1.80:1). What separates a row here is a BAND the full width of
+   the table rather than a one-pixel line, and a band at 1.11 is legible where a
+   line at 1.16 is not. */
 .media-grid[data-view="list"] .media-card:nth-child(odd) {
   background: var(--surface);
 }
