@@ -603,10 +603,28 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * references in CODE reads as uncited by this definition and by no other one
      * available. The nine roster photos are exactly that case.
      */
+    /*
+     * THE STANDING USAGE NOTE, REWRITTEN, because the old one became false in
+     * this commit.
+     *
+     * It said: "An asset referenced only by route code, like the roster photos,
+     * has no citation here and is not therefore unused." Every word of that was
+     * true while the page had two states, and it was the honest confession of a
+     * tracker that could not see route code. The repository scan can, so the
+     * roster photographs now read "in template" and the sentence describes a
+     * limitation that no longer exists.
+     *
+     * What survives is the limitation that DOES still exist, and it is a
+     * narrower and more useful one: the scan matches literal paths, so a path
+     * the code builds at runtime is invisible to it, and nothing here can see an
+     * external site linking a file. That is why the third state is called
+     * unattached and not unused.
+     */
     usageNote:
-      "Usage counts what the renderer emitted for a post. An asset referenced " +
-      "only by route code, like the roster photos, has no citation here and is " +
-      "not therefore unused.",
+      "Usage is asked three ways: what a post cites, what the artifact scan " +
+      "finds, and what repository code references. A file none of them names is " +
+      "unattached rather than unused, because a path the code builds at runtime " +
+      "is invisible to the scan and an external site can link anything.",
   };
 }
 
@@ -1379,7 +1397,22 @@ function CopyButton({
    * produced "Copy the address for Copy address".
    */
   name,
-}: { value: string; label: string; name?: string }) {
+  /**
+   * Render the label as TEXT beside the glyph.
+   *
+   * **THE DEFAULT IS GLYPH-ONLY AND THAT IS MEASURED**: on a tile the word
+   * "Copy" cost 41px of a 131px row and pushed the filename back into the
+   * end-truncation this design exists to avoid. The inspector has the room, and
+   * more importantly it NEEDS the words: three identical glyphs in a row are
+   * three controls a reader has to press to tell apart, and the whole point of
+   * the adaptive labels is that "HTML link" and "HTML tag" warn you which one
+   * you are about to copy. A label only a screen reader can hear cannot do that.
+   *
+   * Found by `check:admin-ui`: the labels were computed, passed in, and rendered
+   * nowhere, so the adaptive naming shipped invisible for one commit.
+   */
+  showLabel,
+}: { value: string; label: string; name?: string; showLabel?: boolean }) {
   return (
     <button
       type="button"
@@ -1422,6 +1455,9 @@ function CopyButton({
         <rect x="9" y="9" width="12" height="12" rx="2" />
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
       </svg>
+      {showLabel ? <span className="media-copy-label">{label}</span> : null}
+      {/* The accessible name always, because the visible label is absent on a
+          tile and is a fragment ("Markdown") even where it is present. */}
       <span className="sr-only">{name ?? `Copy the address for ${label}`}</span>
     </button>
   );
@@ -2309,6 +2345,7 @@ export default function AdminMedia({
                         value={snippet.value}
                         label={snippet.label}
                         name={snippet.name}
+                        showLabel
                       />
                     ))}
                   </div>
