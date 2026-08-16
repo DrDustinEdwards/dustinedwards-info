@@ -3,6 +3,7 @@ import { Form, Link, NavLink, Outlet, redirect, useRouteLoaderData } from "react
 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
+import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { loadArtifact } from "~/lib/editor/publish.server";
@@ -42,6 +43,19 @@ export async function loader({ context }: Route.LoaderArgs) {
   const ask = await context.get(askStatusContext)();
   return {
     email: context.get(adminSessionContext).user.email,
+    /**
+     * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
+     *
+     * The mockup badges Sites, Content, Posts and Media. Only two of those
+     * numbers exist: `/admin/sites` and `/admin/content` are stubbed cockpit
+     * sections built on `stubSource()`, and Content's own count field is `null`
+     * on every one of its three rows and renders as the words "no data".
+     * Shipping "6" beside Sites would be the count of a hardcoded placeholder
+     * array, and a numeral in the sidebar is read as a measurement. Those two
+     * get badges when they get data; until then the absence is the honest
+     * signal and it costs nothing to leave them bare.
+     */
+    counts: await adminNavCounts(getEnv(context)),
     /**
      * ONE number, not the status object. The badge is a count and the repair
      * lives on /admin/posts, so shipping the key lists to every admin page
@@ -164,15 +178,16 @@ const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
   { to: "/admin/sites", label: "Sites", icon: ICONS.sites },
   { to: "/admin/content", label: "Content", icon: ICONS.content },
-  // The only item that carries a count. Drift is a fact about the post corpus,
-  // and Posts is where the repair lives.
-  { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true },
+  // `drift` is the ALARM, and it is a fact about the post corpus with its
+  // repair on this page. `count` is the neutral size of the section. They are
+  // different claims and they render differently; see `navName` below.
+  { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true, count: "posts" },
   // After Posts and before Tools, because it is content the posts consume
   // rather than an admin control. Until now /admin/media existed and loaded but
   // NOTHING linked to it: the sidebar had five items, none of them Media, and
   // no item even marked itself active while the page was open, so the library
   // was reachable only by typing the URL.
-  { to: "/admin/media", label: "Media", icon: ICONS.media },
+  { to: "/admin/media", label: "Media", icon: ICONS.media, count: "media" },
   // Reading rather than editing, so it sits after the content items and before
   // the controls. The label matches the panel heading exactly: this counts
   // origin requests, and calling the nav item anything shorter would put a
@@ -191,9 +206,10 @@ const NAV = [
  * text equivalent for a SIGHTED reader in the collapsed rail, where the badge
  * has room for the number but not for what the number counts.
  */
-function navName(label: string, drift: number) {
-  if (drift <= 0) return label;
-  return `${label}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted`;
+function navName(label: string, drift: number, count: number | null) {
+  const size = count === null ? "" : `, ${count} item${count === 1 ? "" : "s"}`;
+  if (drift <= 0) return `${label}${size}`;
+  return `${label}${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted`;
 }
 
 /** 24x24 stroked glyph, the same shape the rest of the admin uses. */
@@ -366,7 +382,13 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         <nav className="admin-nav" aria-label="Admin sections">
           {NAV.map((item) => {
             const drift = item.drift ? loaderData.askDrift : 0;
-            const name = navName(item.label, drift);
+            /* `null` means this section HAS no count, which is not the same as
+               a count of zero and must not render as one. Sites and Content are
+               stubs; see the loader. */
+            const count = item.count
+              ? loaderData.counts[item.count as keyof typeof loaderData.counts]
+              : null;
+            const name = navName(item.label, drift, count);
             return (
               <NavLink
                 key={item.to}
@@ -384,6 +406,27 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               >
                 <Glyph>{item.icon}</Glyph>
                 <span className="admin-nav-label">{item.label}</span>
+                {/*
+                  THE COUNT AND THE DRIFT BADGE ARE DIFFERENT CLAIMS, so they
+                  are different elements and they can both be present.
+
+                  The count is how big the section is: quiet, plain, always
+                  true. The badge is an alarm that something needs repairing,
+                  and it keeps the warning fill it has always had. Collapsing
+                  them into one numeral was the alternative and it is worse in
+                  both directions: styling the count like an alarm cries wolf on
+                  every page, and hiding the count whenever drift appeared would
+                  remove a fact exactly when somebody is looking at the section.
+
+                  A count of ZERO still renders, unlike the badge. "0" is a real
+                  and useful answer to "how many posts are there"; a badge of
+                  zero is an alarm about nothing.
+                */}
+                {count !== null ? (
+                  <span className="admin-nav-count" aria-hidden="true">
+                    {count}
+                  </span>
+                ) : null}
                 {/* Zero renders NOTHING, rather than a 0 badge: a count of
                     nothing is not news, and a permanent badge stops being a
                     signal. aria-hidden because the name above already says it

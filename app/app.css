@@ -1242,6 +1242,46 @@ a:hover {
   text-overflow: ellipsis;
 }
 
+/* THE SECTION COUNT, and it is deliberately NOT a badge.
+ *
+ * A badge is an alarm; this is a size. It gets no fill, no pill and no warning
+ * colour, only the right edge and a quieter grade of text, which is what the
+ * mockup does and is why the two can sit on one row without the eye reading
+ * both as problems. `--text-muted` clears the floor at 7.1:1; the mockup's
+ * #a79c8a is 2.34:1 and does not ship here any more than it ships in the media
+ * table.
+ *
+ * `margin-left: auto` puts it at the far edge, and the drift badge that may
+ * follow it takes the same treatment it always had, so on the one item that can
+ * carry both the count sits inboard of the alarm.
+ *
+ * TABULAR FIGURES, so a rail of counts lines up on the digit rather than
+ * jittering between 9 and 31. */
+.admin-nav-count {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Beside a drift badge the count gives up the auto margin, or the two would
+   fight over the same edge and the count would be pushed off it. */
+.admin-nav-count + .admin-nav-badge {
+  margin-left: 0.375rem;
+}
+
+/* IN THE COLLAPSED RAIL THE COUNT GOES, and the badge stays.
+ *
+ * There is room for one numeral over a 20px glyph and the alarm is the one
+ * worth keeping: a count with no label beside it is a number nobody can read
+ * the unit of, which is the exact defect the badge's own accessible name was
+ * written to avoid. The count survives as words in the item's aria-label, so
+ * nothing is lost to a screen reader, and `title` carries it for a pointer. */
+[data-admin-sidebar="collapsed"] .admin-nav-count {
+  display: none;
+}
+
 /* Ask index drift, on the item that owns the repair.
  *
  * A FILL, per the binding rule that interactive semantics take fills and never
