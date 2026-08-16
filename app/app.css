@@ -5422,31 +5422,43 @@ a:hover {
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 0.1875rem;
-  padding-top: 0.1875rem;
+  /* More air than the mockup gives them, and that is a CONSEQUENCE of the
+     colour rather than a taste. At #ede6d8 the mockup can stack three rules 3px
+     apart and they still read as texture; at --border they are legible lines,
+     and three legible lines 3px apart read as a triple underline hanging off
+     the title. Spacing them buys back the "paragraph seen from across a room"
+     the faint colour was doing for free. */
+  gap: 0.3125rem;
+  padding-top: 0.5rem;
 }
 
+/* RAGGED, LIKE TEXT IS. The mockup runs two full-width rules and one at 62
+   percent. At this contrast a full-width rule reads as a divider, so all three
+   stop short and stop at different places: what makes it read as prose rather
+   than as ruling is the uneven right edge, which costs no contrast at all.
+   Quietness from SHAPE, which is the same move the labels make with size and
+   tracking. */
 .media-doc-rules span {
   height: 1px;
   background: var(--border);
 }
 
-.media-doc-rules span:last-child {
-  width: 62%;
+.media-doc-rules span:nth-child(1) {
+  width: 92%;
 }
 
-/* THE ONE FACT ALONG THE BOTTOM, and it is the SIZE rather than a page count.
-   The mockup prints "24 pages"; that string is fixture data in the mockup and
-   nothing in this system stores a page count. Producing one means fetching the
-   PDF out of R2 and parsing it, per row, per render. The route comment beside
-   `DocumentCard` carries the full reasoning. */
-.media-doc-foot {
-  flex: none;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  white-space: nowrap;
+.media-doc-rules span:nth-child(2) {
+  width: 78%;
 }
+
+.media-doc-rules span:nth-child(3) {
+  width: 45%;
+}
+
+/* NO RULE FOR A CARD FOOT, because there is no card foot. The mockup ends its
+   document card with "24 pages", which is fixture data there and unstorable
+   here, and the size that stood in for it duplicated the tile's own meta line.
+   `DocumentCard` carries the full reasoning. */
 
 /* The three tile sizes give the card different amounts of room, so the parts
    that need room appear only when there is some. At S the card is ~112px wide
@@ -5766,8 +5778,7 @@ a:hover {
   padding: 0;
 }
 
-.media-grid[data-view="list"] .media-doc-main,
-.media-grid[data-view="list"] .media-doc-foot {
+.media-grid[data-view="list"] .media-doc-main {
   display: none;
 }
 
