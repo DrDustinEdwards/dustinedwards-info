@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
+import { MediaKeyboard, MediaToast, toast } from "~/components/admin/media-keyboard";
+import { MediaPalette } from "~/components/admin/media-palette";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import {
@@ -137,6 +139,45 @@ const FILTERS = [
 const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 
 /**
+ * How many rows the command palette returns.
+ *
+ * SIX, the mockup's own cap, and a real constraint rather than a round number: a
+ * dropdown under a search bar has about six rows before the highlighted one can
+ * leave the viewport, and a list the arrow keys cannot walk is a list with no
+ * keyboard navigation. The count line says "6+" when there are more, so the cap
+ * never reads as the whole answer.
+ */
+const PALETTE_RESULTS = 6;
+
+/**
+ * THE KEYBOARD SHORTCUTS, as data, so the popover cannot document one that does
+ * not exist.
+ *
+ * The previous ruling on this page was that an absent shortcut must not be
+ * advertised, which is why the Cmd+K badge was held back for a whole session
+ * after the mockup drew it. The same rule applies to this list: every row here
+ * is wired, the two global ones in `MediaPalette` and the rest in
+ * `MediaKeyboard`, and `check:admin-ui` asserts the rendered panel and this
+ * table name the same set.
+ *
+ * WRITTEN IN WORDS, not glyphs. The mockup uses the arrow, return and delete
+ * SYMBOLS, which a screen reader reads as punctuation or skips entirely, and
+ * which several fonts render as tofu. A `<kbd>` saying "shift enter" is legible
+ * to everything.
+ */
+const MEDIA_SHORTCUTS = [
+  { keys: "cmd K", what: "Focus search from anywhere" },
+  { keys: "/", what: "Focus search" },
+  { keys: "up down", what: "Move through results" },
+  { keys: "enter", what: "Copy the address" },
+  { keys: "shift enter", what: "Open details" },
+  { keys: "arrows", what: "Move through the grid" },
+  { keys: "x", what: "Select the tile under the cursor" },
+  { keys: "c", what: "Copy the address of the tile under the cursor" },
+  { keys: "escape", what: "Clear the search or the selection" },
+] as const;
+
+/**
  * THE QUALITY LENSES, with the sentence each one is asking.
  *
  * The hints are the mockup's own framing carried over: a lens is a question,
@@ -187,6 +228,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // The picker asks for a flatter, bigger payload from this same loader, which
   // is what makes it the same listing rather than a second one.
   const picker = url.searchParams.get("picker") === "1";
+
+  /*
+   * THE COMMAND PALETTE, ON THIS LOADER, for the reason the picker is.
+   *
+   * It could have been a route of its own, or the client could have filtered a
+   * copy of the library shipped into the page. Both are second answers to "what
+   * matches this query", and this page has already paid for a second answer
+   * once: the Unused chip counted with one predicate and filtered with another.
+   *
+   * Reaching the SAME `matchesQuery` in SQL means the palette and the plain GET
+   * form cannot disagree about what a query matches, which matters because the
+   * form is what the palette degrades to. Shipping the corpus to the browser
+   * would also stop being viable at exactly the size where search starts to
+   * matter, and this page paginates precisely because that size is coming.
+   */
+  const palette = url.searchParams.get("palette") === "1";
 
   // DEFAULT TO CONTENT, which is the whole ordering fix stated as a default.
   // An empty `?role=` is not "no filter", it is the absence of the parameter;
@@ -265,6 +322,35 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         alt: object.alt,
       })),
       truncated: listed.hasMore,
+    };
+  }
+
+  /*
+   * THE PALETTE PAYLOAD: small, flat, and capped.
+   *
+   * SIX, which is the mockup's own cap and a real constraint rather than a
+   * round number: the dropdown sits under a search bar with a viewport beneath
+   * it, and a list long enough to scroll is a list the arrow keys cannot walk
+   * without the highlighted row leaving the screen. `hasMore` is reported so the
+   * count can say "6+ matches" rather than claiming six is all there is.
+   *
+   * NO usage, NO citations, NO twins. Those cost three more queries per
+   * keystroke and answer nothing a reader picking a file needs; the palette
+   * exists to find an address, and the inspector is one keystroke away for the
+   * rest.
+   */
+  if (palette) {
+    return {
+      palette: true as const,
+      results: listed.objects.slice(0, PALETTE_RESULTS).map((object) => ({
+        key: object.key,
+        url: object.url,
+        name: object.originalName ?? object.key.split("/").pop() ?? object.key,
+        dir: folderPrefix(object.key),
+        size: object.size,
+        viewable: isViewable(object.kind),
+      })),
+      hasMore: listed.objects.length > PALETTE_RESULTS || listed.hasMore,
     };
   }
 
@@ -404,6 +490,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   return {
     picker: false as const,
+    palette: false as const,
     objects: shown.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
@@ -1280,7 +1367,19 @@ function MediaListHeader({
   );
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
+function CopyButton({
+  value,
+  label,
+  /**
+   * The accessible name, when the visible label is not a sentence.
+   *
+   * Defaults to the old shape, which is right for a tile whose label is a
+   * filename ("Copy the address for plate-2019.png"). The inspector passes one
+   * explicitly, because there the label is already an imperative and the default
+   * produced "Copy the address for Copy address".
+   */
+  name,
+}: { value: string; label: string; name?: string }) {
   return (
     <button
       type="button"
@@ -1292,6 +1391,10 @@ function CopyButton({ value, label }: { value: string; label: string }) {
           .writeText(value)
           .then(() => {
             button.dataset.copied = "yes";
+            // ANNOUNCED as well as drawn. The data attribute drives a `::after`,
+            // which is invisible to assistive technology; the toast is a live
+            // region, so this is the half a screen reader actually gets.
+            toast(`Copied ${value}`);
             window.setTimeout(() => {
               delete button.dataset.copied;
             }, 1500);
@@ -1319,7 +1422,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
         <rect x="9" y="9" width="12" height="12" rx="2" />
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
       </svg>
-      <span className="sr-only">Copy the address for {label}</span>
+      <span className="sr-only">{name ?? `Copy the address for ${label}`}</span>
     </button>
   );
 }
@@ -1340,7 +1443,8 @@ export default function AdminMedia({
    */
   initialSelection = [],
 }: Route.ComponentProps & { initialSelection?: string[] }) {
-  if (loaderData.picker) return null;
+  // Both JSON branches render nothing: they are data for a fetch, not a page.
+  if (loaderData.picker || loaderData.palette) return null;
   const {
     objects,
     page,
@@ -1581,7 +1685,32 @@ export default function AdminMedia({
             Clear
           </Link>
         ) : null}
+        {/*
+          THE Cmd+K AFFORDANCE, WHICH MAY NOW BE RENDERED.
+
+          The v6.4 pass deliberately left it out with a note: "NO Cmd+K
+          AFFORDANCE IS RENDERED. The mockup shows one; this page has no such
+          shortcut, and the earlier ruling against documenting absent shortcuts
+          applies unchanged. It goes in when the shortcut does." The shortcut
+          went in with the palette below, so the badge goes in with it. The
+          ruling is satisfied rather than waived.
+
+          aria-hidden: it is a picture of a key combination, and a screen reader
+          announcing "command K" beside a search field it can already reach adds
+          nothing. The binding itself is listed in the shortcuts popover.
+        */}
+        <span className="media-search-kbd" aria-hidden="true">
+          {"⌘K"}
+        </span>
       </form>
+      {/*
+        THE PALETTE, mounted AFTER the form and rendering nothing on the server.
+
+        It attaches to the input above by id rather than owning it, so with
+        scripting off the form is untouched and still navigates. Everything the
+        palette adds is additive: live results, arrow keys, Enter to copy.
+      */}
+      <MediaPalette inputId="media-q" />
 
       {/* THE FACET ROW, from the ratified mockup: a label, the chips, and a
           hint that says who owns this axis.
@@ -1769,6 +1898,40 @@ export default function AdminMedia({
                 Reset to defaults
               </Link>
             ) : null}
+          </div>
+        </details>
+
+        {/*
+          THE KEYBOARD SHORTCUTS, behind the mockup's "?" control.
+
+          A `<details>` like the Display popover beside it, for the same reason:
+          the open and close behaviour, the Escape key and the summary semantics
+          are the platform's, and this needs no script at all. That matters more
+          here than anywhere else on the page, because a panel documenting
+          keyboard access that itself requires a mouse would be a joke at the
+          reader's expense.
+
+          THE LIST IS DERIVED FROM `MEDIA_SHORTCUTS`, not typed here, so a
+          binding cannot be documented without existing. Everything in that
+          table is implemented: the two global ones by the palette, the rest by
+          the grid navigator.
+        */}
+        <details className="media-display media-shortcuts">
+          <summary className="row-action" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+            ?
+          </summary>
+          <div className="media-display-panel media-shortcuts-panel">
+            <span className="media-display-label">Keyboard</span>
+            <dl className="media-shortcut-list">
+              {MEDIA_SHORTCUTS.map((s) => (
+                <div key={s.keys} className="media-shortcut">
+                  <dt>
+                    <kbd>{s.keys}</kbd>
+                  </dt>
+                  <dd>{s.what}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </details>
 
@@ -2141,7 +2304,12 @@ export default function AdminMedia({
                       alt: detail.alt,
                       base: detail.originalName ?? detail.key.split("/").pop() ?? detail.key,
                     }).map((snippet) => (
-                      <CopyButton key={snippet.id} value={snippet.value} label={snippet.label} />
+                      <CopyButton
+                        key={snippet.id}
+                        value={snippet.value}
+                        label={snippet.label}
+                        name={snippet.name}
+                      />
                     ))}
                   </div>
 
@@ -2444,7 +2612,50 @@ export default function AdminMedia({
           <div className="posts-bulk" role="group" aria-label="Bulk actions">
             <p className="posts-bulk-count" aria-live="polite">
               {chosen.length} selected
+              {/*
+                THE SIZE OF WHAT IS SELECTED, which is the number the mockup puts
+                beside the count and the one that answers the question somebody
+                selecting a dozen files is actually asking: how much is this.
+                A count of twelve says nothing about whether they are thumbnails
+                or a conference poster.
+              */}
+              <span className="posts-bulk-size">
+                {formatBytes(
+                  objects
+                    .filter((o) => chosen.includes(o.key))
+                    .reduce((sum, o) => sum + o.size, 0),
+                )}
+              </span>
             </p>
+            {/*
+              COPY ADDRESSES, one per line, for the selection.
+
+              `type="button"` so it never submits the form it sits inside, and
+              the only client-side control in this bar: everything beside it is a
+              real submission. One address per line because that is what pastes
+              usefully into a document, and a comma-separated list is not
+              something anybody wants.
+            */}
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                const addresses = objects
+                  .filter((o) => chosen.includes(o.key))
+                  .map((o) => o.url)
+                  .join("\n");
+                navigator.clipboard
+                  .writeText(addresses)
+                  .then(() =>
+                    toast(
+                      `Copied ${chosen.length} address${chosen.length === 1 ? "" : "es"}`,
+                    ),
+                  )
+                  .catch(() => toast("The clipboard refused. Open a file to copy its address."));
+              }}
+            >
+              Copy addresses
+            </button>
             <label className="posts-bulk-tag">
               <span>Tag</span>
               <input
@@ -2467,6 +2678,14 @@ export default function AdminMedia({
             </button>
             <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
               Remove tag
+            </button>
+            {/* Escape clears too, and nobody discovers Escape. */}
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => setSelected([])}
+            >
+              Clear
             </button>
           </div>
         ) : null}
@@ -2590,6 +2809,11 @@ export default function AdminMedia({
               <li
                 key={object.key}
                 className="media-card"
+                /* The keyboard navigator addresses tiles by this attribute and
+                   reads their rendered boxes for the grid geometry. It is the
+                   only thing tying the island to the markup, and it is the key
+                   rather than an index so a reflow cannot change what it means. */
+                data-tile={object.key}
                 data-selected={chosen.includes(object.key) || undefined}
                 data-active={view.key === object.key || undefined}
                 data-kind={object.viewable ? "image" : "document"}
@@ -2885,6 +3109,15 @@ export default function AdminMedia({
           filter was how paging out of a filtered view silently reverted to the
           default, and a search dropped the same way would be the same bug
           wearing a different parameter. */}
+      {/*
+        THE TWO PAGE-LEVEL ISLANDS. Both render nothing on the server: the toast
+        is an empty live region until something speaks, and the navigator draws
+        no markup at all. With scripting off neither exists and the page is
+        exactly what it was.
+      */}
+      <MediaToast />
+      {view.view === "grid" ? <MediaKeyboard /> : null}
+
       {hasMore || page > 1 ? (
         <p className="posts-toolbar">
           {page > 1 ? (
