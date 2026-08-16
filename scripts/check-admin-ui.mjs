@@ -1870,15 +1870,36 @@ structural(
  * saying so is what stops somebody adding a plausible number.
  */
 structural(
-  "the document card's foot carries the stored size",
-  "media, document in the grid",
-  (h) => /class="media-doc-foot"[^>]*>1\.4 MB</.test(h),
-);
-structural(
   "no page count is invented, because nothing stores one",
   "media, document in the grid",
   (h) => !/\d+\s+pages?/i.test(h),
 );
+
+/*
+ * THE CARD DOES NOT REPEAT THE TILE'S OWN META LINE.
+ *
+ * The card carried a size along its bottom for one render, in the slot the
+ * mockup fills with a page count, and the tile's meta line prints the size too,
+ * so `1.4 MB` appeared twice inside sixty pixels and read as a bug on a
+ * screenshot. The mockup has no such problem because its tile has NO BODY: the
+ * card is the whole tile. This one has always had a body.
+ *
+ * **SCOPED TO THE CARD, and the first draft was not, which cost a red run
+ * worth keeping.** It counted the string across the whole tile and expected
+ * one, and found three: the list's Size column and its Dims column are in the
+ * markup on every render by the one-tree rule and hidden by CSS in the grid.
+ * Counting rendered TEXT to prove something about LAYOUT is a category error
+ * this gate is especially prone to, because it renders with no stylesheet at
+ * all and cannot see `display: none`. The property is about the card, so the
+ * assertion reads the card.
+ *
+ * Paired with a scope check, because a `.media-doc` regex that stopped matching
+ * would make the absence below pass over an empty string.
+ */
+structural("the document card does not repeat the size", "media, document in the grid", (h) => {
+  const card = /<span class="media-doc">[\s\S]*?<\/span><\/span>/.exec(h)?.[0] ?? "";
+  return card.includes("edwards 2024 phage genomics") && !card.includes("1.4 MB");
+});
 
 /* ---- 2. THE CAPTION BAR ------------------------------------------------- */
 
@@ -2008,8 +2029,16 @@ structural("the sorted column is the one the view names", "media, list sorted by
   const hrefsIn = (block) =>
     [...block.matchAll(/href="(\/admin\/media[^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
 
-  /** @param {string} href the sort key the url RESOLVES to, defaults included */
+  /*
+   * RESOLVED THROUGH `readView`, never read off the query string.
+   *
+   * `hrefWith` OMITS a parameter equal to its default, so the sort a link MEANS
+   * and the sort it SPELLS are different questions, and the loader answers the
+   * first one. Asking the second is how the header filter above went wrong.
+   */
+  /** @param {string} href @returns {string} */
   const sortOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).sort;
+  /** @param {string} href @returns {string} */
   const dirOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).dir;
 
   /* The header's children are spans and anchors and nothing nests inside it, so
@@ -2048,8 +2077,9 @@ structural("the sorted column is the one the view names", "media, list sorted by
       `The popover and the header must offer the same columns.`,
   );
 
-  /** key -> href, for each side. */
+  /** @param {string[]} list @returns {Record<string, string>} sort key -> href */
   const byKey = (list) => {
+    /** @type {Record<string, string>} */
     const out = {};
     for (const href of list) out[sortOf(href)] = href;
     return out;

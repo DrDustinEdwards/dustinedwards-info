@@ -851,16 +851,26 @@ function extensionOf(object: { key: string; mime: string | null }) {
  * lines standing in for the text of the page, and one fact along the bottom.
  * A reader scanning that grid sees five different papers.
  *
- * **THE PAGE COUNT IS NOT SHOWN, and this is a measurement, not a shortcut.**
- * The mockup's bottom line reads "24 pages"; in the mockup that string is
- * FIXTURE DATA, typed into its row table beside the size. Nothing in this
- * system stores a page count: `media` carries bytes, mime, width and height,
- * and width and height are null for every PDF. Producing one would mean
- * fetching the object out of R2 and parsing it on every render of every tile,
- * which is a network read per row for a decoration. So the line carries the
- * SIZE, which is stored, is already true, and is the fact somebody looking at a
- * library of papers actually acts on. A page count arrives if and when a column
- * holds one.
+ * **THERE IS NO BOTTOM LINE, BECAUSE THE FACT IT WOULD CARRY DOES NOT EXIST.**
+ *
+ * The mockup's card ends with "24 pages". In the mockup that string is FIXTURE
+ * DATA, typed into its row table beside the size, and nothing computes it.
+ * Nothing in this system stores a page count either: `media` carries bytes,
+ * mime, width and height, and width and height are null for every PDF. Getting
+ * one would mean fetching the object out of R2 and parsing it, per row, per
+ * render, which is a network read for a decoration.
+ *
+ * The SIZE was put there instead for one render and it was worse, which is why
+ * this note is longer than the code it explains. The mockup's tile has NO BODY:
+ * the card IS the whole tile. This page's tile has always had a body, and that
+ * body's meta line already prints the size, so a card foot carrying it too
+ * rendered `1.4 MB` twice inside sixty pixels. A fact repeated is not a fact
+ * confirmed; it reads as a bug, and it read as one on a screenshot.
+ *
+ * So the space is left empty, and the card is the extension, the title and the
+ * suggestion of text. A page count goes in when a column holds one.
+ * `check:admin-ui` holds both halves meanwhile: no invented page count, and the
+ * size stated exactly ONCE per tile.
  *
  * THE RULED LINES ARE DECORATION and are marked so: `aria-hidden`, no text, no
  * meaning carried. They are the one thing here that suggests rather than states.
@@ -868,7 +878,7 @@ function extensionOf(object: { key: string; mime: string | null }) {
 function DocumentCard({
   object,
 }: {
-  object: { key: string; mime: string | null; originalName: string | null; size: number };
+  object: { key: string; mime: string | null; originalName: string | null };
 }) {
   const base = object.originalName ?? object.key.split("/").pop() ?? object.key;
   return (
@@ -885,9 +895,6 @@ function DocumentCard({
           <span />
         </span>
       </span>
-      {/* The one fact along the bottom. Size, because size is stored and a page
-          count is not. See the note above before changing this to pages. */}
-      <span className="media-doc-foot">{formatBytes(object.size)}</span>
     </span>
   );
 }
