@@ -4735,96 +4735,151 @@ a:hover {
  * grid permanently and this page is only ever showing one asset at a time. It
  * is a `?key=` on the same URL, so it is linkable, survives a reload and needs
  * no script. */
-/* THE INSPECTOR AS A PERSISTENT SIDE PANEL, not a block above the grid.
+/* THE INSPECTOR AS A DOCKED DRAWER, which is what the mockup has and what two
+ * previous attempts were not.
  *
- * It was a card stacked over the listing, which is the shape that pushes the
- * whole library down the page the moment you open one file: you click a tile to
- * find out about it and the grid you were reading jumps out from under you. The
- * mockup answers this with a right-hand drawer, and the reason is not
- * decoration. Inspecting is a SIDE activity. The reader is comparing the panel
- * against the grid, so both have to be on screen at once.
+ * ## WHAT WAS WRONG WITH THE IN-FLOW PANEL
  *
- * STICKY, NOT FIXED, and this is the one real decision here. `position: fixed`
- * would take it out of flow entirely and require the grid to reserve a gutter by
- * hand at every breakpoint. Sticky keeps it in the layout, so the grid beside it
- * simply has less room, and it scrolls with the page until it reaches the top
- * and then stays. `max-height` plus its own scroller means a long panel never
- * runs past the viewport with its Delete button below the fold.
+ * It was `position: sticky` inside a two-column panel grid, and every one of
+ * its measured properties was wrong. Opening a file put 23 of the panel's 566
+ * pixels on screen and required 507px of scrolling to reach its top. It also
+ * SQUEEZED the page behind it: the search bar, the lens row, the usage note and
+ * the grid all went from 977px to 573px, the grid dropped from six columns to
+ * three, and a 483px void of empty column sat above the panel. Clicking a file
+ * to learn about it reflowed the entire library you were reading.
  *
- * NARROW VIEWPORTS GET THE OLD BEHAVIOUR BACK, deliberately. Below 60rem there
- * is no room for two columns, and a 392px drawer over a 390px phone is a modal
- * without any of a modal's obligations: no focus trap, no scrim, no Escape. The
- * block layout is honest there and needs none of that. */
+ * ## WHAT IT IS NOW
+ *
+ * Fixed, flush to the right edge of the viewport, full viewport height, over a
+ * scrim, with the page behind it completely unaffected. That is the mockup's
+ * design and the reason for it is that inspecting is a SIDE activity: the
+ * reader is comparing the panel against the grid, so the grid must not move.
+ *
+ * `position: fixed` also takes it out of `.admin-content`, which is the shell's
+ * scroll container on desktop, so the drawer pins to the viewport rather than
+ * to a scrolled box. That is why there is no breakpoint here: the same
+ * mechanism is correct at every width, and `min(392px, 100%)` makes it
+ * full-bleed on a phone without a media query.
+ *
+ * 100dvh rather than 100vh, because on mobile Safari 100vh is taller than the
+ * visible area and the panel's last control would sit under the browser chrome.
+ */
 .media-detail {
-  display: grid;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--surface);
-}
-
-@media (min-width: 60rem) {
-  /* The page becomes two columns only while the inspector is open. `:has` is
-     what makes that possible without the route rendering a different tree: the
-     panel is a sibling, and its container reacts to its presence.
-
-     `.panel` DIRECTLY, because there is no body wrapper: `Panel` renders a head
-     and then its children as siblings. Written against `.panel-body` first,
-     which does not exist and therefore did nothing at all, silently, which is
-     what a selector for an element nobody renders always does. */
-  .panel:has(> .media-detail) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 24rem;
-    align-items: start;
-    gap: 0 1.25rem;
-  }
-
-  /* The heading spans both columns, or the title would sit in the left one and
-     the panel would start beside it. */
-  .panel:has(> .media-detail) > .panel-head {
-    grid-column: 1 / -1;
-  }
-
-  .media-detail {
-    position: sticky;
-    top: 1rem;
-    order: 2;
-    max-height: calc(100vh - 2rem);
-    margin-bottom: 0;
-    overflow-y: auto;
-    /* Popover elevation, so hard rule 5 applies: the elevated step takes
-       --border-strong and never --border. */
-    background: var(--surface-popover);
-    border-color: var(--border-strong);
-  }
-
-  /* Everything else in the panel body stays in the first column. Named rather
-     than left to source order, because the inspector renders BEFORE the grid in
-     the markup and would otherwise take the left column. */
-  .panel:has(> .media-detail) > *:not(.media-detail):not(.panel-head) {
-    grid-column: 1;
-  }
-}
-
-.media-detail-head {
+  position: fixed;
+  z-index: 46;
+  top: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 1rem;
+  width: min(24.5rem, 100%);
+  height: 100dvh;
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  /* A left seam only. The other three edges are the viewport. */
+  border: 0;
+  border-left: 1px solid var(--border-strong);
+  border-radius: 0;
 }
 
+/* THE STICKY HEAD, so the name of the thing you are reading about does not
+   scroll away from the facts about it, and Close stays reachable without
+   scrolling back up. Negative margins pull it out to the drawer's padding edge
+   so the band is full bleed rather than a strip with gaps at its sides. */
+.media-detail-head {
+  position: sticky;
+  z-index: 2;
+  top: -1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: -1rem -1rem 0;
+  padding: 0.6875rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* The name takes the free space and ELLIPSISES rather than wrapping. A
+   content-addressed key is 20 characters of hash and a static one is a path;
+   either wraps to three lines and pushes the whole panel down. `min-width: 0`
+   is what makes the ellipsis possible: a flex item refuses to shrink below its
+   content otherwise, and the close control would be pushed off the panel. The
+   full string is in the title attribute and in the Address field below. */
 .media-detail-head h3 {
-  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
-  font-size: 1rem;
+  overflow: hidden;
+  font-size: 0.84375rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.media-detail-body {
+/* The usage state, repeated where the eye lands first. It is the one fact
+   somebody opens this panel to check, and the panel explains it further down. */
+.media-detail-usage-pill {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.125rem 0.5rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  white-space: nowrap;
+}
+
+.media-detail-close {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  border-radius: 0.375rem;
+  text-decoration: none;
+}
+
+.media-detail-close:hover,
+.media-detail-close:focus-visible {
+  color: var(--text);
+  background: var(--surface-popover);
+}
+
+/* THE SCRIM. A real link, so closing works with no script at all, and the whole
+   area outside the drawer is the target, which is what everybody expects of a
+   drawer. `aria-hidden` would be wrong on a focusable control, so it carries a
+   real accessible name instead and is simply not announced as decoration. */
+.media-detail-scrim {
+  position: fixed;
+  z-index: 45;
+  inset: 0;
+  display: block;
+  /* THE EXISTING `--scrim` TOKEN AT 28 PERCENT, not a new one.
+
+     A `--scrim-veil: rgba(...)` was written first and check:contrast refused it
+     three ways, all correctly: the token block accepts LITERAL HEXES only, so
+     an rgba() is unparseable; Lightning CSS minifies it to `#2a262247` so the
+     shipped value would not match the declared one either; and the
+     participation assertion demands every declared token appear in a measured
+     pair, which a translucent veil cannot honestly do because no text ever sits
+     on it and it has no ratio.
+
+     `opacity` on the element sidesteps all three. `--scrim` is already declared
+     in every theme and already priced in the matrix against `--on-scrim`, and
+     nothing is drawn on this layer, so dimming the whole element is exactly
+     what is wanted. The mockup's own value is rgba(42,38,34,0.28); this is the
+     ratified dark neutral at the same 28 percent. */
+  background: var(--scrim);
+  opacity: 0.28;
 }
 
 @media (max-width: 800px) {
