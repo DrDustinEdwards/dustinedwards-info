@@ -54,6 +54,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
@@ -162,6 +164,82 @@ console.log(
     ? "  no stated-absence placeholders are declared, so nothing was checked here."
     : `  no unmeasured placeholders (${PLACEHOLDERS.length} checked).`,
 );
+
+/* ------------------------------------------ 1c. the deployed schema is current */
+
+/*
+ * **NO MIGRATION MAY BE PENDING WHEN A DEPLOY GOES OUT.**
+ *
+ * SHIP WINDOW 5 is why this exists. It deployed with every offline gate green
+ * and the media admin page returned a 500 on its first load, because
+ * `0011_media_trash_tags.sql` had been pending on the remote database since the
+ * session that authored it, four sessions earlier. `trashed_at` and `tags` did
+ * not exist, and every media loader query threw.
+ *
+ * Nothing in the repo could see it. Ship applies no migrations and compares no
+ * schema. `check:migrations` compares FILES to a hash manifest and never to a
+ * database. `check:admin-ui` renders the route with every `.server` import
+ * stubbed, so the loader never runs. Authoring a migration created an
+ * obligation in no instrument anywhere.
+ *
+ * ## IT REFUSES. IT DOES NOT APPLY.
+ *
+ * `0011` happened to be additive, two `ADD COLUMN` and an index, and ship
+ * cannot tell that from a `DROP` or a rewrite without reading and classifying
+ * SQL. Being wrong about that once is unrecoverable, and a deploy that silently
+ * mutates the production schema is worse than one that stops. The operator
+ * decides; this makes sure they are ASKED rather than finding out from a 500.
+ *
+ * ## BEFORE THE BUILD, not merely before the deploy
+ *
+ * The ruling says before deploy. This is earlier than it has to be, and that is
+ * deliberate: the answer cannot change during a build on a single-operator
+ * system, and refusing in five seconds is kinder than refusing after two
+ * minutes of build and gates. It sits with the other preconditions about the
+ * state of the world, beside the clean-tree check.
+ *
+ * FAIL CLOSED. Three outcomes, not two: pending refuses naming the files,
+ * clean proceeds, and anything unreadable, including a non-zero exit from a
+ * network or auth failure, refuses saying so. `readMigrationList` owns that
+ * decision and is unit tested against wrangler output recorded from a real
+ * database in both states.
+ */
+
+announce("The deployed database has every migration");
+
+const DATABASE = "dustinedwards";
+
+const migrationList = run(
+  "npx",
+  ["wrangler", "d1", "migrations", "list", DATABASE, "--remote"],
+  { capture: true },
+);
+const migrations = readMigrationList({
+  code: migrationList.code,
+  text: migrationList.text,
+});
+
+if (migrations.state === "pending") {
+  refuse(
+    `the deployed database is missing ${migrations.pending.length} migration(s): ` +
+      migrations.pending.join(", "),
+    `Apply them first, then re-run ship:
+    ${applyCommand(DATABASE)}
+  ` +
+      "  Ship does not apply migrations itself: additive and destructive look " +
+      "the same from here, so the choice is yours.",
+  );
+}
+if (migrations.state === "unreadable") {
+  refuse(
+    `the deployed schema could not be determined: ${migrations.reason}`,
+    "Ship refuses on an unknown rather than deploying past it. Check network " +
+      `and credentials, then re-run. To see it yourself:
+    npx wrangler d1 ` +
+      `migrations list ${DATABASE} --remote`,
+  );
+}
+console.log(`  ${migrations.reason}.`);
 
 /* --------------------------------------------------------------- 2. build */
 
