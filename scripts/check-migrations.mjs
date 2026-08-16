@@ -225,6 +225,112 @@ console.log(
     `sha256 compared both directions`,
 );
 
+
+/* ------------------------------ ship refuses on a pending migration -------- */
+
+/*
+ * **AUTHORING A MIGRATION MUST CREATE AN OBLIGATION SOMEWHERE, AND THIS IS IT.**
+ *
+ * SHIP WINDOW 5 deployed with every offline gate green and the media admin page
+ * returned a 500 on its first load, because `0011_media_trash_tags.sql` had
+ * been pending on the remote database since the session that authored it, four
+ * sessions earlier. The columns did not exist and every media loader query
+ * threw.
+ *
+ * This section belongs HERE rather than in a gate of its own, and that is a
+ * judgement worth stating. Nothing owns ship's step ORDERING today; the closest
+ * thing is `check:assertions`, which lints every `scripts/**` file including
+ * `ship.mjs`, but only for the vacuity classes. What this gate owns is the
+ * MIGRATION CONTRACT: hashes both directions, append-only, never edit an
+ * applied one. "A migration that exists in the repo must be applied before the
+ * code that needs it deploys" is a clause of that same contract, so it is added
+ * to the gate that already holds it rather than a new gate being invented for
+ * one assertion.
+ *
+ * SOURCE LEVEL, and the boundary is real: this reads what `ship.mjs` DECLARES.
+ * It cannot run ship, and must not: the ship-guard law is that a deploy guard
+ * is proven on its PREDICATE IN ISOLATION, never by invoking the deploy. The
+ * predicate's own behaviour is unit tested in `test/pending-migrations.test.mjs`
+ * against wrangler output recorded from a real database in both states.
+ */
+
+/** @param {string} source Comments out, strings kept. */
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+}
+
+const SHIP = join(root, "scripts", "ship.mjs");
+
+ok(
+  "scripts/ship.mjs exists",
+  existsSync(SHIP),
+  "without it nothing below examines anything",
+);
+
+if (existsSync(SHIP)) {
+  const shipSource = readFileSync(SHIP, "utf8");
+  // Comments stripped before anything is located, the same trap check:logo,
+  // check:contrast and check:features have each hit by parsing their own prose.
+  const shipCode = stripComments(shipSource);
+
+  ok(
+    "ship imports the pending-migration predicate",
+    /readMigrationList/.test(shipCode),
+    "the guard's decision lives in scripts/lib/pending-migrations.mjs, which is " +
+      "unit tested. A guard reimplemented inline in ship would be untested by " +
+      "construction, because nothing can run ship without deploying.",
+  );
+  ok(
+    "ship asks the deployed database which migrations are applied",
+    /migrations[\s\S]{0,80}list/.test(shipCode) || /"list"/.test(shipCode),
+    "the comparison is against the DATABASE, not against the manifest. The " +
+      "manifest comparison above cannot see an unapplied migration at all.",
+  );
+  ok(
+    "ship refuses on a PENDING migration",
+    /state\s*===\s*"pending"/.test(shipCode) && /refuse\(/.test(shipCode),
+    "it must refuse rather than apply: additive and destructive are " +
+      "indistinguishable from ship, so the operator decides",
+  );
+  ok(
+    "ship refuses on an UNREADABLE answer, so it fails closed",
+    /state\s*===\s*"unreadable"/.test(shipCode),
+    "a network or auth failure prints no migration names, and reading that as " +
+      "nothing pending is how this guard would become decoration",
+  );
+  ok(
+    "the refusal states the operator's next command",
+    /applyCommand\(/.test(shipCode),
+    "nobody should have to remember `wrangler d1 migrations apply` under the " +
+      "pressure of a refused deploy",
+  );
+
+  /*
+   * ORDERING, which is the half a presence check cannot see.
+   *
+   * A guard that runs AFTER the deploy is not a guard, it is a report. The
+   * index comparison is crude and it is the right crudeness: it reads the
+   * position of the guard's own announce against the deploy's, so moving
+   * either one fails.
+   */
+  const guardAt = shipCode.indexOf("The deployed database has every migration");
+  const deployAt = shipCode.indexOf('announce("Deploy")');
+  ok(
+    "both the migration guard and the deploy step were located",
+    guardAt !== -1 && deployAt !== -1,
+    `guard at ${guardAt}, deploy at ${deployAt}. If either moved or was renamed, ` +
+      `the ordering assertion below would pass vacuously.`,
+  );
+  ok(
+    "the migration guard is ordered BEFORE the deploy",
+    guardAt !== -1 && deployAt !== -1 && guardAt < deployAt,
+    "a schema check that runs after the deploy is a report, not a guard. Window " +
+      "5 did not need a report; it needed something that stopped.",
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -233,12 +339,16 @@ console.log(
  * that stopped running over a directory that is still full, and neither can see
  * the other's bug.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 33.
- * Never summed. Floored at 30, slack of three: the count steps by a fixed
- * amount per migration, and migrations are append-only by hard rule 14, so it
- * only ever grows.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 44.
+ * Never summed. It was 33 against a floor of 30 until the ship-guard clause
+ * landed, which adds eight assertions over `ship.mjs` plus the migration this
+ * arc added.
+ *
+ * Floored at 41, slack of three: the count steps by a fixed amount per
+ * migration, and migrations are append-only by hard rule 14, so it only ever
+ * grows.
  */
-const MINIMUM_CHECKS = 30;
+const MINIMUM_CHECKS = 41;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
