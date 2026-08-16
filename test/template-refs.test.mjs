@@ -17,6 +17,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   SOURCE_EXTENSIONS,
@@ -174,4 +175,37 @@ test("results fold to sorted keys and sorted files, so the artifact is stable", 
 test("one file naming one asset twice is recorded once", () => {
   const out = foldRefs([{ file: "app/a.ts", assets: ["/logo.svg"] }, { file: "app/a.ts", assets: ["/logo.svg"] }]);
   assert.deepEqual(out.refs["/logo.svg"], ["app/a.ts"]);
+});
+
+test("the self-referential guard beats SOURCE_FILES, which is where it decides", () => {
+  /*
+   * A PLANT PROVED THIS GUARD WAS DOING NOTHING. Removing the check entirely
+   * left check:content green, because `content/generated/assets.json` sits under
+   * `content/`, which is not a source root, so the root rule already rejected
+   * it. The guard was an assertion that could not fail.
+   *
+   * It decides in exactly one place: `SOURCE_FILES` entries are named
+   * individually and BYPASS the root rule, so a self-referential file listed
+   * there would be read unless the guard runs first. That ordering is the
+   * property, and this is the only test that can see it.
+   */
+  // `content/features.json` IS in SOURCE_FILES and IS read, which is the
+  // control: it proves the bypass exists for the guard to beat.
+  assert.equal(isSourceFile("content/features.json"), true);
+  // And the guarded one is refused even though it is under the same root.
+  assert.equal(isSourceFile("content/generated/assets.json"), false);
+});
+
+test("the guard is checked BEFORE the source-file allowance, not after", () => {
+  // Order is the whole property: if the allowance ran first, a self-referential
+  // entry named in SOURCE_FILES would be read and the third usage state would
+  // collapse into "everything is referenced".
+  const source = readFileSync(
+    new URL("../app/lib/media/template-refs.mjs", import.meta.url),
+    "utf8",
+  );
+  const guard = source.indexOf("SELF_REFERENTIAL.includes(file)");
+  const allow = source.indexOf("SOURCE_FILES.includes(file)");
+  assert.ok(guard > 0 && allow > 0, "both checks must exist");
+  assert.ok(guard < allow, "the self-referential guard must run first");
 });

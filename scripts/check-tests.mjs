@@ -45,7 +45,7 @@ const TEST_DIR = join(root, "test");
 
 /**
  * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-16 by RUNNING
- * it: 15 files, 191 tests. Never summed. It read 9 and 78, then 10 and 88, then
+ * it: 15 files, 195 tests. Never summed. It read 9 and 78, then 10 and 88, then
  * 11 and 102, all the same day, as `analytics-path`, `media-tags` and then
  * `media-view` landed, and 13 and 138 the day after.
  *
@@ -59,7 +59,7 @@ const TEST_DIR = join(root, "test");
  *
  * Tight rather than slack, deliberately. These move UP when someone adds a
  * test, which is a one-line edit in the same commit, and the whole point is to
- * notice the set SHRINKING. 179 is 94 percent of 191, which is the margin the
+ * notice the set SHRINKING. 183 is 94 percent of 195, which is the margin the
  * other gates use and is narrow enough that losing the smallest test file, 4
  * tests, still trips it.
  *
@@ -76,7 +76,7 @@ const TEST_DIR = join(root, "test");
  * than a comment.
  */
 const MINIMUM_FILES = 15;
-const MINIMUM_TESTS = 179;
+const MINIMUM_TESTS = 183;
 
 let checks = 0;
 let failures = 0;

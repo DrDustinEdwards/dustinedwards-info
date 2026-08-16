@@ -164,17 +164,33 @@ const PALETTE_RESULTS = 6;
  * SYMBOLS, which a screen reader reads as punctuation or skips entirely, and
  * which several fonts render as tofu. A `<kbd>` saying "shift enter" is legible
  * to everything.
+ *
+ * **`evidence` NAMES THE SOURCE TOKEN THAT IMPLEMENTS THE BINDING, and it is
+ * there because a plant proved the first version of this gate was a tautology.**
+ * Adding a fake row ("ctrl D, delete everything instantly") left check:admin-ui
+ * green: it compared the number of rows DECLARED against the number RENDERED,
+ * and a fake row increments both. It could only ever catch the panel failing to
+ * render, which is not what the rule is about.
+ *
+ * The rule is that this page must not advertise a shortcut nobody wired, which
+ * is why the Cmd+K badge was held back for an entire session. So each row now
+ * points at the expression in `media-palette.tsx` or `media-keyboard.tsx` that
+ * handles it, and the gate greps for it. A fake row has no expression to name.
  */
 const MEDIA_SHORTCUTS = [
-  { keys: "cmd K", what: "Focus search from anywhere" },
-  { keys: "/", what: "Focus search" },
-  { keys: "up down", what: "Move through results" },
-  { keys: "enter", what: "Copy the address" },
-  { keys: "shift enter", what: "Open details" },
-  { keys: "arrows", what: "Move through the grid" },
-  { keys: "x", what: "Select the tile under the cursor" },
-  { keys: "c", what: "Copy the address of the tile under the cursor" },
-  { keys: "escape", what: "Clear the search or the selection" },
+  { keys: "cmd K", what: "Focus search from anywhere", evidence: "metaKey" },
+  { keys: "/", what: "Focus search", evidence: 'event.key === "/"' },
+  { keys: "up down", what: "Move through results", evidence: 'event.key === "ArrowDown"' },
+  { keys: "enter", what: "Copy the address", evidence: 'event.key === "Enter"' },
+  { keys: "shift enter", what: "Open details", evidence: "event.shiftKey" },
+  { keys: "arrows", what: "Move through the grid", evidence: 'event.key === "ArrowRight"' },
+  { keys: "x", what: "Select the tile under the cursor", evidence: 'event.key === "x"' },
+  {
+    keys: "c",
+    what: "Copy the address of the tile under the cursor",
+    evidence: 'event.key === "c"',
+  },
+  { keys: "escape", what: "Clear the search or the selection", evidence: 'event.key === "Escape"' },
 ] as const;
 
 /**
