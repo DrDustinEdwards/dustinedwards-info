@@ -24,6 +24,15 @@
     // The folder table view.mjs groups by. Same reason as view.mjs above:
     // check:admin-ui reaches the module, so this project has to list it.
     "app/lib/media/folders.mjs",
+    // The repository-reference scan. build:template-refs walks the tree and
+    // check:content reconciles the artifact, so both reach this module, and the
+    // Worker imports the artifact it produces. One definition of "does source
+    // reference this asset", for the same reason classify.mjs is listed: a gate
+    // and a writer disagreeing about it is the drift the gate exists to catch.
+    "app/lib/media/template-refs.mjs",
+    // The three-state usage model, the per-row flags and the copy snippets. The
+    // route renders from it and check:admin-ui asserts against it.
+    "app/lib/media/usage.mjs",
     "app/lib/search/records.mjs",
     // The colophon's section descriptor. build-content.mjs reads it to emit the
     // page's search records, and app/routes/colophon.tsx renders from the same

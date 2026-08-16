@@ -1,0 +1,58 @@
+{
+  "generated": 17,
+  "refs": {
+    "/android-chrome-192x192.png": [
+      "public/site.webmanifest"
+    ],
+    "/android-chrome-512x512.png": [
+      "public/site.webmanifest"
+    ],
+    "/apple-touch-icon.png": [
+      "app/root.tsx"
+    ],
+    "/favicon.ico": [
+      "app/root.tsx"
+    ],
+    "/favicon.svg": [
+      "app/root.tsx"
+    ],
+    "/maskable-icon-512x512.png": [
+      "public/site.webmanifest"
+    ],
+    "/og-image.png": [
+      "app/lib/seo.ts"
+    ],
+    "/phage-hunters/2017.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2018.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2019.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2020.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2021.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2022.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2023.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2024.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/phage-hunters/2025.webp": [
+      "app/data/phage-hunters.ts"
+    ],
+    "/site.webmanifest": [
+      "app/root.tsx"
+    ]
+  },
+  "filesRead": 134,
+  "assetsConsidered": 58
+}
