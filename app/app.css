@@ -6002,9 +6002,13 @@ a:hover {
   background: var(--text-muted);
 }
 
-.media-usage-dot[data-cited="yes"] {
-  background: var(--fill-success);
-}
+/* THE `data-cited` RULE IS GONE. It coloured the dot of the two-state model,
+   where a row was cited or it was not. Nothing has rendered that attribute
+   since the three states landed and the dot became `data-usage`, so it was a
+   rule matching an attribute no markup carries: dead on the day the model
+   changed and invisible to every gate, because a selector for an element
+   nobody renders simply never applies. Found by grepping the deployed
+   stylesheet for a negative needle. */
 
 .media-col-dims,
 .media-col-size,
