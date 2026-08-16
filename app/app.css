@@ -5491,9 +5491,14 @@ a:hover {
   right: 0;
   bottom: 0;
   display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-  padding: 0.4375rem 0.5625rem;
+  align-items: center;
+  gap: 0.375rem;
+  /* MEASURED AND TIGHTENED. At 7px of padding with inherited line-heights the
+     bar came out 56px tall on a 102px tile, and with the fade above it the
+     picture the caption exists to label was almost entirely covered. A label
+     that hides its subject is not a label. 37px leaves the image readable and
+     still fits both lines and the control. */
+  padding: 0.3125rem 0.5rem;
   /* SOLID under the text, and the fade is a separate strip ABOVE it that
      carries nothing. See the --scrim token for the measured reason: a gradient
      that fades under the text makes the ratio a function of the photograph. */
@@ -5509,7 +5514,7 @@ a:hover {
   left: 0;
   right: 0;
   bottom: 100%;
-  height: 1.75rem;
+  height: 1.25rem;
   background: linear-gradient(to top, var(--scrim), transparent);
   pointer-events: none;
 }
@@ -5527,7 +5532,9 @@ a:hover {
   color: var(--on-scrim);
   font-size: 0.71875rem;
   font-weight: 500;
-  line-height: 1.25;
+  /* Explicit, because the inherited body line-height is what made this bar
+     half a tile tall. */
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5540,12 +5547,15 @@ a:hover {
   color: var(--on-scrim);
   font-family: var(--font-mono);
   font-size: 0.625rem;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .media-caption .media-copy {
   flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
   color: var(--on-scrim);
 }
 
