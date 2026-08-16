@@ -2478,6 +2478,74 @@ structural(
   );
 }
 
+/* -------------------------------------------------------------------------
+ * THE FORBIDDEN WORD, guarded on the RENDERED PAGE.
+ *
+ * The usage ruling says this page may never call a file "unused": the
+ * repository scan cannot see a path the code builds at runtime, and nothing
+ * here can see an external site linking a file. "unattached" is an absence of
+ * evidence and says so; "unused" is a claim about the world that no check here
+ * can support.
+ *
+ * The standing usage-note sentence has been guarded at source since the note
+ * was rewritten. **THE TILE META LINE WAS NOT, and it kept the word for two
+ * windows**: `cited ? " used" : " unused"` was written when the page had two
+ * states, survived the three-state model landing, and rendered
+ * `content 189 kB, unused` on the same nine roster photographs the list view
+ * beneath it called "in template". Found by looking at a screenshot, not by any
+ * gate.
+ *
+ * ASSERTED OVER MARKUP rather than over source, because the defect was a
+ * rendered string. Scoped to the tile's meta element so the word remains legal
+ * in the prose that EXPLAINS why it is illegal, which is the trap a bare
+ * page-wide search would fall into.
+ * ---------------------------------------------------------------------- */
+
+for (const state of [
+  "media, unused object",
+  "media, placed by page code",
+  "media, cited by a post",
+  "media, document in the grid",
+]) {
+  structural(`the tile meta never says unused (${state})`, state, (h) => {
+    const metas = [...h.matchAll(/class="media-meta">([\s\S]*?)<\/p>/g)].map((m) =>
+      m[1].replace(/<[^>]*>/g, ""),
+    );
+    // SCOPE FIRST: zero meta lines would make the absence below pass by
+    // examining nothing, which is this repo's most repeated defect class.
+    if (metas.length === 0) return false;
+    return metas.every((t) => !/\bunused\b/.test(t));
+  });
+}
+
+/*
+ * AND THE POSITIVE, so the absence above cannot pass on a tile that stopped
+ * printing usage at all. A plant proved it could: deleting the label left the
+ * gate green.
+ *
+ * **THROUGH THE SAME EXTRACTION AS THE NEGATIVE, and the first draft was not.**
+ * It matched `class="media-meta">[\s\S]*?unattached[\s\S]*?</p>`, and a
+ * non-greedy run of `[\s\S]` happily crosses `</p>` to reach the word in the
+ * list view's usage cell further down the document, then finds some later
+ * closing tag. The assertion passed on a meta line that said nothing at all.
+ * An element-bounded read is the only way to assert about one element.
+ */
+const metaText = (h) =>
+  [...h.matchAll(/class="media-meta">([\s\S]*?)<\/p>/g)].map((m) =>
+    m[1].replace(/<[^>]*>/g, ""),
+  );
+
+for (const [state, label] of [
+  ["media, unused object", "unattached"],
+  ["media, placed by page code", "in template"],
+  ["media, cited by a post", "used"],
+]) {
+  structural(`a tile meta names its usage state (${label})`, state, (h) => {
+    const metas = metaText(h);
+    return metas.length > 0 && metas.every((t) => t.includes(label));
+  });
+}
+
 /* ---- 3. PER-ROW FLAGS AND THE TILE DOT ---------------------------------- */
 
 structural(

@@ -2817,7 +2817,8 @@ export default function AdminMedia({
         <ul className="media-grid" data-view={view.view} data-size={view.size}>
           {bucket.rows.map((object) => {
             const name = displayName(object);
-            const cited = object.citations.length > 0 || object.refCount > 0;
+            /* `cited` was here and is gone with the two-state meta line that
+               was its only reader. Usage is a three-state descriptor now. */
             /*
              * THE THREE-STATE DESCRIPTOR AND THE PER-ROW FLAGS, from the pure
              * module. The row does not decide either: `usage` arrives from the
@@ -3079,11 +3080,27 @@ export default function AdminMedia({
                         exactly where there is room for it. */}
                     <span className="media-name-dir">{folderPrefix(object.key)}</span>
                   </div>
-                  {/* The grid's meta line. Hidden in the list, where the same
-                      three facts have columns of their own. */}
+                  {/*
+                    The grid's meta line. Hidden in the list, where the same
+                    facts have columns of their own.
+
+                    **IT SAID "unused" AND THAT WORD IS FORBIDDEN HERE.** The
+                    line was written when the page had two states and it
+                    survived the three-state model landing, so a tile could read
+                    `content 189 kB · unused` while the row beneath it in the
+                    list view said `in template` about the same file. Worse than
+                    inconsistent: "unused" is the exact claim the usage ruling
+                    says this page may never make, because the repository scan
+                    cannot see a constructed path and nothing here can see an
+                    external site linking a file. Nine roster photographs the
+                    site serves on every visit were labelled unused.
+
+                    It now reads the SAME descriptor every other surface reads,
+                    so the tile, the row and the inspector cannot disagree.
+                  */}
                   <p className="media-meta">
                     <span className="chip">{object.role}</span> {formatBytes(object.size)}
-                    {scanComplete ? (cited ? " · used" : " · unused") : ""}
+                    {scanComplete ? ` · ${usage.label}` : ""}
                   </p>
                 </div>
 
