@@ -1612,8 +1612,17 @@ export default function AdminMedia({
         which they knew.
       */
       description={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
-    >
-      <div className="posts-toolbar">
+      /*
+        UPLOAD AND MAINTENANCE MOVE BESIDE THE TITLE.
+
+        They were a full-width row of their own directly under the head,
+        which cost a whole band of vertical space to say "upload" and was
+        one of the seven rows standing between the top of the page and the
+        grid, where the design has four. An action belongs on the heading of
+        the thing it acts on.
+      */
+      actions={
+        <>
         {/*
           UPLOAD, on the page whose job is finding pictures.
 
@@ -1684,7 +1693,9 @@ export default function AdminMedia({
             </button>
           </Form>
         </OverflowMenu>
-      </div>
+        </>
+      }
+    >
 
       {/*
         SEARCH AND FILTER, as a GET form, borrowed from the posts list.
@@ -1874,6 +1885,39 @@ export default function AdminMedia({
         behaviour, the Escape key and the summary semantics are the platform's.
       */}
       <div className="media-display-bar">
+        {/*
+          SELECT ALL SHOWN, IN THE CONTROLS ROW where the mockup has it.
+
+          It was a row of its own between the notes and the grid, which is a
+          whole band of vertical space for one checkbox and was one of the seven
+          rows above the grid where the design has four. It is a view control
+          like the layout toggle beside it, so it belongs in the row of view
+          controls.
+
+          Moved OUT of the wrapping bulk form deliberately and safely: it is a
+          client-side toggle with no `name`, so it contributed nothing to that
+          submission and `check:admin-ui` records no change for it. The
+          checkboxes it toggles are still inside the form, which is what the
+          bulk action actually reads.
+
+          The ruled wording is unchanged: never the bare word "all" while a
+          filter is active, because this only ever reaches the rows on screen.
+        */}
+        {objects.length > 0 ? (
+          <label className="media-select-all">
+            <input
+              type="checkbox"
+              checked={allShown}
+              onChange={() => setSelected(allShown ? [] : visible)}
+            />
+            <span>
+              {view.tag || q || filter !== "all"
+                ? `Select all ${visible.length} shown`
+                : `Select all ${visible.length}`}
+            </span>
+          </label>
+        ) : null}
+
         <nav className="media-view-toggle" aria-label="Layout">
           {[
             ["list", "List"],
@@ -2813,24 +2857,6 @@ export default function AdminMedia({
           </div>
         ) : null}
 
-        {/* SELECT ALL SHOWN. Never the bare word "all" while a filter is
-            active: this only ever reaches the rows on screen, and the posts
-            index has a ruled assertion about exactly this wording. */}
-        {objects.length > 0 ? (
-          <label className="media-select-all">
-            <input
-              type="checkbox"
-              checked={allShown}
-              onChange={() => setSelected(allShown ? [] : visible)}
-            />
-            <span>
-              {view.tag || q || filter !== "all"
-                ? `Select all ${visible.length} shown`
-                : `Select all ${visible.length}`}
-            </span>
-          </label>
-        ) : null}
-
         {/*
           GROUPED PAGE-LOCAL. Each page buckets the rows IT HAS; a group never
           spans a page boundary. That is a ruling, not a shortcut, and the
@@ -2998,6 +3024,31 @@ export default function AdminMedia({
                   to={linkTo({ key: object.key })}
                   className="media-thumb-link"
                   preventScrollReset
+                  /*
+                    SHIFT OR META CLICK SELECTS INSTEAD OF OPENING.
+
+                    This is the mockup's behaviour and it is what every file
+                    manager does: a modified click extends or toggles a
+                    selection rather than navigating. Without it, building a
+                    selection in the grid means hunting for 31 small checkboxes,
+                    and shift-clicking a range is impossible because the first
+                    click navigates away.
+
+                    `preventDefault` only inside the branch, so an UNMODIFIED
+                    click is untouched and still a plain link: with no script it
+                    navigates as it always did, and ctrl-click to open in a new
+                    tab still works because that is meta on this platform and
+                    lands on the same guard the mockup uses.
+
+                    The range logic is `selectRange`, already written for the
+                    checkbox, so shift-click in the grid and shift-click on a
+                    checkbox extend the same way from the same anchor.
+                  */
+                  onClick={(event) => {
+                    if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return;
+                    event.preventDefault();
+                    selectRange(object.key, event.shiftKey);
+                  }}
                 >
                   <span
                     className="media-thumb-box"
