@@ -266,21 +266,28 @@ export function suggestedTags(key) {
  * alt is a snippet somebody ships with an empty alt.
  *
  * @param {{ url: string, viewable: boolean, alt: string | null, base: string }} row
- * @returns {Array<{ id: string, label: string, value: string }>}
+ * @returns {Array<{ id: string, label: string, name: string, value: string }>}
  */
 export function copySnippetsFor(row) {
   const alt = (row.alt ?? "").trim();
   const title = suggestedAlt(row.base);
+  /*
+   * `label` is what the BUTTON SHOWS and `name` is what a screen reader HEARS.
+   * They differ because the visible label sits in a group headed "Copy", which
+   * supplies the verb for a sighted reader and supplies nothing to anyone else.
+   * Interpolating the label into a sentence produced "Copy the address for Copy
+   * address", which is what shipped for one render.
+   */
   if (row.viewable) {
     return [
-      { id: "address", label: "Copy address", value: row.url },
-      { id: "markdown", label: "Markdown", value: `![${alt}](${row.url})` },
-      { id: "html", label: "HTML tag", value: `<img src="${row.url}" alt="${alt}">` },
+      { id: "address", label: "Copy address", name: "Copy the address", value: row.url },
+      { id: "markdown", label: "Markdown", name: "Copy the markdown image", value: `![${alt}](${row.url})` },
+      { id: "html", label: "HTML tag", name: "Copy the HTML image tag", value: `<img src="${row.url}" alt="${alt}">` },
     ];
   }
   return [
-    { id: "address", label: "Copy address", value: row.url },
-    { id: "markdown", label: "Markdown", value: `[${title}](${row.url})` },
-    { id: "html", label: "HTML link", value: `<a href="${row.url}">${title}</a>` },
+    { id: "address", label: "Copy address", name: "Copy the address", value: row.url },
+    { id: "markdown", label: "Markdown", name: "Copy the markdown link", value: `[${title}](${row.url})` },
+    { id: "html", label: "HTML link", name: "Copy the HTML link", value: `<a href="${row.url}">${title}</a>` },
   ];
 }

@@ -216,3 +216,29 @@ test("an image with no alt still produces a snippet, with an empty alt attribute
   const out = copySnippetsFor({ url: "/a.png", viewable: true, alt: null, base: "a.png" });
   assert.equal(out[2].value, '<img src="/a.png" alt="">');
 });
+
+test("every snippet carries an accessible name that is not its visible label", () => {
+  // The visible label sits under a heading that supplies the verb for a sighted
+  // reader and supplies nothing to anyone else. Interpolating the label into a
+  // sentence shipped "Copy the address for Copy address" for one render.
+  for (const viewable of [true, false]) {
+    const out = copySnippetsFor({ url: "/a", viewable, alt: "", base: "a.png" });
+    for (const s of out) {
+      assert.ok(s.name.length > 0, `${s.id} has no accessible name`);
+      assert.ok(
+        s.name.toLowerCase().startsWith("copy the"),
+        `${s.id} name should be an imperative sentence, got ${s.name}`,
+      );
+      assert.notEqual(s.name, s.label, `${s.id} name and label are the same string`);
+    }
+    // And the three are distinguishable from one another by name alone.
+    assert.equal(new Set(out.map((s) => s.name)).size, 3);
+  }
+});
+
+test("the accessible names say which FORM they copy, not just that they copy", () => {
+  const img = copySnippetsFor({ url: "/a", viewable: true, alt: "", base: "a.png" });
+  const doc = copySnippetsFor({ url: "/a.pdf", viewable: false, alt: "", base: "a.pdf" });
+  assert.ok(img[2].name.includes("image"), img[2].name);
+  assert.ok(doc[2].name.includes("link"), doc[2].name);
+});
