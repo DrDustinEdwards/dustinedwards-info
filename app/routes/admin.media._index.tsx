@@ -28,7 +28,15 @@ import {
 import { getEnv } from "~/lib/context";
 import { storageOf } from "~/lib/media/classify.mjs";
 import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
-import { displaySummary, groupRows, hrefWith, isModified, readView } from "~/lib/media/view.mjs";
+import {
+  displaySummary,
+  docTitle,
+  groupRows,
+  hrefWith,
+  isModified,
+  readView,
+  sortHref,
+} from "~/lib/media/view.mjs";
 import {
   MEDIA_PAGE_SIZE,
   deleteMediaObject,
@@ -777,6 +785,113 @@ function formatBytes(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * The Added column, as a date a person reads.
+ *
+ * UTC, for the same reason the month HEADINGS are UTC: a file uploaded at 23:30
+ * UTC must not show one date here and a different month in the heading directly
+ * above it. The two would disagree on the same screen.
+ *
+ * NO CLOCK IS READ. This formats a string the loader supplied; it never asks
+ * what today is, which is the rule the scheduled-post fixture exists to hold.
+ *
+ * A static asset has no upload event, and NULL is the honest value, so it says
+ * where the file comes from instead of borrowing a date from somewhere.
+ */
+function formatAdded(uploaded: string | null | undefined) {
+  if (!uploaded) return "in repo";
+  const at = Date.parse(uploaded);
+  if (Number.isNaN(at)) return "in repo";
+  const d = new Date(at);
+  return `${String(d.getUTCDate()).padStart(2, "0")} ${MONTH_ABBR[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/**
+ * The Dims column, and an EM DASH IS NOT AVAILABLE, so an unmeasured row says
+ * so in a character that is allowed here.
+ *
+ * A document has no pixel dimensions and never will; a vector may have none
+ * recorded. Both are "not measured" rather than zero, and printing 0x0 would be
+ * a claim.
+ */
+function formatDims(width: number | null | undefined, height: number | null | undefined) {
+  return width && height ? `${width}×${height}` : "not measured";
+}
+
+/**
+ * The file extension, uppercased, off the key. PDF, SVG, PNG.
+ *
+ * Read from the KEY rather than from the mime type, because the key is what the
+ * reader sees everywhere else on this page and a mime type disagreeing with a
+ * filename is a distinction nobody wants explained on a tile. Falls back to the
+ * mime subtype when a key genuinely carries no extension.
+ */
+function extensionOf(object: { key: string; mime: string | null }) {
+  const fromKey = /\.([a-z0-9]{1,5})$/i.exec(object.key.split("/").pop() ?? "")?.[1];
+  if (fromKey) return fromKey.toUpperCase();
+  return (object.mime ?? "file").split("/").pop()?.toUpperCase() ?? "FILE";
+}
+
+/**
+ * WHAT A DOCUMENT TILE SHOWS INSTEAD OF A PICTURE.
+ *
+ * **31 of the 70 rows are documents and they currently read as damage.** The
+ * tile was a label floating in an empty band, so a folder of five papers
+ * rendered as five identical grey boxes whose only distinguishing text was
+ * `edw...omics.pdf` against `edw...lysis.pdf`: the middle-elision working
+ * correctly on a string that should never have been the identifying one.
+ *
+ * The mockup's answer, verified in its source rather than in a description of
+ * it: a small extension label top left, the TITLE in words, a few faint ruled
+ * lines standing in for the text of the page, and one fact along the bottom.
+ * A reader scanning that grid sees five different papers.
+ *
+ * **THE PAGE COUNT IS NOT SHOWN, and this is a measurement, not a shortcut.**
+ * The mockup's bottom line reads "24 pages"; in the mockup that string is
+ * FIXTURE DATA, typed into its row table beside the size. Nothing in this
+ * system stores a page count: `media` carries bytes, mime, width and height,
+ * and width and height are null for every PDF. Producing one would mean
+ * fetching the object out of R2 and parsing it on every render of every tile,
+ * which is a network read per row for a decoration. So the line carries the
+ * SIZE, which is stored, is already true, and is the fact somebody looking at a
+ * library of papers actually acts on. A page count arrives if and when a column
+ * holds one.
+ *
+ * THE RULED LINES ARE DECORATION and are marked so: `aria-hidden`, no text, no
+ * meaning carried. They are the one thing here that suggests rather than states.
+ */
+function DocumentCard({
+  object,
+}: {
+  object: { key: string; mime: string | null; originalName: string | null; size: number };
+}) {
+  const base = object.originalName ?? object.key.split("/").pop() ?? object.key;
+  return (
+    <span className="media-doc">
+      <span className="media-doc-ext">{extensionOf(object)}</span>
+      <span className="media-doc-main">
+        <span className="media-doc-title">{docTitle(base)}</span>
+        {/* Three rules, the last one short, which is what a paragraph of text
+            looks like from across a room. Decoration only: it says nothing, so
+            it is hidden from anything that reads rather than looks. */}
+        <span className="media-doc-rules" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </span>
+      {/* The one fact along the bottom. Size, because size is stored and a page
+          count is not. See the note above before changing this to pages. */}
+      <span className="media-doc-foot">{formatBytes(object.size)}</span>
+    </span>
+  );
+}
+
 /**
  * THE LAST SEGMENT, because a directory is the part these names SHARE.
  *
@@ -794,6 +909,20 @@ function formatBytes(size: number) {
  * A content-addressed key has no directory, so this returns it unchanged. What
  * remains is still too long for the tile, which `middleTruncate` below handles.
  */
+/**
+ * The directory a key sits in, with its trailing slash, for the list row.
+ *
+ * The COUNTERPART to `displayName` dropping it. A content-addressed key has no
+ * directory, and saying "Uploads" here would invent a folder that does not
+ * exist in the key; the empty string is the honest answer and the cell simply
+ * carries nothing. `folderOf` is not reused because it substitutes that word
+ * deliberately, for a HEADING, where a bucket does need a name.
+ */
+function folderPrefix(key: string) {
+  const at = key.lastIndexOf("/");
+  return at > 0 ? `${key.slice(0, at)}/` : "";
+}
+
 function displayName(object: { originalName: string | null; key: string }) {
   if (object.originalName) return object.originalName;
   const last = object.key.split("/").pop();
@@ -967,6 +1096,101 @@ function MediaDisplayGroup({
           </Link>
         ))}
       </nav>
+    </div>
+  );
+}
+
+/**
+ * THE LIST'S HEADER ROW, and every cell in it is a LINK.
+ *
+ * The whole display state is a URL on this page, so a sort control has an
+ * address and must be an anchor: it is shareable, bookmarkable, restored by the
+ * back button and works with scripting off, which a click handler on a `<th>`
+ * is none of. That is the same reasoning the Display popover's segmented
+ * controls were built on, applied to the other control that changes a sort.
+ *
+ * **BOTH CONTROLS CALL `sortHref`, WHICH IS THE POINT.** A header and a popover
+ * that build their own URLs are two implementations of one destination, and
+ * they drift the way `q` and `role` drifted off their links. One builder means
+ * choosing Size in the popover and pressing the Size header land on the same
+ * page by construction; `check:admin-ui` asserts the two hrefs are byte-equal
+ * per column over the rendered markup, and `test/media-view.test.mjs` asserts
+ * the same property on the function.
+ *
+ * DIMS IS NOT SORTABLE AND SAYS SO BY BEING A SPAN. There is no `dims` sort
+ * key, because half the library has no dimensions at all: 31 documents and
+ * every SVG would collapse into one undifferentiated block at whichever end of
+ * the order nulls land. So the column is a label rather than a dead link, which
+ * is the mockup's own choice (its Dims entry carries no arrow and a no-op
+ * handler) expressed in markup instead of in a disabled state.
+ */
+/**
+ * The columns, in track order, and whether each one sorts.
+ *
+ * ONE LIST, so the header cannot grow a column the row does not have or lose
+ * one the row still renders. `null` is Dims, which is a label rather than a
+ * link; see the note above for why there is no `dims` sort key to point it at.
+ */
+const LIST_COLUMNS: Array<[sortKey: string | null, label: string, align: "start" | "end"]> = [
+  ["name", "Name", "start"],
+  ["usage", "Usage", "start"],
+  [null, "Dims", "end"],
+  ["size", "Size", "end"],
+  ["added", "Added", "end"],
+];
+
+function MediaListHeader({
+  view,
+}: {
+  view: Parameters<typeof sortHref>[0];
+}) {
+  /** The arrow the ACTIVE column carries, and no other column carries one. */
+  const arrow = view.dir === "asc" ? "↑" : "↓";
+
+  return (
+    <div className="media-list-head" role="row">
+      {/* Two empty leading cells, matching the checkbox and thumbnail tracks.
+          They head nothing, so they say nothing. */}
+      <span />
+      <span />
+      {LIST_COLUMNS.map(([key, label, align]) =>
+        key === null ? (
+          <span key={label} className="media-col-head is-unsortable" data-align={align}>
+            {label}
+          </span>
+        ) : (
+          <Link
+            key={key}
+            to={sortHref(view, key, { toggle: true })}
+            className={`media-col-head${view.sort === key ? " is-active" : ""}`}
+            /* ALIGNMENT AS DATA, never as `nth-of-type`. It was positional for
+               one render and it was already wrong: `nth-of-type` counts among
+               siblings of the SAME ELEMENT TYPE, and this row mixes anchors
+               with spans, so "the fourth heading" and "the fourth anchor" are
+               different cells. Size sat at the left of its track against a
+               right-aligned Dims and the two headings collided. A column
+               declares its own alignment beside its own label. */
+            data-align={align}
+            /* The key, so the narrow-viewport query can drop a heading BY NAME
+               alongside the cell it labels, rather than by counting. */
+            data-sort={key}
+            // The SORT STATE, as the property assistive technology reads for a
+            // sortable column. `none` on the others is not noise: it is what
+            // says this column can be sorted and currently is not.
+            aria-sort={
+              view.sort === key ? (view.dir === "asc" ? "ascending" : "descending") : "none"
+            }
+          >
+            {label}
+            {/* The glyph is decoration over a state already announced above, so
+                it is hidden rather than read out as an arrow. */}
+            <span aria-hidden="true" className="media-col-arrow">
+              {view.sort === key ? arrow : ""}
+            </span>
+          </Link>
+        ),
+      )}
+      <span />
     </div>
   );
 }
@@ -1412,7 +1636,18 @@ export default function AdminMedia({
                 ["usage", "Usage"],
               ]}
               current={view.sort}
-              hrefFor={(id) => linkTo({ sort: id, page: 1 })}
+              /*
+                THROUGH `sortHref`, the SAME builder the list header uses.
+                It used to be `linkTo({ sort: id, page: 1 })`, which set the key
+                and left `dir` at whatever the URL already carried: choosing
+                Largest while ascending gave you the SMALLEST file, from a
+                control labelled Largest. A sort key is not direction-neutral,
+                so the choice carries its direction, and both controls read that
+                pairing from one table. No toggle here: a popover option is a
+                destination, and reversing is what the Direction group and the
+                header press are for.
+              */
+              hrefFor={(id) => sortHref(view, id)}
             />
             <MediaDisplayGroup
               label="Direction"
@@ -1952,6 +2187,20 @@ export default function AdminMedia({
           submissions and structure, and a comment leaking into the document
           changes neither.
         */}
+        {/*
+          THE HEADER ROW, ONCE, above every group rather than once per group.
+
+          Column headings describe the TABLE, and a heading repeated above each
+          folder would say the same five words four times while making each
+          group look like a table of its own. The grouping is still real: the
+          folder headings sit below this, and the columns line up across all of
+          them because every row is laid out on the same fixed track list rather
+          than on a shared grid.
+        */}
+        {view.view === "list" && objects.length > 0 ? (
+          <MediaListHeader view={view} />
+        ) : null}
+
         {groupRows(objects, view.group).map((bucket) => (
         <section key={bucket.label || "ungrouped"} className="media-group">
           {bucket.label ? (
@@ -1979,11 +2228,34 @@ export default function AdminMedia({
           {bucket.rows.map((object) => {
             const name = displayName(object);
             const cited = object.citations.length > 0 || object.refCount > 0;
+            /*
+             * WHETHER THIS TILE WEARS THE CAPTION BAR.
+             *
+             * **NO NEW CLIENT STATE.** Both halves already exist and neither is
+             * invented here: `chosen` is the selection this page has carried
+             * since bulk actions landed, and `view.key` is the inspector, which
+             * is a URL parameter like every other. So the caption is a function
+             * of state the page already holds, which is why it costs nothing.
+             *
+             * GRID ONLY. In the list a row already has columns for the size and
+             * the dimensions, so a bar laid over a 44px thumbnail would be the
+             * same three facts a second time, in less room.
+             *
+             * Deliberately NOT on hover. Hover is not a state the server can
+             * render, and reaching it would mean either script or a CSS rule
+             * that reveals a control the keyboard cannot get to first. The
+             * mockup shows it on hover AND on the active tile; this page keeps
+             * the half that has an address.
+             */
+            const showCaption =
+              view.view === "grid" && (chosen.includes(object.key) || view.key === object.key);
             return (
               <li
                 key={object.key}
                 className="media-card"
                 data-selected={chosen.includes(object.key) || undefined}
+                data-active={view.key === object.key || undefined}
+                data-kind={object.viewable ? "image" : "document"}
               >
                 {/* The checkbox carries `key`, which is what the bulk action
                     reads with form.getAll("key"). Same shape as the posts
@@ -2016,6 +2288,16 @@ export default function AdminMedia({
                     explicit ratio on the wrapper reserves the space before the
                     image arrives, so a lazily-loaded tile cannot reflow the rows
                     below it as it lands. */}
+                {/*
+                  THE FRAME EXISTS SO THE CAPTION CAN BE A SIBLING OF THE LINK
+                  RATHER THAN A CHILD OF IT.
+                  The caption carries the copy control, and a <button> inside an
+                  <a> is invalid HTML that browsers resolve differently: the
+                  press either navigates or copies depending on who you ask.
+                  Wrapping both in one positioned box is what lets the bar sit
+                  over the picture while staying outside the anchor.
+                */}
+                <span className="media-thumb-frame">
                 <Link to={linkTo({ key: object.key })} className="media-thumb-link">
                   <span
                     className="media-thumb-box"
@@ -2036,16 +2318,26 @@ export default function AdminMedia({
                         : undefined
                     }
                     data-placeholder={object.placeholder ? "lqip" : "none"}
-                    // A DOCUMENT GETS A SHORTER BOX. There is nothing to look
-                    // at, so it must not claim the same height as a picture:
-                    // 31 of the 70 rows are PDFs and at full tile height they
-                    // read as a wall of failed loads.
+                    /*
+                     * A DOCUMENT USED TO GET A SHORTER BOX, and it no longer
+                     * does. The old reason was written down and was true at the
+                     * time: "there is nothing to look at, so it must not claim
+                     * the same height as a picture", and 5:2 kept a wall of
+                     * empty bands from claiming a picture's canvas.
+                     *
+                     * THERE IS SOMETHING TO LOOK AT NOW. `DocumentCard` puts a
+                     * title, a suggestion of text and a size in that space, so
+                     * the premise the squash was built on is gone, and a squashed
+                     * card would crush the thing that fixed it. Back to 3:2,
+                     * which is also the ratio every tile has in the mockup.
+                     */
                     data-kind={object.viewable ? "image" : "document"}
                   >
-                    {/* A PDF has no thumbnail to show, so it gets a label rather
-                        than an <img> pointed at something that cannot render one.
-                        31 of the 70 rows are documents; an empty box for each
-                        would read as a loading failure. */}
+                    {/* A document has no thumbnail the Images binding can ever
+                        produce, so it gets a CARD rather than an <img> pointed
+                        at something that cannot render one. 31 of the 70 rows
+                        are documents; an empty box for each read as 31 loading
+                        failures, which is what this replaces. */}
                     {object.viewable ? (
                       <img
                         className="media-thumb"
@@ -2057,19 +2349,62 @@ export default function AdminMedia({
                         height={320}
                       />
                     ) : (
-                      <span className="media-thumb-label" aria-hidden="true">
-                        {(object.mime ?? "file").split("/").pop()?.toUpperCase()}
-                      </span>
+                      <DocumentCard object={object} />
                     )}
                   </span>
                 </Link>
 
+                {/*
+                  THE CAPTION BAR, over the picture, on the tile the reader has
+                  picked out. Filename, size and dimensions, and the page's one
+                  job in the corner of it.
+
+                  It is the tile's ONLY copy control when it renders: the body's
+                  copy button is suppressed below rather than drawn twice. Two
+                  buttons with the same accessible name on one card is a thing
+                  a screen reader reads twice and a pointer picks between for no
+                  reason, and the payload is identical either way, so there is
+                  nothing to trade off.
+                */}
+                {showCaption ? (
+                  <span className="media-caption">
+                    <span className="media-caption-text">
+                      <span className="media-caption-name">{name}</span>
+                      {/* Size, then the dimensions WHEN THERE ARE ANY. A
+                          document has none and never will, and "1.4 MB · not
+                          measured" spends the caption's second line saying that
+                          a PDF is not a picture. The list has a Dims column
+                          where an absence belongs, because there a blank cell
+                          is a value; here it is just a phrase in the way. */}
+                      <span className="media-caption-meta">
+                        {formatBytes(object.size)}
+                        {object.width && object.height
+                          ? ` · ${formatDims(object.width, object.height)}`
+                          : ""}
+                      </span>
+                    </span>
+                    <CopyButton value={object.url} label={name} />
+                  </span>
+                ) : null}
+                </span>
+
+                {/*
+                  THE BODY IS `display: contents` IN BOTH LAYOUTS, so its
+                  children are laid out by the CARD rather than by it.
+
+                  That is what keeps this ONE MARKUP TREE while the list becomes
+                  a real eight-column table. A row's cells have to be grid items
+                  of the row, and they cannot be if a wrapper sits between them;
+                  a second JSX branch for the list would be a second place for a
+                  control to go missing, which is exactly what this page's
+                  layout rule forbids. The wrapper stays because it names the
+                  group, and it stops laying anything out.
+                */}
                 <div className="media-card-body">
-                  {/* NAME AND COPY ON ONE ROW. The button was a full-width
-                      block, which at 24 tiles is 24 stacked slabs competing
-                      with the pictures they belong to. It is the page's one
-                      job, so it stays visible on every tile, but it is a
-                      control beside the name rather than a bar under it. */}
+                  {/* THE NAME CELL. In the grid it is the line under the
+                      picture; in the list it is column three, and it carries
+                      the directory underneath, which is the half the grid
+                      cannot afford to show. */}
                   <div className="media-name-row">
                     {/* The LAST SEGMENT, linking to the detail view, which is
                         also the no-script route to the address. A
@@ -2101,13 +2436,62 @@ export default function AdminMedia({
                       */}
                       {view.view === "list" ? name : middleTruncate(name)}
                     </Link>
-                    <CopyButton value={object.url} label={name} />
+                    {/* THE DIRECTORY, under the name, LIST ONLY.
+
+                        `displayName` drops the directory because nine roster
+                        photographs share every character of theirs and the tile
+                        had 109px to spend. A list row is not a tile: it has the
+                        width, and without the folder two files with the same
+                        basename in different directories are one row printed
+                        twice. So the half the grid throws away comes back
+                        exactly where there is room for it. */}
+                    <span className="media-name-dir">{folderPrefix(object.key)}</span>
                   </div>
+                  {/* The grid's meta line. Hidden in the list, where the same
+                      three facts have columns of their own. */}
                   <p className="media-meta">
                     <span className="chip">{object.role}</span> {formatBytes(object.size)}
                     {scanComplete ? (cited ? " · used" : " · unused") : ""}
                   </p>
                 </div>
+
+                {/*
+                  THE LIST'S REMAINING COLUMNS. Hidden in the grid by CSS rather
+                  than omitted from the markup, per the one-tree rule above.
+
+                  A cell that reads "not measured" is doing work: 31 documents
+                  and every SVG have no dimensions, and printing 0x0 or an empty
+                  cell would both read as a value rather than as an absence.
+                */}
+                <span className="media-col media-col-usage">
+                  <span
+                    className="media-usage-dot"
+                    data-cited={scanComplete ? (cited ? "yes" : "no") : "unknown"}
+                    aria-hidden="true"
+                  />
+                  {scanComplete ? (cited ? "used" : "unattached") : "unknown"}
+                </span>
+                <span className="media-col media-col-dims">
+                  {formatDims(object.width, object.height)}
+                </span>
+                <span className="media-col media-col-size">{formatBytes(object.size)}</span>
+                <span className="media-col media-col-added">{formatAdded(object.uploaded)}</span>
+
+                {/*
+                  THE COPY CONTROL, ONE PER CARD, as the card's last child.
+
+                  It was inside the name row, which made the name row two cells
+                  wide and left the list with no eighth column to put it in.
+                  Explicit grid placement puts it back beside the name in the
+                  grid view, so the tile is unchanged to look at while the row
+                  gains its column. It renders here only when the caption bar is
+                  not already carrying it.
+                */}
+                {showCaption ? null : (
+                  <span className="media-col-copy">
+                    <CopyButton value={object.url} label={name} />
+                  </span>
+                )}
               </li>
             );
           })}
