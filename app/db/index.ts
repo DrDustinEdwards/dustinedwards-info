@@ -442,6 +442,49 @@ export async function getDraftPostForPreview(env: Env, slug: string) {
  * that with a much narrower predicate; the sentence here used to say "the one"
  * and went false the moment that landed.
  */
+/**
+ * THE TWO COUNTS THE ADMIN NAV CAN HONESTLY CARRY.
+ *
+ * The mockup badges four sections: Sites, Content, Posts and Media. **Only two
+ * of those numbers exist.** `/admin/sites` and `/admin/content` are stubbed
+ * cockpit sections served by `stubSource()`: Sites renders a hardcoded array of
+ * six placeholder cards whose every status is "health check not wired", and
+ * Content's own `count` field is literally `null` on all three of its sections
+ * and renders as the words "no data". A badge over either one would be a
+ * numeral in the sidebar asserting a quantity nothing has measured, which is
+ * worse than no badge: the reader has no way to tell a counted section from a
+ * decorated one. They get counts when the sections get data.
+ *
+ * Posts and Media are real rows in D1, so they are real numbers.
+ *
+ * TWO QUERY-BUILDER READS, CONCURRENT, and deliberately NOT one hand-written
+ * statement with two scalar subqueries. The single-statement version was
+ * written first and was a real defect: invariants section 6 finds posts readers
+ * by matching `.from(posts)`, so a count that reached the table from inside a
+ * `sql` template was INVISIBLE to the chokepoint that exists to catch a public
+ * read losing its visibility predicate. It would have passed the gate by not
+ * being seen, which is this repo's most expensive failure class. One round trip
+ * was not worth being unobservable; `Promise.all` gets most of it back anyway.
+ *
+ * NO `publiclyVisible()`, on purpose, and it is a NAMED EXEMPTION in
+ * `check-invariants.mjs` for the same reason `listAllPostsForAdmin` is: this
+ * badge counts what the admin can edit, so drafts and future-dated rows are the
+ * point. It is reached only from the /admin layout, behind Better Auth.
+ *
+ * MEDIA EXCLUDES THE TRASH, through `notTrashed()` rather than a second spelling
+ * of the same predicate, so this number and the one the media page's own head
+ * prints cannot drift apart. Two counts of one library disagreeing by the size
+ * of the bin is how somebody spends an afternoon looking for missing files.
+ */
+export async function adminNavCounts(env: Env) {
+  const db = getDb(env);
+  const [postRow, mediaRow] = await Promise.all([
+    db.select({ n: count() }).from(posts).where(eq(posts.kind, "post")),
+    db.select({ n: count() }).from(media).where(notTrashed()),
+  ]);
+  return { posts: Number(postRow[0]?.n ?? 0), media: Number(mediaRow[0]?.n ?? 0) };
+}
+
 export async function listAllPostsForAdmin(env: Env) {
   return getDb(env)
     .select({

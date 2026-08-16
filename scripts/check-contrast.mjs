@@ -339,6 +339,25 @@ const MATRIX = [
   // reverse. Read it as documentation with a number attached, not as an
   // independent assertion.
   ["--surface-chrome", "--on-chrome-muted", TEXT, "pressed toggle and skip link, inverted"],
+  // THE TILE CAPTION SCRIM. The media grid lays a filename, a size and a copy
+  // control over the picture on the selected tile, and this is the pair that
+  // makes it provable: the band under the text is OPAQUE, so the ratio is a
+  // constant rather than a function of whichever photograph is underneath.
+  //
+  // That opacity is the whole point of the row. The mockup fades its scrim to
+  // transparent through the region the text sits in, which means the real
+  // backdrop is the image: measured against a white backdrop, a #1a1614 scrim
+  // reaches 4.70:1 at alpha 0.60 and 3.42:1 at 0.50, so a gradient through that
+  // range crosses the floor at a point no gate can name and no reviewer can
+  // see. design-tokens.md reached the same conclusion for the glass extension
+  // and put a hard alpha floor on it. Here there is no alpha to floor: the
+  // fade is a separate strip ABOVE the band, over which no text is ever drawn.
+  //
+  // Same values in both themes, deliberately. A scrim is a hole punched in the
+  // page rather than a surface the page tints, so a "dark mode scrim" would be
+  // a lighter one, which is backwards.
+  ["--on-scrim", "--scrim", TEXT, "tile caption over the image"],
+
   // There is deliberately NO --border-strong on --surface-chrome row for the
   // header and footer seam. Measured 1.80:1 light and 3.22:1 dark, and the
   // ruling is explicit that a surface-to-surface seam carries no 3:1
@@ -831,28 +850,35 @@ for (const a of worst) {
  * the second lock on the same door, for the case where that assertion is ever
  * weakened.
  *
- * **RE-MEASURED 2026-08-15 with the build present: 615**, after
- * `--text-destructive` and `--tint-destructive` were minted for the media v6
- * arc and put on four matrix pairs. The build-present floor moves to 578, which
- * is 94 percent of the measurement.
+ * **RE-MEASURED 2026-08-16, BOTH TIERS, BY RUNNING THEM: 625 with the build
+ * present and 501 without.** The scrim pair landed for the media v6 caption
+ * bar (`--scrim`, `--on-scrim`), which the participation assertion caught the
+ * moment the tokens were declared and before either had a pair.
  *
- * **THE NO-BUILD FLOOR IS DELIBERATELY NOT MOVED, and this is the honest
- * version of that.** Renaming `build/` aside to measure the second tier was
- * refused by the filesystem on this host, twice, so the run that was supposed
- * to produce the second number silently measured the first one again and read
- * 615 both times. The arithmetic answer is 491, and this arc has already twice
- * caught arithmetic being wrong about a floor: verify-live's predicted 213
- * measured 214. So 460 stays until somebody can actually run the tier, which is
- * loose rather than false, and a loose floor is the safe direction. The
- * measurement is owed, not the number.
+ * **THE OWED MEASUREMENT IS PAID.** The previous note recorded that renaming
+ * `build/` aside had been refused by this filesystem twice, so the no-build
+ * tier had never actually been run and 460 was left deliberately loose with the
+ * measurement stated as owed rather than done. The rename succeeded this time
+ * (`build/client/assets` moved aside, gate run, moved back), and the tier reads
+ * 501.
+ *
+ * **THE ARITHMETIC WOULD HAVE BEEN WRONG AGAIN, THIRD INSTANCE.** Subtracting
+ * the previously recorded 132-check gap from 625 predicts 493; the measurement
+ * is 501. The two prior instances are on the record in the same class:
+ * verify-live's predicted 213 measured 214, and this gate's own prior note
+ * carried 599 in its failure message while its prose carried 615. A count is
+ * measured or it is a guess with a number attached.
+ *
+ * Both floors are 94 percent of their own measurement, which is the margin the
+ * other gates use: 587 of 625, and 470 of 501.
  */
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 578 : 460;
+const MINIMUM_CHECKS = buildPresent ? 587 : 470;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
       `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. Measured: 599 with the built stylesheet compared, 483 without.`,
+      `failing. Measured 2026-08-16: 625 with the built stylesheet compared, 501 without.`,
   );
 }
 

@@ -1387,6 +1387,19 @@ const VISIBILITY_EXEMPT = {
   listAllPostsForAdmin:
     "the admin post list exists to show drafts and future-dated rows; that IS its " +
     "job. Reached only from /admin routes, which are behind Better Auth.",
+  adminNavCounts:
+    "the sidebar's Posts badge counts what the admin can EDIT, so a draft is one " +
+    "of the things being counted and filtering drafts out would make the badge " +
+    "disagree with the list it links to. Same standing as listAllPostsForAdmin " +
+    "above, reached only from the /admin layout loader behind Better Auth, and " +
+    "weaker in consequence than either exemption here: it selects COUNT(*) and " +
+    "no columns, so no title, slug, body or date of an unpublished post can " +
+    "leave through it. What escapes in the worst case is one integer. It was " +
+    "written first as a single statement with two scalar subqueries and this " +
+    "section COULD NOT SEE IT, because the scan matches `.from(posts)` and that " +
+    "form reached the table from inside a sql template. Rewritten through the " +
+    "query builder so the chokepoint applies; the extra round trip is the price " +
+    "of being observable.",
   getDraftPostForPreview:
     "draft preview links (feature G). The ONLY exempt reader reachable without a " +
     "session, so the reason has to be stronger than the one above. It does not " +
