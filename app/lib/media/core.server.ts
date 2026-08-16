@@ -104,6 +104,24 @@ export function isViewable(kind: string) {
 }
 
 /**
+ * The listing axes, DERIVED from `listMediaPage` rather than restated here.
+ *
+ * Restating them is what broke `listMedia`. The options type named six of the
+ * twelve axes `listMediaPage` implements, the loader passed all twelve through
+ * an object SPREAD, and spreads are exempt from excess-property checking, so
+ * `sort`, `dir`, `tag`, `lens`, `templateKeys` and `trashed` were accepted by
+ * the compiler and dropped on the floor. Live effect, measured on production
+ * 2026-08-16: `?sort=size` and `?sort=name&dir=asc` returned byte-identical
+ * rows to the default, and `?trash=1` returned 24 NOT-trashed files while the
+ * trash count beside it read 0.
+ *
+ * Deriving the type means a new axis on `listMediaPage` is covered here by
+ * construction instead of by somebody remembering. `check:media-axes` asserts
+ * both halves: that this stays derived, and that the forwarding stays a spread.
+ */
+type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
+
+/**
  * Lists one page of the library FROM D1.
  *
  * **It no longer touches R2, and that is the point of the index.** Listing from
@@ -120,23 +138,13 @@ export function isViewable(kind: string) {
  */
 export async function listMedia(
   env: Env,
-  options: {
-    page?: number;
-    limit?: number;
-    insertableOnly?: boolean;
-    role?: string;
-    unusedOnly?: boolean;
-    /** Free text. Which columns it matches is `matchesQuery`'s business. */
-    q?: string;
-  } = {},
+  options: ListMediaOptions = {},
 ): Promise<MediaPage> {
+  // SPREAD, deliberately, not a hand-copied key list: the hand-copied list is
+  // the defect this replaced. `limit` is the one axis with a default of its own.
   const { rows, page, hasMore } = await listMediaPage(env, {
-    page: options.page,
+    ...options,
     limit: options.limit ?? MEDIA_PAGE_SIZE,
-    insertableOnly: options.insertableOnly,
-    role: options.role,
-    unusedOnly: options.unusedOnly,
-    q: options.q,
   });
 
   return {
