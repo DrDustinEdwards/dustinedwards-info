@@ -4649,6 +4649,35 @@ a:hover {
   padding: 0;
 }
 
+/* A COPY BUTTON THAT CARRIES A WORD IS NOT A 22px SQUARE.
+ *
+ * `.media-copy` is sized for a TILE, where the measurement is on the record:
+ * the word "Copy" cost 41px of a 131px row and pushed the filename back into
+ * the end-truncation the middle-elision exists to prevent. So the tile control
+ * is a fixed 22x22 glyph, correctly.
+ *
+ * The inspector's three snippet buttons carry visible labels, added so the
+ * adaptive naming ("HTML tag" against "HTML link") can actually warn somebody
+ * before they press it. They inherited the fixed square and the labels rendered
+ * OUTSIDE their own buttons: measured at 22px wide with the text overhanging by
+ * 19, 29 and 12px, overlapping each other. The label shipped invisible for one
+ * commit, then shipped overflowing for one more.
+ *
+ * `:has()` rather than a modifier class, because the condition IS "this button
+ * contains a label" and there is no second fact to name. */
+.media-copy:has(.media-copy-label) {
+  width: auto;
+  height: auto;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+}
+
+.media-copy-label {
+  font-size: 0.78125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .media-copy[data-copied="yes"]::after {
   content: " copied";
 }
