@@ -165,6 +165,12 @@
     "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key",
     "POST /admin/media?key=1234abcd5678ef90.png | tags=talks | intent,key"
   ],
+  "media, large but attached": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?view=grid | (none) | ",
+    "POST /admin/media?view=grid | intent=rebuild | "
+  ],
   "media, unattached lens with its note": [
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",

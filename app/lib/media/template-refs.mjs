@@ -82,8 +82,21 @@ export const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".css", ".json",
  *
  * `assets.json` is the asset INVENTORY, so it contains every asset path by
  * construction. Counting it would mark all 58 static files as referenced by
- * repository code and make the entire third state meaningless, which is a
- * failure mode worth naming rather than discovering.
+ * repository code and make the entire third state meaningless.
+ *
+ * **THIS GUARD IS CHECKED FIRST BECAUSE OF WHERE IT HAS TO WIN, and a plant
+ * proved it was doing nothing at all.** Removing the whole check left the gate
+ * green, because `content/generated/assets.json` is under `content/`, which is
+ * not a source root, so the root rule below already rejected it. The guard was
+ * an assertion that could not fail: rule 10's own class, in the module that
+ * feeds the usage model.
+ *
+ * It is load-bearing for `SOURCE_FILES`, not for the roots. Those entries are
+ * named individually and BYPASS the root rule entirely, so a self-referential
+ * file added there would be read unless this ran first. `assets.json` stays
+ * listed as the worked example of what must never be scanned, and the test
+ * exercises the guard through a `SOURCE_FILES` member, which is the only path
+ * where it can actually decide anything.
  */
 export const SELF_REFERENTIAL = ["content/generated/assets.json"];
 

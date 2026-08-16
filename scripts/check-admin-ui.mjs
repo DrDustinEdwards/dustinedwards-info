@@ -805,6 +805,30 @@ const STATES = [
     }),
   },
   {
+    /*
+     * A LARGE FILE THAT IS CITED, DESCRIBED AND UNIQUE. The flag list is
+     * non-empty ("over 1 MB") and the tile precedence selects NOTHING, which is
+     * the only shape where "one dot by precedence" and "a dot whenever any flag
+     * exists" disagree. A plant proved the previous assertion could not tell
+     * them apart.
+     */
+    name: "media, large but attached",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid",
+    loaderData: MEDIA_SHELL({
+      view: { ...MEDIA_SHELL().view, view: "grid" },
+      objects: [
+        MEDIA_OBJECT({
+          size: 2_000_000,
+          alt: "A described picture",
+          usage: "used",
+          refCount: 1,
+        }),
+      ],
+    }),
+  },
+  {
     // A NARROWED LENS, which owes the reader the boundary of its own claim.
     name: "media, unattached lens with its note",
     entry: "app/routes/admin.media._index.tsx",
@@ -2483,6 +2507,32 @@ structural(
   "media, document in the grid",
   (h) => (h.match(/class="media-tile-flag"/g) ?? []).length === 1,
 );
+/*
+ * **AND A TILE WITH NOTHING WORTH FLAGGING CARRIES NO DOT.**
+ *
+ * The assertion above cannot fail on its own and a plant proved it. Replacing
+ * `tileFlagFor` with `flags.length > 0` left it green, because on that fixture
+ * both expressions render exactly one dot: the document is over 1 MB, so the
+ * flag list is non-empty AND the precedence picks a member.
+ *
+ * The two only disagree where the flag list is non-empty and the PRECEDENCE
+ * selects nothing: a large file that is cited by a post, has alt text and has no
+ * twin. `flagsFor` returns ["large"], `tileFlagFor` returns null, and a tile
+ * should be quiet. This is that state.
+ */
+structural(
+  "a large but attached and described tile carries no dot at all",
+  "media, large but attached",
+  (h) => !h.includes('class="media-tile-flag"'),
+);
+/* And the flag itself is still REACHABLE on that same row, in the list, so the
+   assertion above is about the tile being quiet rather than about the flag
+   having been dropped everywhere. */
+structural(
+  "and the row still prints the flag as words",
+  "media, large but attached",
+  (h) => /class="media-row-flags"[^>]*>over 1 MB</.test(h),
+);
 
 /* ---- 4. LENS NOTES AND EMPTY STATES ------------------------------------- */
 
@@ -2613,13 +2663,100 @@ structural(
 {
   const html = htmlFor("media, unused object");
   const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
-  const declared = (source.match(/\{ keys: "/g) ?? []).length;
+  const declared = (source.match(/\{\s*keys: "/g) ?? []).length;
   const rendered = (html.match(/class="media-shortcut"/g) ?? []).length;
   assert(
     "every declared shortcut is rendered, and no extra one is",
     declared > 0 && declared === rendered,
-    `${declared} declared in MEDIA_SHORTCUTS, ${rendered} rendered. A panel that ` +
-      `documents a binding nobody wired is the defect the Cmd+K badge was held back for.`,
+    `${declared} declared in MEDIA_SHORTCUTS, ${rendered} rendered.`,
+  );
+
+  /*
+   * **AND EVERY DOCUMENTED SHORTCUT IS ACTUALLY WIRED.**
+   *
+   * The assertion above is a tautology on its own and a plant proved it: adding
+   * a fake row ("ctrl D, delete everything instantly") increments BOTH counts,
+   * so they stayed equal and the gate stayed green. It can only ever catch the
+   * panel failing to render, which is not the rule.
+   *
+   * The rule is that this page must not advertise a binding nobody wired, which
+   * is why the Cmd+K badge was withheld for a session with that reason written
+   * down. So each row names the expression that implements it and this greps the
+   * two islands for it. A fake row has no expression to name.
+   */
+  const islands = ["media-palette", "media-keyboard"]
+    .map((f) => readFileSync(join(root, `app/components/admin/${f}.tsx`), "utf8"))
+    .join("\n");
+  const evidence = [...source.matchAll(/evidence: (?:"([^"]+)"|'([^']+)')/g)].map(
+    (m) => m[1] ?? m[2],
+  );
+  assert(
+    "every shortcut names the expression that implements it",
+    evidence.length === declared && declared >= 9,
+    `${evidence.length} evidence token(s) for ${declared} declared shortcut(s). ` +
+      `A row with no evidence is a row nothing can check.`,
+  );
+  const unwired = evidence.filter((token) => !islands.includes(token));
+  assert(
+    "every documented shortcut is implemented by one of the islands",
+    unwired.length === 0,
+    `these are advertised and not wired: ${unwired.join(", ")}. The page must not ` +
+      `document a shortcut that does nothing; that is the ruling the Cmd+K badge ` +
+      `waited a whole session for.`,
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * THE LOADER WIRING, ASSERTED AT SOURCE, because this harness cannot run a
+ * loader and says so in its own header.
+ *
+ * A plant proved the gap: replacing the loader's `templateRefs` lookup with a
+ * literal `0` left every assertion green. The states supply `usage` as fixture
+ * INPUT, so the component renders whatever it is given and the model can be
+ * disconnected without a single rendered byte changing. That is the harness
+ * boundary working exactly as documented, and it means the wiring needs a
+ * different instrument.
+ *
+ * These are source greps, which is a weaker instrument than a render and is the
+ * strongest one available here. They assert the three joins exist: the artifact
+ * is imported, the row usage is computed from it, and BOTH readers of the
+ * unattached predicate are handed the same key list.
+ * ---------------------------------------------------------------------- */
+{
+  const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
+
+  assert(
+    "the media loader imports the repository-reference artifact",
+    /import templateRefs from "\.\.\/\.\.\/content\/generated\/template-refs\.json"/.test(source),
+    "without it the third usage state has no evidence and every roster photograph " +
+      "goes back to reading as unattached beside a delete button.",
+  );
+  assert(
+    "row usage is computed from all three pieces of evidence",
+    /usageStateOf\(\{[\s\S]{0,260}?templateRefs: \(TEMPLATE_REFS\[object\.key\] \?\? \[\]\)\.length/.test(source),
+    "the loader must READ the artifact per row. A literal here disconnects the " +
+      "model while every rendered byte stays identical, which is what a plant did.",
+  );
+  assert(
+    "the inspector computes usage from the artifact too",
+    /usageStateOf\(\{[\s\S]{0,260}?templateRefs: \(TEMPLATE_REFS\[row\.key\] \?\? \[\]\)\.length/.test(source),
+    "the panel and the row must not disagree about one file.",
+  );
+  /*
+   * BOTH READERS OF THE PREDICATE GET THE SAME LIST. The listing and the lens
+   * count are separate queries, and the Unused chip already shipped once with a
+   * count from one predicate and a filter from another.
+   */
+  assert(
+    "the listing filters unattached against the repository keys",
+    /templateKeys: TEMPLATE_REF_KEYS/.test(source),
+    "without it the lens selects rows the chip does not count.",
+  );
+  assert(
+    "the lens count uses the same key list as the listing",
+    /mediaLensCounts\(env, TEMPLATE_REF_KEYS\)/.test(source),
+    "a chip counting one predicate while the grid filters another is the exact " +
+      "defect the Unused chip shipped with.",
   );
 }
 
@@ -2982,7 +3119,17 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   v6.4    285 checks, 51 state(s), 208 submission(s)   floor 267
  *   v6.5    270 checks, 51 state(s), 208 submission(s)   (deduplicated)
  *   v6.5    302 checks, 54 state(s), 221 submission(s)   floor 283
- *   v6.6    359 checks, 64 state(s), 280 submission(s)   floor 337
+ *   v6.6    370 checks, 65 state(s), 280 submission(s)   floor 347
+ *
+ * **THE LAST 11 CHECKS AND THE 65TH STATE ARE WHAT SIX SILENT PLANTS BOUGHT.**
+ * Twenty-two plants ran against this session's work and six left the suite
+ * green, each naming a real hole: the shortcut cross-check was a tautology (a
+ * fake row increments both sides of the count it compared); the one-dot-per-tile
+ * assertion could not distinguish precedence from `flags.length > 0`, because on
+ * its fixture both render one dot; and the loader wiring is invisible to a
+ * harness that supplies loader data as input. The first two are now real
+ * assertions, and the third is a set of source greps, which is a weaker
+ * instrument and the strongest one available inside this boundary.
  *
  * **v6.6 IS THE USAGE MODEL AND EVERYTHING IT FEEDS.** Ten states and 57
  * assertions: three usage states on four surfaces, per-row flags, the tile dot,
@@ -3055,7 +3202,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 337;
+const MINIMUM_CHECKS = 347;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -3064,7 +3211,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 359.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 370.`,
   );
 }
 
