@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 24;
+const MINIMUM_GATES = 25;
 
 /**
  * Which gates need something this machine may not have.
@@ -75,6 +75,11 @@ const TIERS = {
   "check:diagrams": "offline",
   "check:admin-ui": "offline",
   "check:urls": "offline",
+  // Reads the two media modules as source and proves every listing axis
+  // `listMediaPage` declares is both READ there and FORWARDED by `listMedia`.
+  // It runs no query, so it sees an axis DROPPED and not one built into wrong
+  // SQL; the query itself is check:media's and verify-live's subject.
+  "check:media-axes": "offline",
   // Reads the tracked example config, package.json and drizzle/. No network.
   "check:stack": "offline",
   // Parses routes.ts and reads gate scripts off disk. No network.

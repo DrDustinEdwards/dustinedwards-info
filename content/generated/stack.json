@@ -170,6 +170,7 @@
     "check:llms",
     "check:logo",
     "check:media",
+    "check:media-axes",
     "check:migrations",
     "check:policy",
     "check:search",
