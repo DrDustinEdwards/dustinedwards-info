@@ -26,6 +26,7 @@
     "build:og": "node scripts/build-og.mjs",
     "build:diagrams": "node scripts/build-diagrams.mjs",
     "build:assets": "node scripts/build-assets.mjs",
+    "build:template-refs": "node scripts/build-template-refs.mjs",
     "build:stack": "node scripts/build-stack.mjs",
     "check:backup": "node scripts/check-backup.mjs",
     "check:media": "node scripts/check-media.mjs",
