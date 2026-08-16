@@ -547,13 +547,33 @@ export async function listMediaRecords(env: Env) {
  * says "3 unused" and lists five. Written once here rather than twice, which is
  * the same rule the picker's `insertable` clause below is written under.
  *
- * It is narrower than "unused" and the page says so: `media_refs` records what
- * the PIPELINE emitted, so an asset a route references in code, rather than a
- * post referencing it in markdown, is uncited by this definition and cited by
- * no other one available here.
+ * **IT USED TO BE NARROWER THAN "UNUSED" AND THAT WAS THE WHOLE PROBLEM.** The
+ * old comment here said an asset a route references in code "is uncited by this
+ * definition and cited by no other one available", which was true and was the
+ * reason nine cohort photographs sat in the Unattached lens while the site
+ * served them on every visit.
+ *
+ * There is now a second definition available. `template-refs.json` is built by
+ * scanning `app/` and `workers/` for the literal path, and the keys it names are
+ * passed in here, so unattached means what it says: **no post cites it AND no
+ * repository code references it.** The scan runs at build time because nothing
+ * inside the Worker can read the repository; see `template-refs.mjs`.
+ *
+ * THE KEYS ARE A PARAMETER RATHER THAN A SECOND QUERY, because this predicate
+ * has two readers, the listing and the lens count, and they have to mean the
+ * same thing or the chip says three and the grid shows five. Passing one list to
+ * both is what keeps that true.
+ *
+ * @param templateKeys keys repository code references, from the build artifact
  */
-function uncited() {
-  return sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`;
+function uncited(templateKeys: string[] = []) {
+  const noPost = sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`;
+  // An empty list is not "exclude nothing" in SQL: `NOT IN ()` is a syntax
+  // error in SQLite, so the clause is omitted rather than emitted empty. That
+  // is also the honest behaviour when the artifact is missing: everything falls
+  // back to the old two-state answer rather than the query throwing.
+  if (templateKeys.length === 0) return noPost;
+  return sql`${noPost} AND ${media.key} NOT IN ${templateKeys}`;
 }
 
 /**
@@ -684,6 +704,16 @@ export async function listMediaPage(
      * filter, because a hand-edited URL should show a library.
      */
     lens?: string;
+    /**
+     * Keys repository code references, from `content/generated/template-refs.json`.
+     *
+     * A PARAMETER rather than something this module reads for itself, because
+     * the artifact is a build-time import and `app/db` is imported by scripts
+     * that have no bundler. The loader owns the import and hands the list down,
+     * which also means the lens count and the listing are given the SAME list by
+     * construction rather than by two reads agreeing.
+     */
+    templateKeys?: string[];
     /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
     sort?: string;
     /** 'asc' | 'desc'. */
@@ -735,7 +765,7 @@ export async function listMediaPage(
   // remains the authority. This filter therefore means "nothing the renderer
   // emitted cites it", which is narrower than "unused" and is why the chip
   // carries that wording rather than a bare claim.
-  if (options.unusedOnly) clauses.push(uncited());
+  if (options.unusedOnly) clauses.push(uncited(options.templateKeys));
   // SEARCH IN SQL, and this is the one place the library deliberately diverges
   // from the posts list. That page filters an in-memory array of the whole
   // corpus; this one PAGINATES at 24, so a filter applied after the page was
@@ -764,7 +794,7 @@ export async function listMediaPage(
    * route filters that lens after the read. Putting a fake SQL predicate here
    * to keep the shape uniform would be a second definition of twin.
    */
-  if (options.lens === "unattached") clauses.push(uncited());
+  if (options.lens === "unattached") clauses.push(uncited(options.templateKeys));
   if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
   if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
   const where = clauses.length > 0 ? and(...clauses) : undefined;
@@ -948,11 +978,21 @@ export async function mediaTwins(env: Env) {
  * key in JS, and inventing a SQL approximation here would be a second
  * definition of a rule that already has one.
  */
-export async function mediaLensCounts(env: Env) {
+export async function mediaLensCounts(env: Env, templateKeys: string[] = []) {
   const [row] = await getDb(env)
     .select({
       all: count(),
-      unattached: sql<number>`sum(CASE WHEN NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key}) THEN 1 ELSE 0 END)`,
+      /*
+       * THROUGH `uncited()`, NOT A SECOND COPY OF ITS SQL.
+       *
+       * This restated the NOT EXISTS inline, which is precisely the shape the
+       * predicate's own comment warns about: the chip counted one thing and the
+       * filter selected another, and nothing could see them diverge. They did
+       * diverge the moment the template scan landed, because widening the
+       * predicate would have moved the filter and left the count behind. One
+       * call, one definition, both readers.
+       */
+      unattached: sql<number>`sum(CASE WHEN ${uncited(templateKeys)} THEN 1 ELSE 0 END)`,
       noAlt: sql<number>`sum(CASE WHEN ${media.alt} = '' THEN 1 ELSE 0 END)`,
       large: sql<number>`sum(CASE WHEN ${media.bytes} > ${LARGE_FILE_BYTES} THEN 1 ELSE 0 END)`,
     })

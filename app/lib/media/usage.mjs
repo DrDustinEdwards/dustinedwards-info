@@ -193,6 +193,21 @@ export const LENS_NOTES = {
 };
 
 /**
+ * The note for one lens, or the empty string when a lens does not narrow.
+ *
+ * A FUNCTION rather than a direct index, so the component never has to cast an
+ * arbitrary string against the table's key union. `all` and `trash` are not
+ * missing entries, they are lenses that make no claim: `all` narrows nothing and
+ * `trash` already carries its own longer explanation on the page.
+ *
+ * @param {string} lens
+ * @returns {string}
+ */
+export function lensNoteFor(lens) {
+  return /** @type {Record<string, string>} */ (LENS_NOTES)[lens] ?? "";
+}
+
+/**
  * SUGGESTED ALT TEXT, from the filename, offered and never applied.
  *
  * A filename is a weak description and this is honest about that: it is a
