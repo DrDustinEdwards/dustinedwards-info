@@ -1682,6 +1682,30 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  /* **THE PLACEMENT HAS TO COME BACK WITH THE TRACK LIST, and its absence made
+     every admin page blank on a phone.**
+
+     `.admin-main` is placed at `grid-column: 2` for the desktop shell, where
+     column 1 is the rail. This block collapses the template to a single `1fr`
+     track and never reset that placement, so the main column was still asking
+     for column 2, which does not exist. Grid does not clamp an out-of-range
+     placement, it CREATES an implicit track, and implicit tracks are sized by
+     `grid-auto-columns`, which defaults to `auto`.
+
+     Measured at a 420px viewport before this line existed: the explicit `1fr`
+     track took 399.78px and the implicit one took 4.88px, so `.admin-main` was
+     4.88px wide, `.panel` was 0, the grid was 0, and the document grew to
+     9757px as every word wrapped to one character. The header rendered because
+     it spans `1 / -1`; everything below it was blank.
+
+     Nothing could see it. `check:admin-ui` renders with NO stylesheet by
+     design, no gate measures layout, and the desktop path is unaffected because
+     there column 2 is real. It shipped on `0f2f638` and survived every window
+     since. */
+  .admin-main {
+    grid-column: 1;
+  }
+
   .admin-sidebar {
     position: fixed;
     top: 0;
