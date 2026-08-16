@@ -117,6 +117,14 @@ const MEDIA_OBJECT = (over = {}) => ({
   tags: [],
   /** Rows carrying identical bytes. Exact content identity only. */
   twinCount: 0,
+  /*
+   * THE THIRD USAGE STATE and its evidence, decided by the loader from
+   * `media_refs`, the artifact scan and `template-refs.json`. `unattached` is
+   * the default because it is the state a fresh upload is in; the roster case is
+   * its own scenario below, and it is the one the state exists for.
+   */
+  usage: "unattached",
+  templateRefs: [],
   ...over,
 });
 
@@ -169,10 +177,15 @@ const MEDIA_SHELL = (over = {}) => ({
   trashedCount: 0,
   tagCounts: [],
   lensCounts: { all: 1, unattached: 1, noAlt: 1, large: 0, duplicates: 0 },
+  /* INPUT, not an expectation: the loader owns this sentence and the component
+     echoes it. It carried the pre-scan wording ("an asset referenced only by
+     route code has no citation here") until the repository scan made that false,
+     and the component went on rendering it because a fixture is a copy. The
+     WORDING is asserted against the route source below, where it actually
+     lives; this only has to be a note so the paragraph renders at all. */
   usageNote:
-    "Usage counts what the renderer emitted for a post. An asset referenced " +
-    "only by route code, like the roster photos, has no citation here and is " +
-    "not therefore unused.",
+    "Usage is asked three ways: what a post cites, what the artifact scan " +
+    "finds, and what repository code references.",
   ...over,
 });
 
@@ -203,6 +216,14 @@ const MEDIA_DETAIL = (over = {}) => ({
   trashedAt: null,
   hash: "1234abcd5678ef90",
   twins: [],
+  /* Same three the row carries, plus the two the inspector alone shows. These
+     went missing for exactly one run and the gate said so by THROWING on
+     `templateRefs.length`, which is the failure a shared fixture helper exists
+     to make loud rather than silent. */
+  usage: "unattached",
+  templateRefs: [],
+  altSuggestion: "a picture",
+  tagSuggestions: [],
   ...over,
 });
 
@@ -655,6 +676,180 @@ const STATES = [
       view: { ...MEDIA_SHELL().view, sort: "size", dir: "desc" },
       modified: true,
       objects: [MEDIA_OBJECT()],
+    }),
+  },
+  /* ---- media v6 session 5: the usage model and everything it feeds --------
+   *
+   * Nine states, each because it changes what RENDERS and none of them visible
+   * to the payload baseline on its own. The usage states are the point: the page
+   * could express two of them and the third was the one the roster photographs
+   * needed.
+   * ---------------------------------------------------------------------- */
+  {
+    // THE CASE THE THIRD STATE EXISTS FOR. Referenced by repository code, cited
+    // by no post. Before this it rendered identically to a genuine orphan.
+    name: "media, placed by page code",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({
+          key: "/phage-hunters/2019.webp",
+          url: "/phage-hunters/2019.webp",
+          thumb: "/phage-hunters/2019.webp",
+          storage: "static",
+          originalName: null,
+          deletable: false,
+          usage: "template",
+          templateRefs: ["app/data/phage-hunters.ts"],
+        }),
+      ],
+    }),
+  },
+  {
+    name: "media, cited by a post",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({
+      objects: [
+        MEDIA_OBJECT({
+          usage: "used",
+          refCount: 1,
+          citations: [
+            { type: "post", id: "a-post", title: "A post", form: "markdown-image", detail: "line 12" },
+          ],
+        }),
+      ],
+    }),
+  },
+  {
+    // THE INSPECTOR ON A TEMPLATE-PLACED FILE: the claim, its boundary, and the
+    // source file that is the evidence for it.
+    name: "media, inspector on a template-placed file",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=/phage-hunters/2019.webp",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, key: "/phage-hunters/2019.webp" },
+      detail: MEDIA_DETAIL({
+        key: "/phage-hunters/2019.webp",
+        url: "/phage-hunters/2019.webp",
+        originalName: null,
+        deletable: false,
+        storage: "static",
+        hash: null,
+        usage: "template",
+        templateRefs: ["app/data/phage-hunters.ts"],
+        altSuggestion: "2019",
+        tagSuggestions: ["phage hunters", "2019"],
+      }),
+    }),
+  },
+  {
+    // A DOCUMENT IN THE INSPECTOR. The copy labels change here and nowhere else:
+    // an <img> tag pointed at a PDF is a broken page.
+    name: "media, inspector on a document",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=/publications/edwards-2024-phage-genomics.pdf",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, key: "/publications/edwards-2024-phage-genomics.pdf" },
+      detail: MEDIA_DETAIL({
+        key: "/publications/edwards-2024-phage-genomics.pdf",
+        url: "/publications/edwards-2024-phage-genomics.pdf",
+        originalName: null,
+        mime: "application/pdf",
+        kind: "document",
+        viewable: false,
+        deletable: false,
+        storage: "static",
+        width: null,
+        height: null,
+        hash: null,
+        altSuggestion: "edwards 2024 phage genomics",
+      }),
+    }),
+  },
+  {
+    // THE DUPLICATE SURFACE: the byte-identical sentence and the named trash
+    // offer. This is the one place the page proposes removing something on the
+    // strength of a comparison, so the copy is what makes it safe to accept.
+    name: "media, inspector on a duplicate",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT({ twinCount: 1 })],
+      view: { ...MEDIA_SHELL().view, key: "1234abcd5678ef90.png" },
+      detail: MEDIA_DETAIL({
+        twins: [{ key: "aabbccdd11223344.png", originalName: "headshot-final-v2.png" }],
+      }),
+    }),
+  },
+  {
+    // AN IMAGE WITH ALT ALREADY WRITTEN. The suggestion must NOT be offered
+    // here: a suggestion beside somebody's sentence invites overwriting it with
+    // a filename. This is the negative half of the suggestion assertion.
+    name: "media, inspector with alt already written",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT({ alt: "A plate of plaques" })],
+      view: { ...MEDIA_SHELL().view, key: "1234abcd5678ef90.png" },
+      detail: MEDIA_DETAIL({ alt: "A plate of plaques", tagSuggestions: ["talks"] }),
+    }),
+  },
+  {
+    // A NARROWED LENS, which owes the reader the boundary of its own claim.
+    name: "media, unattached lens with its note",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?lens=unattached",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      view: { ...MEDIA_SHELL().view, lens: "unattached" },
+      modified: true,
+    }),
+  },
+  {
+    // THE LIBRARY IS EMPTY. The only empty state that gets a heading and an
+    // action, because it is the only one where the reader has nothing to undo.
+    name: "media, library empty",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({
+      objects: [],
+      counts: [],
+      roleCounts: [],
+      lensCounts: { all: 0, unattached: 0, noAlt: 0, large: 0, duplicates: 0 },
+    }),
+  },
+  {
+    // A SEARCH MISS, which is a different thing from an empty library and needs
+    // a different next step. It names the query back and says what was searched.
+    name: "media, search matched nothing",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?q=zzzz",
+    loaderData: MEDIA_SHELL({ objects: [], q: "zzzz" }),
+  },
+  {
+    // A LENS THAT FOUND NOTHING, which is GOOD NEWS and reads as an error unless
+    // it says so.
+    name: "media, lens matched nothing",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?lens=duplicates",
+    loaderData: MEDIA_SHELL({
+      objects: [],
+      view: { ...MEDIA_SHELL().view, lens: "duplicates" },
+      modified: true,
     }),
   },
   {
@@ -2125,6 +2320,345 @@ structural("the sorted column is the one the view names", "media, list sorted by
 }
 
 /* -------------------------------------------------------------------------
+ * MEDIA v6 session 5: THE THREE-STATE USAGE MODEL and everything it feeds.
+ *
+ * **NONE OF THIS IS VISIBLE TO THE PAYLOAD BASELINE.** Three usage states, four
+ * lens notes, three empty states, a suggestion, a duplicate sentence and a set
+ * of copy labels are all TEXT, and the baseline records `METHOD action | intent
+ * | field names`. The whole model could be reverted to the old binary without
+ * moving a single tuple.
+ *
+ * The assertions below are therefore about SENTENCES, and about the one thing
+ * that makes a sentence dangerous: a page can say "unattached" truthfully and
+ * "unused" falsely with the same layout.
+ * ---------------------------------------------------------------------- */
+
+{
+  const { USAGE_STATES, LENS_NOTES } = await import("../app/lib/media/usage.mjs");
+
+  /*
+   * THE MODEL AND THE RENDER AGREE ON THE VOCABULARY.
+   *
+   * Derived from the module rather than typed here, for the reason the
+   * evaporation needles are derived from PARAM_NAMES: a hand-written list of
+   * states going stale against the real one is exactly how a fourth state would
+   * ship undocumented, or a retired one keep an assertion alive.
+   */
+  assert(
+    "the usage model declares exactly three states",
+    Object.keys(USAGE_STATES).length === 3,
+    `${Object.keys(USAGE_STATES).length} declared. The page renders one label per state.`,
+  );
+  assert(
+    "every lens that narrows carries a note",
+    Object.keys(LENS_NOTES).length >= 4,
+    `${Object.keys(LENS_NOTES).length} note(s). A lens with no note makes a claim it does not bound.`,
+  );
+}
+
+/* ---- 1. THE THIRD STATE, ON EVERY SURFACE ------------------------------- */
+
+structural(
+  "a file placed by page code reads as in template, not unattached",
+  "media, placed by page code",
+  (h) => h.includes(">in template<") && !h.includes(">unattached<"),
+);
+structural(
+  "its dot is the template dot, not the unattached one",
+  "media, placed by page code",
+  (h) => /data-usage="template"/.test(h) && !/data-usage="unattached"/.test(h),
+);
+/* THE NEGATIVE, on a row that genuinely has no reference, so the assertion
+   above is known to discriminate rather than to match every row. */
+structural(
+  "a file with no reference anywhere still reads as unattached",
+  "media, unused object",
+  (h) => h.includes(">unattached<") && !h.includes(">in template<"),
+);
+structural(
+  "a cited file reads as used",
+  "media, cited by a post",
+  (h) => h.includes(">used<") && /data-usage="used"/.test(h),
+);
+
+/* ---- 2. THE INSPECTOR NAMES ITS EVIDENCE -------------------------------- */
+
+structural(
+  "the inspector states the claim and its boundary",
+  "media, inspector on a template-placed file",
+  (h) => h.includes("Placed by page code") && h.includes("Found by scanning the repository"),
+);
+/*
+ * AND IT NAMES THE FILE. A claim with no evidence behind it is the thing the old
+ * two-state model had: it said "nothing cites this" and could not say what it
+ * had looked at.
+ */
+structural(
+  "the inspector names the source file that places it",
+  "media, inspector on a template-placed file",
+  (h) => h.includes("app/data/phage-hunters.ts") && h.includes("references this address"),
+);
+/*
+ * THE SENTENCE THE WHOLE FEATURE EXISTS TO STOP. An unattached file must never
+ * be described as unused, because the scan cannot see a constructed path and an
+ * external site can link anything. Asserted as an ABSENCE, with the positive
+ * above proving the panel renders at all.
+ */
+structural(
+  "the unattached note refuses to call the file unused",
+  "media, detail open",
+  (h) => h.includes("not the same as") && !/\bis unused\b/.test(h),
+);
+/* The paragraph RENDERS on every listing, so a reader who never opens the
+   inspector still gets a caveat. */
+structural(
+  "the standing usage note renders on the listing",
+  "media, unused object",
+  (h) => h.includes('class="media-usage-note"') && h.includes("repository code references"),
+);
+/*
+ * AND ITS WORDING IS ASSERTED AT SOURCE, not through the fixture.
+ *
+ * The note is loader data, so the fixture supplies one and the component echoes
+ * it: asserting the words through a render would be asserting that the gate's
+ * own copy says what the gate expects. The shipped sentence lives in the route,
+ * so that is where it is read from.
+ *
+ * **THE OLD SENTENCE WAS TRUE UNTIL THIS COMMIT AND IS NOW FALSE.** It said an
+ * asset referenced only by route code "has no citation here", which was the
+ * honest confession of a two-state tracker. The scan sees route code now, so the
+ * absence half of this assertion is what stops the confession being restored by
+ * a future edit that has forgotten the scan exists.
+ */
+{
+  const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
+  const note = /usageNote:([\s\S]{0,700}?)\n  \};/.exec(source)?.[1] ?? "";
+  assert(
+    "the standing usage note was found in the route source",
+    note.length > 80,
+    `${note.length} chars matched. A zero-scope read makes both assertions below vacuous.`,
+  );
+  assert(
+    "the standing usage note names all three checks",
+    note.includes("a post cites") &&
+      note.includes("artifact scan") &&
+      note.includes("repository code references"),
+    `it must name what it actually asked, or the reader cannot tell what an ` +
+      `absence of evidence covers. Got: ${note.slice(0, 160)}`,
+  );
+  assert(
+    "the standing usage note no longer claims route code is invisible",
+    !note.includes("has no citation here") && !note.includes("only by route code"),
+    `that sentence described a limitation the repository scan removed. It is ` +
+      `false now and it sits next to a delete button.`,
+  );
+}
+
+/* ---- 3. PER-ROW FLAGS AND THE TILE DOT ---------------------------------- */
+
+structural(
+  "a row prints its flags",
+  "media, unused object",
+  (h) => /class="media-row-flags"[^>]*>no alt</.test(h),
+);
+/*
+ * SCOPED TO THE FLAGS ELEMENT, and the first draft was not.
+ *
+ * `!h.includes("no alt")` over the whole page matched the no-alt LENS CHIP's own
+ * hint, "Images with no alt text written yet", which is present on every render
+ * and says nothing about this row. The assertion failed on correct markup, which
+ * is the right direction to be wrong in but is still a broken instrument: it
+ * would have gone on failing whatever the row did.
+ */
+structural(
+  "a document row is never flagged for missing alt",
+  "media, document row",
+  (h) => {
+    const flags = [...h.matchAll(/class="media-row-flags">([^<]*)</g)].map((m) => m[1]);
+    return flags.every((f) => !f.includes("no alt"));
+  },
+);
+structural(
+  "a grid tile carries one corner flag, not three",
+  "media, document in the grid",
+  (h) => (h.match(/class="media-tile-flag"/g) ?? []).length === 1,
+);
+
+/* ---- 4. LENS NOTES AND EMPTY STATES ------------------------------------- */
+
+structural(
+  "a narrowed lens explains what it is claiming, with a way out",
+  "media, unattached lens with its note",
+  (h) =>
+    h.includes("No reference was found in posts or in repository code") &&
+    h.includes("Show everything"),
+);
+structural(
+  "the unnarrowed view carries no lens note",
+  "media, unused object",
+  (h) => !h.includes('class="media-lens-note"'),
+);
+
+/* THE THREE EMPTY STATES, each asserted to be the RIGHT one. A single assertion
+   that "an empty state rendered" would pass on any of the three appearing in
+   all three situations, which is the defect this replaces. */
+structural(
+  "an empty library explains what the library is for",
+  "media, library empty",
+  (h) => h.includes('data-empty="library"') && h.includes("Nothing here yet") &&
+    h.includes("Upload the first file"),
+);
+structural(
+  "a search miss names the query and says what was searched",
+  "media, search matched nothing",
+  (h) =>
+    h.includes('data-empty="search"') &&
+    h.includes("Searched paths, names, alt text and tags") &&
+    h.includes("zzzz"),
+);
+structural(
+  "an empty lens reads as good news rather than as an error",
+  "media, lens matched nothing",
+  (h) => h.includes('data-empty="lens"') && h.includes("Every file passes this check"),
+);
+/* AND THEY ARE MUTUALLY EXCLUSIVE. Without this, one state rendering in all
+   three situations would satisfy all three assertions above. */
+structural(
+  "a search miss is not also the library-empty state",
+  "media, search matched nothing",
+  (h) => !h.includes("Upload the first file"),
+);
+
+/* ---- 5. SUGGESTIONS, OFFERED AND NOT APPLIED ---------------------------- */
+
+structural(
+  "an empty alt field offers the filename as a suggestion",
+  "media, inspector on a template-placed file",
+  (h) => h.includes("Use suggested: 2019"),
+);
+/* THE NEGATIVE, and it is the one that matters: a suggestion beside text
+   somebody already wrote is an invitation to overwrite their sentence. */
+structural(
+  "a written alt field offers no suggestion",
+  "media, inspector with alt already written",
+  (h) => !h.includes("Use suggested:"),
+);
+structural(
+  "tag suggestions are offered as chips",
+  "media, inspector on a template-placed file",
+  (h) => (h.match(/class="media-tag-suggestion"/g) ?? []).length === 2,
+);
+/* A DOCUMENT TAKES NO ALT TEXT, so the field is not offered at all. It was on
+   all 70 rows, which invents an obligation on the 31 that cannot discharge it. */
+structural(
+  "a document is offered no alt field",
+  "media, inspector on a document",
+  (h) => !h.includes('id="detail-alt"') && h.includes("A document takes no alt text"),
+);
+
+/* ---- 6. COPY LABELS THAT ADAPT ------------------------------------------ */
+
+structural(
+  "an image offers an HTML tag",
+  "media, inspector on a duplicate",
+  (h) => h.includes("HTML tag") && !h.includes("HTML link"),
+);
+structural(
+  "a document offers an HTML link, and never an img tag",
+  "media, inspector on a document",
+  (h) => h.includes("HTML link") && !h.includes("HTML tag"),
+);
+
+/* ---- 7. THE DUPLICATE SURFACE ------------------------------------------- */
+
+structural(
+  "a duplicate states that both addresses resolve to the same content",
+  "media, inspector on a duplicate",
+  (h) =>
+    h.includes("Byte-identical to") &&
+    h.includes("both addresses resolve to the same content"),
+);
+structural(
+  "and the trash offer names which file it would remove",
+  "media, inspector on a duplicate",
+  (h) => h.includes("Keep this, trash headshot-final-v2.png"),
+);
+
+/* ---- 8. THE PALETTE, THE SHORTCUTS AND THE Cmd+K BADGE ------------------ */
+
+/*
+ * THE RULING THIS SATISFIES: an absent shortcut must not be advertised. The
+ * badge was held back for a whole session with that reason written down, so
+ * asserting it now is asserting that the binding it advertises exists.
+ */
+structural(
+  "the search bar advertises the shortcut that now exists",
+  "media, unused object",
+  (h) => h.includes('class="media-search-kbd"'),
+);
+structural(
+  "the shortcuts panel documents every binding",
+  "media, unused object",
+  (h) => {
+    const rows = (h.match(/class="media-shortcut"/g) ?? []).length;
+    return rows >= 9 && h.includes("Copy the address") && h.includes("Focus search from anywhere");
+  },
+);
+/*
+ * THE SHORTCUTS PANEL AND THE SHORTCUT TABLE NAME THE SAME SET, so a binding
+ * cannot be documented without existing or exist without being documented. The
+ * count is read out of the RENDERED markup and compared against the module's own
+ * table length, neither of them typed here.
+ */
+{
+  const html = htmlFor("media, unused object");
+  const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
+  const declared = (source.match(/\{ keys: "/g) ?? []).length;
+  const rendered = (html.match(/class="media-shortcut"/g) ?? []).length;
+  assert(
+    "every declared shortcut is rendered, and no extra one is",
+    declared > 0 && declared === rendered,
+    `${declared} declared in MEDIA_SHORTCUTS, ${rendered} rendered. A panel that ` +
+      `documents a binding nobody wired is the defect the Cmd+K badge was held back for.`,
+  );
+}
+
+/* ---- 9. THE NO-SCRIPT FLOOR --------------------------------------------- */
+
+/*
+ * **EVERY ENHANCEMENT IS ADDITIVE, ASSERTED RATHER THAN CLAIMED.**
+ *
+ * The palette, the toast and the keyboard navigator all need script, which is
+ * accepted for this page. What is NOT accepted is any of them becoming the only
+ * way to do something. The harness renders with no script at all, which makes it
+ * the right instrument for exactly this: whatever it can see is what a reader
+ * with scripting off gets.
+ *
+ * So the search form must still be a real GET form, and the suggestion and tag
+ * chips must still be real submit buttons rather than click handlers.
+ */
+structural(
+  "search is still a native GET form with no script",
+  "media, unused object",
+  (h) => /<form[^>]*method="get"[^>]*role="search"|<form[^>]*role="search"[^>]*method="get"/.test(h),
+);
+structural(
+  "the palette renders nothing on the server",
+  "media, unused object",
+  (h) => !h.includes('class="media-palette"'),
+);
+structural(
+  "the alt suggestion is a submit button, not a click handler",
+  "media, inspector on a template-placed file",
+  (h) => /<button[^>]*type="submit"[^>]*class="media-suggestion"|<button[^>]*class="media-suggestion"[^>]*type="submit"/.test(h),
+);
+structural(
+  "the tag chips are submit buttons carrying the resulting list",
+  "media, inspector on a template-placed file",
+  (h) => /<button[^>]*type="submit"[^>]*class="media-tag-suggestion"/.test(h),
+);
+
+/* -------------------------------------------------------------------------
  * MEDIA v6 session 3: grouping headings and the ruled select-all wording.
  *
  * The payload fixture cannot see either. Headings are text, and the select-all
@@ -2448,6 +2982,29 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   v6.4    285 checks, 51 state(s), 208 submission(s)   floor 267
  *   v6.5    270 checks, 51 state(s), 208 submission(s)   (deduplicated)
  *   v6.5    302 checks, 54 state(s), 221 submission(s)   floor 283
+ *   v6.6    359 checks, 64 state(s), 280 submission(s)   floor 337
+ *
+ * **v6.6 IS THE USAGE MODEL AND EVERYTHING IT FEEDS.** Ten states and 57
+ * assertions: three usage states on four surfaces, per-row flags, the tile dot,
+ * four lens notes, three empty states, the two suggestion controls, the adaptive
+ * copy labels, the duplicate sentence, the shortcuts panel and the no-script
+ * floor. Almost none of it is visible to the payload baseline, which is why the
+ * assertion count moved five times as far as the submission count.
+ *
+ * **THE 59 NEW SUBMISSIONS ARE 55 FROM THE TEN NEW STATES AND FOUR REAL ONES.**
+ * The four are the alt-suggestion button appearing on each existing inspector
+ * state, and they are a genuine payload addition: a second control that writes
+ * through the SAME `set-alt` intent, carrying its value on the button. Nothing
+ * was removed and no existing tuple changed, which is the evidence that the rest
+ * of this session was presentation over a model that already worked.
+ *
+ * THREE DEFECTS THIS GATE FOUND, none of which any other instrument could see:
+ * the loader gained three fields and the shared fixture did not, so four detail
+ * states threw on `templateRefs.length`; the adaptive copy LABELS were computed,
+ * passed in and rendered nowhere, because `CopyButton` is glyph-only by design
+ * and nobody had asked it to show a word; and the standing usage note still told
+ * the reader that an asset referenced only by route code "has no citation here",
+ * which the repository scan had just made false.
  *
  * **v6.5 IS TWO MOVEMENTS AND THE FIRST ONE IS DOWNWARD, WHICH IS THE POINT.**
  *
@@ -2498,7 +3055,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 283;
+const MINIMUM_CHECKS = 337;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -2507,7 +3064,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 302.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 359.`,
   );
 }
 

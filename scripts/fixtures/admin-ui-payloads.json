@@ -111,6 +111,81 @@
     "POST /admin/media?sort=size&amp;dir=desc | (none) | ",
     "POST /admin/media?sort=size&amp;dir=desc | intent=rebuild | "
   ],
+  "media, placed by page code": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media | (none) | ",
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media/upload | intent=upload-form | file"
+  ],
+  "media, cited by a post": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media | (none) | ",
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media/upload | intent=upload-form | file"
+  ],
+  "media, inspector on a template-placed file": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=/phage-hunters/2019.webp | (none) | ",
+    "POST /admin/media?key=/phage-hunters/2019.webp | alt=2019 | alt,key",
+    "POST /admin/media?key=/phage-hunters/2019.webp | intent=rebuild | ",
+    "POST /admin/media?key=/phage-hunters/2019.webp | intent=set-alt | alt,key",
+    "POST /admin/media?key=/phage-hunters/2019.webp | intent=set-tags | key,tags",
+    "POST /admin/media?key=/phage-hunters/2019.webp | intent=trash | key",
+    "POST /admin/media?key=/phage-hunters/2019.webp | tags=2019 | intent,key",
+    "POST /admin/media?key=/phage-hunters/2019.webp | tags=phage hunters | intent,key"
+  ],
+  "media, inspector on a document": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | (none) | ",
+    "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | intent=rebuild | ",
+    "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | intent=set-tags | key,tags",
+    "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | intent=trash | key"
+  ],
+  "media, inspector on a duplicate": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
+  ],
+  "media, inspector with alt already written": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | tags=talks | intent,key"
+  ],
+  "media, unattached lens with its note": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?lens=unattached | (none) | ",
+    "POST /admin/media?lens=unattached | intent=rebuild | "
+  ],
+  "media, library empty": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media | intent=rebuild | ",
+    "POST /admin/media/upload | intent=upload-form | file"
+  ],
+  "media, search matched nothing": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?q=zzzz | intent=rebuild | "
+  ],
+  "media, lens matched nothing": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?lens=duplicates | intent=rebuild | "
+  ],
   "media, search with results": [
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
@@ -126,6 +201,7 @@
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
@@ -135,6 +211,7 @@
   "media, detail for a static row": [
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=/logo.svg | alt=a picture | alt,key",
     "POST /admin/media?key=/logo.svg | intent=rebuild | ",
     "POST /admin/media?key=/logo.svg | intent=set-alt | alt,key",
     "POST /admin/media?key=/logo.svg | intent=set-tags | key,tags",
@@ -209,6 +286,7 @@
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
@@ -219,6 +297,7 @@
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | alt=a picture | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=delete | key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=empty-trash | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=rebuild | ",
