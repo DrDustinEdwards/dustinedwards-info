@@ -587,6 +587,76 @@ const STATES = [
       roleCounts: [{ role: "brand", n: 1 }],
     }),
   },
+  /* ---- media v6 session 4 -------------------------------------------------
+   *
+   * Three states the redesign added, each because it changes what RENDERS.
+   *
+   * A DOCUMENT IN THE GRID is not the same state as a document in a row: the
+   * list gives a PDF a 44px extension chip, and the grid gives it a card with a
+   * title, a suggestion of text and a size. 31 of the 70 real rows are here.
+   *
+   * A SELECTED TILE grows a caption bar carrying the name, the size and the
+   * copy control, and the body's copy control goes so the card has exactly one.
+   * That swap is invisible to the payload baseline, because a copy button is
+   * `type="button"` and submits nothing, so it needs a structural assertion.
+   *
+   * A SORTED LIST is the state the column headers exist for: one heading is
+   * active and carries an arrow, four are not, and one is not a link at all.
+   * ---------------------------------------------------------------------- */
+  {
+    name: "media, document in the grid",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid",
+    loaderData: MEDIA_SHELL({
+      view: { ...MEDIA_SHELL().view, view: "grid" },
+      objects: [
+        MEDIA_OBJECT({
+          key: "/publications/edwards-2024-phage-genomics.pdf",
+          url: "/publications/edwards-2024-phage-genomics.pdf",
+          thumb: "/publications/edwards-2024-phage-genomics.pdf",
+          storage: "static",
+          kind: "document",
+          mime: "application/pdf",
+          // NULL, which is the real shape: a static PDF has no originalName, so
+          // the title has to come off the KEY. A fixture that supplied a tidy
+          // name here would test a path the corpus never takes.
+          originalName: null,
+          placeholder: null,
+          width: null,
+          height: null,
+          size: 1468006,
+          deletable: false,
+          viewable: false,
+        }),
+      ],
+    }),
+  },
+  {
+    name: "media, grid with a selected tile",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?view=grid",
+    loaderData: MEDIA_SHELL({
+      view: { ...MEDIA_SHELL().view, view: "grid" },
+      objects: [MEDIA_OBJECT()],
+    }),
+    // The harness seam, per admin queue ruling 8. One static render dispatches
+    // no events, so without a seeded selection the caption bar never mounts and
+    // the state would assert the absence of something that cannot appear.
+    props: { initialSelection: ["1234abcd5678ef90.png"] },
+  },
+  {
+    name: "media, list sorted by size",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?sort=size&dir=desc",
+    loaderData: MEDIA_SHELL({
+      view: { ...MEDIA_SHELL().view, sort: "size", dir: "desc" },
+      modified: true,
+      objects: [MEDIA_OBJECT()],
+    }),
+  },
   {
     // SEARCH WITH RESULTS. `q` is echoed back, so the input renders its value,
     // the chips carry it and the pager carries it; the Clear link only exists
@@ -1584,9 +1654,19 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 {
   const { DEFAULTS, PARAM_NAMES } = await import("../app/lib/media/view.mjs");
 
-  /** Every parameter non-default, so every one MUST appear in every link. */
+  /*
+   * Every parameter non-default, so every one MUST appear in every link.
+   *
+   * **`view` IS "list" AND THAT IS LOAD BEARING, not a default left alone.**
+   * It was "grid", and the column headers introduced in session 4 render only
+   * in the list, so the newest link builder on the page was the one link
+   * builder this scan could not see. A header that dropped `q` would have been
+   * the third instance of the exact bug this block exists for, passing green.
+   * The grid loses nothing by not being the scanned view: its tile links are
+   * the same links the list draws, and the view toggle emits both either way.
+   */
   const FULL_VIEW = {
-    view: "grid",
+    view: "list",
     group: "folder",
     sort: "size",
     dir: "asc",
@@ -1610,7 +1690,7 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
     name: "media, every parameter set",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
-    url: "/admin/media?view=grid&group=folder&sort=size&dir=asc&size=l&role=brand&q=logo&tag=roster&page=2",
+    url: "/admin/media?view=list&group=folder&sort=size&dir=asc&size=l&role=brand&q=logo&tag=roster&page=2",
     loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
       q: "logo",
@@ -1718,159 +1798,300 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 }
 
 /* -------------------------------------------------------------------------
- * MEDIA v6: THE PARAMETER THAT MUST NOT EVAPORATE.
+ * MEDIA v6 session 4: the document card, the caption bar, and the table.
  *
- * **THIS IS THE INSTRUMENT THE TWO PREVIOUS INCIDENTS DID NOT HAVE.** `q` fell
- * off the pagination links once and `role` fell off the chips once. Neither was
- * visible to this gate, and that is structural rather than an oversight: the
- * payload baseline records METHOD, action and field names, and every one of
- * these links is a `GET` with no fields at all. `GET /admin/media` is the tuple
- * whether the href carries ten parameters or one.
+ * NONE OF THIS IS VISIBLE TO THE PAYLOAD BASELINE, and that is why it is here
+ * rather than left to the fixture. The baseline records `METHOD action | intent
+ * | field names`. A document card is text, a caption bar is text, a column
+ * heading is a `GET` link with no fields, and the copy control is a
+ * `type="button"` that submits nothing at all. Every one of the four things
+ * this session shipped could be deleted outright without moving a single tuple
+ * in `admin-ui.json`.
+ * ---------------------------------------------------------------------- */
+
+/* ---- 1. THE DOCUMENT CARD ---------------------------------------------- */
+
+structural(
+  "a document tile renders a card, not an empty labelled box",
+  "media, document in the grid",
+  (h) => h.includes('class="media-doc"') && h.includes('class="media-doc-title"'),
+);
+
+/*
+ * THE TITLE IS THE WORDS, and this is the assertion the whole item turns on.
+ * The fixture's key is `/publications/edwards-2024-phage-genomics.pdf`, so the
+ * expected string is written out HERE rather than produced by calling
+ * `docTitle`, per rule 10's fixture-independence clause: a gate whose expected
+ * value comes out of the code under test is a mirror.
+ */
+structural(
+  "the document title is sentence-spaced words derived from the key",
+  "media, document in the grid",
+  (h) => h.includes(">edwards 2024 phage genomics<"),
+);
+
+/* BOTH DIRECTIONS. The positive above passes on a card that ALSO printed the
+   raw filename somewhere, which is exactly the duplication this design removed:
+   `edwards 2024 phage genomics` over `edw...omics.pdf` is the same file twice,
+   one of them in the elided form. */
+structural(
+  "a document tile does not also print the slug or the extension as a title",
+  "media, document in the grid",
+  (h) =>
+    !h.includes(">edwards-2024-phage-genomics.pdf<") &&
+    !h.includes(">edwards 2024 phage genomics.pdf<"),
+);
+
+structural(
+  "the extension is a label on the card",
+  "media, document in the grid",
+  (h) => /class="media-doc-ext"[^>]*>PDF</.test(h),
+);
+
+/*
+ * THE RULED LINES ARE DECORATION AND ARE MARKED AS SUCH. Three empty spans
+ * suggesting text is exactly the kind of thing that reads as three blank list
+ * items to a screen reader if nobody hides it.
+ */
+structural(
+  "the ruled lines are hidden from anything that reads rather than looks",
+  "media, document in the grid",
+  (h) => /class="media-doc-rules" aria-hidden="true"|aria-hidden="true" class="media-doc-rules"/.test(h),
+);
+
+/*
+ * THE PAGE COUNT IS NOT FAKED, and this is the honest half of item 1.
  *
- * So this reads the rendered HREFS instead. It takes a state where every
- * parameter is set, renders the page, and asserts that each internal link back
- * to this page carries the whole set. A link built by hand, outside `hrefWith`,
- * fails here by name.
+ * The mockup's document card ends with "24 pages". Nothing in this system
+ * stores a page count: `media` carries bytes, mime, width and height, and width
+ * and height are null for every PDF. The card carries the SIZE instead, and
+ * this asserts both halves: the size is there, and no page count was invented
+ * to fill the space. A future column can turn this around; until then a gate
+ * saying so is what stops somebody adding a plausible number.
+ */
+structural(
+  "the document card's foot carries the stored size",
+  "media, document in the grid",
+  (h) => /class="media-doc-foot"[^>]*>1\.4 MB</.test(h),
+);
+structural(
+  "no page count is invented, because nothing stores one",
+  "media, document in the grid",
+  (h) => !/\d+\s+pages?/i.test(h),
+);
+
+/* ---- 2. THE CAPTION BAR ------------------------------------------------- */
+
+structural(
+  "a selected tile grows a caption bar",
+  "media, grid with a selected tile",
+  (h) => h.includes('class="media-caption"'),
+);
+
+structural(
+  "the caption carries the filename and the size and the dimensions",
+  "media, grid with a selected tile",
+  (h) =>
+    /class="media-caption-name"[^>]*>a-picture\.png</.test(h) &&
+    /class="media-caption-meta"[^>]*>50 kB · 1200×630</.test(h),
+);
+
+/*
+ * AN UNSELECTED GRID HAS NO CAPTION. Without this the assertion above passes on
+ * a page that draws the bar over all seventy tiles, which is a different design
+ * and not the one that was approved.
+ */
+structural(
+  "an unselected tile has no caption bar",
+  "media, document in the grid",
+  (h) => !h.includes('class="media-caption"'),
+);
+
+/*
+ * EXACTLY ONE COPY CONTROL PER CARD, in both states.
  *
- * The needle set is DERIVED from the module's own PARAM_NAMES rather than typed
- * again, because a hand-written list of parameters going stale against the real
- * one is precisely what both incidents were.
+ * The caption carries the copy button, and the body's copy button is not
+ * rendered when it does. Two controls with the same accessible name on one card
+ * is read twice by a screen reader and chosen between for no reason by a
+ * pointer. The payload baseline cannot see this at all: `type="button"` is not
+ * a submission, so a tile with two copy buttons and a tile with one produce
+ * byte-identical tuples.
+ */
+for (const [state, note] of [
+  ["media, grid with a selected tile", "the caption owns it"],
+  ["media, unused object", "the body owns it"],
+]) {
+  structural(`exactly one copy control on the card (${note})`, state, (h) => {
+    const cards = h.split('class="media-card"').slice(1);
+    if (cards.length !== 1) return false;
+    return (cards[0].match(/class="btn-ghost media-copy"/g) ?? []).length === 1;
+  });
+}
+
+/* ---- 3. THE LIST HEADER, AND THE URLS IT PRODUCES ----------------------- */
+
+structural(
+  "the list renders a header row",
+  "media, list sorted by size",
+  (h) => h.includes('class="media-list-head"'),
+);
+
+structural(
+  "the grid renders no header row, because a grid has no columns",
+  "media, grid with a selected tile",
+  (h) => !h.includes('class="media-list-head"'),
+);
+
+/*
+ * DIMS IS A LABEL RATHER THAN A DEAD LINK, both directions. There is no `dims`
+ * sort key: half the library has no dimensions, so every document and every SVG
+ * would pile up at one end of that order. A disabled-looking anchor would still
+ * be focusable and still navigate.
+ */
+structural("Dims is not a link", "media, list sorted by size", (h) => {
+  const head = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(h)?.[0] ?? "";
+  return (
+    head.includes('class="media-col-head is-unsortable" data-align="end">Dims') &&
+    !/<a[^>]*>Dims/.test(head)
+  );
+});
+
+/*
+ * EXACTLY ONE ACTIVE COLUMN, and it is the one the view is sorted by.
+ *
+ * The state sorts by size, so Size carries `aria-sort="descending"` and the
+ * other three carry `none`. Counting BOTH is what makes this fail on a
+ * regression that marked every column active as easily as one that marked none.
+ */
+structural("exactly one column reports itself sorted", "media, list sorted by size", (h) => {
+  const head = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(h)?.[0] ?? "";
+  const sorted = (head.match(/aria-sort="(ascending|descending)"/g) ?? []).length;
+  const unsorted = (head.match(/aria-sort="none"/g) ?? []).length;
+  return sorted === 1 && unsorted === 3;
+});
+
+structural("the sorted column is the one the view names", "media, list sorted by size", (h) => {
+  const head = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(h)?.[0] ?? "";
+  return /aria-sort="descending"[^>]*>Size|data-sort="size"[^>]*aria-sort="descending"/.test(head);
+});
+
+/* -------------------------------------------------------------------------
+ * THE SORT-LINK TUPLES, and this is the assertion the item was specified on.
+ *
+ * "Header sorts are GET links producing the same URLs the Display popover
+ * already produces, so clicking a header and choosing from the popover must
+ * land on identical URLs."
+ *
+ * READ OFF THE RENDERED MARKUP, both sides, and compared as STRINGS. Nothing
+ * here recomputes an expected href: the property is that the page's two sort
+ * controls agree with EACH OTHER, so both sides of the comparison have to come
+ * out of the page. Calling `sortHref` to produce an expectation would assert
+ * that the function equals itself.
+ *
+ * The active column is exempt and named: a header press on the column you are
+ * already sorted by REVERSES it, which every table does and which the popover
+ * deliberately does not, so those two hrefs are supposed to differ. Asserting
+ * they matched would forbid the toggle.
  * ---------------------------------------------------------------------- */
 
 {
-  const { DEFAULTS, PARAM_NAMES } = await import("../app/lib/media/view.mjs");
-
-  /** Every parameter non-default, so every one MUST appear in every link. */
-  const FULL_VIEW = {
-    view: "grid",
-    group: "folder",
-    sort: "size",
-    dir: "asc",
-    size: "l",
-    role: "brand",
-    q: "logo",
-    tag: "roster",
-    page: 2,
-    trash: false,
-    key: "",
-  };
+  const { SORTS, readView } = await import("../app/lib/media/view.mjs");
+  const html = htmlFor("media, list sorted by size");
 
   assert(
-    "the evaporation needle set is derived, not hand-written",
-    PARAM_NAMES.length >= 10 && PARAM_NAMES.every((n) => n in DEFAULTS),
-    `${PARAM_NAMES.length} names. A hand-written list going stale against the real ` +
-      `one is what both previous incidents actually were.`,
+    "the sorted-list state rendered for the tuple comparison",
+    html.length > 400,
+    `${html.length} chars. A comparison over an empty string passes by examining nothing.`,
   );
 
-  const state = {
-    name: "media, every parameter set",
-    entry: "app/routes/admin.media._index.tsx",
-    path: "/admin/media",
-    url: "/admin/media?view=grid&group=folder&sort=size&dir=asc&size=l&role=brand&q=logo&tag=roster&page=2",
-    loaderData: MEDIA_SHELL({
-      objects: [MEDIA_OBJECT()],
-      q: "logo",
-      filter: "brand",
-      page: 2,
-      hasMore: true,
-      view: FULL_VIEW,
-      modified: true,
-      tagCounts: [{ tag: "roster", n: 9 }],
-      roleCounts: [{ role: "brand", n: 6 }],
-    }),
-  };
+  /** @param {string} block @returns {string[]} */
+  const hrefsIn = (block) =>
+    [...block.matchAll(/href="(\/admin\/media[^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
 
-  const mod = modules.get(state.entry);
-  assert(
-    "the media route bundled for the evaporation scan",
-    Boolean(mod),
-    "without it the scan would examine an empty string and pass",
-  );
-  let html = "";
-  try {
-    html = await renderRoute(/** @type {{ default: unknown }} */ (mod), {
-      path: state.path,
-      url: state.url,
-      loaderData: state.loaderData,
-    });
-  } catch (error) {
-    fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
-  }
+  /** @param {string} href the sort key the url RESOLVES to, defaults included */
+  const sortOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).sort;
+  const dirOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).dir;
+
+  /* The header's children are spans and anchors and nothing nests inside it, so
+     the first `</div>` is its own. */
+  const headBlock = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
+  /* The popover's SORT group only. The Direction group next to it also emits
+     links back to this page, and they resolve to the CURRENT sort key, so
+     scanning the whole panel would put a direction link in the name column's
+     slot and compare two unrelated controls. */
+  const sortNav = /<nav[^>]*aria-label="Sort"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? "";
 
   /*
-   * Every href pointing back at this page, which is the set that has to carry
-   * the state. External links and the upload endpoint are not view links.
-   *
-   * THE SEARCH FORM IS CUT OUT FIRST, and that is a real exemption rather than
-   * a convenience: the form OWNS `q`, so the Clear control inside it is the one
-   * link on the page whose whole job is to drop it. Scanning it would make the
-   * assertion below forbid the only correct way to clear a search.
-   *
-   * Found when the clear control started working: before this design pass the
-   * Clear link was built from the role chip helper and CARRIED q, so pressing
-   * Clear did not clear. The assertion caught the fix, which is the right way
-   * round.
+   * NOT FILTERED ON `sort=` APPEARING IN THE QUERY STRING, and the first draft
+   * of this was. That draft cost a red run and was worth it: `hrefWith` OMITS a
+   * parameter equal to its default, so the Added column at the default
+   * direction produces a BARE `/admin/media` carrying neither token. The filter
+   * dropped exactly one column, reported it as MISSING FROM THE HEADER rather
+   * than as filtered out of the scan, and would have gone on hiding it. Every
+   * anchor in this block is a column heading; there is nothing to filter.
    */
-  const outsideSearch = html.replace(/<form[^>]*role="search"[\s\S]*?<\/form>/g, "");
-  const hrefs = [...outsideSearch.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
-    m[1].replace(/&amp;/g, "&"),
-  );
+  const headHrefs = hrefsIn(headBlock);
+  const popoverHrefs = hrefsIn(sortNav);
 
-  // NON-EMPTY SCOPE FIRST. Zero links found would make every assertion below
-  // pass by examining nothing, which is this repo's most-repeated defect class.
+  // SCOPE FIRST, BOTH SIDES. Either block failing to match its regex would make
+  // every comparison below pass over an empty list, which is this repo's most
+  // repeated defect class and the reason rule 10 exists.
   assert(
-    "the evaporation scan found view links to examine",
-    hrefs.length >= 8,
-    `${hrefs.length} link(s) back to /admin/media. A green result below would mean nothing.`,
+    "the header block yielded sort links to compare",
+    headHrefs.length === 4,
+    `${headHrefs.length} found in the header, expected 4. A green result below would mean nothing.`,
+  );
+  assert(
+    "the Display popover's Sort group yielded links to compare",
+    popoverHrefs.length === SORTS.length,
+    `${popoverHrefs.length} found, expected one per sort key (${SORTS.length}). ` +
+      `The popover and the header must offer the same columns.`,
   );
 
-  /**
-   * Parameters a link is ALLOWED to drop, with the reason.
-   *
-   * @type {Record<string, string>}
-   */
-  const MAY_DROP = {
-    // A chip goes back to page one, deliberately: page 3 of one filter is not
-    // page 3 of another. So `page` may be absent from any link.
-    page: "a filter change resets to page one",
-    // The parameter each control OWNS is the one it changes, and changing it to
-    // the default legitimately removes it from the query.
-    view: "the view toggle owns it",
-    group: "the Display popover owns it",
-    sort: "the Display popover owns it",
-    dir: "the Display popover owns it",
-    size: "the Display popover owns it",
-    role: "the role chips own it",
-    tag: "the tag chips own it",
-    trash: "the Trash lens owns it",
-    key: "the inspector owns it, and closing it is an explicit empty",
+  /** key -> href, for each side. */
+  const byKey = (list) => {
+    const out = {};
+    for (const href of list) out[sortOf(href)] = href;
+    return out;
   };
+  const head = byKey(headHrefs);
+  const popover = byKey(popoverHrefs);
 
-  /*
-   * THE ASSERTION, and it is deliberately about `q` above all.
-   *
-   * `q` is the one parameter NO control on this page owns: nothing here is a
-   * "clear the search" link except the explicit one, so a link that drops it is
-   * always the bug. The other parameters each have exactly one owner and are
-   * checked as a set instead: at least one link must carry each, which catches
-   * a parameter that vanished from the page entirely.
-   */
-  const withoutQ = hrefs.filter((h) => !new URLSearchParams(h.split("?")[1]).has("q"));
-  assert(
-    "every view link carries the search, which no control on this page owns",
-    withoutQ.length === 0,
-    `${withoutQ.length} link(s) dropped q:\n    ${withoutQ.slice(0, 6).join("\n    ")}`,
-  );
-
-  for (const name of PARAM_NAMES) {
-    if (name === "q") continue;
-    const carried = hrefs.filter((h) => new URLSearchParams(h.split("?")[1]).has(name));
+  const ACTIVE = "size"; // what the state is sorted by
+  let compared = 0;
+  for (const key of SORTS) {
+    if (key === ACTIVE) continue;
     assert(
-      `at least one view link carries ${name} (${MAY_DROP[name]})`,
-      carried.length > 0 || name === "key" || name === "trash",
-      `no link on the page carries ${name}, so it cannot survive any navigation`,
+      `the ${key} header and the ${key} popover option are ONE url`,
+      head[key] !== undefined && head[key] === popover[key],
+      `header ${head[key] ?? "(missing)"}\n    popover ${popover[key] ?? "(missing)"}. ` +
+        `Two builders for one destination is how q and role fell off their links.`,
     );
+    compared += 1;
   }
+  assert(
+    "the tuple comparison examined every inactive column",
+    compared === SORTS.length - 1 && compared >= 3,
+    `${compared} compared of ${SORTS.length - 1} expected. A SORTS that shrank, or an ` +
+      `ACTIVE that stopped naming a real key, would make this loop pass over nothing.`,
+  );
+
+  /*
+   * THE TOGGLE, asserted rather than assumed. The active column's header must
+   * REVERSE the direction; the popover's option for the same column must not.
+   * Without this the exemption above is a hole somebody could drive the whole
+   * header through by making every column non-toggling.
+   */
+  assert(
+    "the active column's header reverses the direction",
+    head[ACTIVE] !== undefined && dirOf(head[ACTIVE]) === "asc",
+    `the view is size/desc, so pressing Size must ask for asc. Got ${head[ACTIVE] ?? "(missing)"}.`,
+  );
+  assert(
+    "the active column's popover option does NOT reverse it",
+    popover[ACTIVE] !== undefined && dirOf(popover[ACTIVE]) === "desc",
+    `a popover option is a destination, not a toggle. Got ${popover[ACTIVE] ?? "(missing)"}.`,
+  );
 }
 
 /* -------------------------------------------------------------------------
@@ -2195,6 +2416,30 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  *   v6      249 checks, 46 state(s), 169 submission(s)   floor 234
  *   v6.3    280 checks, 50 state(s), 204 submission(s)   floor 263
  *   v6.4    285 checks, 51 state(s), 208 submission(s)   floor 267
+ *   v6.5    270 checks, 51 state(s), 208 submission(s)   (deduplicated)
+ *   v6.5    302 checks, 54 state(s), 221 submission(s)   floor 283
+ *
+ * **v6.5 IS TWO MOVEMENTS AND THE FIRST ONE IS DOWNWARD, WHICH IS THE POINT.**
+ *
+ * The evaporation section existed TWICE in this file, 155 lines duplicated
+ * verbatim, confirmed byte-identical by hashing both ranges before either was
+ * touched. It rendered the same state twice and applied the same 15 assertions
+ * twice, so 15 of the 285 could not fail independently: if the first copy
+ * passed, the second was guaranteed to. That is rule 10's own class, "a pass
+ * count is not coverage", sitting inside the gate that enforces it, and it had
+ * inflated the floor by 15 for two sessions. Removing it read 270.
+ *
+ * Then session 4 added the document card, the caption bar and the column
+ * headers: three states and 32 assertions, taking it to 302. Floored at 283,
+ * which is 94 percent.
+ *
+ * **SUBMISSIONS MOVED 208 TO 221 AND ALL OF IT IS THE THREE NEW STATES.** Not
+ * one existing state's tuple changed, and that is the evidence that a redesign
+ * this size was presentational: the copy control moved between two parents and
+ * is conditionally not rendered, the tile grew a caption, and the list grew a
+ * header row of links, and none of it is a submission. The 13 added are the
+ * upload form, the wrapping bulk form and rebuild on each new state, plus the
+ * two bulk intents on the one state that seeds a selection.
  *
  * v6.4 is the design pass: folder grouping as the default with its notes, the
  * quality lenses replacing the role chips, and one wide search bar. Submissions
@@ -2223,7 +2468,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * slack has to absorb a state being added mid-session without hiding one being
  * lost.
  */
-const MINIMUM_CHECKS = 267;
+const MINIMUM_CHECKS = 283;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -2232,7 +2477,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 285.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 302.`,
   );
 }
 

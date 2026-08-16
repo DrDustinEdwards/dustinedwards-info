@@ -92,6 +92,25 @@
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
+  "media, document in the grid": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?view=grid | (none) | ",
+    "POST /admin/media?view=grid | intent=rebuild | "
+  ],
+  "media, grid with a selected tile": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?view=grid | intent=bulk-add-tag | key,tag",
+    "POST /admin/media?view=grid | intent=bulk-remove-tag | key,tag",
+    "POST /admin/media?view=grid | intent=rebuild | "
+  ],
+  "media, list sorted by size": [
+    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?sort=size&amp;dir=desc | (none) | ",
+    "POST /admin/media?sort=size&amp;dir=desc | intent=rebuild | "
+  ],
   "media, search with results": [
     "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
