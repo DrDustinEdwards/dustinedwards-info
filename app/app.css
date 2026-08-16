@@ -4668,6 +4668,13 @@ a:hover {
   flex: none;
   align-items: center;
   justify-content: center;
+  /* `.btn-ghost` carries `margin-top: 1.25rem`, which is right for a button
+     stacked under a form and wrong for a 22px glyph sitting in a table cell.
+     This rule reset the padding and the size and left the margin, so the copy
+     control contributed 42px to a row that wanted to be 46: 22 of button and 20
+     of a margin meant for something else. Found by measuring the list row and
+     walking down to the one child that would not shrink. */
+  margin: 0;
   width: 1.375rem;
   height: 1.375rem;
   padding: 0;
@@ -8797,17 +8804,32 @@ a:hover {
 
 /* ---- TYPE ---------------------------------------------------------------
  *
- * **IBM PLEX IS NOT SHIPPED, and this is a cost decision stated rather than
- * absorbed.** The mockup loads IBM Plex Sans and IBM Plex Mono from Google
- * Fonts: eleven woff2 files across the two families and their weights. This
- * site ships no webfont at all on any plane, its CSP has no font-src for a
- * third party, and adding one would put a render-blocking cross-origin request
- * on the PUBLIC pages too, because app.css is one stylesheet for both planes.
- * That is a real cost for an admin surface one person uses.
+ * **THE FAMILIES ARE NOT CHANGED HERE, and the first reason written down for
+ * that was FALSE, so here is the measured one.**
  *
- * So the FAMILIES stay and the TREATMENT matches: size, weight and tracking are
- * set to the mockup's values, which is what actually carries the difference
- * between a title that reads as a title and one that reads as a paragraph. */
+ * The draft of this comment said the site ships no webfont and has no font-src
+ * for a third party. Both are wrong: `app/root.tsx` preconnects to
+ * fonts.googleapis.com and fonts.gstatic.com and loads Inter, and
+ * `workers/app.ts` already carries `font-src https://fonts.gstatic.com`. A
+ * claim written from memory rather than from the file, which is the class this
+ * repo keeps paying for.
+ *
+ * What is actually true:
+ *
+ *   IBM PLEX SANS would be a SWAP, not an addition. Same origin, same CSP, one
+ *   Google Fonts request either way. It is also `--font-sans`, which every
+ *   PUBLIC page uses, so it is the site's brand typeface and not a property of
+ *   the media library. Changing it is an aesthetic verdict, and those are
+ *   Dustin's by the standing delegation.
+ *
+ *   IBM PLEX MONO would be a real ADDITION. `--font-mono` is a system stack
+ *   today and costs nothing; adding a webfont for it puts a new request on the
+ *   public plane, because app.css ships as one stylesheet for both.
+ *
+ * So the TREATMENT matches and the families are left for Dustin: size, weight
+ * and tracking are set to the mockup's values, which is what carries the
+ * difference between a title that reads as a title and one that reads as a
+ * paragraph. */
 
 /* The page title. The mockup is 27px / 600 / -0.018em; this was 20px / 400,
    which is smaller than the search field beneath it. */
