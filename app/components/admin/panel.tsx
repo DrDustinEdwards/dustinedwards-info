@@ -9,11 +9,25 @@ export function Panel({
   title,
   description,
   result,
+  /**
+   * Controls that belong BESIDE the title rather than above the content.
+   *
+   * Optional and absent everywhere but the media library, so no other panel
+   * changes. It exists because a page whose primary action is a full-width row
+   * of its own spends a whole band of vertical space saying "upload": measured
+   * on the media page, the upload row alone pushed the grid 68px down and was
+   * one of seven rows above it where the design has four.
+   *
+   * An action is a thing you do TO the section, so it belongs on the section
+   * heading, which is where every other admin surface would put it too.
+   */
+  actions,
   children,
 }: {
   title: string;
   description?: string;
   result?: SourceResult<unknown>;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -24,6 +38,7 @@ export function Panel({
           {description ? <p className="muted">{description}</p> : null}
         </div>
         {result ? <SourceChip result={result} /> : null}
+        {actions ? <div className="panel-actions">{actions}</div> : null}
       </header>
       {children}
     </section>
