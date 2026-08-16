@@ -55,6 +55,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
+import { retryRead } from "./lib/retry.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -209,15 +210,62 @@ announce("The deployed database has every migration");
 
 const DATABASE = "dustinedwards";
 
-const migrationList = run(
-  "npx",
-  ["wrangler", "d1", "migrations", "list", DATABASE, "--remote"],
-  { capture: true },
-);
-const migrations = readMigrationList({
-  code: migrationList.code,
-  text: migrationList.text,
-});
+/*
+ * WRAPPED IN `retryRead`, and this is the EIGHTH incident in that class.
+ *
+ * The guard refused on its first live use, in SHIP WINDOW 6, with
+ * `The given account is not valid or is not authorized to access this service
+ * [code: 7403]`. It was not a credential fault: `wrangler whoami` reported the
+ * right account with `d1 (write)` scope and no overriding env var, and the
+ * identical command re-run immediately returned `No migrations to apply!`. A
+ * transient on a Cloudflare control-plane READ, which is exactly the class
+ * `retry.mjs` already wraps at 27 other sites, at the one site nobody had
+ * wrapped. It cost a ship attempt.
+ *
+ * A READ, so this is inside the documented policy rather than an exception to
+ * it: the wrapper's own header says reads only, never a write, and listing
+ * migrations mutates nothing.
+ *
+ * **ONLY `unreadable` IS RETRIED, and the distinction is the whole implementation.**
+ * `readMigrationList` RETURNS its verdict and never throws, so wrapping the
+ * spawn alone would have retried nothing at all: a 7403 exits non-zero, the
+ * parser reports `unreadable`, and `retryRead` sees a perfectly resolved
+ * promise. So the wrapped function throws on that verdict and only that one.
+ * `pending` is a real answer about the world, not a transient, and retrying it
+ * would spend 90 seconds re-asking a question already correctly answered before
+ * a refusal that was always going to happen.
+ *
+ * The second failure propagates unchanged and lands in the same refusal it
+ * would have without this, which is what the `catch` below preserves.
+ */
+let migrations;
+try {
+  migrations = await retryRead(
+    () => {
+      const listed = run(
+        "npx",
+        ["wrangler", "d1", "migrations", "list", DATABASE, "--remote"],
+        { capture: true },
+      );
+      const verdict = readMigrationList({ code: listed.code, text: listed.text });
+      // The ONE retryable outcome. Thrown rather than returned so the wrapper
+      // can see it; caught below so the refusal is unchanged either way.
+      if (verdict.state === "unreadable") {
+        const error = new Error(verdict.reason);
+        /** @type {any} */ (error).verdict = verdict;
+        throw error;
+      }
+      return verdict;
+    },
+    { label: "wrangler d1 migrations list (deployed schema)" },
+  );
+} catch (error) {
+  migrations = /** @type {any} */ (error)?.verdict ?? {
+    state: "unreadable",
+    pending: [],
+    reason: error instanceof Error ? error.message : String(error),
+  };
+}
 
 if (migrations.state === "pending") {
   refuse(
