@@ -82,6 +82,9 @@ export const SIZES = ["s", "m", "l"];
  */
 export const LENSES = ["unattached", "duplicates", "no-alt", "large"];
 
+/** Confirmations that have a URL of their own. See DEFAULTS.confirm. */
+export const CONFIRMS = ["empty-trash"];
+
 /**
  * The defaults, which are also what `Reset to defaults` links back to.
  *
@@ -121,6 +124,20 @@ export const DEFAULTS = {
    * `hrefWith(view, { key: "" })`, which is explicit.
    */
   key: "",
+  /**
+   * WHICH CONFIRMATION IS OPEN, or "" for none.
+   *
+   * A URL rather than client state, for the one thing `prompt()` could never
+   * do: work with scripting off. The empty-trash control used an `onSubmit`
+   * handler calling `prompt()`, so with no script the handler never ran and the
+   * form submitted STRAIGHT THROUGH, deleting every trashed object with no
+   * confirmation at all. The ceremony was script-only while the destruction
+   * was not.
+   *
+   * As a URL the modal is server-rendered, cancel is a link and confirm is a
+   * real submit, so the ladder holds identically either way.
+   */
+  confirm: "",
 };
 
 /**
@@ -135,6 +152,29 @@ export const PARAM_NAMES = Object.keys(DEFAULTS);
 /** @param {unknown} value @param {string[]} allowed @param {string} fallback */
 function oneOf(value, allowed, fallback) {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
+}
+
+/**
+ * THE TYPED-COUNT LADDER, as a predicate rather than a line inside an action.
+ *
+ * It was three lines in the route, which meant NO gate could reach it: the
+ * admin-ui harness renders and compares submissions, it never runs an action.
+ * A plant that deleted the check left every gate green, so the one guard
+ * standing between a mistyped confirmation and an irreversible R2 delete was
+ * unasserted. Extracted here for the same reason the pending-migration
+ * predicate was: a pure function is the only part of an action a test can hold.
+ *
+ * STRICT AND STRING-EQUAL, deliberately. Not `Number(typed) === count`, because
+ * that accepts "3 ", "03", "+3", "3.0" and `""` for zero. The ceremony is worth
+ * having only if typing something ADJACENT to the count does not pass it.
+ *
+ * @param {unknown} typed What the operator typed into the confirmation.
+ * @param {number} count The count read in THIS request, not one the form carried.
+ * @returns {boolean} Whether the destructive branch may proceed.
+ */
+export function confirmationSatisfied(typed, count) {
+  if (!Number.isInteger(count) || count <= 0) return false;
+  return String(typed ?? "").trim() === String(count);
 }
 
 /**
@@ -169,6 +209,7 @@ export function readView(params) {
     // NOT trimmed or lowercased: a media key is an exact string, 58 of them are
     // paths, and normalising one would make a bookmarked inspector link miss.
     key: params.get("key") ?? "",
+    confirm: oneOf(params.get("confirm"), CONFIRMS, DEFAULTS.confirm),
   };
 }
 

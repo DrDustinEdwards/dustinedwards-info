@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
+import { MediaConfirm } from "~/components/admin/media-confirm";
 import { MediaDrawer } from "~/components/admin/media-drawer";
 import { MediaKeyboard, MediaToast, toast } from "~/components/admin/media-keyboard";
 import { MediaPalette } from "~/components/admin/media-palette";
@@ -43,6 +44,7 @@ import {
 } from "~/lib/media/usage.mjs";
 import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
 import {
+  confirmationSatisfied,
   displaySummary,
   docTitle,
   groupRows,
@@ -745,6 +747,43 @@ export async function action({ request, context }: Route.ActionArgs) {
    * then finds the image still loading on a published post must not conclude
    * the button failed.
    */
+  /*
+   * BULK TRASH. The per-row ruling applied unchanged to many rows.
+   *
+   * Trashing is REVERSIBLE and touches neither R2 nor any public URL, which is
+   * why it takes a plain confirmation rather than the type-the-count ceremony
+   * that `empty-trash` owes. The friction ladder is unchanged: the count is
+   * spent where the action is irreversible.
+   *
+   * It ITERATES `trashMediaRecord`, the same per-row writer the inspector uses,
+   * and reports per key, exactly as the bulk-tagging ruling requires. There is
+   * no bulk SQL path and there must not be: a second writer would be a second
+   * author of a rule this table has already been bitten by.
+   */
+  if (intent === "bulk-trash") {
+    const keys = form.getAll("key").map(String).filter(Boolean);
+    if (keys.length === 0) return { message: "Nothing selected." };
+    let moved = 0;
+    let already = 0;
+    const failed: string[] = [];
+    for (const key of keys) {
+      try {
+        const result = await trashMediaRecord(env, key);
+        if (result.moved) moved += 1;
+        else already += 1;
+      } catch (error) {
+        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return {
+      message:
+        `Moved ${moved} of ${keys.length} to the trash` +
+        (already > 0 ? `, ${already} already there` : "") +
+        ". Every address still works and no published page changes." +
+        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+    };
+  }
+
   if (intent === "trash") {
     const key = String(form.get("key") ?? "");
     const { moved } = await trashMediaRecord(env, key);
@@ -776,6 +815,31 @@ export async function action({ request, context }: Route.ActionArgs) {
    */
   if (intent === "empty-trash") {
     const keys = await trashedMediaKeys(env);
+
+    /*
+     * **THE TYPE-THE-COUNT LADDER, ENFORCED HERE AND NOT ONLY IN THE UI.**
+     *
+     * It lived in an `onSubmit` handler calling `prompt()`, so with scripting
+     * off the handler never ran and this action deleted every trashed object
+     * with no confirmation at all. The ceremony was script-only while the
+     * destruction was not.
+     *
+     * The modal now renders its confirm button ENABLED on the server, precisely
+     * so a reader without script can reach it, which means the check has to be
+     * here. The disabled button is earlier feedback; this is the gate.
+     *
+     * Compared against the count read in THIS request rather than one the form
+     * carried, so a stale page cannot authorise a delete of a different size
+     * than the operator was shown.
+     */
+    const typed = String(form.get("confirm-count") ?? "").trim();
+    if (!confirmationSatisfied(typed, keys.length)) {
+      return {
+        message:
+          `Nothing was deleted. The trash holds ${keys.length} file(s) and the ` +
+          `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
+      };
+    }
     const deleted: string[] = [];
     const refused: string[] = [];
     for (const key of keys) {
@@ -1495,7 +1559,23 @@ export default function AdminMedia({
    * three: the posts index has the other one, with the same name.
    */
   initialSelection = [],
-}: Route.ComponentProps & { initialSelection?: string[] }) {
+  /*
+   * THE THIRD AND LAST HARNESS SEAM, at the ruled ceiling of three.
+   *
+   * The bulk-trash confirmation opens from client state, so a single static
+   * render can never reach it and the gate would be asserting the absence of
+   * something structurally unreachable. Same shape as `initialSelection`: an
+   * optional prop with a production default, never supplied by React Router.
+   *
+   * This is the surface that permanently hides files from the library in one
+   * press, so leaving it outside the fixture is exactly the mistake the posts
+   * index made with its bulk bar for a whole session.
+   */
+  initialConfirmingTrash = false,
+}: Route.ComponentProps & {
+  initialSelection?: string[];
+  initialConfirmingTrash?: boolean;
+}) {
   // Both JSON branches render nothing: they are data for a fetch, not a page.
   if (loaderData.picker || loaderData.palette) return null;
   const {
@@ -1534,6 +1614,8 @@ export default function AdminMedia({
    * way to do anything here.
    */
   const [selected, setSelected] = useState<string[]>(initialSelection);
+  /** Whether the bulk-trash confirmation is open. Transient by nature. */
+  const [confirmingTrash, setConfirmingTrash] = useState(initialConfirmingTrash);
   const visible = objects.map((o) => o.key);
   /** Selection survives a filter change only for rows still on screen. */
   const chosen = selected.filter((key) => visible.includes(key));
@@ -2087,27 +2169,54 @@ export default function AdminMedia({
         rather than inventing a fourth level of ceremony.
       */}
       {view.trash && trashedCount > 0 ? (
-        <Form
-          method="post"
-          className="media-empty-trash"
-          onSubmit={(event) => {
-            const typed = prompt(
-              `Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"} from R2? ` +
-                `Anything a post cites will be kept. Type ${trashedCount} to confirm.`,
-            );
-            if (typed === null || typed.trim() !== String(trashedCount)) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <button type="submit" name="intent" value="empty-trash" className="btn-danger">
+        <p className="media-empty-trash">
+          {/*
+            A LINK TO THE CONFIRMATION, not a form with a prompt() handler.
+
+            The old control called `prompt()` from `onSubmit`, so with scripting
+            off the handler never ran and the form submitted straight through:
+            the ceremony was script-only while the destruction was not. The
+            confirmation is a URL now, so it is server-rendered and the ladder
+            holds either way.
+          */}
+          <Link to={linkTo({ confirm: "empty-trash" })} className="btn-danger">
             Empty trash
-          </button>
+          </Link>
           <span className="media-facet-hint">
             Deletes the objects. Anything a post cites is kept and named.
           </span>
-        </Form>
+        </p>
       ) : null}
+
+      {/*
+        THE EMPTY-TRASH CONFIRMATION, opened by `?confirm=empty-trash`.
+
+        Server-rendered, so it exists with no script; cancel is a link back to
+        the same view with the parameter cleared, and confirm is a real submit
+        whose typed count the ACTION checks. The disabled button is earlier
+        feedback once hydrated, never the gate.
+      */}
+      <MediaConfirm
+        open={view.confirm === "empty-trash" && trashedCount > 0}
+        title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
+        body={
+          <>
+            <p>
+              Addresses are content hashes, so a deleted file cannot be restored
+              by re-uploading it under the same URL. Anything a post cites is
+              kept and named.
+            </p>
+            <p>
+              Type <strong>{trashedCount}</strong> to confirm.
+            </p>
+          </>
+        }
+        requireTyped={String(trashedCount)}
+        confirmLabel="Delete permanently"
+        cancelHref={linkTo({ confirm: "" })}
+      >
+        <input type="hidden" name="intent" value="empty-trash" />
+      </MediaConfirm>
 
       {/* ONE LINE, in words, and it states ONCE what Unused actually means.
           The chip now carries a number, and a number invites the reading
@@ -2846,6 +2955,22 @@ export default function AdminMedia({
             <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
               Remove tag
             </button>
+            {/*
+              MOVE TO TRASH, for the selection. Reversible, touches no object and
+              no public URL, so it takes a plain confirmation rather than the
+              type-the-count ceremony reserved for the irreversible delete.
+
+              A `type="button"` that opens the confirmation, because the confirm
+              lives in the modal and submitting from here would skip it. The
+              modal's own submit carries the same form's selected keys.
+            */}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setConfirmingTrash(true)}
+            >
+              Move to trash
+            </button>
             {/* Escape clears too, and nobody discovers Escape. */}
             <button
               type="button"
@@ -3322,6 +3447,37 @@ export default function AdminMedia({
         no markup at all. With scripting off neither exists and the page is
         exactly what it was.
       */}
+      {/*
+        THE BULK-TRASH CONFIRMATION, opened from CLIENT STATE rather than a URL.
+
+        That asymmetry with the empty-trash modal is deliberate and is the
+        honest one: this acts on the SELECTION, which is client state, inside a
+        bulk bar that does not render without script at all. A URL cannot carry
+        the selection, and pretending it could would be a no-script path that
+        silently acts on nothing.
+
+        The keys are re-rendered as hidden fields here rather than read from the
+        grid's checkboxes, because this form is its own submission.
+      */}
+      <MediaConfirm
+        open={confirmingTrash && chosen.length > 0}
+        title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
+        body={
+          <p>
+            They stop showing in the library. Every address keeps working and no
+            published page changes, so nothing here can cost a post its image.
+            Restore puts them back.
+          </p>
+        }
+        confirmLabel="Move to trash"
+        onCancel={() => setConfirmingTrash(false)}
+      >
+        <input type="hidden" name="intent" value="bulk-trash" />
+        {chosen.map((key) => (
+          <input key={key} type="hidden" name="key" value={key} />
+        ))}
+      </MediaConfirm>
+
       <MediaToast />
       {view.view === "grid" ? <MediaKeyboard /> : null}
 

@@ -176,7 +176,30 @@ export function MediaKeyboard({ initialActive = "" }: { initialActive?: string }
       else if (event.key === "ArrowDown") move("down");
       else if (event.key === "ArrowUp") move("up");
       else if (event.key === "Escape") {
+        /*
+         * ESCAPE CLEARS EVERYTHING THIS PAGE CAN HAVE OPEN, in one press, which
+         * is what the key means everywhere else.
+         *
+         * It cleared only the keyboard cursor, so a reader with twelve files
+         * selected and a popover open had no way out but clicking each control.
+         *
+         * ORDER MATTERS AND IS NOT ARBITRARY: the drawer and the modals stop
+         * this event before it reaches here, so one press closes the thing ON
+         * TOP rather than everything at once. What is left for this handler is
+         * the page underneath.
+         */
         setActive("");
+        // Every `<details>` popover: Display, and the shortcuts panel.
+        for (const d of document.querySelectorAll("details[open]")) {
+          (d as HTMLDetailsElement).open = false;
+        }
+        // The selection, by unchecking the real boxes rather than by keeping a
+        // second copy of it here. The grid owns the selection; this asks.
+        for (const box of document.querySelectorAll(
+          '.media-card input[type="checkbox"]:checked',
+        )) {
+          (box as HTMLInputElement).click();
+        }
       } else if (event.key === "x" && active) {
         // The REAL checkbox, clicked. Not a parallel selection model: the bulk
         // form reads those checkboxes, so anything else would select rows the
