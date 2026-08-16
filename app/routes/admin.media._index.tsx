@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
+import { MediaDrawer } from "~/components/admin/media-drawer";
 import { MediaKeyboard, MediaToast, toast } from "~/components/admin/media-keyboard";
 import { MediaPalette } from "~/components/admin/media-palette";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
@@ -2125,13 +2126,75 @@ export default function AdminMedia({
       ) : null}
 
       {detail ? (
-        <section className="media-detail" aria-label="Asset detail">
+        <>
+        {/*
+          THE SCRIM, and it is a LINK rather than a div with a handler.
+
+          Clicking outside a drawer closes it, and that expectation does not
+          depend on script, so the mechanism must not either. A link to the same
+          view with `key` cleared is the whole implementation, it works with
+          scripting off, and it is the same URL the Close control uses, so there
+          is one way to close and not two.
+
+          `preventScrollReset` because closing is not a new place to be: the
+          reader was looking at a grid and should still be looking at the same
+          part of it.
+        */}
+        <Link
+          to={linkTo({ key: "" })}
+          className="media-detail-scrim"
+          preventScrollReset
+          aria-label="Close the inspector"
+        />
+        <section
+          className="media-detail"
+          /*
+            A DIALOG in role, because that is what a scrim plus a focus trap
+            makes it. Not a `<dialog>` element: that would need `showModal()` to
+            behave, which is script, and this panel is server-rendered and has to
+            work without any. The role and the label are what assistive
+            technology reads either way, and `MediaDrawer` supplies the trap.
+          */
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Details for ${detail.found ? (detail.originalName ?? detail.key) : detail.key}`}
+          tabIndex={-1}
+        >
           {detail.found ? (
             <>
+              {/*
+                THE STICKY HEAD, which the mockup has and which a scrolling
+                drawer needs: the name of the thing you are reading about must
+                not scroll away from the facts about it, and Close must stay
+                reachable without scrolling back up.
+
+                The name ELLIPSISES rather than wrapping. A content-addressed key
+                is 20 characters of hash and a static one is a path; either can
+                wrap to three lines and push the whole panel down. The full
+                string is in the `title` and in the Address field below.
+
+                The usage pill repeats the state the panel explains further down.
+                That is deliberate: it is the one fact somebody opens this panel
+                to check, and it belongs where the eye lands first.
+              */}
               <header className="media-detail-head">
-                <h3>{detail.originalName ?? detail.key}</h3>
-                <Link to={linkTo({ key: "" })} className="btn-ghost">
-                  Close
+                <h3 title={detail.key}>{detail.originalName ?? detail.key}</h3>
+                <span className="media-detail-usage-pill">
+                  <span
+                    className="media-usage-dot"
+                    data-usage={detail.usage}
+                    aria-hidden="true"
+                  />
+                  {usageDescriptor(detail.usage).label}
+                </span>
+                <Link
+                  to={linkTo({ key: "" })}
+                  className="media-detail-close"
+                  preventScrollReset
+                  aria-label="Close the inspector"
+                  title="Close, or press escape"
+                >
+                  <span aria-hidden="true">&times;</span>
                 </Link>
               </header>
 
@@ -2572,10 +2635,17 @@ export default function AdminMedia({
           ) : (
             <p className="muted">
               Nothing in the index has the key {detail.key}. It may have been deleted.{" "}
-              <Link to={linkTo({ key: "" })}>Back to the library</Link>.
+              <Link to={linkTo({ key: "" })} preventScrollReset>
+                Back to the library
+              </Link>
+              .
             </p>
           )}
         </section>
+        {/* Escape, the focus trap and focus return. Renders nothing; with no
+            script the drawer still opens, works and closes by its own links. */}
+        <MediaDrawer activeKey={detail.key} closeHref={linkTo({ key: "" })} />
+        </>
       ) : null}
 
       {objects.length === 0 ? (
@@ -2913,7 +2983,22 @@ export default function AdminMedia({
                   over the picture while staying outside the anchor.
                 */}
                 <span className="media-thumb-frame">
-                <Link to={linkTo({ key: object.key })} className="media-thumb-link">
+                {/*
+                  `preventScrollReset` is what stops opening a file throwing the
+                  reader back to the top of the library.
+
+                  `<Link>` is a CLIENT-SIDE transition, so there is no document
+                  reload, but `<ScrollRestoration>` in root treats every new
+                  location as a new place and scrolls to top. Opening an
+                  inspector is not going somewhere else, it is looking closer at
+                  where you already are, and the grid behind the drawer must
+                  still be showing the tile you clicked.
+                */}
+                <Link
+                  to={linkTo({ key: object.key })}
+                  className="media-thumb-link"
+                  preventScrollReset
+                >
                   <span
                     className="media-thumb-box"
                     // LQIP as a CSS background BEHIND the real image. The element
@@ -3049,6 +3134,7 @@ export default function AdminMedia({
                       to={linkTo({ key: object.key })}
                       className="media-name"
                       title={object.key}
+                      preventScrollReset
                     >
                       {/*
                         THE CLAMP IS THE GRID'S, AND ONLY THE GRID'S.
