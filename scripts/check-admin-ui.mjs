@@ -2530,6 +2530,7 @@ for (const state of [
  * closing tag. The assertion passed on a meta line that said nothing at all.
  * An element-bounded read is the only way to assert about one element.
  */
+/** @param {string} h @returns {string[]} */
 const metaText = (h) =>
   [...h.matchAll(/class="media-meta">([\s\S]*?)<\/p>/g)].map((m) =>
     m[1].replace(/<[^>]*>/g, ""),
