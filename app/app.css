@@ -8845,3 +8845,122 @@ a:hover {
 .media-grid[data-view="list"] .media-col-usage {
   line-height: 1.3;
 }
+
+/* AND THE COPY CELL IS A FLEX BOX. `.media-col` is `display: block`, so the
+   cell was a line box holding an inline-block button, which adds the strut's
+   descent under it. That is small next to the margin above, but it is real and
+   it is what puts the glyph off the row's optical centre. */
+.media-grid[data-view="list"] .media-col-copy {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* THE CONFIRMATION MODAL. Replaces `window.prompt`, which was unstyleable, told
+ * a screen reader nothing beyond its bare string, blocked the whole browser and
+ * is silently disabled in some contexts, where the form submitted unconfirmed.
+ *
+ * Centred rather than docked, because a confirmation is a question that stops
+ * everything, not a panel you work beside. */
+.media-modal-layer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+/* The scrim is a real control, so it is a link or a button rather than a div,
+   and it fills the layer behind the panel. */
+.media-modal-scrim {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: var(--scrim);
+  border: 0;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+/* Heavier than the drawer's 0.28: a drawer is meant to be compared against the
+   page behind it, and a confirmation is meant to stop you reading it. */
+.media-modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 27rem;
+  padding: 1.3125rem;
+  background: var(--surface-popover);
+  /* Popover elevation, so hard rule 5 applies: --border-strong, never --border. */
+  border: 1px solid var(--border-strong);
+  border-radius: 0.8125rem;
+}
+
+.media-modal h2 {
+  margin: 0 0 0.4375rem;
+  font-size: 1.03125rem;
+  font-weight: 600;
+}
+
+.media-modal-body {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.84375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.media-modal-body p {
+  margin: 0 0 0.5rem;
+}
+
+.media-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.media-modal-body strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.media-modal-typed input {
+  width: 100%;
+  padding: 0.5625rem 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+}
+
+.media-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* A refused control has to LOOK refused, or the reader presses it and concludes
+   the page is broken rather than that they have not typed the count yet. */
+.media-modal-actions .btn-danger[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The empty-trash trigger is a link now, so it needs the button's own box. */
+.media-empty-trash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.media-empty-trash .btn-danger {
+  display: inline-block;
+  text-decoration: none;
+}

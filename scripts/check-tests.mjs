@@ -76,7 +76,11 @@ const TEST_DIR = join(root, "test");
  * than a comment.
  */
 const MINIMUM_FILES = 15;
-const MINIMUM_TESTS = 183;
+/* 186 against 198 measured, roughly 94 percent. Raised from 183 with the
+   typed-count ladder, which is the first thing here asserting about an ACTION's
+   guard rather than about a pure view helper: it was extracted out of the route
+   precisely so a test could hold it. */
+const MINIMUM_TESTS = 186;
 
 let checks = 0;
 let failures = 0;

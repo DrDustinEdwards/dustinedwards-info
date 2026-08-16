@@ -19,6 +19,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  confirmationSatisfied,
   DEFAULTS,
   DIRS,
   GROUPS,
@@ -55,6 +56,10 @@ const FULLY_SET = {
   page: 3,
   trash: true,
   key: "1234abcd5678ef90.png",
+  /* The confirmation modal is a URL like everything else here, so it has to
+     survive a link like everything else. Added when `confirm` landed, and the
+     three evaporation tests above are what demanded it. */
+  confirm: "empty-trash",
 };
 
 test("THE DEFECT: every non-default parameter survives a link", () => {
@@ -441,4 +446,36 @@ test("a document title survives the shapes a real key comes in", () => {
   // render a card rather than throw the page away.
   assert.equal(docTitle(""), "");
   assert.equal(docTitle(".pdf"), "");
+});
+
+/* -------------------------------------------------------------------------
+ * THE TYPED-COUNT LADDER.
+ *
+ * The guard in front of the one irreversible action this page has. It lived
+ * inside the route action, where no gate could reach it: the admin-ui harness
+ * renders markup and compares submissions, it never runs an action, so deleting
+ * the check left every gate green. These are the assertions that were missing.
+ * ---------------------------------------------------------------------- */
+test("the confirmation passes only on an exact match", () => {
+  assert.equal(confirmationSatisfied("3", 3), true);
+  assert.equal(confirmationSatisfied(" 3 ", 3), true, "surrounding space is trimmed");
+});
+
+test("the confirmation rejects everything adjacent to the count", () => {
+  for (const typed of ["", "  ", "03", "3.0", "+3", "3 files", "2", "4", "three", null, undefined]) {
+    assert.equal(
+      confirmationSatisfied(typed, 3),
+      false,
+      `expected ${JSON.stringify(typed)} to be rejected for a count of 3`,
+    );
+  }
+});
+
+test("the confirmation refuses a count that is not a positive whole number", () => {
+  // A blank confirmation against an empty trash must not read as agreement,
+  // which `String(typed) === String(count)` alone would have allowed for "".
+  assert.equal(confirmationSatisfied("0", 0), false);
+  assert.equal(confirmationSatisfied("", 0), false);
+  assert.equal(confirmationSatisfied("-1", -1), false);
+  assert.equal(confirmationSatisfied("1.5", 1.5), false);
 });
