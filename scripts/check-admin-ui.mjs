@@ -434,6 +434,27 @@ const STATES = [
    * "1 selected" and hide any plural or count-formatting defect, and the delete
    * confirmation reads the count.
    */
+  /*
+   * THE THREE CONFIRMATION STEPS, which are the no-script half of the delete
+   * guards. The action refuses an unconfirmed destructive POST and returns what
+   * it would have destroyed; these states render that return.
+   *
+   * They exist because the guards' whole failure mode is being reachable only
+   * with script. A confirmation step that never rendered would leave the
+   * refusal a dead end, and nothing else here would notice: the submission
+   * baseline only sees forms that are on the page.
+   */
+  {
+    name: "posts index, bulk delete awaiting confirmation",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
+    actionData: {
+      confirmDelete: { slugs: [POSTS[0].slug, POSTS[1].slug], count: 2, typed: "" },
+      message: "Nothing was deleted. 2 post(s) are selected.",
+    },
+  },
   {
     name: "posts index, two selected",
     entry: "app/routes/admin.posts._index.tsx",
@@ -956,6 +977,17 @@ const STATES = [
     loaderData: MEDIA_SHELL({ q: "zzzz", objects: [] }),
   },
   {
+    name: "media, delete awaiting confirmation",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: MEDIA_DETAIL({}),
+    }),
+    actionData: { confirmDelete: "1234abcd5678ef90.png" },
+  },
+  {
     // THE DETAIL VIEW, where set-alt and delete now live. Both mutations must
     // appear HERE and nowhere else, which is exactly what comparing this
     // scenario against the grid ones asserts.
@@ -1323,6 +1355,19 @@ const STATES = [
       everPublished: true,
       state: "draft",
     }),
+  },
+  {
+    name: "edit, delete awaiting confirmation",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({ draft: false, firstPublished: "2026-06-01" }),
+      everPublished: true,
+      state: "published",
+    }),
+    actionData: { kind: "confirm-delete", slug: "a-post" },
   },
   {
     name: "edit, published",
@@ -3749,15 +3794,15 @@ assert(
 );
 
 /*
- * FLOOR RAISED 374 -> 405 by the no-script fallback section.
+ * FLOOR RAISED 405 -> 412 by the three delete-confirmation states.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 424,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 430,
  * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
  * retired; dropping the whole no-script section is 20 assertions and still
  * fails. The message below prints the same number as this comment, which is
  * the discipline the previous note was written to enforce.
  */
-const MINIMUM_CHECKS = 405;
+const MINIMUM_CHECKS = 412;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -3766,7 +3811,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 424.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 430.`,
   );
 }
 
