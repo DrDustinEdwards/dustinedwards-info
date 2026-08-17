@@ -23,9 +23,16 @@ export function loader() {
    * the route itself, which are instructions to whatever actually arrives. This
    * line exists so a compliant crawler that somehow learns a token URL does not
    * spend a request on it, and for no stronger reason than that.
+   *
+   * `/search/ask` is disallowed for a DIFFERENT reason, and the difference is
+   * worth keeping straight. It is not private, it is EXPENSIVE: every answer
+   * spends a per-IP allowance and one of a capped number of daily generations.
+   * The control is that the endpoint takes POST and refuses GET with a 405, so
+   * nothing that merely follows a URL can spend anything. This line is the
+   * courtesy on top, and on its own it would be worth very little.
    */
   const block = (agent: string) =>
-    `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /preview\n`;
+    `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /preview\nDisallow: /search/ask\n`;
 
   const body = [
     ...AI_AGENTS.map(block),

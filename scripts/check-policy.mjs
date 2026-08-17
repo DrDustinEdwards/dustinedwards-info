@@ -26,6 +26,9 @@ import { fileURLToPath } from "node:url";
 
 import { decide, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
 
+/** Repo root, so the source assertions below read real files. */
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
 let checks = 0;
 /** @type {string[]} */
 const failures = [];
@@ -339,6 +342,64 @@ permits("admin may create an already published post", () =>
  * The Ask index is a public surface
  * ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+ * ASK IS BILLED, SO IT MUST NOT BE REACHABLE BY A GET.
+ * ---------------------------------------------------------------------- *
+ *
+ * Every answer spends a per-IP allowance and one of a capped number of daily
+ * generations. A GET that bills is a side-effecting GET: a crawler, a link
+ * prefetch, a preview unfurler or an `<img src>` on somebody else's page all
+ * issue one without a person deciding to. The METHOD is the only part of that a
+ * third party cannot choose for us, and robots.txt is advisory on top.
+ *
+ * Asserted from SOURCE. The route file must export an action and must not
+ * export a loader that does work, and the robots body must name the path.
+ */
+{
+  const askRoute = readFileSync(join(root, "app/routes/search.ask.ts"), "utf8");
+
+  eq(
+    "ask: the route exports an action",
+    /export\s+async\s+function\s+action\b/.test(askRoute),
+    true,
+  );
+
+  /*
+   * The loader must exist and must REFUSE. Asserting merely that no loader
+   * exists would pass for a route that quietly serves GET through some other
+   * export, and asserting the file mentions 405 anywhere would pass on a
+   * comment. Scoped to the loader's own body.
+   */
+  const loaderAt = askRoute.search(/export\s+function\s+loader\s*\(/);
+  eq("ask: the route exports a loader", loaderAt !== -1, true);
+  const loaderBody = loaderAt === -1 ? "" : askRoute.slice(loaderAt, loaderAt + 400);
+  eq("ask: the loader refuses with 405", /status:\s*405/.test(loaderBody), true);
+  eq("ask: the refusal names the allowed method", /allow:\s*"POST"/.test(loaderBody), true);
+
+  /*
+   * And the question is read from the BODY, not the query string. A route that
+   * kept reading `searchParams` would still bill on a hand-made GET the moment
+   * somebody restored a loader.
+   */
+  eq(
+    "ask: the question is read from the request body",
+    /request\.formData\(\)/.test(askRoute),
+    true,
+  );
+  eq(
+    "ask: the question is not read from the query string",
+    /searchParams\.get\("q"\)/.test(askRoute),
+    false,
+  );
+
+  const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
+  eq(
+    "ask: robots.txt disallows /search/ask",
+    /Disallow: \/search\/ask/.test(robots),
+    true,
+  );
+}
+
 /**
  * Drafts must never reach the AI index.
  *
@@ -417,16 +478,17 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 45.
- * Never summed. Floored at 42, slack of three: every case is an inline state
- * fixture driven through the real decide(), so the count moves only when a
- * transition is added to the table.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 52,
+ * after the Ask-method block landed. Never summed. It was 45 against a floor of
+ * 42. Floored at 48, slack of four: most cases are inline state fixtures driven
+ * through the real decide(), so the count moves only when a transition is added
+ * to the table or a source assertion is added beside it.
  */
-const MINIMUM_CHECKS = 42;
+const MINIMUM_CHECKS = 48;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 45.`,
+      `A block was SKIPPED rather than failing. Measured: 52.`,
   );
 }
 

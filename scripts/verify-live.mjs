@@ -516,8 +516,16 @@ const ASK_PROBE_LIMIT = 3;
    * @returns {Promise<{keys: string[], status: number} | null>} null if refused
    */
   async function askKeys(label, q) {
-    const res = await fetch(`${ORIGIN}/search/ask?q=${encodeURIComponent(q)}`, {
-      headers: { "user-agent": UA, "cache-control": "no-cache" },
+    // POST since 2026-08-16: Ask bills, so a GET that spends budget was
+    // reachable by any crawler or prefetch. The probe follows the endpoint.
+    const res = await fetch(`${ORIGIN}/search/ask`, {
+      method: "POST",
+      headers: {
+        "user-agent": UA,
+        "cache-control": "no-cache",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ q }),
     });
     const body = await res.text();
     // A refusal is the guard working, not a leak result, and it must not be
