@@ -457,3 +457,72 @@ export function displaySummary(state) {
   const sort = { added: "Newest", name: "A to Z", size: "Largest", usage: "Usage" }[state.sort];
   return [group, sort, state.size.toUpperCase()].join(" · ");
 }
+
+/**
+ * THE DISPLAY AXES: the ones that change how the fetched page is PRESENTED and
+ * never which rows it contains.
+ *
+ * `view` picks list or grid over one markup tree, `size` is a CSS class hook on
+ * the grid, and `group` buckets rows already in hand. None of the three reaches
+ * SQL, which `check:media-display-axes` asserts by reading `listMediaPage`.
+ *
+ * Standing ruling, 2026-08-16: anything that does not change which data comes
+ * back must not touch the server at all. These three are the whole set on this
+ * page. `sort` and `dir` are NOT here and must not be added: the page paginates,
+ * so reordering changes which 24 rows page one holds.
+ */
+export const DISPLAY_AXES = ["view", "group", "size"];
+
+/**
+ * The display axes as the URL currently spells them.
+ *
+ * The component overlays this on the loader's view so a display change renders
+ * from the CLIENT URL with no revalidation. On the server the two are the same
+ * object by construction, because both read the same request URL, so the
+ * overlay is a no-op in the no-script render.
+ *
+ * @param {{ get(name: string): string | null }} params
+ * @returns {{ view: string, group: string, size: string }}
+ */
+export function readDisplayAxes(params) {
+  return {
+    view: oneOf(params.get("view"), VIEWS, DEFAULTS.view),
+    group: oneOf(params.get("group"), GROUPS, DEFAULTS.group),
+    size: oneOf(params.get("size"), SIZES, DEFAULTS.size),
+  };
+}
+
+/**
+ * True when two URLs for this page differ ONLY in display axes.
+ *
+ * Used by the route's `shouldRevalidate` to skip the loader entirely. Identical
+ * URLs return FALSE, not true: a revalidation after an action arrives with the
+ * same URL on both sides, and answering "only display changed" there would skip
+ * the refetch that makes the write visible.
+ *
+ * @param {URL} currentUrl
+ * @param {URL} nextUrl
+ * @returns {boolean}
+ */
+export function onlyDisplayChanged(currentUrl, nextUrl) {
+  if (currentUrl.pathname !== nextUrl.pathname) return false;
+
+  const a = currentUrl.searchParams;
+  const b = nextUrl.searchParams;
+
+  // Every axis that is NOT a display axis has to match exactly. Read through
+  // `readView` rather than comparing raw strings so that two spellings of the
+  // same state (`?view=list` and the bare URL, since defaults are omitted) are
+  // not mistaken for a difference.
+  const from = readView(a);
+  const to = readView(b);
+  const names = /** @type {(keyof typeof from)[]} */ (PARAM_NAMES);
+  for (const name of names) {
+    if (DISPLAY_AXES.includes(name)) continue;
+    if (from[name] !== to[name]) return false;
+  }
+
+  return /** @type {(keyof typeof from)[]} */ (DISPLAY_AXES).some(
+    (name) => from[name] !== to[name],
+  );
+}
