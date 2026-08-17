@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
+  useLocation,
+  useNavigation,
   useSearchParams,
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
@@ -1642,6 +1644,35 @@ export default function AdminMedia({
    */
   const [displayParams] = useSearchParams();
   const view = { ...loadedView, ...readDisplayAxes(displayParams) };
+
+  /*
+   * PENDING STATE, from the router and nothing else.
+   *
+   * A data-changing control on this plane costs a round trip to the origin plus
+   * a D1 query: 1629ms median, MEASURED on production 2026-08-16. Without a
+   * signal the page simply sits there, and the second press is the one that
+   * makes a bulk action run twice.
+   *
+   * `useNavigation` already knows. There is no spinner, no timer and no state
+   * of our own: one attribute the stylesheet dims, plus `aria-busy` so the
+   * announcement is not a visual-only affordance.
+   *
+   * DISPLAY CHANGES ARE EXCLUDED. They resolve without the loader, so flagging
+   * them would flash pending over a re-render that already happened, and would
+   * teach the reader the indicator means nothing.
+   */
+  const navigation = useNavigation();
+  const here = useLocation();
+  const pending =
+    navigation.state === "loading" &&
+    navigation.location != null &&
+    !onlyDisplayChanged(
+      new URL(`${here.pathname}${here.search}`, "https://admin.local"),
+      new URL(
+        `${navigation.location.pathname}${navigation.location.search}`,
+        "https://admin.local",
+      ),
+    );
   const activeLens = LENS_CHIPS.find((l) => l.id === view.lens);
 
   /*
@@ -3073,7 +3104,13 @@ export default function AdminMedia({
               ) : null}
             </h3>
           ) : null}
-        <ul className="media-grid" data-view={view.view} data-size={view.size}>
+        <ul
+          className="media-grid"
+          data-view={view.view}
+          data-size={view.size}
+          data-pending={pending || undefined}
+          aria-busy={pending || undefined}
+        >
           {bucket.rows.map((object) => {
             const name = displayName(object);
             /* `cited` was here and is gone with the two-state meta line that
