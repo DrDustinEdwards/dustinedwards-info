@@ -746,6 +746,54 @@ console.log(
  * deliberate diff rather than drift.
  */
 /* ------------------------------------------------------------------ *
+ * UPLOADED SVG IS SERVED AS AN ATTACHMENT.
+ * ------------------------------------------------------------------ *
+ *
+ * An SVG is a document, not a picture: it can carry script. `image/svg+xml` is
+ * on the upload allowlist, and `/media/*` serves from the SITE'S OWN ORIGIN, so
+ * inline it is script running as the site. The CSP is still Report-Only, so it
+ * would report the execution rather than prevent it.
+ *
+ * OBSERVATION BOUNDARY: source only. This proves the route SETS the header on
+ * the paths that serve the stored bytes; it does not fetch an object, so it
+ * cannot see R2 or a cache layer dropping it on the way out.
+ */
+{
+  const mediaRoute = readFileSync(join(root, "app/routes/media.$.ts"), "utf8");
+
+  const helperAt = mediaRoute.search(/function attachIfActive/);
+  ok("media: the svg attachment helper exists", helperAt !== -1,
+    "nothing sets Content-Disposition, so an uploaded SVG renders inline");
+
+  // SCOPED to the helper's own body. Asserting the FILE mentions attachment
+  // would pass on a comment, which is the mistake the media axis gate made.
+  const helperBody = helperAt === -1 ? "" : mediaRoute.slice(helperAt, helperAt + 700);
+  ok("media: it keys on the svg content type",
+    /image\/svg\+xml/.test(helperBody),
+    "the helper does not test for image/svg+xml");
+  ok("media: it sets content-disposition attachment",
+    /content-disposition"?,\s*"attachment/.test(helperBody),
+    "the helper exists but does not set the disposition");
+  ok("media: it sets nosniff alongside",
+    /x-content-type-options/.test(helperBody),
+    "an attachment a browser sniffs back to SVG defeats the disposition");
+
+  /*
+   * AND IT IS APPLIED ON EVERY PATH THAT SERVES THE STORED BYTES, which is the
+   * half that rots: a new branch returning `object.body` would be invisible to
+   * a check that only asserted the helper exists. Counted, both directions.
+   */
+  const bodyReturns = [...mediaRoute.matchAll(/new Response\(object\.body/g)].length;
+  const applications = [...mediaRoute.matchAll(/attachIfActive\(headers\)/g)].length;
+  ok("media: some path serves the stored bytes", bodyReturns > 0,
+    "no `new Response(object.body` found; this block is asserting nothing");
+  ok("media: every stored-bytes response applies the helper",
+    applications >= bodyReturns,
+    `${bodyReturns} response(s) return the object body but the helper is ` +
+      `applied ${applications} time(s). A path serves an SVG inline.`);
+}
+
+/* ------------------------------------------------------------------ *
  * ASSET CACHE RULES: `public/_headers`.
  * ------------------------------------------------------------------ *
  *
@@ -797,7 +845,7 @@ if (existsSync(headersPath)) {
     `a long-lived rule on an unhashed path cannot be revoked before it expires`);
 }
 
-const MINIMUM_CHECKS = 94;
+const MINIMUM_CHECKS = 99;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

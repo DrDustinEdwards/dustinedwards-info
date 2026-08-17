@@ -27,6 +27,37 @@ import type { Route } from "./+types/media.$";
  * responses are not cached by Cloudflare, and every uncached call is a full
  * decode and re-encode, which is both slow and a billed transformation.
  */
+/**
+ * SVG IS SERVED AS AN ATTACHMENT, NEVER INLINE.
+ *
+ * An SVG is a document, not a picture: it can carry `<script>`, `<foreignObject>`
+ * and external references. Anything in this bucket arrived through the upload
+ * form, `image/svg+xml` is on the allowed list in `upload-contract.mjs`, and
+ * this route serves it from the SITE'S OWN ORIGIN. Inline, a stored SVG is
+ * script running as the site, and the CSP is still Report-Only so it would
+ * report the execution rather than prevent it.
+ *
+ * `attachment` is the fix rather than a sandbox or a nonce because nothing
+ * legitimately renders an R2 SVG inline: the brand marks and the diagram pairs
+ * are STATIC assets whose keys begin with `/`, served by the assets host and
+ * never through here (`thumbUrl` returns such keys untouched, and a grep of
+ * app/ and content/ for `/media/*.svg` finds nothing).
+ *
+ * Applied by the STORED content type, so a file renamed to `.png` on the way in
+ * is still caught, and a future allowed type with the same property has one
+ * place to be added.
+ *
+ * @param {Headers} headers Headers already carrying the object's metadata.
+ */
+function attachIfActive(headers: Headers) {
+  const type = (headers.get("content-type") ?? "").toLowerCase();
+  if (!type.startsWith("image/svg+xml")) return;
+  headers.set("content-disposition", "attachment");
+  // Belt and braces: an attachment that a browser sniffs back to SVG would
+  // defeat the disposition on its own.
+  headers.set("x-content-type-options", "nosniff");
+}
+
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const key = params["*"];
   if (!key) return new Response("Not found", { status: 404 });
@@ -57,6 +88,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   object.writeHttpMetadata(headers);
   headers.set("etag", etag);
   headers.set("cache-control", "public, max-age=31536000, immutable");
+  attachIfActive(headers);
 
   return new Response(object.body, { headers });
 }
@@ -98,6 +130,9 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
     object.writeHttpMetadata(headers);
     headers.set("cache-control", "public, max-age=31536000, immutable");
     headers.set("x-media-thumb", "unavailable-no-images-binding");
+    // The no-Images-binding fallback serves the ORIGINAL bytes, so an SVG
+    // reaches the reader through here too and needs the same treatment.
+    attachIfActive(headers);
     return new Response(object.body, { headers });
   }
 
