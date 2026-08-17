@@ -117,9 +117,17 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   (async () => {
     let response: Response;
     try {
-      response = await fetch(`/search/ask?q=${encodeURIComponent(question)}`, {
+      // POST, because the endpoint bills. A GET that spends per-IP budget and
+      // a daily generation is reachable by anything that follows a URL on its
+      // own: a crawler, a prefetch, an `<img src>` on somebody else's page.
+      response = await fetch("/search/ask", {
+        method: "POST",
         signal: controller.signal,
-        headers: { accept: "text/event-stream" },
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ q: question }),
       });
     } catch {
       if (!controller.signal.aborted) fail("Ask is unavailable.");

@@ -87,7 +87,26 @@ function refuse(reason: string | undefined, retryAfter: number | undefined): Res
   });
 }
 
-export async function loader({ request, context }: Route.LoaderArgs) {
+/**
+ * GET IS REFUSED, EXPLICITLY.
+ *
+ * This endpoint spends money and per-IP budget, so it must not be reachable by
+ * anything that follows or fetches a URL on its own initiative: a crawler, a
+ * link prefetch, an `<img src>` on any site, a preview unfurler. A GET that
+ * bills is a side-effecting GET, and the method is the only part of that a
+ * third party cannot choose for us.
+ *
+ * 405 with `Allow` rather than 404: the endpoint exists, the method is wrong,
+ * and saying so is what stops the next caller reinventing the GET.
+ */
+export function loader() {
+  return new Response("Ask takes POST.", {
+    status: 405,
+    headers: { allow: "POST", "cache-control": "no-store" },
+  });
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
 
   // 404 rather than 503. With the binding absent this endpoint does not exist,
@@ -97,8 +116,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return new Response("Ask is not enabled.", { status: 404 });
   }
 
-  const url = new URL(request.url);
-  const question = (url.searchParams.get("q") ?? "").trim();
+  /*
+   * The question travels in a FORM-ENCODED BODY, which is what an ordinary
+   * `<form method="post">` sends. Ask has no no-script form today (the trigger
+   * is a button that does nothing without script, and its declared fallback is
+   * the classic results already on the page), but reading the body this way
+   * means adding one later is markup and nothing else.
+   */
+  const body = await request.formData();
+  const question = String(body.get("q") ?? "").trim();
 
   if (!question) {
     return new Response("Missing q.", { status: 400 });
