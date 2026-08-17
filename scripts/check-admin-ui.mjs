@@ -44,6 +44,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
+import {
+  DEFAULTS as MEDIA_DEFAULTS,
+  DISPLAY_AXES,
+  GROUPS,
+  SIZES,
+  VIEWS,
+} from "../app/lib/media/view.mjs";
 import { stateOf, transitionsFor } from "../app/lib/editor/publish-transition.mjs";
 import {
   bundleRoutes,
@@ -1702,6 +1709,10 @@ for (let i = 0; i < entries.length; i += 1) {
   modules.set(entries[i], await importBundled(bundle.files[i]));
 }
 
+/** Rendered markup per state, kept for the no-script fallback section. */
+/** @type {Map<string, string>} */
+const renderedHtml = new Map();
+
 /** @type {Record<string, string[]>} */
 const actual = {};
 /** Raw markup per state, kept for the structural assertions in section 3. */
@@ -1737,6 +1748,7 @@ for (const state of STATES) {
   rendered += 1;
   renders[state.name] = html;
   actual[state.name] = submissionKeys(html);
+  renderedHtml.set(state.name, html);
 }
 
 await bundle.cleanup();
@@ -3514,7 +3526,177 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
  * selection bar landed with three new states behind them. A floor left at the
  * old measurement is a floor that has stopped being able to notice anything.
  */
-const MINIMUM_CHECKS = 374;
+/* ------------------------------------------------------------------ *
+ * NO-SCRIPT FALLBACK: the display axes are REAL LINKS carrying their
+ * parameter.
+ * ------------------------------------------------------------------ *
+ *
+ * Standing ruling, 2026-08-16: every control stays a real link or form that
+ * works with scripting off, and nothing is built the slow way to preserve that.
+ * `view`, `size` and `group` are handled on the CLIENT by the route's
+ * `shouldRevalidate`, which is exactly the arrangement where the fallback rots
+ * silently: the scripted path keeps working while the anchor behind it decays
+ * into a button, and nobody notices until somebody arrives without script.
+ *
+ * So the anchor is asserted, from RENDERED MARKUP rather than from source. The
+ * vocabularies are IMPORTED from view.mjs, never restated, so adding a fourth
+ * tile size is covered here the moment it is declared.
+ *
+ * Defaults are omitted from emitted hrefs by `hrefWith`, deliberately, so the
+ * default value is asserted as an anchor to the BARE url and every other value
+ * as an anchor carrying `axis=value`. Asserting `view=list` would fail against
+ * correct markup.
+ */
+
+/*
+ * Each axis is owned by ONE control group, and the assertion is scoped to it.
+ *
+ * The first version of this section searched every href on the page and was
+ * satisfied by any link that happened to carry the axis. A plant that turned
+ * the layout toggle into a `<button>` passed it cleanly, because on a state
+ * whose URL already has `view=grid` every OTHER link carries `view=grid` too:
+ * `hrefWith` preserves the whole state by design. That is hard rule 10's
+ * "count matches, not containers" in its most literal form.
+ *
+ * Both control groups render a `<nav aria-label>`, so the label is the seam.
+ */
+/** @type {Record<string, { nav: string, values: string[] }>} */
+const AXIS_CONTROL = {
+  view: { nav: "Layout", values: VIEWS },
+  group: { nav: "Group by", values: GROUPS },
+  size: { nav: "Tile size", values: SIZES },
+};
+
+/**
+ * The markup of the `<nav>` carrying this aria-label, or "" when absent.
+ * @param {string} html
+ * @param {string} ariaLabel
+ */
+function navNamed(html, ariaLabel) {
+  const open = html.indexOf(`aria-label="${ariaLabel}"`);
+  if (open === -1) return "";
+  const start = html.lastIndexOf("<nav", open);
+  const end = html.indexOf("</nav>", open);
+  if (start === -1 || end === -1) return "";
+  return html.slice(start, end);
+}
+
+/*
+ * SCOPED-BY: `navNamed` delimits to the <nav aria-label="Layout"> ELEMENT, so
+ * this is a match on the layout control itself and not on the string appearing
+ * anywhere in the document (a class name in an inline style block, say).
+ */
+const displayStates = [...renderedHtml.entries()].filter(
+  ([, html]) => navNamed(html, "Layout").length > 0,
+);
+
+/*
+ * SCOPE NON-EMPTINESS. Every assertion below reads this list, so a rename of
+ * the toggle class would otherwise turn the whole section into 0 findings over
+ * 0 states and still pass.
+ */
+assert(
+  "the no-script section found states that render the display controls",
+  displayStates.length >= 3,
+  `only ${displayStates.length} rendered state(s) contain the layout toggle`,
+);
+
+const hrefsOf = (html) => [...html.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
+
+for (const axis of DISPLAY_AXES) {
+  const control = AXIS_CONTROL[axis];
+  checks += 1;
+  if (!control) {
+    fail(`no-script: ${axis} has no control group in this gate, so it is unasserted`);
+    continue;
+  }
+
+  // The owning control has to EXIST before its options can be asserted.
+  const owning = displayStates
+    .map(([name, html]) => [name, navNamed(html, control.nav)])
+    .filter(([, nav]) => nav.length > 0);
+  assert(
+    `no-script: the ${axis} control renders a nav labelled "${control.nav}"`,
+    owning.length > 0,
+    `no rendered state contains <nav aria-label="${control.nav}">, so the ` +
+      `control that owns ${axis} is gone and its options cannot be links.`,
+  );
+
+  for (const value of control.values) {
+    const isDefault = MEDIA_DEFAULTS[axis] === value;
+    const hit = owning.some(([, nav]) =>
+      hrefsOf(nav).some((href) =>
+        isDefault
+          ? href.startsWith("/admin/media") && !href.includes(`${axis}=`)
+          : new RegExp(`[?&]${axis}=${value}(&|$)`).test(href),
+      ),
+    );
+    assert(
+      `no-script: ${axis}=${value} is reachable by an anchor`,
+      hit,
+      isDefault
+        ? `no rendered anchor points at /admin/media without ${axis}=, which is ` +
+            `how the default value is spelled. The control stopped being a link.`
+        : `no rendered anchor carries ${axis}=${value}. With scripting off this ` +
+            `control does nothing, so the client-side display switch has become ` +
+            `a dependency rather than an enhancement.`,
+    );
+  }
+}
+
+/*
+ * THE SERVER STILL RESOLVES THE DISPLAY AXES FROM THE URL.
+ *
+ * The component reads these three from `useSearchParams()` so a client-side
+ * flip re-renders without the loader. On the server both sides read the same
+ * request URL, so the overlay must be a NO-OP there. If it ever is not, the
+ * scripted path keeps working and the no-script path silently renders the
+ * default layout for everybody, which is the exact failure this whole section
+ * exists to catch. Asserted from the markup the grid actually emits.
+ */
+const gridStates = STATES.filter(
+  (state) => typeof state.url === "string" && state.url.includes("view=grid"),
+);
+assert(
+  "no-script: some rendered state requests the grid",
+  gridStates.length > 0,
+  "no state carries view=grid, so the server-side resolution is unasserted",
+);
+for (const state of gridStates) {
+  const html = renderedHtml.get(state.name) ?? "";
+  if (!html.includes("media-grid")) continue;
+  assert(
+    `no-script: ${state.name} server-renders data-view="grid"`,
+    html.includes('data-view="grid"'),
+    `the URL asked for the grid and the markup came back with the default ` +
+      `layout, so the server no longer resolves view from the request URL.`,
+  );
+}
+
+/*
+ * AND THE SEARCH FORM IS STILL A FORM. It is the one control on this page that
+ * carries free text, so it cannot degrade to a link, and a GET form is the only
+ * shape that submits without script.
+ */
+assert(
+  "no-script: the media search renders as a GET form naming its action",
+  displayStates.some(([, html]) =>
+    /<form[^>]*method="get"[^>]*action="\/admin\/media"/.test(html) ||
+    /<form[^>]*action="\/admin\/media"[^>]*method="get"/.test(html),
+  ),
+  "no rendered state contains a GET form posting to /admin/media",
+);
+
+/*
+ * FLOOR RAISED 374 -> 405 by the no-script fallback section.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 420,
+ * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
+ * retired; dropping the whole no-script section is 20 assertions and still
+ * fails. The message below prints the same number as this comment, which is
+ * the discipline the previous note was written to enforce.
+ */
+const MINIMUM_CHECKS = 405;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -3523,7 +3705,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 370.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 420.`,
   );
 }
 
