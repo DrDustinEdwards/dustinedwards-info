@@ -24,7 +24,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decide, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
+import { decide, decideDelete, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
 
 /** Repo root, so the source assertions below read real files. */
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -343,6 +343,79 @@ permits("admin may create an already published post", () =>
  * ---------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
+ * OPERATORS CANNOT DELETE.
+ * ---------------------------------------------------------------------- *
+ *
+ * Ruled 2026-08-17. `savePost` refused an operator's FIRST publish through
+ * decide(); `deletePost` took the same actor and used it only to build a commit
+ * message, so a token forbidden from making a post public was permitted to
+ * DESTROY it, over the network through /api/operator. Least privilege: the
+ * destructive verb needs more authority than the publishing one, not less.
+ *
+ * Driven through the REAL decide/decideDelete, not a copy of the rule.
+ */
+{
+  refuses(
+    "delete: an operator is refused",
+    () => decideDelete({ actor: { kind: "operator", id: "mcp" } }),
+    "delete-requires-admin",
+  );
+  permits("delete: the admin is permitted", () =>
+    decideDelete({ actor: { kind: "admin" } }),
+  );
+
+  /*
+   * THE ASYMMETRY IS GONE, asserted as a PAIR rather than as two separate
+   * facts. The defect was not that delete was permissive in isolation, it was
+   * that it was permissive while publish was not, so the property worth holding
+   * is that an actor refused a first publish is also refused a delete.
+   */
+  const operator = /** @type {const} */ ({ kind: "operator", id: "mcp" });
+  let publishRefused = false;
+  try {
+    decide({ actor: operator, incomingRaw: file({ draft: false }), priorRaw: null });
+  } catch (error) {
+    publishRefused = error instanceof PolicyError;
+  }
+  let deleteRefused = false;
+  try {
+    decideDelete({ actor: operator });
+  } catch (error) {
+    deleteRefused = error instanceof PolicyError;
+  }
+  eq("delete: an actor refused a first publish is refused a delete too",
+    [publishRefused, deleteRefused], [true, true]);
+
+  /*
+   * AND THE CALL SITE ACTUALLY REACHES IT. The predicate passing proves the
+   * rule; it does not prove `deletePost` asks. SCOPED to deletePost's own body,
+   * because the file imports decide() for savePost and a file-wide match would
+   * be satisfied by that.
+   */
+  const publishSrc = readFileSync(join(root, "app/lib/editor/publish.server.ts"), "utf8");
+  const at = publishSrc.indexOf("export async function deletePost(");
+  eq("delete: deletePost exists to be checked", at !== -1, true);
+  const open = publishSrc.indexOf("{", publishSrc.indexOf(")", at));
+  let depth = 0, close = -1;
+  for (let i = open; i < publishSrc.length; i += 1) {
+    if (publishSrc[i] === "{") depth += 1;
+    else if (publishSrc[i] === "}") { depth -= 1; if (depth === 0) { close = i; break; } }
+  }
+  const body = close === -1 ? "" : publishSrc.slice(open, close);
+  eq("delete: deletePost's body parses", body.length > 0, true);
+  eq("delete: deletePost calls decideDelete in its own body",
+    /decideDelete\(\s*\{\s*actor\s*\}\s*\)/.test(body), true);
+
+  /*
+   * BEFORE THE FILE READ. A guard placed after it still refuses, but it lets an
+   * unauthorised caller probe which slugs exist by the difference between two
+   * error messages. Position is part of the guard.
+   */
+  eq("delete: the decision precedes the file read",
+    body.indexOf("decideDelete") < body.indexOf("readFile("), true);
+}
+
+/* ----------------------------------------------------------------------
  * ASK IS BILLED, SO IT MUST NOT BE REACHABLE BY A GET.
  * ---------------------------------------------------------------------- *
  *
@@ -478,17 +551,17 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 52,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 59,
  * after the Ask-method block landed. Never summed. It was 45 against a floor of
- * 42. Floored at 48, slack of four: most cases are inline state fixtures driven
+ * 42, then 52. Floored at 55, slack of four: most cases are inline state fixtures driven
  * through the real decide(), so the count moves only when a transition is added
  * to the table or a source assertion is added beside it.
  */
-const MINIMUM_CHECKS = 48;
+const MINIMUM_CHECKS = 55;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 52.`,
+      `A block was SKIPPED rather than failing. Measured: 59.`,
   );
 }
 

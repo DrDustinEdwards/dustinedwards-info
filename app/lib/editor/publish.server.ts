@@ -46,7 +46,7 @@ import {
   readBinaryFile,
   GitHubError,
 } from "./github.server";
-import { decide, PolicyError, type Actor } from "./publish-policy.mjs";
+import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 
 export { GitHubError, PolicyError };
@@ -407,6 +407,23 @@ export async function deletePost(
   options: { slug: string; expectedHeadSha?: string | null; actor?: Actor },
 ) {
   const actor: Actor = options.actor ?? { kind: "admin" };
+
+  /*
+   * **THE POLICY DECISION, BEFORE ANY READ OR WRITE.**
+   *
+   * Until 2026-08-17 this function took `actor` and used it ONLY to build the
+   * commit message below, so there was no policy path at all: an operator token
+   * forbidden by `decide()` from making a post public for the FIRST time was
+   * permitted to DESTROY that same post, over the network through
+   * `/api/operator`. Least privilege says the destructive verb needs more
+   * authority than the publishing one, not less.
+   *
+   * First statement in the function deliberately. Placing it after the file
+   * read would still refuse, but it would let an unauthorised caller probe
+   * which slugs exist by the difference between two error messages.
+   */
+  decideDelete({ actor });
+
   const existing = await readFile(env, postPath(options.slug));
   if (!existing) {
     throw new EditorError(`No post file exists for "${options.slug}".`);
