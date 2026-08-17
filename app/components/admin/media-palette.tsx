@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 
 /**
  * THE COMMAND PALETTE, LAYERED OVER THE SEARCH FORM RATHER THAN REPLACING IT.
@@ -75,6 +76,7 @@ export function MediaPalette({
   const [results, setResults] = useState<PaletteResult[]>(initialResults?.results ?? []);
   const [hasMore, setHasMore] = useState(initialResults?.hasMore ?? false);
   const [cursor, setCursor] = useState(0);
+  const navigate = useNavigate();
   const [open, setOpen] = useState(Boolean(initialResults));
   const [copied, setCopied] = useState("");
 
@@ -204,7 +206,13 @@ export function MediaPalette({
         const hit = results[Math.min(cursor, results.length - 1)];
         if (!hit) return;
         if (event.shiftKey) {
-          window.location.href = `/admin/media?key=${encodeURIComponent(hit.key)}`;
+          // A ROUTER navigation, not `window.location`. The destination is
+          // this same route with a `key` in the query, which every other
+          // control that opens the inspector reaches by `<Link>`; assigning to
+          // `location` tore the document down and rebuilt it to show a panel.
+          navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
+            preventScrollReset: true,
+          });
         } else {
           copy(hit.url);
         }
@@ -212,7 +220,7 @@ export function MediaPalette({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, results, cursor]);
+  }, [open, results, cursor, navigate]);
 
   if (!open || (results.length === 0 && !query.trim())) return null;
 

@@ -1804,7 +1804,7 @@ export default function AdminMedia({
         such shortcut, and the earlier ruling against documenting absent
         shortcuts applies unchanged. It goes in when the shortcut does.
       */}
-      <form method="get" className="media-search" role="search">
+      <Form method="get" action="/admin/media" className="media-search" role="search">
         <input
           id="media-q"
           type="search"
@@ -1848,7 +1848,7 @@ export default function AdminMedia({
         <span className="media-search-kbd" aria-hidden="true">
           {"⌘K"}
         </span>
-      </form>
+      </Form>
       {/*
         THE PALETTE, mounted AFTER the form and rendering nothing on the server.
 

@@ -474,7 +474,7 @@ export default function AdminPosts({
         check:admin-ui's fixture. Regenerated deliberately, with the before and
         after triples reported, per the queue's standing rule.
       */}
-      <form method="get" className="posts-filters" role="search">
+      <Form method="get" action="/admin/posts" className="posts-filters" role="search">
         <div className="posts-filter-field">
           <label htmlFor="posts-q">Search</label>
           <input
@@ -538,7 +538,7 @@ export default function AdminPosts({
             Clear
           </Link>
         ) : null}
-      </form>
+      </Form>
 
       {/*
         THE SCHEDULED QUEUE, stated whenever anything is scheduled.

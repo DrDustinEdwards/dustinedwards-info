@@ -1,4 +1,4 @@
-import { Link, data } from "react-router";
+import { Form, Link, data } from "react-router";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { BlogSpeculation } from "~/components/blog-speculation";
@@ -177,9 +177,13 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         {/* Blog-scoped search is site search with type pinned, not a second
             engine. The hidden field is what scopes it, so the same index, the
             same parser and the same ranking serve both, and a reader can widen
-            to the whole site by removing one chip on the results page. A plain
-            GET form: it works with scripting off. */}
-        <form method="get" action="/search" role="search" className="blog-search">
+            to the whole site by removing one chip on the results page.
+
+            A router `<Form method="get">`, which emits the same markup and the
+            same URL as a plain form, so it still works with scripting off. The
+            destination's own form (`search.tsx`) has always been a `<Form>`;
+            these two now agree. */}
+        <Form method="get" action="/search" role="search" className="blog-search">
           <label className="sr-only" htmlFor="blog-search-input">
             Search the blog
           </label>
@@ -192,7 +196,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           />
           <input type="hidden" name="type" value="post" />
           <button type="submit">Search</button>
-        </form>
+        </Form>
 
         {tags.length > 0 && (
           <nav className="tag-chips" aria-label="Filter posts by tag">

@@ -2608,7 +2608,7 @@
       "url": "/playground",
       "type": "page",
       "title": "Playground",
-      "body": "Interactive demos of this site's own machinery. Each one runs the same code the site runs, server-side, with no JavaScript. Every demo here runs the real thing. The contrast lab computes with the module the build gate computes with, the search demo runs the query through the same path /search uses, and the chart is drawn by the pipeline that draws the charts in the articles. A demo of a reimplementation would demonstrate nothing, so there are no reimplementations. Every result is a plain GET, rendered on the server, at a URL you can paste to someone.",
+      "body": "Interactive demos of this site's own machinery. Each one runs the same code the site runs, server-side, and every result is a shareable URL. Every demo here runs the real thing. The contrast lab computes with the module the build gate computes with, the search demo runs the query through the same path /search uses, and the chart is drawn by the pipeline that draws the charts in the articles. A demo of a reimplementation would demonstrate nothing, so there are no reimplementations. Every result is a plain GET, rendered on the server, at a URL you can paste to someone.",
       "tags": "",
       "docTags": "",
       "docUid": "page:playground",
