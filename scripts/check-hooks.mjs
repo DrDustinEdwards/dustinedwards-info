@@ -79,13 +79,18 @@ const SETTINGS_PATH = join(root, ".claude", "settings.json");
  * Canon requires the Bash arm: capsid/conventions.md records the no-em-dash hook
  * as covering Write, Edit and Bash, including `git commit -m` and heredocs.
  *
- * A NOTE ON THE WORDING BELOW. Prose in this file must not read as raw SQL.
- * `check:invariants` section 5 matches its `LOOKS_LIKE_SQL` constant against the
- * whole file, then resolves the token after a row-write keyword as a table name,
- * so an ordinary English sentence can become a phantom statement and fail the
- * gate naming a column that never existed. Measured 2026-08-14: the first draft
- * of the drift message said "u" plus "pdate EXPECTED_HOOKS" and did exactly
- * that. The extractor is correctly broad, so the prose gives way, not the guard.
+ * A NOTE ON THE WORDING BELOW, NOW HISTORICAL. Prose in this file used to have
+ * to avoid reading as raw SQL: `check:invariants` section 5 matched a
+ * `LOOKS_LIKE_SQL` constant against the whole file and resolved the token after
+ * a row-write keyword as a table name, so an ordinary English sentence became a
+ * phantom statement and failed the gate naming a column that never existed.
+ * Measured 2026-08-14: the first draft of the drift message said "u" plus
+ * "pdate EXPECTED_HOOKS" and did exactly that.
+ *
+ * That section was DELETED on 2026-08-16, so the constraint is lifted. It is
+ * kept here as evidence rather than as a rule: a guard that made a neighbouring
+ * gate write around it was reporting its own noise, and that is part of why it
+ * went.
  */
 const EXPECTED_HOOKS = [
   {
