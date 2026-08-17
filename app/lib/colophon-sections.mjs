@@ -112,6 +112,14 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "is the honest boundary of the technique.",
   },
   {
+    id: "security",
+    title: "A tradeoff in the security headers",
+    lead:
+      "The content security policy is enforced, not merely reported. One part " +
+      "of it is a compromise rather than a clean win, and the compromise is " +
+      "worth stating plainly.",
+  },
+  {
     id: "not-adopted",
     title: "What was not adopted",
     lead:
@@ -120,6 +128,31 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "accepted gap is something missing that nobody ruled on, written down so " +
       "it is not mistaken for a choice.",
   },
+]);
+
+/**
+ * THE SECURITY TRADEOFF, in one place so the page and the search index cannot
+ * drift apart. That drift is the exact failure this module exists to prevent,
+ * and it has already happened once here (the 2026-08-05 not-adopted defect,
+ * where the index carried a word the page never showed).
+ *
+ * Plain language on purpose. A showcase that only lists its wins is an
+ * advertisement; the honest account of a compromise is the more useful artifact,
+ * and this one is genuinely a compromise.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+export const SECURITY_TRADEOFF = Object.freeze([
+  "Every response carries a one-time number that scripts on the page must " +
+    "quote to be allowed to run. That number is generated per response.",
+  "Seven pages of this site are cached at Cloudflare's edge and served to " +
+    "everyone from the same stored copy for up to ten minutes. The number is " +
+    "part of that copy, so visitors served from one cache entry share it.",
+  "We took that trade deliberately. The alternative is to stop caching those " +
+    "pages, which would make every reader wait for the origin on every visit.",
+  "It is acceptable only because these pages carry no writing from anyone but " +
+    "me. There are no comments and no user submissions, so there is nowhere " +
+    "for a stranger's script to get in and use the shared number.",
 ]);
 
 /** Fragment ids, for a gate that needs the set rather than the order. */
@@ -235,6 +268,10 @@ export function colophonPageInput(stack, features) {
       return features.features
         .map((/** @type {any} */ f) => `${f.component}. ${f.name}. ${f.what}`)
         .join(" ");
+    }
+    if (id === "security") {
+      // The page renders these sentences; the index gets the same ones.
+      return SECURITY_TRADEOFF.join(" ");
     }
     if (id === "not-adopted") {
       // `statusLabel`, never `n.status`. The page renders the label, so the
