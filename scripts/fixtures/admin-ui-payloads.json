@@ -1,33 +1,33 @@
 {
   "posts index, clean": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask drifted": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, Ask disabled": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, empty corpus": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, two selected": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | intent=bulk-add-tag | slug,tag",
     "POST /admin/posts | intent=bulk-delete | slug,tag",
     "POST /admin/posts | intent=bulk-remove-tag | slug,tag",
@@ -36,7 +36,7 @@
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, filtered and selected": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts?status=published | intent=bulk-add-tag | slug,tag",
     "POST /admin/posts?status=published | intent=bulk-delete | slug,tag",
     "POST /admin/posts?status=published | intent=bulk-remove-tag | slug,tag",
@@ -45,86 +45,86 @@
     "POST /admin/posts?status=published | intent=sync-ask | "
   ],
   "posts index, filtered with matches": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts?q=live&amp;status=published | (none) | ",
     "POST /admin/posts?q=live&amp;status=published | intent=regenerate | ",
     "POST /admin/posts?q=live&amp;status=published | intent=reset-ask-budget | ",
     "POST /admin/posts?q=live&amp;status=published | intent=sync-ask | "
   ],
   "posts index, filtered with no matches": [
-    "GET  | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=regenerate | ",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=reset-ask-budget | ",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=sync-ask | "
   ],
   "media, unused object": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, cited object": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, reference scan failed": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, empty bucket": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, document row": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, static row": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, document in the grid": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?view=grid | (none) | ",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, grid with a selected tile": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?view=grid | intent=bulk-add-tag | key,tag",
     "POST /admin/media?view=grid | intent=bulk-remove-tag | key,tag",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, list sorted by size": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?sort=size&amp;dir=desc | (none) | ",
     "POST /admin/media?sort=size&amp;dir=desc | intent=rebuild | "
   ],
   "media, placed by page code": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, cited by a post": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, inspector on a template-placed file": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=/phage-hunters/2019.webp | (none) | ",
     "POST /admin/media?key=/phage-hunters/2019.webp | alt=2019 | alt,key",
@@ -136,7 +136,7 @@
     "POST /admin/media?key=/phage-hunters/2019.webp | tags=phage hunters | intent,key"
   ],
   "media, inspector on a document": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | (none) | ",
     "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | intent=rebuild | ",
@@ -144,7 +144,7 @@
     "POST /admin/media?key=/publications/edwards-2024-phage-genomics.pdf | intent=trash | key"
   ],
   "media, inspector on a duplicate": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
@@ -155,7 +155,7 @@
     "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
   ],
   "media, inspector with alt already written": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
@@ -166,66 +166,66 @@
     "POST /admin/media?key=1234abcd5678ef90.png | tags=talks | intent,key"
   ],
   "media, large but attached": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?view=grid | (none) | ",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, unattached lens with its note": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?lens=unattached | (none) | ",
     "POST /admin/media?lens=unattached | intent=rebuild | "
   ],
   "media, library empty": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, search matched nothing": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?q=zzzz | intent=rebuild | "
   ],
   "media, lens matched nothing": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?lens=duplicates | intent=rebuild | "
   ],
   "media, empty trash confirmation": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
-    "POST  | (none) | confirm-count,intent",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?trash=1&amp;confirm=empty-trash | (none) | confirm-count,intent",
     "POST /admin/media?trash=1&amp;confirm=empty-trash | intent=rebuild | "
   ],
   "media, bulk trash confirmation": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
-    "POST  | (none) | intent,key",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media | (none) | intent,key",
     "POST /admin/media | intent=bulk-add-tag | key,tag",
     "POST /admin/media | intent=bulk-remove-tag | key,tag",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, selection bar": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?view=grid | intent=bulk-add-tag | key,tag",
     "POST /admin/media?view=grid | intent=bulk-remove-tag | key,tag",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, search with results": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?q=picture | (none) | ",
     "POST /admin/media?q=picture | intent=rebuild | "
   ],
   "media, search with nothing found": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?q=zzzz | intent=rebuild | "
   ],
   "media, detail open": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
@@ -236,7 +236,7 @@
     "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
   ],
   "media, detail for a static row": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=/logo.svg | alt=a picture | alt,key",
     "POST /admin/media?key=/logo.svg | intent=rebuild | ",
@@ -245,71 +245,71 @@
     "POST /admin/media?key=/logo.svg | intent=trash | key"
   ],
   "media, detail for a missing key": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=gone.png | (none) | ",
     "POST /admin/media?key=gone.png | intent=rebuild | "
   ],
   "media, upload accepted": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?uploaded=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?uploaded=1234abcd5678ef90.png | intent=rebuild | "
   ],
   "media, upload refused": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?upload-error=too-large | (none) | ",
     "POST /admin/media?upload-error=too-large | intent=rebuild | "
   ],
   "media, list view": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media | (none) | ",
     "POST /admin/media | intent=rebuild | ",
     "POST /admin/media/upload | intent=upload-form | file"
   ],
   "media, flat view": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?group=flat | (none) | ",
     "POST /admin/media?group=flat | intent=rebuild | "
   ],
   "media, grid view": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?view=grid | (none) | ",
     "POST /admin/media?view=grid | intent=rebuild | "
   ],
   "media, grouped and sorted": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?group=folder&amp;sort=size&amp;dir=asc&amp;size=l | (none) | ",
     "POST /admin/media?group=folder&amp;sort=size&amp;dir=asc&amp;size=l | intent=rebuild | "
   ],
   "media, trash view": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?trash=1 | (none) | ",
     "POST /admin/media?trash=1 | intent=rebuild | "
   ],
   "media, trash view empty": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?trash=1 | intent=rebuild | "
   ],
   "media, tag filter active": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?tag=roster | (none) | ",
     "POST /admin/media?tag=roster | intent=rebuild | "
   ],
   "media, tag filter with no results": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?tag=nothing-here | intent=rebuild | "
   ],
   "media, detail with a twin": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
@@ -320,7 +320,7 @@
     "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
   ],
   "media, detail for a trashed row": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | alt=a picture | alt,key",
@@ -331,26 +331,26 @@
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-tags | key,tags"
   ],
   "media, grouped by folder": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?group=folder | (none) | ",
     "POST /admin/media?group=folder | intent=rebuild | "
   ],
   "media, grouped by month": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?group=month | (none) | ",
     "POST /admin/media?group=month | intent=rebuild | "
   ],
   "media, two selected": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?role=all | intent=bulk-add-tag | key,tag",
     "POST /admin/media?role=all | intent=bulk-remove-tag | key,tag",
     "POST /admin/media?role=all | intent=rebuild | "
   ],
   "media, filtered and selected": [
-    "GET  | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?tag=roster | intent=bulk-add-tag | key,tag",
     "POST /admin/media?tag=roster | intent=bulk-remove-tag | key,tag",

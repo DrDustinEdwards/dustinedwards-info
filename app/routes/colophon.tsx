@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import features from "../../content/features.json";
 import {
   COLOPHON_DESCRIPTION,
@@ -134,9 +136,9 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
       <li>
         <span className="muted">route </span>
         {followable ? (
-          <a href={anchor.path}>
+          <Link to={anchor.path}>
             <code>{anchor.path}</code>
-          </a>
+          </Link>
         ) : (
           <code>{anchor.path}</code>
         )}

@@ -20,9 +20,16 @@ export const PLAYGROUND_URL = "/playground";
 
 export const PLAYGROUND_TITLE = "Playground";
 
+/*
+ * "with no JavaScript" stood here until 2026-08-16 and was FALSE the whole
+ * time: `root.tsx` renders `<Scripts />` on every route, so this page has
+ * always shipped the router runtime. What is actually true, and is what the
+ * demos are for, is that each one runs real production code on the server and
+ * every result state is a shareable URL. Both survive scripting being off.
+ */
 export const PLAYGROUND_DESCRIPTION =
   "Interactive demos of this site's own machinery. Each one runs the same code " +
-  "the site runs, server-side, with no JavaScript.";
+  "the site runs, server-side, and every result is a shareable URL.";
 
 /** The lead paragraph above the demos, indexed with the document. */
 export const PLAYGROUND_INTRO =

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Form, Link } from "react-router";
 
 /**
  * A DESTRUCTIVE CONFIRMATION, as a real modal rather than `window.prompt`.
@@ -124,7 +125,12 @@ export function MediaConfirm({
       {/* The scrim. A link when there is a URL to go back to, a button when the
           trigger was client state; either way clicking outside cancels. */}
       {cancelHref ? (
-        <a href={cancelHref} className="media-modal-scrim" aria-label="Cancel" />
+        <Link
+          to={cancelHref}
+          preventScrollReset
+          className="media-modal-scrim"
+          aria-label="Cancel"
+        />
       ) : (
         <button
           type="button"
@@ -142,7 +148,7 @@ export function MediaConfirm({
       >
         <h2 id="media-modal-title">{title}</h2>
         <div className="media-modal-body">{body}</div>
-        <form method={method} className="media-modal-form">
+        <Form method={method} className="media-modal-form">
           {children}
           {requireTyped ? (
             <label className="media-modal-typed">
@@ -159,9 +165,9 @@ export function MediaConfirm({
           ) : null}
           <div className="media-modal-actions">
             {cancelHref ? (
-              <a href={cancelHref} className="btn-ghost">
+              <Link to={cancelHref} preventScrollReset className="btn-ghost">
                 Cancel
-              </a>
+              </Link>
             ) : (
               <button type="button" className="btn-ghost" onClick={onCancel}>
                 Cancel
@@ -171,7 +177,7 @@ export function MediaConfirm({
               {confirmLabel}
             </button>
           </div>
-        </form>
+        </Form>
       </div>
     </div>
   );

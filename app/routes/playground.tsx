@@ -1,3 +1,4 @@
+import { Form, Link } from "react-router";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 
@@ -32,12 +33,26 @@ import type { Route } from "./+types/playground";
  *    a rule, because a demo of a reimplementation demonstrates nothing: it would
  *    keep working while the thing it claims to show was broken.
  *
- * 2. ZERO JAVASCRIPT, BY CONSTRUCTION. Every demo is a GET form and every result
- *    is rendered on the server, so hard rule 9 is satisfied by there being
- *    nothing to fall back FROM rather than by a fallback. Nothing here belongs in
- *    enhancements.json. It also means every result state is a URL: the reader
- *    can paste one and the recipient sees the identical render, because the
- *    query string is the entire input.
+ * 2. EVERY RESULT STATE IS A URL, AND THE SERVER RENDERS IT. Every demo is a
+ *    GET form whose entire input is the query string, so a reader can paste a
+ *    URL and the recipient sees the identical render. With scripting off the
+ *    forms submit natively and the server answers exactly the same way, which
+ *    is what satisfies hard rule 9 here.
+ *
+ *    THIS LAW USED TO READ "ZERO JAVASCRIPT, BY CONSTRUCTION" AND THAT WAS
+ *    NEVER TRUE OF THE DELIVERED PAGE. `root.tsx` renders `<Scripts />` on
+ *    every route, so the router runtime has always shipped here; the claim was
+ *    only ever true of this file's own code. Corrected 2026-08-16 along with
+ *    the reader-facing copy in `playground-page.mjs`, which told visitors the
+ *    demos ran "with no JavaScript".
+ *
+ *    The forms are react-router `<Form method="get">`. That emits the same
+ *    markup and the same URL as a plain form, so the no-script path is
+ *    unchanged, and where script is present it skips the document teardown.
+ *    MEASURED on production 2026-08-16: a full document load of this page
+ *    spends 861ms after `responseEnd` reaching interactive and 2111ms reaching
+ *    load, all of which a client transition skips. The wire cost is the same
+ *    either way (145ms both), so bytes were never the reason.
  *
  * NO USER INPUT IS PERSISTED ANYWHERE. Not logged, not stored, not counted. The
  * analytics point carries the bare path and never the query string, which is a
@@ -229,7 +244,7 @@ function DemoHeader({ index }: { index: number }) {
       <p className="playground-demo-lede">{demo.lede}</p>
       <p className="playground-demo-runs">
         Runs <code>{demo.realPath.split(",")[0]}</code>.{" "}
-        <a href={`/blog/${demo.homeArticle.slug}`}>{demo.homeArticle.title}</a>
+        <Link to={`/blog/${demo.homeArticle.slug}`}>{demo.homeArticle.title}</Link>
       </p>
     </>
   );
@@ -269,7 +284,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
           <section id={demoAnchor("contrast")} className="playground-demo">
             <DemoHeader index={0} />
 
-            <form method="get" action={PLAYGROUND_URL} className="playground-form">
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("lab")}
               <div className="playground-field">
                 <label htmlFor="pg-fg">Foreground</label>
@@ -293,16 +308,16 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
               <p id="pg-hex-cap" className="playground-cap">
                 Three or six hex digits each, with or without the hash.
               </p>
-            </form>
+            </Form>
 
             <ul className="playground-swatches">
               {SWATCHES.map((s) => (
                 <li key={s.label}>
-                  <a
-                    href={`${PLAYGROUND_URL}?fg=${encodeURIComponent(s.fg)}&bg=${encodeURIComponent(s.bg)}#${demoAnchor("contrast")}`}
+                  <Link
+                    to={`${PLAYGROUND_URL}?fg=${encodeURIComponent(s.fg)}&bg=${encodeURIComponent(s.bg)}#${demoAnchor("contrast")}`}
                   >
                     {s.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -362,7 +377,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
           <section id={demoAnchor("search-anatomy")} className="playground-demo">
             <DemoHeader index={1} />
 
-            <form method="get" action={PLAYGROUND_URL} className="playground-form">
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("search")}
               <div className="playground-field playground-field-wide">
                 <label htmlFor="pg-q">Query</label>
@@ -376,7 +391,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
               <p id="pg-q-cap" className="playground-cap">
                 Up to {QUERY_CAP} characters. Nothing you type is stored.
               </p>
-            </form>
+            </Form>
 
             {anatomyError && <Problem>{anatomyError}</Problem>}
 
@@ -474,7 +489,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
           <section id={demoAnchor("chart-options")} className="playground-demo">
             <DemoHeader index={2} />
 
-            <form method="get" action={PLAYGROUND_URL} className="playground-form">
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("chart")}
               <fieldset className="playground-fieldset">
                 <legend>Mark type</legend>
@@ -500,7 +515,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                 arbitrary input into the renderer is a compute surface this page
                 does not open.
               </p>
-            </form>
+            </Form>
 
             {chartError && <Problem>{chartError}</Problem>}
             {chartRenderError && <Problem>{chartRenderError}</Problem>}
