@@ -43,6 +43,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
 
@@ -768,9 +770,28 @@ console.log(
   // SCOPED to the helper's own body. Asserting the FILE mentions attachment
   // would pass on a comment, which is the mistake the media axis gate made.
   const helperBody = helperAt === -1 ? "" : mediaRoute.slice(helperAt, helperAt + 700);
-  ok("media: it keys on the svg content type",
-    /image\/svg\+xml/.test(helperBody),
-    "the helper does not test for image/svg+xml");
+  /*
+   * DERIVED FROM THE UPLOAD ALLOWLIST, never restated. The pairing is the
+   * invariant: a script-capable type is uploadable only while this route
+   * refuses to serve it inline. Restating "svg" here would let a NEW capable
+   * type be added to the allowlist with no corresponding attachment rule,
+   * which is the exact shape of the N-1-of-N misses this repo keeps paying for.
+   * The allowlist end of the pairing is asserted in test/upload-contract.test.mjs.
+   */
+  const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
+  const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
+
+  ok("media: some uploadable type can carry script, so this block has scope",
+    uploadableCapable.length > 0,
+    "no script-capable type is uploadable; if that is now true, delete this block " +
+      "deliberately rather than leaving it asserting nothing");
+
+  for (const type of uploadableCapable) {
+    ok(`media: the helper refuses ${type} inline`,
+      helperBody.includes(type),
+      `${type} is uploadable and this route does not attach it, so it is served ` +
+        `inline from our own origin`);
+  }
   ok("media: it sets content-disposition attachment",
     /content-disposition"?,\s*"attachment/.test(helperBody),
     "the helper exists but does not set the disposition");
