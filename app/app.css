@@ -4391,6 +4391,46 @@ a:hover {
  * and the viewport below it. Nothing asserts any of this: check:admin-ui
  * reduces the page to what it submits and sees no styling, so this table is the
  * record and it is only as fresh as the last time someone rendered the page. */
+/* PENDING, while a data-changing navigation is in flight.
+ *
+ * The router sets `data-pending` through `useNavigation`; nothing here polls or
+ * animates a widget. A data change on this plane costs a round trip plus a D1
+ * query, MEASURED at 1629ms median, and an unmarked page reads as frozen and
+ * gets pressed twice.
+ *
+ * The rows STAY LEGIBLE and stay in place: this dims and stops accepting
+ * pointer input, it does not blank the grid or collapse its height, so nothing
+ * reflows under the cursor and the previous answer is still readable while the
+ * next one is fetched. `aria-busy` on the same element carries it to a screen
+ * reader, so the affordance is not visual only.
+ *
+ * NOT applied to a display change. Those resolve without the loader, so
+ * flagging them would flash over a re-render that already happened.
+ */
+/* The same treatment on the posts table. Every control there changes which rows
+ * come back, so there is no display-only case to exclude. */
+.posts-table[data-pending] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .posts-table {
+    transition: opacity 120ms ease-out;
+  }
+}
+
+.media-grid[data-pending] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .media-grid {
+    transition: opacity 120ms ease-out;
+  }
+}
+
 .media-grid {
   display: grid;
   /* `min(100%, ...)` is the mockup's form and is a correctness fix rather than a

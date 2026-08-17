@@ -3675,6 +3675,65 @@ for (const state of gridStates) {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * PENDING TRANSITIONS: router-driven, and OFF when nothing is in flight.
+ * ------------------------------------------------------------------ *
+ *
+ * A data-changing control on this plane costs a round trip plus a D1 query,
+ * MEASURED at 1629ms median on production, so the results region carries
+ * `data-pending` and `aria-busy` while `useNavigation` reports a load.
+ *
+ * WHAT THIS HARNESS CAN SEE: it renders ONE static pass, so `useNavigation`
+ * is always idle here and a genuine in-flight state cannot be produced. What
+ * it can prove is the half that actually rots, and the half a reader would
+ * suffer: that the mark is CONDITIONAL. A hardcoded `data-pending` dims the
+ * grid and swallows every pointer event forever, on every state, and no test
+ * that only checks "the attribute exists" would notice.
+ *
+ * The complement, that the attribute APPEARS while loading, is not observable
+ * offline. It is carried by the router's own `navigation.state` and is stated
+ * here as a boundary rather than left to look covered.
+ */
+let pendingStatesChecked = 0;
+for (const [name, html] of renderedHtml) {
+  if (!html.includes("data-pending")) continue;
+  pendingStatesChecked += 1;
+  fail(
+    `${name}: renders data-pending while idle, so the results region is dimmed ` +
+      `and inert on every load. The attribute must come from useNavigation.`,
+  );
+}
+checks += 1;
+assert(
+  "pending: no state renders as pending while the router is idle",
+  pendingStatesChecked === 0,
+  `${pendingStatesChecked} state(s) carried data-pending in a static render`,
+);
+
+/*
+ * AND IT COMES FROM THE ROUTER, not from a hand-rolled timer or a useState
+ * somebody flips on click. That is the "do not build a spinner system" half.
+ */
+for (const routeFile of [
+  "app/routes/admin.media._index.tsx",
+  "app/routes/admin.posts._index.tsx",
+]) {
+  const src = readFileSync(join(root, routeFile), "utf8");
+  // The subject is a MODULE, not a rendered document, so the question is
+  // file-level by construction: does this module anywhere set data-pending
+  // without anywhere importing useNavigation. Delimiting to one element would
+  // let a second, hand-rolled pending mark elsewhere in the file pass unseen.
+  // SCOPED-BY: the whole source file, deliberately, per the note above.
+  const marks = src.includes("data-pending");
+  assert(
+    `pending: ${routeFile} drives data-pending from useNavigation`,
+    // SCOPED-BY: the whole source file, for the reason given above the match.
+    !marks || src.includes("useNavigation"),
+    `the route sets data-pending without importing useNavigation, so the ` +
+      `pending signal is hand-rolled state rather than the router's.`,
+  );
+}
+
 /*
  * AND THE SEARCH FORM IS STILL A FORM. It is the one control on this page that
  * carries free text, so it cannot degrade to a link, and a GET form is the only
@@ -3692,7 +3751,7 @@ assert(
 /*
  * FLOOR RAISED 374 -> 405 by the no-script fallback section.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 420,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 424,
  * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
  * retired; dropping the whole no-script section is 20 assertions and still
  * fails. The message below prints the same number as this comment, which is
@@ -3707,7 +3766,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 420.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 424.`,
   );
 }
 

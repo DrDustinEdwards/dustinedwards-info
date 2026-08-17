@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Link } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
@@ -338,6 +338,15 @@ export default function AdminPosts({
 }: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
+
+  /*
+   * PENDING STATE, from the router. Every control on this page changes which
+   * rows come back, so unlike /admin/media there is no display-only case to
+   * exclude: any navigation here is a real fetch and all of them get the mark.
+   * One attribute the stylesheet dims plus `aria-busy`. No spinner, no timer.
+   */
+  const navigation = useNavigation();
+  const pending = navigation.state === "loading" && navigation.location != null;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
 
   /*
@@ -674,7 +683,7 @@ export default function AdminPosts({
               </div>
             ) : null}
 
-            <table className="posts-table">
+            <table className="posts-table" data-pending={pending || undefined} aria-busy={pending || undefined}>
               <thead>
                 <tr>
                   <th scope="col" className="posts-check">
