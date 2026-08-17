@@ -3,9 +3,9 @@ import matter from "gray-matter";
 /**
  * Who is asking to write, and what they are allowed to do.
  *
- * The distinction exists for exactly one rule: an agent may not be the one to
- * make a post public for the first time. Everything else an operator can do,
- * the admin can do, and the code path is identical.
+ * The distinction exists for two rules now: an agent may not be the one to make
+ * a post public for the first time, and an agent may not DELETE a post at all.
+ * Everything else an operator can do, the admin can do, on an identical path.
  */
 /**
  * @typedef {{ kind: "admin" } | { kind: "operator", id: string }} Actor
@@ -129,6 +129,45 @@ function classify(state) {
  * creating a post with draft:false in one shot is a first publication and is
  * refused, exactly like flipping an existing draft.
  */
+/**
+ * MAY THIS ACTOR DELETE A POST?
+ *
+ * **Operators may not. Ruled 2026-08-17.**
+ *
+ * The asymmetry this closes was reachable over the network. `savePost` called
+ * `decide()` and refused an operator's first publish; `deletePost` took the
+ * same `actor` and used it ONLY to build the commit message, with no policy
+ * path at all. So a token forbidden from making a post public was permitted to
+ * destroy that same post, which is the wrong way round: least privilege says
+ * the destructive verb is the one that needs MORE authority, not less.
+ *
+ * A separate function rather than a branch inside `decide()` because the two
+ * answer different questions. `decide()` is about a publish TRANSITION and
+ * needs the incoming and prior bodies to compute one; a delete has no incoming
+ * body and no transition, only an actor. Folding it in would mean inventing a
+ * body to ask the question. What they share, deliberately, is the module and
+ * the error type: `PolicyError` already maps to 403 with `detail.policy` in the
+ * operator API, so this refusal arrives named rather than as a 500.
+ *
+ * Throws rather than returning a boolean, so a caller that forgets to check the
+ * result cannot proceed. There is no success value worth having.
+ *
+ * @param {{ actor: Actor }} options
+ * @returns {void}
+ * @throws {PolicyError} when the actor may not delete
+ */
+export function decideDelete(options) {
+  if (options.actor.kind === "operator") {
+    throw new PolicyError(
+      "Refused: deleting a post is reserved to the human admin. An operator " +
+        "may create, edit, unpublish and republish a post, but not destroy it. " +
+        "Unpublish it instead (draft: true), which is reversible, and ask " +
+        "Dustin to delete it from /admin/posts if it should go for good.",
+      "delete-requires-admin",
+    );
+  }
+}
+
 /**
  * @param {{ actor: Actor, incomingRaw: string, priorRaw: string | null }} options
  * @returns {{ raw: string, firstPublished: string | null, published: boolean, outcome: SaveOutcome }}
