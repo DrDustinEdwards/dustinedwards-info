@@ -2588,6 +2588,22 @@
       "publishAt": null
     },
     {
+      "uid": "page:colophon#security",
+      "url": "/colophon#security",
+      "type": "page",
+      "title": "A tradeoff in the security headers",
+      "body": "The content security policy is enforced, not merely reported. One part of it is a compromise rather than a clean win, and the compromise is worth stating plainly. Every response carries a one-time number that scripts on the page must quote to be allowed to run. That number is generated per response. Seven pages of this site are cached at Cloudflare's edge and served to everyone from the same stored copy for up to ten minutes. The number is part of that copy, so visitors served from one cache entry share it. We took that trade deliberately. The alternative is to stop caching those pages, which would make every reader wait for the origin on every visit. It is acceptable only because these pages carry no writing from anyone but me. There are no comments and no user submissions, so there is nowhere for a stranger's script to get in and use the shared number.",
+      "tags": "",
+      "docTags": "",
+      "docUid": "page:colophon",
+      "docTitle": "How this site is built",
+      "docUrl": "/colophon",
+      "anchor": "security",
+      "ordinal": 7,
+      "status": "published",
+      "publishAt": null
+    },
+    {
       "uid": "page:colophon#not-adopted",
       "url": "/colophon#not-adopted",
       "type": "page",
@@ -2599,7 +2615,7 @@
       "docTitle": "How this site is built",
       "docUrl": "/colophon",
       "anchor": "not-adopted",
-      "ordinal": 7,
+      "ordinal": 8,
       "status": "published",
       "publishAt": null
     },

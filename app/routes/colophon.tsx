@@ -5,6 +5,7 @@ import {
   COLOPHON_DESCRIPTION,
   COLOPHON_INTRO,
   COLOPHON_SECTIONS,
+  SECURITY_TRADEOFF,
   COLOPHON_TITLE,
   statusLabel,
 } from "~/lib/colophon-sections.mjs";
@@ -263,6 +264,18 @@ export default function Colophon() {
                   </section>
                 ))}
               </section>
+            ))}
+
+            {/*
+              The security tradeoff, rendered from the SAME constant the search
+              record is built from, so the page cannot describe it one way and
+              the index another. Prose, not a table: it is an argument, and a
+              reader deciding whether to trust the claim needs the reasoning
+              rather than a row.
+            */}
+            <SectionHead id="security" />
+            {SECURITY_TRADEOFF.map((sentence) => (
+              <p key={sentence.slice(0, 32)}>{sentence}</p>
             ))}
 
             <SectionHead id="not-adopted" />
