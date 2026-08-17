@@ -194,6 +194,27 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!askAvailable(env)) {
       return { message: "Ask is not enabled: no AI Search binding." };
     }
+    /*
+     * **THE CONFIRMATION, CHECKED HERE. Ruled 2026-08-17.**
+     *
+     * "Sync" reads as additive and is not: `pruneAskCorpus` DELETES every AI
+     * Search record whose key is not in the set this run uploaded, and the run
+     * also drops cached answers. So a sync against a partial artifact prunes
+     * the index to whatever that artifact contained, and the button sat one
+     * item below Regenerate in the same menu with nothing between a mis-click
+     * and that outcome.
+     *
+     * The count is 1 rather than the number of records at risk, for the same
+     * reason as the media rebuild: how many a prune removes is not knowable
+     * without running it, so a typed count would be invented precision. The
+     * step states the corpus size instead, which is what is actually at stake.
+     */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      const posts = await loadArtifact(env);
+      return { confirmSyncAsk: posts.length };
+    }
+
     try {
       const posts = await loadArtifact(env);
       const { uploaded, keys, cacheDropped } = await syncAskCorpus(env, posts);
@@ -648,6 +669,37 @@ export default function AdminPosts({
         round trip it never made as URL state, and it is an ordinary form: no
         script participates at any point.
       */}
+      {/*
+        THE SYNC-ASK CONFIRMATION. Same shape as the bulk-delete step below: the
+        action refuses an unconfirmed run and returns what is at stake, and this
+        renders it as an ordinary form so the no-script path reaches it too.
+      */}
+      {actionData?.confirmSyncAsk !== undefined ? (
+        <form method="post" className="posts-confirm-delete">
+          <h2>Re-sync the Ask corpus?</h2>
+          <p>
+            Every record whose key is not in this run is REMOVED from the AI
+            index, and cached answers are dropped. A sync against a partial
+            artifact prunes the index to whatever that artifact held. The corpus
+            currently has <strong>{actionData.confirmSyncAsk}</strong> post(s).
+          </p>
+          <label>
+            <span>
+              Type <strong>1</strong> to confirm
+            </span>
+            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
+          </label>
+          <div className="posts-confirm-actions">
+            <Link to="/admin/posts" className="btn-ghost">
+              Cancel
+            </Link>
+            <button type="submit" name="intent" value="sync-ask" className="btn-danger">
+              Sync the corpus
+            </button>
+          </div>
+        </form>
+      ) : null}
+
       {actionData?.confirmDelete ? (
         <form method="post" className="posts-confirm-delete">
           <h2>

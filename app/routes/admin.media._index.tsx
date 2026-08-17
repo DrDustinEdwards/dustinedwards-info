@@ -934,6 +934,29 @@ export async function action({ request, context }: Route.ActionArgs) {
     // the column default. So a stale-looking role split does NOT imply the
     // deriver is broken, and a correct role split does not prove the rebuild
     // reached every source. Report both, and read each for what it answers.
+    /*
+     * **THE CONFIRMATION, CHECKED HERE. Ruled 2026-08-17.**
+     *
+     * A rebuild is idempotent for rows whose source still exists, and that is
+     * what made it look harmless. It is not: `report.removed` DELETES rows
+     * whose source is gone, so a rebuild run against a half-populated bucket,
+     * or while R2 is returning an error, prunes the index down to whatever it
+     * managed to see. Nothing asked before doing that.
+     *
+     * The count is 1, not the number of rows at risk, and the reason is honest
+     * rather than lazy: how many rows a rebuild removes cannot be known without
+     * running it, so a typed count would be a number invented to look precise.
+     * The confirmation step states the CURRENT size instead, which is the
+     * quantity actually at stake.
+     */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      const before = await mediaCounts(env);
+      return {
+        confirmRebuild: before.reduce((sum, row) => sum + Number(row.n), 0),
+      };
+    }
+
     const report = await rebuildMediaIndex(env);
     const after = await mediaCounts(env);
     const total = after.reduce((sum, row) => sum + Number(row.n), 0);
@@ -3658,6 +3681,36 @@ export default function AdminMedia({
         Cancel is a Link, so it works with no script: it is an ordinary GET back
         to this view, which discards the action result.
       */}
+      {/*
+        THE REBUILD CONFIRMATION, opened by the action refusing an unconfirmed
+        rebuild. Same shape as the single delete beside it: an unconfirmed
+        destructive POST is the confirmation step, not an error.
+      */}
+      <MediaConfirm
+        open={Boolean(actionData?.confirmRebuild !== undefined)}
+        title="Re-derive the whole media index"
+        body={
+          <>
+            <p>
+              Every derived column is recomputed from the buckets and every
+              authored one is preserved. Rows whose source object is GONE are
+              removed, so running this against a bucket that is only partly
+              readable prunes the index to whatever it managed to see.
+            </p>
+            <p>
+              The index currently holds{" "}
+              <strong>{actionData?.confirmRebuild ?? 0}</strong> row(s). Type{" "}
+              <strong>1</strong> to confirm.
+            </p>
+          </>
+        }
+        requireTyped="1"
+        confirmLabel="Rebuild the index"
+        cancelHref={linkTo({})}
+      >
+        <input type="hidden" name="intent" value="rebuild" />
+      </MediaConfirm>
+
       <MediaConfirm
         open={Boolean(actionData?.confirmDelete)}
         title={`Permanently delete ${actionData?.confirmDelete ?? ""}`}
