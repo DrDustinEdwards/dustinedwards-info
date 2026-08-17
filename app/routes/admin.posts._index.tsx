@@ -6,6 +6,7 @@ import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
 import {
@@ -247,6 +248,35 @@ export async function action({ request, context }: Route.ActionArgs) {
     let skipped = 0;
 
     if (intent === "bulk-delete") {
+      /*
+       * **THE TYPED-COUNT LADDER, ENFORCED HERE AND NOT ONLY IN THE UI.**
+       *
+       * It lived entirely in `confirmDelete()`, an `onClick` handler calling
+       * `prompt()`. With scripting off the handler never ran, the button
+       * submitted, and this loop deleted every selected post with no
+       * confirmation at all. The ceremony was script-only while the destruction
+       * was not, which is exactly the defect `empty-trash` was fixed for and
+       * which survived here because that fix closed one instance and never
+       * swept for siblings.
+       *
+       * AN UNCONFIRMED DELETE IS NOT AN ERROR, IT IS THE CONFIRMATION STEP.
+       * Refusing with the slugs in hand lets the page render a real
+       * server-rendered second step, so the no-script path gets a confirmation
+       * rather than a dead end.
+       *
+       * Counted from the slugs in THIS request, never from a number the form
+       * carried, so a stale page cannot authorise a delete of a different size
+       * than the operator was shown.
+       */
+      const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+      if (!confirmationSatisfied(typed, slugs.length)) {
+        return {
+          confirmDelete: { slugs, count: slugs.length, typed },
+          message:
+            `Nothing was deleted. ${slugs.length} post(s) are selected and the ` +
+            `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
+        };
+      }
       for (const slug of slugs) {
         try {
           await deletePost(env, { slug });
@@ -386,6 +416,12 @@ export default function AdminPosts({
    * The count is read from `chosen` INSIDE the handler. React reattaches this
    * handler on every render, so the closure is current, but reading it here
    * rather than hoisting it keeps that true if the button is ever memoized.
+   *
+   * **THIS IS NO LONGER THE GATE, AND MUST NOT BECOME ONE AGAIN.** The action
+   * checks the same count server-side, because a handler does not run for a
+   * reader without JavaScript and the destruction did. What this function now
+   * does is CARRY what the operator typed into the request, so a scripted
+   * operator is asked once rather than twice; the server is what decides.
    */
   const confirmDelete = () => {
     const n = chosen.length;
@@ -396,10 +432,20 @@ export default function AdminPosts({
       `Delete ${n} post${n === 1 ? "" : "s"}? This removes each file and its rows.\n\n` +
         `${list}\n\nType ${n} to confirm.`,
     );
-    // Cancel returns null; a mismatch returns the wrong string. Both abort, and
-    // neither reaches the action, so no mutation happens on a miss.
-    return typed !== null && typed.trim() === String(n);
+    // Cancel returns null; a mismatch returns the wrong string. Both abort here
+    // as earlier feedback. A miss that DID reach the action would be refused
+    // there too, which is the property that matters.
+    if (typed === null) return null;
+    return typed.trim();
   };
+
+  /*
+   * What the handler typed, carried in a hidden field so the ONE submission a
+   * scripted operator makes already satisfies the server check. With scripting
+   * off this stays empty, the action refuses, and the page renders the
+   * server-side confirmation step below.
+   */
+  const [typedCount, setTypedCount] = useState("");
 
   /** What the author actually asked for, in words, for the empty state. */
   const askedFor = [
@@ -589,6 +635,54 @@ export default function AdminPosts({
         </p>
       ) : null}
 
+      {/*
+        THE SERVER-RENDERED CONFIRMATION STEP.
+
+        Reached when the action refused an unconfirmed bulk delete, which is the
+        no-script path: the handler that would have prompted never ran, so the
+        request arrived with an empty confirmation and nothing was deleted. This
+        is the second step, and it exists so the refusal is a confirmation
+        rather than a dead end.
+
+        It re-carries each slug as a hidden field, so the selection survives a
+        round trip it never made as URL state, and it is an ordinary form: no
+        script participates at any point.
+      */}
+      {actionData?.confirmDelete ? (
+        <form method="post" className="posts-confirm-delete">
+          <h2>
+            Delete {actionData.confirmDelete.count} post
+            {actionData.confirmDelete.count === 1 ? "" : "s"}?
+          </h2>
+          <p>
+            This removes each file and its rows. It is recoverable only through
+            git.
+          </p>
+          <ul>
+            {actionData.confirmDelete.slugs.map((slug) => (
+              <li key={slug}>
+                <code>{slug}</code>
+                <input type="hidden" name="slug" value={slug} />
+              </li>
+            ))}
+          </ul>
+          <label>
+            <span>
+              Type <strong>{actionData.confirmDelete.count}</strong> to confirm
+            </span>
+            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
+          </label>
+          <div className="posts-confirm-actions">
+            <Link to="/admin/posts" className="btn-ghost">
+              Cancel
+            </Link>
+            <button type="submit" name="intent" value="bulk-delete" className="btn-danger">
+              Delete permanently
+            </button>
+          </div>
+        </form>
+      ) : null}
+
       {/* Ask index drift. Surfaced here because a save is allowed to succeed
           when the Ask sync behind it fails, and the save then redirects, so
           there is nowhere else a failure could be reported. Nothing renders
@@ -663,6 +757,14 @@ export default function AdminPosts({
                   ))}
                 </datalist>
 
+                {/*
+                  THE CONFIRMATION, CARRIED. Hidden because a scripted operator
+                  already answered the prompt; the server reads this name either
+                  way, and with scripting off it arrives empty and the action
+                  refuses rather than deleting.
+                */}
+                <input type="hidden" name={CONFIRM_FIELD} defaultValue={typedCount} />
+
                 <button type="submit" name="intent" value="bulk-add-tag" className="btn">
                   Add tag
                 </button>
@@ -675,7 +777,18 @@ export default function AdminPosts({
                   value="bulk-delete"
                   className="btn-danger"
                   onClick={(event) => {
-                    if (!confirmDelete()) event.preventDefault();
+                    const typed = confirmDelete();
+                    if (typed === null) {
+                      event.preventDefault();
+                      return;
+                    }
+                    // Set it on the DOM node directly: React state written here
+                    // does not reach the form before this same event submits it.
+                    const field = event.currentTarget.form?.elements.namedItem(
+                      CONFIRM_FIELD,
+                    );
+                    if (field instanceof HTMLInputElement) field.value = typed;
+                    setTypedCount(typed);
                   }}
                 >
                   Delete

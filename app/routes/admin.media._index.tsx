@@ -49,9 +49,9 @@ import {
   usageDescriptor,
   usageStateOf,
 } from "~/lib/media/usage.mjs";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
 import {
-  confirmationSatisfied,
   displaySummary,
   docTitle,
   groupRows,
@@ -943,6 +943,25 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "delete") {
     const key = String(form.get("key") ?? "");
+
+    /*
+     * **THE CONFIRMATION IS CHECKED HERE, NOT IN THE FORM'S onSubmit.**
+     *
+     * It was a `confirm()` in an `onSubmit` handler, so with scripting off the
+     * handler never ran and the R2 object went with no confirmation at all.
+     * The refcount, static and claim checks below were always server-side and
+     * stay exactly as they were; what was missing is the only one that asks
+     * whether a HUMAN meant this, and those other checks cannot stand in for it
+     * because an uncited object passes every one of them.
+     *
+     * The key is content-addressed, so a deleted object cannot be restored by
+     * re-uploading the same bytes under the same URL. One object, so the count
+     * is 1, using the same predicate and field name as empty-trash beside it.
+     */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      return { confirmDelete: key };
+    }
 
     // STATIC ASSETS ARE NOT DELETABLE HERE, and this is enforced in the ACTION
     // rather than by hiding the button. A hidden button is a UI opinion; a
@@ -2837,13 +2856,26 @@ export default function AdminMedia({
                     <Form
                       method="post"
                       onSubmit={(event) => {
-                        // The same confirmation discipline the post delete uses.
+                        /*
+                         * EARLIER FEEDBACK, NOT THE GATE. The action checks the
+                         * same thing server-side, because this handler does not
+                         * run for a reader without JavaScript and the R2 delete
+                         * did. On accept it fills the field the server reads, so
+                         * a scripted operator is asked once rather than twice.
+                         */
                         if (!confirm(`Delete ${detail.key}? This removes the object from R2.`)) {
                           event.preventDefault();
+                          return;
                         }
+                        const field =
+                          event.currentTarget.elements.namedItem(CONFIRM_FIELD);
+                        if (field instanceof HTMLInputElement) field.value = "1";
                       }}
                     >
                       <input type="hidden" name="key" value={detail.key} />
+                      {/* Empty with scripting off, which is what makes the action
+                          refuse and open the confirmation below. */}
+                      <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
                       <button type="submit" name="intent" value="delete" className="btn-danger">
                         Delete
                       </button>
@@ -3551,6 +3583,43 @@ export default function AdminMedia({
         {chosen.map((key) => (
           <input key={key} type="hidden" name="key" value={key} />
         ))}
+      </MediaConfirm>
+
+      {/*
+        THE SINGLE-DELETE CONFIRMATION, opened by the ACTION refusing an
+        unconfirmed delete rather than by a URL.
+
+        Empty-trash next door is opened by `?confirm=`, because its target is
+        the whole bin and needs no identifying. This one's target is a key the
+        action already has in hand, and routing it through the URL would mean a
+        second confirm vocabulary and a loader change for no gain. Both end at
+        the same place: a server-rendered step whose typed count the action
+        checks.
+
+        Cancel is a Link, so it works with no script: it is an ordinary GET back
+        to this view, which discards the action result.
+      */}
+      <MediaConfirm
+        open={Boolean(actionData?.confirmDelete)}
+        title={`Permanently delete ${actionData?.confirmDelete ?? ""}`}
+        body={
+          <>
+            <p>
+              This removes the object from R2. Addresses are content hashes, so a
+              deleted file cannot be restored by re-uploading it under the same
+              URL.
+            </p>
+            <p>
+              Type <strong>1</strong> to confirm.
+            </p>
+          </>
+        }
+        requireTyped="1"
+        confirmLabel="Delete permanently"
+        cancelHref={linkTo({ key: actionData?.confirmDelete ?? "" })}
+      >
+        <input type="hidden" name="intent" value="delete" />
+        <input type="hidden" name="key" value={actionData?.confirmDelete ?? ""} />
       </MediaConfirm>
 
       <MediaToast />

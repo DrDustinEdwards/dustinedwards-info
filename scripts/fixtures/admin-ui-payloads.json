@@ -26,20 +26,28 @@
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
+  "posts index, bulk delete awaiting confirmation": [
+    "GET /admin/posts | (none) | q,status,tag",
+    "POST  | intent=bulk-delete | confirm-count,slug",
+    "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | "
+  ],
   "posts index, two selected": [
     "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | intent=bulk-add-tag | slug,tag",
-    "POST /admin/posts | intent=bulk-delete | slug,tag",
-    "POST /admin/posts | intent=bulk-remove-tag | slug,tag",
+    "POST /admin/posts | intent=bulk-add-tag | confirm-count,slug,tag",
+    "POST /admin/posts | intent=bulk-delete | confirm-count,slug,tag",
+    "POST /admin/posts | intent=bulk-remove-tag | confirm-count,slug,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, filtered and selected": [
     "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts?status=published | intent=bulk-add-tag | slug,tag",
-    "POST /admin/posts?status=published | intent=bulk-delete | slug,tag",
-    "POST /admin/posts?status=published | intent=bulk-remove-tag | slug,tag",
+    "POST /admin/posts?status=published | intent=bulk-add-tag | confirm-count,slug,tag",
+    "POST /admin/posts?status=published | intent=bulk-delete | confirm-count,slug,tag",
+    "POST /admin/posts?status=published | intent=bulk-remove-tag | confirm-count,slug,tag",
     "POST /admin/posts?status=published | intent=regenerate | ",
     "POST /admin/posts?status=published | intent=reset-ask-budget | ",
     "POST /admin/posts?status=published | intent=sync-ask | "
@@ -148,7 +156,7 @@
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
-    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
@@ -158,7 +166,7 @@
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
-    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
@@ -224,12 +232,24 @@
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?q=zzzz | intent=rebuild | "
   ],
+  "media, delete awaiting confirmation": [
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | confirm-count,intent,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
+  ],
   "media, detail open": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
-    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
@@ -313,7 +333,7 @@
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
-    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
@@ -324,7 +344,7 @@
     "POST /admin/media/upload | intent=upload-form | file",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | (none) | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | alt=a picture | alt,key",
-    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=delete | key",
+    "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=delete | confirm-count,key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=rebuild | ",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=restore | key",
     "POST /admin/media?key=1234abcd5678ef90.png&amp;trash=1 | intent=set-alt | alt,key",
@@ -369,60 +389,66 @@
     "POST /admin/posts/new | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft that never published": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft that published before": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
+  "edit, delete awaiting confirmation": [
+    "POST  | intent=delete | confirm-count,headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
   "edit, published": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, scheduled": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, with a cover set": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, save refused": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, saving unavailable": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft with no preview links": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft with two preview links": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
     "POST /admin/posts/a-post/edit | intent=revoke-preview-link | token",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,draft=on,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, published offers no preview links": [
-    "POST /admin/posts/a-post/edit | intent=delete | headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],

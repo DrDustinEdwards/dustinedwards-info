@@ -161,6 +161,7 @@
     "check:config",
     "check:content",
     "check:contrast",
+    "check:destructive",
     "check:diagrams",
     "check:features",
     "check:head",

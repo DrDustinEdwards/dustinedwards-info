@@ -14,6 +14,7 @@ import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/pr
 import { expiresAt, previewUrl } from "~/lib/preview-token.mjs";
 import { loadLinkTargets } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "~/lib/editor/publish-transition.mjs";
@@ -189,6 +190,27 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   if (intent === "delete") {
+    /*
+     * **THE CONFIRMATION IS CHECKED HERE, NOT IN THE FORM'S onSubmit.**
+     *
+     * It was a `confirm()` in an `onSubmit` handler. With scripting off the
+     * handler never ran, the form posted, and the file and its rows went with
+     * no confirmation at all. `expectedHeadSha` below is CONCURRENCY, not
+     * consent: it stops a stale page overwriting a newer one, and says nothing
+     * about whether a human meant to delete anything.
+     *
+     * One post, so the count is 1. Same predicate and same field name as the
+     * bulk and empty-trash paths, because three spellings of one ceremony is
+     * how one of them ends up unchecked.
+     *
+     * An unconfirmed delete is the CONFIRMATION STEP, not an error: the route
+     * renders a server-rendered second step from this, so a reader without
+     * script gets a confirmation rather than a refusal they cannot satisfy.
+     */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      return { kind: "confirm-delete" as const, slug: params.slug };
+    }
     try {
       await deletePost(env, {
         slug: params.slug,
@@ -329,17 +351,61 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         }
       />
 
+      {/*
+        THE SERVER-RENDERED CONFIRMATION STEP, reached when the action refused
+        an unconfirmed delete. That is the no-script path: the onSubmit handler
+        never ran, the field arrived empty, and nothing was deleted. An ordinary
+        form, so no script participates in satisfying it either.
+      */}
+      {actionData?.kind === "confirm-delete" ? (
+        <form method="post" className="editor-confirm-delete">
+          <h2>Delete "{actionData.slug}"?</h2>
+          <p>
+            This removes the file and its rows. It is recoverable only through
+            git.
+          </p>
+          <input type="hidden" name="headSha" value={headSha} />
+          <label>
+            <span>
+              Type <strong>1</strong> to confirm
+            </span>
+            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
+          </label>
+          <div className="editor-confirm-actions">
+            <Link to={`/admin/posts/${actionData.slug}/edit`} className="btn-ghost">
+              Cancel
+            </Link>
+            <button type="submit" name="intent" value="delete" className="btn-danger">
+              Delete permanently
+            </button>
+          </div>
+        </form>
+      ) : null}
+
       <Form
         id="delete-post"
         method="post"
         className="editor-delete-form"
         onSubmit={(event) => {
+          /*
+           * EARLIER FEEDBACK, NOT THE GATE. The action checks the same thing
+           * server-side, because this handler does not run for a reader without
+           * JavaScript and the delete did. On accept it fills the field the
+           * server reads, so a scripted operator is asked once rather than
+           * twice.
+           */
           if (!confirm(`Delete "${loaderData.slug}"? This removes the file and its rows.`)) {
             event.preventDefault();
+            return;
           }
+          const field = event.currentTarget.elements.namedItem(CONFIRM_FIELD);
+          if (field instanceof HTMLInputElement) field.value = "1";
         }}
       >
         <input type="hidden" name="headSha" value={headSha} />
+        {/* Empty with scripting off, which is what makes the action refuse and
+            render the confirmation step instead of deleting. */}
+        <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
       </Form>
 
       {/*

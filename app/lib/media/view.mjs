@@ -154,28 +154,15 @@ function oneOf(value, allowed, fallback) {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
 }
 
-/**
- * THE TYPED-COUNT LADDER, as a predicate rather than a line inside an action.
+/*
+ * `confirmationSatisfied` MOVED to `app/lib/destructive.mjs` on 2026-08-16.
  *
- * It was three lines in the route, which meant NO gate could reach it: the
- * admin-ui harness renders and compares submissions, it never runs an action.
- * A plant that deleted the check left every gate green, so the one guard
- * standing between a mistyped confirmation and an irreversible R2 delete was
- * unasserted. Extracted here for the same reason the pending-migration
- * predicate was: a pure function is the only part of an action a test can hold.
- *
- * STRICT AND STRING-EQUAL, deliberately. Not `Number(typed) === count`, because
- * that accepts "3 ", "03", "+3", "3.0" and `""` for zero. The ceremony is worth
- * having only if typing something ADJACENT to the count does not pass it.
- *
- * @param {unknown} typed What the operator typed into the confirmation.
- * @param {number} count The count read in THIS request, not one the form carried.
- * @returns {boolean} Whether the destructive branch may proceed.
+ * Three routes now gate a destructive action on it, and two of them are posts
+ * routes that have no business importing the media view vocabulary. Re-exported
+ * here so existing importers and `test/media-view.test.mjs` keep resolving it
+ * from where it used to live.
  */
-export function confirmationSatisfied(typed, count) {
-  if (!Number.isInteger(count) || count <= 0) return false;
-  return String(typed ?? "").trim() === String(count);
-}
+export { confirmationSatisfied } from "../destructive.mjs";
 
 /**
  * Reads the view state out of a URLSearchParams-like object.
