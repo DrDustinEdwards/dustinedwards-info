@@ -445,6 +445,14 @@ const STATES = [
    * baseline only sees forms that are on the page.
    */
   {
+    name: "posts index, ask sync awaiting confirmation",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
+    actionData: { confirmSyncAsk: 12 },
+  },
+  {
     name: "posts index, bulk delete awaiting confirmation",
     entry: "app/routes/admin.posts._index.tsx",
     path: "/admin/posts",
@@ -975,6 +983,14 @@ const STATES = [
     path: "/admin/media",
     url: "/admin/media?q=zzzz",
     loaderData: MEDIA_SHELL({ q: "zzzz", objects: [] }),
+  },
+  {
+    name: "media, rebuild awaiting confirmation",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media",
+    loaderData: MEDIA_SHELL({ objects: [MEDIA_OBJECT()] }),
+    actionData: { confirmRebuild: 70 },
   },
   {
     name: "media, delete awaiting confirmation",
@@ -3826,7 +3842,7 @@ assert(
 /*
  * FLOOR RAISED 405 -> 412 by the three delete-confirmation states.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 434,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 438,
  * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
  * retired; dropping the whole no-script section is 20 assertions and still
  * fails. The message below prints the same number as this comment, which is
@@ -3841,7 +3857,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 434.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 438.`,
   );
 }
 

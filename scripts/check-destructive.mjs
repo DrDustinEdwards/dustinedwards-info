@@ -57,6 +57,15 @@ const DESTRUCTIVE = new Set([
   "admin.posts.$slug.edit.tsx:delete",
   "admin.media._index.tsx:delete",
   "admin.media._index.tsx:empty-trash",
+  /*
+   * RECLASSIFIED 2026-08-17, from REVERSIBLE. Both read as maintenance and both
+   * destroy records: `rebuild` removes rows whose source object is gone, and
+   * `sync-ask` prunes every AI Search record the run did not upload and drops
+   * cached answers. Neither can know its own removal count without running, so
+   * both confirm on a count of 1 and state the scale at stake instead.
+   */
+  "admin.media._index.tsx:rebuild",
+  "admin.posts._index.tsx:sync-ask",
 ]);
 
 /**
@@ -67,7 +76,6 @@ const REVERSIBLE = new Map([
   ["admin.posts._index.tsx:bulk-add-tag", "a tag, undone by remove"],
   ["admin.posts._index.tsx:bulk-remove-tag", "a tag, undone by add"],
   ["admin.posts._index.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
-  ["admin.posts._index.tsx:sync-ask", "prunes and rebuilds a derived index"],
   ["admin.posts._index.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
   ["admin.posts.$slug.edit.tsx:preview-link", "mints, removes nothing"],
   ["admin.posts.$slug.edit.tsx:revoke-preview-link", "revokes access; fails in the safe direction"],
@@ -78,7 +86,6 @@ const REVERSIBLE = new Map([
   ["admin.media._index.tsx:bulk-remove-tag", "a tag, undone by add"],
   ["admin.media._index.tsx:set-tags", "replaces the tag set; retypable"],
   ["admin.media._index.tsx:set-alt", "overwrites alt text; retypable"],
-  ["admin.media._index.tsx:rebuild", "re-derives the index from R2"],
 ]);
 
 /*
@@ -291,19 +298,19 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 /*
  * EXECUTED-COUNT FLOOR.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 49,
- * over 11 action modules and 19 intents. Never summed, and not the 50 first
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 53,
+ * over 12 action modules and 19 intents, 6 of them destructive. Never summed, and not the 50 first
  * written here from counting the source by eye, which failed the gate on its
- * own first green run. Floored at 45, slack 4, so retiring one intent does not
+ * own first green run. Floored at 49, slack 4, so retiring one intent does not
  * fail the floor while dropping a whole BLOCK still does.
  */
-const MINIMUM_CHECKS = 45;
+const MINIMUM_CHECKS = 49;
 if (checks < MINIMUM_CHECKS) {
   assertThat(
     false,
     "this gate executed its assertions",
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was ` +
-      `SKIPPED rather than failing. Measured: 49.`,
+      `SKIPPED rather than failing. Measured: 53.`,
   );
 }
 
