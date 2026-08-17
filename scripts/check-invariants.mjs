@@ -25,7 +25,7 @@
  * beside it. Asserting a single function agrees with itself proves nothing and
  * would be a gate that can never fail.
  *
- * So this file holds six sections, and the first is not a comparison:
+ * So this file holds eight sections, and the first is not a comparison:
  *
  *   1. NO SECOND BUCKET SELECTION. Structural. The dedupe is only true while it
  *      stays true, and the failure mode now is a fourth copy appearing in a
@@ -730,11 +730,16 @@ try {
       `${virtual.length} virtual excluded`,
   );
   if (unmodelled.length > 0) {
-    // Not a failure. A table drizzle does not model is reachable only through
-    // raw SQL, which is precisely what section 5 asserts against. Printed so the
-    // set is visible rather than implied.
+    /*
+     * Not a failure, and NO LONGER COVERED. This used to read "covered by
+     * section 5", which was true until section 5 was deleted on 2026-08-16 for
+     * being unable to check anything reliably. A table drizzle does not model
+     * is reachable only through raw SQL, and nothing asserts its column names
+     * now. Printed as an EXPOSURE rather than as reassurance, because the line
+     * that named a cover which no longer exists is worse than no line at all.
+     */
     console.log(
-      `     not modelled in drizzle, so covered by section 5: ${unmodelled.join(", ")}`,
+      `     not modelled in drizzle and UNCOVERED since section 5 was removed: ${unmodelled.join(", ")}`,
     );
   }
 
@@ -840,504 +845,42 @@ try {
   fail("the column comparison could not run", String(error));
 }
 
-/* --------------------------------- 5. raw SQL names columns that exist */
+/* ------------------- 5. REMOVED: the raw-SQL column scanner ------------- */
 
-console.log("\n  5. every column named in raw SQL exists in the schema");
-
-/**
- * The columns raw SQL refers to, checked against the real schema.
+/*
+ * SECTION 5 WAS DELETED 2026-08-16, and the number is kept so 6 through 9 do
+ * not renumber. It matched SQL out of string literals with a regex and then
+ * checked every qualified name against `schema.ts`.
  *
- * Section 4 proves the three schema sources agree. This proves the SQL STRINGS
- * agree with them, which is the half that actually failed: `r2_key` was not a
- * disagreement between schema sources, it was a string nobody compared to any
- * of them.
+ * IT COULD CHECK NOTHING AND PRINT ZERO PROBLEMS. The literal matcher
+ * understood quotes but not REGEX LITERALS, so a `/"/` or `/'/` anywhere in a
+ * scanned file opened a string that never closed and every quote after it was
+ * paired against the wrong partner. MEASURED on 2026-08-16 against the same
+ * matcher, read out of this file rather than retyped: 692 desynced matches
+ * swallowing 47,495 characters in `check-admin-ui.mjs`, and 19 swallowing 6,739
+ * in `search.server.ts`, whose worst single phantom ran 1,523 characters and
+ * took the real FTS queries with it. A run that examined nothing looked exactly
+ * like a clean one, because the count it printed was of phantoms.
  *
- * **It does not parse SQL and does not need to.** Five extractions, all regex,
- * and every one of them was added because a probe proved the previous set let a
- * real column rename through:
+ * RULED: delete rather than patch. Reading SQL out of a host language correctly
+ * needs a tokenizer that knows where a regex literal may begin, which in
+ * JavaScript is decided by the preceding token, so it needs a parser, not a
+ * longer regex. A second regex would be the same instrument with more surface.
  *
- *   (a) INSERT INTO <table> (a, b, c)  table-scoped, so a column that exists on
- *                                      some OTHER table is still caught
- *   (b) <qualifier>.<column>           resolved through FROM/JOIN aliases, and
- *                                      through `excluded` to the INSERT target
- *   (c) unqualified names after
- *       WHERE / AND / OR / SET / BY     table-scoped when one table is in play,
- *                                      otherwise a schema-wide existence check
- *   (d) EVERY assignment in a SET      not just the first after the keyword
- *   (e) bare SELECT lists              plain identifiers only
+ * WHAT IS LOST, stated rather than absorbed: `search_docs` is not modelled in
+ * drizzle, and section 4 used to name section 5 as its cover. That cover is
+ * gone. Section 4 still reconciles every drizzle-modelled table across
+ * `schema.ts`, the migrations and the live database, and section 7 still guards
+ * the FTS indexes, but no gate now checks a column name written in raw SQL.
  *
- * Statements are read from string literals JOINED ACROSS `+` first. Without
- * that, `sync-content.mjs` was the last hole in this gate: it builds its SQL as
- * literal text, so every column name is statically present, but it concatenates
- * fragments for line length and no single fragment holds a whole statement.
- *
- * **It asserts only that a named column EXISTS, never that a statement names
- * every column.** That distinction is load-bearing: the editor's `posts` upsert
- * deliberately omits `og_image`, because a post created in the editor has no
- * social card until `build:og` runs, and the editor stores nothing rather than a
- * URL that would 404. A completeness check would call that a defect and be
- * wrong.
- *
- * Virtual tables are skipped: `INSERT INTO posts_fts (posts_fts) VALUES
- * ('rebuild')` names the TABLE in the column position, which is fts5 command
- * syntax rather than a column reference, and `MATCH`, `snippet()` and `bm25()`
- * have no equivalent the query builder can express.
+ * THE SAME MATCHER IS STILL LIVE IN TWO PLACES, and it was one instance of a
+ * three-instance class rather than a lone defect: section 7 declares it as
+ * `LITERAL` and section 8 as `LITERALS`, byte-identical both times. Those guard
+ * hard rules 2 and 1, so they were NOT deleted with this one: removing them
+ * would drop the guards entirely. They are recorded here as open, because
+ * closing a class on one instance is what left three delete paths unguarded
+ * this same week.
  */
-/**
- * SQL is extracted from STRING LITERALS, never from a byte window in the file.
- *
- * The first version of this matched anything after a SELECT/INSERT keyword for
- * 1200 characters, which swallowed the surrounding JavaScript and duly reported
- * `view.state`, `rows.map` and `window.innerHeight` as unknown columns. A
- * qualified name only means a column if it is inside SQL, so the literal is the
- * unit and everything outside one is not SQL by construction.
- */
-const STRING_LITERAL = /`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
-const LOOKS_LIKE_SQL = /\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i;
-
-/**
- * Adjacent string literals joined across `+`, so a statement split for line
- * length is one statement again.
- *
- * **This is what `sync-content.mjs` needed, and without it that file was the
- * last hole in this gate.** It builds its SQL as literal text, so the column
- * names are all statically present, but it concatenates fragments:
- *
- *     `INSERT INTO posts (slug, kind, title, body, ` +
- *       `html, description, ...) VALUES (` +
- *       ...
- *
- * Every extraction below needs a WHOLE statement. The INSERT column list is
- * matched up to its closing paren, and that paren is three fragments away, so
- * the largest write path in the repo was invisible while the file still
- * appeared in the scan because its single-fragment statements matched.
- *
- * Joining is safe for the same reason it is necessary: it can only make a
- * literal longer, and a longer literal that is not SQL still fails
- * `LOOKS_LIKE_SQL`, while a name that resolves to no table is caught either way.
- *
- * @param {string} source
- */
-// joinConcatenatedLiterals moved to scripts/lib/sql-literals.mjs 2026-08-09, so it
-// can be covered by test/sql-literals.test.mjs without importing this gate,
-// which runs its whole suite at module load. Grounds are in that module.
-
-try {
-  const columnUniverse = new Map();
-  const fresh2 = new DatabaseSync(":memory:");
-  for (const file of readdirSync(join(root, "drizzle"))
-    .filter((f) => f.endsWith(".sql"))
-    .sort()) {
-    fresh2.exec(readFileSync(join(root, "drizzle", file), "utf8"));
-  }
-  const tables2 = /** @type {{name: string, sql: string | null}[]} */ (
-    /** @type {unknown} */ (
-      fresh2
-        .prepare("SELECT name, sql FROM sqlite_master WHERE type='table'")
-        .all()
-    )
-  );
-  const { real: realTables, virtual: virtualTables } = classifyTables(tables2);
-  for (const table of realTables) {
-    const info = /** @type {any[]} */ (
-      fresh2.prepare(`PRAGMA table_info(${table})`).all()
-    );
-    columnUniverse.set(table, new Set(info.map((c) => String(c.name))));
-  }
-  /** Every column name anywhere, for the cases an alias cannot be resolved. */
-  const anyColumn = new Set(
-    [...columnUniverse.values()].flatMap((s) => [...s]),
-  );
-  // SQLite exposes these on every table without declaring them.
-  for (const implicit of ["rowid", "oid", "_rowid_"]) anyColumn.add(implicit);
-
-  ok(
-    "the column universe is not empty",
-    anyColumn.size > 0 && columnUniverse.size > 0,
-    "nothing to check names against, so every assertion below would be vacuous",
-  );
-
-  const SQL_KEYWORDS = new Set([
-    "select", "from", "where", "and", "or", "not", "null", "is", "in", "as",
-    "on", "join", "left", "inner", "outer", "order", "by", "group", "having",
-    "limit", "offset", "insert", "into", "values", "update", "set", "delete",
-    "conflict", "do", "nothing", "ignore", "desc", "asc", "distinct", "count",
-    "case", "when", "then", "else", "end", "excluded", "unixepoch", "datetime",
-    "strftime", "substr", "instr", "snippet", "bm25", "char", "coalesce", "cast",
-    "exists", "union", "all", "replace", "rebuild", "abs", "length", "max", "min",
-  ]);
-
-  let statementsScanned = 0;
-  let namesChecked = 0;
-  /*
-   * Counted and PRINTED, so "0 unknown columns" can never quietly mean "every
-   * statement was skipped". The same discipline the diagram gate uses for
-   * unreachable rules: an exclusion that reports nothing is indistinguishable
-   * from an exclusion that swallowed everything.
-   */
-  let analyticsStatementsSkipped = 0;
-  /**
-   * Analytics Engine dataset names, from the TRACKED example config.
-   *
-   * The real wrangler.jsonc is gitignored and absent from check:head's
-   * extracted worktree, and `check:config` asserts the dataset name matches in
-   * both files, so reading the example is the portable half of one gated pair
-   * rather than a weaker source.
-   *
-   * @type {string[]}
-   */
-  const ANALYTICS_DATASETS = (() => {
-    try {
-      const raw = readFileSync(join(root, "wrangler.jsonc.example"), "utf8");
-      const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-      const names = (JSON.parse(stripped).analytics_engine_datasets ?? [])
-        .map((/** @type {any} */ ae) => ae.dataset)
-        .filter(Boolean);
-      return names;
-    } catch {
-      // FAIL CLOSED. An unreadable config means no exclusion, so an Analytics
-      // Engine statement is reported rather than silently skipped.
-      return [];
-    }
-  })();
-  let unresolved = 0;
-  /** @type {string[]} */
-  const unknown = [];
-
-  for (const file of sourceFiles()) {
-    const relativePath = relative(root, file).split(sep).join("/");
-    // This gate quotes SQL in its own prose and fixtures; scanning itself would
-    // report its own examples. Same self-reference trap as section 1.
-    if (relativePath === "scripts/check-invariants.mjs") continue;
-    // Generated ambient types. No SQL, and its doc comments carry URLs that
-    // read as qualified names.
-    if (relativePath.endsWith(".d.ts")) continue;
-    /*
-     * `test/` holds SQL FIXTURES, which is the same self-reference trap as this
-     * gate's own file one line above and is excluded for the same reason, not
-     * as a convenience.
-     *
-     * Found the moment `test/` was added, 2026-08-09: `test/sql-literals.test.mjs`
-     * replays the `og_titl` defect, so it deliberately contains statements
-     * naming columns that exist nowhere, and this section correctly reported
-     * four of them. A fixture asserting that a MISSPELLED column is rejoined
-     * cannot also be required to name real columns.
-     *
-     * The scope is narrow on purpose. Only `test/` is excluded, not any file
-     * with "test" in its name, and the coverage floor below still applies to
-     * everything else, so this cannot quietly become a way to hide real SQL.
-     */
-    if (relativePath === "test" || relativePath.startsWith("test/")) continue;
-    const text = joinConcatenatedLiterals(
-      stripComments(readFileSync(file, "utf8")),
-    );
-    if (!LOOKS_LIKE_SQL.test(text)) continue;
-
-    /*
-     * A FILE MAY DEFINE ITS OWN SCHEMA, and one does.
-     * `workers/ask-budget.ts` runs against the Durable Object's private SQLite,
-     * not D1, and creates its `budget` table in the same file. Its `day` and
-     * `count` columns are perfectly real and appear nowhere in `drizzle/`.
-     *
-     * Derived rather than excluded by name: any CREATE TABLE found in this
-     * file is executed into a throwaway database and read back with the same
-     * PRAGMA as everything else, so the local tables are checked against their
-     * own definition instead of being skipped. A typo in the Durable Object's
-     * own SQL is still caught.
-     */
-    const localSchema = new Map();
-    for (const create of text.match(/CREATE\s+TABLE[\s\S]*?\([\s\S]*?\)/gi) ?? []) {
-      const ddl = create.replace(/\$\{[^}]*\}/g, "x");
-      try {
-        const scratch = new DatabaseSync(":memory:");
-        scratch.exec(ddl);
-        const made = /** @type {any[]} */ (
-          scratch
-            .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-            .all()
-        );
-        for (const t of made) {
-          const info = /** @type {any[]} */ (
-            scratch.prepare(`PRAGMA table_info(${t.name})`).all()
-          );
-          localSchema.set(
-            String(t.name),
-            new Set(info.map((c) => String(c.name))),
-          );
-        }
-      } catch {
-        // Not valid standalone DDL (an interpolated fragment, a partial match).
-        // Nothing to learn from it, and guessing would be worse than skipping.
-      }
-    }
-
-    for (const literal of text.match(STRING_LITERAL) ?? []) {
-      // An interpolation is a value or an identifier this scan cannot resolve,
-      // so it becomes a placeholder rather than text to read column names out
-      // of. `${posts.publishAt}` is a drizzle column reference, already checked
-      // by the typechecker, and is not a raw name.
-      const statement = literal
-        .slice(1, -1)
-        .replace(/\$\{[^}]*\}/g, " ? ");
-      if (!LOOKS_LIKE_SQL.test(statement)) continue;
-      if (!/\b(FROM|INTO|UPDATE|SET)\b/i.test(statement)) continue;
-
-      /*
-       * ANALYTICS ENGINE IS NOT D1, so its statements are out of scope here.
-       *
-       * This section asserts that every column named in raw SQL exists in
-       * `app/db/schema.ts`. Analytics Engine is a different system with a fixed
-       * schema we do not own: `blob1`, `double1`, `timestamp` and
-       * `_sample_interval` are its columns and will never appear in ours.
-       * Checking them against the D1 universe asks a question with no true
-       * answer, which is what it did on first contact with the traffic panel.
-       *
-       * TWO DISCRIMINATORS, because one of them does not survive this scanner.
-       * The dataset name is the obvious signal, but the callers build the FROM
-       * by interpolation and the loop above rewrites every `${...}` to `?`, so
-       * the name is gone by the time the text arrives here. Measured, after the
-       * name-only version skipped zero statements and reported the failure
-       * unchanged.
-       *
-       * So `_sample_interval` carries it. That column is Analytics Engine's
-       * sampling weight, it is not a name this schema has or could have, and
-       * every query against the dataset must reference it: counting without it
-       * undercounts the moment sampling engages, which is the panel's whole
-       * correctness argument. The dataset name is kept as the second signal for
-       * statements that spell it out, and it is resolved from the config rather
-       * than typed here so renaming the dataset moves this with it.
-       *
-       * An Analytics Engine statement that references neither would be checked
-       * against the D1 schema and reported. That is the safe direction: loud
-       * and wrong, rather than quiet and unchecked.
-       *
-       * SCOPED TO THE STATEMENT, never to the file. A D1 statement sitting in
-       * the same module is still checked, which is why this is not an exemption
-       * list of paths.
-       */
-      const namesDataset = ANALYTICS_DATASETS.some((d) =>
-        new RegExp(`\\bFROM\\s+${d}\\b`, "i").test(statement),
-      );
-      if (namesDataset || /\b_sample_interval\b/.test(statement)) {
-        analyticsStatementsSkipped += 1;
-        continue;
-      }
-
-      statementsScanned += 1;
-
-      // (a) INSERT INTO <table> ( ... ), scoped to that table.
-      const insert = statement.match(
-        /INSERT\s+(?:OR\s+\w+\s+)?INTO\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)/i,
-      );
-      if (insert && !virtualTables.includes(insert[1])) {
-        const table = insert[1];
-        const known = columnUniverse.get(table);
-        if (known) {
-          for (const piece of insert[2].split(",")) {
-            const name = piece.trim().replace(/^["'`\[]|["'`\]]$/g, "");
-            if (!name || !/^[A-Za-z_][\w]*$/.test(name)) continue;
-            if (SQL_KEYWORDS.has(name.toLowerCase())) continue;
-            namesChecked += 1;
-            if (!known.has(name)) {
-              unknown.push(`${relativePath}: ${table}.${name} (INSERT column list)`);
-            }
-          }
-        }
-      }
-
-      /*
-       * (b) qualified references, resolved to a table wherever possible.
-       *
-       * The QUALIFIER must be a real table or an alias this statement binds.
-       * That is what separates `d.publish_at` from `console.log`, and without
-       * it a multi-line template literal that happens to contain SQL reports
-       * every property access near it as an unknown column. Resolving the alias
-       * also makes the check table-scoped rather than schema-wide, so a column
-       * that exists on some OTHER table is still caught.
-       *
-       * Quoted values are removed first: `WHERE key = 'llms.txt'` is a string,
-       * not a reference to a `txt` column on an `llms` table.
-       */
-      const body = statement.replace(/'(?:[^']|'')*'/g, " ? ");
-
-      /** @type {Map<string, string>} */
-      const aliases = new Map();
-      for (const table of realTables) aliases.set(table, table);
-      for (const table of localSchema.keys()) aliases.set(table, table);
-      for (const [, table, alias] of body.matchAll(
-        /\b(?:FROM|JOIN|INTO|UPDATE)\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi,
-      )) {
-        if (!realTables.includes(table)) continue;
-        if (alias && !SQL_KEYWORDS.has(alias.toLowerCase())) {
-          aliases.set(alias, table);
-        }
-      }
-      // `FROM posts p, tags t` binds the second pair after a comma.
-      for (const [, table, alias] of body.matchAll(
-        /,\s*([A-Za-z_]\w*)\s+(?:AS\s+)?([A-Za-z_]\w*)/gi,
-      )) {
-        if (realTables.includes(table)) aliases.set(alias, table);
-      }
-      /*
-       * `excluded` is the row the INSERT tried to write, so it carries exactly
-       * the target table's columns. Binding it makes `excluded.og_title` a
-       * checkable reference instead of an unresolvable qualifier, and an upsert
-       * is where most of this repo's column names appear twice.
-       */
-      const insertTarget = body.match(
-        /INSERT\s+(?:OR\s+\w+\s+)?INTO\s+([A-Za-z_]\w*)/i,
-      );
-      if (insertTarget && realTables.includes(insertTarget[1])) {
-        aliases.set("excluded", insertTarget[1]);
-      }
-
-      /*
-       * (c) UNQUALIFIED references.
-       *
-       * **This is the case the original bug was in.** `claimMediaKeyForDelete`
-       * read `DELETE FROM media WHERE r2_key = ?1`, with no qualifier and no
-       * INSERT column list, so neither of the extractions above would have seen
-       * it and this gate would have shipped unable to catch the defect it was
-       * written for.
-       */
-
-      /** Columns of a table, from the file's own DDL if it declares any. */
-      const columnsOf = (/** @type {string} */ t) =>
-        localSchema.get(t) ?? columnUniverse.get(t);
-
-      /** Every column name in scope for THIS file, D1 plus any local table. */
-      const inScope = new Set(anyColumn);
-      for (const cols of localSchema.values()) {
-        for (const c of cols) inScope.add(c);
-      }
-
-      const tablesTouched = new Set(
-        [...body.matchAll(/\b(?:FROM|JOIN|INTO|UPDATE)\s+([A-Za-z_]\w*)/gi)]
-          .map((m) => m[1])
-          .filter((t) => realTables.includes(t) || localSchema.has(t)),
-      );
-      const soleTable = tablesTouched.size === 1 ? [...tablesTouched][0] : null;
-
-      const bare = [
-        ...body.matchAll(
-          /\b(?:WHERE|AND|OR|SET|BY)\s+([A-Za-z_]\w*)\s*(?:=|<|>|!=|\bIS\b|\bIN\b|\bLIKE\b|\bNOT\b|\bDESC\b|\bASC\b|,|$)/gi,
-        ),
-      ].map((m) => m[1]);
-
-      /*
-       * (e) BARE SELECT lists.
-       *
-       * `SELECT uid, url, title, publish_at FROM search_docs` names four
-       * columns and none of them followed a keyword this scan anchored on, so
-       * all four were unchecked. Measured before this existed: `titl` in that
-       * list was accepted with 0 failures.
-       *
-       * Only plain identifiers are taken. `COUNT(*)`, `snippet(...)`,
-       * `substr(d.body, 1, 240) AS snippet` and anything qualified are left to
-       * the other extractions, which already handle them or correctly ignore
-       * them.
-       */
-      const selectList = body.match(/\bSELECT\b\s+(?:DISTINCT\s+)?([\s\S]*?)\bFROM\b/i);
-      if (selectList) {
-        for (const item of selectList[1].split(",")) {
-          const name = item.trim();
-          if (!/^[A-Za-z_]\w*$/.test(name)) continue;
-          bare.push(name);
-        }
-      }
-
-      /*
-       * (d) EVERY assignment target in a SET clause, not just the first.
-       *
-       * The pattern above anchors on the SET keyword, so in
-       * `SET kind = excluded.kind, title = excluded.title, ...` it saw `kind`
-       * and stopped. An upsert in this repo assigns twenty-two columns, so
-       * twenty-one of them were unchecked, and a typo in any of them passed.
-       * Measured before this existed: `og_titl = excluded.og_title` in
-       * sync-content.mjs was accepted with 0 failures.
-       */
-      const setClause = body.match(/\bSET\b([\s\S]*?)(?:\bWHERE\b|$)/i);
-      if (setClause) {
-        for (const [, name] of setClause[1].matchAll(
-          /(?:^|,)\s*([A-Za-z_]\w*)\s*=/g,
-        )) {
-          bare.push(name);
-        }
-      }
-
-      for (const name of bare) {
-        if (SQL_KEYWORDS.has(name.toLowerCase())) continue;
-        namesChecked += 1;
-        if (soleTable) {
-          // One table, so the name is attributable and the check is exact.
-          const known = columnsOf(soleTable);
-          if (known && !known.has(name)) {
-            unknown.push(
-              `${relativePath}: ${name} is not a column of ${soleTable}`,
-            );
-          }
-        } else if (!inScope.has(name)) {
-          /*
-           * More than one table in play, so which one owns an unqualified name
-           * needs a parser. The weaker question is still worth asking and is
-           * still decisive for the bug this gate exists for: `r2_key` is a
-           * column of NO table, and the statement that named it touched both
-           * `media` and `media_refs` through a subquery, which is exactly why
-           * a single-table restriction here missed it on the first attempt.
-           */
-          unknown.push(
-            `${relativePath}: ${name} is not a column of any table (statement touches ${[...tablesTouched].join(", ") || "no known table"})`,
-          );
-        }
-      }
-
-      for (const [, qualifier, name] of body.matchAll(
-        /\b([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\b/g,
-      )) {
-        if (SQL_KEYWORDS.has(name.toLowerCase())) continue;
-        if (virtualTables.includes(qualifier)) continue;
-        const table = aliases.get(qualifier);
-        // An unresolvable qualifier is not a column reference this scan can
-        // judge, so it is skipped rather than guessed at. Reported in the
-        // count below so the skipping is visible.
-        if (!table) {
-          unresolved += 1;
-          continue;
-        }
-        namesChecked += 1;
-        const known = columnsOf(table);
-        if (known && !known.has(name) && !inScope.has(name)) {
-          unknown.push(`${relativePath}: ${table}.${name}`);
-        } else if (known && !known.has(name)) {
-          unknown.push(
-            `${relativePath}: ${name} is not a column of ${table} (qualified as ${qualifier})`,
-          );
-        }
-      }
-    }
-  }
-
-  ok(
-    "the scan found raw SQL to examine",
-    statementsScanned > 0 && namesChecked > 0,
-    `${statementsScanned} statement(s), ${namesChecked} name(s); a green result would mean nothing`,
-  );
-  ok(
-    "every column named in raw SQL exists",
-    unknown.length === 0,
-    unknown.join(" | "),
-  );
-
-  console.log(
-    `     ${statementsScanned} raw statement(s), ${namesChecked} column reference(s) ` +
-      `checked, ${unresolved} qualifier(s) unresolved, ` +
-      `${virtualTables.length} fts5 table(s) skipped, ` +
-      `${analyticsStatementsSkipped} analytics engine statement(s) out of scope ` +
-      `(${ANALYTICS_DATASETS.join(", ") || "no dataset resolved"})`,
-  );
-} catch (error) {
-  fail("the raw SQL column check could not run", String(error));
-}
 
 /* ------------------------- 6. every posts READER composes the predicate */
 
@@ -2448,21 +1991,27 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
 /*
  * EXECUTED-COUNT FLOOR.
  *
- * This gate is NINE sections, several of which are wrapped in try blocks that
+ * This gate is EIGHT sections numbered 1 to 9 with 5 REMOVED, several of which
+ * are wrapped in try blocks that
  * report a failure and continue, and two of which change shape with --remote.
  * A section that stops running is therefore the most available failure here,
  * and it is invisible: the remaining sections still pass and the total is the
  * only witness.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 102
- * offline. Never summed. It was 84 against a floor of 80, then 85 when the
- * draft preview reader took a second visibility exemption, then 102 when
- * section 9 landed with the media trash predicate, its restore round trip and
- * the permanent-delete guard.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 102
+ * offline, AFTER section 5 was removed. Never summed. It was 84 against a floor
+ * of 80, then 85 when the draft preview reader took a second visibility
+ * exemption, then 105 when section 9 landed with the media trash predicate, its
+ * restore round trip and the permanent-delete guard.
  *
- * Floored at 97, slack of five: the offline count is stable across runs, and
- * --remote only ADDS, so a floor set on the offline figure holds for both
- * tiers.
+ * DELETING SECTION 5 COST THREE ASSERTIONS, 105 to 102, and that ratio is the
+ * argument for the deletion rather than against it: 499 lines and a scan
+ * reporting 246 column references produced three checks, and the scan could
+ * desync on a regex literal and examine nothing while printing the same three.
+ *
+ * Floored at 97, slack of five, UNCHANGED. The drop is absorbed by the existing
+ * slack deliberately: lowering the floor to match would hide the next section
+ * that stops running, which is the failure this floor exists for.
  */
 const MINIMUM_CHECKS = 97;
 if (checks < MINIMUM_CHECKS) {
