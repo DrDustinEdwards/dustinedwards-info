@@ -75,12 +75,12 @@ const TEST_DIR = join(root, "test");
  * properties two callers can drift apart on, which is why they are tests rather
  * than a comment.
  */
-const MINIMUM_FILES = 16;
+const MINIMUM_FILES = 17;
 /* 186 against 198 measured, roughly 94 percent. Raised from 183 with the
    typed-count ladder, which is the first thing here asserting about an ACTION's
    guard rather than about a pure view helper: it was extracted out of the route
    precisely so a test could hold it. */
-const MINIMUM_TESTS = 198;
+const MINIMUM_TESTS = 204;
 
 let checks = 0;
 let failures = 0;

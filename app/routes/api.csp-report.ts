@@ -1,3 +1,4 @@
+import { readCapped } from "~/lib/read-capped.mjs";
 import { getEnv } from "~/lib/context";
 
 import type { Route } from "./+types/api.csp-report";
@@ -47,6 +48,7 @@ import type { Route } from "./+types/api.csp-report";
 /** Bytes. A real report is a few hundred; the batch format is still small. */
 const MAX_BODY_BYTES = 8 * 1024;
 
+
 const RATE_LIMIT = 60;
 const RATE_PERIOD_SECONDS = 60;
 
@@ -58,8 +60,19 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   }
 
-  const declared = Number(request.headers.get("content-length") ?? "0");
-  if (declared > MAX_BODY_BYTES) {
+  /*
+   * CONTENT-LENGTH IS A HINT FROM THE CLIENT, so it is used to refuse early and
+   * never to permit. An honest oversized header is rejected here without
+   * touching the body; a missing or lying one falls through to `readCapped`
+   * below, which counts the bytes as they arrive.
+   *
+   * This used to be the ONLY cap, and it was `Number(header ?? "0")`: a request
+   * with no Content-Length became 0, sailed past `> MAX_BODY_BYTES`, and the
+   * body was then materialised whole by `request.text()`. A small lie did the
+   * same. The endpoint is public, unauthenticated and POST.
+   */
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     return new Response("Payload Too Large", {
       status: 413,
       headers: { "cache-control": "private, no-store" },
@@ -90,13 +103,26 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   }
 
-  // Read AFTER the cap and the limiter, so a refused request never costs a read.
-  let body = "";
-  try {
-    body = (await request.text()).slice(0, MAX_BODY_BYTES);
-  } catch {
-    body = "(unreadable)";
+  /*
+   * READ THE STREAM AND STOP AT THE CAP.
+   *
+   * The previous comment here claimed the cap preceded the read. It did not:
+   * `request.text()` materialises the whole body before `.slice()` can shorten
+   * it, so the slice bounded what was LOGGED and never what was received.
+   *
+   * `readCapped` cancels the stream the moment the count crosses the limit, so
+   * an oversized body costs the bytes already in flight and nothing more, and a
+   * client that omits or understates Content-Length gets the same treatment as
+   * one that declares it honestly.
+   */
+  const capped = await readCapped(request, MAX_BODY_BYTES);
+  if (capped === null) {
+    return new Response("Payload Too Large", {
+      status: 413,
+      headers: { "cache-control": "private, no-store" },
+    });
   }
+  const body = capped;
 
   // One line, prefixed so it can be filtered out of the log stream. The report
   // is logged VERBATIM rather than parsed: both the legacy `report-uri` shape
