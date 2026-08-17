@@ -745,13 +745,65 @@ console.log(
  * the capture's exclusions, so it moves when one is added, which should be a
  * deliberate diff rather than drift.
  */
-const MINIMUM_CHECKS = 88;
+/* ------------------------------------------------------------------ *
+ * ASSET CACHE RULES: `public/_headers`.
+ * ------------------------------------------------------------------ *
+ *
+ * Workers Assets defaults every asset to `max-age=0, must-revalidate`.
+ * MEASURED on production 2026-08-16, one full document load of /admin/media:
+ * 14 asset requests, all 14 on the network, every one headers-only
+ * (transferSize 300 against encoded bodies up to 60 kB, so a 304 with the body
+ * already on disk), median 689ms and 1204ms for the slowest.
+ *
+ * The rule is scoped to `/assets/*`, whose filenames carry their content hash,
+ * so a year is safe by construction. THE DANGER IS THE GLOB WIDENING. A rule
+ * over `/*` would pin `favicon.ico`, `logo.svg` and the icon suite for a year
+ * at stable paths, and this repo has already recorded a browser holding a stale
+ * favicon hard enough to look like a failed deploy. That is what this asserts.
+ *
+ * OBSERVATION BOUNDARY: this reads the tracked FILE. It does not fetch an
+ * asset, so it cannot see Workers Assets failing to apply a rule it parsed.
+ * The served header was proven separately with `wrangler dev` and is owed a
+ * re-measure on the next deploy.
+ */
+const HEADERS_FILE = "public/_headers";
+const headersPath = join(root, HEADERS_FILE);
+
+ok(`${HEADERS_FILE} exists`, existsSync(headersPath),
+  "Workers Assets falls back to max-age=0 for every asset without it");
+
+if (existsSync(headersPath)) {
+  const raw = readFileSync(headersPath, "utf8");
+  // Path lines start at column 0; header lines are indented. Comments are '#'.
+  const lines = raw
+    .split(/\r?\n/)
+    .filter((l) => l.trim() && !l.trim().startsWith("#"));
+  const paths = lines.filter((l) => !/^\s/.test(l)).map((l) => l.trim());
+  const directives = lines.filter((l) => /^\s/.test(l)).map((l) => l.trim());
+
+  ok("the rule file declares at least one path", paths.length > 0,
+    `parsed ${paths.length} path line(s) from ${HEADERS_FILE}`);
+
+  ok("every declared path is scoped to the hashed build output",
+    paths.every((p) => p === "/assets/*"),
+    `only /assets/* carries a content hash in its filename. Found: ${paths.join(", ")}`);
+
+  const immutable = directives.filter((d) => /immutable|max-age=\d{5,}/i.test(d));
+  ok("an immutable rule is declared", immutable.length > 0,
+    "the file exists but pins nothing, so every asset still revalidates");
+
+  ok("nothing outside /assets/* is given a long max-age",
+    !paths.some((p) => p !== "/assets/*") || immutable.length === 0,
+    `a long-lived rule on an unhashed path cannot be revoked before it expires`);
+}
+
+const MINIMUM_CHECKS = 94;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 66.`,
+      `rather than failing. Measured: 99.`,
   );
 }
 

@@ -1,0 +1,25 @@
+# Cloudflare Workers Assets header rules. Copied into build/client/ by Vite,
+# because `public/` is the publicDir, and read by the assets runtime.
+#
+# WHY THIS FILE EXISTS. Workers Assets defaults every asset to
+# `cache-control: public, max-age=0, must-revalidate`. MEASURED on production
+# 2026-08-16, on one full document load of /admin/media: 14 asset requests, all
+# 14 going to the network, every one returning headers only (transferSize 300
+# against encoded bodies of up to 60 kB, so a 304 with the body already on
+# disk). Median 689ms each and 1204ms for the slowest, against a document whose
+# own response finished at 3146ms. The revalidations, not the HTML, are what
+# stood between responseEnd and interactive.
+#
+# ONLY `/assets/*`, and the narrowness is the whole point. Everything under it
+# is Vite build output whose filename CONTAINS its content hash, so the URL
+# changes whenever the bytes do and a year is safe by construction.
+#
+# Nothing else gets this. `logo.svg`, `favicon.ico` and the icon suite sit at
+# stable paths with no hash, so an immutable year would make replacing one
+# unshippable, and this repo has already recorded browsers holding a stale
+# favicon hard enough to look like a failed deploy.
+#
+# This changes STATIC ASSET caching only. HTML cache policy is untouched: it is
+# set per route in the app and governed by hard rule 8.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
