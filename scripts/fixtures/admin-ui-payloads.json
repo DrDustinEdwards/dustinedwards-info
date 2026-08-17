@@ -244,6 +244,33 @@
     "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
     "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
   ],
+  "media, detail with several tags": [
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | clear=1 | intent,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key",
+    "POST /admin/media?key=1234abcd5678ef90.png | tags=photo, 2019 | intent,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | tags=roster, 2019 | intent,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | tags=roster, photo | intent,key"
+  ],
+  "media, detail with one tag": [
+    "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
+    "POST /admin/media/upload | intent=upload-form | file",
+    "POST /admin/media?key=1234abcd5678ef90.png | (none) | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | alt=a picture | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | clear=1 | intent,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=delete | confirm-count,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=rebuild | ",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-alt | alt,key",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=set-tags | key,tags",
+    "POST /admin/media?key=1234abcd5678ef90.png | intent=trash | key"
+  ],
   "media, detail open": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
