@@ -3601,6 +3601,7 @@ assert(
   `only ${displayStates.length} rendered state(s) contain the layout toggle`,
 );
 
+/** @param {string} html */
 const hrefsOf = (html) => [...html.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
 
 for (const axis of DISPLAY_AXES) {
@@ -3623,7 +3624,8 @@ for (const axis of DISPLAY_AXES) {
   );
 
   for (const value of control.values) {
-    const isDefault = MEDIA_DEFAULTS[axis] === value;
+    const isDefault =
+      /** @type {Record<string, unknown>} */ (MEDIA_DEFAULTS)[axis] === value;
     const hit = owning.some(([, nav]) =>
       hrefsOf(nav).some((href) =>
         isDefault

@@ -459,7 +459,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
          */
         hash: /^([0-9a-f]{16,})\./.exec(row.key)?.[1] ?? null,
         /** Rows carrying identical bytes. Exact identity only. */
-        twins: (await mediaTwins(env)).get(row.key) ?? [],
+        twins: twins.get(row.key) ?? [],
         /** The third state, from the same three pieces of evidence as a tile. */
         usage: usageStateOf({
           postRefs: (detailRefs.get(row.key) ?? []).length,
@@ -573,16 +573,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** False when a resolver threw. The page says so and delete refuses. */
     scanComplete: resolution.complete,
     scanFailed: resolution.failed,
-    /** What the index holds, so a rebuild's effect is visible on the page. */
-    counts: await mediaCounts(env),
-    /**
-     * The role split, shown BESIDE the row count rather than instead of it.
-     * The two answer different questions: rows say the rebuild ran, roles say
-     * the deriver worked. See the rebuild action for why conflating them cost a
-     * session.
-     */
-    roleCounts: await mediaRoleCounts(env),
-
     /**
      * THE VIEW STATE, echoed whole so the component can build links from it.
      *
@@ -615,7 +605,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       // exact defect the Unused chip shipped with, and passing one array to both
       // readers is what makes agreement structural rather than remembered.
       ...(await mediaLensCounts(env, TEMPLATE_REF_KEYS)),
-      duplicates: (await mediaTwins(env)).size,
+      duplicates: twins.size,
     },
 
     /**
@@ -1631,8 +1621,6 @@ export default function AdminMedia({
     uploadError,
     scanComplete,
     scanFailed,
-    counts,
-    roleCounts,
     view: loadedView,
     modified,
     trashedCount,
@@ -1712,9 +1700,6 @@ export default function AdminMedia({
     setSelected((was) => [...new Set([...was, ...span])]);
   };
 
-  const total = counts.reduce((sum, row) => sum + Number(row.n), 0);
-  const byRole = new Map(roleCounts.map((row) => [row.role, Number(row.n)]));
-  const active = FILTERS.find((f) => f.id === filter);
 
   /*
    * EVERY LINK ON THIS PAGE IS `hrefWith(view, {one override})`.
@@ -1731,11 +1716,8 @@ export default function AdminMedia({
    */
   const linkTo = (over: Parameters<typeof hrefWith>[1] = {}) => hrefWith(view, over);
 
-  /** A chip is its own filter, back at page one, carrying everything else. */
-  const chipHref = (role: string) => linkTo({ role, page: 1 });
   /** A tag chip toggles: pressing the active one clears it. */
   const tagHref = (tag: string) => linkTo({ tag: view.tag === tag ? "" : tag, page: 1 });
-  const count = (id: string) => byRole.get(id);
 
   return (
     <Panel
