@@ -101,3 +101,79 @@ test("THE LIMITS the sentences are built from are the ones the route enforces", 
   );
   assert.ok(uploadErrorSentence("unsupported-type").includes("svg+xml".split("/")[0]));
 });
+
+/* ------------------------------------------------------------------ *
+ * THE ORIGIN INVARIANT: nothing user-writable may serve a script.
+ * ------------------------------------------------------------------ *
+ *
+ * Uploads land on the SITE'S OWN ORIGIN, under `/media/*`. That makes this
+ * allowlist a security boundary rather than a convenience: anything it accepts
+ * is a file a third party can put on our origin and then link to.
+ *
+ * The invariant matters most to whatever `script-src` ends up being. A policy
+ * that trusts the origin (`'self'`) is only as strong as the promise that the
+ * origin cannot serve attacker-authored script. Recorded 2026-08-17 while
+ * ruling on the CSP: the allowlist satisfies it today and must not drift.
+ *
+ * TWO TIERS, because they need different answers:
+ *
+ *   EXECUTABLE  a browser runs it straight from a URL. Never allowed, at all.
+ *   CAPABLE     it can CARRY script (SVG, HTML, XML). Allowed only while it is
+ *               served as an attachment, which `check:headers` asserts against
+ *               `media.$.ts` because a unit test cannot read that route.
+ *
+ * SVG is the live case: it is in the allowlist deliberately, and it is safe
+ * only because of the Content-Disposition fix. Deleting that fix without
+ * removing SVG here reopens a stored-script path.
+ */
+
+/** Types a browser executes directly. The allowlist must never contain one. */
+const EXECUTABLE_TYPES = [
+  "application/javascript",
+  "text/javascript",
+  "application/ecmascript",
+  "text/ecmascript",
+  "application/x-javascript",
+  "module",
+  "application/wasm",
+];
+
+/** Extensions the same rule covers, since the map stores those too. */
+const EXECUTABLE_EXTENSIONS = ["js", "mjs", "cjs", "jsx", "ts", "wasm", "html", "htm", "xhtml"];
+
+/** Types that can CARRY script. Allowed only with the attachment mitigation. */
+export const SCRIPT_CAPABLE_TYPES = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
+
+test("the upload allowlist contains no directly executable type", () => {
+  for (const type of ALLOWED.keys()) {
+    assert.ok(
+      !EXECUTABLE_TYPES.includes(type),
+      `${type} is executable and must never be uploadable: uploads land on this origin`,
+    );
+  }
+  for (const ext of ALLOWED.values()) {
+    assert.ok(
+      !EXECUTABLE_EXTENSIONS.includes(ext),
+      `.${ext} is executable and must never be uploadable`,
+    );
+  }
+});
+
+test("the allowlist is non-empty, so the loop above is not vacuous", () => {
+  // Hard rule 10: every per-entry assertion is vacuous over an empty map, and
+  // an emptied allowlist would pass the check above while breaking uploads.
+  assert.ok(ALLOWED.size >= 6, `allowlist has ${ALLOWED.size} entries`);
+});
+
+test("every script-CAPABLE allowed type is a known one with a mitigation", () => {
+  // Not a ban: SVG is deliberately allowed. This fails when a NEW capable type
+  // is added, so the attachment rule is extended in the same change rather than
+  // silently left behind. check:headers asserts the route end of that pairing.
+  const capable = [...ALLOWED.keys()].filter((t) => SCRIPT_CAPABLE_TYPES.includes(t));
+  assert.deepEqual(
+    capable,
+    ["image/svg+xml"],
+    "a script-capable type was added or removed; the Content-Disposition rule in " +
+      "app/routes/media.$.ts must be updated to match, and check:headers asserts it",
+  );
+});

@@ -80,7 +80,7 @@ const MINIMUM_FILES = 17;
    typed-count ladder, which is the first thing here asserting about an ACTION's
    guard rather than about a pure view helper: it was extracted out of the route
    precisely so a test could hold it. */
-const MINIMUM_TESTS = 204;
+const MINIMUM_TESTS = 207;
 
 let checks = 0;
 let failures = 0;

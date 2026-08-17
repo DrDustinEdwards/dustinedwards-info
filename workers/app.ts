@@ -170,8 +170,12 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  * attributes are permitted, which is the trade taken here.
  *
  * **THE SOLE ENFORCEMENT BLOCKER: a nonce and a SHARED CACHE. MEASURED.**
- * Six HTML routes are `public, s-maxage=600` for cookieless readers, so the
- * header and the body are cached together.
+ * SEVEN HTML routes are `public, s-maxage=600` for cookieless readers, so the
+ * header and the body are cached together: `/`, `/blog`, `/blog/:slug`,
+ * `/colophon`, `/phage-discovery`, `/playground`, `/search`. (`/projects` is
+ * `private, no-store`.) This said SIX until 2026-08-17 and was written on
+ * 2026-08-09, before `/playground` shipped on the 14th, so the exposure was one
+ * route wider than recorded. Confirmed against production, not counted here.
  *
  * Measured on the live site 2026-08-09, which is the half nothing had ever
  * checked:
@@ -189,7 +193,37 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  * It changes nothing in Report-Only, which is why it was not solved when found.
  * It must be RULED ON BEFORE the switch, and there are two acceptable answers:
  * accept the ten-minute window in writing with the reasoning recorded, or make
- * those six routes uncacheable and give back the shared-cache benefit. DNS
+ * those seven routes uncacheable and give back the shared-cache benefit.
+ *
+ * **A THIRD ANSWER WAS RULED IN AND THEN FALSIFIED BY MEASUREMENT, 2026-08-17.**
+ * The ruling was `script-src 'self'` with `'strict-dynamic'` removed, on the
+ * premise that every script here is a first-party bundle under `/assets/`. Half
+ * of that is right and the load-bearing half is not:
+ *
+ *   - RIGHT: `'strict-dynamic'` does cause `'self'` and every allowlist entry
+ *     to be IGNORED, so the two genuinely cannot be combined. MDN, verbatim:
+ *     "any allowlist or source expressions such as 'self' or 'unsafe-inline'
+ *     will be ignored."
+ *   - WRONG: there is not one external `<script src>` on this site. MEASURED on
+ *     production across `/`, `/blog`, `/playground`, `/search`, `/colophon`,
+ *     `/projects` and `/login`: every script element is INLINE, five to seven
+ *     per page, and the `/assets/` bundles are reached by an inline `type=module`
+ *     script that IMPORTS them. `'self'` does not cover inline script.
+ *
+ * DRIVEN IN A REAL BROWSER before being rejected, with the current policy as the
+ * control on the same page and harness: under `script-src 'self'` enforced,
+ * ZERO JavaScript was requested and `window.__reactRouterContext` was undefined,
+ * so nothing hydrated; under the current policy the same page fetched 23 scripts
+ * and hydrated. Option C would have taken the whole site down.
+ *
+ * Hashes cannot rescue it either: three of the inline blocks carry per-request
+ * loader data, so their content changes every render.
+ *
+ * **What survives from that ruling and is now GATED: the origin invariant.**
+ * Whatever `script-src` becomes, nothing user-writable may serve a script from
+ * this origin. `test/upload-contract.test.mjs` refuses an executable type in the
+ * upload allowlist, and `check:headers` derives the attachment rule below from
+ * that same allowlist so a new script-capable type cannot be added without one. DNS
  * cutover changes the terms, because a proxied zone brings Cache Rules into
  * scope. `verify-live` asserts the measurement above so the number cannot drift
  * unnoticed while the decision is pending.
