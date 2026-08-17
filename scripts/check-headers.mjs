@@ -359,19 +359,39 @@ ok(
   "nothing on this site evals, and adding it would be silencing a report rather than fixing it",
 );
 
-// PHASE B IS REPORT-ONLY. Switching to enforcing is a separate ruling, and it
-// must not happen as a side effect of some other edit.
+/*
+ * PHASE B IS ENFORCED, ruled 2026-08-17 (option A). This assertion REVERSED on
+ * that date: it used to require Report-Only and to refuse the enforcing header,
+ * so that enforcement could not happen as a side effect of some other edit. The
+ * ruling is made, so the direction flips and the guard stays: enforcement must
+ * not be silently REVERTED either, which is the more likely accident now.
+ *
+ * A revert would be invisible in every other way. The page still works, the
+ * header is still present, the reports still arrive, and the only difference is
+ * that nothing is blocked, which is exactly the state this spent eleven days in.
+ */
 ok(
-  "the CSP is applied as Report-Only, not enforcing",
-  code.includes('"Content-Security-Policy-Report-Only"') &&
-    !/headers\.set\(\s*"Content-Security-Policy"/.test(code),
-  "Phase B ships Report-Only. Enforcing needs its own ruling, and the " +
-    "nonce-with-a-shared-cache question has to be settled first.",
+  "the CSP is applied as ENFORCED, not Report-Only",
+  /headers\.set\(\s*"Content-Security-Policy"/.test(code) &&
+    !code.includes('"Content-Security-Policy-Report-Only"'),
+  "the header reverted to Report-Only. Ruled 2026-08-17: the existing nonce " +
+    "plus strict-dynamic policy is ENFORCED, keeping shared caching on the " +
+    "seven HTML routes and accepting the ten-minute nonce window.",
 );
 ok(
   "the CSP is applied on BOTH exits, like the static set",
-  [...code.matchAll(/Content-Security-Policy-Report-Only/g)].length >= 2,
-  "a redirect that misses it reports nothing, which reads as a clean surface",
+  [...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length >= 2,
+  "a redirect that misses it is UNPROTECTED, not merely unreported",
+);
+/*
+ * REPORTING SURVIVES ENFORCEMENT. Enforcing and reporting are independent: a
+ * policy can block silently. Losing the reports would remove the only signal
+ * that the policy is refusing something a reader needed.
+ */
+ok(
+  "reporting is still on after the switch to enforcing",
+  cspBody.includes("report-uri ") && cspBody.includes("report-to "),
+  "the policy blocks but reports nothing, so a false positive would be invisible",
 );
 ok(
   "a report destination is declared (report-to AND the legacy report-uri)",
@@ -386,8 +406,8 @@ ok(
 );
 
 console.log(
-  `     ${directives.length} directive(s), Report-Only, ` +
-    `${[...code.matchAll(/Content-Security-Policy-Report-Only/g)].length} application site(s)`,
+  `     ${directives.length} directive(s), ENFORCED, ` +
+    `${[...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length} application site(s)`,
 );
 
 /* -------------------------------------- the nonce reaches every script ---- */

@@ -52,7 +52,8 @@ const UNCACHED = "private, no-store";
  * Content-Security-Policy here. A useful CSP needs a per-response nonce, which
  * has to exist BEFORE the render so `<Scripts nonce>` can stamp it, so it
  * cannot be a pure exit-path header the way these are. That is Phase B, its own
- * ruling and its own commit, and it starts in Report-Only.
+ * ruling and its own commit. It started in Report-Only and is enforced as of
+ * 2026-08-17.
  *
  * Three of these look tightenable and are not. The reasoning is not recoverable
  * from the values, so it is written here rather than left for someone to
@@ -119,11 +120,24 @@ const CSP_REPORT_PATH = "/api/csp-report";
 const CSP_ENDPOINT_NAME = "csp-endpoint";
 
 /**
- * The Phase B policy, REPORT-ONLY. Ratified 2026-08-06.
+ * The Phase B policy, ENFORCED since 2026-08-17. Ratified 2026-08-06.
  *
- * **This header enforces NOTHING.** It is `Content-Security-Policy-Report-Only`
- * on purpose. It shipped that way because three questions could not be answered
- * by reading and were deliberately left to the browser rather than to argument.
+ * **THIS HEADER NOW BLOCKS.** It is `Content-Security-Policy`, not
+ * `-Report-Only`, and reporting stays on beside it. It spent its first eleven
+ * days reporting because three questions could not be answered by reading and
+ * were deliberately left to the browser rather than to argument.
+ *
+ * **WHAT WAS DRIVEN BEFORE THE SWITCH, because an enforced policy that blocks
+ * something is worse than Report-Only.** Eighteen routes, real navigations,
+ * counting the browser's own `report-uri` POSTs: ten public under the ENFORCED
+ * header locally (`/`, `/blog`, a post, `/colophon`, `/projects`,
+ * `/playground` with all three demos, `/phage-discovery`, `/search` with the
+ * palette opened, `/login`, and a 404 through the error boundary) and eight
+ * admin on production, where the policy content is byte-identical (`/admin`,
+ * media in grid view, posts, the CodeMirror editor, origin-requests, tools,
+ * content, sites). **Zero violations on every one, and every one hydrated.**
+ * Two apparent image failures were chased down and were lazy loading, not
+ * blocking: forced eager, 9 of 9 loaded on both.
  *
  * **ALL THREE ARE NOW ANSWERED. None of them blocks enforcement.** They are kept
  * here with their answers because the answers are the reason the phase split was
@@ -243,7 +257,16 @@ function contentSecurityPolicy(nonce: string): string {
     `script-src 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' https://fonts.googleapis.com",
     "style-src-attr 'unsafe-inline'",
-    "font-src https://fonts.gstatic.com",
+    /*
+     * `'self'` ALONGSIDE gstatic, added 2026-08-17. Nothing serves a font from
+     * this origin yet, so today this permits nothing new: `font-src` replaces
+     * `default-src` entirely, so without it a self-hosted font would be blocked
+     * the moment one shipped. Widening a directive cannot break a load that
+     * already works, and self-hosting Inter is a decided direction with unused
+     * font files already sitting in the repo. The alternative was discovering
+     * this from a blocked font in the font session.
+     */
+    "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data:",
     "connect-src 'self'",
     "object-src 'none'",
@@ -457,7 +480,7 @@ export default {
       if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);
       applySecurityHeaders(response.headers);
       response.headers.set("Reporting-Endpoints", reportTo);
-      response.headers.set("Content-Security-Policy-Report-Only", csp);
+      response.headers.set("Content-Security-Policy", csp);
       if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
       }
@@ -466,7 +489,7 @@ export default {
       if (downgradeForCookie) headers.set("cache-control", UNCACHED);
       applySecurityHeaders(headers);
       headers.set("Reporting-Endpoints", reportTo);
-      headers.set("Content-Security-Policy-Report-Only", csp);
+      headers.set("Content-Security-Policy", csp);
       if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
       return new Response(response.body, {
         status: response.status,
