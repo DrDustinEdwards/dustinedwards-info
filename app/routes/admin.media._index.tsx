@@ -730,7 +730,35 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "set-tags") {
     const key = String(form.get("key") ?? "");
-    const saved = await setMediaTags(env, key, String(form.get("tags") ?? ""));
+    const tags = String(form.get("tags") ?? "").trim();
+
+    /*
+     * **AN EMPTY FIELD IS NOT AN INSTRUCTION TO CLEAR.**
+     *
+     * This used to pass whatever arrived straight to `setMediaTags`, so blanking
+     * the text box and pressing Save wiped every tag on the key and reported
+     * "Tags cleared" as though that had been asked for. The destructive outcome
+     * was the DEFAULT of an empty field, which is the wrong way round: the
+     * common accident and the deliberate act produced the same request.
+     *
+     * Clearing is now its own act, marked by `clear`. Nothing else changes:
+     * `setMediaTags` stays the one writer and the one author of the delimiter
+     * rule, so a chip still cannot become a second way to format a tag.
+     *
+     * Not a confirmation ceremony. Tags are retypable, so the fix is to stop
+     * the accident being expressible, not to ask twice about it.
+     */
+    const clearing = form.get("clear") !== null;
+    if (!tags && !clearing) {
+      return {
+        message:
+          `Nothing changed for ${key}. The tag field was empty, and an empty ` +
+          `field does not clear tags. Remove them one at a time, or press ` +
+          `Clear all.`,
+      };
+    }
+
+    const saved = await setMediaTags(env, key, clearing ? "" : tags);
     return {
       message: saved.length
         ? `Tags saved for ${key}: ${saved.join(", ")}.`
@@ -2591,7 +2619,12 @@ export default function AdminMedia({
                     the SUGGESTIONS the path implies beside them.
 
                     Every one of these is a submit button on the SAME `set-tags`
-                    intent, carrying the WHOLE resulting list as its value. That
+                    intent, carrying the WHOLE resulting list as its value, with
+                    ONE exception: the chip whose removal would leave nothing
+                    submits `clear` instead, because an empty `tags` value is no
+                    longer an instruction to clear. A button carries exactly one
+                    name and value, so the marker replaces the list rather than
+                    accompanying it. That
                     is deliberate: `setMediaTags` stays the one writer and the one
                     author of the delimiter rule, so a chip cannot become a second
                     way to write a tag that formats it differently. This table has
@@ -2612,8 +2645,12 @@ export default function AdminMedia({
                         <button
                           key={`applied-${tag}`}
                           type="submit"
-                          name="tags"
-                          value={detail.tags.filter((t) => t !== tag).join(", ")}
+                          {...(detail.tags.length === 1
+                            ? { name: "clear", value: "1" }
+                            : {
+                                name: "tags",
+                                value: detail.tags.filter((t) => t !== tag).join(", "),
+                              })}
                           className="media-tag-chip"
                           aria-label={`Remove tag ${tag}`}
                           title={`Remove tag ${tag}`}
@@ -2621,6 +2658,28 @@ export default function AdminMedia({
                           {tag} <span aria-hidden="true">&times;</span>
                         </button>
                       ))}
+                      {/*
+                        CLEAR ALL, an explicit act with its own control.
+
+                        Without it the only way to empty a long list would be to
+                        remove chips one at a time, which is the kind of friction
+                        that gets routed around. The point of the fix is that
+                        clearing is DELIBERATE, not that it is tedious. Shown
+                        only above one tag, because at exactly one tag the chip
+                        beside it already does this and two controls for one act
+                        is noise.
+                      */}
+                      {detail.tags.length > 1 ? (
+                        <button
+                          type="submit"
+                          name="clear"
+                          value="1"
+                          className="media-tag-chip media-tag-clear"
+                          title={`Remove all ${detail.tags.length} tags`}
+                        >
+                          Clear all
+                        </button>
+                      ) : null}
                       {detail.tagSuggestions.map((tag) => (
                         <button
                           key={`suggested-${tag}`}

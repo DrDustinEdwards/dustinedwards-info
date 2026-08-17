@@ -987,6 +987,36 @@ const STATES = [
     }),
     actionData: { confirmDelete: "1234abcd5678ef90.png" },
   },
+  /*
+   * TAGS ON THE DETAIL, both branches, because until 2026-08-17 no state
+   * carried any and the whole chip region rendered in NO state. A blank
+   * submit clearing every tag was invisible here for that reason.
+   *
+   * Two states, because the chip has two shapes: with several tags a chip
+   * carries the remaining list and a separate Clear all appears, and at
+   * exactly one tag the chip itself becomes the clear, since an empty `tags`
+   * value no longer means clear.
+   */
+  {
+    name: "media, detail with several tags",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: MEDIA_DETAIL({ tags: ["roster", "photo", "2019"] }),
+    }),
+  },
+  {
+    name: "media, detail with one tag",
+    entry: "app/routes/admin.media._index.tsx",
+    path: "/admin/media",
+    url: "/admin/media?key=1234abcd5678ef90.png",
+    loaderData: MEDIA_SHELL({
+      objects: [MEDIA_OBJECT()],
+      detail: MEDIA_DETAIL({ tags: ["roster"] }),
+    }),
+  },
   {
     // THE DETAIL VIEW, where set-alt and delete now live. Both mutations must
     // appear HERE and nowhere else, which is exactly what comparing this
@@ -3796,7 +3826,7 @@ assert(
 /*
  * FLOOR RAISED 405 -> 412 by the three delete-confirmation states.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 430,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 434,
  * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
  * retired; dropping the whole no-script section is 20 assertions and still
  * fails. The message below prints the same number as this comment, which is
@@ -3811,7 +3841,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 430.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 434.`,
   );
 }
 
