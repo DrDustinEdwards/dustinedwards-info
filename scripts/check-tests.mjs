@@ -82,12 +82,13 @@ const TEST_DIR = join(root, "test");
  * numbers moved in the SAME COMMIT as the file, which is the thing this comment
  * keeps recording that people keep not doing.
  */
-const MINIMUM_FILES = 19;
-/* 216 against 225 measured. Raised from 212, which was set against 221 and
-   would have let `ssr-nonce` be deleted whole without the test count noticing;
-   the file floor above is what actually catches a file leaving, and this one
-   catches a file being hollowed out in place. */
-const MINIMUM_TESTS = 216;
+const MINIMUM_FILES = 20;
+/* 223 against 232 measured, after `colophon-facts` (7) landed in the same
+   commit as the numbers. It was 216 against 225, and 212 before that against
+   221, which would have let a whole file be deleted without the test count
+   noticing; the file floor above is what actually catches a file leaving, and
+   this one catches a file being hollowed out in place. */
+const MINIMUM_TESTS = 223;
 
 let checks = 0;
 let failures = 0;
