@@ -3,10 +3,12 @@
  *
  * OBSERVATION BOUNDARY: this is a GENERATOR, not a gate. It renders; it asserts
  * nothing about what is already on disk. What proves its output is committed is
- * `check:media` against the `build:assets` manifest, and what proves the output
- * itself is `check:logo`, which since 2026-08-13 parses the ICO container,
- * checks every raster's dimensions against `scripts/fixtures/icon-suite.json`
- * and probes one tile pixel per raster.
+ * `check:content`, which since 2026-08-18 compares the `build:assets` manifest
+ * against `public/` OFFLINE (it was `check:media`, and it was remote-only, which
+ * is how a file shipped unindexed). What proves the output itself is
+ * `check:logo`, which since 2026-08-13 parses the ICO container, checks every
+ * raster's dimensions against `scripts/fixtures/icon-suite.json` and probes one
+ * tile pixel per raster.
  *
  * What still nothing sees: the SHAPE of a rendered raster. An icon whose tile is
  * right and whose mark is clipped, mirrored or drawn in the wrong purple passes
@@ -35,6 +37,7 @@
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -249,3 +252,46 @@ emit("android-chrome-512x512.png", png(square({ size: 512, mark: DARK, tile: TIL
 emit("maskable-icon-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.19 }), 512));
 
 emit("og-image.png", png(ogCard(), 1200));
+
+/*
+ * REGENERATE THE ASSET MANIFEST, the way build-diagrams.mjs does, and for the
+ * reason this script was the last one not to.
+ *
+ * Everything above writes files into `public/`, and `content/generated/assets.json`
+ * is derived from exactly that directory. There is no world in which a stale one
+ * is wanted, so it is not left to be remembered: this script has NO npm alias
+ * (it is run as `node scripts/build-icons.mjs`), it is run by hand and rarely,
+ * and it is the only generator that adds NEW files to `public/` rather than
+ * rewriting ones already listed. That combination is why the ruling singled it
+ * out: a new icon would otherwise sit unindexed until someone happened to run
+ * `build:assets` for an unrelated reason.
+ *
+ * ONLY WHEN WRITING TO public/. With `--out` pointed at a scratch directory this
+ * script is rendering for inspection, nothing under `public/` moved, and
+ * regenerating the manifest would be a side effect nobody asked for.
+ *
+ * The media index itself still cannot be rebuilt from here: it needs the ASSETS
+ * binding and therefore the Worker. Saying so is all this can do, and saying it
+ * loudly is the point.
+ */
+if (OUT === join(ROOT, "public")) {
+  // cwd pinned to ROOT: build-assets.mjs resolves `public` and `content/generated`
+  // relative to the working directory, so inheriting a caller's cwd would walk
+  // the wrong tree or write the artifact somewhere nobody looks.
+  const manifest = spawnSync(process.execPath, [join(ROOT, "scripts", "build-assets.mjs")], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
+  process.stdout.write(manifest.stdout ?? "");
+  if (manifest.status !== 0) {
+    process.stderr.write(manifest.stderr ?? "");
+    throw new Error("build:assets failed after icons changed");
+  }
+  console.log(
+    "\n  NOTE: the icon assets were rewritten, so the media index is now stale and\n" +
+      '        check:media will fail until it is rebuilt. Press "Rebuild media index"\n' +
+      "        on /admin/media, then re-run check:media.\n",
+  );
+} else {
+  console.log("\n  NOTE: --out is not public/, so the asset manifest was left alone.\n");
+}
