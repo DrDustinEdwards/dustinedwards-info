@@ -6847,10 +6847,37 @@ a:hover {
   color: var(--text-muted);
 }
 
-/* Code block furniture. The label and button are script-added; the padding
-   below reserves room so nothing jumps when they appear. */
+/* Code block furniture. The label and button are script-added, so the room for
+   them is reserved CONDITIONALLY. It used to be unconditional, and a reader
+   with no script got 2.25rem of empty space above every fence, on every post,
+   for a button that could never arrive. That is the audit's tier 3 finding.
+
+   Two rules rather than one, and they answer different browsers:
+
+     `scripting: enabled` reserves the space at FIRST PAINT wherever it is
+     supported, so the button lands in room that was already there and nothing
+     moves. This is the one that matters.
+
+     `[data-enhanced]` is set by the enhancement itself, on the same element, in
+     the same block that appends the furniture. It covers a browser that runs
+     script and does not know the media feature: the space arrives with the
+     button rather than before it, which costs one small shift and is the only
+     alternative to the button sitting on top of the first line of code.
+
+   A reader with no script matches NEITHER and gets no gap, which is the point.
+   `position: relative` stays unconditional: the furniture is positioned against
+   it, and it reserves nothing. */
 .prose pre {
   position: relative;
+}
+
+@media (scripting: enabled) {
+  .prose pre {
+    padding-top: 2.25rem;
+  }
+}
+
+.prose pre[data-enhanced] {
   padding-top: 2.25rem;
 }
 
@@ -7097,7 +7124,11 @@ a:hover {
     line-height: 1.5;
   }
 
-  .prose pre {
+  /* `[data-enhanced]` is carried too, or it would outrank this by one attribute
+     selector and print a fence with 2.25rem of space above it for a button that
+     this same block sets to display: none. */
+  .prose pre,
+  .prose pre[data-enhanced] {
     padding-top: 0.75rem;
     white-space: pre-wrap;
     word-break: break-word;
