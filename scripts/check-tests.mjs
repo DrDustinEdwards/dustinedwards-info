@@ -74,13 +74,20 @@ const TEST_DIR = join(root, "test");
  * header and the Display popover have to build ONE url per column. Both are
  * properties two callers can drift apart on, which is why they are tests rather
  * than a comment.
+ *
+ * 225 across 19 files, RE-MEASURED THROUGH THIS GATE on 2026-08-18 when
+ * `ssr-nonce` (4) landed: the SSR entry passed the CSP nonce as a ServerRouter
+ * prop and not as a renderToReadableStream option, so react-dom's own Suspense
+ * completion scripts shipped bare and the enforcing policy blocked them. Both
+ * numbers moved in the SAME COMMIT as the file, which is the thing this comment
+ * keeps recording that people keep not doing.
  */
-const MINIMUM_FILES = 18;
-/* 186 against 198 measured, roughly 94 percent. Raised from 183 with the
-   typed-count ladder, which is the first thing here asserting about an ACTION's
-   guard rather than about a pure view helper: it was extracted out of the route
-   precisely so a test could hold it. */
-const MINIMUM_TESTS = 212;
+const MINIMUM_FILES = 19;
+/* 216 against 225 measured. Raised from 212, which was set against 221 and
+   would have let `ssr-nonce` be deleted whole without the test count noticing;
+   the file floor above is what actually catches a file leaving, and this one
+   catches a file being hollowed out in place. */
+const MINIMUM_TESTS = 216;
 
 let checks = 0;
 let failures = 0;
