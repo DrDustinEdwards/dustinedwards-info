@@ -42,12 +42,38 @@ export default async function handleRequest(
    * `ServerRouterProps.nonce` in react-router's types, and PR #15170, "Use the
    * ServerRouter nonce for nonce-aware SSR components when they don't provide
    * their own value so strict CSP pages can load them."
+   *
+   * **THE PROP IS NOT ENOUGH. REACT EMITS INLINE SCRIPTS OF ITS OWN, AND ONLY
+   * THE RENDER OPTION BELOW STAMPS THOSE.**
+   *
+   * The prop reaches react-router's components. It cannot reach react-dom,
+   * which writes its own inline `<script>` blocks to COMPLETE a Suspense
+   * boundary whose content resolves after the shell has flushed. Those are the
+   * `$RC` instruction scripts, and react-dom takes their nonce from the
+   * `renderToReadableStream` OPTIONS, never from a prop on the tree.
+   *
+   * MEASURED, not inferred: a boundary resolving after the shell emits exactly
+   * two inline scripts, `<script id="_R_">` and a bare `<script>`. Without the
+   * option both ship with no nonce; with it both carry one. `test/ssr-nonce.test.mjs`
+   * holds that pair, including the no-option control, so the option cannot be
+   * dropped without a named failure.
+   *
+   * **This was inert for eleven days and then was not.** The policy spent them
+   * in Report-Only, where a blocked script is only a report. Enforcement landed
+   * 2026-08-17 and the site's ONE Suspense boundary, the lazily imported
+   * CodeMirror in the post editor, stopped completing: the browser refused the
+   * two scripts, the boundary never swapped its `null` fallback for the editor,
+   * and react reported error #419, "the server could not finish this Suspense
+   * boundary". The editor route rendered a plain textarea and nothing said why.
    */
   const nonce = getNonce(loadContext);
 
   const body = await renderToReadableStream(
     <ServerRouter context={routerContext} url={request.url} nonce={nonce} />,
     {
+      // For react-dom's OWN streaming scripts. See the block above; the prop on
+      // ServerRouter does not reach them and an enforcing CSP blocks them.
+      nonce,
       onError(error: unknown) {
         responseStatusCode = 500;
         // Log streaming rendering errors from inside the shell.  Don't log
