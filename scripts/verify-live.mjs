@@ -66,7 +66,9 @@ import {
 // against the rendered page, and a copy of those leads here would be a third
 // mirror to go stale, asserting what this harness remembers rather than what
 // the index carries.
-import { COLOPHON_SECTIONS, statusLabel } from "../app/lib/colophon-sections.mjs";
+import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
+// The fact needles, and the `statusLabel` call that used to be made here.
+import { colophonFacts } from "./lib/colophon-facts.mjs";
 
 // The card key, DERIVED with the same function the sync and the uploader use.
 // A literal key here survived exactly until the day the hash set changed; see
@@ -784,70 +786,23 @@ const ASK_PROBE_LIMIT = 3;
   };
 
   /**
-   * Element-delimited, so a token cannot pass on a neighbour's substring.
+   * The fact needles, from `scripts/lib/colophon-facts.mjs`.
    *
-   * `react` is a substring of `react-dom` and `react-router`, so a bare
-   * `includes("react")` survives the react entry being dropped entirely. That
-   * is the "token that cannot fail" case, which reads as coverage and is worse
-   * than a missing check. `>react<` is the rendered `<code>` and fails.
+   * They used to be a closure right here, and that is what made this the
+   * colophon's second registration site with no offline reader. A section could
+   * be added to the descriptor with its body rule and without its fact list,
+   * and the first thing to say so was this harness, crashing after a deploy.
+   * That is what happened to `security` in ship window 8.
    *
-   * @param {string} v
-   */
-  const el = (v) => `>${v}<`;
-
-  /**
-   * Every discrete fact each section's RECORD BODY was assembled from, in
-   * `colophonPageInput` order.
-   *
-   * Read from the same two JSON files the page renders, never restated here.
-   *
-   * **`notAdopted[].status` IS swept, and its absence here is why the defect
-   * survived.** Until 2026-08-05 the record body carried the raw enum,
-   * `(refused)` and `(accepted-gap)`, while the page rendered the label through
-   * a STATUS_LABEL that lived in `colophon.tsx`. For `accepted-gap` the hyphen
-   * meant the indexed token was on the page in no casing at all. The map moved
-   * into the descriptor so both readers share it, and the token is swept
-   * through `statusLabel()` rather than as a literal, so this assertion cannot
-   * drift from what the page renders.
+   * Moved into a module so `test/colophon-facts.test.mjs` can assert the
+   * coverage offline. The values are still authored independently of
+   * `colophonPageInput`, deliberately; the module's header says why deriving
+   * them would make this sweep unable to fail.
    *
    * @param {string} id
    * @returns {string[]}
    */
-  const factsFor = (id) => {
-    if (id === "runtime")
-      return [
-        el(stack.runtime.compatibilityDate),
-        ...stack.runtime.compatibilityFlags.map(el),
-        el(stack.runtime.nodeVersion),
-      ];
-    if (id === "bindings")
-      return stack.bindings.flatMap((/** @type {any} */ b) => [
-        el(b.name),
-        `(${b.kind})`,
-        el(b.what),
-        b.whyLoadBearing,
-      ]);
-    if (id === "schema") return stack.migrations.map(el);
-    if (id === "gates") return stack.gates.map(el);
-    if (id === "dependencies")
-      return stack.dependencies.flatMap((/** @type {any} */ d) => [el(d.name), el(d.range)]);
-    if (id === "features")
-      return features.features.flatMap((/** @type {any} */ f) => [
-        el(f.component),
-        el(f.name),
-        el(f.what),
-      ]);
-    if (id === "not-adopted")
-      return stack.notAdopted.flatMap((/** @type {any} */ n) => [
-        `${n.name} <`,
-        `(${statusLabel(n.status)})`,
-        el(n.reason),
-      ]);
-    // Fail closed, for the reason colophonPageInput does: a section added to
-    // the descriptor with no rule here would be swept as its lead alone, which
-    // passes and proves nothing about the content underneath it.
-    throw new Error(`verify-live has no fact list for colophon section "${id}"`);
-  };
+  const factsFor = (id) => colophonFacts(stack, features, id);
 
   /**
    * A term that exists ONLY on the colophon, so a hit cannot come from a post.
