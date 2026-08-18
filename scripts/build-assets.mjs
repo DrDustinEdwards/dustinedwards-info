@@ -23,7 +23,7 @@ import { readdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { classify } from "../app/lib/media/classify.mjs";
+import { classify, excludedFromAssets } from "../app/lib/media/classify.mjs";
 
 export const PUBLIC_DIR = "public";
 export const ASSET_MANIFEST_PATH = path.join("content", "generated", "assets.json");
@@ -34,6 +34,12 @@ export const ASSET_MANIFEST_PATH = path.join("content", "generated", "assets.jso
  * Sorted so the artifact is stable: an unordered directory read would rewrite
  * the file on a machine whose filesystem enumerates differently, and a generated
  * artifact that churns cannot be byte-compared by anything.
+ *
+ * Minus the named non-assets in `classify.mjs`. The exclusion is applied HERE,
+ * inside the walk, rather than in main(): `check:media` imports this function and
+ * diffs what it returns against D1, so an exclusion applied only to the manifest
+ * would make the gate demand a row for a file the manifest deliberately omits.
+ * One set, both readers.
  *
  * @param {string} [dir]
  * @returns {Promise<string[]>}
@@ -51,7 +57,12 @@ export async function walkPublic(dir = PUBLIC_DIR) {
     // Site-absolute, forward slashes, because that is what the browser asks for
     // and what `env.ASSETS.fetch()` matches on. Backslashes on Windows would
     // make the artifact platform-dependent.
-    out.push(`/${path.relative(PUBLIC_DIR, full).split(path.sep).join("/")}`);
+    const sitePath = `/${path.relative(PUBLIC_DIR, full).split(path.sep).join("/")}`;
+    // Named non-assets only. Anything else unrecognised stays in the list and
+    // meets classify(), which throws. Skipping is a decision someone made by
+    // name, never a fallthrough.
+    if (excludedFromAssets(sitePath)) continue;
+    out.push(sitePath);
   }
   return out.sort();
 }

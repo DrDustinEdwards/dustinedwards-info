@@ -65,6 +65,55 @@ export function classify(pathOrKey) {
 }
 
 /**
+ * Files under `public/` that are NOT assets, BY NAME, each with its reason.
+ *
+ * `_headers` is a DEPLOY-TIME CONTROL FILE. Cloudflare's static-asset uploader
+ * reads it, applies the rules to everything else, and never serves it; there is
+ * no URL for it and there is nothing for the media index to point at. A row for
+ * it would claim a static asset that 404s, which is the exact falsehood the
+ * index exists to prevent. `_redirects` is the same contract and is listed now
+ * so adding one is a one-line diff rather than a repeat of this session.
+ *
+ * **NAMED, not a rule.** The tempting version of this is "skip anything with no
+ * extension", and that is a catch-all that fails OPEN: the next extensionless
+ * file nobody has thought of disappears from the manifest silently instead of
+ * stopping a build. This map excludes two paths and nothing else. Everything
+ * unrecognised still reaches `classify()` and still throws.
+ *
+ * Keyed on the SITE-ABSOLUTE path, so the exclusion is anchored at the root of
+ * `public/` where Cloudflare's contract actually puts these files. A
+ * `public/publications/_headers` is not a control file, is not excluded, and
+ * fails loudly, which is what it should do.
+ */
+const NOT_ASSETS = new Map([
+  [
+    "/_headers",
+    "Cloudflare static-asset header rules. Consumed by the uploader at deploy " +
+      "time and never served, so it has no URL to index. Subject of check:headers.",
+  ],
+  [
+    "/_redirects",
+    "Cloudflare static-asset redirect rules. Same deploy-time contract as _headers.",
+  ],
+]);
+
+/**
+ * Why this path is not an asset, or null if it is one.
+ *
+ * Lives here rather than in the walk because this module is the single answer
+ * to "what kind of thing is this file", and "not a thing the index carries" is
+ * an answer to that question. `walkPublic()` and therefore `check:media` both
+ * take the set from here, so the manifest and the reconciler cannot disagree
+ * about which files exist.
+ *
+ * @param {string} pathOrKey
+ * @returns {string | null}
+ */
+export function excludedFromAssets(pathOrKey) {
+  return NOT_ASSETS.get(pathOrKey) ?? null;
+}
+
+/**
  * True when the Images binding can read intrinsic dimensions and an LQIP.
  * @param {string} pathOrKey
  */
