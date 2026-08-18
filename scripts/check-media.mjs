@@ -1,11 +1,30 @@
 /**
  * Gate: the D1 media index must agree with R2 and with `public/`, both ways.
  *
- * OBSERVATION BOUNDARY: reconciles KEYS. It lists R2, walks public/ and diffs
- * both against D1, and it never FETCHES a single one of those URLs. An object
- * that exists with a row and 404s through the serving route passes, which is
- * exactly how 58 static rows carried broken /media//path thumbnails while this
- * gate was green.
+ * OBSERVATION BOUNDARY, REWRITTEN 2026-08-18 rather than extended, because two
+ * of its sentences went false when the manifest half moved out. A boundary note
+ * is a claim that ages (hard rule 7), and this file has now aged one twice.
+ *
+ * It reconciles KEYS. It lists R2, walks public/ and diffs both against D1, and
+ * it never FETCHES a single one of those URLs. An object that exists with a row
+ * and 404s through the serving route passes, which is exactly how 58 static rows
+ * carried broken /media//path thumbnails while this gate was green.
+ *
+ * **IT NO LONGER READS content/generated/assets.json AT ALL.** That comparison
+ * was pure filesystem, so it was the one offline-capable assertion in a gate
+ * that must be remote, and it now lives in `check:content` beside the two other
+ * artifacts in that directory. What follows from the move, and it is the part
+ * worth reading twice: this gate still detects a stale manifest, but only
+ * INDIRECTLY and only AFTER A REBUILD. The Worker writes rows from the manifest,
+ * so a manifest missing a file becomes a public/ file with no D1 row, which is
+ * direction 3 below. Between a bad `build:assets` and the next rebuild, this
+ * gate sees nothing, and when it does speak it names a missing ROW rather than
+ * the manifest that caused it. That is precisely the "confusing D1 diff whose
+ * real cause is two directories away" the old comment here warned about, and it
+ * is now someone else's job to say it first, offline.
+ *
+ * So: manifest-to-filesystem is NOT here. Manifest-to-D1 is here, transitively,
+ * late, and under a different name.
  *
  *   npm run check:media -- --local
  *   npm run check:media -- --remote
@@ -42,13 +61,12 @@
  * content table and reported 7 while the index held 0.
  */
 
-import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
 import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { retryRead } from "./lib/retry.mjs";
-import { ASSET_MANIFEST_PATH, walkPublic } from "./build-assets.mjs";
+import { walkPublic } from "./build-assets.mjs";
 import { bucketNames } from "./lib/wrangler-config.mjs";
 
 const DB_NAME = "dustinedwards";
@@ -283,24 +301,6 @@ async function main() {
     problems.push(
       `${orphanStatic.length} storage='static' row(s) with no file under public/. The ` +
         `filesystem wins: DELETE these rows.\n${sample(orphanStatic)}`,
-    );
-  }
-
-  // The manifest the Worker rebuild reads. Checked against the filesystem here
-  // so a stale manifest is NAMED as one, rather than surfacing later as a
-  // confusing D1 diff whose real cause is two directories away.
-  let manifestPaths = [];
-  try {
-    manifestPaths = JSON.parse(await readFile(ASSET_MANIFEST_PATH, "utf8")).paths ?? [];
-  } catch {
-    problems.push(`${ASSET_MANIFEST_PATH} is missing or unparseable. Run: npm run build:assets`);
-  }
-  if (manifestPaths.length > 0 && JSON.stringify(manifestPaths) !== JSON.stringify(files)) {
-    const missing = files.filter((f) => !manifestPaths.includes(f));
-    const extra = manifestPaths.filter((/** @type {string} */ p) => !fileKeys.has(p));
-    problems.push(
-      `${ASSET_MANIFEST_PATH} disagrees with public/. Run: npm run build:assets\n` +
-        `        ${missing.length} file(s) missing from the manifest, ${extra.length} stale entr(ies)`,
     );
   }
 
