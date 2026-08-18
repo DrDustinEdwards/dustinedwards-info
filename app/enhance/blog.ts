@@ -92,37 +92,91 @@ function scrollSpy() {
   for (const target of targets) observer.observe(target);
 }
 
-/** Language label and a copy button on every code block. */
-function codeBlocks() {
-  for (const pre of document.querySelectorAll<HTMLElement>(".prose pre[data-lang]")) {
-    const lang = pre.dataset.lang;
-    if (lang && lang !== "text") {
-      const label = document.createElement("span");
-      label.className = "code-lang";
-      label.textContent = lang;
-      label.setAttribute("aria-hidden", "true");
-      pre.appendChild(label);
-    }
+/**
+ * Language label and a copy button on one code block.
+ *
+ * IDEMPOTENT, and the guard tests for the BUTTON rather than for the
+ * `data-enhanced` attribute it also sets. The attribute is a proxy for the
+ * thing we actually care about, and a proxy can be lost while the thing it
+ * stands for survives: strip it alone and this would append a second button to
+ * a block that already had one. Asking whether the furniture is there answers
+ * the real question and cannot drift from it.
+ *
+ * `data-enhanced` is then purely the CSS hook. `app.css` reserves the top
+ * padding for a `pre` carrying it, so the space and the thing occupying it
+ * arrive together and a reader without script is not left with a gap.
+ */
+function decorateCodeBlock(pre: HTMLElement) {
+  if (pre.querySelector(":scope > .code-copy")) return;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "code-copy";
-    button.textContent = "Copy";
-    button.setAttribute("aria-label", "Copy code to clipboard");
-    button.addEventListener("click", async () => {
-      const code = pre.querySelector("code")?.textContent ?? "";
-      try {
-        await navigator.clipboard.writeText(code);
-        button.textContent = "Copied";
-      } catch {
-        button.textContent = "Press Ctrl C";
-      }
-      setTimeout(() => {
-        button.textContent = "Copy";
-      }, 2000);
-    });
-    pre.appendChild(button);
+  const lang = pre.dataset.lang;
+  if (lang && lang !== "text") {
+    const label = document.createElement("span");
+    label.className = "code-lang";
+    label.textContent = lang;
+    label.setAttribute("aria-hidden", "true");
+    pre.appendChild(label);
   }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "code-copy";
+  button.textContent = "Copy";
+  button.setAttribute("aria-label", "Copy code to clipboard");
+  button.addEventListener("click", async () => {
+    const code = pre.querySelector("code")?.textContent ?? "";
+    try {
+      await navigator.clipboard.writeText(code);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Press Ctrl C";
+    }
+    setTimeout(() => {
+      button.textContent = "Copy";
+    }, 2000);
+  });
+  pre.appendChild(button);
+
+  // Last, so the padding never arrives before the thing it makes room for.
+  pre.setAttribute("data-enhanced", "");
+}
+
+/**
+ * Language label and a copy button on every code block, AND AGAIN AFTERWARDS.
+ *
+ * **The re-apply is the whole fix, and it is not defensive coding.** The post
+ * body is injected with `dangerouslySetInnerHTML` in `blog.$slug.tsx`, so react
+ * owns that subtree. It re-renders the container once after hydration and
+ * rewrites every child from the loader's html string, which destroys anything
+ * script appended into it.
+ *
+ * MEASURED on production, not reasoned. A MutationObserver installed before any
+ * page script recorded all six nodes attaching, then `.prose` losing and
+ * regaining all 67 of its children 23ms later, leaving zero buttons. The
+ * control run, with the enhancement chunk blocked at the network, showed the
+ * SAME wholesale replacement, which is what proves the re-render is react's own
+ * and not something this file provokes.
+ *
+ * So decorating once is a race this file loses every time. Observing the
+ * container and decorating again is the only version that survives, and the
+ * container element itself persists across the rewrite, which is why the
+ * observer keeps working.
+ *
+ * It terminates. Every write happens inside `decorateCodeBlock`, which does
+ * nothing to a `pre` already carrying `data-enhanced`, so the mutations this
+ * observer causes produce a pass that writes nothing and no further mutations.
+ */
+function codeBlocks() {
+  const prose = document.querySelector<HTMLElement>(".prose");
+  const decorateAll = () => {
+    for (const pre of document.querySelectorAll<HTMLElement>(".prose pre[data-lang]")) {
+      decorateCodeBlock(pre);
+    }
+  };
+
+  decorateAll();
+  if (!prose) return;
+  new MutationObserver(decorateAll).observe(prose, { childList: true, subtree: true });
 }
 
 /** Turns the existing heading anchors into copy-link buttons on hover. */

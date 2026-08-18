@@ -82,13 +82,13 @@ const TEST_DIR = join(root, "test");
  * numbers moved in the SAME COMMIT as the file, which is the thing this comment
  * keeps recording that people keep not doing.
  */
-const MINIMUM_FILES = 20;
-/* 223 against 232 measured, after `colophon-facts` (7) landed in the same
-   commit as the numbers. It was 216 against 225, and 212 before that against
-   221, which would have let a whole file be deleted without the test count
-   noticing; the file floor above is what actually catches a file leaving, and
-   this one catches a file being hollowed out in place. */
-const MINIMUM_TESTS = 223;
+const MINIMUM_FILES = 21;
+/* 227 against 236 measured, after `code-block-padding` (4) landed in the same
+   commit as the numbers. It was 223 against 232, 216 against 225, and 212
+   before that against 221, which would have let a whole file be deleted without
+   the test count noticing; the file floor above is what actually catches a file
+   leaving, and this one catches a file being hollowed out in place. */
+const MINIMUM_TESTS = 227;
 
 let checks = 0;
 let failures = 0;
