@@ -1,10 +1,22 @@
 /**
- * Gate for the generated content artifact.
+ * Gate for the generated artifacts under `content/generated/`.
  *
- * OBSERVATION BOUNDARY: byte-compares the artifact against a fresh generation.
- * It never renders a page, never queries D1, and cannot tell whether the rows
- * the artifact syncs INTO match it. A correct artifact and a stale database
- * look identical here.
+ * OBSERVATION BOUNDARY: byte-compares each artifact against a fresh generation
+ * of itself. It never renders a page, never queries D1, and cannot tell whether
+ * the rows an artifact syncs INTO match it. A correct artifact and a stale
+ * database look identical here.
+ *
+ * THREE artifacts, one rule: an artifact derived from something in this
+ * repository must equal a fresh derivation, offline, before it can ship.
+ * `posts.json` from `content/posts`, `template-refs.json` from a source scan,
+ * and `assets.json` from a walk of `public/`. The third arrived here on
+ * 2026-08-18 and the reason is the whole point of the rule: it was the only one
+ * of the three reconciled by a NETWORK gate, so `public/_headers` was committed
+ * and deployed inside a ship window with every offline gate green. Nothing
+ * offline had ever looked at `public/`.
+ *
+ * What that third section still cannot see is stated at its definition, and it
+ * is not a detail: manifest-to-D1 is not here and is not offline.
  *
  * Regenerates from content/posts in memory and compares against the committed
  * content/generated/posts.json. Any difference fails, which is what stops a
@@ -15,9 +27,25 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 
 import { ARTIFACT_PATH, buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
+import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
+
+/**
+ * Names, not a count. A failure that says "3 file(s) missing" sends the reader
+ * to run a command and compare two lists by eye; a failure that says which
+ * files is already the answer. Capped, because a first run against a fresh
+ * checkout could otherwise print sixty lines.
+ *
+ * @param {string[]} names
+ */
+function nameThem(names) {
+  const shown = names.slice(0, 10).map((n) => `          ${n}`);
+  if (names.length > shown.length) shown.push(`          ... and ${names.length - 10} more`);
+  return shown.join("\n");
+}
 
 /**
  * Reports the first line that differs, so the failure names a location rather
@@ -61,6 +89,7 @@ async function main() {
     const { posts } = JSON.parse(committed);
     console.log(`check:content ok. ${ARTIFACT_PATH} matches source (${posts.length} posts).`);
     await checkTemplateRefs();
+    await checkAssetManifest();
     return;
   }
 
@@ -168,6 +197,182 @@ async function checkTemplateRefs() {
       `(${parsed.generated} asset(s) referenced by ${parsed.filesRead} source file(s), ` +
       `${roster.length} of them roster photographs).`,
   );
+}
+
+/**
+ * THE THIRD GENERATED ARTIFACT, and the one that was reconciled by nothing
+ * offline until 2026-08-18.
+ *
+ * `assets.json` is the list of static files, written by `build:assets` from a
+ * walk of `public/`. **A Worker cannot list its own static assets**: the ASSETS
+ * binding has `fetch()` and nothing else, so the media rebuild running inside
+ * the Worker discovers what exists by reading this file. A manifest missing a
+ * file therefore means a file that is never indexed, never appears in
+ * /admin/media, and is not missing from anything a reader can see. It is the
+ * quietest possible failure.
+ *
+ * IT MOVED HERE FROM check:media, AND THE TIER IS THE ENTIRE POINT. The
+ * comparison is a `readdir` and a JSON read with no network in it at all, and
+ * it was the only offline-capable half of a gate tiered `network` because its
+ * other four directions list R2 and query D1. So the check existed, was
+ * correct, and ran only on `check:all --remote`. `public/_headers` was
+ * committed in `f3256e8` and shipped in window 8 with 25 green gates.
+ *
+ * WHAT THIS SECTION CANNOT SEE, stated plainly because the tier makes it
+ * tempting to assume otherwise: it compares the manifest to THE FILESYSTEM. It
+ * does not know what rows exist in D1, so a manifest that matches `public/`
+ * perfectly while the media index is months stale passes here without comment.
+ * Manifest-to-D1 is `check:media`'s, it needs the network, and moving this half
+ * out did not shrink that half by one assertion.
+ *
+ * Ordering note: this runs LAST, after both byte comparisons, because it is the
+ * cheapest to fix and the least likely to be what someone is mid-way through
+ * debugging.
+ */
+async function checkAssetManifest() {
+  const files = await walkPublic();
+
+  // FAILS CLOSED ON AN EMPTY WALK, the same discipline check:media applies to
+  // an empty R2 listing. A broken walk and an empty directory produce the same
+  // array, and every comparison below would pass vacuously against it.
+  if (files.length === 0) {
+    console.error(
+      `check:content failed. walked ${PUBLIC_DIR}/ and found 0 file(s), which cannot be right. ` +
+        `A zero-scope walk agrees with any manifest.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  /** @type {string[]} */
+  let manifestPaths;
+  try {
+    const parsed = JSON.parse(await readFile(ASSET_MANIFEST_PATH, "utf8"));
+    // `?? []` is deliberately absent. A manifest whose `paths` key is missing is
+    // a broken artifact, and defaulting it to an empty array would turn that
+    // into "every file is missing from the manifest", which is a true statement
+    // that names the wrong defect.
+    if (!Array.isArray(parsed.paths)) throw new Error("no `paths` array");
+    manifestPaths = parsed.paths;
+  } catch (error) {
+    console.error(
+      `check:content failed. ${ASSET_MANIFEST_PATH} is missing or unparseable ` +
+        `(${error instanceof Error ? error.message : String(error)}). Run npm run build:assets.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  // Order matters as well as membership: `walkPublic()` sorts, so an unsorted
+  // manifest is a hand edit or a generator that stopped sorting, and either is
+  // worth failing on. Compared as JSON for that reason rather than as sets.
+  if (JSON.stringify(manifestPaths) !== JSON.stringify(files)) {
+    const fileSet = new Set(files);
+    const missing = files.filter((f) => !manifestPaths.includes(f));
+    const extra = manifestPaths.filter((p) => !fileSet.has(p));
+    console.error(`check:content failed. ${ASSET_MANIFEST_PATH} disagrees with ${PUBLIC_DIR}/.`);
+    if (missing.length > 0) {
+      console.error(`  ${missing.length} file(s) on disk and NOT in the manifest:`);
+      console.error(nameThem(missing));
+      console.error("  These are unindexed: nothing in the Worker can discover them.");
+    }
+    if (extra.length > 0) {
+      console.error(`  ${extra.length} manifest entr(ies) with no file on disk:`);
+      console.error(nameThem(extra));
+    }
+    if (missing.length === 0 && extra.length === 0) {
+      console.error(`  same ${files.length} path(s), different ORDER. The manifest is hand-edited.`);
+    }
+    console.error("  Run npm run build:assets and commit the result.");
+    process.exit(1);
+    return;
+  }
+
+  await checkManifestIsRepoWide(manifestPaths);
+
+  console.log(
+    `check:content ok. ${ASSET_MANIFEST_PATH} matches ${PUBLIC_DIR}/ ` +
+      `(${files.length} file(s), none of them gitignored).`,
+  );
+}
+
+/**
+ * A path may not be BOTH gitignored and in the manifest.
+ *
+ * WHY THIS IS A DEFECT AND NOT A CURIOSITY. The manifest is committed, so it
+ * describes what the repository contains. A gitignored file under `public/`
+ * classifies fine, enters the manifest on whoever's machine holds it, and then
+ * exists in no clone: the artifact has quietly started describing A DISK. Two
+ * things make that live rather than theoretical here. `npm run deploy` builds
+ * from the WORKING TREE, so the file ships from that one machine; and
+ * `check:head` extracts a ref into a throwaway worktree, where the file is
+ * absent and this same comparison would fail for a reason nobody could
+ * reproduce.
+ *
+ * `.gitignore` carries `/public/phage-hunters/*.jpg`, the roster photo sources
+ * whose committed form is the generated WebP. The trap is already written down;
+ * nothing has walked into it yet. **This is a tripwire being armed, not a break
+ * being fixed**, which is exactly why the scope assertion below matters more
+ * than usual: an assertion that has never fired and cannot fire is
+ * indistinguishable from one that is merely quiet.
+ *
+ * `git check-ignore` rather than parsing `.gitignore`: negations, directory
+ * rules, precedence and nested ignore files are git's semantics, and a second
+ * implementation of them would be wrong in ways this gate could not see.
+ *
+ * @param {string[]} manifestPaths site-absolute, as the manifest stores them
+ */
+async function checkManifestIsRepoWide(manifestPaths) {
+  // SCOPE, ASSERTED FIRST. This whole check reports "nothing ignored" when the
+  // path list is empty, when git cannot answer, and when every path is clean.
+  // Only the third is a pass, so the other two are eliminated before the answer
+  // is read at all.
+  if (manifestPaths.length === 0) {
+    console.error(
+      "check:content failed. the gitignore tripwire was handed 0 path(s), so its clean " +
+        "answer describes nothing.",
+    );
+    process.exit(1);
+    return;
+  }
+
+  const repoPaths = manifestPaths.map((p) => `${PUBLIC_DIR}${p}`);
+  const result = spawnSync("git", ["check-ignore", "--stdin"], {
+    input: `${repoPaths.join("\n")}\n`,
+    encoding: "utf8",
+  });
+
+  // Exit 0 means at least one path IS ignored, 1 means none are, and anything
+  // else is git failing to answer. FAIL CLOSED on the third: an unreadable
+  // answer is not a clean one, and this is the branch that would otherwise turn
+  // a missing git into a silent pass forever.
+  if (result.status !== 0 && result.status !== 1) {
+    console.error(
+      `check:content failed. git check-ignore could not answer (status ${result.status}). ` +
+        `${(result.stderr ?? "").trim()}`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  const ignored = (result.stdout ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (ignored.length > 0) {
+    console.error(
+      `check:content failed. ${ignored.length} path(s) are BOTH gitignored and in ` +
+        `${ASSET_MANIFEST_PATH}:`,
+    );
+    console.error(nameThem(ignored));
+    console.error(
+      "  The manifest now describes a disk rather than the repository: these files exist\n" +
+        "  in no clone, they are absent from check:head's extracted worktree, and\n" +
+        "  npm run deploy would ship them from this machine alone. Either commit them or\n" +
+        "  move them out of public/, then run npm run build:assets.",
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((/** @type {unknown} */ error) => {
