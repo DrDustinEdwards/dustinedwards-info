@@ -7,9 +7,10 @@ Personal platform and Cloudflare showcase for Dustin Edwards. React Router 8 (SS
 ## Session ritual
 
 Start: `brief("dustinedwards")`, or read `capsid/conventions.md` then `dustinedwards/core.md` by hand.
-End: write a `session-YYYY-MM-DD.md` episodic (type `episodic`, under ~2KB) to the dustinedwards namespace.
 
 Do this before touching code. It is not a formality: the recurring failure in this repo is a session acting on a stale claim it could have checked in one call.
+
+**There is no end-of-session write. Sessions READ Capsid and never write it**, per `dustinedwards/core.md`. This file asked for a `session-YYYY-MM-DD.md` episodic at the end and had done since the ritual was written, which contradicted that rule outright. Capsid wins and this file was the defect, exactly as the paragraph above the ritual says. Removed 2026-08-18, after a session stopped on the conflict rather than resolving it in its own favour. Do not re-add it here: if the standing rule changes, it changes in Capsid first and this file follows.
 
 ## Hard rules
 
