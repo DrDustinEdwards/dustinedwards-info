@@ -1988,6 +1988,115 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
   force: true,
 });
 
+/* ------- 10. every route-level artifact read goes through the shared reader */
+
+/*
+ * ONE 600KB READ PER REQUEST, ENFORCED AT THE CALLER.
+ *
+ * `loadArtifact` is not a database read. It is an HTTPS round trip off
+ * Cloudflare's network to the GitHub Contents API for
+ * `content/generated/posts.json`, 601,683 bytes, base64 encoded to roughly
+ * 802,000 over the wire, then decoded and parsed inside the Worker. Measured on
+ * production at 283 to 632ms per call.
+ *
+ * `artifactReader` memoizes it per request and the admin middleware installs
+ * one on `artifactContext`, so callers that thread it share a single read.
+ * `resolveCitations` takes that reader as an OPTIONAL third argument and falls
+ * back to its own `loadArtifact` when it is absent, which keeps the resolver
+ * usable from the operator path. That fallback is also exactly what makes a
+ * missing argument silent: it works, it returns the right answer, and it costs
+ * another full round trip.
+ *
+ * ## THIS IS NOT A TRIPWIRE. IT HAD A LIVE INSTANCE.
+ *
+ * Written 2026-08-20 after the gap had been NAMED as unasserted twice without
+ * anyone looking for instances. There was one: the media loader's detail branch
+ * called `resolveCitations(env, [row.key])` with no reader, inside the same
+ * loader that had already resolved citations for the grid. So
+ * `/admin/media?key=...` fetched the artifact TWICE per request, once for the
+ * grid and once for the drawer. Found by grepping the call sites while writing
+ * this section, not by measurement, because the detail view was never sampled.
+ *
+ * ## SCOPE, AND WHAT IT DELIBERATELY DOES NOT COVER
+ *
+ * ROUTE FILES ONLY. A route runs inside a request that has a context, so it can
+ * always thread the reader. `app/lib/` is out of scope: `publish.server.ts`,
+ * `operator/api.server.ts` and `posts.server.ts` call `loadArtifact` directly
+ * and are reached from paths that hold only an `env`, so requiring a reader
+ * there would be requiring something the caller cannot supply.
+ *
+ * It asserts the ARGUMENT IS PASSED, not that it is the right reader. Passing a
+ * freshly constructed `artifactReader(env)` would satisfy this and still read
+ * twice. No cheap source check separates those, and stating the limit is worth
+ * more than a regex pretending otherwise.
+ *
+ * Comments are stripped first, because a `resolveCitations(env, keys)` written
+ * in a comment would otherwise fail a section whose subject is code. That is the
+ * inverse of the defect check:policy carried until 2026-08-19, where a comment
+ * SATISFIED an assertion; both directions cost a real reading.
+ */
+
+console.log("\n  10. every route-level artifact read goes through the shared reader");
+
+{
+  const ROUTES_DIR = join(root, "app", "routes");
+  let routeFiles = 0;
+  let resolveCalls = 0;
+  let threaded = 0;
+  const unthreaded = [];
+  const directLoads = [];
+
+  for (const file of sourceFiles(ROUTES_DIR)) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (rel.endsWith(".d.ts")) continue;
+    routeFiles += 1;
+    const code = stripComments(readFileSync(file, "utf8"));
+
+    // Every resolveCitations call in a route must carry a third argument.
+    // Matched to the closing paren of the call rather than to end of line,
+    // because the threaded form wraps and an anchored line match would read a
+    // wrapped call as two-argument.
+    for (const m of code.matchAll(/resolveCitations\(([\s\S]{0,200}?)\)\s*[,;)]/g)) {
+      resolveCalls += 1;
+      const args = m[1];
+      if (/artifactContext/.test(args)) threaded += 1;
+      else unthreaded.push(`${rel}: resolveCitations(${args.replace(/\s+/g, " ").trim()})`);
+    }
+
+    // And no route may reach loadArtifact directly, which bypasses the memo
+    // entirely. admin.tsx is the one permitted site: it is where the reader is
+    // BUILT, and the call there is the memo's own body.
+    if (rel !== "app/routes/admin.tsx") {
+      for (const _m of code.matchAll(/\bloadArtifact\(/g)) directLoads.push(rel);
+    }
+  }
+
+  /*
+   * SCOPE, ASSERTED FIRST. Every assertion below reports "nothing unthreaded"
+   * when the walk found no files, when the stripper emptied them, and when the
+   * code is genuinely clean. Only the third is a pass.
+   */
+  ok(
+    "the route walk found files and at least one resolveCitations call",
+    routeFiles >= 10 && resolveCalls >= 3,
+    `${routeFiles} route file(s), ${resolveCalls} call(s). A zero-scope walk agrees with anything.`,
+  );
+
+  ok(
+    "every route-level resolveCitations threads the shared reader",
+    unthreaded.length === 0,
+    `${unthreaded.length} call(s) fall back to their own loadArtifact, each a separate ` +
+      `600KB GitHub round trip:\n        ${unthreaded.join("\n        ")}`,
+  );
+
+  ok(
+    "no route outside admin.tsx calls loadArtifact directly",
+    directLoads.length === 0,
+    `direct call(s) in: ${[...new Set(directLoads)].join(", ")}. Thread the reader from ` +
+      `artifactContext instead, or state why this route cannot.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2012,8 +2121,13 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
  * Floored at 97, slack of five, UNCHANGED. The drop is absorbed by the existing
  * slack deliberately: lowering the floor to match would hide the next section
  * that stops running, which is the failure this floor exists for.
+ *
+ * RE-MEASURED 2026-08-20 by RUNNING it: 105 offline, after section 10 added its
+ * three assertions. Floor 97 to 100, slack of five held. Section 10 is three
+ * assertions over a walk of every route file, so a walk that stopped finding
+ * files would drop the count by three and the floor is what notices.
  */
-const MINIMUM_CHECKS = 97;
+const MINIMUM_CHECKS = 100;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

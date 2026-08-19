@@ -469,8 +469,21 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (detailKey) {
     const row = await mediaRecord(env, detailKey);
     if (row) {
+      /*
+       * THE SHARED READER, and its absence here was a live second read.
+       *
+       * This branch runs INSIDE the loader, after the listing above has already
+       * resolved citations for the page. Without the reader, `postsResolver`
+       * falls back to its own `loadArtifact`, so `/admin/media?key=...` fetched
+       * 601,683 bytes from the GitHub Contents API TWICE in one request: once
+       * for the grid and once for the drawer. Measured at 283 to 632ms per read.
+       *
+       * Found by grepping the call sites while writing the gate that now
+       * enforces this, not by measurement, because the detail view was never
+       * sampled.
+       */
       const [detailResolution, detailRefs] = await Promise.all([
-        resolveCitations(env, [row.key]),
+        resolveCitations(env, [row.key], context.get(artifactContext).load ?? undefined),
         mediaRefsFor(env, [row.key]),
       ]);
       detail = {
@@ -1127,7 +1140,11 @@ export async function action({ request, context }: Route.ActionArgs) {
     // is looking at may be minutes old and a post may have started citing this
     // object since it rendered, so the UI's opinion is never the authority.
     const [resolution, refs] = await Promise.all([
-      resolveCitations(env, [key]),
+      // The shared reader, for uniformity rather than for a saving: this action
+      // is its own request and reads the artifact once either way. Threading it
+      // anyway means every call site in this file looks the same, so the next
+      // one written by copy is threaded by default.
+      resolveCitations(env, [key], context.get(artifactContext).load ?? undefined),
       mediaRefsFor(env, [key]),
     ]);
 

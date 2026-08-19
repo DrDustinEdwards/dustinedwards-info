@@ -11,7 +11,7 @@ import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
 import {
   deletePost,
-  loadArtifact,
+  artifactContext,
   postPath,
   regenerateAllFromArtifact,
   savePost,
@@ -210,13 +210,29 @@ export async function action({ request, context }: Route.ActionArgs) {
      * step states the corpus size instead, which is what is actually at stake.
      */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    /*
+     * The request's shared reader, resolved ONCE for both branches below.
+     *
+     * A non-null assertion would be the short version and would hide the
+     * failure: the reader is installed by the /admin middleware, so its absence
+     * means this action ran outside the subtree that gates it, which is a
+     * routing defect and not a missing artifact. Naming that is worth two lines.
+     */
+    const readArtifact = context.get(artifactContext).load;
+    if (!readArtifact) {
+      throw new Error(
+        "no artifact reader on the request context. This action runs under the /admin " +
+          "middleware, which installs one, so reaching here means it did not.",
+      );
+    }
+
     if (!confirmationSatisfied(typed, 1)) {
-      const posts = await loadArtifact(env);
+      const posts = await readArtifact();
       return { confirmSyncAsk: posts.length };
     }
 
     try {
-      const posts = await loadArtifact(env);
+      const posts = await readArtifact();
       const { uploaded, keys, cacheDropped } = await syncAskCorpus(env, posts);
       const removed = await pruneAskCorpus(env, keys);
       return {
