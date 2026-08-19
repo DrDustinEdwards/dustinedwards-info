@@ -1306,7 +1306,7 @@ const ASK_PROBE_LIMIT = 3;
     `  security headers: ${expected.length} asserted by exact value on a 200 and the /admin 302`,
   );
 
-  /* --- the CSP, Phase B, Report-Only ----------------------------------- *
+  /* --- the CSP, Phase B, ENFORCED -------------------------------------- *
    *
    * **THE STATIC-NONCE ASSERTION IS THE ONE THAT MATTERS HERE.** A nonce that
    * never changes renders every page correctly, reports nothing, and protects
@@ -1314,19 +1314,36 @@ const ASK_PROBE_LIMIT = 3;
    * failure mode that looks exactly like success, and the wire is the only
    * place it can be seen: `check:headers` can prove the source interpolates a
    * variable, not that the variable varies.
+   *
+   * **REVERSED 2026-08-19, and it was eight failures late.** This block read
+   * `Content-Security-Policy-Report-Only` and required the enforcing header to
+   * be ABSENT. Enforcement was ruled and shipped on 2026-08-17 in `20c27d6`;
+   * `check:headers` flipped in the same commit and this harness did not. Every
+   * one of its nonce assertions then read a header that no longer exists, so it
+   * compared "" to "" and reported the site broken while the site was correct.
+   *
+   * The direction of the guard is preserved, not dropped: it used to refuse
+   * enforcement so that enforcement could not arrive as a side effect of some
+   * other edit, and it now refuses a REVERSION to Report-Only for the same
+   * reason. A phase change should be a decision, in both directions.
    */
   {
+    const ENFORCED = "content-security-policy";
     const RO = "content-security-policy-report-only";
 
     for (const [label, path, wantStatus] of SURFACES) {
       const { res } = await get(path);
-      const policy = res.headers.get(RO) ?? "";
-      check(`csp (${label}) ${path}: Report-Only header is present`, policy.length > 0, "ABSENT");
+      const policy = res.headers.get(ENFORCED) ?? "";
       check(
-        `csp (${label}) ${path}: the ENFORCING header is absent (Phase B is Report-Only)`,
-        res.headers.get("content-security-policy") === null,
-        `got ${JSON.stringify(res.headers.get("content-security-policy"))}. ` +
-          `Enforcing is a separate ruling.`,
+        `csp (${label}) ${path}: the ENFORCING header is present`,
+        policy.length > 0,
+        "ABSENT. Ruled 2026-08-17: this policy is enforced, not merely reported.",
+      );
+      check(
+        `csp (${label}) ${path}: Report-Only is gone (both at once is a half-migration)`,
+        res.headers.get(RO) === null,
+        `got ${JSON.stringify(res.headers.get(RO))}. Two policies means a browser ` +
+          `enforces one and reports the other, and nobody can say which is the ruling.`,
       );
       check(
         `csp (${label}) ${path}: Reporting-Endpoints names the sink`,
@@ -1355,8 +1372,8 @@ const ASK_PROBE_LIMIT = 3;
     const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
     const first = await get("/", { cookie: "theme=dark" });
     const second = await get("/", { cookie: "theme=dark" });
-    const n1 = nonceOf(first.res.headers.get(RO) ?? "");
-    const n2 = nonceOf(second.res.headers.get(RO) ?? "");
+    const n1 = nonceOf(first.res.headers.get(ENFORCED) ?? "");
+    const n2 = nonceOf(second.res.headers.get(ENFORCED) ?? "");
 
     check("csp: the header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
     check(
@@ -1365,14 +1382,15 @@ const ASK_PROBE_LIMIT = 3;
       `both responses carried ${JSON.stringify(n1)}. A static nonce renders perfectly ` +
         `and protects nothing.`,
     );
-    // And it must be the nonce the DOCUMENT actually used, or an enforcing
-    // policy would block every script while Report-Only looked healthy.
+    // And it must be the nonce the DOCUMENT actually used. Under Report-Only a
+    // mismatch was a report nobody read; under enforcement it is every script on
+    // the page refusing to run, which is exactly what happened to the editor.
     check(
       "csp: the header nonce matches the one stamped on the document's scripts",
       n1.length > 0 && first.text.includes(`nonce="${n1}"`),
       `header nonce ${JSON.stringify(n1)} does not appear as a nonce attribute in the body`,
     );
-    console.log(`  csp: Report-Only, nonce varies (${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`);
+    console.log(`  csp: ENFORCED, nonce varies (${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`);
 
     /*
      * THE SOLE ENFORCEMENT BLOCKER, PINNED. This is the other half of the
@@ -1385,11 +1403,16 @@ const ASK_PROBE_LIMIT = 3;
      * distinct nonce, against 4 distinct across 4 BYPASS responses.
      *
      * **THIS ASSERTS THE TENSION STILL EXISTS, which means it goes RED when
-     * somebody FIXES it.** That is deliberate and it is the same shape as
-     * check:headers pinning Report-Only: the two decisions are coupled, and
-     * making these routes uncacheable without ruling on enforcement, or
-     * enforcing without making them uncacheable, are both wrong. Whichever is
-     * changed first, this fires and asks for the other.
+     * somebody FIXES it.** That is deliberate: the window was ACCEPTED in
+     * writing on 2026-08-17 (option A, and it is on the colophon), so it is a
+     * standing condition rather than an outstanding bug, and a change to it
+     * should be a decision rather than a drift.
+     *
+     * It could not observe any of that between 2026-08-17 and 2026-08-19,
+     * because it read the Report-Only header and enforcement had removed it, so
+     * both sides of the comparison were "". It failed rather than passing
+     * vacuously, which is the one thing that went right, but a failing
+     * assertion that cannot see its subject is not evidence either way.
      *
      * It only runs on a genuine HIT. A cold or bypassed edge says nothing about
      * shared-cache behaviour, and asserting into that would be a check that
@@ -1402,8 +1425,8 @@ const ASK_PROBE_LIMIT = 3;
     const warmCf = warm.res.headers.get("cf-cache-status") ?? "(none)";
     if (warmCf === "HIT") {
       const again = await get("/");
-      const c1 = nonceOf(warm.res.headers.get(RO) ?? "");
-      const c2 = nonceOf(again.res.headers.get(RO) ?? "");
+      const c1 = nonceOf(warm.res.headers.get(ENFORCED) ?? "");
+      const c2 = nonceOf(again.res.headers.get(ENFORCED) ?? "");
       check(
         "csp: cookieless readers on a cache HIT SHARE one nonce (the enforcement blocker, pinned)",
         c1.length > 0 && c1 === c2,
