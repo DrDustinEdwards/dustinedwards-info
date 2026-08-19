@@ -79,9 +79,20 @@ export async function loader({ context }: Route.LoaderArgs) {
    * is these two calls and neither had a name.
    */
   const timings = context.get(timingsContext).timings;
-  const ask = await timed(timings, "layout_ask_status", () =>
-    context.get(askStatusContext)(),
-  );
+  /*
+   * IN PARALLEL, because they were strictly serial and share nothing.
+   *
+   * `ask` was awaited on its own line and `counts` was awaited inside the
+   * returned object literal, and an object literal evaluates its properties in
+   * order. So the D1 nav-count query did not start until the Ask drift check
+   * had finished, and the drift check is the slow one. Neither reads the
+   * other's result; the only reason for the ordering was where the lines
+   * happened to sit.
+   */
+  const [ask, counts] = await Promise.all([
+    timed(timings, "layout_ask_status", () => context.get(askStatusContext)()),
+    timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
+  ]);
   return {
     email: context.get(adminSessionContext).user.email,
     /**
@@ -96,9 +107,7 @@ export async function loader({ context }: Route.LoaderArgs) {
      * get badges when they get data; until then the absence is the honest
      * signal and it costs nothing to leave them bare.
      */
-    counts: await timed(timings, "layout_nav_counts", () =>
-      adminNavCounts(getEnv(context)),
-    ),
+    counts,
     /**
      * ONE number, not the status object. The badge is a count and the repair
      * lives on /admin/posts, so shipping the key lists to every admin page
