@@ -14,6 +14,9 @@
  * the editor.
  */
 
+import { createContext } from "react-router";
+
+import { memoizeOnce } from "~/lib/once.mjs";
 import { imageSize } from "image-size";
 
 import { serializeArtifact } from "~/lib/content/artifact.mjs";
@@ -218,6 +221,66 @@ export async function validateAndRender(
  * Reads the committed artifact and returns its posts, so a save can splice one
  * entry without re-rendering every other post.
  */
+/**
+ * ONE artifact read per request, shared by everything that needs it.
+ *
+ * **This is deduplication, not a cache, and the distinction is the whole
+ * justification.** Nothing here survives the request, nothing is served stale,
+ * and no TTL has to be reasoned about. Two callers asking the same question
+ * inside one request get one answer instead of two, which is a fact about the
+ * request rather than a policy about freshness. Tier 1.5 forbids caching added
+ * to hide a slow path; this hides nothing, and the slow path is named below.
+ *
+ * **What it costs today, measured on production.** `loadArtifact` is not a
+ * database read. It is `readFile` against the GitHub Contents API: an HTTPS
+ * round trip off Cloudflare's network to api.github.com, for
+ * `content/generated/posts.json`, which is 601,683 bytes and arrives base64
+ * encoded at roughly 802,000, then gets `atob`ed, `TextDecoder`ed and
+ * `JSON.parse`d in the Worker. Measured at 283 to 528ms per call.
+ *
+ * **It was happening TWICE on /admin/media.** The layout's Ask drift check
+ * loads it for the badge, and the media loader's citation resolver loads it
+ * again to scan for keys. `askStatusReader` memoized its own use and nothing
+ * bridged the two, so the second call paid full price for bytes already in
+ * memory.
+ *
+ * Request scope is enforced by construction: the memo is a closure created per
+ * request by the admin middleware and reached through a context. A module-level
+ * map keyed on `env` would have looked equivalent and been a CROSS-REQUEST
+ * cache, because Workers reuse one `env` object for the life of an isolate,
+ * and it would have served a stale corpus after a publish with nothing to say
+ * so.
+ */
+export function artifactReader(
+  env: PublishEnv,
+  /**
+   * The read itself, injectable ONLY so the memo is testable.
+   *
+   * The property that matters is "called once per request no matter how many
+   * callers ask", and that is unobservable from outside unless something can
+   * count the calls. Without this parameter the memo could silently stop
+   * memoizing and every test would still pass, which is a missing assertion
+   * rather than a passing one. Production never passes it.
+   */
+  load: (env: PublishEnv) => Promise<any[]> = loadArtifact,
+) {
+  // The memo itself lives in `once.mjs`, dependency-free, because the property
+  // "called once" is unobservable without a counter and nothing can import a
+  // `.ts` module behind a `~/` alias to count it.
+  return memoizeOnce(() => load(env));
+}
+
+/**
+ * The per-request reader, for callers that are not handed one directly.
+ *
+ * `load` is null when no middleware set it, which is every non-admin path.
+ * A caller that finds null falls back to reading the artifact itself, so this
+ * is an optimisation a route may opt into and never a requirement.
+ */
+export const artifactContext = createContext<{ load: (() => Promise<any[]>) | null }>({
+  load: null,
+});
+
 export async function loadArtifact(env: PublishEnv) {
   const file = await readFile(env, ARTIFACT_PATH);
   if (!file) return [] as any[];

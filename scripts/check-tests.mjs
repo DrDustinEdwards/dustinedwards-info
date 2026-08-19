@@ -82,14 +82,14 @@ const TEST_DIR = join(root, "test");
  * numbers moved in the SAME COMMIT as the file, which is the thing this comment
  * keeps recording that people keep not doing.
  */
-const MINIMUM_FILES = 22;
-/* 233 against 242 measured, after `asset-exclusions` (6) landed in the same
-   commit as the numbers. It was 227 against 236, 223 against 232, 216 against
-   225, and 212 before that against 221, which would have let a whole file be
-   deleted without the test count noticing; the file floor above is what
-   actually catches a file leaving, and this one catches a file being hollowed
-   out in place. */
-const MINIMUM_TESTS = 233;
+const MINIMUM_FILES = 23;
+/* 237 against 246 measured, after `artifact-once-per-request` (4) landed in the
+   same commit as the numbers. It was 233 against 242, 227 against 236, 223
+   against 232, 216 against 225, and 212 before that against 221, which would
+   have let a whole file be deleted without the test count noticing; the file
+   floor above is what actually catches a file leaving, and this one catches a
+   file being hollowed out in place. */
+const MINIMUM_TESTS = 237;
 
 let checks = 0;
 let failures = 0;
