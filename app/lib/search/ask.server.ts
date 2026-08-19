@@ -18,6 +18,7 @@ import { createContext } from "react-router";
 
 import { invalidateAnswerCache } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
+import { askExpectedUrls } from "./search.server";
 import { recordsForPosts } from "./records.mjs";
 
 /** @see app/lib/search/records.mjs */
@@ -417,15 +418,22 @@ export interface AskIndexStatus {
  * Fails in BOTH directions, the same rule the backup gate follows: an item the
  * corpus does not know about is as much a defect as a record the index lacks.
  */
-export async function askIndexStatus(
-  env: Env,
-  posts: Parameters<typeof recordsForPosts>[0],
-): Promise<AskIndexStatus> {
-  // Same filter as the uploader, or every draft would read as a missing item
-  // forever and the drift panel would cry wolf.
-  const expected = new Set(
-    recordsForPosts(publishableForAsk(posts)).map((r) => keyForUrl(r.url)),
-  );
+export async function askIndexStatus(env: Env): Promise<AskIndexStatus> {
+  /*
+   * THE EXPECTED SET COMES FROM D1, NOT FROM THE REPOSITORY ARTIFACT.
+   *
+   * It used to be `recordsForPosts(publishableForAsk(posts))` over the corpus,
+   * which meant a 600KB GitHub fetch on every admin page load to produce one
+   * integer for a nav badge. `askExpectedUrls` reads the same records out of
+   * `search_docs`, where `sync:content` materialised them from the same
+   * `records.mjs`, and applies the same visibility rule through
+   * `visibilityClause`. Grounds, the verification, and the behaviour change
+   * are all stated at that function.
+   *
+   * `publishableForAsk` is still the filter the UPLOADERS use, and it must
+   * stay in step with the SQL predicate here. `check:policy` binds the two.
+   */
+  const expected = new Set((await askExpectedUrls(env)).map((u) => keyForUrl(u)));
   const listed = await listAllAskItems(env);
   const present = new Set(listed.map((item) => item.key));
 
@@ -466,17 +474,14 @@ export const askStatusContext = createContext<AskStatusReader>();
  * grounds the posts loader already had: the AI index is an enhancement and it
  * may not take an admin page down with it when it is unbound or unreachable.
  */
-export function askStatusReader(
-  env: Env,
-  loadPosts: () => Promise<Parameters<typeof askIndexStatus>[1]>,
-): AskStatusReader {
+export function askStatusReader(env: Env): AskStatusReader {
   /** One in-flight promise per request, so concurrent callers share a listing. */
   let pending: Promise<AskIndexStatus | null> | undefined;
   return () => {
     pending ??= (async () => {
       if (!askAvailable(env)) return null;
       try {
-        return await askIndexStatus(env, await loadPosts());
+        return await askIndexStatus(env);
       } catch (error) {
         console.error("ask index status failed", error);
         return null;

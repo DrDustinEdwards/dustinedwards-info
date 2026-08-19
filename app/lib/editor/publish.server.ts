@@ -254,13 +254,19 @@ export async function validateAndRender(
 export function artifactReader(
   env: PublishEnv,
   /**
-   * The read itself, injectable ONLY so the memo is testable.
+   * The read itself, injectable for two reasons.
    *
-   * The property that matters is "called once per request no matter how many
-   * callers ask", and that is unobservable from outside unless something can
-   * count the calls. Without this parameter the memo could silently stop
-   * memoizing and every test would still pass, which is a missing assertion
-   * rather than a passing one. Production never passes it.
+   * FIRST, so the memo is testable. The property that matters is "called once
+   * per request no matter how many callers ask", and that is unobservable from
+   * outside unless something can count the calls. Without this parameter the
+   * memo could silently stop memoizing and every test would still pass.
+   *
+   * SECOND, so instrumentation lands INSIDE the memo. `admin.tsx` passes a
+   * timed `loadArtifact`, which makes the `artifact_load` mark fire once, on
+   * whichever caller reaches it first. Wrapping the returned reader instead
+   * would emit a near-zero mark of the same name on every memo hit and make
+   * the Server-Timing header ambiguous about how many reads actually happened,
+   * which is the exact question the mark exists to answer.
    */
   load: (env: PublishEnv) => Promise<any[]> = loadArtifact,
 ) {
