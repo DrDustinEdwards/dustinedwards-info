@@ -134,6 +134,6 @@ All paths are Capsid documents in the `dustinedwards` namespace unless marked.
     capsid/conventions.md      portfolio rules
     capsid/repo-structure.md   the layer model, and the .claude/ directory contract
 
-**Security headers and the Report-Only CSP are live.** Full subsystem in `security-headers.md`: both phases, the nonce chain, the report sink, and the one thing blocking enforcement. Source of truth is `workers/app.ts`, with `scripts/check-headers.mjs` bound to the ratification.
+**Security headers are live and the CSP is ENFORCED, not Report-Only** (since `20c27d6`, 2026-08-17). Full subsystem in `security-headers.md`: both phases, the nonce chain, the report sink, and the nonce-versus-shared-cache tradeoff accepted to get here. Source of truth is `workers/app.ts`, with `scripts/check-headers.mjs` bound to the ratification.
 
 The chart and diagram authoring contract for authors is `.claude/skills/charts/SKILL.md`, in this repo. Skills resolve as `<name>/SKILL.md`; a flat `.md` at that path is never loaded.
