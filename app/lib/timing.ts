@@ -14,7 +14,32 @@
  * exactly what this replaces.
  */
 
+import { createContext } from "react-router";
+
 export type Timings = Array<{ name: string; ms: number }>;
+
+/**
+ * The per-request collector, so a MIDDLEWARE and a child LOADER can write into
+ * one list and the route emits a single header.
+ *
+ * `/blog` needed none of this: one loader owns the whole request and can keep
+ * the array in a local. The admin plane cannot, because the auth gate that runs
+ * before every admin loader lives in `admin.tsx` and the queries live in child
+ * routes. Without a shared collector the session lookup is measurable only by
+ * subtracting one route's total from another's, which is how the 1200ms went
+ * unattributed in the first place.
+ *
+ * Held in a WRAPPER OBJECT whose `timings` is optional, rather than as a
+ * nullable context value. The context default then describes "nobody asked"
+ * without the type having to admit undefined, so a route that reads this before
+ * any middleware ran gets the same answer as a request without `?timing=1`.
+ */
+export const timingsContext = createContext<{ timings?: Timings }>({});
+
+/** True when this request asked to be measured. `?timing=1`, nothing else. */
+export function wantsTiming(url: URL) {
+  return url.searchParams.get("timing") === "1";
+}
 
 /**
  * Runs `fn`, recording how long it took.
@@ -36,6 +61,28 @@ export async function timed<T>(
     // In a `finally`, so a throwing call still reports the time it burned
     // before failing. A slow path that also errors is the one most worth
     // measuring and the easiest to lose.
+    into.push({ name, ms: performance.now() - start });
+  }
+}
+
+/**
+ * Runs `fn` and records how long it took, for a SYNCHRONOUS call.
+ *
+ * `createAuth()` is the reason this exists. It builds a whole Better Auth
+ * instance, including the Drizzle adapter, on every admin request, and it is
+ * synchronous, so wrapping it in the async `timed` would add an await to the
+ * uninstrumented path as well. That would be an instrument changing the thing
+ * it measures, which is the one thing an instrument may not do.
+ *
+ * Same contract as `timed`: no collector, no cost, and the call is returned
+ * directly rather than through a promise.
+ */
+export function timedSync<T>(into: Timings | undefined, name: string, fn: () => T): T {
+  if (!into) return fn();
+  const start = performance.now();
+  try {
+    return fn();
+  } finally {
     into.push({ name, ms: performance.now() - start });
   }
 }

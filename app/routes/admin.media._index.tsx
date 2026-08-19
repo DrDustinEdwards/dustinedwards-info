@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
+  data,
   useLocation,
   useNavigation,
   useSearchParams,
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { MediaConfirm } from "~/components/admin/media-confirm";
 import { MediaDrawer } from "~/components/admin/media-drawer";
@@ -250,6 +252,17 @@ const TEMPLATE_REF_KEYS = Object.keys(TEMPLATE_REFS);
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
+  /*
+   * INSTRUMENTATION, OFF BY DEFAULT. The collector is created by the /admin
+   * middleware on `?timing=1` and already holds the auth marks by the time this
+   * runs, so the header this loader emits accounts for the WHOLE request rather
+   * than for the part one file can see.
+   *
+   * Undefined on every other request, and every `timed` call below then
+   * degrades to a plain call.
+   */
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? "1") || 1;
 
@@ -298,7 +311,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   /** Free text. Trimmed once here so every reader downstream sees the same q. */
   const q = view.q;
 
-  const listed = await listMedia(env, {
+  const listed = await timed(timings, "d1_list_media", () =>
+    listMedia(env, {
     page,
     limit: picker ? 200 : MEDIA_PAGE_SIZE,
     // The reader's Display choices, straight through. The picker branch below
@@ -337,7 +351,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           ...(!view.trash && ROLE_IDS.has(filter) ? { role: filter } : {}),
           ...(q ? { q } : {}),
         }),
-  });
+    }),
+  );
   const keys = listed.objects.map((object) => object.key);
 
   if (picker) {
@@ -390,13 +405,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // it will count a mention inside a code fence that the renderer never turned
   // into a link. Neither subsumes the other, and for a delete decision the
   // union is what fails closed.
-  const [resolution, refs, twins] = await Promise.all([
-    resolveCitations(env, keys),
-    mediaRefsFor(env, keys),
-    // Exact content identity only. See `mediaTwins` for why nothing perceptual
-    // is coming.
-    mediaTwins(env),
-  ]);
+  // NAMED PER LEG AS WELL AS AS A GROUP. The group time is the wall clock the
+  // request actually pays; the legs are what says which one is the long pole.
+  // Reporting only the group would leave the next session unable to tell three
+  // fast queries from one slow one hiding behind two.
+  const [resolution, refs, twins] = await timed(timings, "d1_group_citations", () =>
+    Promise.all([
+      timed(timings, "d1_resolve_citations", () => resolveCitations(env, keys)),
+      timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
+      // Exact content identity only. See `mediaTwins` for why nothing perceptual
+      // is coming.
+      timed(timings, "d1_media_twins", () => mediaTwins(env)),
+    ]),
+  );
 
   /*
    * THE DETAIL VIEW, as a parameter on this page rather than a route of its own.
@@ -516,7 +537,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ? listed.objects.filter((o) => (twins.get(o.key) ?? []).length > 0)
       : listed.objects;
 
-  return {
+  const payload = {
     picker: false as const,
     palette: false as const,
     objects: shown.map((object) => ({
@@ -586,14 +607,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** Whether `Reset to defaults` has anything to reset. */
     modified: isModified(view),
     /** How many rows are in the bin, for the Trash lens. */
-    trashedCount: await mediaTrashedCount(env),
+    trashedCount: await timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
     /**
      * Tags in use, with counts, for the filter chips.
      *
      * From `mediaTagCounts`, which excludes trashed rows, so a tag carried only
      * by binned assets does not offer a chip leading to an empty grid.
      */
-    tagCounts: await mediaTagCounts(env),
+    tagCounts: await timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
 
     /**
      * THE LENS COUNTS, one query, sharing the filters' own predicates.
@@ -606,7 +627,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       // THE SAME LIST THE LISTING GOT. The chip and the grid disagreeing is the
       // exact defect the Unused chip shipped with, and passing one array to both
       // readers is what makes agreement structural rather than remembered.
-      ...(await mediaLensCounts(env, TEMPLATE_REF_KEYS)),
+      ...(await timed(timings, "d1_lens_counts", () =>
+        mediaLensCounts(env, TEMPLATE_REF_KEYS),
+      )),
       duplicates: twins.size,
     },
 
@@ -644,6 +667,45 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       "unattached rather than unused, because a path the code builds at runtime " +
       "is invisible to the scan and an external site can link anything.",
   };
+
+  /*
+   * SERIALIZATION IS NOT MEASURED HERE, and saying so is the point.
+   *
+   * What the framework does after this returns is a turbo-stream encode, not a
+   * `JSON.stringify`, so timing a stringify of the same object would produce a
+   * number that looks like serialization and is not. `payload_build` below is
+   * the honest measurement available from inside a loader: everything from the
+   * first query to the assembled object.
+   *
+   * The two costs this instrument still cannot see are the framework's encode
+   * and React's render. Both are derivable without touching entry.server.tsx:
+   * request the same route as a document and as a `.data` request, and the
+   * difference between their totals, with loader_total identical, is the render.
+   */
+  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+
+  // No header at all unless it was asked for, so the default response is
+  // byte-identical to what it was before any of this instrumentation existed.
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
+}
+
+/**
+ * Carries the loader's `Server-Timing` to the response, and nothing else.
+ *
+ * Deliberately does NOT set Cache-Control. `workers/app.ts` applies
+ * `private, no-store` to any response that did not set one, and the cookie
+ * downgrade forces it for every admin request regardless, so setting a cache
+ * header here would be a second answer to a question that already has one.
+ * Returning a bare Headers keeps this route on the same default as every other
+ * admin route.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers();
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
 }
 
 export async function action({ request, context }: Route.ActionArgs) {

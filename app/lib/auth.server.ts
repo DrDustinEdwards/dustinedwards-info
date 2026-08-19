@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 
 import { getDb } from "~/db";
+import { timed, timedSync, type Timings } from "~/lib/timing";
 import * as authSchema from "~/db/auth-schema";
 
 /**
@@ -79,10 +80,25 @@ export type AdminSession = NonNullable<
 export async function getAdminSession(
   env: Env,
   request: Request,
+  /**
+   * Optional collector. Absent on every request that did not ask for timing,
+   * which is all of them but the ones being diagnosed.
+   *
+   * SPLIT INTO TWO MARKS ON PURPOSE. `createAuth` and `getSession` are one
+   * line together and two completely different costs: the first is CPU
+   * building an auth instance and a Drizzle adapter from scratch on every
+   * request, the second is IO against KV. A single `auth_total` would have
+   * left the next session guessing which, and guessing is what the instrument
+   * exists to replace.
+   */
+  timings?: Timings,
 ): Promise<AdminSession | null> {
-  const session = await createAuth(env).api.getSession({
-    headers: request.headers,
-  });
+  const auth = timedSync(timings, "auth_create", () => createAuth(env));
+  const session = await timed(timings, "auth_getsession", () =>
+    auth.api.getSession({
+      headers: request.headers,
+    }),
+  );
   if (!session) return null;
   const adminEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
   if (!adminEmail || session.user.email?.toLowerCase() !== adminEmail) {
