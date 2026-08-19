@@ -7,7 +7,7 @@ import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
-import { loadArtifact } from "~/lib/editor/publish.server";
+import { artifactContext, artifactReader } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
@@ -44,6 +44,14 @@ export const middleware: Route.MiddlewareFunction[] = [
     // badge and /admin/posts wants the full status for its alert. Sharing the
     // reader means one listing per request rather than two, and a route that
     // never asks for it never pays for it.
+    /*
+     * ONE artifact read for the whole request, handed to everything that wants
+     * it. The drift check below and the media loader's citation resolver were
+     * each doing their own 600KB GitHub round trip, roughly 300 to 500ms apiece,
+     * for byte-identical content inside one request.
+     */
+    const readArtifact = artifactReader(env);
+    context.set(artifactContext, { load: readArtifact });
     context.set(
       askStatusContext,
       /*
@@ -57,7 +65,7 @@ export const middleware: Route.MiddlewareFunction[] = [
        * read and the AI Search listing indistinguishable, and they are two
        * different fixes.
        */
-      askStatusReader(env, () => timed(timings, "artifact_load", () => loadArtifact(env))),
+      askStatusReader(env, () => timed(timings, "artifact_load", readArtifact)),
     );
     return next();
   },

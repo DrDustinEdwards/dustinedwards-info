@@ -46,14 +46,17 @@ import type { MediaCitation, ReferenceResolver } from "../resolvers.server";
  *     listed: they are build output keyed by a content hash and no post cites
  *     them by name, so a usage scan would call every one unused
  */
-export const postsResolver: ReferenceResolver = async (env, keys) => {
+export const postsResolver: ReferenceResolver = async (env, keys, loadPosts) => {
   const out = new Map<string, MediaCitation[]>(keys.map((key) => [key, []]));
   if (keys.length === 0) return out;
 
   // Deliberately NOT caught: a failure here must reach `resolveCitations`, which
   // reports it, so the delete action can fail closed. Swallowing it would turn
   // "we could not check" into "nothing cites it".
-  const posts = (await loadArtifact(env)) as Array<{
+  // The caller's memo when it has one, its own read when it does not. Falling
+  // back rather than requiring one keeps this resolver usable from the operator
+  // path and from anywhere else that holds only an env.
+  const posts = (await (loadPosts ? loadPosts() : loadArtifact(env))) as Array<{
     slug?: string;
     title?: string;
     markdown?: string;

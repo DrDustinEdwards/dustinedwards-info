@@ -10,6 +10,7 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
+import { artifactContext } from "~/lib/editor/publish.server";
 import { serverTiming, timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { MediaConfirm } from "~/components/admin/media-confirm";
@@ -409,9 +410,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // request actually pays; the legs are what says which one is the long pole.
   // Reporting only the group would leave the next session unable to tell three
   // fast queries from one slow one hiding behind two.
-  const [resolution, refs, twins] = await timed(timings, "d1_group_citations", () =>
+  // NOT a d1_ mark, and the old name is why a whole session went looking for a
+  // query plan. `resolveCitations` touches no database: it reads the committed
+  // artifact over the GitHub Contents API and scans it in memory. The prefix
+  // named the wrong subsystem and sent the search to the wrong place.
+  const [resolution, refs, twins] = await timed(timings, "group_citations", () =>
     Promise.all([
-      timed(timings, "d1_resolve_citations", () => resolveCitations(env, keys)),
+      timed(timings, "resolve_citations", () =>
+        resolveCitations(env, keys, context.get(artifactContext).load ?? undefined),
+      ),
       timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
       // Exact content identity only. See `mediaTwins` for why nothing perceptual
       // is coming.
