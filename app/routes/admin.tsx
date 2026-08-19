@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Form, Link, NavLink, Outlet, redirect, useRouteLoaderData } from "react-router";
+import { Form, Link, NavLink, Outlet, data, redirect, useRouteLoaderData } from "react-router";
 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
-import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
+import { serverTiming, timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
@@ -67,7 +67,7 @@ export const middleware: Route.MiddlewareFunction[] = [
       timed(timings, "artifact_load", () => loadArtifact(e)),
     );
     context.set(artifactContext, { load: readArtifact });
-    context.set(askStatusContext, askStatusReader(env));
+    context.set(askStatusContext, askStatusReader(env, timings));
     return next();
   },
 ];
@@ -94,7 +94,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     timed(timings, "layout_ask_status", () => context.get(askStatusContext)()),
     timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
   ]);
-  return {
+  const payload = {
     email: context.get(adminSessionContext).user.email,
     /**
      * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
@@ -120,6 +120,33 @@ export async function loader({ context }: Route.LoaderArgs) {
      */
     askDrift: ask ? ask.missing.length + ask.stale.length : 0,
   };
+
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
+}
+
+/**
+ * Carries this loader's `Server-Timing` to the response.
+ *
+ * **WITHOUT THIS THE LAYOUT WAS UNMEASURABLE, and every number reported for it
+ * was inferred.** `/admin.data` carried no timing header at all, so the only
+ * way to see `layout_ask_status` was to request a CHILD route and hope the
+ * layout finished before the child serialised its own header. React Router runs
+ * them in parallel, so that observation was biased FAST by construction: the
+ * samples that went missing were exactly the slow ones, and a distribution
+ * missing its tail was being read as a range.
+ *
+ * Deliberately does NOT set Cache-Control, for the same reason the media route
+ * does not: `workers/app.ts` applies `private, no-store` to any response that
+ * did not set one, and the cookie downgrade forces it for every admin request
+ * regardless. Setting one here would be a second answer to a settled question.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers();
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
 }
 
 /**
