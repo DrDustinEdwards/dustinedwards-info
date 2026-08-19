@@ -6,7 +6,7 @@ import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
-import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
+import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { loadArtifact } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
@@ -46,14 +46,34 @@ export const middleware: Route.MiddlewareFunction[] = [
     // never asks for it never pays for it.
     context.set(
       askStatusContext,
-      askStatusReader(env, () => loadArtifact(env)),
+      /*
+       * `artifact_load` is wrapped HERE rather than by changing
+       * `askStatusReader`'s signature, because the thing worth measuring is the
+       * callback and the reader already treats it as opaque.
+       *
+       * The listing itself is then the DIFFERENCE between `layout_ask_status`
+       * and `artifact_load`, which is why both marks exist and why neither is
+       * named for the whole. Naming one mark `ask` would have made the artifact
+       * read and the AI Search listing indistinguishable, and they are two
+       * different fixes.
+       */
+      askStatusReader(env, () => timed(timings, "artifact_load", () => loadArtifact(env))),
     );
     return next();
   },
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const ask = await context.get(askStatusContext)();
+  /*
+   * THE LAYOUT LOADER RUNS ON EVERY ADMIN REQUEST, and until now nothing in it
+   * was measured. A trivial admin route costs ~1150ms against 233ms for a
+   * public one, and `auth_getsession` accounts for 57ms of that gap; the rest
+   * is these two calls and neither had a name.
+   */
+  const timings = context.get(timingsContext).timings;
+  const ask = await timed(timings, "layout_ask_status", () =>
+    context.get(askStatusContext)(),
+  );
   return {
     email: context.get(adminSessionContext).user.email,
     /**
@@ -68,7 +88,9 @@ export async function loader({ context }: Route.LoaderArgs) {
      * get badges when they get data; until then the absence is the honest
      * signal and it costs nothing to leave them bare.
      */
-    counts: await adminNavCounts(getEnv(context)),
+    counts: await timed(timings, "layout_nav_counts", () =>
+      adminNavCounts(getEnv(context)),
+    ),
     /**
      * ONE number, not the status object. The badge is a count and the repair
      * lives on /admin/posts, so shipping the key lists to every admin page
