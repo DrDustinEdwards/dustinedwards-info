@@ -6,6 +6,7 @@ import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
+import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { loadArtifact } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
@@ -24,7 +25,19 @@ export function meta() {
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
-    const session = await getAdminSession(env, request);
+    /*
+     * INSTRUMENTATION, OFF BY DEFAULT, opted into with `?timing=1` exactly as
+     * `blog._index.tsx` does. Created HERE rather than in each loader because
+     * the auth gate is the one cost every admin request pays and no child
+     * loader can see it.
+     *
+     * A request that did not ask carries `undefined` all the way down, every
+     * `timed` call degrades to a plain call, and no header is emitted. The
+     * uninstrumented path is the path that shipped.
+     */
+    const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
+    context.set(timingsContext, { timings });
+    const session = await getAdminSession(env, request, timings);
     if (!session) throw redirect("/login");
     context.set(adminSessionContext, session);
     // Lazy and memoized: this layout's loader wants a drift COUNT for the nav
