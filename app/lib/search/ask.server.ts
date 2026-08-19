@@ -19,6 +19,7 @@ import { createContext } from "react-router";
 import { invalidateAnswerCache } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
 import { askExpectedUrls } from "./search.server";
+import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 
 /** @see app/lib/search/records.mjs */
@@ -237,14 +238,30 @@ export interface CorpusSyncResult {
  * A prune that cannot see an item cannot delete it, and it reports success
  * either way. That is the failure mode this exists to remove.
  */
-async function listAllAskItems(env: Env) {
+async function listAllAskItems(env: Env, timings?: Timings) {
   /** @type {any[]} */
   const all: Awaited<ReturnType<typeof env.AI_SEARCH.items.list>>["result"] = [];
   // 50 is the API maximum. Measured: per_page 100 is rejected with
   // "Too big: expected number to be <=50".
   const perPage = 50;
   for (let page = 1; ; page += 1) {
-    const listed = await env.AI_SEARCH.items.list({ page, per_page: perPage });
+    /*
+     * ONE MARK PER PAGE, and the COUNT of them is the measurement.
+     *
+     * The pagination cost has only ever been inferred from the index size:
+     * "81 items at 50 a page, so two round trips". That is arithmetic, not a
+     * reading. Emitting a mark per iteration means the Server-Timing header
+     * carries as many `ask_list_page` entries as there were round trips, each
+     * with its own duration, so the page count is COUNTED and the cost is
+     * attributed to a specific page rather than to the loop.
+     *
+     * Entries, not a map: two pages produce two entries with the same name, and
+     * anything that collapses them by name reports one. That mistake was made
+     * once already in this codebase's own measurement of artifact_load.
+     */
+    const listed = await timed(timings, "ask_list_page", () =>
+      env.AI_SEARCH.items.list({ page, per_page: perPage }),
+    );
     const batch = listed.result ?? [];
     all.push(...batch);
     const total = listed.result_info?.total_count;
@@ -418,7 +435,7 @@ export interface AskIndexStatus {
  * Fails in BOTH directions, the same rule the backup gate follows: an item the
  * corpus does not know about is as much a defect as a record the index lacks.
  */
-export async function askIndexStatus(env: Env): Promise<AskIndexStatus> {
+export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIndexStatus> {
   /*
    * THE EXPECTED SET COMES FROM D1, NOT FROM THE REPOSITORY ARTIFACT.
    *
@@ -434,7 +451,7 @@ export async function askIndexStatus(env: Env): Promise<AskIndexStatus> {
    * stay in step with the SQL predicate here. `check:policy` binds the two.
    */
   const expected = new Set((await askExpectedUrls(env)).map((u) => keyForUrl(u)));
-  const listed = await listAllAskItems(env);
+  const listed = await listAllAskItems(env, timings);
   const present = new Set(listed.map((item) => item.key));
 
   return {
@@ -474,14 +491,14 @@ export const askStatusContext = createContext<AskStatusReader>();
  * grounds the posts loader already had: the AI index is an enhancement and it
  * may not take an admin page down with it when it is unbound or unreachable.
  */
-export function askStatusReader(env: Env): AskStatusReader {
+export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
   /** One in-flight promise per request, so concurrent callers share a listing. */
   let pending: Promise<AskIndexStatus | null> | undefined;
   return () => {
     pending ??= (async () => {
       if (!askAvailable(env)) return null;
       try {
-        return await askIndexStatus(env);
+        return await askIndexStatus(env, timings);
       } catch (error) {
         console.error("ask index status failed", error);
         return null;
