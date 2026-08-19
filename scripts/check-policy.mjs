@@ -520,10 +520,43 @@ permits("admin may create an already published post", () =>
 
   // And the source of truth actually enforces it. Read the shipped module
   // rather than restating the rule, so this fails if the filter is removed.
-  const askSource = readFileSync(
+  const askRaw = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "ask.server.ts"),
     "utf8",
   );
+  const searchRaw = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "search.server.ts"),
+    "utf8",
+  );
+
+  /*
+   * COMMENTS STRIPPED BEFORE MATCHING, and this is not tidiness.
+   *
+   * The assertion below used to be "publishableForAsk(posts) appears at least
+   * twice". On 2026-08-19 askIndexStatus stopped calling it, the change wrote a
+   * comment EXPLAINING that it used to call it, and the count stayed at two. The
+   * gate went green on prose. That is hard rule 10's comment-satisfied anchor,
+   * caught here only because the change's author went looking.
+   *
+   * LIMIT, stated: this removes block comments and whole-line `//` comments. It
+   * does not attempt trailing `//`, because a naive pass corrupts a URL inside
+   * a string literal, and it does not parse. A pattern hidden in a trailing
+   * comment would still satisfy these matches.
+   */
+  const codeOnly = (/** @type {string} */ src) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+  const askSource = codeOnly(askRaw);
+  const searchSource = codeOnly(searchRaw);
+
+  // SCOPE, ASSERTED. Stripping is only safe if it left something to match. An
+  // over-eager stripper would empty the file and every assertion below would
+  // report a missing filter that is present.
+  eq(
+    "stripping comments left the module's code behind",
+    askSource.length > askRaw.length / 3 && /export async function syncAskCorpus/.test(askSource),
+    true,
+  );
+
   eq(
     "syncAskCorpus filters through publishableForAsk",
     /recordsForPosts\(publishableForAsk\(posts\)\)/.test(askSource),
@@ -534,9 +567,75 @@ permits("admin may create an already published post", () =>
     /askPublishable\(post\)\s*\?\s*recordsForPosts\(\[post\]\)\s*:\s*\[\]/.test(askSource),
     true,
   );
+
+  /*
+   * THE DRIFT CHECK'S EXPECTED SET, re-scoped 2026-08-19 to the mechanism that
+   * replaced the one this used to watch.
+   *
+   * It no longer recomputes records from the corpus, because doing so cost a
+   * 600KB GitHub round trip on every admin page load. It reads the same records
+   * out of `search_docs`. So the property worth pinning moved with it: the
+   * expected set must come from that query, and that query must compose the
+   * shared visibility predicate rather than hand-copying it, and must stay
+   * posts-only or the twenty page records read as permanently stale.
+   */
   eq(
-    "askIndexStatus uses the same filter",
-    (askSource.match(/publishableForAsk\(posts\)/g) ?? []).length >= 2,
+    "askIndexStatus takes its expected set from askExpectedUrls",
+    /const expected = new Set\(\(await askExpectedUrls\(env\)\)/.test(askSource),
+    true,
+  );
+  eq(
+    "askIndexStatus no longer recomputes records from the corpus",
+    !/recordsForPosts\(publishableForAsk\(posts\)\)[\s\S]{0,400}listAllAskItems/.test(askSource),
+    true,
+  );
+  /*
+   * SCOPED TO THE FUNCTION BODY, not to a character window after its name.
+   *
+   * The first draft of these three matched `askExpectedUrls` followed by the
+   * needle within 900 characters. A plant that replaced the composed predicate
+   * with a hand-copied one PASSED, because `zeroState` sits directly below and
+   * composes `visibilityClause(NO_ALIAS)` itself: the window reached into the
+   * next function and found a neighbour's compliance. That is hard rule 10's
+   * unanchored needle, and it was caught by planting rather than by reading.
+   */
+  const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
+    const start = src.indexOf(`export async function ${name}(`);
+    if (start === -1) return "";
+    // To the first line that is exactly a closing brace, which is where a
+    // top-level function ends in this codebase's formatting.
+    const end = src.indexOf("\n}", start);
+    return end === -1 ? src.slice(start) : src.slice(start, end + 2);
+  };
+
+  const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
+
+  // SCOPE, ASSERTED, for the same reason as the stripper above: an extractor
+  // that returned "" would make all three assertions below report a missing
+  // predicate that is present, and an extractor that returned the whole file
+  // would make them pass on a neighbour's code, which is the defect that
+  // produced this block.
+  eq(
+    "the askExpectedUrls body was extracted, and it is that function alone",
+    expectedUrlsBody.length > 80 &&
+      expectedUrlsBody.length < searchSource.length / 4 &&
+      !expectedUrlsBody.includes("export async function zeroState"),
+    true,
+  );
+
+  eq(
+    "askExpectedUrls composes visibilityClause rather than hand-copying it",
+    expectedUrlsBody.includes("visibilityClause(NO_ALIAS)"),
+    true,
+  );
+  eq(
+    "askExpectedUrls stays posts-only, or every page record reads as stale",
+    expectedUrlsBody.includes("type = 'post'"),
+    true,
+  );
+  eq(
+    "askExpectedUrls binds seconds, the unit publish_at is stored in",
+    expectedUrlsBody.includes("Math.floor(now.getTime() / 1000)"),
     true,
   );
 }
@@ -551,13 +650,14 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 59,
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-19 by RUNNING it: 64,
+ * after the drift check moved off the corpus and the comment stripper landed. It was 59,
  * after the Ask-method block landed. Never summed. It was 45 against a floor of
- * 42, then 52. Floored at 55, slack of four: most cases are inline state fixtures driven
+ * 42, then 52. Floored at 60, slack of four: most cases are inline state fixtures driven
  * through the real decide(), so the count moves only when a transition is added
  * to the table or a source assertion is added beside it.
  */
-const MINIMUM_CHECKS = 55;
+const MINIMUM_CHECKS = 60;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
