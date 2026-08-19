@@ -546,6 +546,62 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * cheapest useful things the database can offer: tags that look like what was
  * typed, and the most recent posts.
  */
+/**
+ * Every URL the Ask index is expected to hold, from D1 rather than from git.
+ *
+ * **WHY THIS EXISTS: the admin layout was fetching 600KB from GitHub to render
+ * a nav badge.** `askIndexStatus` built its expected set by running
+ * `recordsForPosts(publishableForAsk(posts))` over the committed artifact, and
+ * the only way to get that artifact inside a Worker is
+ * `readFile` against the GitHub Contents API: an HTTPS round trip off
+ * Cloudflare's network for `content/generated/posts.json`, 601,683 bytes,
+ * base64 encoded to roughly 802,000 over the wire, then decoded and parsed.
+ * Measured on production at 283 to 528ms, on EVERY admin page load, for one
+ * integer.
+ *
+ * **THIS IS NOT A SECOND INDEXER, and that distinction is the whole argument.**
+ * `records.mjs` remains the only thing that decides what a record is. These
+ * rows were written by `sync:content` from `recordsForPosts`, so this reads
+ * the same derivation out of the place it was materialised instead of
+ * recomputing it. `keyForUrl` is still the only thing that turns a URL into an
+ * Ask key. Nothing here knows the record shape.
+ *
+ * VERIFIED BEFORE IT WAS BUILT ON, both directions, against live D1 on
+ * 2026-08-19: 90 keys from the artifact, 90 from this query, zero in either
+ * difference.
+ *
+ * **WHAT CHANGES, stated because it is a real behaviour change and not a
+ * refactor.** The expected set used to come from the repository and now comes
+ * from D1. If D1 were stale against the artifact, drift would be measured
+ * against a stale baseline and could under-report. Three things bound that: the
+ * artifact is byte-gated by `check:content`, `ship` syncs D1 and asserts
+ * three-way docsize equality in the same window, and the editor's save path
+ * writes both. The window is a deploy-time one. In exchange the badge now
+ * answers a more useful question anyway: whether Ask agrees with what the
+ * site's own search actually serves.
+ *
+ * `type = 'post'` because the Ask corpus is posts only. Page records exist in
+ * `search_docs` and are deliberately not uploaded, so including them here would
+ * report all twenty as permanently stale.
+ *
+ * The predicate is `visibilityClause(NO_ALIAS)`, composed and never hand
+ * copied, which is hard rule 1 and what `check:invariants` section 8 binds
+ * every `search_docs` reader to. It also carries the unit: `publish_at` is
+ * SECONDS, and an ad-hoc query written against milliseconds during this
+ * change's own verification silently matched everything.
+ */
+export async function askExpectedUrls(env: Env, now = new Date()): Promise<string[]> {
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+  const rows = await env.DB.prepare(
+    // CONCATENATED, not interpolated, for the reason stated at NO_ALIAS: a
+    // `${...}` truncates the literal check:invariants section 5 can see.
+    `SELECT url FROM search_docs WHERE type = 'post' AND ` + visibilityClause(NO_ALIAS),
+  )
+    .bind(nowSeconds)
+    .all<{ url: string }>();
+  return (rows.results ?? []).map((r) => r.url);
+}
+
 export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date()) {
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const needles = [...parsed.terms, ...parsed.phrases].map((t) => t.toLowerCase());

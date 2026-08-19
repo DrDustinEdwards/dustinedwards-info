@@ -7,7 +7,7 @@ import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
-import { artifactContext, artifactReader } from "~/lib/editor/publish.server";
+import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
 import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
@@ -45,28 +45,29 @@ export const middleware: Route.MiddlewareFunction[] = [
     // reader means one listing per request rather than two, and a route that
     // never asks for it never pays for it.
     /*
-     * ONE artifact read for the whole request, handed to everything that wants
-     * it. The drift check below and the media loader's citation resolver were
-     * each doing their own 600KB GitHub round trip, roughly 300 to 500ms apiece,
-     * for byte-identical content inside one request.
+     * ONE artifact read for the whole request, for whoever still needs it.
+     *
+     * **The drift check no longer does, and that is this window's fix.** It
+     * used to build its expected key set from the committed corpus, so every
+     * admin page load paid a 600KB GitHub round trip, 283 to 528ms measured, to
+     * render one integer in the nav. It now reads the same records out of
+     * `search_docs`; grounds at `askExpectedUrls`.
+     *
+     * The reader stays because the media loader's citation resolver genuinely
+     * does need the corpus: it scans post markdown for `/media/<key>`, which is
+     * not a fact D1 holds. On /admin/media that is now ONE read for the request
+     * instead of two, and on every other admin route it is zero.
+     *
+     * `artifact_load` is passed as the reader's loader so the mark fires INSIDE
+     * the memo, once, on whichever caller gets there first. Wrapping outside
+     * would emit a second near-zero mark of the same name on every memo hit and
+     * make the header ambiguous.
      */
-    const readArtifact = artifactReader(env);
-    context.set(artifactContext, { load: readArtifact });
-    context.set(
-      askStatusContext,
-      /*
-       * `artifact_load` is wrapped HERE rather than by changing
-       * `askStatusReader`'s signature, because the thing worth measuring is the
-       * callback and the reader already treats it as opaque.
-       *
-       * The listing itself is then the DIFFERENCE between `layout_ask_status`
-       * and `artifact_load`, which is why both marks exist and why neither is
-       * named for the whole. Naming one mark `ask` would have made the artifact
-       * read and the AI Search listing indistinguishable, and they are two
-       * different fixes.
-       */
-      askStatusReader(env, () => timed(timings, "artifact_load", readArtifact)),
+    const readArtifact = artifactReader(env, (e) =>
+      timed(timings, "artifact_load", () => loadArtifact(e)),
     );
+    context.set(artifactContext, { load: readArtifact });
+    context.set(askStatusContext, askStatusReader(env));
     return next();
   },
 ];
