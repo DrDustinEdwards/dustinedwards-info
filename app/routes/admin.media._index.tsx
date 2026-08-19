@@ -414,16 +414,41 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // query plan. `resolveCitations` touches no database: it reads the committed
   // artifact over the GitHub Contents API and scans it in memory. The prefix
   // named the wrong subsystem and sent the search to the wrong place.
-  const [resolution, refs, twins] = await timed(timings, "group_citations", () =>
-    Promise.all([
-      timed(timings, "resolve_citations", () =>
-        resolveCitations(env, keys, context.get(artifactContext).load ?? undefined),
-      ),
-      timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
-      // Exact content identity only. See `mediaTwins` for why nothing perceptual
-      // is coming.
-      timed(timings, "d1_media_twins", () => mediaTwins(env)),
-    ]),
+  /*
+   * SIX CALLS, ONE WALL CLOCK. The three counts below used to be `await`s
+   * inside the returned object literal, which evaluates its properties in
+   * order, so they ran three round trips deep AFTER this group had finished:
+   * five sequential steps where two would do.
+   *
+   * None of them depends on `keys`, or on each other, or on anything this
+   * group produces. They were serial because of where the lines sat, which is
+   * the same defect the admin layout loader had.
+   *
+   * **They join THIS group rather than starting at the top of the loader**, and
+   * that is deliberate. The picker and palette branches return before this
+   * point; a promise created above them would be created on paths that never
+   * await it, which is a wasted query on the picker path and an unhandled
+   * rejection waiting to happen on any of them.
+   *
+   * Named per leg as well as as a group, so the next reading says which of the
+   * six is the long pole rather than only how long the slowest was.
+   */
+  const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
+    timings,
+    "group_listing",
+    () =>
+      Promise.all([
+        timed(timings, "resolve_citations", () =>
+          resolveCitations(env, keys, context.get(artifactContext).load ?? undefined),
+        ),
+        timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
+        // Exact content identity only. See `mediaTwins` for why nothing perceptual
+        // is coming.
+        timed(timings, "d1_media_twins", () => mediaTwins(env)),
+        timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
+        timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
+        timed(timings, "d1_lens_counts", () => mediaLensCounts(env, TEMPLATE_REF_KEYS)),
+      ]),
   );
 
   /*
@@ -614,14 +639,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** Whether `Reset to defaults` has anything to reset. */
     modified: isModified(view),
     /** How many rows are in the bin, for the Trash lens. */
-    trashedCount: await timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
+    trashedCount,
     /**
      * Tags in use, with counts, for the filter chips.
      *
      * From `mediaTagCounts`, which excludes trashed rows, so a tag carried only
      * by binned assets does not offer a chip leading to an empty grid.
      */
-    tagCounts: await timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
+    tagCounts,
 
     /**
      * THE LENS COUNTS, one query, sharing the filters' own predicates.
@@ -634,9 +659,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       // THE SAME LIST THE LISTING GOT. The chip and the grid disagreeing is the
       // exact defect the Unused chip shipped with, and passing one array to both
       // readers is what makes agreement structural rather than remembered.
-      ...(await timed(timings, "d1_lens_counts", () =>
-        mediaLensCounts(env, TEMPLATE_REF_KEYS),
-      )),
+      ...lensCounts,
       duplicates: twins.size,
     },
 
