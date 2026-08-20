@@ -759,10 +759,36 @@ a:hover {
  * Scope: PUBLIC plane only. The admin chrome is deliberately untouched and
  * gets its own ruling if it ever wants one.
  */
+/* THE HEADER WRAPS, because it did not and every public page scrolled sideways
+   on a phone.
+
+   MEASURED at a 320px viewport, before: `.site-header-nav` laid out 414px wide
+   with its right edge at 552, so `document.scrollWidth` was 552 against a
+   clientWidth of 320 on /, /blog, /search, /colophon and /projects. The nav is
+   four links plus the search control plus the two theme buttons, and it was
+   `display: flex` with no `flex-wrap` and no narrow media query anywhere in
+   this file.
+
+   A RECORDED MEASUREMENT SAID THE OPPOSITE. core.md carried "wrap measured to
+   320px with no overflow and no page scroll" for the four-link nav. It is
+   false, and it was false when written: there is no wrap declaration to have
+   measured. Re-measured here rather than trusted, which is why this comment
+   carries the number.
+
+   `flex-wrap` on BOTH, deliberately. On the nav alone the brand and the nav
+   still compete for one line and the nav's own wrap point never arrives; on the
+   header alone the nav stays a 414px unbreakable row. Together the brand takes
+   the first line and the nav flows under it.
+
+   NO MEDIA QUERY, and that is the point. A breakpoint is a guess about which
+   widths exist, and this repo has five labels in the nav whose combined width
+   depends on the words. Wrapping is width-agnostic: it holds at 320, at 280,
+   and after a sixth link is added. */
 .site-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   min-height: 4rem;
   /* The shared inset. The admin topbar reads the same declaration, which is
@@ -2121,6 +2147,10 @@ a:hover {
 .site-header-nav {
   display: flex;
   align-items: center;
+  /* See the block on `.site-header` above for the measurement. Wrapping here is
+     the half that lets the four labels and three controls break; wrapping there
+     is the half that gives them a line of their own to break onto. */
+  flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.9375rem;
   --control-h: 2.25rem;
