@@ -178,6 +178,7 @@
     "check:secrets",
     "check:stack",
     "check:tests",
+    "check:types",
     "check:urls"
   ],
   "notAdopted": [
