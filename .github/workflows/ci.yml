@@ -1,0 +1,83 @@
+# The review that is not the author.
+#
+# Audit 2.1: "the gates are the review" was one person grading their own
+# homework with a rubric they wrote, on a machine that already had node_modules,
+# generated types and a real wrangler.jsonc. This runs the same rubric on a
+# machine that has none of that.
+#
+# WHAT THE CLEAN CHECKOUT ACTUALLY REVEALED, measured 2026-08-20 by extracting
+# HEAD, running `npm ci` in it and running the offline tier there: 22 passed,
+# 4 failed. `npm ci` needs no Cloudflare credentials, because `postinstall`
+# runs `bootstrap-config.mjs && wrangler types`, which writes a wrangler.jsonc
+# from the tracked example and generates worker-configuration.d.ts locally. So
+# CI reaches a typechecking state with no secrets at all, and this workflow
+# declares none.
+#
+# Two of those four failures are real and permanent and are excluded in
+# CI_EXCLUDED in scripts/check-all.mjs, each with its measured reason:
+# check:config cannot pass in any checkout, and check:backup needs gitignored
+# miniflare state. check:head is excluded for a different reason, that it is
+# VACUOUS here rather than broken.
+#
+# The other two failures were artifacts of the measurement, not of CI:
+# `git archive` produces no .git, so check:content's gitignore tripwire and
+# check:head's worktree both failed on "not a git repository". actions/checkout
+# provides a real repository, so check:content runs here and is not excluded.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to main should not race the first. `cancel-in-progress` is
+# deliberately false: the runs are the review, and cancelling one loses the
+# only record that a commit was ever checked.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Gates, clean checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # No fetch-depth override. The default shallow clone is a real repository,
+      # which is all check:content's `git check-ignore` needs, and a full history
+      # buys this workflow nothing.
+      - uses: actions/checkout@v4
+
+      # The version is READ FROM .nvmrc rather than written here. A second
+      # statement of the Node version is a mirror, and this repo has been bitten
+      # by mirrors twice this month; .nvmrc is the one place that says 24.14.1.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` and not `npm install`: it installs from the lockfile exactly and
+      # fails if package.json and the lockfile disagree, which is the property
+      # that makes this a review rather than a re-resolution.
+      #
+      # postinstall runs here and provisions wrangler.jsonc plus the generated
+      # types. If that ever needs credentials, this step is where it will fail
+      # loudly rather than silently degrading a later gate.
+      - name: Install
+        run: npm ci
+
+      # ONE COMMAND, derived. The tier is the offline tier minus CI_EXCLUDED,
+      # computed in check-all.mjs from package.json, so a gate added tomorrow is
+      # in CI by default and has to be argued OUT rather than remembered IN.
+      # Listing gate names here would be the mirror that lets the next one be
+      # forgotten, which is the exact failure that file exists about.
+      #
+      # The typecheck is inside this tier as check:types since 2026-08-20, so a
+      # build that does not compile fails CI without a separate step.
+      - name: Gates
+        run: npm run check:ci

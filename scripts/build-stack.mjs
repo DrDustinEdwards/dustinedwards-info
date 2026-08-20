@@ -88,17 +88,32 @@ export function migrationFiles(migrationsDir) {
 }
 
 /**
+ * The `check:` scripts that RUN gates rather than being one.
+ *
+ * A named set rather than a comparison, because there are two of them now and
+ * the second one caught this file out. The comment here already said "the
+ * runners" in the plural while the filter compared against exactly one name, so
+ * adding `check:ci` on 2026-08-20 would have put a runner in the colophon's
+ * gate list and made the site claim 28 gates where 27 exist.
+ */
+export const RUNNERS = new Set(["check:all", "check:ci"]);
+
+/**
  * Every gate, derived from package.json's `check:*` scripts.
  *
- * The same derivation `check-all.mjs` performs, and for the same stated reason:
- * a hardcoded list is how the next gate gets forgotten. The runners themselves
- * are excluded because they run gates rather than being one.
+ * ONE DEFINITION, imported by `check-all.mjs` rather than restated there.
+ * Until 2026-08-20 both files implemented this filter separately, which is the
+ * mirror class this repo keeps being bitten by: two derivations of one rule,
+ * agreeing until the day one of them gains a case. That day was `check:ci`.
+ *
+ * A hardcoded list is how the next gate gets forgotten, which is why it is
+ * derived at all.
  *
  * @param {any} pkg
  */
 export function gateNames(pkg) {
   return Object.keys(pkg.scripts ?? {})
-    .filter((name) => name.startsWith("check:") && name !== "check:all")
+    .filter((name) => name.startsWith("check:") && !RUNNERS.has(name))
     .sort();
 }
 
