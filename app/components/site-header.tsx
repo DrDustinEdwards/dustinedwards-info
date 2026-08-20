@@ -61,7 +61,13 @@ export function SiteHeader() {
         <SiteLogoHeader className="site-header-mark" />
         {SITE.name}
       </Link>
-      <nav className="site-header-nav">
+      {/* NAMED, because site-footer.tsx's own comment already says "The nav
+          carries an aria-label because the header has one too, and two
+          unlabelled navigation landmarks on a page are indistinguishable to a
+          screen reader". The footer carried aria-label="Colophon" and the
+          header carried nothing, so that sentence was false on every page and
+          the pair it describes never existed. */}
+      <nav className="site-header-nav" aria-label="Main">
         <NavLink to="/blog" end>Blog</NavLink>
         <NavLink to="/projects">Projects</NavLink>
         <NavLink to="/playground">Playground</NavLink>
