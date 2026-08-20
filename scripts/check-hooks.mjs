@@ -337,25 +337,120 @@ ok(
     `every session and wants a line in this gate before it wants a line in settings.`,
 );
 
+/*
+ * THE ASSERTION FOLLOWS THE DELEGATION, since 2026-08-20.
+ *
+ * It used to read the command string in settings.json and require
+ * `npm run -s typecheck` to appear THERE. The property it protects is that
+ * package.json is the one place defining what a typecheck is, and reading the
+ * command string was a proxy for that: true while the hook was one command, and
+ * false the moment the hook needed any logic of its own.
+ *
+ * The Stop hook now delegates to `.claude/hooks/stop-typecheck.sh`, which
+ * guards on `stop_hook_active` before running the typecheck. That preserves the
+ * property exactly and moved it one file away, so this gate went red on a change
+ * that kept everything it cares about. Reported as a finding rather than
+ * silenced with a fixture.
+ *
+ * **AND FOLLOWING IT CLOSES A HOLE THAT WAS ALWAYS THERE.** A Stop hook pointed
+ * at a script could have run anything at all, or nothing, and this gate would
+ * have seen only a well-formed command string. The subject is now what actually
+ * runs, whether that is written in settings.json or one delegation away.
+ *
+ * ONE HOP, deliberately. A script that calls another script is not followed,
+ * and that limit is stated rather than papered over: chasing an arbitrary chain
+ * needs a shell parser, and this gate is not one. A second hop would pass this
+ * assertion while running something else entirely.
+ */
+const resolveStopSubject = (/** @type {string} */ command) => {
+  const referenced = command.match(/\.claude\/hooks\/([\w.-]+\.sh)/)?.[1] ?? "";
+  if (!referenced) return { text: command, via: "" };
+  const scriptPath = join(root, ".claude", "hooks", referenced);
+  if (!existsSync(scriptPath)) return { text: command, via: referenced };
+  return { text: shellCodeOnly(readFileSync(scriptPath, "utf8")), via: referenced };
+};
+
+/*
+ * COMMENTS STRIPPED BEFORE MATCHING, and this is not tidiness either.
+ *
+ * The mirror assertion below asks whether the subject RESTATES a typecheck
+ * fragment instead of delegating. `stop-typecheck.sh` explains the defect it
+ * exists to fix, and explaining it means naming `wrangler types`,
+ * `react-router typegen` and `tsc -b` in prose. Unstripped, all three fired on
+ * a script that restates nothing and delegates correctly.
+ *
+ * That is the same class as check:policy's 2026-08-19 defect and its exact
+ * inverse: there a comment SATISFIED an assertion about code, here a comment
+ * FAILS one. Both are the assertion reading prose as though it were code.
+ *
+ * LIMIT, stated: whole-line `#` comments only. A trailing `#` is not attempted,
+ * because a naive pass would cut a shell string containing one, and this is not
+ * a shell parser. A fragment hidden after code on the same line still fires.
+ */
+const shellCodeOnly = (/** @type {string} */ src) =>
+  src.replace(/^s*#.*$/gm, " ");
+
 // EVERY command, not the first. The loop is the fix; the index was the defect.
 stopCommands.forEach((/** @type {string} */ command, /** @type {number} */ i) => {
   const label = stopCommands.length > 1 ? `Stop command ${i + 1}` : "the Stop hook";
+  const subject = resolveStopSubject(command);
+  const where = subject.via ? `${label} (via ${subject.via})` : label;
+
+  /*
+   * SCOPE, ASSERTED. A delegated subject that came back empty would satisfy the
+   * mirror assertions below trivially, and would fail the delegation assertion
+   * for a reason that reads like a missing typecheck rather than a missing file.
+   */
   ok(
-    `${label} invokes the repo's own ${TYPECHECK_SCRIPT} script`,
-    new RegExp(`npm\\s+run\\s+(?:-s\\s+)?${TYPECHECK_SCRIPT}\\b`).test(command),
-    `its command is ${JSON.stringify(command)}. It must run ` +
-      `\`npm run -s ${TYPECHECK_SCRIPT}\` so that package.json stays the one place ` +
-      `that defines what a typecheck is.`,
+    `${where}: the subject to check is non-empty`,
+    subject.text.length > 0,
+    subject.via
+      ? `${subject.via} resolved to zero bytes, so nothing below examined anything`
+      : `the command string is empty`,
+  );
+
+  ok(
+    `${where} invokes the repo's own ${TYPECHECK_SCRIPT} script`,
+    new RegExp(`npm\\s+run\\s+(?:-s\\s+)?${TYPECHECK_SCRIPT}\\b`).test(subject.text),
+    subject.via
+      ? `${subject.via} never runs \`npm run -s ${TYPECHECK_SCRIPT}\`, so the Stop hook ` +
+        `delegates to a script that does not typecheck.`
+      : `its command is ${JSON.stringify(command)}. It must run ` +
+        `\`npm run -s ${TYPECHECK_SCRIPT}\` so that package.json stays the one place ` +
+        `that defines what a typecheck is.`,
   );
   for (const fragment of fragments) {
     ok(
-      `${label} does not restate the ${TYPECHECK_SCRIPT} fragment: ${fragment}`,
-      !command.includes(fragment),
-      `${JSON.stringify(command)} contains ${JSON.stringify(fragment)} verbatim. That is ` +
-        `a MIRROR of package.json, and mirrors drift: this one ran only the last ` +
+      `${where} does not restate the ${TYPECHECK_SCRIPT} fragment: ${fragment}`,
+      !subject.text.includes(fragment),
+      `${subject.via || JSON.stringify(command)} contains ${JSON.stringify(fragment)} verbatim. ` +
+        `That is a MIRROR of package.json, and mirrors drift: this one ran only the last ` +
         `fragment and typechecked against stale generated types.`,
     );
   }
+});
+
+/*
+ * AND THE GUARD ITSELF, which is the reason the delegation exists.
+ *
+ * The hook looped at an idle stop because it never inspected its own input.
+ * Observed live on 2026-08-20 for roughly a dozen consecutive stops with the
+ * typecheck passing every time. A Stop hook that runs unconditionally re-enters
+ * the turn it just ended, so `stop_hook_active` is not a nicety.
+ *
+ * Asserted on the delegated script only. A bare command string has nowhere to
+ * put the guard, so requiring it there would be requiring something impossible.
+ */
+stopCommands.forEach((/** @type {string} */ command, /** @type {number} */ i) => {
+  const subject = resolveStopSubject(command);
+  if (!subject.via) return;
+  const label = stopCommands.length > 1 ? `Stop command ${i + 1}` : "the Stop hook";
+  ok(
+    `${label} (via ${subject.via}) guards on stop_hook_active`,
+    /stop_hook_active/.test(subject.text),
+    `${subject.via} never mentions stop_hook_active, so an idle stop re-triggers ` +
+      `the turn and the hook fires again. Recorded in core.md as looping nine times.`,
+  );
 });
 
 /* ----------------------------------------- the permission allowlist, by value */
@@ -432,8 +527,15 @@ console.log(
  * Never summed. Floored at 34, slack of two: the count is a fixed function of
  * the two registered hooks and the Stop command, all of which are asserted by
  * value, so it does not drift on its own.
+ *
+ * RE-MEASURED 2026-08-20 by RUNNING it: 38, after the Stop assertions began
+ * following the delegation into .claude/hooks/stop-typecheck.sh. Two added: the
+ * subject-non-empty scope check, and the stop_hook_active guard. Floored at 36,
+ * slack of two held. The guard assertion only runs for a DELEGATED command, so
+ * reverting the Stop hook to a bare command string would drop the count to 37
+ * and this floor is what notices rather than the assertion silently not running.
  */
-const MINIMUM_CHECKS = 34;
+const MINIMUM_CHECKS = 36;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

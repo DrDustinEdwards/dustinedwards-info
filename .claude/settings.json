@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm run -s typecheck"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-typecheck.sh\""
           }
         ]
       }
