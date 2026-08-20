@@ -388,7 +388,7 @@ const resolveStopSubject = (/** @type {string} */ command) => {
  * a shell parser. A fragment hidden after code on the same line still fires.
  */
 const shellCodeOnly = (/** @type {string} */ src) =>
-  src.replace(/^s*#.*$/gm, " ");
+  src.replace(/^[ 	]*#.*$/gm, " ");
 
 // EVERY command, not the first. The loop is the fix; the index was the defect.
 stopCommands.forEach((/** @type {string} */ command, /** @type {number} */ i) => {
