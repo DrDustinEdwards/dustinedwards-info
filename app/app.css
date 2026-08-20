@@ -2343,10 +2343,33 @@ a:hover {
   color: var(--on-brand);
 }
 
+/* A TOKEN, NOT AN OPACITY, and that is the whole point of the change.
+
+   It was `color: inherit; opacity: 0.7`. Two problems, and the second is worse
+   than the first.
+
+   ON THE FILLED CURRENT CHIP the count is `--on-brand` over `--brand` at 70%
+   opacity, which is a composite the ratified pair was never measured at. The
+   chip's own text stays at full strength beside it, so the count is the only
+   thing on the chip whose contrast nobody has checked.
+
+   AND check:contrast STRUCTURALLY CANNOT SEE IT. That gate reads token hex
+   values and computes ratios between them; `opacity` is a compositing
+   operation applied afterwards, so a declared, measured, passing pair can be
+   silently degraded by a number in a different declaration and the gate reports
+   the pair it was given. Every opacity on text is a hole of exactly this shape.
+
+   So the de-emphasis moves into a TOKEN the gate already reads. On a normal chip
+   the count is `--text-muted`, which is declared and measured against the chip's
+   surface. On the current chip it inherits `--on-brand` at FULL strength, which
+   is the pair design-tokens.md actually ratified. */
 .tag-count {
-  color: inherit;
-  opacity: 0.7;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.tag-chip[aria-current="true"] .tag-count {
+  color: inherit;
 }
 
 .post-list {
@@ -2727,6 +2750,18 @@ a:hover {
 .prose h4:hover .heading-anchor,
 .heading-anchor:focus-visible {
   opacity: 1;
+}
+
+/* ON TOUCH THERE IS NO HOVER, so the rule above never fires and the anchors were
+   invisible for the entire life of the page. `hover: none` is the query for
+   exactly that: a device whose primary pointer cannot hover. They are shown at
+   reduced strength rather than full, because on a phone they are permanent
+   furniture beside every heading rather than something that appears on
+   approach. */
+@media (hover: none) {
+  .heading-anchor {
+    opacity: 0.55;
+  }
 }
 
 /* Shiki dual themes. The generator emits both palettes as CSS custom properties
@@ -7771,8 +7806,24 @@ a:hover {
   font-size: 1rem;
 }
 
+/* 2.4.7 IS NOT SATISFIED BY REMOVING THE INDICATOR.
+
+   This was `outline: none` with nothing in its place. The input is the palette's
+   only text entry and it takes focus the moment the palette opens, so a reader
+   navigating by keyboard had no way to confirm where focus had gone.
+
+   `:focus-visible` rather than `:focus`, so a pointer user opening the palette
+   does not get a ring they did not ask for, while a keyboard user always does.
+   The token is the on-surface ring the rest of the elevated chrome uses, not a
+   new colour, so it stays inside the palette the contrast gate reads. */
 .palette-input:focus {
   outline: none;
+}
+
+.palette-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
 }
 
 .palette-close {
