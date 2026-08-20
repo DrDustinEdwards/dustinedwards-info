@@ -31,6 +31,7 @@
     "build:template-refs": "node scripts/build-template-refs.mjs",
     "build:stack": "node scripts/build-stack.mjs",
     "check:backup": "node scripts/check-backup.mjs",
+    "check:browser": "node scripts/check-browser.mjs",
     "check:media": "node scripts/check-media.mjs",
     "check:diagrams": "node scripts/check-diagrams.mjs",
     "check:search": "node scripts/check-search.mjs",

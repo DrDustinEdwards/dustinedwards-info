@@ -156,6 +156,7 @@
     "check:admin-ui",
     "check:assertions",
     "check:backup",
+    "check:browser",
     "check:charts",
     "check:claude-md",
     "check:config",
