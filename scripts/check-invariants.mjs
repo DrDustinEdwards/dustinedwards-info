@@ -2097,6 +2097,150 @@ console.log("\n  10. every route-level artifact read goes through the shared rea
   );
 }
 
+/* ---------- 11. the drift badge reads a cache, not the AI Search index ---- */
+
+/*
+ * THE LAYOUT MUST NOT LIST THE INDEX ON A CACHE HIT.
+ *
+ * `listAllAskItems` pages AI Search and was measured on production 2026-08-19
+ * across 12 direct samples of `/admin.data` at a median of 208ms and a maximum
+ * of 2332ms. The admin layout runs on every admin page load, so that tail was
+ * reachable from any click in the admin plane. `askDriftCount` serves the badge
+ * from KV and only lists on a miss.
+ *
+ * ## ASSERTED ON STRUCTURE, NOT ON AN INSTRUMENT, AND THAT IS THE POINT
+ *
+ * The tempting version counts `ask_list_page` marks and asserts none appear on
+ * a cached request. This repo already has the counter-example: on 2026-08-19 a
+ * mark count reported ONE `artifact_load` while TWO reads were happening,
+ * because the second call bypassed the memo the mark sat inside. An instrument
+ * can only see what it was threaded through, so an assertion built on one
+ * inherits every hole in the threading. Source ORDER cannot be bypassed: if the
+ * early return precedes every mention of the index, a hit cannot reach it.
+ *
+ * ## THREE PROPERTIES
+ *
+ * 1. `askDriftCount` returns the cached value BEFORE any reference to the
+ *    index appears in its body.
+ * 2. The admin layout's loader reads the count through `askDriftCount` and does
+ *    not call the full status reader. The reader stays on the CONTEXT for
+ *    `/admin/posts`, which owns the repair and must be authoritative, so this
+ *    is scoped to the loader rather than to the file.
+ * 3. CALLER COVERAGE on invalidation: every function that mutates the index
+ *    must drop the cached number. Written after the first sweep of this change
+ *    missed two of four sites, one because the regex matched a bare `await` and
+ *    the site used an assignment, and one because it invalidated nothing at all.
+ */
+
+console.log("\n  11. the drift badge reads a cache, not the AI Search index");
+
+{
+  const askSource = stripComments(
+    readFileSync(join(root, "app", "lib", "search", "ask.server.ts"), "utf8"),
+  );
+  const layoutSource = stripComments(
+    readFileSync(join(root, "app", "routes", "admin.tsx"), "utf8"),
+  );
+
+  const bodyOf = (src, name) => {
+    const start = src.indexOf(`export async function ${name}(`);
+    if (start === -1) return "";
+    const end = src.indexOf("\n}", start);
+    return end === -1 ? src.slice(start) : src.slice(start, end + 2);
+  };
+
+  const drift = bodyOf(askSource, "askDriftCount");
+
+  /*
+   * SCOPE, ASSERTED FIRST. Every assertion below reports success when the
+   * extractor returns "", because "no index reference before the return" is
+   * trivially true of an empty string. That is the shape of a gate that
+   * examined nothing and said so cheerfully.
+   */
+  ok(
+    "the askDriftCount body was extracted, and it is that function alone",
+    drift.length > 200 &&
+      drift.length < askSource.length / 3 &&
+      !drift.includes("export async function removeAskPost"),
+    `extracted ${drift.length} char(s) from a ${askSource.length} char file`,
+  );
+
+  // ORDER, not presence. Both must exist for the comparison to mean anything,
+  // which is why their presence is asserted before their positions are compared.
+  const cachedReturn = drift.indexOf("return cached;");
+  const firstIndexUse = Math.min(
+    ...["askIndexStatus(", "listAllAskItems(", "AI_SEARCH"]
+      .map((needle) => drift.indexOf(needle))
+      .filter((at) => at !== -1)
+      .concat([Number.MAX_SAFE_INTEGER]),
+  );
+
+  ok(
+    "askDriftCount both returns a cached value and can reach the index",
+    cachedReturn !== -1 && firstIndexUse !== Number.MAX_SAFE_INTEGER,
+    `cached return at ${cachedReturn}, first index use at ${firstIndexUse}. ` +
+      `If either is absent the ordering assertion below compares nothing.`,
+  );
+  ok(
+    "the cached value returns BEFORE any AI Search reference",
+    cachedReturn !== -1 && cachedReturn < firstIndexUse,
+    `cached return at ${cachedReturn}, first index reference at ${firstIndexUse}. ` +
+      `A hit can reach the listing, which is the cost this cache exists to remove.`,
+  );
+
+  // The layout's LOADER specifically. askStatusContext is still set by the
+  // middleware and read by /admin/posts, so a file-level assertion would be
+  // wrong in both directions.
+  const layoutLoader = (() => {
+    const start = layoutSource.indexOf("export async function loader(");
+    if (start === -1) return "";
+    const end = layoutSource.indexOf("\n}", start);
+    return end === -1 ? layoutSource.slice(start) : layoutSource.slice(start, end + 2);
+  })();
+
+  ok(
+    "the admin layout loader was extracted",
+    layoutLoader.length > 200 && layoutLoader.includes("adminNavCounts"),
+    `extracted ${layoutLoader.length} char(s)`,
+  );
+  ok(
+    "the admin layout loader takes the badge from askDriftCount",
+    /askDriftCount\(/.test(layoutLoader),
+    "the layout computes drift some other way, so the cache is bypassed",
+  );
+  ok(
+    "the admin layout loader does not call the full status reader",
+    !/askStatusContext\)\s*\(\)/.test(layoutLoader),
+    "the loader calls the uncached reader, which lists the index on every admin page load",
+  );
+
+  /*
+   * CALLER COVERAGE. A function that changes what the index holds and leaves
+   * the cached number in place makes the badge disagree with an action the
+   * operator just took, for up to the TTL.
+   */
+  const mutators = [];
+  const uncovered = [];
+  for (const m of askSource.matchAll(/export async function (\w+)\(/g)) {
+    const body = bodyOf(askSource, m[1]);
+    if (!/items\.(upload|delete)\(/.test(body)) continue;
+    mutators.push(m[1]);
+    if (!/dropCachedDrift\(/.test(body)) uncovered.push(m[1]);
+  }
+
+  ok(
+    "index-mutating functions were found to check",
+    mutators.length >= 3,
+    `found ${mutators.length}. A zero-scope scan reports full coverage.`,
+  );
+  ok(
+    "every index-mutating function drops the cached drift count",
+    uncovered.length === 0,
+    `${uncovered.join(", ")} mutate the index and leave the badge's cached number ` +
+      `in place, so it disagrees with the action for up to the TTL.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2126,8 +2270,14 @@ console.log("\n  10. every route-level artifact read goes through the shared rea
  * three assertions. Floor 97 to 100, slack of five held. Section 10 is three
  * assertions over a walk of every route file, so a walk that stopped finding
  * files would drop the count by three and the floor is what notices.
+ *
+ * RE-MEASURED AGAIN 2026-08-20 by RUNNING it: 113, after section 11's eight.
+ * Floor 100 to 108, slack of five held. Section 11 extracts two function bodies
+ * and walks the mutators of one module, so an extractor that returned "" would
+ * drop several at once; three of its eight assertions exist to catch exactly
+ * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 100;
+const MINIMUM_CHECKS = 108;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
