@@ -1242,7 +1242,30 @@ export async function renderBody({ file, body, resolveImage }) {
     .use(rehypeAutolinkHeadings, {
       // aria-hidden must carry the literal string. As a boolean it stringifies
       // to a bare attribute, which is not valid ARIA and is read as unset.
-      properties: { className: ["heading-anchor"], ariaHidden: "true", tabIndex: -1 },
+      /*
+       * REACHABLE, DELIBERATELY, and this reverses the previous markup.
+       *
+       * It emitted `aria-hidden="true"` and `tabIndex: -1`, which removes the
+       * link from the tab order AND from the accessibility tree, while app.css
+       * carried a `.heading-anchor:focus-visible` rule and a comment saying the
+       * anchors "stay reachable by keyboard". Both cannot be true: the CSS rule
+       * could never fire, because nothing could ever focus the element.
+       *
+       * Resolved toward REACHABLE rather than toward honestly-decorative,
+       * because the affordance exists to be used and hiding it from keyboard and
+       * from assistive tech left it working for pointer users only, which is the
+       * smallest audience a "link to this section" control could have. That is
+       * the tier 3.5 class, a control that looks live and does nothing, reached
+       * from the other direction.
+       *
+       * THE COST IS STATED: this adds one tab stop per h2, h3 and h4 in an
+       * article. If that is judged too noisy the alternative is the opposite
+       * repair, keep the attributes and delete the CSS rule and its comment, and
+       * this decision is the reversible half.
+       *
+       * The name is on the link because "#" is not one.
+       */
+      properties: { className: ["heading-anchor"], "aria-label": "Link to this section" },
       behavior: "append",
       content: { type: "text", value: "#" },
     })
