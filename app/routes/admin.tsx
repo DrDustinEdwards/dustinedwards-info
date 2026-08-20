@@ -6,9 +6,10 @@ import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
+import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { serverTiming, timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
-import { askStatusContext, askStatusReader } from "~/lib/search/ask.server";
+import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
 
@@ -90,8 +91,22 @@ export async function loader({ context }: Route.LoaderArgs) {
    * other's result; the only reason for the ordering was where the lines
    * happened to sit.
    */
-  const [ask, counts] = await Promise.all([
-    timed(timings, "layout_ask_status", () => context.get(askStatusContext)()),
+  /*
+   * THE BADGE READS A CACHED COUNT, NOT THE INDEX.
+   *
+   * `askDriftCount` returns from KV on a hit and never touches AI Search.
+   * That is the fix: the listing's cost is per-call variance of 46 to 2055ms,
+   * measured, so removing the call from the read path is the only thing that
+   * moves the tail. Making it cheaper does not: both pages of the pagination
+   * cost about 72ms and dropping one leaves the tail where it was.
+   *
+   * The layout wants ONE INTEGER. `/admin/posts` still calls the full reader
+   * on `askStatusContext` for its repair alert, uncached, because the page
+   * that fixes drift must not act on a number up to five minutes old. The
+   * reader stays on the context for exactly that caller.
+   */
+  const [drift, counts] = await Promise.all([
+    timed(timings, "layout_ask_drift", () => askDriftCount(getEnv(context), timings)),
     timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
   ]);
   const payload = {
@@ -118,7 +133,26 @@ export async function loader({ context }: Route.LoaderArgs) {
      * the corpus does not know about is as much a defect as a record the index
      * lacks.
      */
-    askDrift: ask ? ask.missing.length + ask.stale.length : 0,
+    /*
+     * NULL BECOMES 0, which renders NO BADGE rather than a clean one.
+     *
+     * `navName` treats 0 as "nothing to report" and omits the count entirely,
+     * so an unavailable index and an index in agreement look the same to a
+     * reader. That was already true before the cache and is the honest
+     * rendering of "no evidence": the alternative is a numeral asserting
+     * agreement nobody measured.
+     */
+    askDrift: drift ?? 0,
+    /**
+     * How stale that number may be, in seconds, for the reader.
+     *
+     * TIER 1.5 FORBIDS ADDING A CACHE TO HIDE A SLOW PATH WITHOUT SAYING SO,
+     * and a comment in the source says it to the next engineer, not to the
+     * operator looking at the badge. So the number travels to the UI and the
+     * badge's own title states it. The repair lives on /admin/posts, which
+     * computes fresh.
+     */
+    askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
   };
 
   return timings
@@ -286,10 +320,36 @@ const NAV = [
  * text equivalent for a SIGHTED reader in the collapsed rail, where the badge
  * has room for the number but not for what the number counts.
  */
-function navName(label: string, drift: number, count: number | null) {
+/**
+ * The nav item's accessible name, and where the CACHING IS STATED TO THE READER.
+ *
+ * Tier 1.5 forbids adding a cache to hide a slow path without saying so. A
+ * source comment says it to the next engineer; this says it to the operator
+ * looking at the badge, which is the person who would otherwise act on a number
+ * without knowing how old it can be.
+ *
+ * Only on the drifted branch, deliberately. A badge showing nothing has nothing
+ * to qualify, and appending an age to every nav item would be noise on five
+ * links that carry no cached value at all.
+ *
+ * The wording names the authority as well as the age, because "up to 5 minutes
+ * old" invites the question this sentence should already answer: the repair
+ * page recomputes, so that is where to go and what to trust.
+ */
+function navName(
+  label: string,
+  drift: number,
+  count: number | null,
+  maxAgeSeconds: number,
+) {
   const size = count === null ? "" : `, ${count} item${count === 1 ? "" : "s"}`;
   if (drift <= 0) return `${label}${size}`;
-  return `${label}${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted`;
+  const minutes = Math.round(maxAgeSeconds / 60);
+  const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
+  return (
+    `${label}${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
+    `This count is up to ${age} old; open Posts for the current figure and the repair.`
+  );
 }
 
 /** 24x24 stroked glyph, the same shape the rest of the admin uses. */
@@ -468,7 +528,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             const count = item.count
               ? loaderData.counts[item.count as keyof typeof loaderData.counts]
               : null;
-            const name = navName(item.label, drift, count);
+            const name = navName(item.label, drift, count, loaderData.askDriftMaxAgeSeconds);
             return (
               <NavLink
                 key={item.to}

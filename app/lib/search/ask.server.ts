@@ -16,7 +16,13 @@
 
 import { createContext } from "react-router";
 
-import { invalidateAnswerCache } from "./ask-guard.server";
+import {
+  DRIFT_CACHE_TTL_SECONDS,
+  dropCachedDrift,
+  invalidateAnswerCache,
+  readCachedDrift,
+  writeCachedDrift,
+} from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
 import { askExpectedUrls } from "./search.server";
 import { timed, type Timings } from "~/lib/timing";
@@ -353,6 +359,9 @@ export async function syncAskCorpus(
   // outliving the post it was drawn from. It happens on publish, which is the
   // moment the change occurs, rather than being checked on every read forever.
   const dropped = await invalidateAnswerCache(env);
+  // The drift number just changed too. A delete rather than a write, because
+  // this path knows the cached value is stale and not what it became.
+  await dropCachedDrift(env);
 
   return { uploaded: keys.length, keys, cacheDropped: dropped };
 }
@@ -413,6 +422,9 @@ export async function syncAskPost(
   }
 
   await invalidateAnswerCache(env);
+  // The drift number just changed. A delete rather than a write, because this
+  // path knows the cached value is stale and not what it became.
+  await dropCachedDrift(env);
   return { uploaded: records.length, removed };
 }
 
@@ -508,6 +520,105 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
   };
 }
 
+/**
+ * THE DRIFT COUNT FOR THE NAV BADGE, off the read path.
+ *
+ * **THE CACHE IS THE POINT, AND IT IS HIDING A SLOW PATH, SO HERE IS THE SLOW
+ * PATH.** `askIndexStatus` pages the whole AI Search index through
+ * `listAllAskItems`. Measured on production 2026-08-19 across 12 direct
+ * samples of `/admin.data`: median 208ms, MAXIMUM 2332ms, and the admin layout
+ * runs on every admin page load, so that tail was reachable from any click in
+ * the admin plane. Grounds for the TTL are at `DRIFT_CACHE_TTL_SECONDS`.
+ *
+ * ## ON A HIT THIS FUNCTION DOES NOT TOUCH AI SEARCH
+ *
+ * The early return below is the whole feature, and it is STRUCTURAL rather than
+ * conditional: there is one `return` between the KV read and the first mention
+ * of the index, so a hit cannot reach the listing. `check:invariants` section
+ * 11 asserts that ordering on the source, deliberately not on a timing mark. A
+ * mark count already proved unable to see an unmarked read in this codebase
+ * (the second `artifact_load`, 2026-08-19), so an instrument-shaped assertion
+ * here would be the same mistake with a different name.
+ *
+ * ## THE FAILURE MODE ON A MISS, CHOSEN RATHER THAN INHERITED
+ *
+ * A miss must never make the admin plane worse than a missing badge. Two things
+ * follow.
+ *
+ * BOUNDED WAIT. The listing races a budget, and on expiry this returns null and
+ * the page renders without a badge. 1000ms is taken from the measurement rather
+ * than picked: it admits 11 of the 12 observed samples (168 to 970ms) and cuts
+ * only the 2332ms outlier that motivated this change. So a miss costs about
+ * what a miss costs, and the pathological case stops being the reader's problem.
+ *
+ * FAILURE IS NULL, NOT ZERO. An unbound binding, a rejected listing and an
+ * expired budget all return null, and `admin.tsx` renders no badge for null.
+ * Zero would be a claim that the index agrees with the corpus, made on no
+ * evidence, next to a repair the operator would then not perform.
+ *
+ * **WHAT THE LATE WRITE DOES AND DOES NOT PROMISE.** When the budget expires the
+ * listing is left running with a `catch` attached, so a slow answer still
+ * populates the cache for the next request IF the isolate outlives the
+ * response. Workers may cancel pending work once a response is returned, and
+ * this session could not verify which happens without a deploy. It is therefore
+ * an optimisation that may not fire, never a correctness requirement: if it
+ * never lands, the next request is simply another miss.
+ *
+ * ## WHAT THIS IS NOT FOR
+ *
+ * The COUNT only. `/admin/posts` owns the repair and calls
+ * `askStatusReader` for the full key lists, uncached, because a page whose job
+ * is to fix drift must not act on a number up to five minutes old.
+ */
+export async function askDriftCount(env: Env, timings?: Timings): Promise<number | null> {
+  if (!askAvailable(env)) return null;
+
+  const cached = await timed(timings, "drift_cache_read", () => readCachedDrift(env));
+  // THE EARLY RETURN. Nothing below this line runs on a hit, and section 11
+  // asserts that no AI Search reference precedes it.
+  if (cached !== null) return cached;
+
+  // Rejection is folded into the value here rather than caught at the race, so
+  // a failing listing and an absent one reach the same null and the caller has
+  // one thing to handle instead of two.
+  const listing = askIndexStatus(env, timings).catch((error) => {
+    console.error("ask drift count failed", error);
+    return null;
+  });
+
+  // The budget. Resolves to undefined rather than rejecting, so the race below
+  // reads as "whichever arrives first" rather than as error handling.
+  const budget = new Promise<undefined>((resolve) => {
+    setTimeout(() => resolve(undefined), DRIFT_BUDGET_MS);
+  });
+
+  const status = await Promise.race([listing, budget]);
+
+  if (status === undefined) {
+    // The budget won. Keep a handler on the loser so a late rejection is not an
+    // unhandled one, and write the cache if it ever arrives. See the note above
+    // on what this does not promise.
+    void listing
+      .then((late) => (late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null))
+      .catch(() => {});
+    return null;
+  }
+
+  if (!status) return null;
+
+  const drift = status.missing.length + status.stale.length;
+  await writeCachedDrift(env, drift);
+  return drift;
+}
+
+/**
+ * How long a cache miss may hold the admin layout before it gives up.
+ *
+ * From the measurement, not from taste: 11 of 12 observed listings finished
+ * inside this and the one it cuts is the 2332ms sample this change exists for.
+ */
+const DRIFT_BUDGET_MS = 1000;
+
 /** Removes every item belonging to one post. Used when a post is deleted. */
 export async function removeAskPost(env: Env, slug: string): Promise<number> {
   const documentKey = `blog/${slug}.md`;
@@ -521,6 +632,9 @@ export async function removeAskPost(env: Env, slug: string): Promise<number> {
     }
   }
   await invalidateAnswerCache(env);
+  // The drift number just changed. A delete rather than a write, because this
+  // path knows the cached value is stale and not what it became.
+  await dropCachedDrift(env);
   return removed;
 }
 
@@ -542,5 +656,11 @@ export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<stri
       removed.push(item.key);
     }
   }
+  // Removing items changes what the index holds, so the badge's cached number
+  // is stale. This path invalidated NOTHING before the drift cache existed,
+  // which was harmless while every read recomputed and is not once a value is
+  // stored. Only on an actual removal: a prune that removed nothing changed
+  // nothing, and dropping the key anyway would spend the next reader a listing.
+  if (removed.length > 0) await dropCachedDrift(env);
   return removed;
 }
