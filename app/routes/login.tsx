@@ -19,8 +19,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export default function Login() {
   const [busy, setBusy] = useState(false);
+  // `id="main"` because root ALWAYS renders `<a class="skip-link" href="#main">`,
+  // on every route including this one. Without a target here the first thing a
+  // keyboard reader hits on the site's only door moved focus nowhere.
   return (
-    <main className="gate">
+    <main className="gate" id="main">
       <div className="gate-card">
         {/* Decorative: the heading below already names the page. */}
         <SiteLogo className="gate-mark" />

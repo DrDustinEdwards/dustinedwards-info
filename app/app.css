@@ -1009,6 +1009,20 @@ a:hover {
   margin: 0 auto;
 }
 
+/* The error boundary's DEV-ONLY stack. Deliberately not `.prose pre`: this is
+   diagnostic output, not writing, and `overflow-x: auto` is what stops a long
+   frame widening the document the way the header used to. */
+.error-stack {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
 .page-title {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3rem);

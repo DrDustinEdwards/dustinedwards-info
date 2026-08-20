@@ -8,6 +8,8 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { SiteFooter } from "~/components/site-footer";
+import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
 import { themeAttribute, themeFromRequest } from "~/lib/theme";
 
@@ -112,15 +114,41 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     stack = error.stack;
   }
 
+  /*
+   * A 404 IS STILL THE SITE, and this page was not.
+   *
+   * It rendered four leftover Tailwind utility classes, `pt-16 p-4 container
+   * mx-auto`, which this repo does not use anywhere else, with no header, no
+   * footer, and no `id="main"`. So the most likely page a stranger reaches by a
+   * broken link had no navigation off it, no identity, and a skip link pointing
+   * at nothing, because root emits `href="#main"` on every route.
+   *
+   * SiteHeader is SAFE HERE and that is not an assumption: it reads the root
+   * loader through `useRouteLoaderData` and already handles the loader never
+   * having run, with `data?.theme ?? "system"` carrying a written justification
+   * naming the error-boundary path specifically. The comment predicted this use
+   * before it existed.
+   *
+   * The stack block keeps its own class rather than borrowing `.prose pre`,
+   * because it is DEV-ONLY output and styling it as prose would put a reader's
+   * eye on it as content. It stays scrollable so a long stack cannot widen the
+   * page, which is the same overflow class the header just had.
+   */
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <>
+      <SiteHeader />
+      <main className="page" id="main">
+        <div className="page-inner">
+          <h1>{message}</h1>
+          <p className="muted">{details}</p>
+          {stack && (
+            <pre className="error-stack">
+              <code>{stack}</code>
+            </pre>
+          )}
+        </div>
+      </main>
+      <SiteFooter />
+    </>
   );
 }
