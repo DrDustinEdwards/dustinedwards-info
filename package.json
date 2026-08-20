@@ -9,6 +9,7 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
+    "predeploy": "node scripts/require-clean-tree.mjs",
     "deploy": "npm run build && wrangler deploy",
     "verify-live": "node scripts/verify-live.mjs",
     "ae-probe": "node scripts/ae-probe.mjs",
