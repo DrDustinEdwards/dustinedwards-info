@@ -48,7 +48,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 26;
+const MINIMUM_GATES = 27;
 
 /**
  * Which gates need something this machine may not have.
@@ -65,6 +65,45 @@ const MINIMUM_GATES = 26;
  * @type {Record<string, "offline" | "network" | undefined>}
  */
 const TIERS = {
+  /*
+   * THE TYPECHECK IS A GATE, ruled 2026-08-20 after the suite certified a build
+   * it had never compiled.
+   *
+   * `tsc -b` was a separate npm script and a Stop hook, and neither is the
+   * suite. So `npm run check` reported 25 passed 0 failed over source with two
+   * TS7006 errors in it, and `check:head` inherited exactly the same blind spot
+   * and certified 32 checks 0 failures against the same red build. A suite that
+   * certifies a build it never compiled is this repo's own vacuity class raised
+   * to the top level: the runner cannot tell a gate that passed from one that
+   * passed over code that cannot run.
+   *
+   * It made it past four separate checks, which is the part worth recording:
+   * tsc was not re-run after the change, `npm run check` does not typecheck,
+   * `check:head` runs that same offline tier, and the Stop hook reported "No
+   * stderr output" because tsc writes diagnostics to STDOUT.
+   *
+   * OFFLINE, and that is the load-bearing half rather than a formality:
+   * `check:head` derives its list from the offline tier, so tiering this here
+   * is what makes an extracted HEAD get typechecked too. The worktree already
+   * has node_modules by junction and a bootstrapped wrangler.jsonc, which is
+   * what `npm run typecheck` needs.
+   *
+   * IT DELEGATES rather than restating `wrangler types && react-router typegen
+   * && tsc -b`, on the same rule `check:hooks` enforces for the Stop hook:
+   * package.json is the one place that defines what a typecheck is, and a
+   * mirror drifts. This repo has already run a bare `npx tsc -b` against stale
+   * generated types for exactly that reason.
+   *
+   * ALPHABETICAL, NOT FIRST, and the alternative was considered. Running it
+   * first would surface the most fundamental failure earliest in a five minute
+   * run. It was rejected because this runner's stated principle is that EVERY
+   * gate runs and the table at the end is the whole picture, so position
+   * changes only when a watcher sees the line, never whether the failure is
+   * reported. Hoisting one name would also cost the derivation property that
+   * keeps a new gate from being forgotten, which is a worse trade than a later
+   * line in a table that is read whole.
+   */
+  "check:types": "offline",
   "check:content": "offline",
   "check:config": "offline",
   "check:search": "offline",
