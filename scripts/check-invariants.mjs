@@ -2142,7 +2142,7 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
     readFileSync(join(root, "app", "routes", "admin.tsx"), "utf8"),
   );
 
-  const bodyOf = (src, name) => {
+  const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
     const start = src.indexOf(`export async function ${name}(`);
     if (start === -1) return "";
     const end = src.indexOf("\n}", start);
