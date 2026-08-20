@@ -34,6 +34,8 @@
  */
 
 import { readFileSync } from "node:fs";
+
+import { gateNames } from "./build-stack.mjs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,6 +51,63 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * and moving it is a deliberate edit in the same commit as the gate.
  */
 const MINIMUM_GATES = 27;
+
+/**
+ * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
+ *
+ * MEASURED 2026-08-20, not guessed: HEAD was extracted with `git archive`,
+ * `npm ci` was run in it, and the offline tier was run there. 22 passed, 4
+ * failed. Two of those four are real and permanent, and they are here. The other
+ * two, `check:content` and `check:head`, failed only because `git archive`
+ * produces no `.git` directory; `actions/checkout` provides a real repository,
+ * so both work in CI and neither is excluded for that reason.
+ *
+ * Same shape and the same discipline as `check-head.mjs`'s own EXCLUDED map:
+ * a named reason per entry, so an exclusion has to be argued rather than
+ * accumulated.
+ *
+ * @type {Record<string, string>}
+ */
+const CI_EXCLUDED = {
+  /*
+   * MEASURED in the clean checkout. It asserts the tracked example DIFFERS from
+   * the real `wrangler.jsonc` in the two account-scoped ids. A checkout has no
+   * real config, `postinstall` bootstraps one BY COPYING the example, so real
+   * equals example by construction and the gate cannot pass. Verbatim:
+   *
+   *   FAIL  example's database_id is not the real one
+   *   FAIL  example's KV id is not the real one
+   *
+   * That is the gate being CORRECT, not a limitation to work around, and it is
+   * why this gate is load-bearing on exactly one machine. `check-head.mjs`
+   * excludes it for the identical reason.
+   */
+  "check:config": "cannot pass in any checkout: bootstrap copies the example, so real == example.",
+  /*
+   * MEASURED in the clean checkout. Defaults to `--local`, which reads
+   * miniflare state under `.wrangler/`. That directory is gitignored and absent
+   * from a checkout. Verbatim:
+   *
+   *   SENTRY_DO SQLite failed; dbErrorMess...
+   *
+   * Provisioning a local D1 in CI to satisfy it would be inventing state to
+   * check a backup path against, which asserts nothing about the real database.
+   */
+  "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
+  /*
+   * NOT a capability problem. It would very likely RUN in CI, since
+   * `actions/checkout` gives a real repository and node ignores the "junction"
+   * link type off Windows.
+   *
+   * It is excluded because it is VACUOUS there. This gate exists to catch disk
+   * disagreeing with HEAD, and CI has only HEAD: it checks out the ref into an
+   * empty machine, so there is no working tree to diverge. Running it would
+   * extract HEAD from a checkout of HEAD and compare it to itself, then report
+   * a green it could not have failed. That is the vacuity class this repo names
+   * everywhere else, and running it in CI would be adding an instance.
+   */
+  "check:head": "vacuous in CI: it compares disk to HEAD, and CI has only HEAD.",
+};
 
 /**
  * Which gates need something this machine may not have.
@@ -193,16 +252,21 @@ const REMOTE_ARGS = {
 };
 
 const all = process.argv.includes("--all");
+/** `--ci` runs the offline tier minus what a clean checkout cannot run. */
+const ci = process.argv.includes("--ci");
 
 /** Every `check:*` script package.json declares, minus the runners themselves. */
 function discoverGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  const names = Object.keys(pkg.scripts ?? {})
-    .filter((name) => name.startsWith("check:"))
-    // The aggregate runners are not gates. Without this the runner invokes
-    // itself, forever.
-    .filter((name) => name !== "check:all")
-    .sort();
+  /*
+   * ONE DERIVATION, imported rather than restated. This file and
+   * `build-stack.mjs` both used to filter `check:*` themselves, agreeing until
+   * one of them gained a case: `check:ci` is the second aggregate runner, and
+   * the colophon's copy would have listed it as a gate and claimed 28 where 27
+   * exist. Excluding a runner here is not tidiness either, it is what stops the
+   * runner invoking itself forever.
+   */
+  const names = gateNames(pkg);
 
   if (names.length < MINIMUM_GATES) {
     throw new Error(
@@ -243,8 +307,38 @@ function runGate(name, args) {
 
 function main() {
   const gates = discoverGates();
-  const selected = all ? gates : gates.filter((name) => TIERS[name] === "offline");
+  /*
+   * THE CI TIER IS THE OFFLINE TIER MINUS CI_EXCLUDED, derived rather than
+   * listed, so a gate added tomorrow is in CI by default and has to be argued
+   * OUT rather than remembered IN. That direction is the whole point: the
+   * failure this file exists about is a gate silently not running.
+   *
+   * `--all` and `--ci` are not combinable, and nothing tries: `--all` adds the
+   * network tier, which is exactly what CI has no credentials for.
+   */
+  const offline = gates.filter((name) => TIERS[name] === "offline");
+  const selected = all ? gates : ci ? offline.filter((name) => !CI_EXCLUDED[name]) : offline;
   const skipped = gates.filter((name) => !selected.includes(name));
+
+  if (ci) {
+    /*
+     * SCOPE, ASSERTED. An exclusion map that named a gate nobody declares would
+     * silently exclude nothing, and this would report a full CI run while
+     * quietly being the plain offline tier. Same fail-closed shape as the
+     * untiered check above.
+     */
+    const unknown = Object.keys(CI_EXCLUDED).filter((name) => !gates.includes(name));
+    if (unknown.length > 0) {
+      throw new Error(
+        `CI_EXCLUDED names ${unknown.length} gate(s) package.json does not declare: ` +
+          `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
+      );
+    }
+    console.log(
+      `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
+        `Excluded, with reasons in CI_EXCLUDED: ${Object.keys(CI_EXCLUDED).join(", ")}`,
+    );
+  }
 
   console.log(
     `\n${all ? "check:all" : "check"} running ${selected.length} of ${gates.length} gate(s)` +
