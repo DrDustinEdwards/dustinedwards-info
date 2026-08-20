@@ -62,7 +62,7 @@ export function SiteHeader() {
         {SITE.name}
       </Link>
       <nav className="site-header-nav">
-        <NavLink to="/blog">Blog</NavLink>
+        <NavLink to="/blog" end>Blog</NavLink>
         <NavLink to="/projects">Projects</NavLink>
         <NavLink to="/playground">Playground</NavLink>
         <NavLink to="/phage-discovery">Roster</NavLink>
