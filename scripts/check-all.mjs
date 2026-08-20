@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 27;
+const MINIMUM_GATES = 28;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -107,6 +107,14 @@ const CI_EXCLUDED = {
    * everywhere else, and running it in CI would be adding an instance.
    */
   "check:head": "vacuous in CI: it compares disk to HEAD, and CI has only HEAD.",
+  /*
+   * Not runnable in CI as it stands, for two separate reasons and only the
+   * second is fixable. It reads local D1 state to render a post list, and that
+   * state is gitignored, so the aria-current case would find no post to open.
+   * And its admin case needs a real session cookie, which CI has no way to hold
+   * without a stored credential nobody has ruled on.
+   */
+  "check:browser": "needs local D1 state for content, and a real session for the admin case.",
 };
 
 /**
@@ -234,6 +242,24 @@ const TIERS = {
   // NO OFFLINE MODE THAT MEANS ANYTHING. It reconciles D1 against two R2
   // buckets, and --local reads an empty miniflare bucket, so a local run would
   // report drift that does not exist. Network tier, always.
+  /*
+   * NETWORK, and the tiering was the hardest call in this gate.
+   *
+   * It wants to be offline: it drives localhost and asserts nothing about a
+   * deployed resource. Two measured facts stop it. Starting the preview server
+   * prints "Establishing remote connection" because the AI_SEARCH binding
+   * always reaches a real instance even in local dev, so the offline tier's
+   * contract, safe on a plane, would be false. And it costs 67s measured,
+   * against a 26-gate tier, which is a large tax on every run of the tier ship
+   * executes.
+   *
+   * The consequence is stated rather than hidden: `npm run check` does NOT run
+   * this, so neither does `ship`. Layout defects can still ship. Wiring it into
+   * ship is a one-line change and is RECOMMENDED, not taken here, because
+   * changing what ship refuses is a decision about the release path rather than
+   * part of building an instrument.
+   */
+  "check:browser": "network",
   "check:media": "network",
 };
 
