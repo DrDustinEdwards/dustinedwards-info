@@ -51,6 +51,56 @@ const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const ANSWER_CACHE_PREFIX = "ask:answer:";
 
+/**
+ * THE DRIFT BADGE'S CACHE. One integer, one key, no prefix scan.
+ *
+ * **THIS IS A CACHE ADDED TO HIDE A SLOW PATH, AND TIER 1.5 REQUIRES SAYING SO
+ * RATHER THAN NOT DOING IT.** So: it is hiding `listAllAskItems`, which pages
+ * the AI Search index 50 at a time and was measured on production 2026-08-19
+ * from 12 direct samples of `/admin.data` at a median of 208ms and a MAXIMUM OF
+ * 2332ms. The layout runs on every admin page load, so that tail was reachable
+ * from any click anywhere in the admin plane.
+ *
+ * The fix is removing the call from the read path, not making it cheaper. Both
+ * pages cost about 72ms each, so dropping page 2 would buy 72ms and leave the
+ * tail exactly where it was: the cost is per-call variance of 46 to 2055ms, not
+ * round-trip count.
+ *
+ * ## WHY 300 SECONDS, and not a round number chosen for looking tidy
+ *
+ * Three constraints, and the measurement picks the value between them.
+ *
+ * FLOOR: KV refuses a TTL under 60 seconds, so 60 is the shortest expressible.
+ *
+ * THE COST SIDE: at 208ms median the call is affordable occasionally and
+ * unaffordable per page load. An admin session is a burst of navigation, so
+ * what matters is calls per session rather than per request. At 300s a ten
+ * minute working session pays the listing about twice however many pages are
+ * opened, and can meet the 2332ms tail at most twice rather than on any click.
+ * At 60s the same session pays it ten times and meets the tail ten times over,
+ * which is most of the problem still present.
+ *
+ * THE FRESHNESS SIDE, and this is the constraint that set the value rather than
+ * the cost. `askExpectedUrls` composes `visibilityClause`, so the expected set
+ * is a function of THE CLOCK: a scheduled post whose `publish_at` passes
+ * becomes expected and `missing` grows with no write anywhere. TTL expiry is
+ * what recomputes on the clock's schedule, and 300s bounds how long the badge
+ * can under-report that. Five minutes of an under-reported badge on a page that
+ * is not the repair page is not a defect anyone can be harmed by; an hour would
+ * start to be.
+ *
+ * That clock dependency is also exactly why this is a TTL cache and not
+ * compute-on-write, which was the agreed plan until the measurement produced
+ * this reasoning: a number recomputed only on `savePost` and `sync-ask` would
+ * under-report a scheduled post's arrival until the next unrelated save.
+ * Dormant today, since no published post record is future-dated, and armed the
+ * moment one is scheduled.
+ */
+const DRIFT_CACHE_KEY = "ask:drift";
+
+/** Stated here and repeated to the reader in the badge's own title text. */
+export const DRIFT_CACHE_TTL_SECONDS = 300;
+
 export interface CachedAnswer {
   /** The full generated text, exactly as it was streamed the first time. */
   answer: string;
@@ -214,6 +264,48 @@ export async function writeCachedAnswer(
   await env.APP_KV.put(key, JSON.stringify(value), {
     expirationTtl: ANSWER_CACHE_TTL_SECONDS,
   });
+}
+
+/**
+ * The cached drift count, or null when there is none to serve.
+ *
+ * NULL, NOT ZERO, and the distinction is the whole reason this returns a union.
+ * Zero is a real and common answer meaning "the index agrees with the corpus",
+ * and a miss that returned zero would render a clean badge on no evidence.
+ * Anything unparseable is also a miss: a hand-edited key or a value written by
+ * an older shape must not become a number by coercion.
+ */
+export async function readCachedDrift(env: Env): Promise<number | null> {
+  const cached = await env.APP_KV.get(DRIFT_CACHE_KEY, "json");
+  if (!cached || typeof cached !== "object") return null;
+  const value = (cached as { drift?: unknown }).drift;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return null;
+  return value;
+}
+
+/**
+ * Stores the drift count for `DRIFT_CACHE_TTL_SECONDS`.
+ *
+ * An OBJECT rather than a bare number, so a later field can be added without
+ * the stored shape being ambiguous between versions, which is the same reason
+ * `CachedAnswer` is an object holding one string.
+ */
+export async function writeCachedDrift(env: Env, drift: number): Promise<void> {
+  await env.APP_KV.put(DRIFT_CACHE_KEY, JSON.stringify({ drift }), {
+    expirationTtl: DRIFT_CACHE_TTL_SECONDS,
+  });
+}
+
+/**
+ * Drops the cached drift count.
+ *
+ * Called by the paths that KNOW the number just changed, so the badge does not
+ * spend up to the TTL disagreeing with an action the operator just took. A
+ * delete rather than a write, because those paths know the number is stale and
+ * do not necessarily know what it became.
+ */
+export async function dropCachedDrift(env: Env): Promise<void> {
+  await env.APP_KV.delete(DRIFT_CACHE_KEY);
 }
 
 /**
