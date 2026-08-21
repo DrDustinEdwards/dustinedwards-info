@@ -48,7 +48,9 @@ Not gateable: it would need a hand-maintained selector list, which is the mirror
 
 ### 7. PROSE. A gate that feeds a module its own stored output cannot see the TRANSPORT.
 
-Live claims verify on the live path. Boundary-note presence is gated, and **a boundary note is a CLAIM that ages**: two have gone false since being written.
+Live claims verify on the live path. **A boundary note is a CLAIM that ages**: two have gone false since being written, one of them falsified in the same commit that wrote it.
+
+**Boundary-note presence is NO LONGER GATED, since 2026-08-21.** `check:assertions` asserted it and was deleted in audit tier 4.1. Presence was all it could ever assert, and this rule's own second sentence is why that was never the valuable half: nothing can check that a note is still TRUE. The 34 notes stay and are worth writing. Writing one is now a convention, not a build failure.
 
 ### 8. ONE-LINER. WORKERS CACHE IS ON. A response with no `Cache-Control` is CACHED, not skipped.
 
@@ -60,7 +62,25 @@ The `private, no-store` default is asserted three ways.
 
 ### 10. PROSE. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
 
-Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. **Only the tenth is gated**, by `check:invariants` section 17; `check:assertions` linted six and was deleted 2026-08-21 as a lint of lints. The rest are METHOD, which is what they always were. See `VERIFICATION.md`, in this repo.
+Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift.
+
+**THE DISCIPLINES. Restored 2026-08-21 from Capsid `core.md` version 1684, where the rewrite of the same day dropped them entirely.** These are the operative half of the rule: the classes name what goes wrong, and these say what to do.
+
+- **Prove scope non-empty.** A search whose scope is empty reports what a clean sweep reports.
+- **Anchor every needle**, because `check:head`/`check:headers` and `check:content`/`check:contrast` are prefix pairs. **An EMPTY needle matches every line and returns a plausible number** (measured 2026-08-20).
+- **Enumerate inside exclusions.** An exclusion that names a file excludes everything in it.
+- **Guard derived-list patterns.** An empty alternation matches the empty string.
+- **Measure floors THROUGH the gate's own pipeline**, never by summing.
+- **Count matches, not containers.**
+- **Strip comments before matching.** A comment has both satisfied an assertion and failed one.
+- **Resolve bindings, not spellings.**
+- **After a plant's restore, diff against the pre-plant commit.**
+- **One helper name, one argument order.** Gated, uniquely: `check:invariants` section 17.
+- **Re-measure carried claims.** That discipline has corrected an AUDITOR, a PROMPT, and the RULING LOG ITSELF.
+- **A declared token must participate in a measured pair**, which is `check:contrast`'s participation assertion.
+- **A GATE'S EXPECTED VALUES ARE NEVER PRODUCED BY THE PROCESS IT CHECKS.** Fixture independence, and it is what justifies `check:logo` and `check:contrast` existing in the shape they do: `scripts/fixtures/icon-suite.json` is deliberately NOT generator output.
+
+Only the tenth class is gated. The rest are METHOD, which is what they always were. See `VERIFICATION.md`, in this repo.
 
 ### 11. ONE-LINER. `app/db/schema.ts` IS the source of truth.
 
@@ -70,9 +90,17 @@ Ten named classes: unfailable conditions, unreachable thresholds, zero-scope sea
 
 EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied before any result is read.** A green run after a failed plant proves nothing; a mangled path once made a plant a silent no-op and the gate went green. `check:migrations` is the recorded plants-only exception.
 
+**A DICHOTOMY INHERITS ITS AUTHOR'S FRAME.** Before resolving an either-or by measurement, check the question's own scope assumption against the artifact: a plant proves something about what it plants against, and the framing chose the target before any evidence was taken. Restored here 2026-08-21 as a NAMED discipline; the case that produced it is in `VERIFICATION.md`, which is the right split, because the rules are the index and the method file carries the evidence.
+
+**A SURFACE RECOLOR RULING MUST ENUMERATE THE POSITION: `position: absolute` overlays that only render against that surface.** Restored 2026-08-21, and it existed in NO current document. This is how the skip-link-on-purple-chrome defect was classified: a recolor ruling that lists the components it repaints will miss anything whose only appearance is over the recolored surface, because such an element is invisible in the ordinary render and in every screenshot of it.
+
+**When a file carries uncommitted work, revert a plant by TARGETED EDIT, never `git checkout`.** Skipping this once duplicated a lint rule whose stale copy then mis-guarded a plant.
+
 ### 13. PROSE, class only; all instances resolved.
 
-A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `?? "system"` on the theme, `REMOTE_ARGS ?? []`. Lint form: `check:assertions` rule (e).
+A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `?? "system"` on the theme, `REMOTE_ARGS ?? []`, each marked `JUSTIFIED SUBSTITUTION` at its call site.
+
+**The lint form is GONE since 2026-08-21**: `check:assertions` rule (e) enforced it and the gate was deleted in audit tier 4.1. In `app/` this class is stronger than a lint anyway, because a map keyed by its own union is a typecheck failure. In `scripts/` it is now unenforced, and that is the accepted cost.
 
 ### 14. ONE-LINER. Migrations are hand-written, drizzle-kit is deliberately absent, and an applied migration is never edited.
 
@@ -81,6 +109,8 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 ### 15. PROSE. Do not modify `.claude/settings.json` without explicit instruction.
 
 **UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
+
+**OPEN, restored 2026-08-21 from Capsid version 1684 where it was dropped: seven repos still carry the fail-open `scoped-git-add.sh`.** This repo's copy was fixed; propagation to the rest of the portfolio has never been done. It is a live defect in seven repositories, not a status line, which is why it belongs in the rule rather than in a changelog.
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
 
