@@ -56,7 +56,7 @@
  * examined files, so "0 problems" can never quietly mean "0 things examined".
  */
 
-import { readFileSync, readdirSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { dirname, join, relative, sep } from "node:path";
@@ -2306,6 +2306,93 @@ console.log("\n  12. every rendered <main> is the skip link's target");
   );
 }
 
+/* ------- 13. every public page's meta comes from a builder --------------- */
+
+/*
+ * NO PAGE HAND-ASSEMBLES ITS OWN SOCIAL SET.
+ *
+ * Five public pages each built part of the same meta list by hand and each
+ * stopped somewhere different. Measured 2026-08-20: the HOME PAGE, the URL
+ * people paste, had `og:image` and `twitter:card` and no canonical, no
+ * `og:title`, no `og:description`, no `og:url` and no `og:type`. The colophon
+ * and roster had a title and description and nothing else. Projects and
+ * playground had canonical and OG text and no image and no card.
+ *
+ * Nothing was wrong with any single line. The defect is the SHAPE: a copied
+ * literal drifts one property at a time and no reviewer diffs five files
+ * against each other. So the assertion is structural rather than a checklist of
+ * tag names, because a checklist would need updating every time the set grows
+ * and would itself become the sixth copy.
+ *
+ * TWO BUILDERS ARE LEGITIMATE. `pageMeta` for hand-authored pages and
+ * `postSocial` for posts, which resolves per-post overrides and the generated
+ * card. A route using either is compliant; a route returning a bare array is
+ * not.
+ *
+ * SCOPED TO app/routes AND TO PUBLIC PAGES. `admin.*` is exempt: the admin
+ * plane is noindex by ruling, so a canonical and a social card would be
+ * describing pages that must never be shared. `login` is exempt for the same
+ * reason. The exemption is a NAMED LIST with a reason, not a pattern, so a new
+ * public page cannot join it by accident.
+ */
+
+console.log("\n  13. every public page's meta comes from a builder");
+
+{
+  /** Routes allowed to hand-write meta, each with the reason. */
+  const META_EXEMPT = {
+    "app/routes/login.tsx": "noindex by ruling: a canonical would describe a page nobody may share",
+    "app/routes/search.tsx": "results pages are noindex; the meta is a title only",
+    "app/routes/preview.$token.tsx":
+      "a capability-token draft view. It emits noindex in the markup AND on the wire, " +
+      "so a canonical and a social card would describe a page that must never be shared, " +
+      "and the token is in the URL.",
+  };
+
+  /** @type {string[]} */
+  const handRolled = [];
+  let withMeta = 0;
+  let scanned = 0;
+
+  for (const file of sourceFiles(join(root, "app", "routes"))) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (!rel.endsWith(".tsx")) continue;
+    if (rel.includes("/admin")) continue;
+    scanned += 1;
+    const code = stripComments(readFileSync(file, "utf8"));
+    if (!/export function meta\(/.test(code)) continue;
+    withMeta += 1;
+    if (rel in META_EXEMPT) continue;
+    if (/pageMeta\(|postSocial\(/.test(code)) continue;
+    handRolled.push(rel);
+  }
+
+  /*
+   * SCOPE, ASSERTED. "Nothing hand-rolled" is also what an empty walk reports,
+   * and this gate has been bitten by that shape three times in a fortnight.
+   */
+  ok(
+    "the public route walk found files that export meta()",
+    scanned >= 8 && withMeta >= 5,
+    `scanned ${scanned} public route file(s), ${withMeta} export meta(). A zero-scope ` +
+      `walk agrees with anything.`,
+  );
+
+  ok(
+    "every public page's meta comes from pageMeta or postSocial",
+    handRolled.length === 0,
+    `${handRolled.join(", ")} assemble a meta array by hand. That is how five pages ` +
+      `ended up with five different partial social sets.`,
+  );
+
+  ok(
+    "the meta exemptions all name a route that exists",
+    Object.keys(META_EXEMPT).every((p) => existsSync(join(root, p))),
+    `META_EXEMPT names a file that is not there, so it exempts nothing and hides ` +
+      `whatever replaced it`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2342,7 +2429,7 @@ console.log("\n  12. every rendered <main> is the skip link's target");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 110;
+const MINIMUM_CHECKS = 113;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
