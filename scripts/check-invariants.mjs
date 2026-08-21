@@ -2842,6 +2842,195 @@ console.log("\n  16. the CI workflow runs the derived tier");
   );
 }
 
+/* ------- 17. one helper name, one argument order, no string conditions ---- */
+
+/*
+ * THE TENTH VACUITY CLASS, AND THE ONLY TWO RULES OF check:assertions THAT
+ * SURVIVED IT. Moved here 2026-08-21; that gate was deleted in audit tier 4.1
+ * as a lint of lints.
+ *
+ * `assert()` was defined SEVEN times across the gates with FOUR argument orders:
+ * three took the condition first, four took the label first. An assertion copied
+ * between two of them lands a non-empty STRING in the condition slot. A string is
+ * truthy, so it can never fail, and the checks counter still increments, so the
+ * gate reports MORE coverage than before it went blind. Both directions were
+ * demonstrated on 2026-08-11:
+ *
+ *   assert(1 === 2, "must fail")  in a label-first gate     -> 98 checks, 0 failures
+ *   assert("must fail", 1 === 2)  in a condition-first gate ->  7 checks, 0 failures
+ *
+ * The class lives in the API surface BETWEEN instruments, where a per-file lint
+ * cannot look, which is why nine prior classes and a dedicated lint all missed
+ * it. It was found by an external audit and by nothing in this repo.
+ *
+ * ## WHY BOTH RULES, WHEN THE AUDIT ASKED TO KEEP ONE
+ *
+ * Tier 4.1 says keep the helper-argument-order check. **That is half the
+ * repair, and the deleted gate's own comment recorded which half was missing.**
+ * Giving the two shapes two names removes the CAUSE, one name meaning two
+ * things. It does not stop someone hand-writing
+ *
+ *     assert(1 === 2, "AUDIT: a false condition that must fail");
+ *
+ * in a label-first gate. MEASURED AFTER THE RENAME: still 98 checks, 0 failures.
+ * So the condition-position argument is examined directly, and which position
+ * that is comes from the helper's own definition rather than being assumed.
+ *
+ * Dropping the other four rules is the accepted half. (a) literal conditions and
+ * (d) unguarded derived RegExps were each written after ONE instance and have
+ * caught none since; (b) unscoped whole-document matches was enforced by
+ * requiring a `SCOPED-BY` comment, which makes a comment satisfy an assertion
+ * about code, a defect class this repo has now paid for three times; and (c) was
+ * already skipped as unimplementable by its own author.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * **IT READS SOURCE TEXT.** It cannot execute a condition to see whether it can
+ * vary, and it proves an assertion is not a STRING, never that the expression in
+ * that slot is meaningful. `ok("x", page.includes(">Roster<"))` passes here and
+ * would still be worthless if `>Roster<` appeared on every page. That judgement
+ * stays with whoever writes the assertion.
+ */
+
+console.log("\n  17. assertion helpers agree, and no condition is a string");
+
+{
+  const gateFiles = readdirSync(join(root, "scripts"))
+    .filter((n) => n.endsWith(".mjs"))
+    .map((n) => ({ name: n, path: join(root, "scripts", n) }));
+
+  /*
+   * FAILS CLOSED. Zero files is a broken directory read reporting the same
+   * clean sweep as a clean repo. Floored well under the real count, because
+   * this moves by one whenever a gate is added or deleted and both happen.
+   */
+  ok(
+    "the helper scan read the gate scripts",
+    gateFiles.length >= 20,
+    `${gateFiles.length} .mjs file(s) under scripts/; the directory read has broken.`,
+  );
+
+  /** @type {Map<string, {file: string, params: string}[]>} */
+  const signatures = new Map();
+  for (const { name, path } of gateFiles) {
+    const src = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+    for (const m of src.matchAll(
+      /^(?:export\s+)?(?:function|const)\s+(ok|check|assert|assertThat|eq|fail)\b[^\n]*?\(([^)]*)\)/gm,
+    )) {
+      const first = m[2].split(",")[0].trim().replace(/\s*=.*$/, "");
+      const list = signatures.get(m[1]) ?? [];
+      list.push({ file: name, params: first });
+      signatures.set(m[1], list);
+    }
+  }
+
+  // NON-EMPTY SCOPE: no definitions found means the matcher stopped matching
+  // and every consistency claim below would be about nothing.
+  ok(
+    "the signature scan found assertion helpers to compare",
+    signatures.size >= 4,
+    `${signatures.size} helper name(s) across ${gateFiles.length} file(s); the ` +
+      `definition matcher has stopped reading this repo's style.`,
+  );
+
+  for (const [helper, defs] of [...signatures].sort()) {
+    const orders = new Set(defs.map((d) => d.params));
+    ok(
+      `${helper}() takes the same first argument everywhere it is defined`,
+      orders.size === 1,
+      defs.map((d) => `${d.file}: ${helper}(${d.params}, ...)`).join("\n        ") +
+        `\n        ${orders.size} different first arguments for one name. An assertion ` +
+        `copied between these files puts a truthy STRING in the condition slot, can ` +
+        `never fail, and still increments the check count. Give the shapes different ` +
+        `names, or make them agree.`,
+    );
+  }
+
+  /** Splits a call's arguments at top level, ignoring commas inside nesting. */
+  function topLevelArgs(/** @type {string} */ inner) {
+    const args = [];
+    let depth = 0;
+    let quote = "";
+    let current = "";
+    for (let i = 0; i < inner.length; i += 1) {
+      const c = inner[i];
+      if (quote) {
+        current += c;
+        if (c === quote && inner[i - 1] !== "\\") quote = "";
+        continue;
+      }
+      if (c === '"' || c === "'" || c === "`") { quote = c; current += c; continue; }
+      if ("([{".includes(c)) depth += 1;
+      if (")]}".includes(c)) depth -= 1;
+      if (c === "," && depth === 0) { args.push(current.trim()); current = ""; continue; }
+      current += c;
+    }
+    if (current.trim()) args.push(current.trim());
+    return args;
+  }
+
+  /** helper name -> index of the argument that carries the CONDITION. */
+  const conditionIndex = new Map();
+  for (const [helper, defs] of signatures) {
+    const first = defs[0]?.params ?? "";
+    if (helper === "fail") continue; // reports, takes no condition
+    conditionIndex.set(helper, /^(ok|condition)$/.test(first) ? 0 : 1);
+  }
+
+  /** @type {string[]} */
+  const stringConditions = [];
+  let callsExamined = 0;
+
+  for (const { name, path } of gateFiles) {
+    const code = stripped(readFileSync(path, "utf8").replace(/\r\n/g, "\n"));
+    for (const m of code.matchAll(/\b(check|ok|assert|assertThat|eq)\s*\(/g)) {
+      const idx = conditionIndex.get(m[1]);
+      if (idx === undefined) continue;
+      const open = (m.index ?? 0) + m[0].length - 1;
+      let depth = 0;
+      let end = open;
+      for (let i = open; i < code.length; i += 1) {
+        if (code[i] === "(") depth += 1;
+        else if (code[i] === ")") { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      const arg = topLevelArgs(code.slice(open + 1, end))[idx];
+      if (!arg) continue;
+      callsExamined += 1;
+      if (!/^["'`]/.test(arg)) continue;
+      const line = (code.slice(0, m.index ?? 0).match(/\n/g) ?? []).length + 1;
+      stringConditions.push(`${name}:${line} ${m[1]}(...) argument ${idx + 1}`);
+    }
+  }
+
+  /*
+   * SCOPE, ASSERTED, and this one is not decoration: the absence check below
+   * reports the same clean result whether there are no string conditions or no
+   * calls at all. Comments are stripped first, so a stripper that emptied every
+   * file would look exactly like a clean repo.
+   *
+   * MEASURED 2026-08-21 BY RUNNING IT: 347 calls across 39 files. Floored at
+   * 300, about 13 percent under. The first draft GUESSED 400 and failed on its
+   * own first run, which is this assertion working on its author: a floor set by
+   * guess is a floor set above what the scan can actually see, and the failure
+   * mode it is written to catch is a scan that shrinks rather than one that
+   * stops.
+   */
+  ok(
+    "the condition-slot scan examined assertion calls",
+    callsExamined >= 300,
+    `${callsExamined} call(s) examined across ${gateFiles.length} file(s). A ` +
+      `zero-scope scan finds no string conditions because it read nothing.`,
+  );
+
+  ok(
+    "no assertion carries a string literal in its condition slot",
+    stringConditions.length === 0,
+    stringConditions.join("\n        ") +
+      "\n        A string literal is always truthy, so that assertion can never " +
+      "fail while still incrementing the check count. Check the argument order.",
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2878,7 +3067,7 @@ console.log("\n  16. the CI workflow runs the derived tier");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 130;
+const MINIMUM_CHECKS = 136;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
