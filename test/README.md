@@ -16,8 +16,8 @@ than returning it. These are claims about BEHAVIOUR, they are cheap, and they
 are the right home for anything that can be expressed as input in, output out.
 
 **GATES verify the REPO'S SHAPE.** `check:content` byte-compares an artifact.
-`check:claude-md` measures a file's size and section order. `check:config`
-compares two config files to each other. `check:invariants` binds raw SQL column
+`check:invariants` section 15 measures CLAUDE.md's size and section order.
+`check:config` compares two config files to each other. `check:invariants` binds raw SQL column
 names to `schema.ts`. None of these is a behavioural claim, none would fit in a
 test, and each carries an OBSERVATION BOUNDARY note saying what it cannot see.
 
