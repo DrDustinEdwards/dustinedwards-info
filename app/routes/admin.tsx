@@ -666,7 +666,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="admin-main">
-        <main className="admin-content">
+        {/* id="main" for root's unconditional skip link. The admin plane had
+            the same dead hash as /login and the error boundary; found by
+            check:invariants section 12 rather than by the audit. */}
+        <main className="admin-content" id="main">
           <Outlet />
         </main>
       </div>

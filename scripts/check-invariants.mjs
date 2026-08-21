@@ -2241,6 +2241,71 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
   );
 }
 
+/* -------- 12. every rendered <main> is the skip link's target ------------ */
+
+/*
+ * THE SKIP LINK IS UNCONDITIONAL, SO ITS TARGET MUST BE TOO.
+ *
+ * `root.tsx` renders `<a class="skip-link" href="#main">` on EVERY route. A
+ * route that renders a `<main>` without `id="main"` therefore ships a skip
+ * link that moves focus nowhere, and it is the first thing a keyboard reader
+ * reaches.
+ *
+ * It regressed twice and neither was noticed: `/login`, the site's only door,
+ * and the error boundary, which is the most likely page a stranger reaches by a
+ * broken link. Both fixed 2026-08-20.
+ *
+ * **THIS EXISTS BECAUSE check:browser IS NOT IN THE OFFLINE TIER.** That gate
+ * measures the real thing in a real browser and is the better instrument, but
+ * it needs a build, a server and a browser, so it is tiered network and `ship`
+ * never runs it. This is the cheap source-shaped half that runs before every
+ * ship. The two are not redundant: this one cannot see whether the target is
+ * REACHABLE, only whether it exists in the source.
+ *
+ * SCOPED TO ROUTES THAT RENDER A `<main>`. A route rendering into a parent
+ * layout's main has no `<main>` of its own and must not be required to invent
+ * one; the admin subtree is exactly that shape.
+ */
+
+console.log("\n  12. every rendered <main> is the skip link's target");
+
+{
+  const ROUTES = join(root, "app", "routes");
+  /** @type {string[]} */
+  const offenders = [];
+  let withMain = 0;
+  let scanned = 0;
+
+  for (const file of sourceFiles(ROUTES)) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (!rel.endsWith(".tsx")) continue;
+    scanned += 1;
+    const code = stripComments(readFileSync(file, "utf8"));
+    if (!/<main[\s>]/.test(code)) continue;
+    withMain += 1;
+    if (!/<main[^>]*\sid="main"/.test(code)) offenders.push(rel);
+  }
+
+  /*
+   * SCOPE, ASSERTED. "No offenders" is also what an empty walk and a stripper
+   * that emptied every file both report, and this gate has been bitten by that
+   * shape twice in a week.
+   */
+  ok(
+    "the route walk found files, and some of them render a <main>",
+    scanned >= 10 && withMain >= 5,
+    `scanned ${scanned} route file(s), ${withMain} render a <main>. A zero-scope walk ` +
+      `agrees with anything.`,
+  );
+
+  ok(
+    "every route rendering a <main> gives it id=\"main\"",
+    offenders.length === 0,
+    `${offenders.join(", ")} render a <main> with no id="main", so root's ` +
+      `unconditional skip link moves focus nowhere on those routes.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2277,7 +2342,7 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 108;
+const MINIMUM_CHECKS = 110;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
