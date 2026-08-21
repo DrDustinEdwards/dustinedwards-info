@@ -19,6 +19,8 @@ Start: `brief("dustinedwards")`, or read `capsid/conventions.md` then `dustinedw
 
 Do this before touching code. It is not a formality: the recurring failure in this repo is a session acting on a stale claim it could have checked in one call.
 
+**Then read `FAILURES.md`. It is one screen and it is the shortest useful thing in this repo.** Sixteen recurring failure SHAPES, one line each, every one already written down at length before it happened again. It is HERE, in the ritual, rather than in the document list at the bottom, for the reason the page itself makes: a lesson nobody meets is not recorded. The ritual is the one section whose entire job is "before touching code", and these shapes govern how to read everything below them, including the rules.
+
 **There is no end-of-session write. Sessions READ Capsid and never write it**, per `dustinedwards/core.md`. This file asked for a `session-YYYY-MM-DD.md` episodic at the end and had done since the ritual was written, which contradicted that rule outright. Capsid wins and this file was the defect, exactly as the paragraph above the ritual says. Removed 2026-08-18, after a session stopped on the conflict rather than resolving it in its own favour. Do not re-add it here: if the standing rule changes, it changes in Capsid first and this file follows.
 
 ## Hard rules
@@ -119,7 +121,11 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 
 **UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
 
-**OPEN, restored 2026-08-21 from Capsid version 1684 where it was dropped: seven repos still carry the fail-open `scoped-git-add.sh`.** This repo's copy was fixed; propagation to the rest of the portfolio has never been done. It is a live defect in seven repositories, not a status line, which is why it belongs in the rule rather than in a changelog.
+**RESTORED, THEN FALSIFIED BY MEASUREMENT, both on 2026-08-21.** The clause recovered from Capsid version 1684 read "seven repos still carry the fail-open `scoped-git-add.sh`". It was true when written and a propagation landed on 2026-08-16, so the clause predated its own fix.
+
+**Measured at origin, by blob sha, across every repo Capsid maps: ONE is fail-open, not seven.** Six carry canonical `11d59813`; this repo adopted it in `6b59ee5` and was never fail-open, only carrying a stale header over an identical body; `foxhound` carries fail-open `2d4155fb` and is its own authority, with a PR open against it. The two legacy Vercel repos have no hooks directory at all.
+
+**The lesson is the clause, not the count**, and it is the reason this paragraph is kept rather than deleted: *a claim inherited from a document gets the same treatment as one from memory.* Restoring it verbatim from version history put a stale fact back into the one file every session reads first. See `FAILURES.md`.
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
 
@@ -212,6 +218,8 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 **In THIS REPO, because a gate can reach it and Capsid cannot:**
 
     CLAUDE.md                  the fifteen hard rules, above
+    FAILURES.md                the recurring failure SHAPES, one line each. Read in the
+                               ritual above, not here. Gated for length: it fails if it grows
     VERIFICATION.md            how to prove a deploy, a claim, or a gate. The method
                                behind rules 7, 10 and 12. Moved out of Capsid 2026-08-20
     RECOVERY.md                rebuilding every Cloudflare resource from nothing
