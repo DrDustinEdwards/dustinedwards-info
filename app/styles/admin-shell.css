@@ -1,0 +1,1049 @@
+/*
+ * The admin cockpit frame: sidebar, nav, badges, topbar, panels, and the origin-requests panel.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+.admin {
+  display: grid;
+  /* `auto` and not the width itself. The width lives on .admin-sidebar, which
+     the track then sizes to. Transitioning grid-template-columns directly was
+     the obvious way and it is BROKEN: measured 2026-08-01, expanding from the
+     rail left the computed template frozen at `60px 1220px` while the variable
+     had already resolved to 15rem and the labels were back. `width` on a real
+     element interpolates dependably; a track list built from a custom property
+     does not. */
+  grid-template-columns: auto 1fr;
+  /* A header row spanning both columns, then the body. The topbar used to sit
+     inside .admin-main, which put it in the right column and made the mark's x
+     a function of the sidebar's width. */
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+  /* The shell's three declared lengths. Scoped to .admin DELIBERATELY, not
+     added to the token block, because check:contrast parses every custom
+     property in that block as a colour and would throw on a length.
+
+     --admin-topbar-h  the shell topbar. Ruling 8's offset at the narrow
+                       breakpoint, where the document is the scrollport.
+     --admin-cmdbar-h  the editor's command bar. The canvas subtracts it, so it
+                       has to be a number rather than whatever the content
+                       happened to make it.
+     --admin-control-h ONE control height across the command bar, 32px. */
+  /* 4.25rem, not the 4rem the ruling assumed, and the difference is measured
+     rather than chosen. .site-header carries `min-height: 4rem`, but that
+     minimum never binds: its nav controls are 36px tall, so with 1rem block
+     padding the real header is 68.67px and the 32px mark centres at y=18.
+     Matching the DECLARED minimum would have put the admin mark at y=16 and
+     missed by 2px. 4.25rem is 68px, which centres a 32px mark at exactly 18.
+     Load bearing: .editor-canvas subtracts it and the narrow breakpoint offsets
+     .editor-bar by it, so both are re-measured as a regression. */
+  --admin-topbar-h: 4.25rem;
+  --admin-cmdbar-h: 3.5rem;
+  --admin-control-h: 2rem;
+  /* The expanded width, 240px from the ruling. The collapsed one is no longer
+     the ruling's 60px: the 2026-08-01 amendment DERIVES it from the inset, so
+     the rail can hold the same icon column the expanded state indents to. It
+     is applied by an attribute the inline script sets before first paint, so
+     the rail never flashes wide and nothing is corrected after the fact. */
+  --admin-sidebar-w: 15rem;
+  --admin-nav-item-h: 2.75rem;
+  /* THE SHARED ICON COLUMN, and the reason it is this exact width.
+   *
+   * One column and one gap serve the topbar's brand block and every sidebar
+   * item, so the mark and the nav icons stand in the same column and the
+   * wordmark and the nav labels begin at the same x. Before this the sidebar
+   * ran its own inset (10 + 3 + 10 = 23px) while the parity ruling had fixed
+   * the mark at 32px, so the two columns missed each other by 9px.
+   *
+   * 1.44rem is the MARK'S OWN WIDTH and that is what makes the column work at
+   * all. The header crop is intrinsically 36x50, so a 2rem-tall mark is
+   * 2rem * 36/50 = 1.44rem wide. A wider column would centre the mark by
+   * pushing its left edge off the inset; a narrower one would not fit the 20px
+   * nav glyphs. Written as the arithmetic rather than as 1.44rem so the 36x50
+   * stays visible next to it. */
+  --admin-icon-col: calc(2rem * 36 / 50);
+  --admin-icon-gap: 0.5rem;
+  /* THE SHARED INSET, taken from the site-wide declaration on `body` rather
+     than restated, which is what keeps the two planes agreeing. Aliased here
+     because everything in this shell reads it under the admin name. */
+  --admin-item-inset: var(--site-inset);
+  /* THE RAIL IS DERIVED, never a literal.
+   *
+   * inset + column + inset, so the collapsed rail centres the very column the
+   * expanded one indents to, and the icons do not move sideways when the rail
+   * closes. It resolves to 71.04px. Writing 71px here instead would be a number
+   * that silently stops matching the inset the first time the inset is tuned,
+   * and the failure would be a 0.5px drift nobody looks for. */
+  --admin-sidebar-rail-w: calc(var(--admin-item-inset) * 2 + var(--admin-icon-col));
+  /* The active item's left rule. Drawn out of flow, so it is a length this
+     alignment never has to subtract. */
+  --admin-item-rule: 3px;
+}
+
+[data-admin-sidebar="collapsed"] .admin {
+  --admin-sidebar-w: var(--admin-sidebar-rail-w);
+}
+
+/* Ruling 6 asks that the width transition respect prefers-reduced-motion. There
+   is NO width transition, which satisfies it the short way, and that is a
+   correctness decision rather than laziness.
+ *
+ * Measured 2026-08-01, twice. Transitioning `grid-template-columns` left the
+ * computed template frozen at `60px 1220px` after expanding, while the variable
+ * had already resolved to 15rem and the labels were back. Moving the width onto
+ * the sidebar and transitioning that failed the same way in the other
+ * direction: computed width stuck at 240px with the variable resolved to
+ * 3.75rem, and `getAnimations()` reporting nothing running, so the transition
+ * had started, stalled, and left the element at its start value. Setting
+ * `transition: none` at runtime snapped it to 60px, which is what identified
+ * the cause.
+ *
+ * Both failures are the same circularity: the sidebar is a grid item in an
+ * `auto` track, so the track sizes to the item while the item's width is being
+ * animated. A rail that snaps is instant, correct, and cannot get stuck. What
+ * still animates is the CHEVRON, a transform, which does not feed back into
+ * layout. */
+
+.admin-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: var(--admin-sidebar-w);
+  min-width: 0;
+  /* No LEFT padding: the whole inset lives on the item, so the active rule can
+     sit flush against the rail's edge. That is what the active item's
+     `0 0.5rem 0.5rem 0` radius always described, and with a 10px gutter in
+     front of it the shape read as a square-cornered chip floating in the
+     column instead of a tab attached to it. */
+  padding: 1rem 0.625rem 1rem 0;
+  /* A SHADOW, for the reason the topbar's hairline is one: `box-sizing` is
+     border-box, so a border-right would be subtracted from the width, and the
+     collapsed rail's width IS the alignment. The rail is
+     inset + column + inset, and a real border would eat a device-pixel-snapped
+     slice off it and land the icon at 23.67 instead of 24. Out of the box, the
+     content width is exactly what the token says. */
+  box-shadow: 1px 0 0 var(--border);
+  background: var(--surface);
+  /* Tooltips and the collapsed rail's labels need to escape the rail. */
+  overflow: visible;
+}
+
+/* The foot reads as a ZONE, not as two more sections.
+ *
+ * A hairline is enough to say it, so it is a hairline: both items already carry
+ * the nav item's shape, and without a separator they simply extended the list
+ * of places you can be with two things that are not places. --border, not
+ * --border-strong: the sidebar is not an elevated surface, it is the shell, and
+ * the elevated-surface law is about the popover step and pinned bars. */
+.admin-sidebar-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ONE item shape, and now it is the same shape the topbar's brand block uses.
+   The nav links, View site and the collapse toggle all take it: a 44px target,
+   the shared icon column, the shared gap, and a 14px label the rail hides.
+
+   The inset is spent ENTIRELY as padding, and the active rule is drawn out of
+   flow by the pseudo-element below. */
+.admin-nav a,
+.admin-view-site,
+.admin-sidebar-toggle {
+  /* The containing block for that rule, and for the rail's badge. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--admin-icon-gap);
+  min-height: var(--admin-nav-item-h);
+  /* Measured 2026-08-01: this was briefly `calc(inset - rule)` over a real 3px
+     border, and the icon column came out at 31.667 against the mark's 32.
+     Chrome snaps a border to whole device pixels, so `3px` RENDERS 2.667 at
+     dpr 1.5, and subtracting the DECLARED 3px from the padding cannot cancel a
+     rendered 2.667. Same trap as the topbar hairline, one element down: a
+     border may participate in an alignment or be a fixed length, not both. */
+  padding: 0 0.625rem 0 var(--admin-item-inset);
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+
+/* The glyph is 20px but its BOX is the shared column, so it centres in the same
+   column the mark does. The viewBox is square and the height is what binds, so
+   `preserveAspectRatio` centres the 20px drawing inside the 23.04px box on its
+   own; no wrapper element is needed to make a column out of it. */
+.admin-nav-icon {
+  flex: none;
+  width: var(--admin-icon-col);
+  height: 1.25rem;
+}
+
+.admin-nav-label {
+  overflow: hidden;
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+}
+
+/* THE SECTION COUNT, and it is deliberately NOT a badge.
+ *
+ * A badge is an alarm; this is a size. It gets no fill, no pill and no warning
+ * colour, only the right edge and a quieter grade of text, which is what the
+ * mockup does and is why the two can sit on one row without the eye reading
+ * both as problems. `--text-muted` clears the floor at 7.1:1; the mockup's
+ * #a79c8a is 2.34:1 and does not ship here any more than it ships in the media
+ * table.
+ *
+ * `margin-left: auto` puts it at the far edge, and the drift badge that may
+ * follow it takes the same treatment it always had, so on the one item that can
+ * carry both the count sits inboard of the alarm.
+ *
+ * TABULAR FIGURES, so a rail of counts lines up on the digit rather than
+ * jittering between 9 and 31. */
+.admin-nav-count {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Beside a drift badge the count gives up the auto margin, or the two would
+   fight over the same edge and the count would be pushed off it. */
+.admin-nav-count + .admin-nav-badge {
+  margin-left: 0.375rem;
+}
+
+/* IN THE COLLAPSED RAIL THE COUNT GOES, and the badge stays.
+ *
+ * There is room for one numeral over a 20px glyph and the alarm is the one
+ * worth keeping: a count with no label beside it is a number nobody can read
+ * the unit of, which is the exact defect the badge's own accessible name was
+ * written to avoid. The count survives as words in the item's aria-label, so
+ * nothing is lost to a screen reader, and `title` carries it for a pointer. */
+[data-admin-sidebar="collapsed"] .admin-nav-count {
+  display: none;
+}
+
+/* Ask index drift, on the item that owns the repair.
+ *
+ * A FILL, per the binding rule that interactive semantics take fills and never
+ * pastel text on the page. Warning rather than danger: a drifted index means
+ * Ask is answering from a stale corpus, which is a degraded enhancement and not
+ * a broken site, and this badge sits permanently in the furniture where danger
+ * would cry wolf.
+ *
+ * The numeral is aria-hidden and the item's accessible name carries the count
+ * in words, so nothing here has to be readable to be announced. */
+.admin-nav-badge {
+  flex: none;
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 0.625rem;
+  background: var(--fill-warning);
+  color: var(--on-fill-warning);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+/* In the RAIL the badge stays, and stays a numeral.
+ *
+ * There is no label left to sit beside, so it anchors to the item's top right
+ * and overlaps the icon's corner, which is the ordinary shape of a count on an
+ * icon. Kept rather than dropped because the badge exists to pull the eye to
+ * Posts from wherever you are, and the collapsed rail is exactly the state in
+ * which the label that would otherwise say so is gone. Legibility is what the
+ * `title` covers: it carries the same words the accessible name does. The item
+ * is already the containing block, for the active rule. */
+[data-admin-sidebar="collapsed"] .admin-nav-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  margin-left: 0;
+}
+
+/* THE COLLAPSED RAIL. Labels go, targets stay, icons centre. The accessible
+   name is an aria-label on the element, so hiding the text costs nothing:
+   `display: none` on a label that WAS the name would have made every item
+   nameless. */
+[data-admin-sidebar="collapsed"] .admin-nav-label {
+  display: none;
+}
+
+/* THE RAIL KEEPS THE SHARED COLUMN. This is the 2026-08-01 amendment.
+ *
+ * The rail used to be 60px with its icons CENTRED, which put them at x 13.146
+ * against the mark's 32: the topbar does not collapse, so a rail narrower than
+ * inset + column + inset cannot hold the column the expanded state indents to,
+ * and the icons jumped sideways every time the rail closed.
+ *
+ * The amendment moves the inset in to 1.5rem on both planes and sizes the rail
+ * FROM it, so the same padding-left serves both states and centring is never
+ * asked for. The symmetry Dustin asked to see is then a consequence rather than
+ * a technique: the icon sits at the inset, and what is left to its right is the
+ * rail less the inset less the column, which is the inset again.
+ *
+ * The padding is kept rather than zeroed for the same reason it is not
+ * `justify-content: center`: centring derives the icon's x from the CONTENT
+ * BOX, so the sidebar's right padding and its right border would both have to
+ * be zero and stay zero for the number to hold. Positioning it from the left
+ * edge depends on nothing but the inset. */
+[data-admin-sidebar="collapsed"] .admin-nav a,
+[data-admin-sidebar="collapsed"] .admin-view-site,
+[data-admin-sidebar="collapsed"] .admin-sidebar-toggle {
+  gap: 0;
+  padding: 0 0 0 var(--admin-item-inset);
+}
+
+/* The rail's own box must BE the derived width, so nothing inside it is
+   measured against a content box that the padding has already shortened. */
+[data-admin-sidebar="collapsed"] .admin-sidebar {
+  padding-inline: 0;
+}
+
+/* The toggle is an item, not an orphan. Everything but the button reset now
+   comes from the shared item shape above. */
+.admin-sidebar-toggle {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-sidebar-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Height only. The WIDTH is the shared column, inherited from .admin-nav-icon,
+   which the chevron also carries: overriding it here is what left the toggle's
+   glyph 18px wide and centred at 41 while every other item sat at 43.516.
+   A little smaller than the nav glyphs on purpose, so the control reads as
+   chrome rather than as a sixth section. */
+.admin-sidebar-chevron {
+  height: 1.125rem;
+}
+
+/* One glyph, turned around. The direction names the ACTION: pointing left it
+   collapses, pointing right it expands. */
+[data-admin-sidebar="collapsed"] .admin-sidebar-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .admin-sidebar-chevron {
+    transition: transform 160ms ease;
+  }
+}
+
+/* THE IDENTITY BLOCK, at exactly .site-header-brand's treatment.
+ *
+ * The `:visited` selector is not decoration. `.admin-brand` alone is (0,1,0)
+ * and the base `a:visited` is (0,1,1), so without it the wordmark turns claret
+ * the moment /admin is in history, which for the person who runs this admin is
+ * always. That is the THIRD time this defect has been found on this site: the
+ * public wordmark, the New post button, and now here. Any identity element or
+ * filled control worn by a Link needs the same treatment.
+ *
+ * Exempt from the underline rule for the same reason the public wordmark is:
+ * an identity block is not a destination the reader has visited, it is who the
+ * site is. */
+.admin-brand,
+.admin-brand:visited {
+  display: inline-flex;
+  align-items: center;
+  /* The SHARED gap, the same one every sidebar item uses, which is what puts
+     the wordmark's left edge and the nav labels' left edge on the same x. It is
+     still 0.5rem, the value .site-header-brand carries, so sharing it cost the
+     public parity nothing. */
+  gap: var(--admin-icon-gap);
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.admin-brand:hover {
+  color: var(--brand-hover);
+}
+
+/* Same height as .site-header-mark, and the same `display: block` plus
+   `width: auto`, so the intrinsic 36x50 scales identically on both planes. The
+   component is imported, not copied, so check:logo covers this instance;
+   `.site-logo-brand` inside it is var(--brand) and needs no rule here. */
+.admin-brand-mark {
+  display: block;
+  flex: none;
+  /* The SHARED column, stated rather than left to `width: auto`. The token IS
+     the mark's natural width (2rem * 36/50), so the rendered box is the same
+     23.04px the public mark occupies and the parity measurement is unmoved;
+     what changes is that the column is now declared in one place and the
+     sidebar's icons read it too. */
+  width: var(--admin-icon-col);
+  height: 2rem;
+}
+
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.admin-nav a,
+.admin-nav a:visited {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.admin-nav a:hover {
+  color: var(--text);
+}
+
+/* Ruling 5. THREE channels, not one: a left rule, a surface change, and the
+   weight. forced-colors keeps the rule and the weight when it takes the tint
+   and the hue away, so the current page is still findable there. */
+.admin-nav a[aria-current="page"] {
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--tint-brand);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* The rule itself, OUT OF FLOW, which is what lets every item spend its whole
+   inset on padding and stand in the mark's column.
+
+   It is a BORDER on an absolutely positioned box rather than a background bar,
+   and that is the forced-colors half of ruling 5: forced-colors overrides
+   `background`, so a painted bar would disappear in exactly the mode this
+   channel exists for, while a border is re-coloured and survives. Nothing
+   shifts when it lands, because an absolutely positioned box is not in the
+   flow at all, which also retires the transparent border every item used to
+   carry to reserve the space. */
+.admin-nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-left: var(--admin-item-rule) solid var(--brand);
+}
+
+/* The nav item treatment, at the nav's own type size.
+ *
+ * `margin-top: auto` moved to the foot, which is the group that owns the push.
+ * The underline goes for a reason the link rule already sanctions: this carries
+ * a non-colour affordance of its own, the arrow leaving a box, and it now sits
+ * in a list of undecorated items where an underline on one of them read as the
+ * odd one out rather than as an affordance. The glyph is the signal that it
+ * leaves the plane; the accessible name says so in words. */
+.admin-view-site,
+.admin-view-site:visited {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+/* Desktop: neither of these exists. They are the narrow-viewport drawer's
+   opener and its dismissal surface. */
+.admin-menu-button,
+.admin-drawer-backdrop {
+  display: none;
+}
+
+.admin-view-site:hover {
+  color: var(--text);
+}
+
+.admin-main {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* Without this a flex child refuses to shrink below its content, and the
+     scroll lands on the document again. */
+  min-height: 0;
+}
+
+/* Surface hierarchy in the cockpit.
+ *
+ * Three questions, three answers, out of the neutrals that already exist:
+ *
+ *   --surface  the SHELL. Sidebar and topbar together, one continuous L of
+ *              chrome that frames the work rather than holding it.
+ *   --bg       the CANVAS, inherited from body. What the shell wraps.
+ *   --surface  again for a CARD, but sitting on the canvas behind a border.
+ *
+ * The sidebar and a card resolve to the same hex and never touch, so the
+ * ladder still reads as chrome, canvas, raised without inventing a fourth
+ * neutral. Rule 7 sanctions a card here without argument: it says cards are
+ * for indexes, and the posts list is the only index this admin has.
+ *
+ * The topbar was transparent before this, so it read as canvas while the
+ * sidebar read as chrome, and the shell had a seam down the middle of itself. */
+.admin-topbar {
+  /* Row 1, both columns. This is what makes the geometry match by
+     construction rather than by tuning. */
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: var(--admin-topbar-h);
+  /* THE SHARED INSET, the same token .site-header and every sidebar item use,
+     so the mark's LEFT edge is identical on both planes and in both sidebar
+     states. The block padding is 0, so a centred 2rem mark sits at
+     (68 - 32) / 2 = 18, which is where .site-header puts its own. */
+  padding: 0 var(--admin-item-inset);
+  /* Ruling 8. On a desktop viewport this bar is ALREADY pinned structurally,
+     because .admin-content is the scroll container and this sits outside it.
+     `sticky` is here for the narrow breakpoint, where the shell releases its
+     height and the document scrolls again; without it the topbar would scroll
+     away on exactly the viewport where a fixed reference point is worth most.
+     It costs nothing in the case that was already correct. */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  /* Content scrolls beneath this edge, so it separates two live surfaces
+     rather than dividing two static blocks. --border-strong, per the
+     elevated-surface law.
+
+     A SHADOW rather than a border, and that is load bearing for the parity this
+     bar exists to hold. `box-sizing` is border-box, so a border-bottom is
+     subtracted from the declared height: the content box became 68 minus the
+     hairline and the centred mark fell to y=17.667. The public header has the
+     same hairline and does NOT lose that height, because no height binds there
+     and the border adds onto its natural box instead.
+
+     Worse than the 0.333px, the miss was not even CONSTANT. Chrome snaps a
+     hairline to a whole device pixel, so `1px` renders 1 at dpr 1, 0.667 at
+     1.5 and 0.5 at 2, and a border-box height would have landed the mark at a
+     different y on every display while matching on none of them.
+
+     A shadow is outside the box entirely, so the bar stays exactly
+     --admin-topbar-h, the mark centres at 18 at every dpr, and the token keeps
+     telling .editor-canvas the truth about what to subtract. The line still
+     draws over the content below, which is what a pinned bar wants. */
+  box-shadow: 0 1px 0 var(--border-strong);
+  background: var(--surface);
+}
+
+.admin-topbar-scope {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.admin-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+
+.admin-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.admin-signout:hover {
+  border-color: var(--brand);
+}
+
+.admin-content {
+  flex: 1;
+  /* THE SCROLLER IS ALSO A CONTAINING BLOCK, which fixes the whole admin plane
+     at one site rather than one control at a time.
+
+     An absolutely positioned descendant with no positioned ancestor resolves
+     against the INITIAL containing block: it is laid out in DOCUMENT
+     coordinates and this element's overflow does not clip it. `.sr-only` is
+     `position: absolute`, so every visually hidden label inside this scroller
+     was a candidate. Measured on the media library: 24 of them dragged the
+     document's scroll height to 1685px inside a 598px shell, which is a second
+     scrollbar inside the page's own and a screen of dead space below the grid.
+     That was repaired on the one button carrying them; this is the repair for
+     the plane, so the next `.sr-only` to land in an admin scroller cannot do it
+     again. */
+  position: relative;
+  width: 100%;
+  max-width: 72rem;
+  min-height: 0;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* The editor is the one page that manages its own height, so the content well
+   stops scrolling and stops padding, and hands both to the shell inside it.
+   Selected with :has() rather than a route-level class, so the rule lives with
+   the layout it describes and cannot be forgotten on a third editor route. */
+.admin-content:has(.editor-shell) {
+  display: flex;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 800px) {
+  /* The sidebar becomes a horizontal bar above the content, so pinning the
+     shell to the viewport would leave the editor a sliver. The document
+     scrolls again at this width, which is the right behaviour on a phone. */
+  .admin {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .admin-content,
+  .admin-content:has(.editor-shell) {
+    overflow: visible;
+  }
+
+  /* Here the document is the scrollport and the topbar is genuinely overhead,
+     so the command bar takes the combined offset it does not need above. */
+  .editor-bar {
+    top: var(--admin-topbar-h);
+  }
+
+  /* Ruling 8. The rail is a DESKTOP affordance; a 71px icon strip beside a
+     phone-width column would leave the content nothing. Here the sidebar is an
+     off-canvas drawer instead, opened from the topbar and dismissed by Escape
+     or by the backdrop, and the collapsed attribute is ignored entirely. */
+  .admin {
+    grid-template-columns: 1fr;
+  }
+
+  /* **THE PLACEMENT HAS TO COME BACK WITH THE TRACK LIST, and its absence made
+     every admin page blank on a phone.**
+
+     `.admin-main` is placed at `grid-column: 2` for the desktop shell, where
+     column 1 is the rail. This block collapses the template to a single `1fr`
+     track and never reset that placement, so the main column was still asking
+     for column 2, which does not exist. Grid does not clamp an out-of-range
+     placement, it CREATES an implicit track, and implicit tracks are sized by
+     `grid-auto-columns`, which defaults to `auto`.
+
+     Measured at a 420px viewport before this line existed: the explicit `1fr`
+     track took 399.78px and the implicit one took 4.88px, so `.admin-main` was
+     4.88px wide, `.panel` was 0, the grid was 0, and the document grew to
+     9757px as every word wrapped to one character. The header rendered because
+     it spans `1 / -1`; everything below it was blank.
+
+     Nothing could see it. `check:admin-ui` renders with NO stylesheet by
+     design, no gate measures layout, and the desktop path is unaffected because
+     there column 2 is real. It shipped on `0f2f638` and survived every window
+     since. */
+  .admin-main {
+    grid-column: 1;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: 15rem;
+    border-right: 1px solid var(--border-strong);
+    transform: translateX(-100%);
+  }
+
+  /* The attribute has no say at this width: the drawer is always the full
+     labelled sidebar, never the rail. */
+  [data-admin-sidebar="collapsed"] .admin-nav-label {
+    display: block;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-nav a,
+  [data-admin-sidebar="collapsed"] .admin-view-site {
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0 0.625rem;
+  }
+
+  .admin[data-drawer="open"] .admin-sidebar {
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .admin-sidebar {
+      transition: transform 180ms ease;
+    }
+  }
+
+  .admin-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgb(0 0 0 / 45%);
+  }
+
+  .admin[data-drawer="open"] .admin-drawer-backdrop {
+    display: block;
+  }
+
+  .admin-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--admin-control-h);
+    height: var(--admin-control-h);
+    flex: none;
+    margin-right: 0.5rem;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  /* The toggle is the rail's control and the rail does not exist here. */
+  .admin-sidebar-toggle {
+    display: none;
+  }
+}
+
+/* Panels and cards */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  max-width: 44rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Chips read "live", "error" or "stubbed" in words, so the hue is the second
+   channel here rather than the only one. */
+.chip-live {
+  border-color: var(--border-success);
+  color: var(--text-success);
+}
+
+.chip-error {
+  border-color: var(--border-danger);
+  color: var(--text-danger);
+}
+
+/* Status dots carry a SHAPE as well as a fill, because a dot beside a number
+   is otherwise colour on its own and rule 1 forbids that. Circle is healthy,
+   ringed circle is degraded, square is failed. The word is in the adjacent
+   visually hidden label, so the state reaches assistive tech too. */
+.status-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+/* Every dot is RINGED in its family's border token, not just the gold one.
+   A fill alone does not reliably clear 3:1 against the page: measured, gold on
+   caliche is 2.07:1 and dark crimson on prairie night is 2.49:1, so the fill is
+   the identity and the ring is the boundary that makes it discernible. The
+   border tokens are the ones the doc measured for exactly this, 3.4 to 4.9. */
+.status-dot[data-status="ok"] {
+  background: var(--fill-success);
+  outline: 2px solid var(--border-success);
+  outline-offset: 1px;
+}
+
+.status-dot[data-status="warn"] {
+  background: var(--fill-warning);
+  outline: 2px solid var(--border-warning);
+  outline-offset: 1px;
+}
+
+.status-dot[data-status="error"] {
+  background: var(--fill-danger);
+  border-radius: 0.0625rem;
+  outline: 2px solid var(--border-danger);
+  outline-offset: 1px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card,
+.site-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.stat-card header,
+.site-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.stat-card p,
+.site-card p {
+  margin: 0;
+}
+
+.stat-card-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stat-card-value {
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.stat-card-hint,
+.site-card-summary {
+  font-size: 0.8125rem;
+}
+
+.site-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.site-card .muted {
+  font-size: 0.8125rem;
+}
+
+.site-card-meta {
+  margin-top: 0.25rem;
+}
+
+.site-card-link {
+  font-size: 0.8125rem;
+  color: var(--brand);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------
+ * The origin-requests panel.
+ *
+ * Tokens only, and no colour carries meaning on its own: the error is a
+ * sentence, the bar is a magnitude that the adjacent number states in words.
+ * ---------------------------------------------------------------------- */
+
+/* Visible and boring, per rule 1: the words carry it and the border is the
+   second channel. Not a toast, not a colour alone. */
+.panel-error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-danger);
+  border-radius: 0.5rem;
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
+  font-size: 0.9375rem;
+}
+
+/* Wide content scrolls in its own box; the panel never scrolls sideways. */
+.origin-table-scroll {
+  overflow-x: auto;
+}
+
+.origin-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9375rem;
+}
+
+.origin-table caption {
+  margin: 0 0 0.75rem;
+  max-width: 44rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.origin-table th,
+.origin-table td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.origin-table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.origin-table tbody th {
+  font-weight: 400;
+  word-break: break-all;
+}
+
+.origin-count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The bar column takes the slack so the two data columns stay compact. */
+.origin-bar-cell {
+  width: 40%;
+  min-width: 6rem;
+}
+
+.origin-bar {
+  display: block;
+  height: 0.5rem;
+  min-width: 1px;
+  border-radius: 0.25rem;
+  background: var(--brand);
+}
+
+.origin-remainder {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+/* Content sections */
+.content-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.content-section header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.content-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.content-section > .muted {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+/* Tool rows */
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.tool-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+}
+
+.tool-row + .tool-row {
+  border-top: 1px solid var(--border);
+}
+
+.tool-row p {
+  margin: 0;
+}
+
+.tool-row-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.tool-row .muted {
+  font-size: 0.8125rem;
+}
+
+.tool-row .btn-ghost {
+  margin-top: 0;
+  font-size: 0.8125rem;
+}
+
+.tool-row .btn-ghost:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}

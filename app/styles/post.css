@@ -1,0 +1,417 @@
+/*
+ * A single post: head, table of contents, generated prose, figures, charts, diagrams.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Post detail --------------------------------------------------------------- */
+
+.post {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.post-head h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.875rem, 5vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--brand);
+}
+
+.post-toc {
+  margin: 2rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.post-toc h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.post-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+}
+
+.post-toc li[data-depth="3"] {
+  padding-left: 1rem;
+}
+
+.post-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 44rem;
+  margin: 3rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+
+/* Generated prose ----------------------------------------------------------- */
+
+.prose {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+.prose h2,
+.prose h3,
+.prose h4 {
+  margin: 2.25rem 0 0.75rem;
+  line-height: 1.25;
+  scroll-margin-top: 2rem;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 0 0 1.125rem;
+}
+
+.prose a {
+  color: var(--brand);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.25rem;
+}
+
+.prose li {
+  margin-bottom: 0.375rem;
+}
+
+.prose blockquote {
+  margin: 1.5rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+}
+
+.prose figure {
+  margin: 2rem 0;
+}
+
+.prose figcaption {
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose figcaption p {
+  margin: 0;
+}
+
+/*
+ * NO OPACITY ON THIS TEXT. Measured 2026-08-21: at `opacity: 0.8` the inherited
+ * `--text-muted` composites against `--bg` to #7c736a in light mode, which is
+ * 4.35:1 and BELOW the 4.5 AA floor this repo enforces on every declared pair.
+ * check:contrast read the declared 7.13:1 and passed, because it reads token
+ * hexes and opacity is applied afterwards by the compositor. Dark was 5.41:1
+ * and fine, so the defect existed in one mode only.
+ *
+ * The credit is already distinguished from the caption above it by SIZE
+ * (0.8125rem against 0.875rem), so the opacity was buying a second signal for
+ * the same job at the cost of the contrast floor. Same repair as `.tag-count`,
+ * which had opacity 0.7 on text and now takes a token.
+ */
+.figure-credit {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+}
+
+/*
+ * Charts.
+ *
+ * Observable Plot normally injects a <style> block into every SVG it renders.
+ * The chart renderer strips it, for two reasons: it carried
+ * `--plot-background: white`, the one colour literal in Plot's output and the
+ * only thing standing between chart output and the tokens-only rule; and N
+ * charts on a page would otherwise ship N copies of the same stylesheet. These
+ * rules are that block's replacement, declared once.
+ *
+ * The SVG itself carries `fill="currentColor"`, so axes and tick labels inherit
+ * --text and follow the theme with no second render. Series colours come in as
+ * var(--chart-*) custom properties written into the SVG at build time and
+ * resolved by the browser per theme, which is why one stored SVG serves light
+ * and dark.
+ */
+.chart-figure svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--text);
+  /* Plot marks that draw text haloes reference this. */
+  --plot-background: var(--bg);
+}
+
+.chart-figure svg text,
+.chart-figure svg tspan {
+  white-space: pre;
+}
+
+.chart-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+/*
+ * The equivalent data table. Collapsed by default because it repeats the chart
+ * rather than adding to it, but it is real content in the accessibility tree:
+ * the accessible name sits on the SVG, never on this figure, so nothing here is
+ * made presentational.
+ */
+.chart-data {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.chart-data summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.chart-data table {
+  margin: 0.75rem 0 0;
+}
+
+/*
+ * Diagrams.
+ *
+ * A diagram is a build-time asset referenced by <img>, not inline SVG, because
+ * mermaid needs real font metrics and therefore a real browser engine, which a
+ * Worker does not have. Ruling: Capsid `dustinedwards/chart-stack.md`.
+ *
+ * That is also why there are TWO images. An SVG loaded through <img> is an
+ * independent document, so the page's custom properties never reach it and the
+ * one-asset-serves-both-themes trick that charts use is unavailable. Each theme
+ * gets its own render, and these rules pick one.
+ *
+ * `display: none` rather than opacity or visibility, deliberately: it is the
+ * only one of the three that also removes the hidden image from the
+ * accessibility tree, which is what lets both carry the same alt without a
+ * screen reader announcing the diagram twice.
+ *
+ * The three selectors below are the site's theme resolution, unchanged: light by
+ * default, dark when the attribute is absent under a dark OS preference, dark
+ * when chosen. Because the server writes the attribute into the first byte of
+ * HTML, the right image is the displayed one before anything paints.
+ */
+.diagram-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .diagram-light {
+    display: none;
+  }
+
+  :root:not([data-theme]) .diagram-dark {
+    display: block;
+  }
+}
+
+[data-theme="dark"] .diagram-light {
+  display: none;
+}
+
+[data-theme="dark"] .diagram-dark {
+  display: block;
+}
+
+.diagram-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.prose table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.prose th,
+.prose td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.prose th {
+  background: var(--surface);
+}
+
+.prose :not(pre) > code {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--surface);
+  font-size: 0.9em;
+}
+
+.prose pre {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  /* Also set here, not only on .shiki, so a fence in an unlisted language
+     still lands on a surface instead of the page background. */
+  background: var(--surface-code);
+  color: var(--text);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* Footnotes, as emitted by remark-gfm. */
+.prose .footnotes {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+/* remark-gfm labels the footnote section with a visually hidden heading. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Heading anchors. Hidden until the heading is hovered or the link is focused,
+   so they never clutter the page but stay reachable by keyboard. */
+.heading-anchor {
+  margin-left: 0.375rem;
+  color: var(--text-muted);
+  opacity: 0;
+}
+
+.prose h2:hover .heading-anchor,
+.prose h3:hover .heading-anchor,
+.prose h4:hover .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 1;
+}
+
+/* ON TOUCH THERE IS NO HOVER, so the rule above never fires and the anchors were
+   invisible for the entire life of the page. `hover: none` is the query for
+   exactly that: a device whose primary pointer cannot hover. They are shown at
+   reduced strength rather than full, because on a phone they are permanent
+   furniture beside every heading rather than something that appears on
+   approach. */
+@media (hover: none) {
+  .heading-anchor {
+    opacity: 0.55;
+  }
+}
+
+/* Shiki dual themes. The generator emits both palettes as CSS custom properties
+ * on every token, so switching costs no client script and no second stylesheet.
+ *
+ * The theme's own BACKGROUND is dropped. github-dark ships a blue-black
+ * (#24292e) that fights the ratified warm prairie night, and a code block that
+ * carried its own surface would be the one rectangle on the page the token
+ * system does not own. Blocks sit on --surface-code and the tokens supply
+ * colour only. check:contrast holds every syntax token to 4.5:1 against
+ * --surface-code and against --surface-popover, which is the highlighted-line
+ * band, in both modes.
+ *
+ * Resolution mirrors the token block exactly, and for the same reason: with the
+ * attribute absent :root:not([data-theme]) answers, and with it present only
+ * the attribute rules can match. There is no [data-theme="light"] override
+ * because there is nothing left for it to override.
+ */
+.prose .shiki,
+.prose .shiki span {
+  color: var(--shiki-light);
+}
+
+/* The pre carries --shiki-light-bg inline but NO inline background-color, so
+   this wins cleanly. Measured against real pipeline output rather than assumed:
+   the emitted tag is
+   <pre class="shiki ..." style="--shiki-light:#...;--shiki-light-bg:#fff;..."> */
+.prose .shiki {
+  background-color: var(--surface-code);
+}
+
+/* A handful of theme rules pair a foreground with a background of their own:
+   the diff scopes (markup.inserted, markup.deleted, markup.changed,
+   markup.ignored) and carriage-return. Their foregrounds are near-white or
+   near-black and are only legible ON that background, so those spans keep it.
+   The attribute test is what makes this precise: custom properties INHERIT, so
+   a blanket background rule would read the pre's value and paint every token.
+   Only a span that declares its own is matched. */
+.prose .shiki span[style*="--shiki-light-bg"] {
+  background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .prose .shiki,
+  :root:not([data-theme]) .prose .shiki span {
+    color: var(--shiki-dark);
+  }
+
+  :root:not([data-theme]) .prose .shiki span[style*="--shiki-dark-bg"] {
+    background-color: var(--shiki-dark-bg);
+  }
+}
+
+[data-theme="dark"] .prose .shiki,
+[data-theme="dark"] .prose .shiki span {
+  color: var(--shiki-dark);
+}
+
+[data-theme="dark"] .prose .shiki span[style*="--shiki-dark-bg"] {
+  background-color: var(--shiki-dark-bg);
+}

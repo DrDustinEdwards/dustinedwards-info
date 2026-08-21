@@ -1,0 +1,961 @@
+/*
+ * The three-region post editor: bar, panes, CodeMirror, settings drawer.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* The three-region editor -------------------------------------------------
+ *
+ * Region 1 is a command bar that does not move. Region 2 is the writing canvas
+ * and it is the ONLY thing on the page that scrolls. Region 3 is a drawer that
+ * is not laid out at all until it is opened.
+ *
+ * One scroll context is a requirement rather than a preference: a sticky bar
+ * over a document that also scrolls gives two scrollbars, and the inner one is
+ * the one nobody finds. .admin-content hands its height down for this. */
+.editor-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.editor-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Region 1. Not `position: sticky`: the canvas scrolls, not this, so the bar
+   is simply a flex item that never grows. Sticky would be a promise about a
+   scroll container it does not live in. */
+/* The command bar is a THREE COLUMN GRID, not a flex row with space-between.
+   The centre group has to sit at the bar's centre regardless of how wide the
+   two side groups are, and space-between centres the middle item only when the
+   sides happen to match. `1fr auto 1fr` pins it.
+
+   Fixed height, declared once as --admin-cmdbar-h, because the canvas subtracts
+   it. It used to wrap to three rows at 1280px, which is what a wrapping bar of
+   unconstrained controls does. Nothing in it may wrap now. */
+.editor-bar {
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--admin-cmdbar-h);
+  padding: 0 1rem;
+  /* Sticky offsets are measured from the SCROLLPORT, not from the viewport, and
+     .admin-content is the scrollport here. It already begins below the topbar,
+     so asking for --admin-topbar-h again applied the offset twice: the bar was
+     pushed 52px down, overlapped the top of the canvas, and covered the title
+     input so a click on it landed on a command-bar button instead. Measured by
+     elementFromPoint on the live deploy 2026-08-01.
+
+     Zero is correct wherever .admin-content is the scrollport. The narrow
+     breakpoint, where the shell releases its height and the DOCUMENT scrolls
+     instead, is the one case that needs the real offset, and it sets it. */
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.editor-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.editor-bar-center {
+  justify-content: center;
+}
+
+.editor-bar-right {
+  justify-content: flex-end;
+}
+
+/* ONE control height across the whole bar. Every control in it opts in here
+   rather than declaring its own, so the row cannot drift back into the ragged
+   set of 28px, 32px and 36px boxes the comp was drawn to replace. 2rem is 32px
+   at the root size, comfortably past the 24px WCAG 2.2 target minimum. */
+.editor-bar .editor-back,
+.editor-bar .editor-layout-option,
+.editor-bar .editor-icon-button,
+.editor-bar .btn,
+.editor-bar .btn-ghost,
+.editor-bar .overflow-menu-button {
+  height: var(--admin-control-h);
+  min-height: var(--admin-control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* A square icon button. Its accessible name is on the element, not in a label
+   beside it, so the box can be exactly as wide as it is tall. */
+.editor-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--admin-control-h);
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.editor-icon-button:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.editor-icon-button[aria-expanded="true"] {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.editor-back,
+.editor-back:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border-radius: 0.375rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.editor-back:hover {
+  color: var(--text);
+}
+
+.editor-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+}
+
+.editor-identity-title {
+  overflow: hidden;
+  max-width: 24ch;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dirty state as a first-class element. It was a line of prose under the form
+   before, which is the wrong place for the one thing an author checks before
+   closing the tab. Rule 1: the dot is never alone, the words are always there. */
+.editor-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.editor-dirty-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+}
+
+.editor-dirty.is-dirty {
+  color: var(--text-warning);
+}
+
+.editor-dirty.is-dirty .editor-dirty-dot {
+  border-color: var(--border-warning);
+  background: var(--fill-warning);
+}
+
+/* Ruling 3's buffer age, beside the dirty indicator and deliberately QUIETER
+   than it. --text-muted rather than the warning colour its neighbour takes when
+   dirty: the warning is the state, this only qualifies it with when the crash
+   net last caught the draft, and two warning-coloured items would read as two
+   problems. No new contrast pair, this is the same muted-on-surface pair the
+   bar already carries at rest and check:contrast already measures. */
+.editor-buffer-age {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.editor-primary,
+.publish-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Region 2, and the only scroll context on the page.
+
+   The height is DECLARED rather than left to flex, so the contract is legible:
+   the viewport, less the two bars above it. Flex would arrive at the same
+   number today and would quietly stop doing so the moment anything else joined
+   the column, which is exactly how the image uploader came to be eating 126px
+   of it. Nothing may render below this element. */
+.editor-canvas {
+  flex: 1;
+  height: calc(100dvh - var(--admin-topbar-h) - var(--admin-cmdbar-h));
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.editor-page {
+  /* Declared once and read by both the panes grid and the title row, so the
+     two cannot disagree about where the left column ends. */
+  --editor-pane-gap: 1rem;
+  --editor-write-measure: 52rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  /* Wide enough for two panes at a readable measure. The single-pane write view
+     is centred by the panes grid rather than by squeezing this. */
+  max-width: 84rem;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+/* Write view keeps the writing at an article-ish measure instead of stretching
+   a single column across a wide screen. */
+.editor-canvas[data-layout="write"] .editor-panes,
+.editor-canvas[data-layout="write"] .editor-title-row {
+  max-width: var(--editor-write-measure);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* The title belongs to the thing being edited, so it tracks the EDITOR pane
+   rather than the page. In split view it spanned both columns while the editor
+   was half of one, which read as a page heading floating above two unrelated
+   boxes. The width is derived from the same gap the grid uses, so the two
+   cannot drift apart. Preview view needs no rule: there is one column and the
+   title spans it. */
+.editor-canvas[data-layout="split"] .editor-title-row {
+  max-width: calc((100% - var(--editor-pane-gap)) / 2);
+  margin-right: auto;
+}
+
+.editor-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* The counter sits with the title, not on the page rail.
+ *
+ * `field-sizing: content` makes the input as wide as what is typed, so the
+ * counter lands immediately after the words it counts. Where that is not
+ * supported the input keeps `flex: 1` and the counter falls back to the right
+ * edge of the title row, which the rules above have already narrowed to the
+ * editor pane's measure. Both readings are acceptable; the enhanced one is what
+ * was asked for and the fallback is where it used to be minus the full-width
+ * rail that made it look unrelated. */
+@supports (field-sizing: content) {
+  .editor-title {
+    flex: 0 1 auto;
+    field-sizing: content;
+    min-width: 6rem;
+    max-width: 100%;
+  }
+
+  .editor-title-row .count {
+    margin-right: auto;
+  }
+}
+
+/* The title is the page's H1 in everything but element name. It is an input
+   because it is edited, and it is styled as the heading it becomes so the
+   canvas reads as the article rather than as a form. */
+.editor-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-heading);
+  font: inherit;
+  font-size: 1.75rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.editor-title::placeholder {
+  color: var(--text-disabled);
+}
+
+.editor-title:focus-visible {
+  outline-offset: 4px;
+}
+
+.editor-slug-row {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.editor-slug-input {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.editor-slug-input input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.editor-restore-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.editor-delete-form {
+  display: none;
+}
+
+.editor-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .editor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.field-hint {
+  font-size: 0.8125rem;
+}
+
+.count {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.count.over {
+  color: var(--text-warning);
+}
+
+.field input,
+.field textarea {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+/* An invalid field is interactive, so rule 5 sends it to the fill rather than
+   the pastel border. The field also carries an error message in words. */
+.field input[aria-invalid="true"] {
+  border-color: var(--fill-danger);
+}
+
+.field-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.field-draft-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-draft input {
+  min-height: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* Write, split and preview ------------------------------------------------
+ *
+ * The panes are the canvas's content, so they inherit its single scroll
+ * context: each pane scrolls its own overflow and the page still does not. */
+.editor-panes {
+  display: grid;
+  flex: 1;
+  gap: var(--editor-pane-gap);
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Split view is two columns of the SAME height that scroll independently. The
+   grid gives them that for free once the row is not allowed to stretch to the
+   taller child, which `min-height: 0` on the panes is what permits. */
+.editor-canvas[data-layout="split"] .editor-panes {
+  align-items: stretch;
+}
+
+.editor-canvas[data-layout="split"] .editor-panes {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* The write pane is HIDDEN, never unmounted, because the textarea inside it is
+   the field the form submits. Unmounting would drop the body from the payload;
+   display:none changes nothing about what is sent. */
+.editor-canvas[data-layout="preview"] .editor-pane-write {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .editor-canvas[data-layout="split"] .editor-panes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.editor-pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+/* A sandboxed frame is a replaced element with no intrinsic height, so it is
+   given one rather than collapsing to the 150px default. */
+/* No min-height. It was 20rem, which at a shorter viewport made the pane taller
+   than the canvas, so the canvas grew a scrollbar of its own and the preview
+   showed TWO stacked on its right edge: the iframe document's and the canvas's.
+   The pane is a flex child that fills what it is given; anything it cannot show
+   is the iframe's to scroll, and that is the one scroll context it should have. */
+.editor-preview-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.editor-layout-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.editor-layout-option {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.625rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.editor-layout-option + .editor-layout-option {
+  border-left: 1px solid var(--border);
+}
+
+.editor-layout-option:hover {
+  color: var(--text);
+}
+
+/* Rule 1 again: the pressed one carries a fill AND aria-pressed, so the state
+   reaches assistive tech rather than only the eye. */
+.editor-layout-option[aria-pressed="true"] {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.editor-layout-option[aria-pressed="true"]:focus-visible {
+  outline: 2px solid var(--focus-ring-on-brand);
+  outline-offset: -4px;
+}
+
+/* CodeMirror -------------------------------------------------------------- */
+
+.md-editor {
+  display: flex;
+  position: relative;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.md-toolbar {
+  display: flex;
+  /* ONE row. The directive buttons were text, which wrapped the toolbar to two
+     lines at the editor's real width and made the second line read as a
+     separate toolbar. They are icons now and this forbids the wrap. */
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: var(--surface);
+}
+
+/* WCAG 2.2 target size: 1.75rem is 28px, clear of the 24px minimum. */
+.md-tool,
+.md-tool-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.md-tool:hover,
+.md-tool-text:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.md-toolbar-sep {
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.25rem;
+  background: var(--border);
+}
+
+.md-toolbar-hint {
+  margin-left: auto;
+  padding-right: 0.375rem;
+  font-size: 0.75rem;
+}
+
+.md-surface {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* The foot strip. It replaces the Insert image section this pass removes, and
+   it is the only place drag-drop and paste are advertised. */
+/* The editor's foot: the drop hint on the left, the counts on the right. It
+   carries the border and the corners that .md-hint used to own alone, so the
+   two items read as one strip rather than as two stacked boxes. */
+.md-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: var(--surface);
+  font-size: 0.75rem;
+}
+
+.md-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Word count and reading time. Pushed to the far end, away from the drop hint,
+   and TABULAR so the strip does not twitch sideways as the count climbs through
+   a digit. Muted: it is reference, and the command bar upstream owns anything
+   in this view that is actually urgent. */
+.md-stats {
+  margin: 0 0 0 auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.md-stats-sep {
+  margin: 0 0.375rem;
+}
+
+.md-surface .cm-editor {
+  height: 100%;
+}
+
+/* The slash menu sits at the popover elevation, so --border-strong. */
+.md-slash {
+  position: absolute;
+  z-index: 30;
+  min-width: 15rem;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface-popover);
+  list-style: none;
+}
+
+/* THE LINK PALETTE (Cmd+K). Same popover step as the slash menu, so
+   --border-strong per the elevated-surface law: --border drops to 2.66:1 on
+   --surface-popover in dark and would not clear 3:1. */
+.md-link-palette {
+  position: absolute;
+  z-index: 30;
+  width: min(26rem, 90%);
+  padding: 0.375rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface-popover);
+}
+
+.md-link-input {
+  width: 100%;
+  height: var(--admin-control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.md-link-list {
+  max-height: 15rem;
+  margin: 0.375rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.md-link-item {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.md-link-item .muted {
+  font-size: 0.75rem;
+}
+
+/* ONE highlight, driven by `data-active`, which both the arrow keys and the
+   pointer write. A separate :hover rule would let the mouse light one row while
+   Enter still pointed at another. */
+.md-link-item[data-active],
+.md-link-item:focus-visible {
+  background: var(--tint-brand);
+  color: var(--brand);
+}
+
+.md-link-item[data-active] .muted {
+  color: var(--brand);
+}
+
+/* Not a colour: the words say it. This only keeps them from reading as part of
+   the slug. */
+.md-link-state {
+  font-style: italic;
+}
+
+.md-link-note {
+  margin: 0.375rem 0 0;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.md-slash-item {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.md-slash-item:hover,
+.md-slash-item:focus-visible {
+  background: var(--tint-brand);
+}
+
+/* --text-muted is measured on the popover step but not on the brand tint a
+   hovered row paints under it, so the hint steps up to body text, which IS
+   measured there. Same move the overflow menu makes. */
+.md-slash-item:hover .muted,
+.md-slash-item:focus-visible .muted {
+  color: var(--text);
+}
+
+/* The alt prompt that stands between an upload and an insertion. */
+.md-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.md-upload-thumb {
+  width: 5rem;
+  height: 3.25rem;
+  border-radius: 0.375rem;
+  object-fit: cover;
+}
+
+.md-upload-fields {
+  display: grid;
+  flex: 1;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.md-upload-fields input {
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.md-upload-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.md-upload .field-alarm {
+  color: var(--on-tint-warning);
+}
+
+@media (forced-colors: active) {
+  .md-slash,
+  .md-upload,
+  .editor-preview-frame {
+    border: 1px solid CanvasText;
+  }
+
+  .editor-layout-option[aria-pressed="true"] {
+    outline: 1px solid transparent;
+  }
+}
+
+/* The body fills what is left of the canvas rather than carrying a fixed
+   height with the page scrolling past it. `resize: none` because a manual
+   resize handle inside a flex column fights the layout, and there is nothing
+   to resize toward: it is already as tall as the room allows. */
+.editor-body {
+  flex: 1;
+  min-height: 24rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  tab-size: 2;
+  resize: none;
+}
+
+/* Once CodeMirror has mounted, the textarea is still the submitted field but
+   is no longer the control. It is removed from view and from the accessibility
+   tree rather than left as a second, stale copy of the body for a screen
+   reader to find. */
+.editor-body.is-replaced {
+  display: none;
+}
+
+/* An alarm, never a block. The server gates own validity; this only tells the
+   author before they hit one. Text and not a tinted surface, because rule 4
+   spends this view's one tint on the feedback slot. */
+.field-alarm {
+  margin: 0;
+  color: var(--text-warning);
+  font-size: 0.8125rem;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Region 3: the settings drawer -------------------------------------------
+ *
+ * A real <dialog> opened with showModal(), the same choice the command palette
+ * made: the focus trap, Escape, and focus return are the platform's rather than
+ * a keydown handler that is subtly wrong in a way nobody notices.
+ *
+ * It sits on the POPOVER elevation step, so every border inside it is
+ * --border-strong. That is the Session 1 finding, and it is not a style
+ * preference: --border clears the 3:1 UI floor on --surface by 0.04 in dark
+ * mode and drops to 2.66:1 on the popover step. */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: auto;
+  width: min(28rem, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--border-strong);
+  background: var(--surface-popover);
+  color: var(--text);
+}
+
+.drawer::backdrop {
+  /* A scrim, not a palette colour. It is the one place a literal is honest:
+     it darkens whatever is behind it in either theme, and no token describes
+     "less of what is already there". */
+  background: rgb(0 0 0 / 45%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drawer[open] {
+    animation: drawer-in 160ms ease-out;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0;
+  }
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.drawer-head h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: calc(100dvh - 3.75rem);
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.drawer-section {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.drawer-section h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}

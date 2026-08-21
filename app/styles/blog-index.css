@@ -1,0 +1,299 @@
+/*
+ * The blog index furniture: header nav, theme toggle, page head, tag and year chips, post list.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Blog ---------------------------------------------------------------------
+ *
+ * Post bodies are generated HTML stored in D1. Tailwind never sees that markup,
+ * so every class it uses (including sr-only, which remark-gfm emits on the
+ * footnotes label) is defined here rather than assumed from a utility scan.
+ */
+
+/* ONE row, one centreline, one control height.
+ *
+ * This used to be a stretch row with no align-items, so the theme pill (the
+ * tallest item) set the height, the icon controls centred themselves inside
+ * their own boxes, and the Blog link's text sat at the TOP of a box taller
+ * than its line. Three items, three different vertical positions, none of it
+ * visible to any gate we have.
+ *
+ * --control-h is declared here rather than in the token blocks because these
+ * three controls are the only things that share it, and because check:contrast
+ * parses :root for colour tokens. Everything on the row is given that height
+ * explicitly rather than left to stretch, so the row's height stops depending
+ * on which item happens to be tallest. */
+.site-header-nav {
+  display: flex;
+  align-items: center;
+  /* See the block on `.site-header` above for the measurement. Wrapping here is
+     the half that lets the four labels and three controls break; wrapping there
+     is the half that gives them a line of their own to break onto. */
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  --control-h: 2.25rem;
+}
+
+/* Amended rule 2: nav links render as bare text, so they underline. The base
+   `a` rule already does it; this only sets the colour. The icon search control
+   is a sibling of these and opts out on its own rule above. The underline is
+   deliberately KEPT under v4: the chrome changed, the second channel did not.
+
+   v4 also rules that nav links carry NO :visited state. The grounds are the
+   wordmark saga's, one step further out: persistent wayfinding is not a trail
+   marker, and "have I been to Blog" is not a question the header is answering.
+   That makes it a SPECIFICITY problem exactly like the wordmark's, and the same
+   trap applies: it is invisible in review until /blog is in history, which for a
+   returning reader is always. `.site-header-nav a:visited` is (0,2,1) against
+   the base `a:visited` at (0,1,1), so this wins rather than tying. PROVED with
+   both / and /blog in the dev browser's history, not asserted. */
+.site-header-nav a,
+.site-header-nav a:visited {
+  color: var(--on-chrome-muted);
+}
+
+/* The text link gets the same hit area as the controls beside it, so it is as
+   clickable as they are and its baseline lands on their centreline. Centring
+   the text inside a fixed-height box is what keeps the underline still: the box
+   grew, the text did not move. `:not()` because the search control is also an
+   anchor in this nav and sizes itself. */
+.site-header-nav a:not(.search-trigger) {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
+}
+
+.site-header-nav a:hover,
+.site-header-nav a[aria-current="page"] {
+  color: var(--on-chrome);
+}
+
+/* The two pill controls on the row. Both were drawn against the page canvas:
+   --border and --text-muted vanish on purple, and the --tint-brand hover fill
+   becomes either invisible (light: it IS --on-chrome-muted) or a dark patch on
+   dark purple. On chrome they borrow the chrome's own three values instead, so
+   no unmeasured pair enters.
+
+   Hover is a COLOUR step, not a fill, so that the theme toggle's pressed state
+   stays the only filled thing in the header. Rest, hover and pressed are then
+   three visibly distinct looks built from ratified values alone. */
+.site-header .theme-toggle,
+.site-header-nav .search-trigger {
+  border-color: var(--on-chrome-muted);
+}
+
+.site-header-nav .theme-option {
+  color: var(--on-chrome-muted);
+}
+
+.site-header-nav .theme-option:hover,
+.site-header-nav .search-trigger:hover {
+  color: var(--on-chrome);
+  border-color: var(--on-chrome);
+  background: transparent;
+}
+
+/* v4: the pressed state INVERTS. A brand fill on brand chrome is no state at
+   all, so the fill becomes the light value and the icon becomes the chrome.
+   8.7:1 light and 6.9:1 dark, the same ratified pairs read the other way. */
+.site-header-nav .theme-option[aria-pressed="true"] {
+  background: var(--on-chrome-muted);
+  color: var(--surface-chrome);
+}
+
+/* The inset ring the filled control takes. --focus-ring-on-brand was measured
+   against a brand FILL; this fill is now pale, where #f3e3b8 is ~1.1:1 and
+   simply absent. The chrome purple is the measured counterpart of the fill it
+   sits inside. (0,3,1) beats the base inset rule's (0,2,1). */
+.site-header-nav .theme-option[aria-pressed="true"]:focus-visible {
+  outline-color: var(--surface-chrome);
+}
+
+/* Theme toggle ------------------------------------------------------------
+ *
+ * A real form with three submit buttons, so it works with scripting off. The
+ * pressed one takes a brand fill: rule 5 says an interactive state is a fill,
+ * and the fill plus aria-pressed means the selection is not carried by hue.
+ *
+ * No transition. A theme flip repaints every surface at once, and animating
+ * only the few properties named here would tear the page into a fast half and
+ * an instant half. The switch is deliberately immediate, so there is no motion
+ * to reduce and nothing for prefers-reduced-motion to undo.
+ */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  /* Shared with the search control and the Blog link. Falls back to auto
+     wherever --control-h is not in scope, which is its natural height. */
+  height: var(--control-h);
+  padding: 0.125rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.theme-option {
+  display: grid;
+  place-items: center;
+  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.theme-option:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
+
+.theme-option[aria-pressed="true"] {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.page-head {
+  max-width: 48rem;
+  margin: 0 auto 2rem;
+}
+
+.page-head h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--brand);
+}
+
+.page-head p {
+  margin: 0;
+}
+
+/* Tag chips. Links, never click handlers, so filtering works with no script. */
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 48rem;
+  margin: 0 auto 2rem;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* 24px minimum target, WCAG 2.2 AA. */
+  min-height: 1.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.tag-chip:hover {
+  border-color: var(--brand);
+}
+
+.tag-chip[aria-current="true"] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+/* A TOKEN, NOT AN OPACITY, and that is the whole point of the change.
+
+   It was `color: inherit; opacity: 0.7`. Two problems, and the second is worse
+   than the first.
+
+   ON THE FILLED CURRENT CHIP the count is `--on-brand` over `--brand` at 70%
+   opacity, which is a composite the ratified pair was never measured at. The
+   chip's own text stays at full strength beside it, so the count is the only
+   thing on the chip whose contrast nobody has checked.
+
+   AND check:contrast STRUCTURALLY CANNOT SEE IT. That gate reads token hex
+   values and computes ratios between them; `opacity` is a compositing
+   operation applied afterwards, so a declared, measured, passing pair can be
+   silently degraded by a number in a different declaration and the gate reports
+   the pair it was given. Every opacity on text is a hole of exactly this shape.
+
+   So the de-emphasis moves into a TOKEN the gate already reads. On a normal chip
+   the count is `--text-muted`, which is declared and measured against the chip's
+   surface. On the current chip it inherits `--on-brand` at FULL strength, which
+   is the pair design-tokens.md actually ratified. */
+.tag-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tag-chip[aria-current="true"] .tag-count {
+  color: inherit;
+}
+
+.post-list {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2.5rem;
+}
+
+.post-card-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.post-card-title a {
+  color: var(--text);
+}
+
+.post-card-title a:hover {
+  color: var(--brand);
+}
+
+.post-card-meta {
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.post-card p {
+  margin: 0 0 0.5rem;
+  line-height: 1.6;
+}
+
+.post-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.post-card-tags a {
+  color: var(--text-muted);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  max-width: 48rem;
+  margin: 3rem auto 0;
+  font-size: 0.9375rem;
+}
