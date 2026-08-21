@@ -152,6 +152,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                 publishAt: post.publishAt ? new Date(post.publishAt) : null,
                 updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
                 coverImage: post.coverImage,
+                ogImage: post.ogImage,
                 tags: post.tags,
               }),
               breadcrumbJsonLd(SITE_ORIGIN, [
