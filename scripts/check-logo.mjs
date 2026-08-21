@@ -64,7 +64,7 @@ import satori from "satori";
 
 import { markElement, readMark } from "./lib/mark.mjs";
 import { icoPayload, pngCornerPixel, pngSize, readIco } from "./lib/raster.mjs";
-import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
+import { THEME_SELECTORS, allSourceCss, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -242,7 +242,14 @@ const EXPECTED_FILL_BINDINGS = [
 ];
 
 {
-  const css = stripComments(readFileSync(join(ROOT, "app", "app.css"), "utf8"));
+  /*
+   * THE WHOLE STYLESHEET SET, not app.css alone. Since the 2026-08-21 split the
+   * mark's two fill bindings live in DIFFERENT files: `.site-logo-brand` stayed
+   * with the tokens in app.css and `.site-header .site-logo-brand` moved to
+   * app/styles/public-chrome.css. Reading one path found one of two and failed,
+   * which is this section working; reading the set is the fix.
+   */
+  const css = stripComments(allSourceCss());
 
   /** @type {Array<[string, string]>} */
   const found = [];
@@ -254,10 +261,10 @@ const EXPECTED_FILL_BINDINGS = [
 
   // A zero-scope search reports zero violations. The class must be found at all
   // before its bindings mean anything.
-  eq("app.css binds fill on .site-logo-brand somewhere", found.length > 0, true);
+  eq("the stylesheets bind fill on .site-logo-brand somewhere", found.length > 0, true);
 
   eq(
-    `app.css has exactly ${EXPECTED_FILL_BINDINGS.length} fill bindings for the mark` +
+    `the stylesheets carry exactly ${EXPECTED_FILL_BINDINGS.length} fill bindings for the mark` +
       `\n    found: ${found.map(([s, f]) => `${s} -> ${f}`).join(" | ")}`,
     found.length,
     EXPECTED_FILL_BINDINGS.length,
@@ -266,11 +273,11 @@ const EXPECTED_FILL_BINDINGS = [
   // Both directions. Every expected binding ships, and nothing else does.
   for (const [selector, fill] of EXPECTED_FILL_BINDINGS) {
     const got = found.find(([s]) => s === selector);
-    eq(`app.css binds ${selector}`, got?.[1] ?? "(no such rule)", fill);
+    eq(`the stylesheets bind ${selector}`, got?.[1] ?? "(no such rule)", fill);
   }
   for (const [selector, fill] of found) {
     eq(
-      `app.css declares no unexpected mark binding: ${selector}`,
+      `no unexpected mark binding anywhere in the stylesheets: ${selector}`,
       EXPECTED_FILL_BINDINGS.some(([s, f]) => s === selector && f === fill),
       true,
     );

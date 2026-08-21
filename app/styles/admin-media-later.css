@@ -1,0 +1,333 @@
+/*
+ * MORE MEDIA LIBRARY, and the name is deliberate. These rules are separated from admin-media.css by the whole of /playground in the source, so merging the two would REORDER them. Order is what this split refuses to change, so they stay two files and this comment is the reason.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* ---- THE PAGE HEAD ------------------------------------------------------
+ *
+ * The grid started at y 625 with seven rows above it, where the mockup starts
+ * at 345 with four. Three of those rows were structural rather than useful: an
+ * upload row of its own, a select-all row of its own, and the gap each one
+ * carried. Both controls moved into rows that already existed. */
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* The head becomes one row: title block on the left, actions on the right. */
+.panel-head {
+  align-items: center;
+}
+
+/* THE ROWS ABOVE THE GRID CLOSE UP.
+ *
+ * Measured after the two rows were removed: 28px of gap between every pair,
+ * from `.panel`'s own 16px row gap plus each row's own margins stacking on top
+ * of it. The mockup runs 18 to 20 between the same rows and 39 between the lens
+ * row and the controls. Four consecutive 28px gaps is 40px of slack that the
+ * grid pays for.
+ *
+ * Scoped to the media panel so no other admin section moves. */
+.panel:has(.media-search) {
+  gap: 0.625rem;
+}
+
+.media-facet {
+  padding-top: 0.375rem;
+}
+
+.media-display-bar {
+  margin: 0.375rem 0;
+}
+
+.media-usage-note {
+  margin-bottom: 0.5rem;
+}
+
+.media-group + .media-group {
+  margin-top: 1.25rem;
+}
+
+/* The upload control shrinks to a control rather than a band. It is still the
+   label-wrapping-an-input pattern, so the file input is still the keyboard path
+   and the whole thing is still one affordance. */
+.media-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ---- THE FLOATING SELECTION BAR ----------------------------------------
+ *
+ * It was a static block in the content flow at y 564, which put it under the
+ * fold on a short viewport at exactly the moment the reader had just selected
+ * something and wanted to act on it. The mockup floats it, and the reason is
+ * that a selection is a MODE: it persists while you scroll, so its controls
+ * have to persist too.
+ *
+ * `--scrim` and `--on-scrim`, the opaque pair already minted for the caption
+ * bar and already priced in the matrix at 18:1, which is what the mockup gets
+ * with #2A2622 on #F3EEE3 through two literals. */
+.posts-bulk {
+  position: fixed;
+  z-index: 44;
+  bottom: 1.5rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: max-content;
+  /* 64rem, not 56. The mockup's bar carries four controls; this one also
+     carries the ruled bulk TAGGING controls, which the mockup has no equivalent
+     for. At 56rem the extra width tipped it into wrapping: measured 896x161, a
+     four-row block floating over the grid. At 64rem the same content is 991x85.
+     It still takes two rows at a 1280 viewport, and that is the honest residue
+     of having more controls than the drawing did, not a layout to fix by
+     hiding one. */
+  max-width: min(64rem, calc(100vw - 2rem));
+  padding: 0.625rem 0.75rem 0.625rem 1.125rem;
+  background: var(--scrim);
+  color: var(--on-scrim);
+  border: 0;
+  border-radius: 0.8125rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  transform: translateX(-50%);
+  flex-wrap: wrap;
+}
+
+.posts-bulk .posts-bulk-count {
+  margin: 0;
+  color: var(--on-scrim);
+  font-size: 0.84375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.posts-bulk .posts-bulk-size {
+  color: var(--on-scrim);
+}
+
+/* The controls invert onto the dark bar. A ghost button drawn for a light
+   surface is invisible here, so both variants take the scrim treatment. */
+.posts-bulk .btn,
+.posts-bulk .btn-ghost {
+  color: var(--on-scrim);
+  background: none;
+  border: 1px solid var(--on-scrim);
+}
+
+.posts-bulk .btn:hover,
+.posts-bulk .btn-ghost:hover,
+.posts-bulk .btn:focus-visible,
+.posts-bulk .btn-ghost:focus-visible {
+  outline: 1px solid var(--on-scrim);
+  outline-offset: 1px;
+}
+
+.posts-bulk .posts-bulk-tag input {
+  color: var(--text);
+}
+
+.posts-bulk .posts-bulk-tag span {
+  color: var(--on-scrim);
+}
+
+/* The bar overlaps the last row of the grid, so the scroller gains room to
+   scroll past it. Same reason a fixed footer always needs one. */
+.media-grid {
+  scroll-margin-bottom: 5rem;
+}
+
+/* ---- TYPE ---------------------------------------------------------------
+ *
+ * **THE FAMILIES ARE NOT CHANGED HERE, and the first reason written down for
+ * that was FALSE, so here is the measured one.**
+ *
+ * The draft of this comment said the site ships no webfont and has no font-src
+ * for a third party. Both are wrong: `app/root.tsx` preconnects to
+ * fonts.googleapis.com and fonts.gstatic.com and loads Inter, and
+ * `workers/app.ts` already carries `font-src https://fonts.gstatic.com`. A
+ * claim written from memory rather than from the file, which is the class this
+ * repo keeps paying for.
+ *
+ * What is actually true:
+ *
+ *   IBM PLEX SANS would be a SWAP, not an addition. Same origin, same CSP, one
+ *   Google Fonts request either way. It is also `--font-sans`, which every
+ *   PUBLIC page uses, so it is the site's brand typeface and not a property of
+ *   the media library. Changing it is an aesthetic verdict, and those are
+ *   Dustin's by the standing delegation.
+ *
+ *   IBM PLEX MONO would be a real ADDITION. `--font-mono` is a system stack
+ *   today and costs nothing; adding a webfont for it puts a new request on the
+ *   public plane, because app.css ships as one stylesheet for both.
+ *
+ * So the TREATMENT matches and the families are left for Dustin: size, weight
+ * and tracking are set to the mockup's values, which is what carries the
+ * difference between a title that reads as a title and one that reads as a
+ * paragraph. */
+
+/* The page title. The mockup is 27px / 600 / -0.018em; this was 20px / 400,
+   which is smaller than the search field beneath it. */
+.panel-head h2 {
+  font-size: 1.6875rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+}
+
+/* THE GROUP HEADING IS MONO IN THE MOCKUP, and the family is the point: it is a
+   machine's label for a folder, not a piece of prose. 11px, 500, wide tracking,
+   uppercase. It was 12px Inter at 600, which reads as a small headline. */
+.media-group-title {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+/* ---- THE LIST ROW -------------------------------------------------------
+ *
+ * 56px against the mockup's 46px, and the 10px was two things: a 19.5px line
+ * height on a 13px name where the mockup uses 16.9px, and 1px more padding.
+ * A 21 percent taller row is four fewer files on a screen. */
+.media-grid[data-view="list"] .media-name {
+  line-height: 1.3;
+}
+
+.media-grid[data-view="list"] .media-name-dir {
+  line-height: 1.25;
+}
+
+.media-grid[data-view="list"] .media-col-usage {
+  line-height: 1.3;
+}
+
+/* AND THE COPY CELL IS A FLEX BOX. `.media-col` is `display: block`, so the
+   cell was a line box holding an inline-block button, which adds the strut's
+   descent under it. That is small next to the margin above, but it is real and
+   it is what puts the glyph off the row's optical centre. */
+.media-grid[data-view="list"] .media-col-copy {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* THE CONFIRMATION MODAL. Replaces `window.prompt`, which was unstyleable, told
+ * a screen reader nothing beyond its bare string, blocked the whole browser and
+ * is silently disabled in some contexts, where the form submitted unconfirmed.
+ *
+ * Centred rather than docked, because a confirmation is a question that stops
+ * everything, not a panel you work beside. */
+.media-modal-layer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+/* The scrim is a real control, so it is a link or a button rather than a div,
+   and it fills the layer behind the panel. */
+.media-modal-scrim {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: var(--scrim);
+  border: 0;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+/* Heavier than the drawer's 0.28: a drawer is meant to be compared against the
+   page behind it, and a confirmation is meant to stop you reading it. */
+.media-modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 27rem;
+  padding: 1.3125rem;
+  background: var(--surface-popover);
+  /* Popover elevation, so hard rule 5 applies: --border-strong, never --border. */
+  border: 1px solid var(--border-strong);
+  border-radius: 0.8125rem;
+}
+
+.media-modal h2 {
+  margin: 0 0 0.4375rem;
+  font-size: 1.03125rem;
+  font-weight: 600;
+}
+
+.media-modal-body {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.84375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.media-modal-body p {
+  margin: 0 0 0.5rem;
+}
+
+.media-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.media-modal-body strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.media-modal-typed input {
+  width: 100%;
+  padding: 0.5625rem 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+}
+
+.media-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* A refused control has to LOOK refused, or the reader presses it and concludes
+   the page is broken rather than that they have not typed the count yet. */
+.media-modal-actions .btn-danger[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The empty-trash trigger is a link now, so it needs the button's own box. */
+.media-empty-trash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.media-empty-trash .btn-danger {
+  display: inline-block;
+  text-decoration: none;
+}

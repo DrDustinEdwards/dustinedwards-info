@@ -1,0 +1,299 @@
+/*
+ * The command palette, and Ask inside it.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Command palette -----------------------------------------------------------
+   Enhancement only. Every rule here styles markup created by
+   app/enhance/palette.ts, so a reader without script never sees any of it. */
+
+/* Search entry point: ONE control carrying the icon and the shortcut hint.
+ *
+ * The hint used to be a sibling of the anchor, floating beside it with its own
+ * border. At header size that reads as a stray character sitting next to the
+ * icon rather than as a hint belonging to it, so it is now INSIDE the anchor:
+ * one border, one hover state, one focus ring, one hit area. It stays
+ * aria-hidden and unfocusable, and it stays `hidden` until the palette is
+ * listening, so a reader without script sees a plain icon control and is never
+ * told about a shortcut that does not exist.
+ *
+ * That is also what settles rule 2. The anchor previously opted out of the
+ * underline on the ground that it rendered no text at all; it renders a "/"
+ * now, so it opts out on the ordinary exemption instead: it carries a border,
+ * a non-colour affordance, exactly like .search-chip and .btn.
+ *
+ * Height comes from --control-h on .site-header-nav, so this control, the
+ * theme pill and the Blog link are one height and one centreline. With the
+ * hint hidden the padding leaves it a 36px square, above the 24px WCAG 2.2
+ * target floor; with the hint shown it grows into a pill.
+ */
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: var(--control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.search-trigger:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
+
+/* No border, no background and no colour of its own: the control around it
+   owns all three, which is the point. It inherits the anchor's colour so it
+   follows the one hover state. Not a target: it never takes focus and a click
+   on it is a click on the control. */
+.search-trigger-kbd {
+  font-family: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.palette {
+  width: min(40rem, calc(100vw - 2rem));
+  max-height: min(30rem, calc(100vh - 6rem));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+  /* Sits nearer the top than centred: the list grows downward and a centred
+     dialog would jump as results arrive. */
+  margin: 6vh auto auto;
+}
+
+.palette::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .palette[open] {
+    animation: palette-in 120ms ease-out;
+  }
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+.palette-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.palette-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+/* 2.4.7 IS NOT SATISFIED BY REMOVING THE INDICATOR.
+
+   This was `outline: none` with nothing in its place. The input is the palette's
+   only text entry and it takes focus the moment the palette opens, so a reader
+   navigating by keyboard had no way to confirm where focus had gone.
+
+   `:focus-visible` rather than `:focus`, so a pointer user opening the palette
+   does not get a ring they did not ask for, while a keyboard user always does.
+   The token is the on-surface ring the rest of the elevated chrome uses, not a
+   new colour, so it stays inside the palette the contrast gate reads. */
+.palette-input:focus {
+  outline: none;
+}
+
+.palette-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+.palette-close {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  min-height: 1.75rem;
+}
+
+.palette-status {
+  margin: 0;
+  padding: 0.375rem 0.875rem 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.palette-status:empty {
+  display: none;
+}
+
+.palette-listbox {
+  margin: 0;
+  padding: 0.375rem;
+  list-style: none;
+  overflow-y: auto;
+  max-height: 21rem;
+}
+
+.palette-group {
+  padding: 0.5rem 0.5rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.palette-option {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.palette-option[aria-selected="true"] {
+  background: var(--tint-brand);
+}
+
+.palette-title {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.palette-context,
+.palette-why {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.palette-snippet {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.palette-snippet mark {
+  background: var(--mark-bg);
+  color: var(--text);
+}
+
+.palette-recent button {
+  width: 100%;
+  padding: 0.4rem 0.625rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 2rem;
+}
+
+.palette-recent button:hover {
+  background: var(--tint-brand);
+}
+
+.palette-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.palette-footer kbd {
+  padding: 0.05rem 0.3rem;
+  margin-right: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 0.2rem;
+  background: var(--bg);
+  font-size: 0.6875rem;
+}
+
+.palette-footer a {
+  margin-left: auto;
+}
+
+/* Mobile: a full-screen sheet rather than a floating card. */
+@media (max-width: 40rem) {
+  .palette {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .palette-listbox {
+    max-height: none;
+  }
+}
+
+/* Ask inside the command palette ------------------------------------------ */
+
+.palette-ask {
+  padding: 0 0.75rem;
+}
+
+.palette-ask-trigger {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  min-height: 1.5rem;
+}
+
+.palette-ask-trigger:hover {
+  border-color: var(--brand);
+  color: var(--text);
+}
+
+.palette-ask-container .ask-panel {
+  margin-top: 0.5rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}

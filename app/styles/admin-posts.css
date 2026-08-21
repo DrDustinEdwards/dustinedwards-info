@@ -1,0 +1,668 @@
+/*
+ * The admin posts index: toolbar, filters, overflow menu, disabled affordance, bulk bar.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Post editor (admin) ------------------------------------------------------ */
+
+.posts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+/* The overflow sits at the far end, so the row reads as one primary action and
+   then, separately, a place where the repair operations live. */
+.posts-toolbar .overflow-menu {
+  margin-left: auto;
+}
+
+/* SEARCH AND FILTER.
+ *
+ * A row that wraps rather than a grid, because the three fields have honestly
+ * different natural widths and a grid would either stretch the two selects to
+ * match the search box or squeeze the search box to match them. The search
+ * field is the only one that grows. */
+.posts-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.posts-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/* The search field is the one that takes the slack. `min-width` rather than a
+   percentage so it can still wrap onto its own line on a narrow admin. */
+.posts-filters .posts-filter-field:first-child {
+  flex: 1 1 14rem;
+}
+
+.posts-filter-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* The controls sit on the CANVAS behind a border, like the editor's own inputs,
+   rather than on a raised surface: this is a form on the page, not a popover,
+   so --border is correct here and the elevated-surface law does not apply. */
+.posts-filter-input,
+.posts-filter-select {
+  min-width: 0;
+  /* The command bar's control height, so the filter row and the editor's chrome
+     agree about how tall a control is. */
+  height: var(--admin-control-h);
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.posts-filter-input::placeholder {
+  color: var(--text-disabled);
+}
+
+/* Both buttons align to the CONTROLS, not to the labels above them, which is
+   why the row is `align-items: flex-end`. */
+.posts-filter-submit {
+  height: var(--admin-control-h);
+}
+
+/* Aligns to the CONTROLS like its sibling submit, not to the labels above
+   them. It is a .btn-ghost now, so everything but the height comes from that. */
+.posts-filter-clear {
+  height: var(--admin-control-h);
+}
+
+/* THE SCHEDULED QUEUE NOTE. Neutral by rule 4: the one semantic tint in this
+   view is spent on the drift alert, and this is information rather than a
+   demand. The glyph is a clock, so the meaning is not carried by wording
+   alone. */
+.posts-scheduled-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.posts-scheduled-note svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+/* THE EMPTY RESULT, which is not the empty corpus. It states the question that
+   returned nothing and offers the way out of it. */
+.posts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.posts-empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Overflow menu -------------------------------------------------------------
+ *
+ * See app/components/admin/overflow-menu.tsx for why this is a disclosure
+ * rather than a role="menu", and why it is <details> rather than a click
+ * handler. */
+.overflow-menu {
+  position: relative;
+}
+
+.overflow-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  /* The native marker is replaced by the chevron, which can then rotate with
+     the open state. Both selectors are needed: Safari still uses the WebKit
+     pseudo-element. */
+  list-style: none;
+}
+
+.overflow-menu-button::-webkit-details-marker {
+  display: none;
+}
+
+.overflow-menu-button:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.overflow-menu[open] > .overflow-menu-button {
+  color: var(--text);
+}
+
+.overflow-menu[open] .overflow-menu-chevron {
+  transform: rotate(180deg);
+}
+
+.overflow-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  z-index: 20;
+  min-width: 17rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  /* Rule 7's popover step, asked for by its own name. */
+  background: var(--surface-popover);
+}
+
+.overflow-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.overflow-menu-item:hover {
+  background: var(--tint-brand);
+}
+
+.overflow-menu-item-hint {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* The hint is muted text, and --text-muted was measured on --surface-popover
+   (7.1:1 light, 7.8:1 dark) but not on the brand tint a hovered row paints
+   underneath it. Rather than introduce a pair the doc has not ratified, the
+   hover row drops the hint back onto body text, which IS measured on the brand
+   tint. */
+.overflow-menu-item:hover .overflow-menu-item-hint {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .overflow-menu-chevron {
+    transition: transform 120ms ease;
+  }
+}
+
+.btn,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--brand);
+  border-radius: 0.375rem;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 0.9375rem;
+  /* Exempt from rule 2: a fill is already a non-colour affordance. */
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Rule 5: an interactive semantic element takes a FILL, never pastel text on
+   the page background. Delete is the site's one destructive action. */
+.btn-danger {
+  /* The border is the LIGHTER family token, not the fill again. In dark mode
+     the crimson fill sits at 2.49:1 against prairie night, so a same-colour
+     border gives the button no edge; --border-danger is 3.4:1 and does. */
+  border-color: var(--border-danger);
+  background: var(--fill-danger);
+  color: var(--on-fill-danger);
+}
+
+.btn-danger:hover {
+  border-color: var(--fill-danger-hover);
+  background: var(--fill-danger-hover);
+}
+
+.btn:hover {
+  border-color: var(--brand-hover);
+  background: var(--brand-hover);
+}
+
+.btn:active {
+  border-color: var(--brand-active);
+  background: var(--brand-active);
+}
+
+/* The (0,1,0) versus (0,1,1) specificity trap design-tokens.md records for the
+   wordmark, found live again on the New post control and this time as a real
+   contrast failure rather than a wrong hue.
+
+   These classes are worn by anchors as well as buttons, and an anchor is
+   reached by the base `a:visited` and `a:hover` rules at (0,1,1), which outrank
+   a class-only declaration at (0,1,0). So the base rules won on the colour
+   property while the class rules still won on the background, and the label
+   was painted with a token measured against the PAGE, on top of a fill:
+
+     rest, once /admin/posts/new was in history
+       light  --visited #7f2651 on --brand #4f2d7f          1.14:1
+       dark   --visited #d586ac on --brand #b7a5e0          1.21:1
+     hover, both themes
+       --brand-hover on --brand-hover                       1.00:1
+
+   Naming the link states explicitly puts these at (0,2,0), which outranks the
+   base rules, and the label lands back on the three pairs the doc measured for
+   a brand fill: 10.43 / 13.06 / 15.26 light, 8.10 / 10.01 / 10.01 dark.
+   check:contrast already asserts all three, so the fix is verified by a gate
+   rather than by this comment.
+
+   It is invisible in review because it only appears once the destination is in
+   the reader's history, which for the person who runs this admin is always.
+   Any future filled or bordered control worn by a Link needs the same
+   treatment. */
+.btn,
+.btn:visited,
+.btn:hover,
+.btn:active {
+  color: var(--on-brand);
+}
+
+/* Disabled affordance ------------------------------------------------------
+ *
+ * WCAG exempts a disabled control from the contrast minimum, so dimming is
+ * allowed here in a way it is not anywhere else in this stylesheet. What is NOT
+ * exempt is telling the reader the control is unavailable: a button that is
+ * blocked and still renders at full strength with a pointer cursor reads as
+ * broken rather than as waiting.
+ *
+ * Found live 2026-08-01 on Insert figure, which correctly refuses to run until
+ * alt text exists and gave no sign of it. The state is carried by opacity AND
+ * by the cursor, so it survives forced-colors, where opacity is preserved but
+ * the fill is not.
+ */
+.btn:disabled,
+.btn-brand:disabled,
+.btn-danger:disabled,
+.btn-ghost:disabled,
+.md-tool:disabled,
+.md-tool-text:disabled,
+.overflow-menu-item:disabled,
+.row-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Hover must not promise anything to a control that will not act. */
+.btn:disabled:hover,
+.btn-danger:disabled:hover,
+.btn-ghost:disabled:hover,
+.overflow-menu-item:disabled:hover {
+  border-color: inherit;
+  background: inherit;
+}
+
+.btn-ghost,
+.btn-ghost:visited,
+.btn-ghost:hover,
+.btn-ghost:active {
+  color: var(--text);
+  /* Exempt from rule 2 for the same reason .btn is: the border is already a
+     non-colour affordance. Without this the three ghost controls that are
+     Links underline while the ones that are buttons do not, from the same
+     base-rule leak. */
+  text-decoration: none;
+}
+
+/* The posts index, in a card. Rule 7 names indexes as what cards are for, and
+   this is the site's only one. The card is the third rung of the cockpit's
+   surface ladder: shell chrome, canvas, then this sitting on the canvas behind
+   a border. */
+.posts-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  /* The rows run to the card's edge, so the radius has to clip them or the
+     first and last row square off the corners. */
+  overflow: hidden;
+}
+
+/* Bulk actions bar. Present only while something is selected, so the list is
+   unchanged for the ordinary read-and-edit pass.
+
+   Rule 5: it is a pinned bar on the popover elevation step, so its seam is
+   --border-strong and never --border. It sits INSIDE the card, above the
+   table, which is why only the bottom edge is drawn. */
+.posts-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--surface-popover);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.posts-bulk-count {
+  margin: 0;
+  margin-right: auto;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.posts-bulk-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.posts-bulk-tag input {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+/* The checkbox column. Narrow, and the header cell carries select-all for what
+   is CURRENTLY VISIBLE; its label says "shown" whenever a filter is on, so the
+   control never claims more reach than it has. */
+.posts-check {
+  width: 1px;
+  white-space: nowrap;
+}
+
+/* 24px minimum target (WCAG 2.2 AA, 2.5.8). The input is smaller than that in
+   every browser default, so the LABEL carries the hit area with the input
+   inside it. The label is also what names the control, so one element does both
+   jobs rather than a wrapper plus an aria-label that can drift from it. */
+.posts-check-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  cursor: pointer;
+}
+
+/* Selection is a CHOICE, so it takes the brand tint, matching the command
+   palette's active option. That is the opposite of the hover rule below, and
+   deliberately so: a row under a pointer is not a choice, a selected row is. */
+.posts-table tbody tr[data-selected] {
+  background: var(--tint-brand);
+}
+
+.posts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.posts-table th,
+.posts-table td {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.posts-table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The last row's rule would otherwise draw against the card's own border and
+   read as a double line. */
+.posts-table tbody tr:last-child th,
+.posts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Hover is the NEUTRAL elevation step, not the brand tint the command palette
+   paints its active option with. The palette's row is SELECTED, an answer the
+   reader has moved to; a row under a pointer is not a choice, and rule 6 keeps
+   brand out of anything that reads as state. The practical half matters more:
+   a row carries muted text in the slug and the date, and --text-muted is a
+   measured pair against --surface-popover in both the default and the
+   prefers-contrast tier, where against a brand tint it is measured nowhere. */
+.posts-table tbody tr:hover {
+  background: var(--surface-popover);
+}
+
+/* The separator has to come up with the surface under it. --border clears the
+   3:1 UI floor on --surface by 0.04 in dark mode and drops to 2.66:1 on the
+   popover step, so a hovered row drawn with the default border would quietly
+   fall below AA. Measured by check:contrast on the run that introduced the
+   hover, not reasoned about afterwards. */
+.posts-table tbody tr:hover th,
+.posts-table tbody tr:hover td {
+  border-bottom-color: var(--border-strong);
+}
+
+/* Status pill. Three states out of the two the database stores; see the loader.
+ *
+ * Rule 1 wants a channel that is not colour, and the word is the first one. The
+ * second is BORDER STYLE, which is chosen over a hue difference on purpose:
+ * forced-colors takes the fill and the tint away and leaves the stroke, so the
+ * three stay separable in exactly the mode where the palette stops existing.
+ * Published is filled and solid, scheduled is dashed, draft is dotted. */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Rule 5: a state that is TRUE right now takes a fill. The ring is the LIGHTER
+   family token rather than the fill repeated, the same reasoning .btn-danger
+   already carries: a fill is not required to clear 3:1 as a shape against the
+   surface behind it, so the family's --border-* token is what gives the pill
+   an edge. */
+.status-pill[data-state="published"] {
+  border-style: solid;
+  border-color: var(--border-success);
+  background: var(--fill-success);
+  color: var(--on-fill-success);
+}
+
+/* The amber family, and the one semantic tint this view spends. It cannot
+   collide with the drift alert, which is the same family by design. */
+.status-pill[data-state="scheduled"] {
+  border-style: dashed;
+  border-color: var(--border-warning);
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+/* Outlined, per the spec. No fill and no tint, because a draft is the absence
+   of a state rather than a state of its own. */
+.status-pill[data-state="draft"] {
+  border-style: dotted;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.posts-title {
+  display: block;
+  font-weight: 500;
+  /* Exempt from rule 2 only while it is the row's heading line: the slug sits
+     directly under it in a smaller, muted style, so the pair is a title block
+     rather than a link buried in prose. The underline returns on hover. */
+  color: var(--text);
+  text-decoration: none;
+}
+
+.posts-title:visited {
+  color: var(--text);
+}
+
+.posts-title:hover,
+.posts-title:focus-visible {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
+.posts-slug {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.posts-date {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The scheduled row's second line: the ISO date says WHICH day, this says how
+   far away, which is the question the author actually has. Its own line, so the
+   column stays scannable as dates. */
+.posts-date-relative {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.posts-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* WCAG 2.2 target size (minimum) is 24 by 24 CSS pixels. 1.75rem is 28, so the
+   target clears it with the row's own padding still to spare.
+   --border-strong rather than --border, because these ride a row that elevates
+   to --surface-popover on hover, where --border is 2.66:1 in dark. */
+.row-action,
+.row-action:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  color: var(--text);
+  font-size: 0.8125rem;
+  /* Exempt from rule 2: the border is the non-colour affordance. */
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.row-action:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* Standing-condition alert. See app/components/admin/alert.tsx for why this is
+   a named region and not a live one.
+ *
+ * The amber family, because drift is a degradation and not a failure: the site
+ * works, its search works, and only the AI answer layer is out of step. It is
+ * the ONE semantic tint this view spends (rule 4), and the scheduled pill is
+ * deliberately the same family so the two can never sit adjacent in different
+ * ones. */
+.admin-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.admin-alert-glyph {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.admin-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-alert-title {
+  margin: 0 0 0.25rem;
+  /* Colour is inherited from the banner, not taken from --text-heading, which
+     was measured on the page and not on a tint. */
+  color: inherit;
+  font-size: 1rem;
+}
+
+.admin-alert p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.admin-alert-action {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .admin-alert {
+    flex-wrap: wrap;
+  }
+
+  .admin-alert-action {
+    width: 100%;
+  }
+}
+
+/* The quiet line under the table. Reference numbers about the AI layer, sitting
+   with the thing they describe rather than floating above it as body prose. */
+.posts-meta {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}

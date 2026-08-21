@@ -1,0 +1,149 @@
+/*
+ * The editor's feedback slot and upload row.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* The editor's feedback slot ------------------------------------------------
+ *
+ * One slot, four states, and the tint changes family with the state rather than
+ * the state changing only its words. Rule 4 holds because exactly one of these
+ * is ever rendered: the slot is a single node, so there is no arrangement in
+ * which two semantic tints appear together. Everything else in the editor that
+ * could have carried a tint (the missing-token notice) was moved off one for
+ * the same reason.
+ *
+ * The slot element itself is always present and unstyled when empty, because it
+ * is the live region: a container that appears at the same moment as its text
+ * announces nothing.
+ */
+.editor-feedback-slot:empty {
+  display: none;
+}
+
+.editor-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid;
+  border-radius: 0.5rem;
+}
+
+.editor-feedback strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: inherit;
+}
+
+.editor-feedback p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.editor-feedback p + p {
+  margin-top: 0.25rem;
+}
+
+/* The link inherits the banner's on-tint colour rather than the page link
+   colour, which was measured against the page background and not against a
+   tint. It keeps its underline, so rule 2 is untouched. */
+.editor-feedback a {
+  color: inherit;
+}
+
+.editor-feedback-glyph {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.editor-feedback[data-tone="success"] {
+  border-color: var(--border-success);
+  background: var(--tint-success);
+  color: var(--on-tint-success);
+}
+
+.editor-feedback[data-tone="warning"] {
+  border-color: var(--border-warning);
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.editor-feedback[data-tone="danger"] {
+  border-color: var(--border-danger);
+  background: var(--tint-danger);
+  color: var(--on-tint-danger);
+}
+
+/* First publication. The one act the system reserves to the human, so it is the
+   one message that does not look like every other save. The weight is carried
+   by size and a heavier edge, never by a colour the other success state does
+   not also have: a reader who cannot separate the two hues still sees a
+   different shape. */
+.editor-feedback[data-ceremony] {
+  padding: 1.125rem 1.25rem;
+  border-width: 1px 1px 1px 4px;
+}
+
+.editor-feedback[data-ceremony] strong {
+  font-size: 1.125rem;
+}
+
+/* forced-colors: the tint that separated these states is gone, so the edge is
+   the only thing left holding the shape, and the glyph plus the words carry the
+   meaning. Nothing here re-asserts a palette colour. */
+@media (forced-colors: active) {
+  .editor-feedback {
+    border-color: currentColor;
+  }
+}
+
+.editor-upload,
+.editor-preview,
+.editor-danger {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.editor-upload h2,
+.editor-preview h2,
+.editor-danger h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.editor-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.editor-upload-row input[type="text"],
+.editor-upload-row input:not([type]) {
+  flex: 1 1 14rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.editor-preview .prose {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.editor-danger p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}

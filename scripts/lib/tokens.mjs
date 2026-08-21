@@ -19,7 +19,61 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/**
+ * The stylesheet that declares the TOKENS. Still one file, deliberately.
+ *
+ * app.css was split on 2026-08-21 and the token block stayed here, because this
+ * module and `check:contrast` both parse this path and moving the palette would
+ * have been a gate change wearing a refactor's clothes.
+ */
 export const CSS_PATH = join(root, "app", "app.css");
+
+/**
+ * EVERY source stylesheet, in CASCADE ORDER, derived from app.css's own imports.
+ *
+ * ## WHY THIS EXISTS
+ *
+ * app.css was ONE 9,269-line file until 2026-08-21 and is now an entry that
+ * imports sixteen parts. Any gate that reasoned about "the stylesheet" by
+ * reading that one path silently narrowed to the token block the moment the
+ * split landed. That is not hypothetical: `check:contrast`'s resolution scan
+ * dropped from 69 var() uses to 13, and `check:logo` found one of the mark's
+ * two fill bindings. Both FAILED rather than passing quietly, which is the
+ * anti-vacuity floors doing their job, and both are fixed by reading this.
+ *
+ * ## DERIVED, NOT RESTATED
+ *
+ * The order comes from parsing app.css's `@import` lines, so adding a part
+ * means editing app.css and nothing else. A hand-kept list here would be the
+ * mirror this repo keeps paying for, and it would go stale in exactly the
+ * direction that hides CSS from a gate.
+ *
+ * `@import "tailwindcss"` is skipped: it is a package, not a file in this repo,
+ * and no gate asserts anything about what Tailwind generates.
+ *
+ * @returns {string[]} absolute paths, app.css first, then its imports in order
+ */
+export function stylesheetPaths() {
+  const entry = readFileSync(CSS_PATH, "utf8").replace(/\r\n/g, "\n");
+  const imported = [...entry.matchAll(/@import\s+"(\.[^"]+)"/g)].map((m) =>
+    join(root, "app", m[1].replace(/^\.\//, "")),
+  );
+  return [CSS_PATH, ...imported];
+}
+
+/**
+ * Every source stylesheet's text, concatenated in cascade order.
+ *
+ * FAILS CLOSED on a missing file: a gate reading this must not silently examine
+ * a smaller stylesheet than the site ships, which is the whole failure this
+ * function was written after.
+ */
+export function allSourceCss() {
+  return stylesheetPaths()
+    .map((p) => readFileSync(p, "utf8").replace(/\r\n/g, "\n"))
+    .join("\n");
+}
 
 /**
  * The three selectors the site resolves its theme through. "System" is the

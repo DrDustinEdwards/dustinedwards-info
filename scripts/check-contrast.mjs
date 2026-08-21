@@ -82,6 +82,17 @@ import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
 // through them, exactly as they were when all four lived in this file.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 
+/*
+ * FILE DISCOVERY ONLY, and that distinction is what keeps this gate's design
+ * intact. `tokens.mjs` says this file deliberately keeps its OWN palette
+ * parsing, so the two can disagree, and that is unchanged: every hex below is
+ * still read by the parser in this file from the block in this file's own
+ * CSS_PATH. What is imported is the LIST OF STYLESHEETS, which is not one of
+ * the two sources; it is the answer to "which files does the site ship", and
+ * having two answers to that would be the drift, not the safeguard.
+ */
+import { allSourceCss } from "./lib/tokens.mjs";
+
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -533,16 +544,20 @@ const DECLARED_ELSEWHERE = new Map([
 
 {
   /*
-   * `css` IS ALREADY COMMENT-STRIPPED AND CRLF-NORMALISED where it is built,
-   * and this section DEPENDS on that rather than repeating it.
+   * THE WHOLE STYLESHEET SET, not app.css alone, since the 2026-08-21 split.
    *
-   * The dependency is load-bearing, not incidental: app.css documents the Shiki
-   * contract in prose that spells out all four token names, so a scan over the
-   * raw source would read documentation as though it were CSS and report every
-   * one of them as a use. Stripping a second time here would be a no-op that
-   * reads like a safeguard, which is worse than naming the dependency.
+   * `css` above is app.css, which now holds the tokens and the imports and
+   * almost no rules. Scanning it alone dropped this from 69 var() uses to 13,
+   * and the scope floor below FAILED rather than reporting a clean sweep over a
+   * thirteenth of the stylesheet. That failure is the reason this line exists.
+   *
+   * COMMENTS ARE STRIPPED HERE, and it is not a duplicate of the stripping
+   * app.css already gets: `allSourceCss()` returns RAW text for every part. The
+   * dependency is load-bearing, because app.css documents the Shiki contract in
+   * prose that spells out all four token names, so a scan over raw source reads
+   * documentation as though it were CSS and reports every one as a use.
    */
-  const code = css;
+  const code = allSourceCss().replace(/\/\*[\s\S]*?\*\//g, " ");
 
   const used = new Set([...code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].map((m) => m[1]));
   const declaredAnywhere = new Set(
