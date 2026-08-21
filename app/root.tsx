@@ -62,11 +62,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const theme = data ? themeAttribute(data.theme) : undefined;
   /*
    * No data means the root loader did not run, which is the error-boundary
-   * path, and there is then no nonce to stamp. Under Report-Only that costs a
-   * violation report on an error page and nothing else. It is left UNHANDLED on
-   * purpose rather than papered over with a fallback value: a made-up nonce
-   * would satisfy the markup while matching nothing in the header, which is
-   * worse than an honest report. Revisit before switching to enforcing.
+   * path, and there is then nothing to stamp FROM HERE.
+   *
+   * **"Revisit before switching to enforcing" is now DISCHARGED, by a commit
+   * that was not about this.** It said an un-nonced error page cost a violation
+   * report and nothing else, which was true under Report-Only and would have
+   * become "error pages never hydrate" on 2026-08-17.
+   *
+   * It did not, because `<Scripts>` FALLS BACK to the framework context:
+   * react-router 8.3.0, `lib/dom/ssr/components.js`, verbatim
+   * `if (scriptProps.nonce == null && contextNonce)`, and `ScrollRestoration`
+   * does the same. `entry.server.tsx` fills that context from
+   * `<ServerRouter nonce>`, reading `getNonce(loadContext)` DIRECTLY rather than
+   * through loader data, so it has a value whether or not the root loader ran.
+   * That prop was added on 2026-08-07 to fix react-router's two streaming
+   * scripts, and it covered this path as a side effect nobody recorded.
+   *
+   * So `undefined` here is still the honest value and is still deliberately not
+   * given a fallback: a made-up nonce would satisfy the markup while matching
+   * nothing in the header. It is simply no longer the LAST word on what gets
+   * stamped.
    */
   const nonce = data?.nonce;
 
