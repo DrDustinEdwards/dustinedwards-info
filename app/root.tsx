@@ -42,16 +42,12 @@ export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
+  /*
+   * NO FONT LINKS. Inter is self-hosted from /fonts/ since 2026-08-21; the
+   * @font-face blocks are at the top of app.css, which the browser already has.
+   * Removing these took away two external preconnects and one render-blocking
+   * stylesheet, and let style-src and font-src both drop to 'self'.
+   */
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

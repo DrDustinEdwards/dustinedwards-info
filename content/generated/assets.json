@@ -1,5 +1,5 @@
 {
-  "generated": 58,
+  "generated": 61,
   "paths": [
     "/android-chrome-192x192.png",
     "/android-chrome-512x512.png",
@@ -12,6 +12,9 @@
     "/diagrams/e2394abb-light.svg",
     "/favicon.ico",
     "/favicon.svg",
+    "/fonts/OFL.txt",
+    "/fonts/inter-latin-italic.woff2",
+    "/fonts/inter-latin-normal.woff2",
     "/logo-dark.svg",
     "/logo-header-dark.svg",
     "/logo-header.svg",

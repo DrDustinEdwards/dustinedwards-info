@@ -1,0 +1,11 @@
+Inter is licensed under the SIL Open Font License, Version 1.1.
+
+Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+
+The two .woff2 files beside this notice are the LATIN SUBSETS of the Inter
+variable font, weight axis 100 to 900, upright and italic. They were taken
+from the files fonts.gstatic.com was already serving to every visitor of this
+site, so self-hosting changed who serves them and not what is served.
+
+Full license text: https://openfontlicense.org/open-font-license-official-text/
+Upstream project: https://github.com/rsms/inter

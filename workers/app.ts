@@ -271,18 +271,22 @@ function contentSecurityPolicy(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'nonce-${nonce}' 'strict-dynamic'`,
-    "style-src 'self' https://fonts.googleapis.com",
+    // 'self' ALONE since 2026-08-21: Inter is self-hosted, so nothing loads a
+    // stylesheet from another origin any more. This is a TIGHTENING.
+    "style-src 'self'",
     "style-src-attr 'unsafe-inline'",
     /*
-     * `'self'` ALONGSIDE gstatic, added 2026-08-17. Nothing serves a font from
-     * this origin yet, so today this permits nothing new: `font-src` replaces
-     * `default-src` entirely, so without it a self-hosted font would be blocked
-     * the moment one shipped. Widening a directive cannot break a load that
-     * already works, and self-hosting Inter is a decided direction with unused
-     * font files already sitting in the repo. The alternative was discovering
-     * this from a blocked font in the font session.
+     * `'self'` ALONE since 2026-08-21, and the 2026-08-17 note that used to sit
+     * here was RIGHT for the wrong reason. It added `'self'` beside gstatic on
+     * the reasoning that self-hosting was coming and a widening cannot break a
+     * working load. Self-hosting arrived, so gstatic goes and this is a
+     * TIGHTENING rather than the widening it anticipated.
+     *
+     * That note also called the files in `assets/fonts/` unused. They are not:
+     * Satori loads them to draw the social cards. The fonts served here are a
+     * different pair, the variable latin woff2 subsets, in `public/fonts/`.
      */
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self'",
     "img-src 'self' data:",
     "connect-src 'self'",
     "object-src 'none'",
