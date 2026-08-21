@@ -45,6 +45,38 @@
  * Measured 2026-08-10: roughly 50s of gates plus worktree creation, against a
  * 121s offline-tier norm, so `npm run check` goes to roughly 3 minutes. That is
  * the price of the only instrument that can see this class.
+ *
+ * RE-MEASURED 2026-08-20 by RUNNING it: 23 gates in 174.2s, 179s wall. The
+ * slowest are `check:charts` at 64.9s and `check:types` at 35.0s. The old
+ * figure is kept above rather than overwritten, because the difference is the
+ * subject of the next paragraph.
+ *
+ * **THE TYPECHECK IS COLD HERE, ALWAYS, AND THAT IS CORRECT.** `check:types`
+ * costs 35.0s in the extraction against 15s warm on the working tree. The
+ * difference is `tsc -b` incremental state: `tsconfig.node.tsbuildinfo` and
+ * `tsconfig.cloudflare.tsbuildinfo` sit at the repo root, are matched by
+ * `.gitignore:4:*.tsbuildinfo`, and are tracked by nothing, so an extraction
+ * never receives them.
+ *
+ * Copying them in would halve it and would be WRONG. `tsc -b` uses that state
+ * to decide which files it can skip, and it would be deciding against
+ * timestamps and hashes taken from DISK while checking the sources of HEAD. A
+ * gate whose entire purpose is that disk and HEAD may differ must not accept an
+ * oracle built from disk. The 20s is the price of the answer being about HEAD.
+ *
+ * ## A 2881s READING THAT WAS NOT THIS GATE
+ *
+ * On 2026-08-20 a `npm run check` recorded `check:head` at 2881.6s, and every
+ * one of the fourteen gates after it failed in 0.0 to 0.2s. Those were spawn
+ * failures on a saturated machine, not results, and re-running each one
+ * individually showed them all green.
+ *
+ * The cause was the session's own debris rather than anything here: several
+ * `vite preview` servers and Puppeteer browsers from `check:browser` were still
+ * running, because a run killed mid-flight skips the `finally` that stops them.
+ * Recorded because the reading looked exactly like a 32x regression in this
+ * file, and it was a measurement taken through a busy machine. Re-measured on a
+ * quiet one: 179s.
  */
 
 import { spawnSync } from "node:child_process";
