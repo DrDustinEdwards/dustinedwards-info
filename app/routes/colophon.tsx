@@ -182,7 +182,13 @@ export default function Colophon() {
       <SiteHeader />
       <main className="page" id="main">
         <div className="page-inner">
-          <h1 className="page-title">How this site is built</h1>
+          {/* THE TITLE IS READ, NOT TYPED. meta() and recordsForPage both use
+              COLOPHON_TITLE, and this h1 was the one place it was a literal, so
+              renaming the page would have changed the tab, the search record and
+              the social card while the heading kept the old words. That is the
+              exact drift colophon-sections.mjs exists to prevent, inside the
+              page it protects. */}
+          <h1 className="page-title">{COLOPHON_TITLE}</h1>
 
           <div className="prose">
             <p>{COLOPHON_INTRO}</p>
