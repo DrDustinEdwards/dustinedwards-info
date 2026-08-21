@@ -2733,6 +2733,115 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
   );
 }
 
+/* ------- 16. the CI workflow runs the DERIVED tier ----------------------- */
+
+/*
+ * MOVED HERE 2026-08-21 FROM check:hooks, WHICH WAS DELETED.
+ *
+ * Audit tier 4.1 ruled that gate out: it reads `.claude/settings.json`, cannot
+ * see whether a hook RAN, and knows one editor. Accepted for the hooks half.
+ * These six assertions arrived in it on 2026-08-20 and were never about hooks;
+ * they were put there to avoid adding a twenty-eighth gate for one file, which
+ * the gate's own header says out loud. They are the half worth keeping and they
+ * belong with the other structural claims about this repo.
+ *
+ * ## WHAT IS WORTH ASSERTING, and it is narrow on purpose
+ *
+ * Not the yaml's shape: GitHub validates that, and restating its schema would be
+ * a mirror of someone else's parser. What can rot silently and LOCALLY is the
+ * DERIVATION. The workflow's value is that it runs `npm run check:ci`, which
+ * computes the tier from package.json, so a gate added tomorrow is in CI by
+ * default and has to be argued OUT rather than remembered IN. Someone
+ * "helpfully" replacing that with a list of gate names would keep CI green, keep
+ * it looking thorough, and quietly reintroduce the exact failure check-all.mjs
+ * exists about: the next gate is forgotten.
+ *
+ * Same for the Node version. `.nvmrc` says it and `node-version-file` reads it;
+ * a literal `node-version: 24` in the yaml would be a second statement of one
+ * fact, which is the mirror class this repo has paid for twice this month.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * **IT READS A FILE.** It cannot see whether GitHub Actions is enabled on the
+ * repository, whether a run was triggered, whether it passed, whether a branch
+ * protection rule requires it, or whether someone merged past a red one. A green
+ * result here is compatible with CI having never executed once. Only the run
+ * itself proves that, and the run is not an artifact this repo contains.
+ */
+
+console.log("\n  16. the CI workflow runs the derived tier");
+
+{
+  /*
+   * COMMENTS STRIPPED BEFORE MATCHING, and this was caught by its own plant.
+   *
+   * The first draft matched the RAW yaml. Replacing `npm ci` with `npm install`
+   * in the run step PASSED, because that step's own comment says "`npm ci` and
+   * not `npm install`" and the needle found it there. The assertion was reading
+   * prose as though it were configuration.
+   *
+   * LIMIT, stated: whole-line `#` comments only. A trailing `#` is not
+   * attempted, because a naive pass would cut a string containing one, and this
+   * is not a yaml parser. A fragment hidden after code on the same line still
+   * fires.
+   */
+  const stripHashComments = (/** @type {string} */ src) =>
+    src.replace(/^[ \t]*#.*$/gm, " ");
+
+  const CI_PATH = join(root, ".github", "workflows", "ci.yml");
+  const present = existsSync(CI_PATH);
+  ok(
+    "a CI workflow exists at .github/workflows/ci.yml",
+    present,
+    "there is no workflow, so nothing reviews a commit but its author",
+  );
+
+  const rawYaml = present ? readFileSync(CI_PATH, "utf8") : "";
+  const yaml = stripHashComments(rawYaml);
+
+  /*
+   * SCOPE, ASSERTED. Every match below succeeds trivially against an empty
+   * string in the negative direction and fails confusingly in the positive one,
+   * so the file being non-trivial is established before anything is read.
+   */
+  ok(
+    "the workflow file is not empty",
+    rawYaml.length > 200 && yaml.length > 100,
+    present
+      ? `${rawYaml.length} byte(s) raw, ${yaml.length} after stripping comments. A ` +
+        `file that is all comment declares no job, and a stripper that emptied it ` +
+        `would make every assertion below fail for the wrong reason.`
+      : "(absent, see above)",
+  );
+
+  ok(
+    "the workflow runs the DERIVED CI tier, not a hardcoded gate list",
+    /npm run check:ci\b/.test(yaml),
+    "it does not run `npm run check:ci`. A list of gate names there is the mirror " +
+      "that lets the next gate be forgotten, which is what check-all.mjs exists about.",
+  );
+
+  ok(
+    "the workflow installs from the lockfile with npm ci",
+    /\bnpm ci\b/.test(yaml),
+    "`npm install` re-resolves and can pass where the lockfile disagrees with " +
+      "package.json, which makes the run a re-resolution rather than a review",
+  );
+
+  ok(
+    "the Node version comes from .nvmrc rather than a second literal",
+    /node-version-file:\s*\.nvmrc/.test(yaml) && !/node-version:\s*["']?\d/.test(yaml),
+    "the workflow states a Node version of its own. .nvmrc is the one place that " +
+      "says it; a copy there is a mirror and mirrors drift.",
+  );
+
+  ok(
+    "the workflow triggers on push to main and on pull requests",
+    /on:/.test(yaml) && /push:/.test(yaml) && /pull_request:/.test(yaml),
+    "a workflow that runs on neither is a file, not a review",
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2769,7 +2878,7 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 124;
+const MINIMUM_CHECKS = 130;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

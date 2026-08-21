@@ -43,9 +43,12 @@
 # repo has already been bitten by a Stop hook running a bare `npx tsc -b` while
 # `npm run typecheck` runs `wrangler types` and `react-router typegen` first, so
 # it typechecked against stale generated types. package.json is the one place
-# that defines what a typecheck is. scripts/check-hooks.mjs asserts that
-# delegation, and since 2026-08-20 it follows it into this file rather than
-# reading only the command string in settings.json.
+# that defines what a typecheck is.
+#
+# NOTHING ASSERTS THAT ANY MORE. check:hooks did, and was deleted on 2026-08-21
+# in the audit's tier 4.1 sweep, because it could only ever read what a file
+# DECLARED and never whether a hook ran. So this paragraph is the enforcement
+# now. If you change the command here, you are the only check.
 
 set -uo pipefail
 

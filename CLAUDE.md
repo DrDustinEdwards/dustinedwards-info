@@ -80,7 +80,7 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 
 ### 15. PROSE. Do not modify `.claude/settings.json` without explicit instruction.
 
-Gated read-only by `check:hooks`, which reads that file and never writes it.
+**UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
 
@@ -139,7 +139,6 @@ Every script in `package.json`. Counts, timings and what each gate asserts live 
     npm run check:secrets                the secret-handling boundary, by path, both directions
     npm run check:assertions             lints the other gates for assertions that cannot fail,
                                          and asserts every gate states its OBSERVATION BOUNDARY
-    npm run check:hooks                  .claude/settings.json wiring. Reads, never writes
     npm run check:migrations             sha256 of drizzle/*.sql against the manifest, both ways
     npm run check:tests                  node --test over test/. The one gate asserting BEHAVIOUR
     npm run check:head                   extracts a ref to a worktree and runs the offline tier THERE
