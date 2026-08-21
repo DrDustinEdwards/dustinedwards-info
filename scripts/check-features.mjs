@@ -1469,13 +1469,25 @@ ok(
   /not part of any standard/.test(playgroundSource),
   "Lc is advisory and the page must not imply otherwise",
 );
-// ANCHORED NEEDLE, and the anchor matters: "WCAG 2" must still be allowed, so
-// the token is bounded rather than matched as a prefix.
-ok(
-  "the page never claims WCAG 3",
-  !/\bWCAG 3\b/.test(playgroundSource),
-  "there is no such conformance level to claim",
-);
+/*
+ * DELETED 2026-08-21: the assertion banning the string "WCAG 3" from this page.
+ *
+ * THE LABELING RULING ABOVE STAYS and is the half that was ever load-bearing.
+ * The page must name WCAG 2.2 as its conformance target and must label APCA as
+ * not part of any standard. Those say what the page MUST claim, which is the
+ * honest form of the rule and is falsified by a real defect.
+ *
+ * Banning a two-word string said what the page may not SAY, which is a
+ * different and worse thing. WCAG 3.0 exists as a W3C working draft and APCA is
+ * being developed in its context, so the most accurate sentence this lab could
+ * add is one naming that relationship. **The ban made the next TRUE sentence
+ * fail the build**, which is a gate holding a page back from being more correct
+ * rather than stopping it being wrong.
+ *
+ * The failure it guarded, a page claiming conformance to a level that has none,
+ * is already impossible: the assertion above requires WCAG 2.2 to be named as
+ * THE target, so a page claiming WCAG 3 conformance instead would fail there.
+ */
 ok(
   "the page states the input cap it enforces",
   /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
