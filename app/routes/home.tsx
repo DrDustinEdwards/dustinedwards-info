@@ -8,6 +8,7 @@ import {
   SITE,
   SITE_ORIGIN,
   webSiteJsonLd,
+  pageMeta,
 } from "~/lib/seo";
 
 /**
@@ -23,12 +24,9 @@ export function headers() {
 }
 
 export function meta() {
-  return [
-    { title: SITE.name },
-    { name: "description", content: SITE.description },
-    { property: "og:image", content: DEFAULT_OG_IMAGE },
-    { name: "twitter:card", content: "summary_large_image" },
-  ];
+  /* The URL people paste, and it carried no canonical and no OG text at all.
+     See pageMeta for what a partial set costs at cutover. */
+  return pageMeta({ title: SITE.name, description: SITE.description, path: "/" });
 }
 
 export default function Home() {

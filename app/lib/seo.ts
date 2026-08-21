@@ -107,6 +107,61 @@ export function postSocial(post: PostSocialFields) {
  * counter would show a full description in a result that will actually be
  * clipped, which is the one thing a SERP preview exists to prevent.
  */
+/**
+ * The COMPLETE social and canonical set for a hand-authored page.
+ *
+ * ## Why this is a function and not five copies
+ *
+ * Five pages each hand-assembled part of this list and each stopped at a
+ * different point. Measured 2026-08-20: the HOME PAGE, which is the URL people
+ * paste, carried `og:image` and `twitter:card` and had NO canonical, no
+ * `og:title`, no `og:description`, no `og:url` and no `og:type`. The colophon
+ * and the roster carried a title and a description and nothing else. Projects
+ * and playground carried canonical and OG text and no image and no card.
+ *
+ * Every one of those is the same omission with a different edge missing, which
+ * is what a copied literal does over time. One builder means a page cannot ship
+ * a partial set, and adding a property later reaches every page at once.
+ *
+ * ## The canonical matters more than it did
+ *
+ * `SITE_ORIGIN` is still `workers.dev` and the site moves to the apex at DNS
+ * cutover. A page with no canonical is a page that will exist at two hostnames
+ * with no statement about which is authoritative, which is duplicate content by
+ * construction rather than by accident. Emitting it now means the cutover is a
+ * change to one constant rather than an SEO incident.
+ *
+ * ## Twitter card
+ *
+ * `summary_large_image` on every page, because every page has an image: the
+ * argument falls through to the site mark, which is a real 1200x630 card rather
+ * than a placeholder. A `twitter:card` without an image renders as a bare link,
+ * so the two travel together or neither is worth setting.
+ *
+ * @param page `path` is site-absolute and starts with a slash.
+ */
+export function pageMeta(page: {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+}) {
+  const url = `${SITE_ORIGIN}${page.path}`;
+  const image = page.image ?? DEFAULT_OG_IMAGE;
+  return [
+    { title: page.title },
+    { name: "description", content: page.description },
+    { tagName: "link", rel: "canonical", href: url },
+    { property: "og:title", content: page.title },
+    { property: "og:description", content: page.description },
+    { property: "og:url", content: url },
+    { property: "og:type", content: "website" },
+    { property: "og:image", content: image },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: image },
+  ];
+}
+
 export const SERP_TITLE_LIMIT = 60;
 export const SERP_DESCRIPTION_LIMIT = 155;
 
@@ -198,6 +253,8 @@ export type ArticleSeo = {
   publishAt: Date | null;
   updatedAt: Date | null;
   coverImage: string | null;
+  /** The generated social card, when one was built. See postSocial. */
+  ogImage?: string | null;
   tags: string[];
 };
 
@@ -210,7 +267,26 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     description: post.description ?? undefined,
     datePublished: post.publishAt?.toISOString(),
     dateModified: (post.updatedAt ?? post.publishAt)?.toISOString(),
-    image: post.coverImage ? `${origin}${post.coverImage}` : undefined,
+    /*
+     * ONE RESOLUTION, SHARED WITH THE CARD.
+     *
+     * This read `coverImage` alone while `postSocial` falls through cover, then
+     * the generated OG card, then the site mark. So a post with a built card and
+     * no cover told a social crawler it had a card and told Google it had NO
+     * image at all, from two statements about the same post on the same page.
+     *
+     * Asking `postSocial` rather than restating its chain is the point: the two
+     * cannot disagree again, and a fourth fallback added later reaches both.
+     * `postSocial` always returns an absolute URL and never null, so this is
+     * never undefined, which is also the correct schema.org answer.
+     */
+    image: postSocial({
+      slug: post.slug,
+      title: post.title,
+      description: post.description,
+      coverImage: post.coverImage,
+      ogImage: post.ogImage ?? null,
+    }).image,
     keywords: post.tags.length > 0 ? post.tags.join(", ") : undefined,
     mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/blog/${post.slug}` },
     author: { "@type": "Person", name: SITE.name, url: origin },

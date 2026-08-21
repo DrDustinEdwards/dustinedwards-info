@@ -8,7 +8,9 @@ import {
   PROJECTS_URL,
   projectAnchor,
 } from "~/lib/projects-page.mjs";
-import { SITE_ORIGIN } from "~/lib/seo";
+import { SITE_ORIGIN,
+  pageMeta,
+} from "~/lib/seo";
 
 /**
  * /projects, the portfolio index.
@@ -60,15 +62,13 @@ const TITLE = PROJECTS_TITLE;
 const DESCRIPTION = PROJECTS_DESCRIPTION;
 
 export function meta() {
-  return [
-    { title: `${TITLE} | Dustin Edwards` },
-    { name: "description", content: DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE_ORIGIN}${PROJECTS_URL}` },
-    { property: "og:title", content: `${TITLE} | Dustin Edwards` },
-    { property: "og:description", content: DESCRIPTION },
-    { property: "og:url", content: `${SITE_ORIGIN}${PROJECTS_URL}` },
-    { property: "og:type", content: "website" },
-  ];
+  /* Was canonical plus OG text with NO image and NO twitter card, so a shared
+     link rendered as a bare URL rather than a card. pageMeta carries the set. */
+  return pageMeta({
+    title: `${TITLE} | Dustin Edwards`,
+    description: DESCRIPTION,
+    path: PROJECTS_URL,
+  });
 }
 
 /**

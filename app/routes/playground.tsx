@@ -16,7 +16,9 @@ import {
   demoAnchor,
 } from "~/lib/playground-page.mjs";
 import { search } from "~/lib/search/search.server";
-import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE_ORIGIN,
+  pageMeta,
+} from "~/lib/seo";
 
 import type { Route } from "./+types/playground";
 
@@ -96,15 +98,13 @@ type MarkKey = string;
 const QUERY_CAP = 100;
 
 export function meta() {
-  return [
-    { title: `${PLAYGROUND_TITLE} | Dustin Edwards` },
-    { name: "description", content: PLAYGROUND_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE_ORIGIN}${PLAYGROUND_URL}` },
-    { property: "og:title", content: `${PLAYGROUND_TITLE} | Dustin Edwards` },
-    { property: "og:description", content: PLAYGROUND_DESCRIPTION },
-    { property: "og:url", content: `${SITE_ORIGIN}${PLAYGROUND_URL}` },
-    { property: "og:type", content: "website" },
-  ];
+  /* Was canonical plus OG text with NO image and NO twitter card, so a shared
+     link rendered as a bare URL rather than a card. pageMeta carries the set. */
+  return pageMeta({
+    title: `${PLAYGROUND_TITLE} | Dustin Edwards`,
+    description: PLAYGROUND_DESCRIPTION,
+    path: PLAYGROUND_URL,
+  });
 }
 
 export function headers() {
