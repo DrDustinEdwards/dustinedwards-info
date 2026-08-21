@@ -3139,6 +3139,155 @@ console.log("\n  18. the cutover checklist is complete and current");
   );
 }
 
+/* ------- 19. FAILURES.md stays short, cited, and reachable ---------------- */
+
+/*
+ * THE PAGE'S VALUE IS THAT IT IS SHORT, so its length is asserted.
+ *
+ * Every shape on it was already written down, at length, when it happened
+ * again. The problem was never that the incidents went unrecorded; it was that
+ * seventeen stories are not findable and a list is. A page that grows back into
+ * stories has become the thing it was written to replace, and nothing else in
+ * this repo would notice.
+ *
+ * ## WHAT IS ASSERTED
+ *
+ * A ceiling on bytes and on the number of shapes, so growth is a deliberate
+ * diff rather than drift. Every shape carries a CITATION. And CLAUDE.md points
+ * at the page, because a page nobody reads is precisely the failure it exists
+ * to prevent.
+ *
+ * ## PATHS ARE RESOLVED; COMMIT SHAS ARE NOT, and the reason is CI
+ *
+ * A path citation is checked against disk, so a shape pointing at a file that
+ * has been moved or deleted fails here. A commit sha is NOT resolved, because
+ * `actions/checkout@v4` clones at depth 1 and the shas cited are older than
+ * that, so `git cat-file` would fail in CI for a reason that has nothing to do
+ * with the citation being right. Asserting it locally and not in CI would mean
+ * a gate that passes in the place it is reviewed and fails on one machine.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * **IT CANNOT READ THE SHAPES.** It cannot tell whether a line states a real
+ * failure mode, whether the citation supports the claim, or whether two shapes
+ * are the same shape written twice. It counts, measures and resolves paths.
+ * Whether the page is any GOOD is a human judgement and always will be.
+ */
+
+console.log("\n  19. FAILURES.md stays short, cited, and reachable");
+
+{
+  const failures = readFileSync(join(root, "FAILURES.md"), "utf8").replace(/\r\n/g, "\n");
+  const claudeMd = readFileSync(join(root, "CLAUDE.md"), "utf8");
+
+  /*
+   * SCOPE, ASSERTED. An empty or truncated file parses to zero shapes, and
+   * every per-shape assertion below would then pass by iterating nothing.
+   */
+  const shapes = failures.split("\n").reduce((acc, line) => {
+    if (/^- \*\*/.test(line)) acc.push(line);
+    else if (acc.length > 0 && /^ {2}\S/.test(line)) acc[acc.length - 1] += " " + line.trim();
+    return acc;
+  }, /** @type {string[]} */ ([]));
+
+  ok(
+    "FAILURES.md parses into shapes",
+    shapes.length >= 8,
+    `${shapes.length} shape(s) parsed. Below that the citation check is measuring ` +
+      `the parser rather than the page.`,
+  );
+
+  /*
+   * THE CEILING, and it is the whole point rather than tidiness. Measured
+   * 2026-08-21 at 3,567 bytes and 16 shapes. The limits are roughly 60 percent
+   * headroom, so ordinary additions land and a page that has started telling
+   * stories does not.
+   */
+  ok(
+    "FAILURES.md still fits on one screen",
+    failures.length <= 6000,
+    `${failures.length} bytes against a 6000 ceiling. The page's entire value is ` +
+      `that it is short enough to read before starting work. If these shapes now ` +
+      `need more room, the fix is to CUT, or to move detail into VERIFICATION.md ` +
+      `where the evidence lives, not to raise this number.`,
+  );
+
+  ok(
+    "FAILURES.md is a list rather than a collection of stories",
+    shapes.length <= 22,
+    `${shapes.length} shapes against a ceiling of 22. Merge shapes that are the ` +
+      `same shape, or drop the ones nothing has repeated.`,
+  );
+
+  /*
+   * EVERY SHAPE CITES SOMETHING. A shape with no citation is an assertion about
+   * this repo that a reader cannot check, which is the genre of claim this whole
+   * page exists to distrust.
+   */
+  const CITATION = /`([^`]+)`/g;
+  const uncited = [];
+  /** @type {Set<string>} */
+  const citedPaths = new Set();
+
+  for (const shape of shapes) {
+    const tokens = [...shape.matchAll(CITATION)].map((m) => m[1]);
+    const cites = tokens.filter(
+      (t) => /^[0-9a-f]{7,40}$/.test(t) || /\.(md|mjs|ts|tsx|json|sh)$/.test(t),
+    );
+    if (cites.length === 0) uncited.push(shape.slice(0, 70));
+    for (const c of cites) if (!/^[0-9a-f]{7,40}$/.test(c)) citedPaths.add(c);
+  }
+
+  ok(
+    "every shape carries a citation",
+    uncited.length === 0,
+    uncited.join("\n        ") +
+      "\n        A shape with no citation is a claim about this repo that a reader " +
+      "cannot check, which is the genre this page exists to distrust.",
+  );
+
+  /*
+   * PATHS RESOLVE. Not shas: see the header. A cited path that has moved makes
+   * the shape unfollowable, and this repo moves files.
+   *
+   * A `capsid:` prefix marks a citation that lives in the MCP store and is NOT
+   * on disk. Those are skipped here, and the prefix is required rather than
+   * inferred: this section FAILED on its own first run over a bare
+   * `dustinedwards/decisions-vol-7.md`, and inferring "looks like a namespace,
+   * skip it" would have silently exempted any repo path that had been deleted.
+   * Making the author mark it also tells the READER the citation needs the MCP.
+   */
+  ok(
+    "the citation scan found paths to resolve",
+    citedPaths.size >= 4,
+    `${citedPaths.size} distinct path(s) cited. If this is 0 the resolution below ` +
+      `passes by having nothing to resolve.`,
+  );
+
+  const dead = [...citedPaths]
+    .filter((p) => !p.startsWith("capsid:"))
+    .filter((p) => p.includes("/") || p.endsWith(".md"))
+    .filter((p) => !p.includes(" ") && !existsSync(join(root, p)));
+
+  ok(
+    "every cited path still exists",
+    dead.length === 0,
+    `${dead.join(", ")} cited in FAILURES.md and not on disk. A shape pointing at ` +
+      `a file that moved is a shape nobody can follow back to its incident.`,
+  );
+
+  /*
+   * REACHABILITY. The page's own thesis is that a recorded lesson nobody meets
+   * is not recorded, so the pointer is asserted rather than assumed.
+   */
+  ok(
+    "CLAUDE.md points at FAILURES.md",
+    claudeMd.includes("FAILURES.md"),
+    "nothing in the file every session reads first mentions the failure shapes, " +
+      "so the page is exactly the thing it describes: written down and unfindable.",
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -3175,7 +3324,7 @@ console.log("\n  18. the cutover checklist is complete and current");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 150;
+const MINIMUM_CHECKS = 156;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
