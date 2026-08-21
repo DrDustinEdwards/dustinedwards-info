@@ -2554,11 +2554,23 @@ a:hover {
   margin: 0;
 }
 
+/*
+ * NO OPACITY ON THIS TEXT. Measured 2026-08-21: at `opacity: 0.8` the inherited
+ * `--text-muted` composites against `--bg` to #7c736a in light mode, which is
+ * 4.35:1 and BELOW the 4.5 AA floor this repo enforces on every declared pair.
+ * check:contrast read the declared 7.13:1 and passed, because it reads token
+ * hexes and opacity is applied afterwards by the compositor. Dark was 5.41:1
+ * and fine, so the defect existed in one mode only.
+ *
+ * The credit is already distinguished from the caption above it by SIZE
+ * (0.8125rem against 0.875rem), so the opacity was buying a second signal for
+ * the same job at the cost of the contrast floor. Same repair as `.tag-count`,
+ * which had opacity 0.7 on text and now takes a token.
+ */
 .figure-credit {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.8125rem;
-  opacity: 0.8;
 }
 
 /*
