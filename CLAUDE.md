@@ -2,7 +2,16 @@
 
 Personal platform and Cloudflare showcase for Dustin Edwards. React Router 8 (SSR) on Cloudflare Workers, Drizzle on D1, Better Auth, R2 for media. Also the flagship site and a Capsid CMS consumer.
 
-**This file holds only what a session needs BEFORE it can read anything else.** Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect.
+**This file holds only what a session needs BEFORE it can read anything else.**
+
+**PRECEDENCE, corrected 2026-08-21, because the old sentence now contradicts this file's own hard-rules section.** It read: "Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect." That was true while Capsid held everything durable. It stopped being true when the fifteen hard rules and `VERIFICATION.md` moved into this repo, and they moved for a reason that decides the precedence question:
+
+**CAPSID CANNOT BE GATED, BECAUSE EVERY GATE VERIFIES DISK.** So:
+
+- **The REPO wins for anything a gate can verify**, and for anything the code cites: the hard rules, gate counts, the current shape of the code. A count copied into Capsid rots silently; the same count in `check-all.mjs` is the only copy that can be wrong and be caught.
+- **CAPSID wins for rulings, reversals and the measurements that forced them.** None of that survives in code comments, and the reversal log is the half of the store worth its storage.
+
+Where they disagree ON A GATED FACT, the repo is right and Capsid is stale. Where they disagree ON A RULING, Capsid is right and this file is the defect. That is the same rule as before, scoped rather than reversed.
 
 ## Session ritual
 
