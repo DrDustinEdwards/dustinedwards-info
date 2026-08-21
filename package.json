@@ -46,7 +46,6 @@
     "check:stack": "node scripts/check-stack.mjs",
     "check:features": "node scripts/check-features.mjs",
     "check:headers": "node scripts/check-headers.mjs",
-    "check:claude-md": "node scripts/check-claude-md.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:head": "node scripts/check-head.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",

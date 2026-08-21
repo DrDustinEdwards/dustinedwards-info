@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 28;
+const MINIMUM_GATES = 27;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -197,10 +197,6 @@ const TIERS = {
   // Reads workers/app.ts and nothing else. It asserts what the SOURCE declares
   // and cannot see the wire; the deployed headers are verify-live's assertions.
   "check:headers": "offline",
-  // Reads CLAUDE.md as bytes and asserts its SHAPE: that it fits inside the
-  // context-window truncation limit, and that the hard-rules pointer sits early
-  // enough to be read. It cannot tell whether a word of it is true.
-  "check:claude-md": "offline",
   // Reads source text under app/ and workers/ and asserts the secret-handling
   // boundary. It cannot see the emitted bundle, so a secret inlined into a
   // client chunk by a mis-split is invisible here; the header says so.

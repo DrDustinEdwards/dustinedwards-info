@@ -2530,10 +2530,95 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
  * binding on the numbers. The residue is stated rather than closed.
  */
 
-console.log("\n  15. every cited hard-rule number resolves to a rule");
+console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number resolves");
 
 {
   const claudeMd = readFileSync(join(root, "CLAUDE.md"), "utf8");
+
+  /*
+   * NORMALIZED for every structural match, RAW for the size. A needle written
+   * with `\n` must not silently miss on a CRLF checkout, and the character
+   * count has to be what the machine actually holds.
+   */
+  const claudeText = claudeMd.replace(/\r\n/g, "\n");
+
+  /*
+   * ## THE SHAPE ASSERTIONS, ABSORBED FROM check:claude-md ON 2026-08-21
+   *
+   * Audit tier 4.1 ruled that gate out as prompt hygiene rather than a release
+   * gate, and that was right about the GATE and wrong about two of its
+   * assertions, for a reason the audit could not have seen: it read the repo on
+   * 2026-08-16, when CLAUDE.md POINTED at Capsid for the rules and was 8.5 KB.
+   * Since 2026-08-21 the rules ARE this file, so silent truncation now deletes
+   * the fifteen hard rules themselves rather than a pointer to them. The stake
+   * went UP as the gate was being retired.
+   *
+   * MEASURED 2026-08-07, which is why the limit is not theoretical: the file
+   * was 65,489 characters, 39 percent of it past the boundary, and what sat in
+   * that 39 percent was the ENTIRE hard-rules section. Nothing in the harness
+   * reports truncation, so a rule that scrolled past the boundary does not
+   * exist for that session while reading as present to anyone opening the file.
+   *
+   * ## WHAT WAS DROPPED RATHER THAN MOVED, and why each one earned it
+   *
+   * - "CLAUDE.md is not a stub", "has a Hard rules section" and "the section is
+   *   not empty" are all subsumed by the rule-count assertion below: a stub, a
+   *   missing section and an empty one all parse to zero `### N.` headings.
+   * - The CHARACTER-OFFSET check on where the section starts. That gate's own
+   *   header recorded it as slack on today's file, and the ordinal check below
+   *   is the falsifiable form of the same claim.
+   * - The LF-endings pin. `.gitattributes` pins the whole tree, this file is
+   *   line-ending agnostic by construction above, and 0 of 256 tracked text
+   *   files carried a carriage return when measured on 2026-08-20.
+   */
+  const TRUNCATION_LIMIT = 40000;
+
+  ok(
+    `CLAUDE.md fits in the context window (under ${TRUNCATION_LIMIT} characters)`,
+    claudeMd.length < TRUNCATION_LIMIT,
+    `${claudeMd.length} characters, ${claudeMd.length - TRUNCATION_LIMIT} over. ` +
+      `Everything past the limit is silently truncated, so the rules are not ` +
+      `merely long, they are ABSENT for that session while still reading as ` +
+      `present in the file.`,
+  );
+
+  const headings = [...claudeText.matchAll(/\n## (.+)/g)].map((m) => m[1].trim());
+  const ordinal = headings.findIndex((h) => h === "Hard rules");
+
+  /*
+   * SCOPE, ASSERTED. With no headings parsed, `ordinal` is -1 and the check
+   * below would fail for the wrong reason, sending a reader to the document
+   * instead of to this parser.
+   */
+  ok(
+    "the document has sections to order",
+    headings.length >= 3,
+    `${headings.length} \`## \` heading(s) parsed; with fewer than three the ` +
+      `ordinal check means nothing.`,
+  );
+
+  ok(
+    "hard rules is one of the FIRST TWO sections",
+    ordinal !== -1 && ordinal <= 1,
+    `it is section ${ordinal + 1} of ${headings.length}` +
+      (ordinal > 1 ? `, after: ${headings.slice(0, ordinal).join(", ")}` : "") +
+      `. Fitting inside the limit is not enough: a session reads top to bottom ` +
+      `and acts before it reaches the end. This section was LAST until ` +
+      `2026-08-07, and therefore past the boundary entirely.`,
+  );
+
+  /*
+   * APPEND-ONLY survives; FROZEN does not. Moved with the rest, and it is the
+   * one thing stopping a renumber silently retargeting fourteen files'
+   * citations. Matched on "append-only" rather than on "frozen", because the
+   * sentence recording the 2026-08-21 unfreeze CONTAINS the word frozen and a
+   * `/frozen/i` needle would have passed on the commit that falsified it.
+   */
+  ok(
+    "CLAUDE.md records that rule numbering is append-only",
+    /append-only/i.test(claudeText),
+    "without that note the next reader has no reason not to renumber.",
+  );
 
   /** Rule numbers CLAUDE.md actually defines, from its `### N.` headings. */
   const defined = new Set(
@@ -2684,7 +2769,7 @@ console.log("\n  15. every cited hard-rule number resolves to a rule");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 120;
+const MINIMUM_CHECKS = 124;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

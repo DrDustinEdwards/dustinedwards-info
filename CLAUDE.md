@@ -136,7 +136,6 @@ Every script in `package.json`. Counts, timings and what each gate asserts live 
     npm run check:stack
     npm run check:features
     npm run check:headers
-    npm run check:claude-md              this file: size, and the hard-rules pointer near the top
     npm run check:secrets                the secret-handling boundary, by path, both directions
     npm run check:assertions             lints the other gates for assertions that cannot fail,
                                          and asserts every gate states its OBSERVATION BOUNDARY
