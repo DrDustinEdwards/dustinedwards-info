@@ -35,3 +35,38 @@ export function pageForPosition(position, perPage = POSTS_PER_PAGE) {
 export function pageCount(total, perPage = POSTS_PER_PAGE) {
   return Math.max(1, Math.ceil(total / perPage));
 }
+
+/**
+ * Picks the hero post and returns the list with it REMOVED.
+ *
+ * Before 2026-08-21 the route found the featured post inside the page's own
+ * array and rendered it above that same array unchanged, so it appeared twice.
+ * The route's own comment read "repeating it above a list it already appears in
+ * reads as a duplicate", which was the argument against the behaviour the next
+ * three lines introduced.
+ *
+ * HERE RATHER THAN INLINE IN THE LOADER, because the condition cannot be reached
+ * from the current corpus: measured 2026-08-21, 0 of 12 posts carry
+ * `featured: true`, so the duplicate was LATENT and a rendered page proves
+ * nothing either way. Extracted so `test/blog-listing.test.mjs` can prove it.
+ *
+ * MATCHED BY SLUG, not by object identity. The two arrays hold the same objects
+ * today, but identity is not a property this should rest on: a serialisation
+ * boundary anywhere upstream would break it silently, and slug is unique by
+ * schema.
+ *
+ * `eligible` is the CALLER's decision. The hero shows only on the unfiltered
+ * first page, and whether this request is that page depends on the tag, the
+ * year and the page number, none of which belong in here.
+ *
+ * @template {{ slug: string, featured?: boolean }} T
+ * @param {T[]} posts the page of posts, in order
+ * @param {boolean} eligible whether this request may show a hero at all
+ * @returns {{ featured: T | null, posts: T[] }}
+ */
+export function splitFeatured(posts, eligible) {
+  if (!eligible) return { featured: null, posts };
+  const featured = posts.find((post) => post.featured) ?? null;
+  if (!featured) return { featured: null, posts };
+  return { featured, posts: posts.filter((post) => post.slug !== featured.slug) };
+}
