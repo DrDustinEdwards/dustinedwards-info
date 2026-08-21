@@ -21,6 +21,19 @@
  *
  * Nothing here touches the gated artifact. The KEY is deterministic content;
  * the PNG bytes are not, and are never compared.
+ *
+ * ## THE COUPLING LAW, NOW ENFORCED
+ *
+ * **This script uploads AND prunes in one pass**, against the keys the current
+ * artifact references. The live site serves what is in D1's `og_image`, which
+ * changes only when `sync:content` runs. Run this outside a ship window, after
+ * any retitle or template bump, and it deletes every card production points at.
+ * Since 2026-08-21 a guard before the prune reads the live keys out of D1 and
+ * REFUSES if any of them is about to be deleted.
+ *
+ * `/og-samples/` in `.gitignore` is LOAD-BEARING, not cosmetic: `ship` refuses
+ * untracked files, so without the ignore every `--out` review run would have to
+ * be cleaned by hand before the next ship.
  */
 
 import { execSync } from "node:child_process";
@@ -38,7 +51,7 @@ import { ARTIFACT_PATH } from "./build-content.mjs";
 import { markElement } from "./lib/mark.mjs";
 import { listForPrune } from "./lib/r2.mjs";
 import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
-import { bucketFor } from "./lib/wrangler-config.mjs";
+import { bucketFor, databaseFor } from "./lib/wrangler-config.mjs";
 
 /**
  * The derived-card bucket, DERIVED from the wrangler config rather than named
@@ -351,6 +364,45 @@ function card(post) {
   );
 }
 
+/**
+ * The card keys the DEPLOYED site is actually serving, read from D1.
+ *
+ * `sync-content.mjs` writes `og_image` as `/media/${ogImageKey(post)}`, so the
+ * stored value is this bucket's key with one prefix on the front. That prefix is
+ * STRIPPED here rather than the key rebuilt, because rebuilding it would be a
+ * second copy of a rule sync already owns.
+ *
+ * FAILS CLOSED BY CONSTRUCTION. An unreadable database, a wrangler error, or a
+ * response that is not the expected shape all throw out of here, and the prune
+ * below never runs. That is the correct direction: not knowing what is live is a
+ * reason to delete nothing, never a reason to proceed.
+ */
+async function liveCardKeys() {
+  const raw = execSync(
+    `npx wrangler d1 execute ${databaseFor("DB")} --remote --json ` +
+      `--command "SELECT og_image FROM posts WHERE og_image IS NOT NULL"`,
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+
+  let rows;
+  try {
+    rows = JSON.parse(raw)?.[0]?.results;
+  } catch {
+    throw new Error(
+      "build:og could not parse the og_image read from D1, so it cannot know " +
+        "which cards are live. Nothing was pruned.",
+    );
+  }
+  if (!Array.isArray(rows)) {
+    throw new Error(
+      "build:og got no result set from D1 for og_image, so it cannot know which " +
+        "cards are live. Nothing was pruned.",
+    );
+  }
+
+  return new Set(rows.map((r) => String(r.og_image).replace(/^\/media\//, "")));
+}
+
 async function main() {
   const target = process.argv.includes("--local") ? "--local" : "--remote";
   const dryRun = process.argv.includes("--dry-run");
@@ -511,6 +563,84 @@ async function main() {
     `  ${present.length} object(s) under ${PREFIX}, ` +
       `${live.size} referenced by the corpus, ${orphans.length} orphaned`,
   );
+
+  /*
+   * ==========================================================================
+   * THE OG COUPLING LAW, ENFORCED RATHER THAN WRITTEN DOWN. Added 2026-08-21.
+   * ==========================================================================
+   *
+   * **This script UPLOADS AND PRUNES IN ONE PASS, and the two halves disagree
+   * about what "live" means.** `live` above is the set of keys the CURRENT
+   * ARTIFACT references. The DEPLOYED site serves the keys in D1's `og_image`
+   * column, and those change only when `sync:content` runs.
+   *
+   * So after any retitle, retag, or `OG_TEMPLATE_VERSION` bump, and BEFORE the
+   * next sync, every key the live site is serving is an orphan by this script's
+   * definition. **Run it then and it 404s every social card on the site, with no
+   * deploy having occurred and nothing to roll back.**
+   *
+   * That was a law with no enforcement: "run it only inside a ship window,
+   * adjacent to sync:content." Two things made that weak. **ship does not invoke
+   * this script at all**, so there is no ship context to detect. And the law
+   * lived in a Capsid paragraph, where the 2026-08-21 consolidation deleted it.
+   *
+   * ## WHY THIS SHAPE, RATHER THAN REFUSING OUTSIDE A SHIP WINDOW
+   *
+   * "Am I inside a ship window" is not a question this process can answer
+   * honestly, and any flag it checked would be one a hurried operator passes.
+   * The PROPERTY the law protects is checkable directly: **no object the live
+   * site is currently pointing at may be deleted.** So that is what is asserted,
+   * and it is strictly stronger, because it also catches a divergence arising
+   * for a reason nobody anticipated.
+   *
+   * `listForPrune` already refuses a listing it cannot trust. This is the other
+   * side of the same worry: a listing that is perfectly correct, against a
+   * corpus that has moved.
+   *
+   * ## OBSERVATION BOUNDARY
+   *
+   * It compares against what D1 SAYS, not against what R2 holds or what a
+   * browser would fetch. A card row pointing at an object that is already gone
+   * looks live here. It also runs only for `--remote` and only when there is
+   * something to delete, because those are the only conditions under which the
+   * law can be broken.
+   */
+  if (target === "--remote" && !dryRun && orphans.length > 0) {
+    const liveKeys = await liveCardKeys();
+
+    /*
+     * SCOPE, ASSERTED. An empty read makes the comparison below pass by
+     * examining nothing, which is this repo's most repeated defect class. And
+     * if the artifact references cards while D1 names none, that IS the
+     * unsynced state this guard exists for, so it refuses rather than shrugs.
+     */
+    if (live.size > 0 && liveKeys.size === 0) {
+      throw new Error(
+        `build:og REFUSED to prune. The artifact references ${live.size} card(s) ` +
+          `and D1 reports NO og_image at all, so either the corpus has never been ` +
+          `synced or this read looked in the wrong place. Either way it cannot ` +
+          `tell which objects are live. Nothing was pruned.`,
+      );
+    }
+
+    const wouldBreak = orphans.filter((key) => liveKeys.has(key));
+    if (wouldBreak.length > 0) {
+      throw new Error(
+        `build:og REFUSED to prune: ${wouldBreak.length} of ${orphans.length} ` +
+          `orphan(s) are cards THE LIVE SITE IS SERVING RIGHT NOW.\n\n` +
+          wouldBreak.map((k) => `  ${k}`).join("\n") +
+          `\n\nThe artifact has moved since the last sync:content, so this run ` +
+          `would upload the new cards and delete the ones production points at, ` +
+          `in one pass, with no deploy to roll back.\n\n` +
+          `Run this adjacent to sync:content inside a ship window. Nothing was ` +
+          `pruned.`,
+      );
+    }
+
+    console.log(
+      `  coupling check: ${liveKeys.size} card(s) live in D1, none of them orphaned`,
+    );
+  }
 
   let pruned = 0;
   for (const key of orphans) {

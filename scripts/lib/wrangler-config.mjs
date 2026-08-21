@@ -50,6 +50,32 @@ export function bucketNames() {
 }
 
 /**
+ * The D1 database NAME for a binding, or a named failure.
+ *
+ * DERIVED, not restated. `sync-content.mjs` carries `const DB_NAME =
+ * "dustinedwards"` as a literal, which is the mirror shape this repo keeps
+ * paying for; `build-og.mjs` needed the same value and this is where it comes
+ * from instead of a second copy.
+ *
+ * @param {string} binding
+ */
+export function databaseFor(binding) {
+  const config = readWranglerConfig();
+  /** @type {Record<string, string>} */
+  const names = {};
+  for (const db of config.d1_databases ?? []) {
+    if (db.binding && db.database_name) names[db.binding] = db.database_name;
+  }
+  const name = names[binding];
+  if (!name) {
+    throw new Error(
+      `wrangler.jsonc declares no D1 binding "${binding}". Found: ${Object.keys(names).join(", ") || "none"}`,
+    );
+  }
+  return name;
+}
+
+/**
  * One bucket by binding name, or a named failure.
  *
  * Throws rather than returning undefined, so a typo cannot become `undefined`
