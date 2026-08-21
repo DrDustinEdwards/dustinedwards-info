@@ -370,7 +370,27 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             a script tag. With scripting off it stays empty and the page is
             byte-identical to the pre-Layer-2 page apart from these two inert
             elements. With the binding absent it is not rendered at all. */}
-        {askAvailable && hasQuery ? <AskMount question={params.q ?? ""} /> : null}
+        {/*
+            ASK NEEDS A QUESTION, NOT A FILTER.
+
+            The condition was `hasQuery`, which is
+            `!parsed.isEmpty || hasFilters(parsed)`. So `/search?year=2026` with
+            no `q` mounted the Ask affordance and handed it `params.q ?? ""`, an
+            EMPTY STRING. The button appeared, a reader clicked it, and it
+            returned immediately because there was no question to answer. That is
+            a control that looks live and does nothing.
+
+            Filters narrow a list; Ask answers a sentence. A year is not a
+            sentence, and there is nothing sensible for it to generate. So the
+            affordance is gone on filter-only queries rather than being made to
+            fail more gracefully: the honest fix for a control with nothing to do
+            is not to offer it.
+
+            The trimmed check also covers `?q=` and `?q=%20`, which reached the
+            same empty string by a different route. */}
+        {askAvailable && (params.q ?? "").trim().length > 0 ? (
+          <AskMount question={params.q ?? ""} />
+        ) : null}
 
         {hasQuery && result.total > 0 ? (
           <div className="search-body">
