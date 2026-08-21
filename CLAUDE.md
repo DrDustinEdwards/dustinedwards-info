@@ -170,7 +170,7 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 
 **`wrangler.jsonc` is gitignored and `wrangler.jsonc.example` is tracked.** That is a PORTFOLIO rule (`capsid/conventions.md`, Public-repo hygiene), not this repo's choice; three other repos commit the real file and are tracked there as violations. Do not "fix" this one by committing it.
 
-**Adding a binding means editing BOTH files in the same commit.** `npm run check:config` compares them and fails in both directions. It is the only thing binding the example to what actually runs, the real file exists on one machine, and there is no CI, so it is load-bearing and easy to skip.
+**Adding a binding means editing BOTH files in the same commit.** `npm run check:config` compares them and fails in both directions. It is the only thing binding the example to what actually runs, the real file exists on one machine, and **CI CANNOT RUN IT**: a checkout has no real config, `postinstall` bootstraps one by COPYING the example, so real equals example by construction and the gate cannot pass. It is in `CI_EXCLUDED` for that reason. So it stays load-bearing on exactly one machine and easy to skip, which is what it always was; the reason is now measured rather than "there is no CI".
 
 ## Where everything else lives
 
