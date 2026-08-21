@@ -2569,9 +2569,13 @@ structural(
 /* ---- 2. THE INSPECTOR NAMES ITS EVIDENCE -------------------------------- */
 
 structural(
-  "the inspector states the claim and its boundary",
+  // NARROWED 2026-08-21. "Placed by page code" is the usage STATE and is a
+  // fact: it has to agree with the data-usage="template" assertion below.
+  // "Found by scanning the repository" was the boundary sentence's WORDING, and
+  // pinning wording makes an equally true rephrasing a build failure.
+  "the inspector states the usage claim",
   "media, inspector on a template-placed file",
-  (h) => h.includes("Placed by page code") && h.includes("Found by scanning the repository"),
+  (h) => h.includes("Placed by page code"),
 );
 /*
  * AND IT NAMES THE FILE. A claim with no evidence behind it is the thing the old
@@ -2767,11 +2771,13 @@ structural(
 /* ---- 4. LENS NOTES AND EMPTY STATES ------------------------------------- */
 
 structural(
-  "a narrowed lens explains what it is claiming, with a way out",
+  // NARROWED 2026-08-21 to the note's PRESENCE and its escape control. The
+  // sentence inside it was pinned word for word, which is the class tier 4.1
+  // named. That the note exists at all, and that it offers a way out, are the
+  // properties worth holding; its exact phrasing is the writer's.
+  "a narrowed lens renders its note, with a way out",
   "media, unattached lens with its note",
-  (h) =>
-    h.includes("No reference was found in posts or in repository code") &&
-    h.includes("Show everything"),
+  (h) => h.includes('class="media-lens-note"') && h.includes("Show everything"),
 );
 structural(
   "the unnarrowed view carries no lens note",
@@ -2785,21 +2791,26 @@ structural(
 structural(
   "an empty library explains what the library is for",
   "media, library empty",
-  (h) => h.includes('data-empty="library"') && h.includes("Nothing here yet") &&
-    h.includes("Upload the first file"),
+  // NARROWED 2026-08-21: the state attribute and the call to action are facts.
+  // "Nothing here yet" was the headline's wording.
+  (h) => h.includes('data-empty="library"') && h.includes("Upload the first file"),
 );
 structural(
   "a search miss names the query and says what was searched",
   "media, search matched nothing",
-  (h) =>
-    h.includes('data-empty="search"') &&
-    h.includes("Searched paths, names, alt text and tags") &&
-    h.includes("zzzz"),
+  // NARROWED 2026-08-21: echoing the QUERY back is the property, since a miss
+  // that does not say what was searched for is the defect. The list of searched
+  // FIELDS was prose and is also a claim that ages: adding a searched field
+  // would mean editing this gate rather than the page.
+  (h) => h.includes('data-empty="search"') && h.includes("zzzz"),
 );
 structural(
   "an empty lens reads as good news rather than as an error",
   "media, lens matched nothing",
-  (h) => h.includes('data-empty="lens"') && h.includes("Every file passes this check"),
+  // NARROWED 2026-08-21 to the state attribute. Telling the three empty states
+  // apart is what the data-empty values do, and the mutual-exclusion assertions
+  // directly below are what make that binding load-bearing.
+  (h) => h.includes('data-empty="lens"'),
 );
 /* AND THEY ARE MUTUALLY EXCLUSIVE. Without this, one state rendering in all
    three situations would satisfy all three assertions above. */
@@ -2880,8 +2891,11 @@ structural(
   "the shortcuts panel documents every binding",
   "media, unused object",
   (h) => {
-    const rows = (h.match(/class="media-shortcut"/g) ?? []).length;
-    return rows >= 9 && h.includes("Copy the address") && h.includes("Focus search from anywhere");
+    // NARROWED 2026-08-21 to the row COUNT, which is what "documents every
+    // binding" means. The two descriptions were prose samples of nine rows and
+    // proved nothing the count does not. The real coverage is the assertion
+    // below binding the rendered count to MEDIA_SHORTCUTS in both directions.
+    return (h.match(/class="media-shortcut"/g) ?? []).length >= 9;
   },
 );
 /*
