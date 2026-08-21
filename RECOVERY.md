@@ -345,7 +345,14 @@ npm run deploy        # build, then wrangler deploy
 ```
 
 **Never bare `wrangler deploy`.** It ships whatever `build/` already held.
-`npm run deploy` builds first. There is no CI: pushing `main` deploys nothing.
+`npm run deploy` builds first, and since 2026-08-20 it also REFUSES A DIRTY
+TREE, because a deploy built from uncommitted files is a deploy nobody can
+reproduce.
+
+**Deploying is manual.** CI exists as of 2026-08-20 and runs the gates on every
+push to `main`, but it has no Cloudflare credentials and deploys nothing.
+Pushing `main` still ships nothing on its own. That sentence used to read "there
+is no CI", which stopped being true while its conclusion stayed true.
 
 ---
 

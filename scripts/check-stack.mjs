@@ -16,8 +16,11 @@
  * thing binding it to the Worker that actually runs is `check:config`, which
  * compares the example against the real `wrangler.jsonc`. That file is
  * gitignored, so `check:config` can only run where it exists, which is one
- * machine, and there is no CI behind it. A green `check:stack` therefore says
- * the artifact matches the example. It says the artifact matches PRODUCTION
+ * machine, **and CI CANNOT CLOSE THIS GAP.** That is measured, not assumed: a
+ * checkout has no real config and `postinstall` bootstraps one by copying the
+ * example, so real equals example by construction and the gate cannot pass.
+ * It is in `CI_EXCLUDED`. A green `check:stack` therefore says the artifact
+ * matches the example. It says the artifact matches PRODUCTION
  * only as far as someone remembered to run `check:config` on the machine that
  * holds the real config.
  *

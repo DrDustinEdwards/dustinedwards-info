@@ -17,8 +17,12 @@
  * file replaces the other and neither is sufficient alone.
  *
  * What this gate IS for: stopping a later edit from silently dropping a header
- * or loosening a value. That failure has no symptom a human would notice, on a
- * site with no CI, which is precisely the class the gate family exists for.
+ * or loosening a value. That failure has no symptom a human would notice, which
+ * is precisely the class the gate family exists for.
+ *
+ * ("On a site with no CI", until 2026-08-20. CI landed and runs this gate on
+ * every push, which changes who notices a red result, not whether a dropped
+ * header has a symptom. The argument never depended on the missing half.)
  *
  * ## Two independent sources argue
  *

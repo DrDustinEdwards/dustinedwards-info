@@ -9,8 +9,10 @@ consequence of it.
 
 - **Content is code.** Markdown files in `content/posts/` are the source of
   truth. D1 is a derived read model, rebuilt from a committed artifact.
-- **The gates are the review.** There is no CI and no second reviewer, so a
-  family of `check:*` scripts is what stands between a change and production.
+- **The gates are the review.** There is no second reviewer, so a family of
+  `check:*` scripts is what stands between a change and production. Since
+  2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
+  checkout, which is the closest thing here to a second opinion.
 - **Zero JavaScript is a requirement, not a preference.** Every public page
   works with scripting disabled; client JS only ever upgrades markup that
   already functions.
