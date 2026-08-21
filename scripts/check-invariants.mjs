@@ -1304,9 +1304,41 @@ try {
       `${classified.shadow.join(", ")}`,
   );
 
-  /** Strip comments, then EXTRACT literals: the inverse of section 5. */
-  const LITERAL = /`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
-  const SQLISH = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|CREATE\s+VIRTUAL)\b/i;
+  /*
+   * NO LITERAL EXTRACTION HERE ANY MORE, replaced 2026-08-21, and this is the
+   * third instance of the class that killed section 5.
+   *
+   * ## WHAT WAS PROVEN, rather than reasoned
+   *
+   * The old matcher understood quotes but not REGEX LITERALS, so a `/"/`
+   * anywhere in a file opened a string that never closed. MEASURED across the
+   * 189 files this walk scans: 137 regex literals containing a quote, in 28
+   * files, producing 22 phantom "literals" over 800 characters, the longest
+   * 21,551. The 1,523-character phantom in `search.server.ts` that the
+   * 2026-08-16 audit named is still there.
+   *
+   * **AND THE GUARD WAS BYPASSED, DEMONSTRATED WITH A PLANT IN BOTH
+   * DIRECTIONS.** The identical string, `"DELETE FROM posts_fts WHERE rowid =
+   * 1"`, was added to two files. In `app/lib/once.mjs`, which carries no regex
+   * literals, this section FIRED and named it. In `app/lib/search/search.server.ts`,
+   * which carries three phantoms, it was INVISIBLE and the gate reported 167
+   * checks and zero failures. Hard rule 2's guard could be walked past in the
+   * one file most likely to contain FTS SQL.
+   *
+   * ## WHY SCANNING THE SOURCE DIRECTLY IS THE RIGHT REPLACEMENT
+   *
+   * Section 5 needed literal BOUNDARIES because it extracted column names from
+   * inside a statement and compared them to a schema. **This section only asks
+   * whether a forbidden pattern OCCURS.** Boundaries buy it nothing and cost it
+   * a bypass, so they go. Nothing is skipped, so a false negative of that shape
+   * is no longer possible.
+   *
+   * The trade is a false-positive surface, and it is small and self-announcing:
+   * `DELETE FROM posts_fts` is not valid JavaScript outside a string, comments
+   * are already stripped, and if it ever fires on something harmless the failure
+   * prints the file and the surrounding text.
+   */
+  const SQLISH = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|CREATE\s+VIRTUAL)\b/gi;
 
   let filesScanned = 0;
   let sqlLiterals = 0;
@@ -1353,9 +1385,15 @@ try {
           .replace(/\/\*[\s\S]*?\*\//g, " ")
           .replace(/(^|[^:])\/\/[^\n]*/g, "$1 "),
       );
-      for (const literal of code.match(LITERAL) ?? []) {
-        if (!SQLISH.test(literal)) continue;
-        sqlLiterals += 1;
+      /*
+       * SCOPE, COUNTED ON THE SOURCE. `sqlLiterals` used to count extracted
+       * literals; it now counts SQL-ish MATCHES, which is the honest measure of
+       * what this scan has to look at. The floor below moves with it.
+       */
+      sqlLiterals += (code.match(SQLISH) ?? []).length;
+
+      {
+        const literal = code;
         /*
          * Both guarded on a NON-EMPTY derived list. With zero indexes the
          * alternation collapses to `()`, which matches the empty string and so
@@ -1364,11 +1402,26 @@ try {
          * as an FTS violation. Found by the vacuity plant, which produced two
          * misleading extra failures beside the one it was written to fire.
          */
+        /*
+         * A WINDOW AROUND THE MATCH, not the head of the file. `literal` is now
+         * the whole source, so slicing from its start printed the import block
+         * on the defect-replay run: it named the file and never showed the
+         * offence, which is half a failure message.
+         */
+        const window = (/** @type {RegExp} */ re) => {
+          const m = literal.match(re);
+          if (!m || m.index === undefined) return "(matched, but not located)";
+          const from = Math.max(0, m.index - 30);
+          return literal
+            .slice(from, m.index + m[0].length + 40)
+            .replace(/\s+/g, " ")
+            .trim();
+        };
         if (owned.length > 0 && DELETE_FTS.test(literal)) {
-          deleteViolations.push(`${rel}: ${literal.trim().slice(0, 90)}`);
+          deleteViolations.push(`${rel}: ...${window(DELETE_FTS)}...`);
         }
         if (classified.virtual.length > 0 && COUNT_INDEX.test(literal)) {
-          countViolations.push(`${rel}: ${literal.trim().slice(0, 90)}`);
+          countViolations.push(`${rel}: ...${window(COUNT_INDEX)}...`);
         }
         /*
          * MATCHES, not literals. `sync-content.mjs` builds its health check by
@@ -1385,25 +1438,29 @@ try {
   }
 
   /*
-   * ANTI-VACUITY. Measured 2026-08-10 THROUGH THIS EXACT PIPELINE: 143 files
-   * and 61 SQL-bearing literals. A raw count before comment-stripping and
-   * literal-joining reads 150 and 80, and taking those as the floor would sit
-   * it ABOVE what the gate can actually see. Measure what the gate measures.
+   * ANTI-VACUITY, RE-MEASURED 2026-08-21 because the counter changed what it
+   * counts. It was extracted LITERALS, floored at 45 against a measured 61. It
+   * is now SQL-ish MATCHES in the comment-stripped source, which is the honest
+   * measure of what this scan looks at now that it no longer extracts anything.
    *
-   * Floors set roughly a quarter under, so ordinary refactoring does not trip
-   * them. A zero means the literal extractor broke, and "0 violations" from a
-   * broken extractor is indistinguishable from a clean repo. Hard rule 10.
+   * MEASURED THROUGH THIS EXACT PIPELINE: 189 files, 175 matches. Floored a
+   * quarter under at 131, so ordinary refactoring does not trip it. Carrying
+   * the old 45 forward would have been a floor set against a different
+   * instrument, satisfied by roughly a quarter of the corpus going dark.
+   *
+   * A zero means the walk broke, and "0 violations" from a broken walk is
+   * indistinguishable from a clean repo. Hard rule 10.
    */
   ok(
-    "the literal scan examined a plausible number of files",
+    "the source scan examined a plausible number of files",
     filesScanned >= 110,
     `${filesScanned} scanned; expected the whole of app, workers and scripts`,
   );
   ok(
-    "the literal scan found SQL to examine",
-    sqlLiterals >= 45,
-    `${sqlLiterals} SQL-bearing literal(s) found; expected at least 45. The extractor ` +
-      `is broken, so a green result below would mean nothing.`,
+    "the source scan found SQL to examine",
+    sqlLiterals >= 131,
+    `${sqlLiterals} SQL-ish match(es) found; expected at least 131. The walk is ` +
+      `broken, so a green result below would mean nothing.`,
   );
 
   ok(
@@ -1566,6 +1623,45 @@ try {
           );
           if (assign) statement = assign[0];
         }
+
+            /*
+         * ============================================================
+         * THE SAME DEFECTIVE MATCHER, KEPT HERE ON PURPOSE, WITH A TRIPWIRE.
+         * ============================================================
+         *
+         * `LITERALS` is byte-identical to the matcher deleted from section 5
+         * and replaced in section 7 on 2026-08-21, and it does not understand
+         * REGEX LITERALS. Section 7's copy was proven bypassable with a plant.
+         * This one is kept, and the difference is measured rather than assumed.
+         *
+         * **Section 7 scanned whole files. This scans one `prepare()` argument**,
+         * already bounded by paren counting before the matcher ever runs.
+         * MEASURED 2026-08-21 across every `app/` file carrying `search_docs`:
+         * 25 prepare() arguments, longest 1,163 characters, and ZERO of them
+         * contain a regex literal. The desync has nothing to desync on.
+         *
+         * It is not replaced the way section 7 was, because section 7 only
+         * asked whether a pattern OCCURS while this one must CLASSIFY each
+         * literal as a read or a write. Granularity is the assertion here:
+         * `DELETE FROM search_docs` contains `FROM search_docs`, so a
+         * whole-statement test reported both write helpers as unpredicated
+         * readers, and that is recorded above as already having been got wrong.
+         *
+         * SO THE RISK IS BOUNDED AND MADE TO ANNOUNCE ITSELF. The moment a
+         * regex literal appears inside a scanned prepare() argument, the
+         * measurement above stops being true and this fails, rather than
+         * quietly classifying a desynced region.
+         */
+        ok(
+          `no regex literal inside the prepare() argument in ${rel}::${fn.name}`,
+          !/(^|[=(,:!&|?{;[]\s*)\/(?![*/])(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n])+\/[gimsuy]*/.test(
+            statement,
+          ),
+          "LITERALS below does not understand regex literals, so one here would " +
+            "desync quote pairing and this section would classify a phantom. " +
+            "Measured 0 across 25 prepare() arguments on 2026-08-21; that is the " +
+            "premise this section rests on and it has just stopped holding.",
+        );
 
         const literals = statement.match(LITERALS) ?? [];
         if (literals.some((l) => WRITES.test(l) && !READS.test(l))) {
