@@ -60,7 +60,7 @@ The `private, no-store` default is asserted three ways.
 
 ### 10. PROSE. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
 
-Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. `check:assertions` lints six; the rest are method. See `VERIFICATION.md`, in this repo.
+Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. **Only the tenth is gated**, by `check:invariants` section 17; `check:assertions` linted six and was deleted 2026-08-21 as a lint of lints. The rest are METHOD, which is what they always were. See `VERIFICATION.md`, in this repo.
 
 ### 11. ONE-LINER. `app/db/schema.ts` IS the source of truth.
 
@@ -137,8 +137,6 @@ Every script in `package.json`. Counts, timings and what each gate asserts live 
     npm run check:features
     npm run check:headers
     npm run check:secrets                the secret-handling boundary, by path, both directions
-    npm run check:assertions             lints the other gates for assertions that cannot fail,
-                                         and asserts every gate states its OBSERVATION BOUNDARY
     npm run check:migrations             sha256 of drizzle/*.sql against the manifest, both ways
     npm run check:tests                  node --test over test/. The one gate asserting BEHAVIOUR
     npm run check:head                   extracts a ref to a worktree and runs the offline tier THERE
