@@ -67,4 +67,4 @@ Three ways in, then: a URL for people, JSON for programs, MCP for agents.
 
 ## Contact
 
-https://dustinedwards.info
+https://dustinedwards.dustin-edwards.workers.dev
