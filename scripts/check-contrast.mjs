@@ -455,6 +455,107 @@ for (const [mode, block] of MODES) {
 }
 
 /* -------------------------------------------------------------------------
+ * Resolution: a token USED and never declared is invisible to everything above
+ * ---------------------------------------------------------------------- */
+
+/*
+ * THIS GATE WALKS DECLARED TOKENS. A token that is USED and never declared is
+ * structurally outside every assertion in this file: name parity compares two
+ * declaration blocks, the literal-hex pass iterates declarations, and
+ * participation starts from declarations. `var(--nothing)` resolves to the
+ * empty string, the property is dropped, and the element inherits or falls back
+ * to the initial value. Transparent, usually.
+ *
+ * IT HAS BITTEN TWICE, both caught by a person rather than by anything here:
+ * `--surface-2`, the floor every media tile paints on, and `--border-accent`.
+ * Both are declared today, which is why this section has no live finding to
+ * show; it exists so the third one is not found by eye either.
+ *
+ * ## THE EXEMPTION MAP IS FOR TOKENS DECLARED SOMEWHERE THIS FILE CANNOT SEE
+ *
+ * Not every var() is meant to resolve in the stylesheet. Shiki writes its four
+ * colour tokens as INLINE STYLE ATTRIBUTES on each highlighted span, one set per
+ * token per code block, and app.css reads them back with attribute selectors.
+ * They are correctly used and correctly never declared here. Naming them costs
+ * four lines; a blanket "ignore anything starting with --shiki" would exempt a
+ * future typo in the same family.
+ *
+ * SELF-POLICING, on the same rule as NON_PARTICIPATING below: an entry naming a
+ * token that is no longer USED, or one that has since been DECLARED, fails here
+ * rather than quietly widening the hole.
+ */
+
+/** @type {Map<string, string>} token -> why it is declared outside app.css */
+const DECLARED_ELSEWHERE = new Map([
+  [
+    "--shiki-light",
+    "written inline by Shiki on each highlighted span, per token, per code block",
+  ],
+  ["--shiki-dark", "the dark half of the same inline pair"],
+  [
+    "--shiki-light-bg",
+    "inline on the span; app.css matches it with span[style*=...] and reads it back",
+  ],
+  ["--shiki-dark-bg", "the dark half of the same inline background pair"],
+]);
+
+{
+  /*
+   * `css` IS ALREADY COMMENT-STRIPPED AND CRLF-NORMALISED where it is built,
+   * and this section DEPENDS on that rather than repeating it.
+   *
+   * The dependency is load-bearing, not incidental: app.css documents the Shiki
+   * contract in prose that spells out all four token names, so a scan over the
+   * raw source would read documentation as though it were CSS and report every
+   * one of them as a use. Stripping a second time here would be a no-op that
+   * reads like a safeguard, which is worse than naming the dependency.
+   */
+  const code = css;
+
+  const used = new Set([...code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].map((m) => m[1]));
+  const declaredAnywhere = new Set(
+    [...code.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]),
+  );
+
+  /*
+   * SCOPE, ASSERTED, BOTH SIDES. An empty `used` set finds no undeclared token
+   * because it looked at nothing, and an empty `declaredAnywhere` set reports
+   * every token as undeclared, which fails for the wrong reason and sends the
+   * reader to the stylesheet instead of to this parser. Measured 2026-08-21:
+   * 69 used, 79 declared.
+   */
+  assert(
+    `resolution scope: ${used.size} var() token(s) found in app.css`,
+    used.size >= 50,
+  );
+  assert(
+    `resolution scope: ${declaredAnywhere.size} token declaration(s) found in app.css`,
+    declaredAnywhere.size >= 60,
+  );
+
+  const unresolved = [...used]
+    .filter((n) => !declaredAnywhere.has(n) && !DECLARED_ELSEWHERE.has(n))
+    .sort();
+
+  assert(
+    `every var(--token) used in app.css resolves to a declaration` +
+      (unresolved.length
+        ? `\n    used but never declared: ${unresolved.join(", ")}`
+        : ""),
+    unresolved.length === 0,
+  );
+
+  // The exemption map polices itself in both directions.
+  for (const [name, why] of DECLARED_ELSEWHERE) {
+    assert(`exemption ${name} names a token app.css still uses (${why})`, used.has(name));
+    assert(
+      `exemption ${name} is still undeclared in app.css`,
+      !declaredAnywhere.has(name),
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
  * Participation: a declared token that no pair measures is not proven
  * ---------------------------------------------------------------------- */
 
