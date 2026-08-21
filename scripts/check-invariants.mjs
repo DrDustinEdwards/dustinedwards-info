@@ -2393,6 +2393,105 @@ console.log("\n  13. every public page's meta comes from a builder");
   );
 }
 
+/* ------- 14. every public page route is in the sitemap or exempt ---------- */
+
+/*
+ * A PAGE ADDED AND FORGOTTEN IS SILENTLY UNLISTED.
+ *
+ * `sitemap.ts` carries `STATIC_PATHS`, a literal mirroring `routes.ts`. Its own
+ * comment said so and left it: "a public page added there and forgotten here is
+ * simply absent from the sitemap, silently, and nothing fails". That is not a
+ * hypothetical. MEASURED 2026-08-20: `/projects` and `/playground` had been
+ * missing since they shipped, both public, both indexable, both in the header
+ * nav.
+ *
+ * ## THE RULE, so the set is decidable rather than a matter of opinion
+ *
+ * A route is an INDEXABLE PAGE when all three hold:
+ *   1. it is declared before the `// Auth` marker, so it is in the public block
+ *   2. its module is `.tsx`, which is a page rather than a resource route
+ *      returning XML, JSON or a stream
+ *   3. its path carries no `:param`, because dynamic pages are emitted from D1
+ *      further down the sitemap rather than from this list
+ *
+ * Anything satisfying all three must be in `STATIC_PATHS` or in
+ * `SITEMAP_EXEMPT` below, which is a NAMED LIST WITH A REASON, on the same rule
+ * as every other exemption map in this repo. A pattern would let a new page
+ * match by accident; a name cannot.
+ *
+ * ## WHY NOT DERIVE THE ARRAY AT RUNTIME
+ *
+ * `routes.ts` is a build-time module of nested config objects. Reading it inside
+ * the Worker means parsing TypeScript there or shipping a second generated
+ * artifact for four strings. This gets the same guarantee at no runtime cost,
+ * and it can say WHY a route is absent, which a derivation cannot.
+ */
+
+console.log("\n  14. every public page route is in the sitemap or exempt");
+
+{
+  /** Public page routes deliberately absent from the sitemap, with the reason. */
+  const SITEMAP_EXEMPT = {
+    "/search":
+      "a results page. Its content is a function of the query string, so listing " +
+      "the bare path offers a crawler an empty page and listing queries is unbounded.",
+  };
+
+  const routesSource = stripComments(readFileSync(join(root, "app", "routes.ts"), "utf8"));
+  const sitemapSource = readFileSync(join(root, "app", "routes", "sitemap.ts"), "utf8");
+
+  /*
+   * The public block only. Everything from the `// Auth` marker down is login
+   * and the admin subtree, which are noindex by ruling. Comments are stripped
+   * above, so the marker is found on the RAW source rather than the stripped
+   * copy.
+   */
+  const raw = readFileSync(join(root, "app", "routes.ts"), "utf8");
+  const authAt = raw.indexOf("// Auth");
+  const publicRaw = authAt === -1 ? raw : raw.slice(0, authAt);
+  const publicBlock = stripComments(publicRaw);
+
+  /** @type {string[]} */
+  const pages = [];
+  if (/index\("routes\/home\.tsx"\)/.test(publicBlock)) pages.push("/");
+  for (const m of publicBlock.matchAll(/route\(\s*"([^"]+)"\s*,\s*"routes\/([^"]+)"/g)) {
+    const [, path, module] = m;
+    if (!module.endsWith(".tsx")) continue;
+    if (path.includes(":")) continue;
+    pages.push(`/${path}`);
+  }
+
+  /*
+   * SCOPE, ASSERTED. An empty parse reports "nothing missing", which is the
+   * same output as a correct sitemap. The `// Auth` slice is the specific way
+   * this can silently shrink to nothing.
+   */
+  ok(
+    "the public route block parsed into page routes",
+    pages.length >= 6 && authAt !== -1,
+    `parsed ${pages.length} public page route(s) and the // Auth marker was ` +
+      `${authAt === -1 ? "NOT found" : "found"}. A zero-scope parse agrees with anything.`,
+  );
+
+  const missing = pages.filter(
+    (p) => !new RegExp(`"${p}"`).test(sitemapSource) && !(p in SITEMAP_EXEMPT),
+  );
+  ok(
+    "every public page route is in STATIC_PATHS or exempt by name",
+    missing.length === 0,
+    `${missing.join(", ")} are public .tsx pages with no dynamic segment, and they ` +
+      `appear in neither STATIC_PATHS nor SITEMAP_EXEMPT. A page nobody lists is a ` +
+      `page search engines never see.`,
+  );
+
+  ok(
+    "every sitemap exemption names a route that still exists",
+    Object.keys(SITEMAP_EXEMPT).every((p) => pages.includes(p)),
+    `SITEMAP_EXEMPT names a path the route table no longer declares, so it exempts ` +
+      `nothing and hides whatever replaced it`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2429,7 +2528,7 @@ console.log("\n  13. every public page's meta comes from a builder");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 113;
+const MINIMUM_CHECKS = 116;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
