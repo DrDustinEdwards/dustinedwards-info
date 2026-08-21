@@ -8,44 +8,48 @@
 # Token-based, so paths that merely START with a dot (.claude/settings.json)
 # pass; only the bare tokens -A, --all, . and ./ block.
 #
-# FAILS CLOSED (2026-08-11), and until that date it did NOT. The header used to
-# claim "same pattern and rationale as no-em-dash.sh". That was false in the
-# three ways that matter, and the claim is why nobody looked:
+# CANONICAL COPY, ruled 2026-08-16. Two properties define it, and neither is
+# negotiable without a new ruling.
 #
-#   1. The interpreter was probed with `command -v python3`. On Windows that
-#      name resolves to the Microsoft Store stub, which SATISFIES command -v,
-#      prints an install notice and exits 49. The guard never fired.
-#   2. When the guard did fire it ran `exit 1`. Only exit 2 blocks a tool call,
-#      so a missing interpreter PASSED the git add through while printing a
-#      warning nobody reads. That is the fail-open recorded in hard rule 15.
-#   3. Invalid JSON exited 0, and any unexpected checker exit fell through to
-#      exit 0. Both passed the call.
-#
-# So the enforcement could be entirely absent while the file sat there looking
-# like a guard. no-em-dash.sh had already been repaired for exactly this on
-# 2026-07-27; this file was left behind because its header said it was fine.
-#
-# The interpreter is therefore probed by RUNNING it, not by command -v, and
+# FAILS CLOSED. The interpreter is probed by RUNNING candidates, not by
+# command -v, because on Windows the bare name python3 resolves to the Microsoft
+# Store stub, which satisfies command -v, prints an install notice and exits 49.
 # stdin is decoded from sys.stdin.buffer as UTF-8 rather than trusting the text
-# layer, which is cp1252 on Windows.
+# layer, which is cp1252 on Windows. CONTRACT, matching no-em-dash.sh exactly:
+# checker exit 3 blocks, exit 0 passes, EVERY other outcome blocks and names the
+# code. Before 2026-08-11 none of that held here: a missing interpreter exited 1,
+# which does not block a tool call, and invalid JSON and any unexpected checker
+# exit both fell through to 0.
 #
-# CONTRACT, matching no-em-dash.sh exactly: checker exit 3 blocks, exit 0
-# passes, EVERY other outcome blocks and names the code.
+# WHOLE-STRING MATCHING. The scan reads the entire command string. A variant
+# anchoring the match to command position was tried in capsid-mcp (19554e1) and
+# is REJECTED as of 2026-08-16: it removed one false positive and let three real
+# bypasses through, each measured staging every file in a throwaway repo.
+# "if true; then git add -A; fi", "env FOO=1 git add -A", and a backslash
+# newline continuation all passed the narrowed matcher and are blocked by this
+# one.
 #
-# KNOWN AND ACCEPTED FALSE POSITIVE: the scan reads the whole command string, so
-# a command that merely CONTAINS the forbidden token sequence is blocked even
-# when nothing is being staged. Writing a commit message that quotes the rule is
-# the way to meet this, and it happened on the very commit that landed this
-# hardening. The fix is to reword, not to loosen the matcher: parsing shell well
-# enough to tell a heredoc from an argument is not something a guard should
-# attempt, and for a blocking safety hook a false positive costs a rewording
-# while a false negative costs the thing the hook exists to prevent.
+# KNOWN AND ACCEPTED FALSE POSITIVE, measured 2026-08-16 rather than assumed: it
+# fires on UNQUOTED adjacency only, such as the rule written out in a heredoc
+# body. A QUOTED mention passes, because the closing quote glues to the token
+# and defeats the equality test, so a commit message quoting the rule inside
+# double quotes is not blocked. For the cases that do fire the fix is to REWORD,
+# not to loosen the matcher: parsing shell well enough to tell a heredoc from an
+# argument is not something a guard should attempt, and for a blocking safety
+# hook a false positive costs a rewording while a false negative costs the thing
+# the hook exists to prevent. It fired on the very commit that landed the
+# hardening (bb63828).
 #
-# Verified 2026-08-11 by planting all three arms: `git add -A` blocks naming the
-# rule, a scoped add passes, and a stripped PATH blocks with the named
-# interpreter message rather than the old fail-open. The earlier "Functionally
-# tested 2026-07-17: 10/10 cases" note covered the token matching only; it
-# predates the fail-open findings above and never exercised them.
+# KNOWN GAP, recorded and not fixed here: the check is token EQUALITY against
+# four literal spellings, so a quoted flag, bundled short options, a subshell,
+# and the repo-root pathspec all stage everything and are NOT blocked. Widening
+# that tuple is a separate ruling.
+#
+# Verified 2026-08-11 by planting all three arms, and re-verified 2026-08-16
+# against this canonical file before it landed anywhere. The older note
+# "Functionally tested 2026-07-17: 10/10 cases" is RETIRED: it covered token
+# matching only, predates every fail-open finding above, and never exercised
+# them.
 set -uo pipefail
 
 block() {
