@@ -1,7 +1,9 @@
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
-import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE } from "~/lib/seo";
+import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE,
+  pageMeta,
+} from "~/lib/seo";
 
 /**
  * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
@@ -40,10 +42,11 @@ export function headers() {
  */
 
 export function meta() {
-  return [
-    { title: `Roster, ${SITE.name}` },
-    { name: "description", content: "Year-by-year roster, 2017 to 2025." },
-  ];
+  return pageMeta({
+    title: `Roster, ${SITE.name}`,
+    description: "Year-by-year roster, 2017 to 2025.",
+    path: "/phage-discovery",
+  });
 }
 
 export default function Roster() {

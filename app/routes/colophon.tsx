@@ -8,11 +8,14 @@ import {
   SECURITY_TRADEOFF,
   COLOPHON_TITLE,
   statusLabel,
+  COLOPHON_URL,
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE } from "~/lib/seo";
+import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE,
+  pageMeta,
+} from "~/lib/seo";
 
 /**
  * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
@@ -61,10 +64,11 @@ export function headers() {
  */
 
 export function meta() {
-  return [
-    { title: `${COLOPHON_TITLE}, ${SITE.name}` },
-    { name: "description", content: COLOPHON_DESCRIPTION },
-  ];
+  return pageMeta({
+    title: `${COLOPHON_TITLE}, ${SITE.name}`,
+    description: COLOPHON_DESCRIPTION,
+    path: COLOPHON_URL,
+  });
 }
 
 /**
