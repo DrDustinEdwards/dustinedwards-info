@@ -5,7 +5,7 @@ import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
-import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import { serverTiming, timed, type Timings } from "~/lib/timing";
 import {
@@ -53,13 +53,36 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ]),
   );
 
-  // The featured post is surfaced only on the unfiltered first page. Inside a
-  // filter it would be noise, and repeating it above a list it already appears
-  // in reads as a duplicate.
-  const featured =
-    !tag && !year && page === 1
-      ? (listing.posts.find((post) => post.featured) ?? null)
-      : null;
+  /*
+   * The featured post is surfaced only on the unfiltered first page. Inside a
+   * filter it would be noise.
+   *
+   * AND IT IS REMOVED FROM THE LIST BELOW IT, since 2026-08-21. The comment
+   * that used to sit here ended "repeating it above a list it already appears
+   * in reads as a duplicate", and then the code did exactly that: `featured` is
+   * FOUND IN `listing.posts` and the list was rendered from the same array
+   * unchanged, so the hero post appeared twice on /blog. The sentence was the
+   * argument against the behaviour it introduced.
+   *
+   * Filtered HERE rather than in the component so the payload is already
+   * correct, which also means the count the page reports and the items it
+   * renders come from one decision instead of two.
+   *
+   * PAGINATION IS UNAFFECTED, and that is worth stating because it is the
+   * obvious worry. `pageCount` is computed by the query over the whole corpus,
+   * and page 2 is a separate offset query; removing one item from page 1's
+   * rendered list does not shift anything into or out of page 2. Page 1 still
+   * displays the same posts, one of them as the hero rather than as a row.
+   *
+   * KNOWN LIMIT, unchanged and now written down: the hero only appears when the
+   * featured post happens to fall on page 1, because that is the only page this
+   * loader has in hand. A featured post old enough to sit on page 3 is featured
+   * nowhere.
+   */
+  const { featured, posts } = splitFeatured(
+    listing.posts,
+    !tag && !year && page === 1,
+  );
 
   /*
    * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE. Chosen over 404 and over
@@ -99,6 +122,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const payload = {
     ...listing,
+    // AFTER the spread, so the filtered array wins over `listing.posts`. Spread
+    // first and this line is the whole fix; spread second and it is a no-op
+    // that reads like one.
+    posts,
     tags: tagList,
     years: yearList,
     activeTag: tag,
