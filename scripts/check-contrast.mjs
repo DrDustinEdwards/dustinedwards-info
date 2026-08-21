@@ -6,6 +6,38 @@
  * text over an image, or a pair that never occurs in the markup. It also skips
  * the built-CSS check when the build is older than app.css, and SAYS SO.
  *
+ * **AND IT CANNOT SEE OPACITY.** It reads token hexes; `opacity` is compositing
+ * applied by the browser afterwards, so a pair that measures 7:1 here can reach
+ * the reader at 4.35:1. That is not hypothetical: it is what `.figure-credit`
+ * did until 2026-08-21. EVERY opacity on text is a hole of this shape.
+ *
+ * ENUMERATED 2026-08-21, all 19 `opacity` declarations in app.css, classified,
+ * so the next reader inherits the list rather than the search:
+ *
+ *   ON TEXT, PERSISTENT, and therefore the ones that matter:
+ *     .figure-credit                   FIXED, was 0.8 and 4.35:1 in light
+ *     .heading-anchor       0.55       inside @media (hover: none); the permalink
+ *                                      glyph is the only thing it paints
+ *     .search-why-sep       0.5        a "/" between why-terms. 3.06:1 light,
+ *                                      4.18:1 dark. Incidental punctuation, so
+ *                                      LEFT, and recorded rather than hidden
+ *   ON TEXT, TRANSIENT (a pending state, admin plane, seconds at a time):
+ *     .posts-table[data-pending]       0.55
+ *     .media-grid[data-pending]        0.55
+ *   DISABLED CONTROLS, which WCAG 1.4.3 exempts outright:
+ *     .row-action:disabled             0.55
+ *     .media-modal-actions .btn-danger[disabled]  0.5
+ *   NOT TEXT: two scrims (.media-detail-scrim 0.28, .media-modal-scrim 0.5)
+ *   REVEAL PAIRS, 0 then 1, so nothing is ever painted at a partial value:
+ *     .heading-anchor, .media-card-body, .media-check-label, .media-toast
+ *   KEYFRAMES: two `from { opacity: 0 }` steps
+ *
+ * NOT GATEABLE HERE, said plainly rather than left as a to-do. Deciding whether
+ * a selector paints TEXT needs a rendering, and a hand-maintained list of
+ * text-bearing selectors is the mirror this file exists to avoid. The instrument
+ * that could measure it is `check:browser`, which renders and can read a
+ * COMPUTED colour with the compositing already applied.
+ *
  *   npm run check:contrast
  *
  * The point of this script is that it reads TWO INDEPENDENT SOURCES and makes
