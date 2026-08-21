@@ -4,7 +4,13 @@ import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/api.csp-report";
 
 /**
- * The CSP violation sink. Phase B, Report-Only.
+ * The CSP violation sink. Phase B.
+ *
+ * **The Report-Only window closed on 2026-08-17 and this endpoint did not.**
+ * `report-uri` and `report-to` are still sent beside the enforcing header, so
+ * reports still arrive here: under enforcement a report means something was
+ * BLOCKED, which is a live symptom rather than an observation. Everything below
+ * about being an unauthenticated sink is unchanged by that.
  *
  * **THIS IS A PUBLIC, UNAUTHENTICATED POST ENDPOINT.** It has to be: browsers
  * send violation reports with no credentials, and a report that needs a token

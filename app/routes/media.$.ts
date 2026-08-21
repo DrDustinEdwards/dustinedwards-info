@@ -34,8 +34,21 @@ import type { Route } from "./+types/media.$";
  * and external references. Anything in this bucket arrived through the upload
  * form, `image/svg+xml` is on the allowed list in `upload-contract.mjs`, and
  * this route serves it from the SITE'S OWN ORIGIN. Inline, a stored SVG is
- * script running as the site, and the CSP is still Report-Only so it would
- * report the execution rather than prevent it.
+ * script running as the site.
+ *
+ * **The CSP now BLOCKS that, and this rule is kept anyway.** Enforcement landed
+ * 2026-08-17, and `workers/app.ts` stamps the policy on EVERY response with no
+ * early return, so a `/media/*` document is governed by
+ * `script-src 'nonce-...' 'strict-dynamic'` and an inline script inside a
+ * stored SVG carries no nonce. Until then the comment here read "the CSP is
+ * still Report-Only so it would report the execution rather than prevent it",
+ * which is why the wording is being replaced rather than deleted: the sentence
+ * was true when written and had gone false in the SAFE direction, which is the
+ * kind that never announces itself.
+ *
+ * Defence in depth, deliberately. This rule does not depend on the CSP, does
+ * not move if a directive is loosened, and holds for any client that ignores
+ * the policy.
  *
  * `attachment` is the fix rather than a sandbox or a nonce because nothing
  * legitimately renders an R2 SVG inline: the brand marks and the diagram pairs

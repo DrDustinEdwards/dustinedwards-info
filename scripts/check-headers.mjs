@@ -269,19 +269,25 @@ ok(
   `${guardsSettingUncached} of ${guards.length} guards set it`,
 );
 
-/* ------------------------------------------------- the CSP (Phase B, RO) --- */
+/* ------------------------------------------ the CSP (Phase B, ENFORCED) --- */
 
 /*
- * REPORT-ONLY, and the assertion that matters most here is the one about
- * `'unsafe-inline'`.
+ * The assertion that matters most here is the one about `'unsafe-inline'`, and
+ * ENFORCEMENT made it matter more, not less.
  *
- * When a violation report lands, the cheapest way to make it stop is to add
- * `'unsafe-inline'` to `script-src`. That silences the report, keeps every page
- * working, and reduces the policy to decoration, because `'unsafe-inline'` is
- * exactly what an injected `<script>` needs. It is the single most likely wrong
- * fix during the observation window, it is invisible in review, and nothing
- * else in the repo would notice. Hence a named assertion rather than trusting
- * the value comparison to catch it.
+ * When something breaks, the cheapest way to make it stop is to add
+ * `'unsafe-inline'` to `script-src`. That silences it, keeps every page working,
+ * and reduces the policy to decoration, because `'unsafe-inline'` is exactly
+ * what an injected `<script>` needs. It is invisible in review and nothing else
+ * in the repo would notice. Hence a named assertion rather than trusting the
+ * value comparison to catch it.
+ *
+ * This paragraph used to say "the single most likely wrong fix DURING THE
+ * OBSERVATION WINDOW", which dated the risk to a phase that ended on
+ * 2026-08-17. The risk did not end with the phase. It got sharper: under
+ * Report-Only a wrong fix silenced a report, and under enforcement it unbreaks
+ * a page a reader is looking at, which is a far stronger reason to reach for
+ * it.
  *
  * Note `'strict-dynamic'` makes browsers IGNORE `'unsafe-inline'` when both are
  * present, so a future session could add it, see no behaviour change, and
@@ -311,9 +317,17 @@ ok(
   "parsed zero, so every directive assertion below would pass vacuously",
 );
 
-// The ratified directive names. Values are deliberately NOT all asserted here:
-// the point of Report-Only is that some of them may have to change. The NAMES
-// are asserted so a directive cannot be quietly dropped.
+// The ratified directive names. Values are deliberately NOT all asserted here,
+// and the reason CHANGED on 2026-08-17 without the code moving.
+//
+// It used to be "the point of Report-Only is that some of them may have to
+// change", which expired with the phase. What holds now is narrower and is the
+// real argument: this gate transcribes the ratification, and pinning every
+// VALUE would make it a mirror of workers/app.ts, so a deliberate widening
+// would fail here for no reason beyond having been made. The NAMES are asserted
+// so a directive cannot be quietly dropped, and the two values that carry the
+// whole policy, `unsafe-inline` and the enforcing header itself, have named
+// assertions of their own above and below.
 for (const name of [
   "default-src",
   "script-src",
@@ -773,8 +787,12 @@ console.log(
  *
  * An SVG is a document, not a picture: it can carry script. `image/svg+xml` is
  * on the upload allowlist, and `/media/*` serves from the SITE'S OWN ORIGIN, so
- * inline it is script running as the site. The CSP is still Report-Only, so it
- * would report the execution rather than prevent it.
+ * inline it is script running as the site.
+ *
+ * The CSP has BLOCKED that since 2026-08-17 rather than merely reporting it, and
+ * this assertion is kept regardless: it does not depend on the policy, so it
+ * survives a loosened directive and covers any client that ignores CSP. Same
+ * reasoning as the comment on `attachIfActive` itself.
  *
  * OBSERVATION BOUNDARY: source only. This proves the route SETS the header on
  * the paths that serve the stored bytes; it does not fetch an object, so it

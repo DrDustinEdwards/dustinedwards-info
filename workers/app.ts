@@ -200,14 +200,30 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  *
  * So the per-request generator is working exactly as intended, and the CACHE is
  * what collapses it. The policy stays internally consistent, which is why
- * nothing looks wrong and why this is easy to miss, but **on those six routes an
- * attacker who reads one page holds a valid nonce for up to ten minutes**, which
- * is precisely the guarantee an enforcing policy would be relying on.
+ * nothing looks wrong and why this is easy to miss, but **on those SEVEN routes
+ * an attacker who reads one page holds a valid nonce for up to ten minutes**,
+ * which is precisely the guarantee the enforcing policy IS relying on.
  *
- * It changes nothing in Report-Only, which is why it was not solved when found.
- * It must be RULED ON BEFORE the switch, and there are two acceptable answers:
- * accept the ten-minute window in writing with the reasoning recorded, or make
- * those seven routes uncacheable and give back the shared-cache benefit.
+ * (Six, until 2026-08-20. The paragraph above was corrected from six to seven on
+ * 2026-08-17 when `/playground` was found missing from the list, and this
+ * sentence was not, so one paragraph documented the fix while the next repeated
+ * the number it fixed. The next sentence said "seven" the whole time.)
+ *
+ * **RULED 2026-08-17, and the first answer was taken.** The two acceptable
+ * answers were to accept the ten-minute window in writing with the reasoning
+ * recorded, or to make those seven routes uncacheable and give back the
+ * shared-cache benefit. Accepted, and recorded PUBLICLY rather than in a comment:
+ * `app/lib/colophon-sections.mjs` states it in plain language on /colophon, on
+ * the grounds that a showcase listing only its wins is an advertisement. The
+ * reasoning is that the alternative makes every reader wait for the origin, and
+ * that it is acceptable only because these pages carry no writing from anyone
+ * but Dustin.
+ *
+ * This paragraph used to open "It changes nothing in Report-Only, which is why
+ * it was not solved when found. It must be RULED ON BEFORE the switch." The
+ * switch happened, the ruling happened, and the sentence stayed. **The exposure
+ * below is now LIVE and accepted, not pending**, which is a different thing for
+ * the next reader to do something about.
  *
  * **A THIRD ANSWER WAS RULED IN AND THEN FALSIFIED BY MEASUREMENT, 2026-08-17.**
  * The ruling was `script-src 'self'` with `'strict-dynamic'` removed, on the
