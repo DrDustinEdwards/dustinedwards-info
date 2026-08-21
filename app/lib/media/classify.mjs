@@ -28,6 +28,14 @@ const TYPES = new Map([
   ["ico", { kind: "image", mime: "image/x-icon" }],
   ["pdf", { kind: "document", mime: "application/pdf" }],
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
+  // Added 2026-08-21 with the self-hosted fonts, which is the whole reason:
+  // SIL OFL 1.1 requires the licence to travel with the redistributed font, so
+  // public/fonts/OFL.txt has to be served rather than sit beside the binaries
+  // unreachable. This map throwing on "txt" is what made that a decision.
+  ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],
+  // Variable Inter, latin subsets. `font` is a NEW kind rather than "other",
+  // because the media plane groups by kind and a webfont is not a leftover.
+  ["woff2", { kind: "font", mime: "font/woff2" }],
 ]);
 
 /** Extensions the Images binding can measure and transform. */

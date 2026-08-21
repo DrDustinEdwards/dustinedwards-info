@@ -1,5 +1,66 @@
 @import "tailwindcss" source(".");
 
+/*
+ * INTER, SELF-HOSTED SINCE 2026-08-21. Previously three requests to two Google
+ * origins; now two files from this one.
+ *
+ * ## WHY, on a site whose whole argument is that Cloudflare can do everything
+ *
+ * The old shape was `preconnect` to fonts.googleapis.com, `preconnect` to
+ * fonts.gstatic.com, and a render-blocking stylesheet from the first that names
+ * files on the second. That is a SERIALISED two-hop dependency across two
+ * external origins, each with its own DNS and TLS, before a single glyph can be
+ * requested. It also let Google observe every visitor, and it forced
+ * `style-src` and `font-src` to carry third-party origins in an ENFORCED CSP.
+ * All three are gone: both directives are now `'self'`.
+ *
+ * ## WHAT THESE FILES ARE, and the claim they replaced was FALSE
+ *
+ * The recorded plan was to self-host from `assets/fonts/`, described as unused.
+ * MEASURED 2026-08-21, and both halves are wrong. Those two files are NOT
+ * unused: `build-og.mjs` and `check-logo.mjs` load them because Satori needs
+ * TTF buffers to draw the social cards. And they are the wrong FACES: two static
+ * weights, 400 and 700, against a stylesheet that asks for 400, 500, 600, 650
+ * and 700 plus one italic. 51 of 63 weight declarations are 500 or 600, so
+ * self-hosting from them would have silently synthesised the site's dominant
+ * weights.
+ *
+ * These are the VARIABLE latin subsets, weight axis 100 to 900, so one file
+ * covers every weight the stylesheet asks for and the 650 interpolates rather
+ * than rounding. Byte-identical to what fonts.gstatic.com was already serving
+ * to every visitor, taken from that endpoint, so this changes WHO serves them
+ * and not WHAT is served. Inter is SIL OFL 1.1; see public/fonts/OFL.txt.
+ *
+ * `unicode-range` is carried over verbatim. Without it the browser downloads
+ * both files eagerly; with it the italic is fetched only when italic latin text
+ * is actually rendered.
+ *
+ * `font-display: swap` matches what the Google URL asked for, so first paint
+ * behaves as it did. The FLASH is shorter now only because the bytes arrive on
+ * an already-warm same-origin connection.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";

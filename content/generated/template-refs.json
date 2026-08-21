@@ -1,5 +1,5 @@
 {
-  "generated": 17,
+  "generated": 19,
   "refs": {
     "/android-chrome-192x192.png": [
       "public/site.webmanifest"
@@ -15,6 +15,12 @@
     ],
     "/favicon.svg": [
       "app/root.tsx"
+    ],
+    "/fonts/inter-latin-italic.woff2": [
+      "app/app.css"
+    ],
+    "/fonts/inter-latin-normal.woff2": [
+      "app/app.css"
     ],
     "/maskable-icon-512x512.png": [
       "public/site.webmanifest"
@@ -54,5 +60,5 @@
     ]
   },
   "filesRead": 141,
-  "assetsConsidered": 58
+  "assetsConsidered": 61
 }
