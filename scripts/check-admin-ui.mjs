@@ -3406,11 +3406,57 @@ structural(
  * The needles are word-anchored so "traffic" cannot be matched inside a longer
  * token, and each is validated against a decoy below so a typo in the pattern
  * cannot make the absence vacuous.
+ *
+ * ## THE CAPTION IS EXEMPT, SINCE 2026-08-21, AND THE AUDIT WAS RIGHT
+ *
+ * Tier 4.1 ruled this block out entirely, on the grounds that it "rejected the
+ * sentence written to explain the metric it polices". That happened and is
+ * recorded in `app/lib/admin/origin-requests.mjs`: the first draft of
+ * CACHE_SENTENCE said "real traffic is therefore higher" and this gate refused
+ * it.
+ *
+ * DELETING THE BLOCK IS THE WRONG REPAIR, because the defect is not the rule, it
+ * is the SCOPE. A word ban cannot tell "this panel counts visits" from "this
+ * number is not visits", and those two sentences live in different parts of the
+ * page. Labels CLAIM. Prose EXPLAINS.
+ *
+ * So the ban now runs against the markup with `<caption>` removed. Every label
+ * surface stays covered: the panel heading, the column headers, the chips, the
+ * rows and the empty and error states. The caption, which is the one element
+ * whose job is to say what the number is and is not, is free to name the thing
+ * it is contrasting against.
+ *
+ * The positive half below is unchanged and is what actually guarantees the
+ * honest label: every state must SAY "origin requests".
  * ---------------------------------------------------------------------- */
 
 const FORBIDDEN_COPY = ["visits", "visitors", "traffic", "page views"];
 const TRAFFIC_STATES = ["origin requests, loaded", "origin requests, empty", "origin requests, error"];
 
+/** The rendered markup minus the one element allowed to name what this is not. */
+const withoutCaption = (/** @type {string} */ h) =>
+  h.replace(/<caption[\s\S]*?<\/caption>/gi, " ");
+
+/*
+ * THE EXEMPTION IS ITSELF ASSERTED. A `<caption>` regex that matched nothing
+ * would leave the ban exactly as wide as before and this narrowing would be a
+ * comment describing a change that did not happen; one that matched too much
+ * would exempt the whole panel and every absence check below would pass by
+ * examining an empty string.
+ */
+{
+  const loaded = htmlFor("origin requests, loaded");
+  const stripped = withoutCaption(loaded);
+  assert(
+    "copy law: the caption exemption removes a caption and not the page",
+    /<caption/i.test(loaded) &&
+      !/<caption/i.test(stripped) &&
+      stripped.length > loaded.length * 0.5,
+    `loaded state is ${loaded.length} bytes, ${stripped.length} after removing the ` +
+      `caption. Either no caption was found, or the strip took most of the page ` +
+      `with it and every absence check below examines nothing.`,
+  );
+}
 
 for (const word of FORBIDDEN_COPY) {
   const pattern = new RegExp(`\\b${word}\\b`, "i");
@@ -3422,7 +3468,11 @@ for (const word of FORBIDDEN_COPY) {
     "the pattern never matches anything, so every absence check using it is vacuous",
   );
   for (const state of TRAFFIC_STATES) {
-    structural(`copy law: "${word}" never appears in ${state}`, state, (h) => !pattern.test(h));
+    structural(
+      `copy law: "${word}" never labels anything in ${state}`,
+      state,
+      (h) => !pattern.test(withoutCaption(h)),
+    );
   }
 }
 
