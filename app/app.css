@@ -31,6 +31,27 @@
  * to every visitor, taken from that endpoint, so this changes WHO serves them
  * and not WHAT is served. Inter is SIL OFL 1.1; see public/fonts/OFL.txt.
  *
+ * ## THEY GO THROUGH THE BUILD, NOT public/, AND THAT IS THE CACHE FIX
+ *
+ * These `url()`s are PROJECT-RELATIVE, so Vite treats the files as assets,
+ * emits them to `/assets/` with a content hash in the filename, and rewrites
+ * these references to match. That matters for one reason: `public/_headers`
+ * grants `max-age=31536000, immutable` to `/assets/*` ALONE, and its own
+ * comment says why, that everything under it carries a content hash so the URL
+ * changes whenever the bytes do.
+ *
+ * SHIPPED AT public/fonts/ FIRST, 2026-08-21, and that was the defect: a stable
+ * path gets Workers Assets' default `max-age=0, must-revalidate`. MEASURED on
+ * production: an ETag and a 304, so no bytes moved, but one conditional round
+ * trip per navigation where Google had served the same files immutable for a
+ * year. Self-hosting had traded a third-party origin for a revalidation.
+ *
+ * Fixed by making the URL hash-bearing rather than by widening the header rule.
+ * A `/fonts/*` immutable rule would have been the tempting one-liner and it
+ * would have been WRONG: these filenames were stable, so replacing a font would
+ * have left a year of browsers holding the old one, which is the exact failure
+ * `_headers` already records for the favicon. `_headers` is UNCHANGED by this.
+ *
  * `unicode-range` is carried over verbatim. Without it the browser downloads
  * both files eagerly; with it the italic is fetched only when italic latin text
  * is actually rendered.
@@ -44,7 +65,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url("/fonts/inter-latin-normal.woff2") format("woff2");
+  src: url("./fonts/inter-latin-normal.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
@@ -55,7 +76,7 @@
   font-style: italic;
   font-weight: 100 900;
   font-display: swap;
-  src: url("/fonts/inter-latin-italic.woff2") format("woff2");
+  src: url("./fonts/inter-latin-italic.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
