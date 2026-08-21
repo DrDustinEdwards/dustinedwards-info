@@ -1,0 +1,52 @@
+-- Drop `posts.category`, superseded by the tags relation since 0002.
+-- Hand-written (drizzle-kit is intentionally not used). Applied with:
+--   wrangler d1 migrations apply dustinedwards [--local|--remote]
+
+-- 0002 added `tags` and `post_tags` and said this, verbatim: "`posts.category`
+-- is deliberately left in place. New reads go through the tags relation." The
+-- column has been dead ever since and `schema.ts` carried "Kept until nothing
+-- reads it" beside it. Nothing reads it. Measured 2026-08-20 across app/,
+-- scripts/, workers/ and test/: the ONLY occurrence of the identifier outside
+-- these migration files is its own declaration at app/db/schema.ts:28. The
+-- `<category>` elements in blog.rss[.xml].ts are RSS tags built from
+-- `post.tags`, not this column, and the generated artifact has no `category`
+-- key on any post.
+--
+-- ## WHY A PLAIN DROP COLUMN IS SAFE HERE, checked rather than assumed
+--
+-- SQLite refuses DROP COLUMN when the column is a PRIMARY KEY, is UNIQUE, is
+-- named by an index, a view, a trigger, a generated column, or a CHECK or
+-- foreign-key constraint. Every one of those was checked against 0001 to 0011:
+--
+--   - `posts_status_publish_idx` is (status, publish_at).
+--   - `posts_source_path_idx` is (source_path). `posts_featured_idx` is
+--     (featured, publish_at). `posts_series_idx` is (series, part).
+--   - The two CHECK constraints are on `kind` and `status`.
+--   - The three FTS triggers `posts_fts_ai`, `posts_fts_ad` and `posts_fts_au`
+--     reference `id`, `title` and `body` and nothing else.
+--   - There are no views anywhere in this schema.
+--
+-- `posts_fts` is an external-content FTS5 table over posts(title, body). Its
+-- column list does not include this one, so the index is untouched and needs no
+-- rebuild. The three triggers are likewise untouched, which matters because
+-- hard rule 2 records that a corrupt FTS index kills the next trigger-fired
+-- write with SQLITE_CORRUPT_VTAB.
+--
+-- ## THIS IS DESTRUCTIVE AND THE DATA IS NOT COMING BACK
+--
+-- Whatever category strings the live rows hold are deleted by this. That is the
+-- point, and it is worth stating plainly rather than leaving to be inferred
+-- from the verb. Take a `posts` backup before applying to --remote
+-- (`npm run check:backup -- --remote` reads it; hard rule 2 records that
+-- `wrangler d1 export` is broken on this database and per-table is the way).
+--
+-- ## AFTER APPLYING, IN THIS ORDER
+--
+-- `app/db/schema.ts` drops the field in the same commit as this file, so
+-- `check:invariants` section 4 compares migrations-replayed against schema and
+-- agrees OFFLINE the moment both land. Section 4 under `--remote` compares
+-- against the LIVE database and will FAIL until this is applied there. That is
+-- the gate being correct: the repo and production genuinely disagree in the
+-- window between committing this and running it.
+
+ALTER TABLE posts DROP COLUMN category;

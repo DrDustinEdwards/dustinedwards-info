@@ -24,8 +24,6 @@ export const posts = sqliteTable(
     excerpt: text("excerpt"),
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     publishAt: integer("publish_at", { mode: "timestamp" }),
-    /** Superseded by the tags relation. Kept until nothing reads it. */
-    category: text("category"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
