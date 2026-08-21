@@ -60,7 +60,7 @@ The `private, no-store` default is asserted three ways.
 
 ### 10. PROSE. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
 
-Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. `check:assertions` lints six; the rest are method. See `verification-method.md`.
+Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. `check:assertions` lints six; the rest are method. See `VERIFICATION.md`, in this repo.
 
 ### 11. ONE-LINER. `app/db/schema.ts` IS the source of truth.
 
@@ -174,13 +174,20 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 
 ## Where everything else lives
 
-All paths are Capsid documents in the `dustinedwards` namespace unless marked.
+**In THIS REPO, because a gate can reach it and Capsid cannot:**
+
+    CLAUDE.md                  the fifteen hard rules, above
+    VERIFICATION.md            how to prove a deploy, a claim, or a gate. The method
+                               behind rules 7, 10 and 12. Moved out of Capsid 2026-08-20
+    RECOVERY.md                rebuilding every Cloudflare resource from nothing
+    README.md                  what the site is, for a reader who is not a session
+
+All other paths are Capsid documents in the `dustinedwards` namespace.
 
     core.md                    current state only, under 8KB. NOT the hard rules: they are
                                above in this file, and NOT gate counts: those live in the repo
     decisions.md               active ruling log. decisions-vol-1.md is frozen
     gate-backlog.md            what could be gated and is not, ranked
-    verification-method.md     how to prove a deploy, a claim, or a gate
 
     search-architecture.md     all three search layers, FTS5 and D1 constraints, Ask guards
     publish-pipeline.md        content model, the two writers, the gate family, social cards,

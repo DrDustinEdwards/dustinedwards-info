@@ -2557,15 +2557,49 @@ console.log("\n  15. every cited hard-rule number resolves to a rule");
   let cited = 0;
   let scanned = 0;
 
-  for (const dir of ["app", "scripts", "workers", "test"]) {
-    for (const file of sourceFiles(join(root, dir))) {
-      const rel = relative(root, file).split(sep).join("/");
-      if (rel.endsWith(".d.ts")) continue;
-      scanned += 1;
-      const text = readFileSync(file, "utf8");
-      for (const m of text.matchAll(/hard rules? (\d+)/gi)) {
+  /*
+   * PROSE CITES IN LISTS, so the needle reads a list.
+   *
+   * `VERIFICATION.md` opens with "Hard rules 7, 10 and 12 in CLAUDE.md are the
+   * principles". A `(\d+)` needle sees the 7 and NOTHING ELSE, so two of the
+   * three citations in the most-cited sentence in the repo would have gone
+   * unchecked while the gate reported a clean pass. Found by widening the walk
+   * to the root documents and reading what it actually matched.
+   *
+   * The list form is bounded deliberately: digits joined by commas and the word
+   * "and", nothing else. A greedy run would swallow the sentence after it.
+   */
+  const CITATION = /hard rules? ((?:\d+)(?:\s*(?:,|and)\s*\d+)*)/gi;
+
+  /*
+   * THE ROOT DOCUMENTS ARE IN SCOPE, not just source. CLAUDE.md and
+   * VERIFICATION.md cite these numbers more than any source file does, and a
+   * document that sends a reader to a rule that does not exist fails them in
+   * exactly the way a comment does. `sourceFiles` walks code, so the root
+   * markdown is named rather than walked.
+   */
+  const rootDocs = ["CLAUDE.md", "VERIFICATION.md", "README.md", "RECOVERY.md"];
+
+  const targets = [
+    ...rootDocs.map((name) => join(root, name)),
+    ...["app", "scripts", "workers", "test"].flatMap((dir) => [
+      ...sourceFiles(join(root, dir)),
+    ]),
+  ];
+
+  /** Citations found per root document, so the scope check can be specific. */
+  const perDoc = new Map(rootDocs.map((name) => [name, 0]));
+
+  for (const file of targets) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (rel.endsWith(".d.ts")) continue;
+    scanned += 1;
+    const text = readFileSync(file, "utf8");
+    for (const m of text.matchAll(CITATION)) {
+      for (const part of m[1].split(/[^\d]+/).filter(Boolean)) {
         cited += 1;
-        const n = Number(m[1]);
+        if (perDoc.has(rel)) perDoc.set(rel, (perDoc.get(rel) ?? 0) + 1);
+        const n = Number(part);
         if (!defined.has(n)) unresolved.push(`${rel}: "hard rule ${n}"`);
       }
     }
@@ -2576,6 +2610,34 @@ console.log("\n  15. every cited hard-rule number resolves to a rule");
     scanned >= 40 && cited >= 10,
     `scanned ${scanned} file(s) and found ${cited} citation(s). A zero-scope walk ` +
       `resolves every citation it did not find.`,
+  );
+
+  /*
+   * THE SCOPE CHECK ABOVE CANNOT SEE THE ROOT DOCUMENTS DROP OUT, which is the
+   * whole reason they were added. Four files out of a hundred-odd is noise
+   * against `scanned >= 40`, so deleting `rootDocs` would leave VERIFICATION.md
+   * unchecked while the gate went on reporting a clean pass: hard rule 10's
+   * over-wide-threshold class, one line below a threshold written to catch it.
+   *
+   * ## WHY ONLY VERIFICATION.md IS REQUIRED TO CITE
+   *
+   * The first draft required CLAUDE.md to contribute citations too, and it
+   * FAILED on clean disk with "CLAUDE.md contributed 0". That was the assertion
+   * doing its job against its own author. **CLAUDE.md DEFINES the rules and
+   * never cites one**: it carries `### N.` headings, and the phrase "hard rule
+   * N" appears in it zero times. It is already covered, by the `defined.size`
+   * assertion above, which reads it directly.
+   *
+   * README.md and RECOVERY.md are scanned and required to cite nothing, because
+   * there is no reason they should have to.
+   */
+  const REQUIRED_CITERS = ["VERIFICATION.md"];
+  ok(
+    "the documents that cite hard rules were actually read, not just listed",
+    REQUIRED_CITERS.every((name) => (perDoc.get(name) ?? 0) > 0),
+    REQUIRED_CITERS.map((name) => `${name}: ${perDoc.get(name) ?? 0}`).join(", ") +
+      ` citation(s). Zero means the walk is not opening the document that cites ` +
+      `these rules most, and every citation in it resolves by not being looked at.`,
   );
 
   ok(
@@ -2622,7 +2684,7 @@ console.log("\n  15. every cited hard-rule number resolves to a rule");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 119;
+const MINIMUM_CHECKS = 120;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
