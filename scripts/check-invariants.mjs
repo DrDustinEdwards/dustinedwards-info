@@ -44,7 +44,7 @@
  *      the two predicates agree; this proves a reader actually uses one, which
  *      is the half that leaks. Structural, like section 1.
  *
- * Sections 4 and 5 exist because of hard rule 11 and cost a real defect:
+ * Section 4 exists because of hard rule 11 and cost a real defect:
  * `claimMediaKeyForDelete` named `media.r2_key`, which `0007` creates and
  * `0009` renames to `key`, so the statement was guaranteed to throw on the one
  * path it exists to protect. No typecheck reads inside a SQL string, no gate
@@ -2492,6 +2492,100 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
   );
 }
 
+/* ------- 15. every cited hard-rule number resolves to a rule ------------- */
+
+/*
+ * THE CODE CITES THE RULES BY NUMBER, AND NOTHING CHECKED THE NUMBERS.
+ *
+ * Fourteen source files say things like "hard rule 10's class" or "hard rule 15
+ * makes that file off limits". Until 2026-08-21 the rules lived in Capsid, and
+ * **Capsid cannot be gated, because every gate verifies disk.** So the one
+ * document the code depends on by number was the one document no assertion
+ * could reach, which is the mechanism Grok's audit identified behind a month of
+ * stale numbers: `MINIMUM_GATES` was 28 and true while Capsid said 24, 26 and
+ * 27 and was false.
+ *
+ * The rules moved into CLAUDE.md for exactly that reason. This binds them.
+ *
+ * ## WHAT THIS ASSERTS, and it is the weaker of the two things asked for
+ *
+ * Every `hard rule N` cited anywhere in the repo resolves to a heading
+ * `### N.` in CLAUDE.md. A citation of a number that does not exist fails, and
+ * so does renumbering a rule out from under a citation.
+ *
+ * ## WHAT IT DOES NOT ASSERT, stated because the gap is the interesting half
+ *
+ * **It does not check that the TEXT a comment attributes to a rule matches the
+ * rule.** `check-secrets.mjs` says "hard rule 3 says ..." and paraphrases it;
+ * `check-features.mjs` says "hard rule 9's second half". Verifying a paraphrase
+ * against a source sentence needs to decide when two English sentences say the
+ * same thing, which no regex does and which a wrong answer makes worse than no
+ * answer: a gate that green-lights a false paraphrase is more dangerous than
+ * one that never looked.
+ *
+ * So the failure this cannot see is a comment that cites rule 8 correctly and
+ * then describes rule 9. That class was real: the August drift audit found
+ * three rules FALSE AS WRITTEN across two files. What kills it now is having
+ * ONE home rather than two, which removes the copy that drifts, plus this
+ * binding on the numbers. The residue is stated rather than closed.
+ */
+
+console.log("\n  15. every cited hard-rule number resolves to a rule");
+
+{
+  const claudeMd = readFileSync(join(root, "CLAUDE.md"), "utf8");
+
+  /** Rule numbers CLAUDE.md actually defines, from its `### N.` headings. */
+  const defined = new Set(
+    [...claudeMd.matchAll(/^### (\d+)\. /gm)].map((m) => Number(m[1])),
+  );
+
+  /*
+   * SCOPE, ASSERTED. An empty `defined` set makes every citation below
+   * "unresolved" and the failure would read as fourteen broken comments rather
+   * than as one broken parse, which sends the next reader to the wrong file.
+   */
+  ok(
+    "CLAUDE.md defines numbered hard rules",
+    defined.size >= 15,
+    `parsed ${defined.size} rule heading(s) of the form "### N.". If this is 0 the ` +
+      `citation check below is measuring the parser, not the comments.`,
+  );
+
+  /** @type {string[]} */
+  const unresolved = [];
+  let cited = 0;
+  let scanned = 0;
+
+  for (const dir of ["app", "scripts", "workers", "test"]) {
+    for (const file of sourceFiles(join(root, dir))) {
+      const rel = relative(root, file).split(sep).join("/");
+      if (rel.endsWith(".d.ts")) continue;
+      scanned += 1;
+      const text = readFileSync(file, "utf8");
+      for (const m of text.matchAll(/hard rules? (\d+)/gi)) {
+        cited += 1;
+        const n = Number(m[1]);
+        if (!defined.has(n)) unresolved.push(`${rel}: "hard rule ${n}"`);
+      }
+    }
+  }
+
+  ok(
+    "the source walk found hard-rule citations to resolve",
+    scanned >= 40 && cited >= 10,
+    `scanned ${scanned} file(s) and found ${cited} citation(s). A zero-scope walk ` +
+      `resolves every citation it did not find.`,
+  );
+
+  ok(
+    "every cited hard-rule number is defined in CLAUDE.md",
+    unresolved.length === 0,
+    `${unresolved.join(", ")}. The code cites a rule number CLAUDE.md does not ` +
+      `define, so a reader following the citation lands nowhere.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -2528,7 +2622,7 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 116;
+const MINIMUM_CHECKS = 119;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

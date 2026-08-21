@@ -243,22 +243,54 @@ if (at !== -1) {
   );
 
   /*
-   * The section must POINT, not restate. Nineteen rules across two files with
-   * four duplicate pairs, three of them false as written, is what restating
-   * produced. Ruling: dustinedwards/decisions.md, 2026-08-07.
+   * THE RULES LIVE HERE NOW, reversed 2026-08-21.
+   *
+   * This asserted the OPPOSITE: that the section must point at core.md and must
+   * not restate. That was the right call while the rules lived in Capsid, and
+   * it became wrong when Grok's audit found why they could not stay there:
+   * **Capsid cannot be gated, because every gate verifies disk.** Fourteen
+   * source files cite these rules by number and nothing could check the numbers.
+   *
+   * The old ruling's fear was drift from restating in two places. The answer to
+   * that is ONE home rather than the unreachable one, so the section must now
+   * CONTAIN the rules and `check:invariants` section 15 binds every cited
+   * number to a heading here.
    */
   ok(
-    "the hard-rules section points at core.md",
-    section.includes("core.md"),
-    "the rules live in dustinedwards/core.md and this section exists to say so",
+    "the hard-rules section contains the rules rather than pointing away",
+    /^### \d+\. /m.test(section),
+    "no `### N.` rule headings in the section. Since 2026-08-21 this file is the " +
+      "one home: pointing at Capsid puts them where no gate can verify them, which " +
+      "is the mechanism behind a month of stale numbers.",
   );
 
+  /*
+   * COUNTED, not just present. A section carrying one rule heading satisfies
+   * the pattern above while fourteen rules are missing, and the citations that
+   * resolve are exactly the ones nobody deleted.
+   */
+  const ruleCount = (section.match(/^### \d+\. /gm) ?? []).length;
   ok(
-    "the hard-rules section records that the numbering is frozen",
-    /frozen/i.test(section),
-    "scripts/check-invariants.mjs:44 cites hard rule 11 BY NUMBER, so renumbering " +
-      "silently breaks a code comment. If that note is gone, the next reader has " +
-      "no reason not to renumber.",
+    "the section defines at least fifteen rules",
+    ruleCount >= 15,
+    `${ruleCount} rule heading(s) found. The list is fifteen with number 12's ` +
+      `predecessor REMOVED and its number retained.`,
+  );
+
+  /*
+   * APPEND-ONLY survives; FROZEN does not.
+   *
+   * The old assertion was `/frozen/i`, and it would have passed on this very
+   * file today, because the sentence recording the unfreeze contains the word
+   * "FROZEN". That is hard rule 10's comment-satisfied anchor wearing its own
+   * clothes: a needle matched inside a sentence asserting the opposite. The
+   * property worth keeping is append-only, so that is what is matched.
+   */
+  ok(
+    "the hard-rules section records that numbering is append-only",
+    /append-only/i.test(section),
+    "without that note the next reader has no reason not to renumber, and a " +
+      "renumber silently retargets fourteen files' citations.",
   );
 }
 

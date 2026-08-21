@@ -14,11 +14,77 @@ Do this before touching code. It is not a formality: the recurring failure in th
 
 ## Hard rules
 
-**The rules are NOT in this file. They are in `dustinedwards/core.md`, one list of fifteen.** Read them there. Restating them here is how they drifted: nineteen rules across two files, four duplicate pairs, three of them false as written. Ruling: `dustinedwards/decisions.md`, 2026-08-07.
+**THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Fourteen source files cite them; `check:invariants` section 15 now binds every cited number to a rule that exists here.
 
-**The numbering is FROZEN and append-only.** `scripts/check-invariants.mjs:47` cites "hard rule 11" by number, so renumbering breaks a code comment. New rules take the next number; a retired rule keeps its number and is marked REMOVED.
+**Recovered rather than rewritten.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document. The text below was transcribed from the last core.md that carried it. **Diff it against Capsid core.md version 1684 before treating any single clause as exact.**
 
-Each rule is marked ONE-LINER (a gate enforces it, and the gate is the detail) or PROSE (no gate can see it, so read it). What could be gated and is not: `dustinedwards/gate-backlog.md`.
+Each rule is ONE-LINER (a gate enforces it, and the gate is the detail) or PROSE (no gate can see it, so read it). What could be gated and is not: `dustinedwards/gate-backlog.md`.
+
+**Numbering is APPEND-ONLY but no longer frozen.** Nothing pins a number to a line any more; see the note after rule 15.
+
+### 1. ONE-LINER. Every public read goes through `publiclyVisible()`.
+
+`check:invariants` sections 2, 6 (alias-resolving, two named exemptions) and 8 (every `search_docs` reader composes `visibilityClause()`).
+
+### 2. ONE-LINER. `wrangler d1 export` is BROKEN here.
+
+Per-table backups via `check:backup`. FTS `DELETE FROM` is gated by section 7; the repair is `('rebuild')`.
+
+### 3. ONE-LINER. Secrets are read only inside the server boundary.
+
+`check:secrets`, both directions, per-root floors.
+
+### 4. PROSE. Keep the Worker lean; inline SVG over an icon library.
+
+CodeMirror is lazy-split. Client auth is imported by `/login` alone.
+
+### 5. PROSE. Popover elevation and pinned bars take `--border-strong`, never `--border`.
+
+Not gateable: it would need a hand-maintained selector list, which is the mirror anti-pattern.
+
+### 6. ONE-LINER. URL protocols are allowlisted, SCHEMA AND RENDER.
+
+`check:urls`. Operator READ paths validate against the exported `SLUG_PATTERN`, and `content/posts/<slug>.md` is stated ONCE, by the exported `postPath()`.
+
+### 7. PROSE. A gate that feeds a module its own stored output cannot see the TRANSPORT.
+
+Live claims verify on the live path. Boundary-note presence is gated, and **a boundary note is a CLAIM that ages**: two have gone false since being written.
+
+### 8. ONE-LINER. WORKERS CACHE IS ON. A response with no `Cache-Control` is CACHED, not skipped.
+
+The `private, no-store` default is asserted three ways.
+
+### 9. PROSE for the law, ONE-LINER for the inventory. PROGRESSIVE ENHANCEMENT, not "zero JS".
+
+`content/enhancements.json` is reconciled in both directions by `check:features`. The admin plane is exempt. Law: `progressive-enhancement.md`.
+
+### 10. PROSE. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
+
+Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift. `check:assertions` lints six; the rest are method. See `verification-method.md`.
+
+### 11. ONE-LINER. `app/db/schema.ts` IS the source of truth.
+
+`check:invariants` section 4 binds schema to migrations to the live database. Prefer the query builder over raw SQL. **Section 5 was DELETED on 2026-08-16**: its regex could desync on a regex literal and examine nothing while printing a clean result. Do not rebuild it as regex.
+
+### 12. PROSE. A new gate is tested by REPLAYING THE DEFECT it was written for.
+
+EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied before any result is read.** A green run after a failed plant proves nothing; a mangled path once made a plant a silent no-op and the gate went green. `check:migrations` is the recorded plants-only exception.
+
+### 13. PROSE, class only; all instances resolved.
+
+A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `?? "system"` on the theme, `REMOTE_ARGS ?? []`. Lint form: `check:assertions` rule (e).
+
+### 14. ONE-LINER. Migrations are hand-written, drizzle-kit is deliberately absent, and an applied migration is never edited.
+
+`check:migrations` hashes every file against the manifest, both directions.
+
+### 15. PROSE. Do not modify `.claude/settings.json` without explicit instruction.
+
+Gated read-only by `check:hooks`, which reads that file and never writes it.
+
+**REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
+
+**On numbering.** Append-only: a new rule takes 16, and a retired rule keeps its number and is marked REMOVED, so a citation never silently retargets. It is no longer FROZEN. It was frozen because one comment cited a rule by FILE AND LINE, so renumbering broke a line reference; that comment now cites the rule by number alone and section 15 binds the number to this file. Renumbering is still a bad idea and nothing needs it.
 
 ## Workflow: mainline only, until launch
 
@@ -110,7 +176,8 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 
 All paths are Capsid documents in the `dustinedwards` namespace unless marked.
 
-    core.md                    status, the fifteen hard rules, gate counts, what is deployed
+    core.md                    current state only, under 8KB. NOT the hard rules: they are
+                               above in this file, and NOT gate counts: those live in the repo
     decisions.md               active ruling log. decisions-vol-1.md is frozen
     gate-backlog.md            what could be gated and is not, ranked
     verification-method.md     how to prove a deploy, a claim, or a gate
