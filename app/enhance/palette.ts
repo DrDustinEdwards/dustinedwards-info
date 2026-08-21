@@ -53,6 +53,17 @@ let listbox: HTMLUListElement | null = null;
 // Named statusLine, not status: `status` is a long-standing global on window,
 // so a bare `let status` collides with it at type level.
 let statusLine: HTMLParagraphElement | null = null;
+/**
+ * The palette's own "All results" escape hatch.
+ *
+ * It was a static `<a href="/search">`, so it threw away whatever had been
+ * typed and landed the reader on an empty search page. Enter-with-no-hit in the
+ * same file already did the right thing, going to
+ * `/search?q=<typed>`, so the palette contained two answers to one question and
+ * only one of them was correct. This handle exists so the link can be kept in
+ * step with the input rather than being rebuilt from the text of the anchor.
+ */
+let allResultsLink: HTMLAnchorElement | null = null;
 let hits: Hit[] = [];
 let active = -1;
 let sequence = 0;
@@ -351,6 +362,11 @@ function resetAsk() {
 function onInput() {
   if (!input) return;
   const query = input.value.trim();
+  /* "All results" keeps the query, exactly as Enter-with-no-hit already did.
+     Bare /search is still correct when nothing has been typed. */
+  if (allResultsLink) {
+    allResultsLink.href = query ? `/search?q=${encodeURIComponent(query)}` : "/search";
+  }
   clearTimeout(debounce);
   // A new query makes any showing answer answer the wrong question.
   resetAsk();
