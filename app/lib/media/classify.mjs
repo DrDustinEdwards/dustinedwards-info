@@ -33,9 +33,13 @@ const TYPES = new Map([
   // public/fonts/OFL.txt has to be served rather than sit beside the binaries
   // unreachable. This map throwing on "txt" is what made that a decision.
   ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],
-  // Variable Inter, latin subsets. `font` is a NEW kind rather than "other",
-  // because the media plane groups by kind and a webfont is not a leftover.
-  ["woff2", { kind: "font", mime: "font/woff2" }],
+  //
+  // "woff2" WAS HERE AND IS DELETED, same day it was added. The fonts moved out
+  // of public/ into app/fonts/ so the build can content-hash them, so there is
+  // no longer a woff2 under public/ for this map to classify. Leaving the entry
+  // would have been harmless-looking and slightly fail-open: the next webfont
+  // dropped into public/ would acquire a plausible kind instead of stopping the
+  // build, which is the one thing this map exists to do.
 ]);
 
 /** Extensions the Images binding can measure and transform. */
