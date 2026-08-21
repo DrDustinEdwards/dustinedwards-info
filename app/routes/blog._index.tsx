@@ -1,4 +1,4 @@
-import { Form, Link, data } from "react-router";
+import { Form, Link, data, redirect } from "react-router";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { BlogSpeculation } from "~/components/blog-speculation";
@@ -60,6 +60,40 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ? (listing.posts.find((post) => post.featured) ?? null)
       : null;
 
+  /*
+   * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE. Chosen over 404 and over
+   * clamping in place, and the three differ in what they tell the reader.
+   *
+   * `/blog?page=99` rendered an empty list under the words "Page 99 of 3". The
+   * list was honest and the sentence was not, and a crawler reading it sees a
+   * soft 404: a 200 with no content, which is the shape search engines penalise
+   * hardest because it cannot be distinguished from a real page.
+   *
+   * NOT 404, because the resource EXISTS. `/blog?tag=cloudflare` is a real
+   * list; 99 is out of bounds for that list, not a missing document, and 404
+   * would also be wrong the moment enough posts are published to make it valid.
+   *
+   * NOT CLAMPED IN PLACE, because the URL would then disagree with the page:
+   * the address bar says 99 and the content is page 3, so a copied link is a
+   * lie and the canonical would have to argue with its own URL.
+   *
+   * A REDIRECT fixes both. The reader lands on a page that exists, at the URL
+   * that names it, and a crawler follows one hop to the canonical rather than
+   * indexing an empty one. 302 rather than 301: the bound moves as posts are
+   * published, so this is where page 99 goes TODAY, not forever.
+   *
+   * Page 0 and negatives fall out of the same clamp. The parse above already
+   * turns junk into 1 via `|| 1`, so only numbers above the bound reach here.
+   */
+  if (page > listing.pageCount) {
+    const target = new URLSearchParams();
+    if (tag) target.set("tag", tag);
+    if (year) target.set("year", year);
+    if (listing.pageCount > 1) target.set("page", String(listing.pageCount));
+    const qs = target.toString();
+    throw redirect(qs ? `/blog?${qs}` : "/blog");
+  }
+
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
 
   const payload = {
@@ -94,12 +128,35 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const title = loaderData?.activeTag
-    ? `Blog: ${loaderData.activeTag} | ${SITE.name}`
-    : `Blog | ${SITE.name}`;
+  /* The year names the page too. A reader with three `/blog` tabs open, one per
+     year, otherwise sees three identical titles. */
+  const filterLabel = [loaderData?.activeTag, loaderData?.activeYear]
+    .filter(Boolean)
+    .join(", ");
+  const title = filterLabel ? `Blog: ${filterLabel} | ${SITE.name}` : `Blog | ${SITE.name}`;
   const description = "Writing on building for the web, mostly on Cloudflare.";
-  const canonical = loaderData?.activeTag
-    ? `${SITE_ORIGIN}/blog?tag=${encodeURIComponent(loaderData.activeTag)}`
+  /*
+   * THE CANONICAL CARRIES EVERY AXIS THAT CHANGES THE LIST, which is all three.
+   *
+   * It carried `tag` alone, so `/blog?year=2026` and `/blog?page=2` each
+   * declared `/blog` as their canonical. That tells a crawler those are the
+   * same document as the unfiltered first page, which they are not: they are
+   * different posts. The recorded consequence is thin-duplicate treatment, and
+   * the actual one is worse, that the pages are asking to be dropped from the
+   * index in favour of a page whose content they do not share.
+   *
+   * Built from the same axes `filterHref` uses, in the same order, so the
+   * canonical of a page is byte-identical to the link that reaches it.
+   */
+  const canonicalParams = new URLSearchParams();
+  if (loaderData?.activeTag) canonicalParams.set("tag", loaderData.activeTag);
+  if (loaderData?.activeYear) canonicalParams.set("year", loaderData.activeYear);
+  if (loaderData?.page && loaderData.page > 1) {
+    canonicalParams.set("page", String(loaderData.page));
+  }
+  const canonicalQuery = canonicalParams.toString();
+  const canonical = canonicalQuery
+    ? `${SITE_ORIGIN}/blog?${canonicalQuery}`
     : `${SITE_ORIGIN}/blog`;
 
   return [
@@ -144,14 +201,39 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
   const { posts, tags, years, activeTag, activeYear, featured, page, pageCount } =
     loaderData;
 
-  const pageHref = (n: number) => {
+  /**
+   * EVERY link on this page, from one builder.
+   *
+   * The loader composes tag AND year into a single query, so the two filters
+   * are ANDed and a reader can legitimately be in both at once. The chips did
+   * not know that: a tag chip linked to `/blog?tag=x` and a year chip to
+   * `/blog?year=y`, so clicking either one silently DESTROYED the other. A
+   * reader filtering to 2026 and then clicking a tag lost the year without
+   * being told, and the chip they had just been using stopped being current.
+   *
+   * `pageHref` already knew how to preserve both and was the only link that
+   * did. This generalises it rather than adding a second spelling: an override
+   * of `null` clears one axis, which is what the All chips want, and every
+   * other caller passes what it is changing.
+   *
+   * Page is dropped on any filter change, deliberately. Page 3 of one filter is
+   * not page 3 of another, and carrying it would land a reader on an empty list
+   * that their own click created.
+   */
+  const filterHref = (
+    override: { tag?: string | null; year?: string | null; page?: number } = {},
+  ) => {
     const params = new URLSearchParams();
-    if (activeTag) params.set("tag", activeTag);
-    if (activeYear) params.set("year", activeYear);
-    if (n > 1) params.set("page", String(n));
+    const tag = "tag" in override ? override.tag : activeTag;
+    const year = "year" in override ? override.year : activeYear;
+    if (tag) params.set("tag", tag);
+    if (year) params.set("year", year);
+    if (override.page && override.page > 1) params.set("page", String(override.page));
     const qs = params.toString();
     return qs ? `/blog?${qs}` : "/blog";
   };
+
+  const pageHref = (n: number) => filterHref({ page: n });
 
   return (
     <>
@@ -200,8 +282,9 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
 
         {tags.length > 0 && (
           <nav className="tag-chips" aria-label="Filter posts by tag">
+            {/* Clears the TAG and keeps the year, rather than clearing both. */}
             <Link
-              to="/blog"
+              to={filterHref({ tag: null })}
               className="tag-chip"
               aria-current={activeTag ? undefined : "true"}
             >
@@ -210,7 +293,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
             {tags.map((tag) => (
               <Link
                 key={tag.slug}
-                to={`/blog?tag=${encodeURIComponent(tag.slug)}`}
+                to={filterHref({ tag: tag.slug })}
                 className="tag-chip"
                 aria-current={activeTag === tag.slug ? "true" : undefined}
               >
@@ -222,13 +305,14 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
 
         {years.length > 1 && (
           <nav className="year-archive" aria-label="Filter posts by year">
-            <Link to="/blog" aria-current={activeYear ? undefined : "true"}>
+            {/* Clears the YEAR and keeps the tag. */}
+            <Link to={filterHref({ year: null })} aria-current={activeYear ? undefined : "true"}>
               All years
             </Link>
             {years.map((entry) => (
               <Link
                 key={entry.year}
-                to={`/blog?year=${entry.year}`}
+                to={filterHref({ year: String(entry.year) })}
                 aria-current={activeYear === entry.year ? "true" : undefined}
               >
                 {entry.year} <span className="tag-count">{entry.total}</span>
