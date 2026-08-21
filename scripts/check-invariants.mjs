@@ -3031,6 +3031,114 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
   );
 }
 
+/* ------- 18. the cutover checklist is complete and current ---------------- */
+
+/*
+ * A CHECKLIST THAT LOST ITEMS ONCE ALREADY.
+ *
+ * The DNS cutover steps lived inside current-state paragraphs in Capsid's
+ * core.md, and the 2026-08-21 consolidation that cut that file by 87 percent
+ * deleted most of them. They survived only in version history. The audit that
+ * found it named the mechanism exactly: **the cut asked "is this a number the
+ * repo also knows?" and bindings had been filed inside status prose**, so a
+ * question that was right for status was wrong for rules.
+ *
+ * They are in `CUTOVER.md` now, and this is what stops the same thing happening
+ * again: an item cannot be dropped from that file without failing here.
+ *
+ * ## THE ORIGIN IS BOUND, NOT JUST NAMED, and that is the half with teeth
+ *
+ * Keyword presence proves an item is still WRITTEN. It cannot prove the document
+ * is still TRUE. `SITE_ORIGIN` is the one item whose truth is checkable from the
+ * repo: the document names the current value, and it is read out of
+ * `app/lib/seo.ts` rather than restated. **On the day the origin changes, this
+ * goes red until the checklist follows**, which is the same shape as
+ * `check:llms` binding the llms.txt contact URL, and it fires on exactly the
+ * event the checklist exists for.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * **It reads two files.** It cannot tell whether any step was PERFORMED, whether
+ * the zone is still gray-clouded, whether the Web Analytics auto-install is
+ * still armed, or whether a Google redirect URI exists. Every one of those lives
+ * in a Cloudflare or Google console, not in this repo. A green result here means
+ * the checklist is complete and its one machine-checkable fact agrees with the
+ * code; it means nothing at all about the state of the world.
+ */
+
+console.log("\n  18. the cutover checklist is complete and current");
+
+{
+  const cutover = readFileSync(join(root, "CUTOVER.md"), "utf8");
+  const seo = readFileSync(join(root, "app", "lib", "seo.ts"), "utf8");
+
+  /*
+   * SCOPE, ASSERTED. Against an empty or truncated file every keyword check
+   * below fails at once and the report would read as nine missing steps rather
+   * than as one missing document.
+   */
+  ok(
+    "CUTOVER.md is a document rather than a stub",
+    cutover.length > 1500,
+    `${cutover.length} characters. Below that, the item checks below are ` +
+      `measuring whether the file exists, not what it says.`,
+  );
+
+  /*
+   * EVERY ITEM THE CONSOLIDATION DELETED, one assertion each, named rather than
+   * counted. A count would let one item be swapped for another; a name cannot.
+   * The needle is the distinctive token, not the sentence, so the prose stays
+   * the writer's.
+   */
+  /** @type {Array<[string, RegExp]>} */
+  const ITEMS = [
+    ["the Web Analytics auto-install landmine", /auto_install/],
+    ["SITE_ORIGIN", /SITE_ORIGIN/],
+    ["BETTER_AUTH_URL", /BETTER_AUTH_URL/],
+    ["the Google redirect URI", /redirect URI/i],
+    ["AI Search authorized hosts", /Authorized hosts/i],
+    ["operator allowedHostnames", /allowedHostnames/],
+    ["103 Early Hints", /103 Early Hints/],
+    ["HTML caching as a decision", /HTML caching is a DECISION/i],
+    ["the workflow-mainline sunset", /workflow-mainline\.md` SUNSETS|workflow-mainline/i],
+    ["the gray-cloud facts", /gray-clouded/i],
+    ["the 2017 delegation date", /2017-03-20/],
+    ["the legacy origin address", /50\.116\.84\.36/],
+  ];
+
+  for (const [name, needle] of ITEMS) {
+    ok(
+      `CUTOVER.md still names ${name}`,
+      needle.test(cutover),
+      `the checklist no longer mentions it. This document exists because a ` +
+        `consolidation deleted these once; dropping one silently is the failure ` +
+        `this section is here to prevent.`,
+    );
+  }
+
+  /*
+   * THE BINDING. Two independent sources: the value the code uses, and the value
+   * the checklist tells an operator to change.
+   */
+  const origin = (seo.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
+
+  ok(
+    "SITE_ORIGIN was read out of seo.ts",
+    origin.length > 0,
+    "the declaration did not parse, so the comparison below would compare " +
+      "the checklist against an empty string and pass on any document.",
+  );
+
+  ok(
+    "CUTOVER.md names the SITE_ORIGIN the code actually uses",
+    origin.length > 0 && cutover.includes(origin),
+    `seo.ts says ${origin} and CUTOVER.md does not contain it. Either the origin ` +
+      `changed and the checklist was not updated, which is the exact moment this ` +
+      `document matters, or the checklist is describing a site that no longer ` +
+      `exists.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -3067,7 +3175,7 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 136;
+const MINIMUM_CHECKS = 150;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

@@ -215,6 +215,8 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
     VERIFICATION.md            how to prove a deploy, a claim, or a gate. The method
                                behind rules 7, 10 and 12. Moved out of Capsid 2026-08-20
     RECOVERY.md                rebuilding every Cloudflare resource from nothing
+    CUTOVER.md                 taking the apex off legacy WordPress. Harvested back
+                               2026-08-21 from a Capsid cut that had deleted most of it
     README.md                  what the site is, for a reader who is not a session
 
 All other paths are Capsid documents in the `dustinedwards` namespace.
