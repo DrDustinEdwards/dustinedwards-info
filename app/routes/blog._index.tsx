@@ -15,6 +15,7 @@ import {
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
+  pageMeta,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
@@ -155,20 +156,19 @@ export function meta({ loaderData }: Route.MetaArgs) {
     canonicalParams.set("page", String(loaderData.page));
   }
   const canonicalQuery = canonicalParams.toString();
-  const canonical = canonicalQuery
-    ? `${SITE_ORIGIN}/blog?${canonicalQuery}`
-    : `${SITE_ORIGIN}/blog`;
+  const path = canonicalQuery ? `/blog?${canonicalQuery}` : "/blog";
 
+  /*
+   * THE SHARED BUILDER, plus the two feed links only this page has.
+   *
+   * The social half was a hand-written array here exactly as it was on five
+   * other pages, and it had drifted the same way: no `twitter:image`, so the
+   * card it declared rendered as a bare link. `pageMeta` owns the set and this
+   * file adds what is genuinely local, which is the RSS and JSON feed
+   * alternates.
+   */
   return [
-    { title },
-    { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: canonical },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: canonical },
-    { property: "og:image", content: DEFAULT_OG_IMAGE },
-    { name: "twitter:card", content: "summary_large_image" },
+    ...pageMeta({ title, description, path }),
     {
       tagName: "link",
       rel: "alternate",
