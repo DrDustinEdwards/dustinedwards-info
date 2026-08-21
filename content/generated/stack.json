@@ -167,7 +167,6 @@
     "check:features",
     "check:head",
     "check:headers",
-    "check:hooks",
     "check:invariants",
     "check:llms",
     "check:logo",

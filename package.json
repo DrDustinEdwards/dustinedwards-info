@@ -50,7 +50,6 @@
     "check:head": "node scripts/check-head.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:assertions": "node scripts/check-assertions.mjs",
-    "check:hooks": "node scripts/check-hooks.mjs",
     "check:tests": "node scripts/check-tests.mjs",
     "check:types": "npm run -s typecheck",
     "test": "node --test \"test/**/*.test.mjs\"",

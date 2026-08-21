@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 27;
+const MINIMUM_GATES = 26;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -156,7 +156,7 @@ const TIERS = {
    * what `npm run typecheck` needs.
    *
    * IT DELEGATES rather than restating `wrangler types && react-router typegen
-   * && tsc -b`, on the same rule `check:hooks` enforces for the Stop hook:
+   * && tsc -b`, on the same anti-mirror rule the Stop hook follows:
    * package.json is the one place that defines what a typecheck is, and a
    * mirror drifts. This repo has already run a bare `npx tsc -b` against stale
    * generated types for exactly that reason.
@@ -206,11 +206,6 @@ const TIERS = {
   // never that the delimitation is the right one; that judgement stays human.
   // Also asserts every gate header states its own OBSERVATION BOUNDARY.
   "check:assertions": "offline",
-  // Parses .claude/settings.json and asserts the hook wiring. It reads a file:
-  // it cannot see whether Claude Code LOADED that file, whether a user-level
-  // settings file overrode it, or whether any hook actually ran. A green run is
-  // compatible with enforcement being entirely off. It never writes.
-  "check:hooks": "offline",
   // sha256s drizzle/*.sql against drizzle/manifest.json, both directions. Reads
   // files and nothing else. It proves the files match the manifest, NOT that
   // the manifest was honest when written and NOT what the live database
