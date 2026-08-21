@@ -19,6 +19,9 @@ Rebuilding the platform from nothing is a different job with its own document:
 see **[RECOVERY.md](RECOVERY.md)** for every binding, the order they have to be
 created in, and what is genuinely unrecoverable. Nothing here repeats it.
 
+How anything here gets PROVEN is a third: **[VERIFICATION.md](VERIFICATION.md)**
+is the method behind the gates, written from the times it was got wrong.
+
 ## Stack
 
 | Layer | What |
