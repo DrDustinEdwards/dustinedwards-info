@@ -186,7 +186,48 @@ console.log(
  * it and there is no natural movement to absorb. The remote tier only ADDS the
  * D1 row comparison, so a floor set on the offline figure holds for both.
  */
-const MINIMUM_CHECKS = 6;
+/*
+ * THE CONTACT URL IS BOUND TO SITE_ORIGIN, in both directions.
+ *
+ * `content/llms.txt` is a tracked literal, so it cannot import anything and its
+ * contact line was typed by hand. It said `https://dustinedwards.info` while
+ * `SITE_ORIGIN` is the workers.dev host, so the one machine-readable file whose
+ * entire audience is crawlers pointed them at the LEGACY WORDPRESS SITE rather
+ * than at this one.
+ *
+ * The gate is the binding a literal file cannot express. At DNS cutover
+ * `SITE_ORIGIN` changes and this goes red until llms.txt follows, which is the
+ * point: the two move together or the build says so.
+ *
+ * The heading on line 1 is deliberately NOT checked. `# dustinedwards.info` is
+ * the site's NAME, which is that domain either way, and is not a claim about
+ * where anything is served from.
+ */
+{
+  const seoSource = readFileSync("app/lib/seo.ts", "utf8");
+  const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
+
+  assertThat(
+    origin.startsWith("https://"),
+    "SITE_ORIGIN was read out of seo.ts",
+    `parsed ${JSON.stringify(origin)}; without it the comparison below is vacuous`,
+  );
+
+  const contact = (fileText.match(/## Contact\s*\n\s*\n(\S+)/) ?? [])[1] ?? "";
+  assertThat(
+    contact.startsWith("https://"),
+    "llms.txt has a contact URL to compare",
+    `parsed ${JSON.stringify(contact)} from the Contact section`,
+  );
+  assertThat(
+    contact === origin,
+    "the llms.txt contact URL is SITE_ORIGIN",
+    `llms.txt says ${contact} and SITE_ORIGIN is ${origin}. The file crawlers read ` +
+      `points somewhere this site is not served from.`,
+  );
+}
+
+const MINIMUM_CHECKS = 9;
 if (checks < MINIMUM_CHECKS) {
   assertThat(
     false,
