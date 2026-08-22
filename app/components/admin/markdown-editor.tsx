@@ -268,6 +268,41 @@ function looksLikeUrl(text: string) {
   return /^(https?:\/\/|mailto:|\/|#)/i.test(text.trim());
 }
 
+/**
+ * THE NONCE THIS DOCUMENT'S CSP WILL ACTUALLY ACCEPT.
+ *
+ * CodeMirror injects its StyleModule as an inline `<style>` element on mount.
+ * Under an enforced `style-src` that element is refused unless it carries a
+ * nonce the DOCUMENT'S OWN header names, and `EditorView.cspNonce` is the
+ * facet `@codemirror/view` exposes for putting one on it.
+ *
+ * **READ OFF THE DOCUMENT, DELIBERATELY NOT OFF LOADER DATA, and the
+ * distinction is the whole correctness argument.** The root loader does carry
+ * a `nonce`, and the admin layout already uses it for the no-flash script. But
+ * the root loader RE-RUNS on client-side navigation, so after a transition from
+ * /admin/posts to /admin/posts/new its `nonce` is the one minted for that
+ * `.data` request, which is a different value from the one in the enforced
+ * header of the document still on screen. Nonces are per-request here, measured
+ * (four cookie-bearing requests, four distinct nonces), so that mismatch is
+ * certain rather than possible, and the editor mounts after exactly that kind
+ * of navigation. The document's own nonce is the only value the document's own
+ * policy accepts, and it does not change when the route does.
+ *
+ * The `nonce` IDL PROPERTY, not `getAttribute`. Browsers hide the content
+ * attribute after parsing precisely so an injected script cannot read a nonce
+ * back out of the DOM; the property is the supported way in, and it returns the
+ * empty string rather than the value on elements that never had one.
+ *
+ * FAILS CLOSED. No carrier means no nonce means the style element is refused,
+ * which is exactly today's behaviour and not worse. Fabricating a value would
+ * satisfy the facet while matching no policy, which is hard rule 13's
+ * substituted fallback wearing a different hat.
+ */
+function documentCspNonce(): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+}
+
 export default function MarkdownEditor({
   value,
   onChange,
@@ -447,6 +482,14 @@ export default function MarkdownEditor({
     if (!parent || viewRef.current) return;
 
     const extensions: Extension[] = [
+      /*
+       * FIRST, because everything below this line that styles anything reaches
+       * the DOM through the same injected element. `houseTheme` and
+       * `syntaxHighlighting` are StyleModules too, so without this the house
+       * appearance was being dropped alongside CodeMirror's base theme and only
+       * `admin-editor.css` was holding the editor together.
+       */
+      EditorView.cspNonce.of(documentCspNonce()),
       history(),
       markdown({ base: markdownLanguage }),
       syntaxHighlighting(houseHighlight),

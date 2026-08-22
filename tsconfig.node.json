@@ -75,7 +75,13 @@
     "app/lib/editor/publish-policy.mjs",
     // The editor's transition table. Same principle: the Worker imports it and
     // check:admin-ui imports it, so both projects must reach it.
-    "app/lib/editor/publish-transition.mjs"
+    "app/lib/editor/publish-transition.mjs",
+    // The Content Security Policy. The Worker builds every response header
+    // from it and check:headers CALLS it once per branch, on the same
+    // principle as publish-policy.mjs: the gate must not assert against a
+    // second copy of the policy it is checking. It is under workers/ rather
+    // than app/ because it is response policy, not routing.
+    "workers/csp.mjs"
   ],
   "compilerOptions": {
     "composite": true,
