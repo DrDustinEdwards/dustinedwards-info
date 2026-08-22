@@ -133,6 +133,25 @@ const isoDateTime = z.preprocess(
  */
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/**
+ * WHERE A POST LIVES IN THE REPOSITORY. Stated once, here.
+ *
+ * Hard rule 6 says this string is stated ONCE, by the exported `postPath()`.
+ * It was not: this module built the same path independently at `sourcePath`
+ * below while `publish.server.ts` exported the canonical one, so the rule was
+ * true of every consumer except the module that produces the artifact.
+ *
+ * It lives HERE rather than there because the dependency only runs one way:
+ * `publish.server.ts` already imports this module, and this module cannot
+ * import a `.server` file without dragging the server boundary into the build
+ * scripts. Same neighbourhood as `SLUG_PATTERN` on purpose, which is the same
+ * class of rule and was consolidated for the same reason.
+ *
+ * @param {string} slug
+ * @returns {string}
+ */
+export const postPath = (slug) => `content/posts/${slug}.md`;
+
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),
   slug: z.string().regex(SLUG_PATTERN, "must be lowercase kebab-case"),
@@ -1399,6 +1418,6 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     mediaRefs,
     markdown: parsed.content,
     html,
-    sourcePath: `content/posts/${fm.slug}.md`,
+    sourcePath: postPath(fm.slug),
   };
 }
