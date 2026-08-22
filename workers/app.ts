@@ -2,6 +2,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
+import { serverTiming, timingsContext } from "~/lib/timing";
 import { handleMediaEvents } from "./media-events";
 
 // Re-exported so the runtime can find the class its binding names. The Ask
@@ -423,7 +424,52 @@ export default {
     const nonce = crypto.randomUUID();
     context.set(nonceContext, nonce);
 
+    /*
+     * THE TIMING HEADER IS STAMPED HERE, and it has to be, because every other
+     * place races.
+     *
+     * `timings` is ONE array shared through context, and the admin layout's
+     * middleware is what creates it. Every loader pushes into that same array,
+     * and loaders for a matched route run CONCURRENTLY. So a route that stamped
+     * `Server-Timing` from inside its own loader was stamping whatever had
+     * accumulated at the instant IT finished.
+     *
+     * MEASURED on production 2026-08-22, four samples each: /admin.data
+     * carried `auth_create|auth_getsession|overview_source|loader_total` and
+     * had LOST all four of the layout's marks, because the index route's loader
+     * is a stub that finished first. /admin/posts.data carried all twelve,
+     * because its loader takes ~314ms and the layout had long since pushed.
+     * The header's contents depended on which loader won a race, which makes
+     * every breakdown read off it wrong in a way that looks like data.
+     *
+     * Here is the one point where the array is COMPLETE: the handler has
+     * returned, so every loader has finished. The per-route stamps still run
+     * and are simply overwritten by this one; they are now redundant rather
+     * than wrong, and removing them is a separate tidy.
+     *
+     * The creation of the array is deliberately NOT moved here. It stays in the
+     * admin middleware, which is what confines timing to the admin subtree; a
+     * request that never asked carries `undefined` and this whole block is
+     * skipped, so a public response is byte-identical to what shipped.
+     */
+    const handlerStart = performance.now();
     const response = await requestHandler(request, context);
+    const timings = context.get(timingsContext).timings;
+    /*
+     * `worker_total` BOUNDS EVERYTHING, and it is the only mark this file adds.
+     *
+     * The previous session's criterion was that the response path gets no
+     * dedicated instrument unless it owned real time, and it does not: the
+     * browser-side residual after `loader_total` and `layout_total` measured
+     * 25ms at the median over twelve samples, and that figure still includes a
+     * network round trip. This is not that instrument. It is an outer bound, so
+     * the residual can be read off the header itself instead of reconstructed
+     * from PerformanceResourceTiming in a browser, which is what verifying the
+     * fix above requires.
+     */
+    if (timings) {
+      timings.push({ name: "worker_total", ms: performance.now() - handlerStart });
+    }
 
     // THE COOKIELESS-ONLY RULE.
     //
@@ -498,6 +544,7 @@ export default {
 
     try {
       if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);
+      if (timings) response.headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(response.headers);
       response.headers.set("Reporting-Endpoints", reportTo);
       response.headers.set("Content-Security-Policy", csp);
@@ -507,6 +554,7 @@ export default {
     } catch {
       const headers = new Headers(response.headers);
       if (downgradeForCookie) headers.set("cache-control", UNCACHED);
+      if (timings) headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(headers);
       headers.set("Reporting-Endpoints", reportTo);
       headers.set("Content-Security-Policy", csp);
