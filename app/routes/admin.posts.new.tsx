@@ -1,4 +1,6 @@
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
+
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
 
 import { PostEditor } from "~/components/admin/post-editor";
 import { listAllPostsForAdmin, listBlogTags } from "~/db";
@@ -15,23 +17,51 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
+  /*
+   * FOUR SERIAL AWAITS, three of them inside the returned object literal, same
+   * shape as the editor. Marked without reordering, so the numbers describe
+   * what ships.
+   */
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
   const env = getEnv(context);
   const today = new Date().toISOString().slice(0, 10);
   // A missing or broken token must not blank the page. Preview does not touch
   // GitHub, so the editor stays usable and only saving reports the problem.
-  const headSha = await currentHead(env).catch(() => "");
-  return {
+  const headSha = await timed(timings, "gh_head", () => currentHead(env).catch(() => ""));
+  const payload = {
     headSha,
     fields: { ...EMPTY_FIELDS, date: today },
-    tagOptions: (await listBlogTags(env).catch(() => [])).map((tag) => tag.slug),
+    tagOptions: (
+      await timed(timings, "d1_tags", () => listBlogTags(env).catch(() => []))
+    ).map((tag) => tag.slug),
     // The site's own posts, for the body editor's Cmd+K link search.
-    linkTargets: await loadLinkTargets(env),
+    linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
     // So the slug field can say "taken" while the author is still typing,
     // rather than after a round trip that gets refused. The save gate remains
     // the authority; this only saves a wasted submit.
-    existingSlugs: (await listAllPostsForAdmin(env).catch(() => [])).map((post) => post.slug),
+    existingSlugs: (
+      await timed(timings, "d1_all_posts", () => listAllPostsForAdmin(env).catch(() => []))
+    ).map((post) => post.slug),
   };
+
+  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
 }
+
+/**
+ * Carries the loader's `Server-Timing` to the response. Same shape as
+ * admin.tsx and admin.media._index, and deliberately no Cache-Control.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers();
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
+}
+
 
 export async function action({ request, context }: Route.ActionArgs) {
   const result = await handleEditorAction(getEnv(context), request);

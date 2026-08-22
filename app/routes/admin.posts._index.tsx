@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Form, Link, useNavigation } from "react-router";
+import { Form, Link, data, useNavigation } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
@@ -87,13 +88,22 @@ function daysUntil(publishAt: Date, now: number) {
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
+  /*
+   * INSTRUMENTED 2026-08-22, and this route is why the session exists.
+   *
+   * It cost 1,420ms median with NOT ONE `timed()` call, while its two D1
+   * queries measure 0.33 to 0.47ms IN D1. Roughly 1,400ms was unattributed, and
+   * three previous fixes landed on the 90ms layout because the layout was the
+   * only thing marked. Every await below now has a name.
+   */
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
   const env = getEnv(context);
   const filters = readFilters(new URL(request.url).searchParams);
 
-  const [rows, tagRows] = await Promise.all([
-    listAllPostsForAdmin(env),
-    listAllPostTagsForAdmin(env),
-  ]);
+  const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
+    Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
+  );
 
   const tagsBySlug = new Map<string, string[]>();
   for (const row of tagRows) {
@@ -141,18 +151,34 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // the context, because the Posts nav badge wants the same fact and a listing
   // per consumer would be two. It still arrives in THIS route's loader data:
   // the alert owns the repair, and check:admin-ui fabricates `ask` here.
-  const ask = await context.get(askStatusContext)();
+  /*
+   * THE PRIME CANDIDATE, now a measurement instead of an argument.
+   *
+   * This is the UNCACHED Ask reader. `askDriftCount` gave the nav badge a
+   * short-TTL KV cache precisely because this call's per-call variance is 46 to
+   * 2,055ms measured, and that fix took it off the LAYOUT's path. This page
+   * still makes it, on every load, and nothing named it until now.
+   */
+  const ask = await timed(timings, "ask_status_uncached", () =>
+    context.get(askStatusContext)(),
+  );
 
+  /*
+   * A SECOND UNMARKED AWAIT, which the diagnosis did not name: this reads the
+   * ASK_BUDGET Durable Object. A DO read is a network hop and a cold object has
+   * to be woken, so it is a candidate on the same footing as the Ask reader and
+   * it had no more instrumentation than the other did.
+   */
   let budget: Awaited<ReturnType<typeof readAskBudget>> | null = null;
   if (askAvailable(env)) {
     try {
-      budget = await readAskBudget(env);
+      budget = await timed(timings, "ask_budget_do", () => readAskBudget(env));
     } catch (error) {
       console.error("ask budget read failed", error);
     }
   }
 
-  return {
+  const payload = {
     posts,
     ask,
     budget,
@@ -169,6 +195,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** Every tag in use, drafts included, for the filter's options. */
     tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
   };
+
+  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+
+  // No header unless it was asked for, so the default response is byte-identical
+  // to what shipped before any of this instrumentation existed.
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
+}
+
+/**
+ * Carries the loader's `Server-Timing` to the response, and nothing else.
+ * Same shape as admin.tsx and admin.media._index.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers();
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
 }
 
 export async function action({ request, context }: Route.ActionArgs) {

@@ -1,5 +1,7 @@
 import { Form, Link, data, redirect } from "react-router";
 
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
+
 import { PostEditor } from "~/components/admin/post-editor";
 import {
   CREATE_FORM_ID,
@@ -27,8 +29,18 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
+  /*
+   * INSTRUMENTED 2026-08-22, and this loader has the shape the admin layout was
+   * already fixed for: FIVE of its awaits sit inside the RETURNED OBJECT
+   * LITERAL, which evaluates its properties in order, so they run SERIALLY.
+   * Most of them are GitHub API calls. The marks below are deliberately added
+   * WITHOUT reordering anything, so the measurement describes what shipped
+   * rather than what a fix would produce.
+   */
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
   const env = getEnv(context);
-  const file = await readFile(env, postPath(params.slug));
+  const file = await timed(timings, "gh_read_file", () => readFile(env, postPath(params.slug)));
   if (!file) throw data("Not found", { status: 404 });
 
   const fields = parsePost(file.content);
@@ -39,7 +51,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   return {
     fields,
-    headSha: await currentHead(env).catch(() => ""),
+    headSha: await timed(timings, "gh_head", () => currentHead(env).catch(() => "")),
     slug: params.slug,
     // A save redirects back here carrying what it did. Read on the server, so
     // the message is in the first byte of HTML and needs no script to appear.
@@ -63,7 +75,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
      */
     previewLinks:
       state === "draft"
-        ? (await listPreviewLinks(env, params.slug).catch(() => [])).map((link) => ({
+        ? (
+            await timed(timings, "kv_preview_links", () =>
+              listPreviewLinks(env, params.slug).catch(() => []),
+            )
+          ).map((link) => ({
             ...link,
             // Built HERE because only a request knows the origin, and a link
             // that a reviewer cannot paste into a browser is not a link.
@@ -78,9 +94,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // Autocomplete for the tag field. Whatever is already in use on the site,
     // so tagging tends toward the existing vocabulary instead of inventing a
     // near-duplicate of a tag that already exists.
-    tagOptions: (await listBlogTags(env).catch(() => [])).map((tag) => tag.slug),
+    tagOptions: (
+      await timed(timings, "d1_tags", () => listBlogTags(env).catch(() => []))
+    ).map((tag) => tag.slug),
     // The site's own posts, for the body editor's Cmd+K link search.
-    linkTargets: await loadLinkTargets(env),
+    linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
     // Commits touching this post, for the drawer's revision list. LOADER work,
     // deliberately: reading history is a read, so it belongs in the loader and
     // adds no form and no submission to this page. Diffs and revision contents
@@ -91,7 +109,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // Non-fatal: a GitHub outage must not blank the editor. The drawer simply
     // reports no commits, and writing still works because the save path fails
     // loudly on its own.
-    revisions: await listCommitsForPath(env, postPath(params.slug)).catch(
+    revisions: await timed(timings, "gh_commits", () =>
+      listCommitsForPath(env, postPath(params.slug)),
+    ).catch(
       () => [],
     ),
   };

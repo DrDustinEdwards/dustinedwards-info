@@ -1,5 +1,7 @@
 import { Link, data } from "react-router";
 
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
+
 import { Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
 import {
@@ -40,27 +42,47 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const path = postPath(params.slug);
 
-  const file = await readFile(env, path);
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
+
+  const file = await timed(timings, "gh_read_file", () => readFile(env, path));
   if (!file) throw data("Not found", { status: 404 });
 
-  const commits = await listCommitsForPath(env, path);
+  const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
 
   // One diff at a time, chosen by query param, so the page stays a plain
   // link-driven document with no client state.
   const selected = new URL(request.url).searchParams.get("commit");
   const patch =
     selected && commits.some((commit) => commit.sha === selected)
-      ? await getCommitPatch(env, selected, path)
+      ? await timed(timings, "gh_patch", () => getCommitPatch(env, selected, path))
       : null;
 
-  return {
+  const payload = {
     slug: params.slug,
     commits,
     selected,
     patch: patch?.patch ?? null,
-    headSha: await currentHead(env).catch(() => ""),
+    headSha: await timed(timings, "gh_head", () => currentHead(env).catch(() => "")),
   };
+
+  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+  return timings
+    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
+    : data(payload);
 }
+
+/**
+ * Carries the loader's `Server-Timing` to the response. Same shape as
+ * admin.tsx and admin.media._index, and deliberately no Cache-Control.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers();
+  const timing = loaderHeaders.get("Server-Timing");
+  if (timing) headers.set("Server-Timing", timing);
+  return headers;
+}
+
 
 function diffKind(line: string) {
   if (line.startsWith("+") && !line.startsWith("+++")) return "add";

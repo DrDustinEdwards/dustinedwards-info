@@ -1,5 +1,7 @@
 import { data } from "react-router";
 
+import { serverTiming, timed, timingsContext } from "~/lib/timing";
+
 import { getEnv } from "~/lib/context";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { getCommitPatch, readFile } from "~/lib/editor/github.server";
@@ -30,6 +32,23 @@ import type { Route } from "./+types/admin.posts.$slug.revisions";
  */
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
+  /*
+   * A RESOURCE ROUTE, and instrumented anyway.
+   *
+   * It returns raw `Response.json`, so the `headers()` export the other admin
+   * routes use does not apply; the header is set on each Response directly.
+   * Marked because it makes GitHub calls and because the finding this session
+   * exists for is that the ONE loader nobody suspected was the expensive one.
+   */
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
+  const stamp = (response: Response) => {
+    if (timings) {
+      timings.push({ name: "loader_total", ms: performance.now() - loaderStart });
+      response.headers.set("Server-Timing", serverTiming(timings));
+    }
+    return response;
+  };
   const env = getEnv(context);
   const url = new URL(request.url);
   const sha = url.searchParams.get("sha");
@@ -38,7 +57,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     // The commit list is supplied by the edit route's own loader, so this
     // branch exists for a refresh after a save rather than for first paint.
     const { listCommitsForPath } = await import("~/lib/editor/github.server");
-    return Response.json({ commits: await listCommitsForPath(env, postPath(params.slug)) });
+    const commits = await timed(timings, "gh_commits", () =>
+      listCommitsForPath(env, postPath(params.slug)),
+    );
+    return stamp(Response.json({ commits }));
   }
 
   // A sha reaches the GitHub API, so it is checked rather than forwarded. Git
@@ -48,7 +70,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
 
   if (url.searchParams.get("want") === "content") {
-    const file = await readFile(env, postPath(params.slug), sha);
+    const file = await timed(timings, "gh_read_file_at_sha", () =>
+      readFile(env, postPath(params.slug), sha),
+    );
     if (!file) {
       throw data(
         { error: `This post does not exist at ${sha.slice(0, 7)}.` },
@@ -57,9 +81,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     }
     // Parsed on the SERVER, so the browser is handed the same field shape the
     // editor already renders and no second frontmatter parser ships to it.
-    return Response.json({ fields: parsePost(file.content) });
+    return stamp(Response.json({ fields: parsePost(file.content) }));
   }
 
-  const patch = await getCommitPatch(env, sha, postPath(params.slug));
-  return Response.json({ patch: patch?.patch ?? null });
+  const patch = await timed(timings, "gh_patch", () =>
+    getCommitPatch(env, sha, postPath(params.slug)),
+  );
+  return stamp(Response.json({ patch: patch?.patch ?? null }));
 }
