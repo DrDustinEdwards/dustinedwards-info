@@ -463,6 +463,21 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
   if (!askAvailable(env)) return null;
   try {
     const result = await syncAskPost(env, record);
+    /*
+     * A PARTIAL UPLOAD IS NOT `ok`. `syncAskPost` no longer throws when a
+     * single record fails, so without this the editor would be told the index
+     * write succeeded while some of the post was missing from it, which is the
+     * silent half of the defect the retry was added for.
+     */
+    if (result.failed.length > 0) {
+      return {
+        ok: false as const,
+        message:
+          `${result.failed.length} of ${result.failed.length + result.uploaded} Ask ` +
+          `record(s) failed to upload after a retry: ${result.failed.join(", ")}. ` +
+          `The post saved. Re-run the Ask sync from /admin/posts to finish indexing it.`,
+      };
+    }
     return { ok: true as const, ...result };
   } catch (error) {
     console.error("ask index sync failed after save", error);

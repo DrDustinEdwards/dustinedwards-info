@@ -384,7 +384,7 @@ export async function syncAskCorpus(
 export async function syncAskPost(
   env: Env,
   post: Parameters<typeof recordsForPosts>[0][number],
-): Promise<{ uploaded: number; removed: number }> {
+): Promise<{ uploaded: number; removed: number; failed: string[] }> {
   // A draft uploads NOTHING, and actively removes anything this post already
   // has in the index. Skipping the upload alone would be a silent leak on the
   // unpublish path: a post published, indexed, then withdrawn would stay
@@ -393,15 +393,64 @@ export async function syncAskPost(
   const records = askPublishable(post) ? recordsForPosts([post]) : [];
   const live = new Set<string>();
 
+  /*
+   * **ONE FAILING RECORD USED TO ABANDON THE REST, AND THAT IS THE DEFECT THIS
+   * LOOP IS SHAPED AROUND.**
+   *
+   * It was a plain `await` per record with no catch, so the first rejection
+   * threw out of this function. MEASURED CONSEQUENCE: on 2026-07-31 the
+   * Observable Plot post published with NINE records, the first upload failed,
+   * and all nine were missing from the index for three weeks. The caller
+   * catches by design (a save must not fail because an index write did), so
+   * the failure had nowhere to go but the drift badge.
+   *
+   * **THE FAILURE CLASS IS TRANSIENT, and that is measured rather than
+   * assumed.** Those same nine records uploaded without complaint when the
+   * corpus sync was finally run three weeks later, so the records were always
+   * uploadable and the original failure was a blip. This stack produces those:
+   * `sync-content` hit "transient read failed, retrying once" twice in one week
+   * against D1. A transient that costs nine records permanently is worth one
+   * retry.
+   *
+   * So: each record is isolated, retried ONCE, and a record that still fails
+   * does not stop the others.
+   *
+   * ## WHY A FAILED KEY STILL JOINS `live`, WHICH LOOKS WRONG AND IS NOT
+   *
+   * The prune below deletes every key this post owns that is NOT in `live`.
+   * Isolating the loop without this line would turn a transient upload failure
+   * into a DELETION of the perfectly good copy already in the index: the old
+   * record would be pruned because the new one failed to land. The throw used
+   * to prevent that by never reaching the prune at all.
+   *
+   * `live` means "this key should exist", not "this key was just written". A
+   * failed key should exist, so it goes in, and whatever is already there
+   * survives until a later sync replaces it.
+   */
+  const failed: string[] = [];
+
   for (const record of records) {
     if (record.url.includes(KEY_SEPARATOR)) {
+      // NOT caught below. This is a correctness guard, not a transient: the key
+      // would resolve back to the wrong URL and cite the wrong section. Retrying
+      // it would produce the same wrong key, so it still throws.
       throw new Error(
         `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
           `uploaded safely: ${record.url}`,
       );
     }
     const key = keyForUrl(record.url);
-    await env.AI_SEARCH.items.upload(key, `# ${record.title}\n\n${record.body}\n`);
+    const body = `# ${record.title}\n\n${record.body}\n`;
+    try {
+      await env.AI_SEARCH.items.upload(key, body);
+    } catch {
+      try {
+        await env.AI_SEARCH.items.upload(key, body);
+      } catch (error) {
+        console.error("ask upload failed twice", key, error);
+        failed.push(key);
+      }
+    }
     live.add(key);
   }
 
@@ -425,7 +474,11 @@ export async function syncAskPost(
   // The drift number just changed. A delete rather than a write, because this
   // path knows the cached value is stale and not what it became.
   await dropCachedDrift(env);
-  return { uploaded: records.length, removed };
+  // `records.length` MINUS what did not land. It used to return the record
+  // count unconditionally, which was accurate only because a failure threw
+  // before reaching here; with the loop isolated it would have reported nine
+  // uploads on a run that achieved none.
+  return { uploaded: records.length - failed.length, removed, failed };
 }
 
 export interface AskIndexStatus {

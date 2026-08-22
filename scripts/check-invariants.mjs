@@ -2318,6 +2318,90 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
       "land, and its presence beside the waitUntil call makes the cache fill by luck again.",
   );
 
+  /*
+   * THE PER-POST UPLOAD ISOLATES EACH RECORD, AND A FAILED KEY STILL COUNTS AS
+   * LIVE. The second half is the one that bites.
+   *
+   * `syncAskPost` used to `await` each upload with no catch, so the first
+   * rejection threw out of the function. MEASURED: one post published with nine
+   * records, the first upload failed, and all nine were missing for three
+   * weeks. The caller catches by design, so a save must not fail because an
+   * index write did, and the failure had nowhere to go but the drift badge.
+   *
+   * Isolating the loop introduces a worse bug if done carelessly. The prune
+   * below the loop deletes every key this post owns that is NOT in `live`, so a
+   * failed upload whose key never joined `live` would cause the good copy
+   * ALREADY in the index to be deleted. The old throw prevented that by never
+   * reaching the prune. `live` means "this key should exist", not "this key was
+   * just written", so a failed key belongs in it.
+   *
+   * Asserted on ORDER, which is what the property actually is: the push happens
+   * inside the catch and the `live.add` happens after it, unconditionally.
+   */
+  const uploadBody = bodyOf(askSource, "syncAskPost");
+  ok(
+    "the syncAskPost body was extracted",
+    uploadBody.length > 200 && uploadBody.includes("items.upload("),
+    `extracted ${uploadBody.length} char(s)`,
+  );
+  ok(
+    "a failed Ask upload is recorded rather than thrown out of the loop",
+    /failed\.push\(/.test(uploadBody) && /catch/.test(uploadBody),
+    "syncAskPost does not isolate a failing record, so one rejection abandons every " +
+      "remaining record for that post. That cost nine records three weeks.",
+  );
+  /*
+   * **POSITION IS NOT REACHABILITY, and the first version of this assertion got
+   * that wrong.** It compared `indexOf("live.add(key)")` against
+   * `indexOf("failed.push(")` and asserted the first came later. A `continue`
+   * added to the catch block satisfies that comparison perfectly: the text
+   * still sits after the push, and the line is now unreachable on the failure
+   * path. Planted exactly that, and the gate stayed green.
+   *
+   * So the assertion reads what is BETWEEN them. Any control-flow escape
+   * between the failure being recorded and the key joining `live` skips the
+   * `live.add`, whatever order the characters are in.
+   */
+  /*
+   * **THE NEEDLE CARRIES NO BACKSLASH, AND THAT IS NOT STYLE.**
+   *
+   * This was written as a word-boundary regex and the boundary did not survive
+   * being written to disk: a shell heredoc ate one backslash, Python read the
+   * remaining `\b` as an escape, and the file received a literal BACKSPACE
+   * (0x08) on both sides of the alternation. The pattern then asked for
+   * "backspace, continue, backspace", which no source file contains, so the
+   * test returned false, the negation returned true, and the assertion passed
+   * on a planted defect.
+   *
+   * It was caught only because the plant was run. A green gate over a violation
+   * confirmed to have applied is the exact shape hard rule 12 exists for.
+   *
+   * Built from a character class instead. It says the same thing as a word
+   * boundary for this input and contains nothing an escaping layer can eat.
+   */
+  const ESCAPE_BEFORE_LIVE = /(^|[^A-Za-z])(continue|return|break|throw)([^A-Za-z]|$)/;
+  const betweenFailAndLive = uploadBody.slice(
+    uploadBody.indexOf("failed.push("),
+    uploadBody.indexOf("live.add(key)"),
+  );
+  ok(
+    "a failed key still joins the live set, so the prune cannot delete a good record",
+    uploadBody.indexOf("failed.push(") !== -1 &&
+      uploadBody.indexOf("live.add(key)") > uploadBody.indexOf("failed.push(") &&
+      uploadBody.split("live.add(").length - 1 === 1 &&
+      !ESCAPE_BEFORE_LIVE.test(betweenFailAndLive),
+    "the failure branch escapes before `live.add(key)`, or the call moved. The prune " +
+      "deletes every key this post owns that is not in `live`, so a transient upload " +
+      "failure would DELETE the copy already in the index. Found between them: " +
+      JSON.stringify(betweenFailAndLive.trim().slice(0, 120)),
+  );
+  ok(
+    "the uploaded count subtracts what failed",
+    /records\.length - failed\.length/.test(uploadBody),
+    "syncAskPost reports records.length as uploaded, which was only ever accurate " +
+      "because a failure threw before reaching the return.",
+  );
+
   // The layout's LOADER specifically. askStatusContext is still set by the
   // middleware and read by /admin/posts, so a file-level assertion would be
   // wrong in both directions.
