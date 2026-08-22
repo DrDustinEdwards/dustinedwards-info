@@ -122,15 +122,13 @@ export async function loader({ context }: Route.LoaderArgs) {
     /**
      * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
      *
-     * The mockup badged Sites, Content, Posts and Media. **`/admin/sites` was
-     * DELETED rather than badged**, because the only number it could have shown
-     * was the length of a hardcoded array of six placeholder cards, and a
-     * numeral in the sidebar is read as a measurement.
+     * The mockup badged four: Sites, Content, Posts and Media. Two of those
+     * sections no longer exist. Both were stubs that could only ever have
+     * badged the length of a hardcoded array, and a numeral in the sidebar is
+     * read as a measurement, so they were deleted rather than finished.
      *
-     * `/admin/content` is still a stubbed cockpit section built on
-     * `stubSource()`, and its own count field is `null` on every one of its
-     * three rows and renders as the words "no data". It gets a badge when it
-     * gets data; until then the absence is the honest signal.
+     * Posts and Media are real rows in D1, so these two are real numbers. The
+     * nav carries exactly the counts something has counted.
      */
     counts,
     /**
@@ -226,13 +224,6 @@ const ICONS = {
       <rect x="3" y="16" width="7" height="5" rx="1" />
     </>
   ),
-  content: (
-    <>
-      <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
-      <path d="M15 4v5h5" />
-      <path d="M8 13h8M8 17h5" />
-    </>
-  ),
   posts: (
     <>
       <path d="M4 5h16M4 10h16M4 15h11M4 20h7" />
@@ -287,7 +278,6 @@ const ICONS = {
 
 const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
-  { to: "/admin/content", label: "Content", icon: ICONS.content },
   // `drift` is the ALARM, and it is a fact about the post corpus with its
   // repair on this page. `count` is the neutral size of the section. They are
   // different claims and they render differently; see `navName` below.

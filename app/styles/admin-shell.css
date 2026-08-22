@@ -1031,35 +1031,6 @@
   font-size: 0.8125rem;
 }
 
-/* Content sections */
-.content-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.content-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.content-section header {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.content-section h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.content-section > .muted {
-  margin: 0;
-  font-size: 0.8125rem;
-}
-
 /* Tool rows */
 .tool-list {
   display: flex;

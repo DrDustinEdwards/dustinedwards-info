@@ -61,7 +61,6 @@ export default [
     // sees, and the panel spends a caption explaining that these are not reads.
     // A URL making the looser claim would undo that in the address bar.
     route("origin-requests", "routes/admin.origin-requests.tsx"),
-    route("content", "routes/admin.content.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     // The media library page. Its loader is also the picker's listing, which is

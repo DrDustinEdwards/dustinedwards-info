@@ -40,15 +40,6 @@ export interface OverviewCard {
   status: HealthStatus;
 }
 
-/** One managed content area of this site (blog, protocols, CV). */
-export interface ContentSection {
-  id: string;
-  label: string;
-  description: string;
-  count: number | null;
-  status: HealthStatus;
-}
-
 /**
  * One row of the origin-requests panel.
  *
