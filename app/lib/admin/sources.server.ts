@@ -28,48 +28,33 @@ function stubSource<T>(
   };
 }
 
-/** Overview status board: one card per signal the cockpit will aggregate. */
+/**
+ * The overview board. ONE CARD, and the reason there is only one is the point.
+ *
+ * It carried six. Five of them read "unknown" with a hint ending in "pending"
+ * or "not wired": Portfolio sites, Site content, Deploys, Errors, and Capsid
+ * memory. Two of those five pointed at `/admin/sites` and `/admin/content`,
+ * which no longer exist. A status board where five of six cards say "no feed"
+ * is not a status board, it is a roadmap rendered as instrumentation, and a
+ * reader cannot tell a measured card from a decorated one at a glance.
+ *
+ * **`auth` is kept because its text is TRUE, and that is a weaker claim than
+ * "measured". Read this before trusting the dot.** "Single admin, Better Auth,
+ * Google, sessions in KV" is an accurate statement about how this plane works.
+ * Its `status: "ok"` is a CONSTANT: it would render the same green dot with the
+ * session store unreachable, because nothing here checks anything. The card
+ * describes the design, it does not report on it.
+ *
+ * Nothing was invented to fill the space left by the other five. If this board
+ * is to become real it wants facts the admin already computes and does not
+ * show, which is a different piece of work.
+ */
 export const overviewSource = stubSource<OverviewCard[]>(
   "overview",
   "Status board",
   "aggregate",
-  "Each card goes live as its integration is wired.",
+  "One card, describing how this plane authenticates. Nothing here polls.",
   [
-    {
-      id: "sites",
-      label: "Portfolio sites",
-      value: "6 tracked",
-      hint: "Per-site health checks not wired yet",
-      status: "unknown",
-    },
-    {
-      id: "content",
-      label: "Site content",
-      value: "Empty",
-      hint: "Blog, protocols and CV counts land here",
-      status: "unknown",
-    },
-    {
-      id: "deploys",
-      label: "Deploys",
-      value: "Manual",
-      hint: "Cloudflare and Vercel deploy feeds pending",
-      status: "unknown",
-    },
-    {
-      id: "errors",
-      label: "Errors",
-      value: "No feed",
-      hint: "Sentry integration pending",
-      status: "unknown",
-    },
-    {
-      id: "capsid",
-      label: "Capsid memory",
-      value: "No feed",
-      hint: "Namespace and document stats pending",
-      status: "unknown",
-    },
     {
       id: "auth",
       label: "Auth",

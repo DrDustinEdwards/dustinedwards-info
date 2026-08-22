@@ -33,7 +33,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   return (
     <Panel
       title="Overview"
-      description="One card per signal the cockpit aggregates. Each goes live as its integration is wired."
+      description="How this plane authenticates. Nothing on this page polls anything."
       result={result}
     >
       <CardGrid>
