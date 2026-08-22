@@ -579,9 +579,64 @@ permits("admin may create an already published post", () =>
    * shared visibility predicate rather than hand-copying it, and must stay
    * posts-only or the twenty page records read as permanently stale.
    */
+  const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
+    const start = src.indexOf(`export async function ${name}(`);
+    if (start === -1) return "";
+    // To the first line that is exactly a closing brace, which is where a
+    // top-level function ends in this codebase's formatting.
+    const end = src.indexOf("\n}", start);
+    return end === -1 ? src.slice(start) : src.slice(start, end + 2);
+  };
+
+  /*
+   * RE-SCOPED 2026-08-22, from a LINE ARRANGEMENT to the PROPERTY the comment
+   * above already says this is for.
+   *
+   * The needle was `/const expected = new Set\(\(await askExpectedUrls\(env\)\)/`,
+   * which pinned one spelling of one line. Running the D1 read and the AI
+   * Search listing CONCURRENTLY, which is legitimate and measured, broke it
+   * while leaving the binding it exists to protect completely intact: the
+   * expected set still comes from `askExpectedUrls` and from nothing else.
+   *
+   * This is the repo's own rule that a gate broken by a refactor is a finding
+   * rather than a fixture to update, applied honestly in the direction it
+   * actually points. The finding is that the ASSERTION was wrong, not the
+   * refactor: it could not distinguish "reads the expected set from D1" from
+   * "reads it from D1 on one physical line", and only the first is the policy.
+   *
+   * It is scoped to the function BODY rather than the file, on exactly the
+   * grounds the block below states: an unanchored needle finds a neighbour's
+   * compliance.
+   */
+  const statusBody = bodyOf(askSource, "askIndexStatus");
+
+  // SCOPE, ASSERTED. An extractor returning "" reports a missing binding that
+  // is present; one returning the whole file passes on a neighbour's code.
+  eq(
+    "the askIndexStatus body was extracted, and it is that function alone",
+    statusBody.length > 80 &&
+      statusBody.length < askSource.length / 4 &&
+      !statusBody.includes("export function askStatusReader"),
+    true,
+  );
+
   eq(
     "askIndexStatus takes its expected set from askExpectedUrls",
-    /const expected = new Set\(\(await askExpectedUrls\(env\)\)/.test(askSource),
+    /askExpectedUrls\(env\)/.test(statusBody) &&
+      /const expected = new Set\([\s\S]{0,80}\.map\(\(u\) => keyForUrl\(u\)\)\)/.test(statusBody),
+    true,
+  );
+
+  /*
+   * AND FROM NOTHING ELSE, which is the half the old needle got for free by
+   * pinning the whole line and which would otherwise be lost. `recordsForPosts`
+   * is the corpus-recomputing producer this moved away from; the file-wide
+   * check below catches it adjacent to the listing, this catches it anywhere in
+   * the body at all.
+   */
+  eq(
+    "askIndexStatus builds its expected set from no other producer",
+    !/recordsForPosts\(/.test(statusBody),
     true,
   );
   eq(
@@ -599,15 +654,6 @@ permits("admin may create an already published post", () =>
    * next function and found a neighbour's compliance. That is hard rule 10's
    * unanchored needle, and it was caught by planting rather than by reading.
    */
-  const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
-    const start = src.indexOf(`export async function ${name}(`);
-    if (start === -1) return "";
-    // To the first line that is exactly a closing brace, which is where a
-    // top-level function ends in this codebase's formatting.
-    const end = src.indexOf("\n}", start);
-    return end === -1 ? src.slice(start) : src.slice(start, end + 2);
-  };
-
   const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
 
   // SCOPE, ASSERTED, for the same reason as the stripper above: an extractor
