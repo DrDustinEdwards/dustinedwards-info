@@ -2284,6 +2284,40 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
       `A hit can reach the listing, which is the cost this cache exists to remove.`,
   );
 
+  /*
+   * THE LATE WRITE IS REGISTERED ON waitUntil, NOT LEFT FLOATING.
+   *
+   * The defect this replaces: on a listing slower than DRIFT_BUDGET_MS the
+   * write was `void listing.then(...)`, which lands only if the isolate
+   * outlives the response. Workers may cancel pending work once a response is
+   * returned, so a slow listing never populated the cache, the next request
+   * missed for the same reason, and the TTL never got a value to expire.
+   * Measured before the fix: 4 misses in 12 samples, and the only two that
+   * populated the cache were the two that finished UNDER the budget.
+   *
+   * Asserted on SOURCE rather than on a mark, for section 11's standing
+   * reason: a floating write and a registered one are indistinguishable to any
+   * instrument on the request, because the difference is entirely in what
+   * happens after the response has gone.
+   *
+   * BOTH DIRECTIONS. Presence of `ctx.waitUntil(` alone would still pass if a
+   * second, floating `void listing` were added beside it, which is exactly the
+   * shape the fix removed.
+   */
+  ok(
+    "the drift cache's late write is registered on waitUntil",
+    /ctx\.waitUntil\(/.test(drift) && /writeCachedDrift\(/.test(drift),
+    "askDriftCount does not hand its late write to waitUntil, so on a listing slower " +
+      "than the budget the write lands only if the isolate outlives the response. That is " +
+      "the self-perpetuating miss this cache was fixed for.",
+  );
+  ok(
+    "no floating promise survives beside it in askDriftCount",
+    !/\bvoid\s+listing\b/.test(drift),
+    "a `void listing` floating write is back in askDriftCount. It cannot be relied on to " +
+      "land, and its presence beside the waitUntil call makes the cache fill by luck again.",
+  );
+
   // The layout's LOADER specifically. askStatusContext is still set by the
   // middleware and read by /admin/posts, so a file-level assertion would be
   // wrong in both directions.

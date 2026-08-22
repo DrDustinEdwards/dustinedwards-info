@@ -572,13 +572,35 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
  * Zero would be a claim that the index agrees with the corpus, made on no
  * evidence, next to a repair the operator would then not perform.
  *
- * **WHAT THE LATE WRITE DOES AND DOES NOT PROMISE.** When the budget expires the
- * listing is left running with a `catch` attached, so a slow answer still
- * populates the cache for the next request IF the isolate outlives the
- * response. Workers may cancel pending work once a response is returned, and
- * this session could not verify which happens without a deploy. It is therefore
- * an optimisation that may not fire, never a correctness requirement: if it
- * never lands, the next request is simply another miss.
+ * **THE LATE WRITE IS NOW A PROMISE, AND THAT IS THIS WINDOW'S FIX. It was the
+ * defect that made the cache self-perpetuating.** The paragraph here used to
+ * say the late write "may not fire" and left it at that, calling it an
+ * optimisation. It was not an optimisation, it was the mechanism, and treating
+ * it as optional is what let the following loop run indefinitely:
+ *
+ *   1. a miss lists the index and the listing outruns the budget
+ *   2. the budget wins, the response returns with no badge
+ *   3. the write was floating, so it lands only if the isolate happens to
+ *      outlive the response, and Workers may cancel pending work once a
+ *      response is returned
+ *   4. nothing was cached, so the NEXT request misses too, at step 1
+ *
+ * A slow listing therefore never populated the cache, and the TTL never got a
+ * value to expire. MEASURED on production before the fix: 4 misses in 12
+ * samples, at 1008, 436, 1009 and 507ms, and the only two that populated the
+ * cache were the two that came in UNDER the budget. The cache filled by luck.
+ *
+ * `ctx.waitUntil` is the fix rather than a longer budget, because the budget is
+ * not what is wrong: any budget has a listing slower than it, and raising the
+ * number moves the line without removing the loop. `waitUntil` extends the
+ * invocation's lifetime for exactly this, so the write lands whether or not the
+ * response has already gone. The reader still waits at most `DRIFT_BUDGET_MS`,
+ * which is the property the budget was there for.
+ *
+ * The ExecutionContext is a REQUIRED parameter and not an optional one, so a
+ * call site that cannot supply it is a typecheck failure rather than a silent
+ * return to the floating write. That is the same reasoning as the ordering
+ * assertion above: structure, where structure is available.
  *
  * ## WHAT THIS IS NOT FOR
  *
@@ -586,7 +608,11 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
  * `askStatusReader` for the full key lists, uncached, because a page whose job
  * is to fix drift must not act on a number up to five minutes old.
  */
-export async function askDriftCount(env: Env, timings?: Timings): Promise<number | null> {
+export async function askDriftCount(
+  env: Env,
+  ctx: ExecutionContext,
+  timings?: Timings,
+): Promise<number | null> {
   if (!askAvailable(env)) return null;
 
   const cached = await timed(timings, "drift_cache_read", () => readCachedDrift(env));
@@ -611,12 +637,24 @@ export async function askDriftCount(env: Env, timings?: Timings): Promise<number
   const status = await Promise.race([listing, budget]);
 
   if (status === undefined) {
-    // The budget won. Keep a handler on the loser so a late rejection is not an
-    // unhandled one, and write the cache if it ever arrives. See the note above
-    // on what this does not promise.
-    void listing
-      .then((late) => (late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null))
-      .catch(() => {});
+    /*
+     * The budget won. The listing is HANDED TO THE RUNTIME rather than left
+     * floating: `waitUntil` is what makes the write land after the response,
+     * and without it a listing slower than the budget could never populate the
+     * cache, so the next request missed for the same reason and the cache
+     * never filled. Grounds and the before measurement are on the doc comment.
+     *
+     * The `catch` stays. `waitUntil` rejecting is not better than a floating
+     * rejection, and a failed listing here is the same non-event it is above:
+     * there is no number to cache and the badge is already absent.
+     */
+    ctx.waitUntil(
+      listing
+        .then((late) =>
+          late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
+        )
+        .catch(() => {}),
+    );
     return null;
   }
 
