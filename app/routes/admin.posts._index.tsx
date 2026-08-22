@@ -101,6 +101,42 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const filters = readFilters(new URL(request.url).searchParams);
 
+  /*
+   * THREE INDEPENDENT READS, STARTED TOGETHER.
+   *
+   * MEASURED on production 2026-08-22, twelve samples, and the marks tiled
+   * `loader_total` with a residual of EXACTLY ZERO on all twelve, which is what
+   * proved they were strictly serial: d1_admin_posts 80ms + ask_status_uncached
+   * 182ms + ask_budget_do 50ms = loader_total 314ms at the median.
+   *
+   * None of the three reads anything the others write. D1, AI Search and a
+   * Durable Object are three different backends. So the loader's floor is the
+   * SLOWEST of them, not their sum.
+   *
+   * This is the third instance of one shape in this repo: the admin layout's
+   * drift and nav counts were serial, and the editor awaits five times inside
+   * its returned object literal. Started here, awaited below, in the order the
+   * work downstream actually needs them.
+   */
+  const askPromise = timed(timings, "ask_status_uncached", () =>
+    context.get(askStatusContext)(),
+  );
+  /*
+   * The catch is attached AT CREATION, not at the await. A promise that rejects
+   * before anything awaits it is an unhandled rejection, and starting work
+   * early is exactly what creates that gap. `askStatusReader` resolves to null
+   * rather than throwing, so only this one needs it, and it keeps the same
+   * "a failing budget read must not take the page down" behaviour the awaited
+   * try/catch had.
+   */
+  const budgetPromise: Promise<Awaited<ReturnType<typeof readAskBudget>> | null> =
+    askAvailable(env)
+      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).catch((error) => {
+          console.error("ask budget read failed", error);
+          return null;
+        })
+      : Promise.resolve(null);
+
   const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
     Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
   );
@@ -159,9 +195,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
    * 2,055ms measured, and that fix took it off the LAYOUT's path. This page
    * still makes it, on every load, and nothing named it until now.
    */
-  const ask = await timed(timings, "ask_status_uncached", () =>
-    context.get(askStatusContext)(),
-  );
+  const ask = await askPromise;
 
   /*
    * A SECOND UNMARKED AWAIT, which the diagnosis did not name: this reads the
@@ -169,14 +203,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
    * to be woken, so it is a candidate on the same footing as the Ask reader and
    * it had no more instrumentation than the other did.
    */
-  let budget: Awaited<ReturnType<typeof readAskBudget>> | null = null;
-  if (askAvailable(env)) {
-    try {
-      budget = await timed(timings, "ask_budget_do", () => readAskBudget(env));
-    } catch (error) {
-      console.error("ask budget read failed", error);
-    }
-  }
+  const budget = await budgetPromise;
 
   const payload = {
     posts,
