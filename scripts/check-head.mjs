@@ -82,7 +82,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -164,6 +164,28 @@ console.log(`\ncheck:head  (ref: ${REF})\n`);
 const NUL_ROOTS = ["scripts", "app", "workers"];
 const SKIP_DIRS = new Set(["node_modules", ".git", "build", ".wrangler", ".react-router"]);
 
+/**
+ * Extensions that are BINARY BY NATURE, so a NUL in them is not the defect.
+ *
+ * Added 2026-08-21, when the Inter subsets moved from `public/fonts/` into
+ * `app/fonts/` so the build could content-hash them. That put two legitimately
+ * binary files inside a root this preflight walks, and it FAILED, correctly by
+ * its own rule and wrongly about the world.
+ *
+ * The class it guards is a file that LOOKS like source and defeats text tooling:
+ * `app/db/index.ts` and `scripts/check-config.mjs` each carried a NUL for over a
+ * week and were invisible to ripgrep. A woff2 is not that. Nobody expects to
+ * grep it, git already treats it as binary by content, and `.gitattributes`
+ * lists the binary formats explicitly.
+ *
+ * **NAMED BY EXTENSION, not "skip anything that looks binary".** The tempting
+ * version is to exempt any file whose first bytes fail a UTF-8 decode, and that
+ * is a catch-all that fails OPEN on exactly the case this exists for: a `.ts`
+ * with a NUL in it is a file that looks binary. This list is two extensions and
+ * anything else still gets read as bytes and still fails.
+ */
+const BINARY_BY_NATURE = new Set([".woff2", ".woff"]);
+
 /** @param {string} dir @param {string[]} out */
 function walkAll(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -175,8 +197,22 @@ function walkAll(dir, out = []) {
   return out;
 }
 
-const scanned = NUL_ROOTS.flatMap((r) => (existsSync(join(root, r)) ? walkAll(join(root, r)) : []));
+const walked = NUL_ROOTS.flatMap((r) => (existsSync(join(root, r)) ? walkAll(join(root, r)) : []));
+const binaryByNature = walked.filter((f) => BINARY_BY_NATURE.has(extname(f).toLowerCase()));
+const scanned = walked.filter((f) => !BINARY_BY_NATURE.has(extname(f).toLowerCase()));
 const nulFiles = scanned.filter((f) => readFileSync(f).includes(0));
+
+/*
+ * THE EXEMPTION POLICES ITSELF. If the fonts move again, or the extension list
+ * outlives the files it was written for, this says so rather than sitting there
+ * quietly widening the scan's blind spot by two file types.
+ */
+ok(
+  "every binary-by-nature exemption still names a file that exists",
+  binaryByNature.length > 0,
+  `no .woff2 or .woff found under ${NUL_ROOTS.join(", ")}, so BINARY_BY_NATURE ` +
+    `now exempts nothing and should be deleted rather than left as a standing hole.`,
+);
 
 /*
  * FLOOR: was >= 50, MEASURED 158 this session through this walk, now >= 138
