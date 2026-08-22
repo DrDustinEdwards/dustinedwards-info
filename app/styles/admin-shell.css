@@ -1059,6 +1059,17 @@
   margin: 0;
 }
 
+/* The heading over the audit list on /admin/tools. No colour is declared
+   here: it inherits, so it adds no token pair for check:contrast to have to
+   measure, which is the cheapest way to add a heading in this repo. */
+.tool-audit-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.9375rem;
+}
+
 .tool-row-label {
   display: flex;
   align-items: center;

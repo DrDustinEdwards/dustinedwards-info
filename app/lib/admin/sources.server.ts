@@ -5,6 +5,8 @@
  * SourceResult contract stay untouched.
  */
 
+import { REQUIRED_SECRETS } from "~/lib/secrets.mjs";
+
 import type {
   AdminDataSource,
   AdminTool,
@@ -114,9 +116,12 @@ export const toolsSource = stubSource<AdminTool[]>(
     {
       id: "secrets-audit",
       label: "Secrets audit",
-      description: "Verify the five required wrangler secrets are set",
+      // DERIVED, never restated. The word "five" sat here while check:secrets
+      // measured eight, and prose cannot be gated against a list in another
+      // file. Both now read `REQUIRED_SECRETS`.
+      description: `Which of the ${REQUIRED_SECRETS.length} ratified secrets this deployment holds`,
       provider: "Worker env",
-      ready: false,
+      ready: true,
     },
   ],
 );

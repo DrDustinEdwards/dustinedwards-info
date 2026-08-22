@@ -81,7 +81,10 @@
     // principle as publish-policy.mjs: the gate must not assert against a
     // second copy of the policy it is checking. It is under workers/ rather
     // than app/ because it is response policy, not routing.
-    "workers/csp.mjs"
+    "workers/csp.mjs",
+    // The ratified secret list. check:secrets imports its expectation from it
+    // and the Worker audits against it, so this project has to reach it.
+    "app/lib/secrets.mjs"
   ],
   "compilerOptions": {
     "composite": true,

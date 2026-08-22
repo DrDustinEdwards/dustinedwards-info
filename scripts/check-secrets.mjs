@@ -67,42 +67,28 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_TYPES = join(root, "app", "env.d.ts");
 
-/**
- * The ratified secret list, transcribed from dustinedwards/core.md. NOT read
- * from the source.
+const SECRETS = REQUIRED_SECRETS;
+
+/*
+ * THE RATIFIED LIST IS IMPORTED, NOT RESTATED, since 2026-08-22.
  *
- * All eight are guarded, including the two that are arguably public. An OAuth
- * client id appears in the authorization URL a browser follows, and
- * `BETTER_AUTH_URL` is a public origin, so neither is a credential. They are
- * guarded anyway because both are read in exactly one `.server` module today,
- * so guarding them costs nothing, and because "arguably public" is the kind of
- * judgement that should be made in a diff rather than assumed by a gate.
+ * It was declared inline here and the cockpit's tools page described "the five
+ * required wrangler secrets" while this gate measured eight. Two copies, one
+ * of them prose, and nothing could compare them.
  *
- * SEVEN BECAME EIGHT on 2026-08-14 with `ANALYTICS_READ_TOKEN`, the credential
- * the cockpit's origin-requests panel reads Analytics Engine with. It is TYPED
- * AND GUARDED BEFORE IT IS PROVISIONED, which is the intended order: the gate
- * should be watching the boundary on the day the value first exists rather than
- * being retrofitted afterwards. Its optional typing follows the OPERATOR_TOKEN
- * contract, and the panel fails closed to a visible error state without it.
- *
- * NOT ON THIS LIST: `CLOUDFLARE_ACCOUNT_ID`. It is a plain var in wrangler.jsonc
- * and an identifier rather than a credential, so guarding it here would spend
- * this gate's signal on a value already published in the core doc. That is a
- * judgement, so it is recorded rather than left to be inferred from an absence.
+ * **THE INDEPENDENCE ARGUMENT SURVIVES THE MOVE**, which is the thing to check
+ * before assuming it does not. This gate's expectation must not be computed
+ * from the code it checks, and it still is not: `app/lib/secrets.mjs` is the
+ * ratified list itself, hand-maintained against the ruling in
+ * `dustinedwards/core.md`. What the tree READS and what `app/env.d.ts`
+ * DECLARES are still parsed independently and still compared against it, so a
+ * secret added to one and not the others still moves one side and fails.
  */
-const SECRETS = [
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-  "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "ADMIN_EMAIL",
-  "GITHUB_TOKEN",
-  "OPERATOR_TOKEN",
-  "ANALYTICS_READ_TOKEN",
-];
 
 /**
  * Names permitted OUTSIDE the server boundary, each with the reason.
