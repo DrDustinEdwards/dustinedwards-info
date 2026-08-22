@@ -5,7 +5,7 @@ import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
-import { getEnv } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { serverTiming, timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
@@ -107,7 +107,14 @@ export async function loader({ context }: Route.LoaderArgs) {
    * reader stays on the context for exactly that caller.
    */
   const [drift, counts] = await Promise.all([
-    timed(timings, "layout_ask_drift", () => askDriftCount(getEnv(context), timings)),
+    /*
+     * The ExecutionContext travels with the env because the miss path finishes
+     * its cache write on `waitUntil`. It is required rather than optional so
+     * this call site cannot quietly go back to a floating write.
+     */
+    timed(timings, "layout_ask_drift", () =>
+      askDriftCount(getEnv(context), getExecutionContext(context), timings),
+    ),
     timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
   ]);
   const payload = {
