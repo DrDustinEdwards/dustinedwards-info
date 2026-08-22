@@ -28,7 +28,10 @@
  * mis-coloured, or has its z-order inverted passes here. Screenshots would need a
  * human or a baseline, and a baseline is a fixture that drifts.
  *
- * **THE ADMIN CASES ARE OPT-IN AND SKIP LOUDLY.** See ADMIN_COOKIE below.
+ * **THE ADMIN CASES ARE OPT-IN.** They read a session from `.admin-session`, a
+ * gitignored file whose tracked `.example` sibling carries the refill
+ * instructions. ABSENT, they skip loudly. SUPPLIED AND UNUSABLE, they FAIL,
+ * because a file on disk is a request for them. See SESSION_COOKIE_NAME below.
  *
  * **THE ADMIN CASES DO NOT OBSERVE THE PREVIEW BUILD.** They cannot, and that is
  * measured rather than assumed: sessions live in the PRODUCTION KV namespace,
@@ -74,6 +77,7 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -84,7 +88,7 @@ const PORT = 4173;
 const BASE = `http://localhost:${PORT}`;
 
 /**
- * A real admin session cookie, or nothing.
+ * A real admin session, read from a FILE first and the environment second.
  *
  * **THE ADMIN CASES CANNOT BE FAKED AND ARE NOT.** Better Auth holds the session
  * in KV, the single admin signs in through Google, and this repo has NO
@@ -94,40 +98,195 @@ const BASE = `http://localhost:${PORT}`;
  * failing under the enforced CSP, lives in the real authenticated render. A
  * stub would have passed while the editor was broken in production.
  *
- * So the cookie is supplied from outside or the cases do not run. When it is
- * absent this SKIPS and says so; it never passes quietly, because a silent skip
- * is how a gate reports success for work it did not do.
+ * ## WHY A FILE, AND NOT THE ENVIRONMENT VARIABLE ALONE
  *
- * ## THE VALUE IS A BARE TOKEN, AND THIS GATE USED TO SEND IT AS A HEADER
+ * `ADMIN_SESSION_COOKIE` has to be exported in the SAME SHELL the gate runs in,
+ * and it was absent in three consecutive sessions. That is not bad luck, it is
+ * the design: a variable that lives in one shell cannot survive the next one,
+ * and nothing in the repo can carry it forward. The cost is recorded rather
+ * than theoretical. The admin block's executed-count floor is DERIVED instead
+ * of measured, and its sideways-scroll plant is still owed, both because the
+ * cases have never once run.
  *
- * MEASURED 2026-08-21, the first session in which the variable was actually
- * set. `ADMIN_SESSION_COOKIE` holds the cookie's VALUE, with no `name=` segment.
- * The old code passed it whole to `setExtraHTTPHeaders({ cookie })`, which
- * produces a `Cookie:` header with no name, which no server can parse. Every
- * request would have bounced to /login and the case would have failed while
- * blaming the session rather than the header. So a value with no `=` is given
- * the canonical name here, and a value that already carries one is left alone.
+ * A gitignored file at the repo root survives shells, survives sessions, and is
+ * checked by `git check-ignore` rather than by assumption. `.admin-session.example`
+ * is tracked beside it and carries the five Chrome clicks that refill it.
+ *
+ * THE ENVIRONMENT STILL WINS where it is set, so nothing that works today stops
+ * working. It is not free: the variable now has to carry the same `name=value`
+ * form the file does, because the old leniency is the defect below.
+ *
+ * ## WHAT THE VALUE HAS TO BE, AND WHY GUESSING FAILED
+ *
+ * MEASURED 2026-08-21: `ADMIN_SESSION_COOKIE` held the cookie's VALUE with no
+ * `name=` segment, was passed whole to a `Cookie:` header, and produced a header
+ * with no name that no server can parse. The repair at the time was to ask
+ * whether the string contained an `=` and to prepend the canonical name when it
+ * did not.
+ *
+ * **THAT TEST CANNOT WORK AND IS REPLACED HERE.** A Better Auth token is
+ * `<id>.<base64 hmac>`, and base64 pads with `=`. So a bare value carrying
+ * padding contains an `=`, is read as already-named, and gets split at the
+ * padding: the name becomes the token and the value becomes the empty string.
+ * Silently, and the failure that follows blames the session.
+ *
+ * There is no string test that separates those two cases, so the gate stops
+ * guessing and states the requirement instead: the pair, with its name. The one
+ * unambiguous case is kept, because it cannot be misread: a value with NO `=`
+ * anywhere is a bare token and is given the canonical name here.
  */
 const SESSION_COOKIE_NAME = "__Secure-better-auth.session_token";
-const ADMIN_COOKIE_RAW = process.env.ADMIN_SESSION_COOKIE ?? "";
-const ADMIN_COOKIE = ADMIN_COOKIE_RAW
-  ? (ADMIN_COOKIE_RAW.includes("=") ? ADMIN_COOKIE_RAW : `${SESSION_COOKIE_NAME}=${ADMIN_COOKIE_RAW}`)
-  : "";
+const SESSION_FILE = join(root, ".admin-session");
+const SESSION_EXAMPLE = ".admin-session.example";
+
+/**
+ * Reads the session file, or null when there is none.
+ *
+ * `key = value`, `#` comments, blank lines ignored. A non-comment line whose key
+ * is not one this understands is taken as the cookie itself, so a bare
+ * `name=value` pasted straight out of DevTools works without the `cookie = `
+ * prefix. Forgiving about the shape of the line, exact about the cookie, which
+ * is the half that cannot be guessed at.
+ *
+ * @param {string} path
+ */
+function readSessionFile(path) {
+  if (!existsSync(path)) return null;
+  /** @type {{ cookie: string, origin: string }} */
+  const out = { cookie: "", origin: "" };
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim().toLowerCase();
+    const value = trimmed.slice(eq + 1).trim();
+    if (key === "origin") out.origin = value;
+    else if (key === "cookie") out.cookie = value;
+    else out.cookie = trimmed;
+  }
+  return out;
+}
+
+/**
+ * Turns whatever was supplied into the one `name=value` pair to send, or names
+ * what was wrong with it.
+ *
+ * Accepts a whole `Cookie:` header, so pasting from the Network tab works: the
+ * session cookie is picked out by name and everything else is dropped, because
+ * `applySession` sets ONE cookie and the wire check sends one pair.
+ *
+ * **RETURNS NAMES, NEVER VALUES.** The diagnostic says which cookie names were
+ * found and how long the string was. A gate that echoes a live session token
+ * into a terminal, a CI log or a report has published it.
+ *
+ * @param {string} raw
+ * @returns {{ pair: string, error: string }}
+ */
+function sessionPair(raw) {
+  const value = raw.trim();
+  if (!value) return { pair: "", error: "" };
+
+  /*
+   * THE PLACEHOLDER IS CHECKED FIRST, and the plant is why.
+   *
+   * `__Secure-better-auth.session_token=PASTE_THE_VALUE_HERE` is a WELL FORMED
+   * pair carrying the right name, so every structural test below passes it and
+   * the request goes out and is refused. That reached the "almost certainly
+   * EXPIRED" branch and told an operator who had never pasted anything that
+   * their session had run out. The repair it named happened to be right; the
+   * diagnosis was invented.
+   *
+   * A file copied and not filled in is its own state and gets its own sentence.
+   */
+  if (value.includes("PASTE_THE_VALUE_HERE")) {
+    return {
+      pair: "",
+      error:
+        `the placeholder from ${SESSION_EXAMPLE} is still in place, so the file was copied ` +
+        `but no cookie was ever pasted into it.`,
+    };
+  }
+
+  // The one unambiguous case: no `=` anywhere is a bare token, so name it.
+  if (!value.includes("=")) return { pair: `${SESSION_COOKIE_NAME}=${value}`, error: "" };
+
+  const pairs = value
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const eq = part.indexOf("=");
+      return eq === -1 ? { name: part, rest: "" } : { name: part.slice(0, eq).trim(), rest: part };
+    });
+
+  const found = pairs.find((c) => c.name === SESSION_COOKIE_NAME);
+  if (found) return { pair: found.rest, error: "" };
+
+  /*
+   * REDACTED BY DEFAULT, because the thing being described might be the secret.
+   *
+   * The malformed case that matters most is a bare token pasted with no name.
+   * Parsed as pairs, its "name" IS the session token, so a diagnostic that
+   * helpfully lists the names it found would print a live credential into the
+   * terminal, and into any CI log the gate ever runs in. Measured on the first
+   * plant, which is how this exists.
+   *
+   * So a segment is echoed only when it LOOKS like a cookie name: short, and
+   * built from the characters names actually use. A Better Auth token is
+   * neither, so it redacts to its length. This heuristic decides only what to
+   * PRINT, never what to accept, and it errs toward printing nothing.
+   */
+  const safeName = (/** @type {string} */ n) =>
+    /^(__Secure-|__Host-)?[A-Za-z0-9_.-]{1,32}$/.test(n) && !/^[A-Za-z0-9+/]{24,}$/.test(n)
+      ? JSON.stringify(n)
+      : `<${n.length}-char segment, redacted: not shaped like a cookie name>`;
+
+  const names = pairs.map((c) => c.name).filter(Boolean);
+  return {
+    pair: "",
+    error:
+      `no cookie named ${SESSION_COOKIE_NAME} in a ${value.length}-character value. ` +
+      `Found ${names.length ? names.map(safeName).join(", ") : "no name at all"}. ` +
+      `A bare value is only accepted when it carries no "=" at all: with one, it cannot be told ` +
+      `apart from a name=value pair, and splitting at base64 padding produces an empty session.`,
+  };
+}
+
+const fileSession = readSessionFile(SESSION_FILE);
+const RAW_COOKIE = process.env.ADMIN_SESSION_COOKIE ?? fileSession?.cookie ?? "";
+const COOKIE_SOURCE = process.env.ADMIN_SESSION_COOKIE
+  ? "the ADMIN_SESSION_COOKIE environment variable"
+  : `.admin-session`;
+const { pair: ADMIN_COOKIE, error: COOKIE_ERROR } = sessionPair(RAW_COOKIE);
+
+/**
+ * Where to go and refill, named after WHICH source was actually read.
+ *
+ * The environment wins when it is set, so a stale variable in the shell makes
+ * the file irrelevant, and "refill .admin-session" would send the reader to edit
+ * a file the gate is not reading. Naming the wrong repair is the exact failure
+ * this block was rewritten to remove.
+ */
+const REFILL_HINT = process.env.ADMIN_SESSION_COOKIE
+  ? `ADMIN_SESSION_COOKIE is set in this shell and OVERRIDES the file. Update it, or unset ` +
+    `it to fall back to .admin-session. ${SESSION_EXAMPLE} has the five Chrome clicks.`
+  : `refill .admin-session. ${SESSION_EXAMPLE} has the five Chrome clicks.`;
 
 /**
  * The origin the admin cases drive, which is NOT the preview server.
  *
- * MEASURED, and it is why this variable exists at all: a valid production
- * session presented to `vite preview` renders the login page, because the
- * preview's APP_KV is local miniflare storage and the session is a key in the
- * production namespace. Nothing about the cookie is wrong in that case, so the
- * gate must not report it as a rejected session.
+ * MEASURED, and it is why this exists at all: a valid production session
+ * presented to `vite preview` renders the login page, because the preview's
+ * APP_KV is local miniflare storage and the session is a key in the production
+ * namespace. Nothing about the cookie is wrong in that case, so the gate must
+ * not report it as a rejected session.
  *
- * Absent, the admin cases SKIP. They do not silently fall back to the preview,
- * because a fallback that cannot authenticate is a case that fails for a reason
- * unrelated to the code under test.
+ * Comes from the same file as the cookie, so setting the session up is one file
+ * and not a file plus a variable. The environment overrides it, on the same
+ * footing as the cookie above.
  */
-const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? "").replace(/\/+$/, "");
+const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? fileSession?.origin ?? "").replace(/\/+$/, "");
 
 /**
  * Puts the session in the browser's COOKIE JAR rather than on a pinned header.
@@ -478,39 +637,74 @@ try {
    * READ THE BANNER. These cases observe ADMIN_ORIGIN, a deployed Worker. Every
    * other case in this file observes the preview build of the working tree.
    */
-  if (!ADMIN_COOKIE) {
+  /*
+   * THREE STATES, AND ONLY THE FIRST IS A SKIP.
+   *
+   * ABSENT means nobody asked for these cases, so the gate says loudly what it
+   * did not cover and moves on. That is the one honest skip here.
+   *
+   * SUPPLIED BUT NOT USABLE is a FAILURE, every variety of it. A session file
+   * on disk is a request for the admin cases, and the operator who wrote it is
+   * entitled to be told they did not happen. Skipping instead would be the
+   * silent-skip failure wearing the shape of a precondition, and it is what made
+   * an expired session read like a broken test.
+   *
+   * The varieties are told apart because they need DIFFERENT REPAIRS, and a
+   * message that cannot tell them apart sends the reader to the wrong one:
+   *
+   *   malformed  the file exists and its cookie cannot be used. Fix the FORMAT.
+   *   no origin  a session was supplied and there is nowhere to send it.
+   *   rejected   the format is right and the server said no. REFILL the file.
+   *
+   * "Rejected" is overwhelmingly an EXPIRED session, so the message leads with
+   * that and names the file that explains the refill rather than describing the
+   * clicks here, where they would rot next to a second copy of themselves.
+   */
+  if (!RAW_COOKIE) {
     skip(
       "the admin plane (6 surfaces, the editor mount, the two mark fills, and the " +
         "sideways-scroll cases at 1280, 553, 480, 400 and 320)",
-      "no ADMIN_SESSION_COOKIE in the environment. These cases need a REAL admin session " +
-        "and are deliberately not stubbed: a fake auth path would not render what production " +
-        "renders, and the defects they exist to catch live in the authenticated render.",
+      `no admin session. These cases need a REAL one and are deliberately not stubbed: ` +
+        `a fake auth path would not render what production renders, and the defects they ` +
+        `exist to catch live in the authenticated render.\n` +
+        `        TO RUN THEM: copy ${SESSION_EXAMPLE} to .admin-session and paste a live ` +
+        `session cookie into it. That file carries the five Chrome clicks. It is gitignored.`,
+    );
+  } else if (COOKIE_ERROR) {
+    ok(
+      `the session supplied in ${COOKIE_SOURCE} is a usable cookie`,
+      false,
+      `${COOKIE_ERROR}\n` +
+        `        This is a FORMAT problem, not an expired session. See ${SESSION_EXAMPLE}. ` +
+        `The admin cases below did not run.`,
     );
   } else if (!ADMIN_ORIGIN) {
-    skip(
-      "the admin plane (6 surfaces, the editor mount, the two mark fills, and the " +
-        "sideways-scroll cases at 1280, 553, 480, 400 and 320)",
-      "ADMIN_SESSION_COOKIE is set but ADMIN_ORIGIN is not. These cases CANNOT run against " +
-        "the preview server: sessions live in the production KV namespace and the preview " +
-        "reads local miniflare storage, so a valid session renders the login page there. " +
-        "Measured, not assumed. Set ADMIN_ORIGIN to a deployed origin to run them.",
+    ok(
+      "the admin cases have an origin to drive",
+      false,
+      `a session was supplied in ${COOKIE_SOURCE} and no origin was. These cases CANNOT run ` +
+        `against the preview server: sessions live in the production KV namespace and the ` +
+        `preview reads local miniflare storage, so a valid session renders the login page ` +
+        `there. Measured, not assumed.\n` +
+        `        Add an \`origin =\` line to .admin-session, or set ADMIN_ORIGIN. The admin ` +
+        `cases below did not run.`,
     );
   } else if (!(await sessionAuthenticates(ADMIN_ORIGIN))) {
-    /*
-     * NOT a skip. The cookie was supplied and the origin was named, so the
-     * operator asked for these cases and is entitled to be told they did not
-     * happen. A skip here would be the silent-skip failure wearing the shape of
-     * a precondition.
-     */
     ok(
-      `the supplied session authenticates against ${ADMIN_ORIGIN}`,
+      `the session supplied in ${COOKIE_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
       false,
-      "GET /admin with the supplied cookie did not return 200. Either the session has " +
-        "expired, or ADMIN_ORIGIN names an origin that does not share the production KV " +
-        "namespace. The admin cases below did not run.",
+      `GET /admin with it did not return 200, so the session is almost certainly EXPIRED. ` +
+        `The format parsed fine and the cookie was named ${SESSION_COOKIE_NAME}, so this is ` +
+        `not a broken test and not a code defect.\n` +
+        `        TO FIX: ${REFILL_HINT}\n` +
+        `        The other possibility is that ${ADMIN_ORIGIN} does not share the production ` +
+        `KV namespace. The admin cases below did not run.`,
     );
   } else {
-    console.log(`\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`);
+    console.log(
+      `\n  admin session: read from ${COOKIE_SOURCE}` +
+        `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`,
+    );
     ok(`the supplied session authenticates against ${ADMIN_ORIGIN}`, true);
     adminCasesRan = true;
 

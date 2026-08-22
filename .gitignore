@@ -38,6 +38,22 @@
 worker-configuration.d.ts
 wrangler.jsonc
 
+# The admin session for check:browser, read by scripts/check-browser.mjs.
+#
+#   .admin-session          ignored. Holds a live Better Auth session cookie for
+#                           the single admin. A credential, so it never lands in
+#                           git; same footing as .dev.vars above.
+#   .admin-session.example  TRACKED, and it is where the instructions live: the
+#                           five clicks in Chrome, what to copy, what format.
+#                           When the session expires that file is the thing to
+#                           read, which is why it is committed and this is not.
+#
+# IGNORED rather than merely untracked, for the reason /og-samples/ is below:
+# `npm run ship` refuses on any dirty tree, untracked files included, so an
+# unignored session file would block every ship window until it was moved out of
+# the repo by hand.
+.admin-session
+
 # Social card review renders, written by `build:og -- --out og-samples`.
 # Untracked because the PNG bytes are not deterministic and are deliberately
 # kept out of the gated artifact, and IGNORED rather than merely untracked
