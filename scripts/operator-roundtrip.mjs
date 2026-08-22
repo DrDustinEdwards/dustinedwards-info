@@ -24,6 +24,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { postPath } from "../app/lib/content/pipeline.mjs";
+
 const ORIGIN = process.env.ORIGIN ?? "https://dustinedwards.dustin-edwards.workers.dev";
 const TOKEN_FILE = process.env.OPERATOR_TOKEN_FILE;
 const SLUG = process.env.THROWAWAY_SLUG ?? "operator-round-trip-probe";
@@ -192,7 +194,7 @@ if (PHASE === "a") {
       const files = (c.files ?? []).map((/** @type {any} */ f) => f.filename).sort();
       check(
         "the commit carries BOTH the markdown and the artifact",
-        files.includes(`content/posts/${SLUG}.md`) && files.includes("content/generated/posts.json"),
+        files.includes(postPath(SLUG)) && files.includes("content/generated/posts.json"),
         files.join(", "),
       );
       check("it is ONE commit, not two", (c.parents ?? []).length === 1);

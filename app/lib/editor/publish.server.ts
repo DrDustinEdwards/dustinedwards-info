@@ -36,6 +36,7 @@ import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.serve
 import {
   ContentError,
   findWideDashes,
+  postPath,
   renderPost,
   withRelated,
 } from "~/lib/content/pipeline.mjs";
@@ -100,7 +101,14 @@ const ARTIFACT_PATH = "content/generated/posts.json";
  * statements of one rule with only some of them bound to each other. A bulk
  * retag would have added a ninth.
  */
-export const postPath = (slug: string) => `content/posts/${slug}.md`;
+/*
+ * RE-EXPORTED, not defined here, since 2026-08-22. The definition moved to
+ * `pipeline.mjs` beside `SLUG_PATTERN` because that module built the same path
+ * independently for the artifact's `sourcePath`, which made hard rule 6's
+ * "stated ONCE" false by one. Re-exporting keeps all eight importers here
+ * unchanged; the string now exists in exactly one place.
+ */
+export { postPath };
 
 /** A save rejected by a gate. `field` and `line` are for pointing at the cause. */
 export class EditorError extends Error {
