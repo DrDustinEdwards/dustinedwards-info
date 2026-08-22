@@ -2947,6 +2947,187 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
   );
 }
 
+/* ------- 15b. four rules are bound to the behaviour they describe -------- */
+
+/*
+ * **BINDING A RULE'S TEXT TO WHAT THE CODE DOES, for the subset where that is
+ * possible at all.**
+ *
+ * Section 15 binds every cited NUMBER to a heading that exists. That catches a
+ * dangling citation and nothing else, and it says so. It cannot see a rule
+ * whose text is simply false, which is what rule 6 was until 2026-08-22: it
+ * claimed `content/posts/<slug>.md` was stated once and there were three
+ * construction sites. Two separate recovery sessions diffed the rules against
+ * their old Capsid text, pronounced them restored, and neither noticed, because
+ * a rule can be transcribed perfectly and still be wrong about the code.
+ *
+ * ## WHY ONLY FOUR
+ *
+ * Most of the fifteen cannot be bound and pretending otherwise would be worse
+ * than leaving them. Rule 5 says so in its own text: it would need a
+ * hand-maintained selector list, which is the mirror this repo keeps deleting.
+ * Rules 7, 10, 12 and 15 are METHOD, claims about how to work rather than about
+ * what the code contains. Rules 1, 2, 3, 9 and 11 cite gates, and asserting a
+ * gate exists is close to spelling.
+ *
+ * Four rules make a crisp, falsifiable claim about the tree:
+ *
+ *   4   CodeMirror is lazy-split, and client auth is imported by /login alone
+ *   6   the post path is stated ONCE, by the exported postPath()
+ *   13  two justified substitutions, each marked at its call site
+ *   14  drizzle-kit is deliberately absent
+ *
+ * ## BOTH DIRECTIONS, WHICH IS THE WHOLE POINT
+ *
+ * Each rule gets a pair: the CLAIM is still in the rule's text, and the CODE
+ * still has the property. Asserting only the code lets someone rewrite the rule
+ * to say the opposite and stay green. Asserting only the text is spelling. Both
+ * together can pass only while the two agree, which is the property section 15
+ * was missing.
+ *
+ * The residue, stated rather than closed: this cannot see a rule rewritten to
+ * describe a DIFFERENT true property. It can only see the claim leaving, or the
+ * property leaving.
+ */
+
+console.log("\n  15b. four rules are bound to the behaviour they describe");
+
+{
+  const claudeText = readFileSync(join(root, "CLAUDE.md"), "utf8").replace(/\r\n/g, "\n");
+
+  /** The body of one rule, from its heading to the next one. */
+  const ruleBody = (/** @type {number} */ n) => {
+    const start = claudeText.indexOf(`### ${n}. `);
+    if (start === -1) return "";
+    const next = claudeText.indexOf("\n### ", start + 1);
+    return next === -1 ? claudeText.slice(start) : claudeText.slice(start, next);
+  };
+
+  /*
+   * SCOPE FIRST. If the extractor stops matching, every claim assertion below
+   * reports a missing claim and every code assertion still passes, which reads
+   * like four rule defects rather than one broken parser.
+   */
+  const bodies = [4, 6, 13, 14].map(ruleBody);
+  ok(
+    "the four bound rules were extracted from CLAUDE.md",
+    bodies.every((b) => b.length > 80),
+    `lengths ${bodies.map((b) => b.length).join(", ")}. A short body means the heading ` +
+      `shape moved and the claim assertions below are checking nothing.`,
+  );
+
+  const files = (/** @type {string} */ dir) => {
+    /** @type {string[]} */
+    const out = [];
+    const walk = (/** @type {string} */ d) => {
+      for (const entry of readdirSync(d, { withFileTypes: true })) {
+        const full = join(d, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx|mjs)$/.test(entry.name)) out.push(full);
+      }
+    };
+    walk(join(root, dir));
+    return out;
+  };
+  const appFiles = files("app");
+  const scriptFiles = files("scripts");
+  ok(
+    "the tree walk found files to search",
+    appFiles.length > 40 && scriptFiles.length > 20,
+    `app ${appFiles.length}, scripts ${scriptFiles.length}`,
+  );
+
+  /* -- rule 4 -------------------------------------------------------------- */
+  ok(
+    "rule 4 still claims client auth is imported by /login alone",
+    /login/.test(bodies[0]) && /auth/i.test(bodies[0]),
+    "rule 4 no longer makes the claim the assertion below checks",
+  );
+  const authImporters = appFiles.filter((f) =>
+    /from\s+["'][^"']*auth-client/.test(readFileSync(f, "utf8")),
+  );
+  ok(
+    "rule 4 holds: exactly one module imports the client auth helper",
+    authImporters.length === 1 && /login\.tsx$/.test(authImporters[0] ?? ""),
+    `imported by ${authImporters.map((f) => relative(root, f)).join(", ") || "nothing"}. ` +
+      `Rule 4 keeps the Worker lean by confining the client auth bundle to /login.`,
+  );
+
+  /* -- rule 6 -------------------------------------------------------------- */
+  ok(
+    "rule 6 still claims the post path is stated ONCE by postPath()",
+    /postPath/.test(bodies[1]) && /ONCE/.test(bodies[1]),
+    "rule 6 no longer makes the claim the assertion below checks",
+  );
+  /*
+   * OCCURRENCES, NOT FILES, and the plant is why. The first version filtered
+   * files containing the pattern and asserted the count was 1. Reintroducing
+   * the exact defect rule 6 describes, a second construction in the SAME file,
+   * left it green: one file, one match, assertion satisfied. That is rule 10's
+   * own "count matches, not containers" discipline broken inside the gate
+   * written to bind rule 6.
+   */
+  const pathSites = [];
+  for (const f of [...appFiles, ...scriptFiles]) {
+    const hits = (readFileSync(f, "utf8").match(/`content\/posts\/\$\{/g) ?? []).length;
+    for (let i = 0; i < hits; i += 1) pathSites.push(relative(root, f));
+  }
+  ok(
+    "rule 6 holds: the post path is constructed in exactly one place",
+    pathSites.length === 1,
+    `constructed ${pathSites.length} time(s): ${pathSites.join(", ")}. ` +
+      `Rule 6 says this string is stated ONCE, by the exported postPath().`,
+  );
+
+  /* -- rule 13 ------------------------------------------------------------- */
+  ok(
+    "rule 13 still names its two justified substitutions",
+    /JUSTIFIED SUBSTITUTION|justified/i.test(bodies[2]) && /REMOTE_ARGS/.test(bodies[2]),
+    "rule 13 no longer names the substitutions the assertion below counts",
+  );
+  /*
+   * THIS FILE IS EXCLUDED, and it is the only exclusion. The failure message
+   * above contains the marker phrase, so the scan counted the gate itself and
+   * reported three where there are two. A gate matching its own prose is the
+   * comment-satisfies-an-assertion class pointing the other way, and it fired
+   * on the first run.
+   *
+   * Excluded by exact path, never by pattern: an exclusion that names a
+   * directory would hide a real marker added under it later.
+   */
+  const SELF = join(root, "scripts", "check-invariants.mjs");
+  const scanned = [...appFiles, ...scriptFiles].filter((f) => f !== SELF);
+  ok(
+    "the marker scan excludes exactly this gate and nothing else",
+    scanned.length === appFiles.length + scriptFiles.length - 1,
+    `excluded ${appFiles.length + scriptFiles.length - scanned.length} file(s), expected 1`,
+  );
+  const marked = scanned.filter((f) =>
+    readFileSync(f, "utf8").includes("JUSTIFIED SUBSTITUTION"),
+  );
+  ok(
+    "rule 13 holds: every justified substitution is marked at its call site",
+    marked.length === 2,
+    `${marked.length} marked: ${marked.map((f) => relative(root, f)).join(", ")}. ` +
+      `Rule 13 names exactly two, so a third is an unrecorded exception and none ` +
+      `means the markers were dropped.`,
+  );
+
+  /* -- rule 14 ------------------------------------------------------------- */
+  ok(
+    "rule 14 still claims drizzle-kit is deliberately absent",
+    /drizzle-kit/.test(bodies[3]),
+    "rule 14 no longer makes the claim the assertion below checks",
+  );
+  const pkg = readFileSync(join(root, "package.json"), "utf8");
+  ok(
+    "rule 14 holds: drizzle-kit is absent from package.json",
+    !/drizzle-kit/.test(pkg),
+    "drizzle-kit is declared. Rule 14 says migrations are hand-written and the tool " +
+      "is deliberately absent, so either the tool goes or the rule does.",
+  );
+}
+
 /* ------- 16. the CI workflow runs the DERIVED tier ----------------------- */
 
 /*
