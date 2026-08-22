@@ -20,14 +20,24 @@
  *
  * **IT LOADS A LOCAL PREVIEW BUILD, not the deployed Worker.** So it proves what
  * the working tree renders, which is the point, and proves nothing about what is
- * live. `verify-live` owns that and needs the wire.
+ * live. `verify-live` owns that and needs the wire. **The admin cases are the
+ * one exception and they invert this**, for a reason measured below.
  *
  * **IT DOES NOT LOOK.** Every assertion is a number from `getBoundingClientRect`
  * or an attribute from the DOM. A page that lays out correctly and is unreadable,
  * mis-coloured, or has its z-order inverted passes here. Screenshots would need a
  * human or a baseline, and a baseline is a fixture that drifts.
  *
- * **THE ADMIN CASE IS OPT-IN AND SKIPS LOUDLY.** See ADMIN_COOKIE below.
+ * **THE ADMIN CASES ARE OPT-IN AND SKIP LOUDLY.** See ADMIN_COOKIE below.
+ *
+ * **THE ADMIN CASES DO NOT OBSERVE THE PREVIEW BUILD.** They cannot, and that is
+ * measured rather than assumed: sessions live in the PRODUCTION KV namespace,
+ * the preview server runs against local miniflare storage, and a real session
+ * cookie presented to the preview lands on /login every time. So when they run
+ * at all they run against `ADMIN_ORIGIN`, a DEPLOYED Worker, which means they
+ * prove what is live and prove nothing about the working tree. That is the
+ * opposite of every other case in this file. It is the price of the "cannot be
+ * faked" rule below, and the banner says so at runtime.
  *
  * ## Why this exists
  *
@@ -76,7 +86,7 @@ const BASE = `http://localhost:${PORT}`;
 /**
  * A real admin session cookie, or nothing.
  *
- * **THE ADMIN CASE CANNOT BE FAKED AND IS NOT.** Better Auth holds the session
+ * **THE ADMIN CASES CANNOT BE FAKED AND ARE NOT.** Better Auth holds the session
  * in KV, the single admin signs in through Google, and this repo has NO
  * `.dev.vars` by design, so no local server can mint a session. A test-only
  * bypass would mean the spec authenticates through a path production does not
@@ -84,15 +94,105 @@ const BASE = `http://localhost:${PORT}`;
  * failing under the enforced CSP, lives in the real authenticated render. A
  * stub would have passed while the editor was broken in production.
  *
- * So the cookie is supplied from outside or the case does not run. When it is
+ * So the cookie is supplied from outside or the cases do not run. When it is
  * absent this SKIPS and says so; it never passes quietly, because a silent skip
  * is how a gate reports success for work it did not do.
+ *
+ * ## THE VALUE IS A BARE TOKEN, AND THIS GATE USED TO SEND IT AS A HEADER
+ *
+ * MEASURED 2026-08-21, the first session in which the variable was actually
+ * set. `ADMIN_SESSION_COOKIE` holds the cookie's VALUE, with no `name=` segment.
+ * The old code passed it whole to `setExtraHTTPHeaders({ cookie })`, which
+ * produces a `Cookie:` header with no name, which no server can parse. Every
+ * request would have bounced to /login and the case would have failed while
+ * blaming the session rather than the header. So a value with no `=` is given
+ * the canonical name here, and a value that already carries one is left alone.
  */
-const ADMIN_COOKIE = process.env.ADMIN_SESSION_COOKIE ?? "";
+const SESSION_COOKIE_NAME = "__Secure-better-auth.session_token";
+const ADMIN_COOKIE_RAW = process.env.ADMIN_SESSION_COOKIE ?? "";
+const ADMIN_COOKIE = ADMIN_COOKIE_RAW
+  ? (ADMIN_COOKIE_RAW.includes("=") ? ADMIN_COOKIE_RAW : `${SESSION_COOKIE_NAME}=${ADMIN_COOKIE_RAW}`)
+  : "";
+
+/**
+ * The origin the admin cases drive, which is NOT the preview server.
+ *
+ * MEASURED, and it is why this variable exists at all: a valid production
+ * session presented to `vite preview` renders the login page, because the
+ * preview's APP_KV is local miniflare storage and the session is a key in the
+ * production namespace. Nothing about the cookie is wrong in that case, so the
+ * gate must not report it as a rejected session.
+ *
+ * Absent, the admin cases SKIP. They do not silently fall back to the preview,
+ * because a fallback that cannot authenticate is a case that fails for a reason
+ * unrelated to the code under test.
+ */
+const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? "").replace(/\/+$/, "");
+
+/**
+ * Puts the session in the browser's COOKIE JAR rather than on a pinned header.
+ *
+ * MEASURED, 40 navigations: `setExtraHTTPHeaders({ cookie })` bounced to /login
+ * on 6 of 16, while the jar bounced on 0 of 20 and 0 of 4 more in the full
+ * render sweep. A pinned header is also sent in place of whatever the server
+ * most recently Set-Cookie'd, so it fights Better Auth's own session refresh.
+ * The jar is what a real browser does and it is what the gate does now.
+ *
+ * `url` rather than `domain` so the browser derives the host and the secure
+ * attribute from the origin, which keeps this correct for http and https alike.
+ *
+ * @param {import("puppeteer").Page} page
+ * @param {string} origin
+ */
+async function applySession(page, origin) {
+  const eq = ADMIN_COOKIE.indexOf("=");
+  await page.setCookie({
+    url: origin,
+    name: ADMIN_COOKIE.slice(0, eq),
+    value: ADMIN_COOKIE.slice(eq + 1),
+    path: "/",
+    httpOnly: true,
+    sameSite: "Lax",
+  });
+}
+
+/**
+ * Does this origin accept the supplied session? Answered over the WIRE, before
+ * a browser is driven at it.
+ *
+ * A redirect to the login page is the whole signal, and it is read with
+ * `redirect: "manual"` on purpose: a browser follows the 302 and reports 200 for
+ * the login page it lands on, so a status check after following would call a
+ * rejected session a success.
+ *
+ * @param {string} origin
+ */
+async function sessionAuthenticates(origin) {
+  try {
+    const res = await fetch(`${origin}/admin`, {
+      headers: { cookie: ADMIN_COOKIE },
+      redirect: "manual",
+      signal: AbortSignal.timeout(20_000),
+    });
+    return res.status === 200;
+  } catch {
+    return false;
+  }
+}
 
 let checks = 0;
 let failures = 0;
 const skipped = [];
+
+/**
+ * Whether the admin block actually got past authentication and ran its cases.
+ *
+ * NOT derived from `skipped.length`, which cannot tell the difference between
+ * "the admin cases ran" and "the session was rejected, so one assertion failed
+ * and the other fifteen never happened". Those need different floors and the
+ * second must not be reported as a collapsed run on top of its real failure.
+ */
+let adminCasesRan = false;
 
 /** @param {string} label @param {boolean} condition @param {string} [detail] */
 function ok(label, condition, detail = "") {
@@ -361,42 +461,184 @@ try {
       `carries that id, so keyboard focus goes nowhere`,
   );
 
-  /* ------------------------------------------- 6. THE MOUNT CLASS, opt-in */
+  /* ------------------------------- 6. THE ADMIN PLANE, opt-in, DEPLOYED ONLY */
 
   /*
-   * The class no gate in this repo has ever seen: markup that renders and a
+   * The class no gate in this repo had ever seen: markup that renders and a
    * component that never MOUNTS. The editor's lazily imported CodeMirror sat
    * behind a Suspense boundary that the enforced CSP broke, and it was down for
    * two days with all twenty-seven gates green, because every one of them reads
    * source or stub-rendered markup.
    *
-   * Three signals, because any one alone is satisfiable by a broken page: the
-   * chunk is FETCHED (a 200, not merely referenced), `.cm-editor` EXISTS in the
-   * live DOM (so the boundary resolved), and the console carries no React #419,
-   * which is the specific error that boundary throws when it cannot finish.
+   * Widened 2026-08-21 from one editor case to the whole plane, because the
+   * first session to render the admin with an instrument found two defects on
+   * surfaces nobody had ever laid out, and roughly 5,500 lines of the split CSS
+   * are admin with no assertion touching any of it.
+   *
+   * READ THE BANNER. These cases observe ADMIN_ORIGIN, a deployed Worker. Every
+   * other case in this file observes the preview build of the working tree.
    */
   if (!ADMIN_COOKIE) {
     skip(
-      "the post editor mounts CodeMirror",
-      "no ADMIN_SESSION_COOKIE in the environment. This case needs a REAL admin session " +
-        "and is deliberately not stubbed: a fake auth path would not render what production " +
-        "renders, and the defect it exists to catch lives in the authenticated render.",
+      "the admin plane (6 surfaces, the editor mount, the two mark fills)",
+      "no ADMIN_SESSION_COOKIE in the environment. These cases need a REAL admin session " +
+        "and are deliberately not stubbed: a fake auth path would not render what production " +
+        "renders, and the defects they exist to catch live in the authenticated render.",
+    );
+  } else if (!ADMIN_ORIGIN) {
+    skip(
+      "the admin plane (6 surfaces, the editor mount, the two mark fills)",
+      "ADMIN_SESSION_COOKIE is set but ADMIN_ORIGIN is not. These cases CANNOT run against " +
+        "the preview server: sessions live in the production KV namespace and the preview " +
+        "reads local miniflare storage, so a valid session renders the login page there. " +
+        "Measured, not assumed. Set ADMIN_ORIGIN to a deployed origin to run them.",
+    );
+  } else if (!(await sessionAuthenticates(ADMIN_ORIGIN))) {
+    /*
+     * NOT a skip. The cookie was supplied and the origin was named, so the
+     * operator asked for these cases and is entitled to be told they did not
+     * happen. A skip here would be the silent-skip failure wearing the shape of
+     * a precondition.
+     */
+    ok(
+      `the supplied session authenticates against ${ADMIN_ORIGIN}`,
+      false,
+      "GET /admin with the supplied cookie did not return 200. Either the session has " +
+        "expired, or ADMIN_ORIGIN names an origin that does not share the production KV " +
+        "namespace. The admin cases below did not run.",
     );
   } else {
-    await page.setExtraHTTPHeaders({ cookie: ADMIN_COOKIE });
+    console.log(`\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`);
+    ok(`the supplied session authenticates against ${ADMIN_ORIGIN}`, true);
+    adminCasesRan = true;
+
+    const admin = await browser.newPage();
     /** @type {string[]} */
     const errors = [];
-    page.on("console", (m) => {
+    admin.on("console", (m) => {
       if (m.type() === "error") errors.push(m.text());
     });
     /** @type {number[]} */
     const fetched = [];
-    page.on("response", (r) => {
+    admin.on("response", (r) => {
       if (/markdown-editor.*\.js/.test(r.url())) fetched.push(r.status());
     });
+    await applySession(admin, ADMIN_ORIGIN);
+    await admin.setViewport({ width: 1280, height: 900 });
 
-    await page.goto(`${BASE}/admin/posts`, { waitUntil: "networkidle0" });
-    const slug = await page.evaluate(() => {
+    /* ---------------------------------------- 6a. every surface renders */
+
+    /*
+     * The SHELL is the assertion, not the page title, because a title is set by
+     * the route module and survives a body that rendered nothing. The sidebar
+     * and the topbar are the two elements every admin route inherits from the
+     * layout, so their absence means the layout itself failed.
+     *
+     * The login page is named explicitly in the failure. A bounced session
+     * renders a complete, correct, fully styled page, and without this the
+     * failure would read as "the sidebar is missing" on a page that never had
+     * one.
+     */
+    const SURFACES = [
+      ["/admin", "the cockpit"],
+      ["/admin/posts", "the posts list"],
+      ["/admin/media?view=grid", "the media library, grid"],
+      ["/admin/media?view=list", "the media library, list"],
+      ["/admin/tools", "tools"],
+      ["/admin/origin-requests", "origin requests"],
+    ];
+    for (const [path, what] of SURFACES) {
+      await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
+      const r = await admin.evaluate(() => ({
+        sidebar: !!document.querySelector(".admin-sidebar"),
+        topbar: !!document.querySelector(".admin-topbar"),
+        onLogin: location.pathname === "/login",
+        textLen: (document.body.innerText || "").trim().length,
+      }));
+      ok(
+        `${path}: ${what} renders the admin shell`,
+        r.sidebar && r.topbar && !r.onLogin && r.textLen > 100,
+        r.onLogin
+          ? "the session bounced to /login part way through the sweep"
+          : `sidebar=${r.sidebar} topbar=${r.topbar} bodyText=${r.textLen} chars`,
+      );
+    }
+
+    /* ------------------------- 6b. the two mark fills, across the split */
+
+    /*
+     * app.css split into sixteen files on 2026-08-21 and the only evidence the
+     * admin half survived was that the BUILT stylesheet was byte-identical.
+     * That is a real check and it cannot see this: the mark's base fill lives in
+     * app.css and its header override in styles/public-chrome.css, so the two
+     * are separated by a file boundary and by the @import order that decides
+     * which one wins.
+     *
+     * Asserted as RESOLVED COLOUR from getComputedStyle, compared against the
+     * TOKEN read off the same document, never against a literal hex. A hex here
+     * would be a second statement of a value the palette owns, and it would go
+     * red the day the brand is deliberately re-toned.
+     *
+     * Both halves, on the two planes where each is supposed to win: the admin
+     * sidebar mark takes the (0,1,0) base rule, the public header mark takes the
+     * (0,2,0) override. Asserting only one would pass with the override deleted.
+     */
+    const rgb = (/** @type {string} */ hex) => {
+      const h = hex.trim().replace("#", "");
+      const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+      return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+    };
+
+    await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
+    const adminMark = await admin.evaluate(() => {
+      const el = document.querySelector(".admin-brand-mark .site-logo-brand");
+      const root = getComputedStyle(document.documentElement);
+      return {
+        present: !!el,
+        fill: el ? getComputedStyle(el).fill : "",
+        brand: root.getPropertyValue("--brand").trim(),
+      };
+    });
+    ok(
+      "the admin sidebar mark exists to measure",
+      adminMark.present,
+      "no .admin-brand-mark .site-logo-brand, so the fill assertion below would examine nothing",
+    );
+    ok(
+      "the admin mark's fill resolves to --brand, the base binding in app.css",
+      adminMark.present && adminMark.fill === rgb(adminMark.brand),
+      `fill is ${JSON.stringify(adminMark.fill)} and --brand is ${JSON.stringify(adminMark.brand)} ` +
+        `(${rgb(adminMark.brand || "#000")}). The base rule in app.css is not reaching the admin mark.`,
+    );
+
+    await admin.goto(`${ADMIN_ORIGIN}/`, { waitUntil: "networkidle0" });
+    const publicMark = await admin.evaluate(() => {
+      const el = document.querySelector(".site-header .site-logo-brand");
+      const root = getComputedStyle(document.documentElement);
+      return {
+        present: !!el,
+        fill: el ? getComputedStyle(el).fill : "",
+        onChrome: root.getPropertyValue("--mark-on-chrome").trim(),
+      };
+    });
+    ok(
+      "the public header mark exists to measure",
+      publicMark.present,
+      "no .site-header .site-logo-brand, so the fill assertion below would examine nothing",
+    );
+    ok(
+      "the public header mark's fill resolves to --mark-on-chrome, the override in public-chrome.css",
+      publicMark.present && publicMark.fill === rgb(publicMark.onChrome),
+      `fill is ${JSON.stringify(publicMark.fill)} and --mark-on-chrome is ` +
+        `${JSON.stringify(publicMark.onChrome)} (${rgb(publicMark.onChrome || "#000")}). The ` +
+        `(0,2,0) override in styles/public-chrome.css is not beating the (0,1,0) base in app.css, ` +
+        `which is what the sixteen-file split put at risk.`,
+    );
+
+    /* ----------------------------------------- 6c. THE MOUNT CLASS */
+
+    await admin.goto(`${ADMIN_ORIGIN}/admin/posts`, { waitUntil: "networkidle0" });
+    const slug = await admin.evaluate(() => {
       const a = document.querySelector('a[href*="/edit"]');
       return a ? a.getAttribute("href") : null;
     });
@@ -404,14 +646,13 @@ try {
     ok(
       "an edit route was reachable with the supplied session",
       !!slug,
-      "no edit link on /admin/posts. Either the cookie is not a valid admin session or the " +
-        "page did not render, and either way the mount assertions below examine nothing.",
+      "no edit link on /admin/posts, so the mount assertions below examine nothing",
     );
 
     if (slug) {
-      await page.goto(`${BASE}${slug}`, { waitUntil: "networkidle0" });
+      await admin.goto(`${ADMIN_ORIGIN}${slug}`, { waitUntil: "networkidle0" });
       await new Promise((r) => setTimeout(r, 2500));
-      const mounted = await page.evaluate(() => !!document.querySelector(".cm-editor"));
+      const mounted = await admin.evaluate(() => !!document.querySelector(".cm-editor"));
       ok("the CodeMirror chunk was fetched", fetched.length > 0, "no markdown-editor chunk request");
       ok(
         "the chunk was served, not refused",
@@ -425,29 +666,60 @@ try {
         errors.filter((e) => /#419|Minified React error/.test(e)).join(" | "),
       );
     }
+
+    await admin.close();
   }
+
 } finally {
   if (browser) await browser.close().catch(() => {});
   stopServer();
 }
 
 /*
- * EXECUTED-COUNT FLOOR.
+ * EXECUTED-COUNT FLOOR, one per MODE.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 16 without an admin
- * cookie. Never summed. Floored at 14, slack of two.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, 2026-08-21: **15**
+ * with the admin cases skipped and **31** with them running. Never summed.
+ * Floored at 13 and 29, slack of two either way.
+ *
+ * **THE PREVIOUS RECORDED FIGURE, 16, WAS WRONG BY ONE**, and it had been in
+ * this comment since the gate was written. Counted by hand from the eight
+ * non-admin `ok()` sites: one stylesheet, one three-element presence, one
+ * alignment, four skip links, one post-link presence, one aria-current, five
+ * overflow paths, one login skip link. That is 15, and running it says 15. The
+ * old floor of 14 still passed, so the stale number never failed anything,
+ * which is exactly why it survived: a recorded count nothing re-measures is a
+ * claim, not a property.
+ *
+ * ONE FLOOR WOULD NOT DO. A single value low enough for the skip mode would let
+ * the admin block collapse from sixteen assertions to nothing in the run mode
+ * and still clear the bar, which is the failure this floor exists to catch.
  *
  * A gate that drives a browser has more ways to examine nothing than most: a
  * page that 404s, a selector that stopped matching after a class rename, and a
  * server that came up but served an error page all produce assertions that
  * never run rather than assertions that fail.
  */
-const MINIMUM_CHECKS = 14;
+const MINIMUM_CHECKS = adminCasesRan ? 29 : 13;
 console.log(
   `\n${checks} checks, ${failures} failures` +
     (skipped.length ? `, ${skipped.length} skipped` : "") +
     "\n",
 );
+/*
+ * The summary says WHAT WAS NOT COVERED, not just that something was skipped.
+ *
+ * A reader who sees "15 checks, 0 failures" and a SKIP line four screens up has
+ * been told the admin plane was not looked at, in a way nobody reads. This is
+ * the last line before the exit code, which is the one line that gets read.
+ */
+if (!adminCasesRan) {
+  console.log(
+    "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
+      "  mount was not checked, and neither mark fill was measured. A green result above\n" +
+      "  is a statement about the public pages only.\n",
+  );
+}
 if (checks < MINIMUM_CHECKS) {
   console.error(
     `check:browser REFUSED: only ${checks} assertion(s) ran, expected at least ` +
