@@ -11,7 +11,7 @@ import {
 } from "react-router";
 
 import { artifactContext } from "~/lib/editor/publish.server";
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { MediaConfirm } from "~/components/admin/media-confirm";
 import { MediaDrawer } from "~/components/admin/media-drawer";
@@ -729,26 +729,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   // No header at all unless it was asked for, so the default response is
   // byte-identical to what it was before any of this instrumentation existed.
-  return timings
-    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data(payload);
-}
-
-/**
- * Carries the loader's `Server-Timing` to the response, and nothing else.
- *
- * Deliberately does NOT set Cache-Control. `workers/app.ts` applies
- * `private, no-store` to any response that did not set one, and the cookie
- * downgrade forces it for every admin request regardless, so setting a cache
- * header here would be a second answer to a question that already has one.
- * Returning a bare Headers keeps this route on the same default as every other
- * admin route.
- */
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers();
-  const timing = loaderHeaders.get("Server-Timing");
-  if (timing) headers.set("Server-Timing", timing);
-  return headers;
+  return data(payload);
 }
 
 export async function action({ request, context }: Route.ActionArgs) {

@@ -133,8 +133,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     featured,
   };
 
-  // No header at all unless it was asked for, so the default response is
-  // byte-identical to what it was before any of this instrumentation existed.
+  /*
+   * **THIS STAMP IS KEPT, AND IT IS THE ONLY ROUTE-LEVEL ONE LEFT.** The eleven
+   * admin routes carried the same pair of lines and they were all removed,
+   * because `workers/app.ts` writes the header from the SHARED array that the
+   * admin middleware puts on `timingsContext`, with `set`, after the handler
+   * returns. Overwritten by an identical value, on every one of them.
+   *
+   * That reasoning does not reach this route. The array on line 40 is LOCAL: no
+   * middleware runs on the public plane, nothing sets `timingsContext`, and the
+   * context's default is `{}`, so the transport reads `undefined` here and
+   * stamps nothing. Removing these three lines would not tidy a duplicate, it
+   * would delete the only Server-Timing the public plane emits.
+   *
+   * No header at all unless it was asked for, so the default response is
+   * byte-identical to what it was before any of this instrumentation existed.
+   */
   return timings
     ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
     : data(payload);
