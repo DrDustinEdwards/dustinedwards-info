@@ -3384,6 +3384,117 @@ console.log("\n  19. FAILURES.md stays short, cited, and reachable");
   );
 }
 
+/* ------- 20. every admin loader carries timing --------------------------- */
+
+/*
+ * THE ONE LOADER NOBODY MARKED WAS THE EXPENSIVE ONE.
+ *
+ * MEASURED 2026-08-21: `/admin/posts.data` cost 1,420ms median with NOT ONE
+ * `timed()` call, while its two D1 queries measure 0.33 to 0.47ms IN D1. About
+ * 1,400ms was unattributed. Three separate fixes had landed on the admin
+ * LAYOUT, which was the only thing instrumented, and each moved roughly 90ms
+ * while the real cost sat one file away with no name.
+ *
+ * Of fifteen admin route files, TWO carried marks: the layout and the media
+ * index. This section is what stops the next one hiding for a month.
+ *
+ * ## WHAT IS ASSERTED
+ *
+ * Every `app/routes/admin*` file that exports a `loader` contains at least one
+ * `timed(` call, or is named below with a reason.
+ *
+ * ## WHAT IT CANNOT SEE, and it is the honest half
+ *
+ * **It counts a CALL, not COVERAGE.** A loader with six awaits and one
+ * `timed()` passes here while five of them stay invisible, which is exactly the
+ * state `admin.posts.$slug.edit.tsx` was in before this session. Proving every
+ * await is wrapped needs to decide which expressions are I/O, which is a
+ * parser's job and not a regex's. The floor this sets is "somebody thought
+ * about it", and the breakdown SUMMING is what proves coverage; that check is a
+ * measurement, not a gate, because it needs a live request.
+ */
+
+console.log("\n  20. every admin loader carries timing");
+
+{
+  /** @type {Map<string, string>} route file -> why it needs no mark */
+  const NO_TIMING_NEEDED = new Map([
+    [
+      "admin.logout.tsx",
+      "its loader is `throw redirect(\"/admin\")` and nothing else. There is no " +
+        "I/O to time and a mark would measure the cost of throwing.",
+    ],
+  ]);
+
+  const routes = readdirSync(join(root, "app", "routes")).filter(
+    (n) => /^admin.*\.tsx?$/.test(n),
+  );
+
+  /*
+   * SCOPE, ASSERTED. A glob that stopped matching would report every admin
+   * loader instrumented by finding none, which is this repo's most repeated
+   * defect class.
+   */
+  ok(
+    "the admin route walk found routes",
+    routes.length >= 12,
+    `${routes.length} admin route file(s) found under app/routes. A zero-scope ` +
+      `walk reports perfect coverage by examining nothing.`,
+  );
+
+  /** @type {string[]} */
+  const unmarked = [];
+  let withLoader = 0;
+
+  for (const name of routes) {
+    const src = readFileSync(join(root, "app", "routes", name), "utf8");
+    const code = stripComments(src);
+    if (!/export\s+(?:async\s+)?function\s+loader\b/.test(code)) continue;
+    withLoader += 1;
+    if (NO_TIMING_NEEDED.has(name)) continue;
+    if (!/\btimed\s*\(/.test(code)) unmarked.push(name);
+  }
+
+  ok(
+    "the walk found admin loaders to check",
+    withLoader >= 10,
+    `${withLoader} admin route(s) export a loader. If this collapses, the check ` +
+      `below passes by having nothing to examine.`,
+  );
+
+  ok(
+    "every admin loader carries at least one timed() call",
+    unmarked.length === 0,
+    unmarked.join(", ") +
+      " export a loader and contain no timed() call. An unmarked admin loader is " +
+      "how /admin/posts hid 1,400ms for a month while three fixes landed on the " +
+      "90ms layout. Add a mark, or name the file in NO_TIMING_NEEDED with the " +
+      "reason it has no I/O.",
+  );
+
+  /*
+   * THE EXEMPTIONS POLICE THEMSELVES, both directions: an entry naming a file
+   * that no longer exists exempts nothing, and one naming a file that HAS since
+   * gained a timed() call is a stale excuse rather than a standing decision.
+   */
+  for (const [name, why] of NO_TIMING_NEEDED) {
+    ok(
+      `timing exemption ${name} names a route that still exists`,
+      routes.includes(name),
+      `app/routes/${name} is gone, so this exemption covers nothing (${why})`,
+    );
+    const src = routes.includes(name)
+      ? stripComments(readFileSync(join(root, "app", "routes", name), "utf8"))
+      : "";
+    ok(
+      `timing exemption ${name} is still untimed`,
+      !/\btimed\s*\(/.test(src),
+      `${name} now calls timed(), so the exemption is stale and should be deleted ` +
+        `rather than left standing.`,
+    );
+  }
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -3420,7 +3531,7 @@ console.log("\n  19. FAILURES.md stays short, cited, and reachable");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 156;
+const MINIMUM_CHECKS = 160;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
