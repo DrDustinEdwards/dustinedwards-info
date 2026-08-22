@@ -81,6 +81,7 @@ export async function loader({ context }: Route.LoaderArgs) {
    * is these two calls and neither had a name.
    */
   const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
   /*
    * IN PARALLEL, because they were strictly serial and share nothing.
    *
@@ -154,6 +155,25 @@ export async function loader({ context }: Route.LoaderArgs) {
      */
     askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
   };
+
+  /*
+   * THE LAYOUT'S OWN TOTAL, and it is what makes the other routes' arithmetic
+   * close.
+   *
+   * The layout's marks ride along on EVERY admin response, because `timings`
+   * is one array shared through context. So a breakdown of `/admin/posts.data`
+   * that adds up the marks it can see was adding LAYOUT time to ROUTE time and
+   * calling the total attributed. Worse, the layout's two big marks run in
+   * PARALLEL and `drift_cache_read` NESTS inside `layout_ask_drift`, so summing
+   * them overcounts twice over.
+   *
+   * MEASURED 2026-08-21 against production: summing the layout marks on
+   * /admin.data gave 313ms against a 283ms TTFB, which is arithmetic claiming
+   * more time than the request took. With this mark, every admin route reads
+   * as `layout_total` + its own `loader_total` + whatever is left, and the
+   * leftover is the response path rather than a rounding error.
+   */
+  timings?.push({ name: "layout_total", ms: performance.now() - loaderStart });
 
   return timings
     ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
