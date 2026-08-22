@@ -462,8 +462,24 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
    * `publishableForAsk` is still the filter the UPLOADERS use, and it must
    * stay in step with the SQL predicate here. `check:policy` binds the two.
    */
-  const expected = new Set((await askExpectedUrls(env)).map((u) => keyForUrl(u)));
-  const listed = await listAllAskItems(env, timings);
+  /*
+   * CONCURRENT, because the two sides of this comparison share nothing.
+   *
+   * The expected set is a D1 read and the listing is a paged walk of AI Search;
+   * neither reads what the other writes, and they were strictly serial. This
+   * function is 182ms at the median on /admin/posts and its `ask_list_page`
+   * marks account for ~103ms of that, so the D1 half is most of the remainder
+   * and it was pure waiting.
+   *
+   * It matters on BOTH consumers: /admin/posts calls this uncached on every
+   * load, and the nav badge calls it on a drift-cache miss, which is the tail
+   * the cache exists to hide.
+   */
+  const [expectedUrls, listed] = await Promise.all([
+    askExpectedUrls(env),
+    listAllAskItems(env, timings),
+  ]);
+  const expected = new Set(expectedUrls.map((u) => keyForUrl(u)));
   const present = new Set(listed.map((item) => item.key));
 
   return {
