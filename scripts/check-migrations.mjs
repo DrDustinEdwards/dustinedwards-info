@@ -60,6 +60,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -331,6 +332,126 @@ if (existsSync(SHIP)) {
   );
 }
 
+/* ------------- the LOCAL tier's ledger, when there is one to read --------- */
+
+/*
+ * **NOTHING READ THE LOCAL DATABASE, AND THAT IS WHY IT SAT TWO MIGRATIONS
+ * BEHIND FOR A WEEK.**
+ *
+ * The blind spot was structural rather than an oversight. This gate hashes
+ * FILES against the manifest and never opened a database at all.
+ * `check:invariants` section 4 does compare against a database, but only behind
+ * `--remote`, and its third source is the migrations REPLAYED into an in-memory
+ * database, which is built from the same files it is checking and therefore
+ * agrees with them by construction. So every instrument either read the files,
+ * or read production. A tier lagging the files was invisible to all of them.
+ *
+ * ## WHY THIS GATE OWNS IT
+ *
+ * The subject is the migration SET, which is this gate's whole subject. It also
+ * has to run OFFLINE, and this is the offline-tier gate for migrations;
+ * section 4's database arm is remote-gated, so putting it there would mean a
+ * local assertion that never runs in the tier that ships, or a second flag.
+ *
+ * ## READ DIRECTLY, NOT THROUGH WRANGLER, AND THE REASON IS A SIDE EFFECT
+ *
+ * `wrangler d1 execute --local` CREATES the local database when it is absent.
+ * A gate that brings its own subject into existence cannot report on it, and it
+ * would turn every fresh clone into a machine with a database it never asked
+ * for. `node:sqlite` opens the file READ ONLY, and `check:invariants` already
+ * reads sqlite this way, so this is the established path rather than a new one.
+ *
+ * ## A MISSING DATABASE IS NOT A LAGGING ONE
+ *
+ * Conflating them would put a false red on every fresh checkout and on CI,
+ * which has no `.wrangler` state at all. Three states, and only the third can
+ * fail:
+ *
+ *   no directory, or no candidate file   SKIP. Nothing has ever run here.
+ *   a database with no d1_migrations     SKIP. `wrangler dev` creates the file
+ *                                        lazily, so this is indistinguishable
+ *                                        from a first run, and failing it would
+ *                                        red the first `npm run dev` on a clone.
+ *   a database WITH a ledger             COMPARED, and this is the real case:
+ *                                        a tier that has been migrated before
+ *                                        and has since fallen behind.
+ *
+ * **THE SKIP EMITS NO ASSERTION ON PURPOSE.** These `ok()` calls run only when
+ * there is a ledger, so the executed count is lower on CI than on a developer
+ * machine, and `MINIMUM_CHECKS` below is floored for the CI case. A skip that
+ * counted would make the floor mean different things in different environments,
+ * which is worse than a floor that is slightly loose.
+ *
+ * ## NAMES, NOT A COUNT
+ *
+ * The cheapest version compares `d1_migrations` row count against the number of
+ * files. This compares the NAMES, both directions, for the same cost: a count
+ * passes when a file is renamed, or when the ledger holds twelve rows that are
+ * not these twelve, and both of those are the drift this exists to catch.
+ */
+const D1_STATE = join(root, ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject");
+
+/** @returns {string[] | null} the ledger's names, or null when there is none to read */
+function localLedger() {
+  if (!existsSync(D1_STATE)) return null;
+  const candidates = readdirSync(D1_STATE).filter(
+    (n) => n.endsWith(".sqlite") && n !== "metadata.sqlite",
+  );
+  for (const name of candidates) {
+    const db = new DatabaseSync(join(D1_STATE, name), { readOnly: true });
+    try {
+      const table = db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'd1_migrations'")
+        .get();
+      if (!table) continue;
+      return db
+        .prepare("SELECT name FROM d1_migrations ORDER BY name")
+        .all()
+        .map((row) => String(row.name));
+    } finally {
+      db.close();
+    }
+  }
+  return null;
+}
+
+const ledger = localLedger();
+if (ledger === null) {
+  console.log(
+    "\n  SKIP  the local migration ledger. No local D1 under .wrangler/state, so there is\n" +
+      "        nothing to compare. A missing database is not a lagging one, and failing\n" +
+      "        here would red every fresh clone and every CI run.",
+  );
+} else {
+  const onDisk = new Set(files);
+  const applied = new Set(ledger);
+  const notApplied = files.filter((f) => !applied.has(f));
+  const unknown = ledger.filter((n) => !onDisk.has(n));
+
+  /*
+   * SCOPE FIRST. An empty ledger read against an empty file list would report
+   * agreement by comparing nothing, which is this repo's most repeated defect.
+   */
+  ok(
+    "the local ledger was read and there are migrations to compare it against",
+    ledger.length > 0 && files.length > 0,
+    `ledger holds ${ledger.length} row(s) and drizzle/ holds ${files.length} file(s)`,
+  );
+  ok(
+    "every migration on disk is applied to the LOCAL database",
+    notApplied.length === 0,
+    `the local tier is BEHIND by ${notApplied.length}: ${notApplied.join(", ")}. ` +
+      `Run \`wrangler d1 migrations apply dustinedwards --local\`. Production and local ` +
+      `disagreeing about the schema is invisible to every other gate here.`,
+  );
+  ok(
+    "the local ledger records nothing that is not on disk",
+    unknown.length === 0,
+    `the local ledger names ${unknown.join(", ")}, which drizzle/ does not contain. ` +
+      `A migration was renamed or deleted after being applied, which hard rule 14 forbids.`,
+  );
+}
+
 /*
  * EXECUTED-COUNT FLOOR.
  *
@@ -339,16 +460,20 @@ if (existsSync(SHIP)) {
  * that stopped running over a directory that is still full, and neither can see
  * the other's bug.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 44.
- * Never summed. It was 33 against a floor of 30 until the ship-guard clause
- * landed, which adds eight assertions over `ship.mjs` plus the migration this
- * arc added.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, both cases, on
+ * 2026-08-22. **THE COUNT NOW DEPENDS ON THE ENVIRONMENT and the floor is set
+ * for the lower one**, which is the half that would otherwise bite CI:
  *
- * Floored at 41, slack of three: the count steps by a fixed amount per
- * migration, and migrations are append-only by hard rule 14, so it only ever
- * grows.
+ *   47  no local D1 (a fresh clone, and every CI run). The ledger section
+ *       skips and emits no assertion, deliberately.
+ *   50  a machine with a local D1. The same run plus the ledger's three.
+ *
+ * Floored at 44, slack of three under the CI case. Never summed: 47 and 50 are
+ * both read off a run. It was 41 against a measured 44 before the two
+ * migrations this arc added and before the ledger section, and the count steps
+ * by a fixed amount per migration, which is append-only by hard rule 14.
  */
-const MINIMUM_CHECKS = 41;
+const MINIMUM_CHECKS = 44;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
