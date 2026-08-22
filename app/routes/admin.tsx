@@ -122,14 +122,15 @@ export async function loader({ context }: Route.LoaderArgs) {
     /**
      * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
      *
-     * The mockup badges Sites, Content, Posts and Media. Only two of those
-     * numbers exist: `/admin/sites` and `/admin/content` are stubbed cockpit
-     * sections built on `stubSource()`, and Content's own count field is `null`
-     * on every one of its three rows and renders as the words "no data".
-     * Shipping "6" beside Sites would be the count of a hardcoded placeholder
-     * array, and a numeral in the sidebar is read as a measurement. Those two
-     * get badges when they get data; until then the absence is the honest
-     * signal and it costs nothing to leave them bare.
+     * The mockup badged Sites, Content, Posts and Media. **`/admin/sites` was
+     * DELETED rather than badged**, because the only number it could have shown
+     * was the length of a hardcoded array of six placeholder cards, and a
+     * numeral in the sidebar is read as a measurement.
+     *
+     * `/admin/content` is still a stubbed cockpit section built on
+     * `stubSource()`, and its own count field is `null` on every one of its
+     * three rows and renders as the words "no data". It gets a badge when it
+     * gets data; until then the absence is the honest signal.
      */
     counts,
     /**
@@ -225,12 +226,6 @@ const ICONS = {
       <rect x="3" y="16" width="7" height="5" rx="1" />
     </>
   ),
-  sites: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
-    </>
-  ),
   content: (
     <>
       <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
@@ -292,7 +287,6 @@ const ICONS = {
 
 const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
-  { to: "/admin/sites", label: "Sites", icon: ICONS.sites },
   { to: "/admin/content", label: "Content", icon: ICONS.content },
   // `drift` is the ALARM, and it is a fact about the post corpus with its
   // repair on this page. `count` is the neutral size of the section. They are

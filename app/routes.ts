@@ -56,7 +56,6 @@ export default [
   // Private: the admin layout gates every child via middleware.
   route("admin", "routes/admin.tsx", [
     index("routes/admin._index.tsx"),
-    route("sites", "routes/admin.sites.tsx"),
     // Per-path origin requests, read from Analytics Engine. The PATH says
     // origin-requests rather than traffic because a URL is something a reader
     // sees, and the panel spends a caption explaining that these are not reads.

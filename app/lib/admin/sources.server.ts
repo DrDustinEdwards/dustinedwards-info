@@ -10,7 +10,6 @@ import type {
   AdminTool,
   ContentSection,
   OverviewCard,
-  SiteHealth,
 } from "./types";
 
 function stubSource<T>(
@@ -78,70 +77,6 @@ export const overviewSource = stubSource<OverviewCard[]>(
       value: "Single admin",
       hint: "Better Auth, Google, sessions in KV",
       status: "ok",
-    },
-  ],
-);
-
-/** Portfolio health: one card per site the cockpit watches. */
-export const sitesSource = stubSource<SiteHealth[]>(
-  "sites",
-  "Portfolio health",
-  "cloudflare + vercel",
-  "Placeholder statuses until per-site checks are wired.",
-  [
-    {
-      id: "germomics",
-      name: "Germomics",
-      blurb: "Microbiology media site",
-      platform: "Cloudflare Workers",
-      url: null,
-      status: "unknown",
-      summary: "Health check not wired",
-    },
-    {
-      id: "txasm",
-      name: "TXASM",
-      blurb: "Texas branch of ASM",
-      platform: "Cloudflare Workers",
-      url: null,
-      status: "unknown",
-      summary: "Health check not wired",
-    },
-    {
-      id: "foxing",
-      name: "Foxing",
-      blurb: "Journal app, web and mobile",
-      platform: "Vercel",
-      url: null,
-      status: "unknown",
-      summary: "Health check not wired",
-    },
-    {
-      id: "recova",
-      name: "Recova",
-      blurb: "Payment recovery SaaS",
-      platform: "Vercel",
-      url: null,
-      status: "unknown",
-      summary: "Health check not wired",
-    },
-    {
-      id: "julieedwards",
-      name: "julieedwards.info",
-      blurb: "Static personal site",
-      platform: "Cloudflare (Astro)",
-      url: "https://julieedwards.info",
-      status: "unknown",
-      summary: "Health check not wired",
-    },
-    {
-      id: "capsid",
-      name: "Capsid",
-      blurb: "Shared memory MCP server",
-      platform: "Cloudflare Workers",
-      url: null,
-      status: "unknown",
-      summary: "Health check not wired",
     },
   ],
 );
