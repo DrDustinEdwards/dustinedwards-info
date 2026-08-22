@@ -62,6 +62,7 @@
  * Pure: no network, no database, no build.
  */
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -418,6 +419,83 @@ ok(
   "the validator rejects an entry it should accept, so a real exception could never be added",
 );
 
+/* -------------- 3. the admin session file is REALLY ignored --------------- */
+
+/*
+ * **A DOCUMENTED IGNORE THAT IS NOT ACTUALLY IGNORING IS A RECORDED FAILURE
+ * SHAPE HERE, so this asks git rather than reading .gitignore.**
+ *
+ * `.admin-session` holds a live Better Auth session for the single admin. It is
+ * a credential, and the only thing standing between it and a public repo is one
+ * line in `.gitignore`. Reading that file back and finding the line proves the
+ * line exists; it does not prove it MATCHES, because precedence, a later
+ * negation, a trailing space or a directory-scoped pattern all leave the line
+ * sitting there looking correct. `git check-ignore` answers the question the
+ * line is supposed to answer.
+ *
+ * BOTH DIRECTIONS, because they fail differently and both are real:
+ *   the session file MUST be ignored     or the credential can be committed
+ *   the example MUST NOT be ignored      or the instructions vanish from the
+ *                                        repo and nobody can refill the session
+ *
+ * The path is checked whether or not it exists. `check-ignore` is a question
+ * about the rules, not about the filesystem, so this holds on a fresh clone
+ * where no session has ever been created.
+ */
+console.log("\n  3. the admin session file is really ignored");
+
+/** @param {string} path @returns {boolean} */
+function gitIgnores(path) {
+  const res = spawnSync("git", ["check-ignore", "-q", "--no-index", path], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  // 0 ignored, 1 not ignored, anything else is git failing to answer.
+  if (res.status !== 0 && res.status !== 1) {
+    throw new Error(
+      `git check-ignore could not answer for ${path} (status ${res.status}). ` +
+        `Treating that as "ignored" would be the fail-open reading.`,
+    );
+  }
+  return res.status === 0;
+}
+
+ok(
+  "git itself ignores .admin-session",
+  gitIgnores(".admin-session"),
+  "the session file is NOT ignored, so a live admin session can be committed to a public " +
+    "repo by any `git add` that reaches it. A line in .gitignore is not the same as a " +
+    "matching rule.",
+);
+ok(
+  "git does NOT ignore .admin-session.example",
+  !gitIgnores(".admin-session.example"),
+  "the tracked example is being ignored, so the refill instructions would silently leave " +
+    "the repo and the next expired session has nothing to read.",
+);
+
+/*
+ * AND THE EXAMPLE CARRIES NO REAL SESSION. It is committed, so anything pasted
+ * into it is published. The placeholder is the tell: a file that still has it
+ * cannot also hold a token in the same slot.
+ */
+const examplePath = join(root, ".admin-session.example");
+ok(
+  ".admin-session.example exists to be checked",
+  existsSync(examplePath),
+  "the tracked example is gone, so the two assertions above and the refill instructions " +
+    "it carries are checking nothing",
+);
+if (existsSync(examplePath)) {
+  const example = readFileSync(examplePath, "utf8");
+  ok(
+    ".admin-session.example still carries its placeholder, not a session",
+    example.includes("PASTE_THE_VALUE_HERE"),
+    "the placeholder is gone from the TRACKED example, which is how a real session token " +
+      "gets committed: someone edits the example instead of copying it first.",
+  );
+}
+
 console.log(
   `  ${SECRETS.length} secret(s), ${files.length} file(s) scanned, ` +
     `${readsFound} read(s), ${Object.keys(CLIENT_ALLOWED).length} allowlisted`,
@@ -431,12 +509,12 @@ console.log(
  * different bugs: a scope check cannot see an assertion block that stopped
  * running over a scope that is still full.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 29.
- * Never summed. Floored at 27, slack of two: the count is driven by the secret
- * list and the per-root pairs, so it steps by a known amount when a secret is
- * added, as it did going from seven to eight.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 29 on 2026-08-14, and
+ * 33 once section 3 landed. Never summed. Floored at 31, slack of two: the count
+ * is driven by the secret list and the per-root pairs, so it steps by a known
+ * amount when a secret is added, as it did going from seven to eight.
  */
-const MINIMUM_CHECKS = 27;
+const MINIMUM_CHECKS = 31;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
