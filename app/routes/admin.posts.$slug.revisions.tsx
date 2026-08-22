@@ -1,6 +1,6 @@
 import { data } from "react-router";
 
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 
 import { getEnv } from "~/lib/context";
 import { parsePost } from "~/lib/editor/frontmatter";
@@ -36,16 +36,30 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
    * A RESOURCE ROUTE, and instrumented anyway.
    *
    * It returns raw `Response.json`, so the `headers()` export the other admin
-   * routes use does not apply; the header is set on each Response directly.
+   * routes used to carry never applied here. That sentence used to end "the
+   * header is set on each Response directly", which stopped being true when the
+   * per-route stamps came out: the header is written once, in `workers/app.ts`,
+   * for every response on both planes.
+   *
    * Marked because it makes GitHub calls and because the finding this session
    * exists for is that the ONE loader nobody suspected was the expensive one.
    */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
+  /*
+   * PUSHES THE MARK, DOES NOT WRITE THE HEADER. It used to do both, and the
+   * write was redundant: `workers/app.ts` stamps `Server-Timing` from the same
+   * shared array after the handler returns, with `set`, so this one was
+   * overwritten by an identical value on every request that asked for it.
+   *
+   * The push stays because it is the MEASUREMENT, and it is the only place
+   * `loader_total` is recorded for this route. The response argument is kept so
+   * every return path still runs it: dropping it would make the mark
+   * conditional on which branch returned.
+   */
   const stamp = (response: Response) => {
     if (timings) {
       timings.push({ name: "loader_total", ms: performance.now() - loaderStart });
-      response.headers.set("Server-Timing", serverTiming(timings));
     }
     return response;
   };

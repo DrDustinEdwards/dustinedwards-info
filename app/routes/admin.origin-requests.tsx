@@ -1,6 +1,6 @@
 import { data } from "react-router";
 
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import { EmptyState, Panel } from "~/components/admin/panel";
 // Constants come from the SHARED module, never from the .server one. This
 // component renders on the client too, where a .server import is stubbed out
@@ -45,24 +45,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   const loaderStart = performance.now();
   const result = await timed(timings, "ae_fetch_traffic", () => fetchTraffic(getEnv(context)));
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return timings
-    ? data({ result }, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data({ result });
-}
-
-/**
- * Carries the loader's `Server-Timing` to the response, and nothing else.
- *
- * Same shape as admin.tsx and admin.media._index: deliberately no
- * Cache-Control, because `workers/app.ts` applies `private, no-store` to any
- * response that did not set one and the cookie downgrade forces it for every
- * admin request anyway.
- */
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers();
-  const timing = loaderHeaders.get("Server-Timing");
-  if (timing) headers.set("Server-Timing", timing);
-  return headers;
+  return data({ result });
 }
 
 

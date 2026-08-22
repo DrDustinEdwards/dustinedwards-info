@@ -6,7 +6,7 @@ import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
@@ -227,20 +227,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   // No header unless it was asked for, so the default response is byte-identical
   // to what shipped before any of this instrumentation existed.
-  return timings
-    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data(payload);
-}
-
-/**
- * Carries the loader's `Server-Timing` to the response, and nothing else.
- * Same shape as admin.tsx and admin.media._index.
- */
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers();
-  const timing = loaderHeaders.get("Server-Timing");
-  if (timing) headers.set("Server-Timing", timing);
-  return headers;
+  return data(payload);
 }
 
 export async function action({ request, context }: Route.ActionArgs) {

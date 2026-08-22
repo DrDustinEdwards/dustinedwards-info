@@ -1,6 +1,6 @@
 import { Link, data } from "react-router";
 
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 
 import { Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
@@ -67,20 +67,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   };
 
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return timings
-    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data(payload);
-}
-
-/**
- * Carries the loader's `Server-Timing` to the response. Same shape as
- * admin.tsx and admin.media._index, and deliberately no Cache-Control.
- */
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers();
-  const timing = loaderHeaders.get("Server-Timing");
-  if (timing) headers.set("Server-Timing", timing);
-  return headers;
+  return data(payload);
 }
 
 

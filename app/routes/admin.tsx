@@ -7,7 +7,7 @@ import { adminNavCounts } from "~/db";
 import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
-import { serverTiming, timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
+import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
 import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
@@ -182,32 +182,7 @@ export async function loader({ context }: Route.LoaderArgs) {
    */
   timings?.push({ name: "layout_total", ms: performance.now() - loaderStart });
 
-  return timings
-    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data(payload);
-}
-
-/**
- * Carries this loader's `Server-Timing` to the response.
- *
- * **WITHOUT THIS THE LAYOUT WAS UNMEASURABLE, and every number reported for it
- * was inferred.** `/admin.data` carried no timing header at all, so the only
- * way to see `layout_ask_status` was to request a CHILD route and hope the
- * layout finished before the child serialised its own header. React Router runs
- * them in parallel, so that observation was biased FAST by construction: the
- * samples that went missing were exactly the slow ones, and a distribution
- * missing its tail was being read as a range.
- *
- * Deliberately does NOT set Cache-Control, for the same reason the media route
- * does not: `workers/app.ts` applies `private, no-store` to any response that
- * did not set one, and the cookie downgrade forces it for every admin request
- * regardless. Setting one here would be a second answer to a settled question.
- */
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers();
-  const timing = loaderHeaders.get("Server-Timing");
-  if (timing) headers.set("Server-Timing", timing);
-  return headers;
+  return data(payload);
 }
 
 /**
