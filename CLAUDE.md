@@ -27,7 +27,11 @@ Do this before touching code. It is not a formality: the recurring failure in th
 
 **THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Fourteen source files cite them; `check:invariants` section 15 now binds every cited number to a rule that exists here.
 
-**Recovered rather than rewritten.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document. The text below was transcribed from the last core.md that carried it. **Diff it against Capsid core.md version 1684 before treating any single clause as exact.**
+**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document.
+
+**Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22, and the result was that the recovery is COMPLETE.** All fifteen rules carry their subject, rule 10 carries all thirteen disciplines, and rule 12 carries all four. Six clauses differ from 1684 and every one is a deliberate correction of something 1684 asserts that is no longer true: boundary-note presence is no longer gated (7), section 5 was deleted (11), the lint form is gone (13), `check:hooks` is gone (15), the seven-repos claim was falsified by measurement (15), and the numbering freeze was lifted. Two clauses gained material 1684 never had: the plant-revert law (12) and the ungateability note (5).
+
+**The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half both earlier recoveries skipped: rule 6 claimed one statement of `postPath` where there were three (the code moved, `f45316b`), and rule 8 carried an assertion count that had drifted (the count is gone). Check a rule against the CODE, not against 1684.
 
 Each rule is ONE-LINER (a gate enforces it, and the gate is the detail) or PROSE (no gate can see it, so read it). What could be gated and is not: `dustinedwards/gate-backlog.md`.
 
@@ -65,7 +69,7 @@ Live claims verify on the live path. **A boundary note is a CLAIM that ages**: t
 
 ### 8. ONE-LINER. WORKERS CACHE IS ON. A response with no `Cache-Control` is CACHED, not skipped.
 
-The `private, no-store` default is asserted three ways.
+`check:headers` asserts it, in its `cache-control default` section. **No count here on purpose: this line said "three ways" while that section asserted FOUR, measured 2026-08-22.** A number in prose beside a gate is a second copy of the gate, and this file is where that habit has cost the most.
 
 ### 9. PROSE for the law, ONE-LINER for the inventory. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
