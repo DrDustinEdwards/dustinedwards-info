@@ -3,6 +3,12 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
 import { serverTiming, timingsContext } from "~/lib/timing";
+import {
+  CSP_ENDPOINT_NAME,
+  CSP_REPORT_PATH,
+  contentSecurityPolicy,
+  isAdminPath,
+} from "./csp.mjs";
 import { handleMediaEvents } from "./media-events";
 
 // Re-exported so the runtime can find the class its binding names. The Ask
@@ -113,12 +119,6 @@ function applySecurityHeaders(headers: Headers) {
     headers.set(name, value);
   }
 }
-
-/** Where violation reports are POSTed. Also declared in `routes.ts`. */
-const CSP_REPORT_PATH = "/api/csp-report";
-
-/** The `Reporting-Endpoints` name that `report-to` refers to. */
-const CSP_ENDPOINT_NAME = "csp-endpoint";
 
 /**
  * The Phase B policy, ENFORCED since 2026-08-17. Ratified 2026-08-06.
@@ -266,38 +266,19 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
  * `Reporting-Endpoints` Baseline 2024, so both are recent enough that the
  * legacy directive is still carrying real browsers.
  *
- * @param nonce the per-request nonce, already in the render context
+ * **THE BUILDER ITSELF NOW LIVES IN `./csp.mjs`, AND THE MOVE IS A GATE
+ * REQUIREMENT RATHER THAN TIDYING.** The policy became CONDITIONAL when the
+ * admin plane started needing a style nonce, and `check:headers` could only
+ * ever read this file's SOURCE TEXT. Source text can see that two branches
+ * exist; it cannot see which one a request gets. A shared module can be
+ * IMPORTED and CALLED, so the gate now asserts the strings both branches
+ * actually return, and the public branch keeping an absolute `style-src` is a
+ * failing assertion rather than an intention recorded in a comment.
+ *
+ * Everything above about enforcement, the resolved report list and the
+ * shared-cache nonce lifetime is unchanged and still describes this policy.
+ * The grounds for the admin-only branch are on `contentSecurityPolicy` there.
  */
-function contentSecurityPolicy(nonce: string): string {
-  return [
-    "default-src 'self'",
-    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
-    // 'self' ALONE since 2026-08-21: Inter is self-hosted, so nothing loads a
-    // stylesheet from another origin any more. This is a TIGHTENING.
-    "style-src 'self'",
-    "style-src-attr 'unsafe-inline'",
-    /*
-     * `'self'` ALONE since 2026-08-21, and the 2026-08-17 note that used to sit
-     * here was RIGHT for the wrong reason. It added `'self'` beside gstatic on
-     * the reasoning that self-hosting was coming and a widening cannot break a
-     * working load. Self-hosting arrived, so gstatic goes and this is a
-     * TIGHTENING rather than the widening it anticipated.
-     *
-     * That note also called the files in `assets/fonts/` unused. They are not:
-     * Satori loads them to draw the social cards. The fonts served here are a
-     * different pair, the variable latin woff2 subsets, in `public/fonts/`.
-     */
-    "font-src 'self'",
-    "img-src 'self' data:",
-    "connect-src 'self'",
-    "object-src 'none'",
-    "base-uri 'none'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    `report-uri ${CSP_REPORT_PATH}`,
-    `report-to ${CSP_ENDPOINT_NAME}`,
-  ].join("; ");
-}
 
 /**
  * One traffic row per HTML response, into Analytics Engine.
@@ -528,7 +509,13 @@ export default {
     // to add to the cutover list.
     const url = new URL(request.url);
     const reportTo = `${CSP_ENDPOINT_NAME}="${url.origin}${CSP_REPORT_PATH}"`;
-    const csp = contentSecurityPolicy(nonce);
+    /*
+     * The style nonce is emitted for the ADMIN PLANE ONLY, keyed on the path.
+     * `isAdminPath` owns the exact-or-slash test and the reasoning, including
+     * what an unauthenticated request to an admin path gets, which is a
+     * bodyless 302 that is never shared-cached.
+     */
+    const csp = contentSecurityPolicy(nonce, isAdminPath(url.pathname));
 
     /*
      * ONE call site, ABOVE the header block, and both of those are deliberate.

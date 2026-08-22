@@ -48,6 +48,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
+import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
@@ -302,23 +303,47 @@ ok(
 
 console.log("\n  content security policy");
 
-const cspFn = code.match(/function\s+contentSecurityPolicy[\s\S]*?\n\}/);
-ok(
-  "a contentSecurityPolicy builder exists",
-  Boolean(cspFn),
-  "not found after stripping comments",
-);
+/*
+ * THE POLICY IS CALLED, NOT PARSED, since the admin-only style nonce landed.
+ *
+ * This section used to match `function contentSecurityPolicy` out of the Worker
+ * source and regex the directives out of the text. That worked while the
+ * builder returned one string, and stopped being adequate the moment it
+ * returned two: a regex can see that both branches EXIST, and cannot see which
+ * one a request gets, so the strongest assertion it supports is "a nonce
+ * appears somewhere in the function" rather than "the public policy has none".
+ * Those two differ by exactly the defect worth catching.
+ *
+ * So the builder moved to `workers/csp.mjs` and is IMPORTED here. Same module
+ * the Worker runs, so there is no second copy to drift. The nonce below is a
+ * fixed string written in this file and never generator output, per hard rule
+ * 10's fixture-independence discipline.
+ */
+const NONCE = "gate-fixture-nonce-not-a-real-one";
+const publicCsp = contentSecurityPolicy(NONCE, false);
+const adminCsp = contentSecurityPolicy(NONCE, true);
 
-const cspBody = cspFn ? cspFn[0] : "";
-// BOTH quote styles. `script-src` is a TEMPLATE literal because it interpolates
-// the nonce, and a regex that only read double quotes would silently skip the
-// one directive this gate most needs to see. Measured: it did, and reported
-// script-src as missing on a policy that declares it.
-const directives = [...cspBody.matchAll(/[`"]([a-z-]+ [^`"]*)[`"]/g)].map((m) => m[1]);
+/** @param {string} csp */
+const directivesOf = (csp) => csp.split("; ").filter(Boolean);
+/**
+ * @param {string} csp
+ * @param {string} name
+ */
+const directiveIn = (csp, name) =>
+  directivesOf(csp).find((d) => d === name || d.startsWith(name + " ")) ?? "";
+
+const directives = directivesOf(publicCsp);
 ok(
-  "the policy declares directives",
+  "the policy builder returns directives",
   directives.length > 0,
   "parsed zero, so every directive assertion below would pass vacuously",
+);
+ok(
+  "the two branches actually differ",
+  publicCsp !== adminCsp,
+  "contentSecurityPolicy returns the same string for both arms, so the styleNonce " +
+    "argument is being ignored and every branch assertion below compares one policy " +
+    "with itself.",
 );
 
 // The ratified directive names. Values are deliberately NOT all asserted here,
@@ -327,11 +352,13 @@ ok(
 // It used to be "the point of Report-Only is that some of them may have to
 // change", which expired with the phase. What holds now is narrower and is the
 // real argument: this gate transcribes the ratification, and pinning every
-// VALUE would make it a mirror of workers/app.ts, so a deliberate widening
+// VALUE would make it a mirror of workers/csp.mjs, so a deliberate widening
 // would fail here for no reason beyond having been made. The NAMES are asserted
-// so a directive cannot be quietly dropped, and the two values that carry the
-// whole policy, `unsafe-inline` and the enforcing header itself, have named
-// assertions of their own above and below.
+// so a directive cannot be quietly dropped, and the values that carry the whole
+// policy have named assertions of their own.
+//
+// BOTH BRANCHES, because a directive dropped from one arm only is exactly what
+// a single-arm sweep reports as clean.
 for (const name of [
   "default-src",
   "script-src",
@@ -345,24 +372,159 @@ for (const name of [
   "form-action",
   "frame-ancestors",
 ]) {
+  for (const [arm, csp] of [
+    ["public", publicCsp],
+    ["admin", adminCsp],
+  ]) {
+    ok(
+      "the " + arm + " policy declares " + name,
+      Boolean(directiveIn(csp, name)),
+      "parsed: " +
+        (directivesOf(csp)
+          .map((d) => d.split(" ")[0])
+          .join(", ") || "(none)"),
+    );
+  }
+}
+
+/* ------------------------------------ the style nonce is ADMIN ONLY ------- */
+
+/*
+ * **THE PUBLIC BRANCH IS THE ASSERTION THAT MATTERS.**
+ *
+ * The admin plane gets a style nonce so CodeMirror's injected StyleModule is
+ * accepted. The entire value of scoping it that way is that the public side
+ * stays ABSOLUTE, and nothing in the code stops a later edit from passing
+ * `true` everywhere: doing so would fix a violation report, read as a
+ * simplification, leave every comment in place describing a policy that no
+ * longer exists, and break nothing a reader could see.
+ *
+ * The seven edge-cached public routes are why it would matter. Header and body
+ * are cached together for cookieless readers, so one nonce is valid there for
+ * up to ten minutes. That exposure is accepted in writing for `script-src`;
+ * extending it to styles as a side effect is not.
+ *
+ * Asserted in BOTH DIRECTIONS. The public arm must carry no nonce source, and
+ * the admin arm must carry one, because an assertion that only refuses the
+ * nonce publicly is equally satisfied by a build where the editor is broken
+ * again.
+ */
+const publicStyleSrc = directiveIn(publicCsp, "style-src");
+const adminStyleSrc = directiveIn(adminCsp, "style-src");
+
+ok(
+  "the PUBLIC style-src carries no nonce source",
+  !publicStyleSrc.includes("nonce-"),
+  "public style-src is " +
+    JSON.stringify(publicStyleSrc) +
+    ". Seven public HTML routes are edge-cached, so their nonce is stable for up to ten " +
+    "minutes and a nonce source there widens the accepted script-src exposure to styles. " +
+    "Nothing public injects an inline stylesheet, so it buys nothing and costs that.",
+);
+ok(
+  "the PUBLIC style-src is exactly 'self'",
+  publicStyleSrc === "style-src 'self'",
+  "public style-src is " +
+    JSON.stringify(publicStyleSrc) +
+    ", expected \"style-src 'self'\". Anything else is a widening of the public policy.",
+);
+ok(
+  "the PUBLIC style-src carries no 'unsafe-inline'",
+  !publicStyleSrc.includes("'unsafe-inline'"),
+  "that is the easy way to silence the CodeMirror report, and it would apply to every " +
+    "public page, which is the opposite of what the admin-only branch is for",
+);
+ok(
+  "the ADMIN style-src carries the nonce source",
+  adminStyleSrc.includes("'nonce-" + NONCE + "'"),
+  "admin style-src is " +
+    JSON.stringify(adminStyleSrc) +
+    ". Without a nonce source the nonce CodeMirror puts on its injected <style> authorises " +
+    "nothing, and the StyleModule is dropped on every editor load, which is the defect " +
+    "this branch exists for.",
+);
+ok(
+  "the ADMIN style-src still carries 'self'",
+  adminStyleSrc.includes("'self'"),
+  "admin style-src is " +
+    JSON.stringify(adminStyleSrc) +
+    ". There is no 'strict-dynamic' for styles, so 'self' keeps applying and the linked " +
+    "stylesheet needs it.",
+);
+ok(
+  "style-src-attr is identical on both branches",
+  directiveIn(publicCsp, "style-src-attr") === directiveIn(adminCsp, "style-src-attr"),
+  "the style nonce changed what ATTRIBUTES are permitted, which it must not: the 117 " +
+    "inline style attributes the highlighter emits are a public-page concern, and nonces " +
+    "do not apply to attributes at all",
+);
+
+/*
+ * WHAT DECIDES THE BRANCH, asserted on real paths rather than on the caller's
+ * `if`, which would be a mirror of the caller.
+ *
+ * The public list is taken from `routes.ts` and includes the cases that would
+ * catch a bare `startsWith("/admin")`: a hypothetical `/administrator`, and the
+ * `.data` serialisations React Router actually emits.
+ */
+for (const path of [
+  "/",
+  "/blog",
+  "/blog/some-post",
+  "/colophon",
+  "/projects",
+  "/playground",
+  "/search",
+  "/login",
+  "/media/thing.png",
+  "/api/csp-report",
+  "/administrator",
+  "/admin-tools",
+  "/admin.data",
+]) {
   ok(
-    `the policy declares ${name}`,
-    directives.some((d) => d.startsWith(`${name} `)),
-    `parsed: ${directives.map((d) => d.split(" ")[0]).join(", ") || "(none)"}`,
+    path + " is NOT an admin path, so it gets the absolute style-src",
+    !isAdminPath(path),
+    "isAdminPath(" +
+      JSON.stringify(path) +
+      ") is true, so this route would be served a policy carrying a style nonce.",
+  );
+}
+for (const path of [
+  "/admin",
+  "/admin/",
+  "/admin/posts",
+  "/admin/posts/a-slug/edit",
+  // A child route's single-fetch URL. It matches the slash arm, unlike the
+  // layout's own `/admin.data`, which does not. Both are JSON either way.
+  "/admin/posts.data",
+]) {
+  ok(
+    path + " IS an admin path, so the editor's StyleModule is accepted",
+    isAdminPath(path),
+    "isAdminPath(" +
+      JSON.stringify(path) +
+      ") is false, so CodeMirror's injected stylesheet is refused on that route.",
   );
 }
 
-const scriptSrc = directives.find((d) => d.startsWith("script-src ")) ?? "";
+const scriptSrc = directiveIn(publicCsp, "script-src");
 ok(
-  "script-src carries a nonce placeholder, not a literal",
-  scriptSrc.includes("${nonce}"),
-  `script-src is ${JSON.stringify(scriptSrc)}. A literal nonce is a static nonce, ` +
-    `which renders correctly and protects nothing.`,
+  "script-src carries the per-request nonce, not a literal",
+  scriptSrc.includes("'nonce-" + NONCE + "'"),
+  "script-src is " +
+    JSON.stringify(scriptSrc) +
+    ". A literal nonce is a static nonce, which renders correctly and protects nothing.",
+);
+ok(
+  "script-src is identical on both branches",
+  scriptSrc === directiveIn(adminCsp, "script-src"),
+  "the style branch changed script-src, which it has no business touching",
 );
 ok(
   "script-src carries 'strict-dynamic'",
   scriptSrc.includes("'strict-dynamic'"),
-  `script-src is ${JSON.stringify(scriptSrc)}`,
+  "script-src is " + JSON.stringify(scriptSrc),
 );
 ok(
   "script-src does NOT carry 'unsafe-inline'",
@@ -408,12 +570,12 @@ ok(
  */
 ok(
   "reporting is still on after the switch to enforcing",
-  cspBody.includes("report-uri ") && cspBody.includes("report-to "),
+  publicCsp.includes("report-uri ") && publicCsp.includes("report-to "),
   "the policy blocks but reports nothing, so a false positive would be invisible",
 );
 ok(
   "a report destination is declared (report-to AND the legacy report-uri)",
-  cspBody.includes("report-to ") && cspBody.includes("report-uri "),
+  adminCsp.includes("report-to ") && adminCsp.includes("report-uri "),
   "a CSP with no report destination is a header nobody reads. Both are sent " +
     "because report-to is Baseline 2026 and report-uri still carries older browsers.",
 );
