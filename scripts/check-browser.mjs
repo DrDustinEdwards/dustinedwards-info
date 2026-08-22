@@ -879,6 +879,32 @@ try {
      * one unbreakable token, 199px, in a 343px block once the drawer toggle
      * appears) and the document simply grew to meet it.
      *
+     * **THE TOPBAR WAS ONE FLOOR AND NOT THE ONLY ONE. THIS ASSERTION IS STILL
+     * RED WITH THE TOPBAR REPAIR APPLIED, and the number it reports is the
+     * correction to a claim made when the repair landed.**
+     *
+     * That claim was "0 overflow at 320, 400, 480 and 553", and it was measured
+     * by constraining `.admin-topbar` directly and reading its children back. It
+     * was true about the topbar and false about the document, which is the
+     * instrument seeing only what it was threaded through: the topbar was
+     * constrained, so the topbar was what got measured.
+     *
+     * MEASURED PROPERLY on the deployed page with HEAD's stylesheet swapped into
+     * the response and PROVEN in the cascade first: the document floor moves
+     * 576 to 542, not below 320. 553 goes green. 480, 400 and 320 stay red at
+     * 62, 142 and 222.
+     *
+     * The chain, at 320: two `.stat-card`s at 234 each hold `.card-grid` at 480,
+     * which holds `.panel` at 480 and `.admin-content` at 528 once its padding
+     * is added. `.admin-content` sizes the grid track, the track stretches
+     * `.admin-topbar` to 528, and `.admin-signout` (correctly refusing to shrink)
+     * ends up 14px past that at 542. So the remaining floor is the COCKPIT
+     * CONTENT, not the bar, and the bar's own repair did what it claimed: its
+     * min-content is no longer the binding constraint.
+     *
+     * This assertion stays exactly as it is. Narrowing it to pass on the half
+     * that is fixed would be tuning the assertion to the defect.
+     *
      * FOUR WIDTHS, NOT ONE, and that is the point of the arithmetic above. A
      * single assertion at 320 would pass the moment the floor dropped to 320,
      * while 553 still scrolled. The failure was linear in the viewport, so the
@@ -1006,24 +1032,22 @@ try {
  * never run rather than assertions that fail.
  */
 /*
- * **THE ADMIN FLOOR BELOW IS DERIVED, NOT MEASURED, AND THAT BREAKS HARD RULE
- * 10's OWN DISCIPLINE. It is written here rather than quietly, because a summed
- * floor that reads like a measured one is the defect that discipline exists to
- * prevent.**
+ * **BOTH FLOORS ARE NOW MEASURED THROUGH THIS GATE'S OWN PIPELINE, by RUNNING
+ * it. 15 with the admin cases skipped, 43 with them running.** Never summed.
+ * Floored at 13 and 41, slack of two either way.
  *
- * The skip-mode floor, 13, is still measured: this environment runs that mode
- * and it reports 15.
+ * The run-mode figure was DERIVED until 2026-08-22 and said so, because the
+ * admin cases need a session and no session had ever been present. It was
+ * 29 + 12 counted from the source, and the count that replaced it is 43, so the
+ * derivation happened to be right and the floor does not move. **That is the
+ * least interesting possible outcome and it is still worth the run**: a summed
+ * floor that agrees with the measurement is indistinguishable, before the
+ * measurement, from one that does not. The previous figure in this file was
+ * wrong by one for years, and the comment above says why nothing noticed.
  *
- * The run-mode floor is not. The admin cases need ADMIN_SESSION_COOKIE and
- * ADMIN_ORIGIN, neither of which was set in the session that added the overflow
- * cases, so the mode could not be executed and 41 is 29 + 12 counted from the
- * source: five widths times two paths, plus the two containment assertions. The
- * previous figure in this file was wrong by one for years for exactly this
- * reason, and the comment above says why that survived.
- *
- * **OWED: run this gate once with a session and replace 41 with the measured
- * number minus the usual slack of two.** Until then a green run in admin mode
- * proves less than the floor implies.
+ * The cross-check that makes 43 credible rather than merely observed: the
+ * recorded pre-overflow measurement was 31, twelve assertions were added, and
+ * the run reports 43.
  */
 const MINIMUM_CHECKS = adminCasesRan ? 41 : 13;
 console.log(
