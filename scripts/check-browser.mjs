@@ -480,14 +480,16 @@ try {
    */
   if (!ADMIN_COOKIE) {
     skip(
-      "the admin plane (6 surfaces, the editor mount, the two mark fills)",
+      "the admin plane (6 surfaces, the editor mount, the two mark fills, and the " +
+        "sideways-scroll cases at 1280, 553, 480, 400 and 320)",
       "no ADMIN_SESSION_COOKIE in the environment. These cases need a REAL admin session " +
         "and are deliberately not stubbed: a fake auth path would not render what production " +
         "renders, and the defects they exist to catch live in the authenticated render.",
     );
   } else if (!ADMIN_ORIGIN) {
     skip(
-      "the admin plane (6 surfaces, the editor mount, the two mark fills)",
+      "the admin plane (6 surfaces, the editor mount, the two mark fills, and the " +
+        "sideways-scroll cases at 1280, 553, 480, 400 and 320)",
       "ADMIN_SESSION_COOKIE is set but ADMIN_ORIGIN is not. These cases CANNOT run against " +
         "the preview server: sessions live in the production KV namespace and the preview " +
         "reads local miniflare storage, so a valid session renders the login page there. " +
@@ -667,6 +669,115 @@ try {
       );
     }
 
+    /* ------------------------- the admin plane does not scroll sideways ---- */
+
+    /*
+     * THE SAME WIDTH THE PUBLIC PAGES ARE GATED AT, and it had never been
+     * applied to this plane. Case 4 above drives every public page at 320 and
+     * has since the `.site-header-nav` defect; the admin shell was exempt for
+     * no reason beyond needing a session, so it was never measured and it was
+     * broken.
+     *
+     * MEASURED BEFORE THE REPAIR: 23px of overflow at 553, 96 at 480, 176 at
+     * 400, 256 at 320. Those four are one number. 553 + 23, 480 + 96,
+     * 400 + 176 and 320 + 256 are 576 every time, because `.admin-topbar-user`
+     * had a min-content floor it could not shrink past (the operator's email is
+     * one unbreakable token, 199px, in a 343px block once the drawer toggle
+     * appears) and the document simply grew to meet it.
+     *
+     * FOUR WIDTHS, NOT ONE, and that is the point of the arithmetic above. A
+     * single assertion at 320 would pass the moment the floor dropped to 320,
+     * while 553 still scrolled. The failure was linear in the viewport, so the
+     * gate has to sample the line rather than its worst point. 553 is included
+     * precisely because it is the shallowest of the four and the first to go
+     * green under a partial fix.
+     *
+     * 1280 is asserted too. Everything here shrinks and truncates, and a fix
+     * built out of `min-width: 0` can easily buy the narrow case by collapsing
+     * something that was fine at desktop width.
+     *
+     * The offending element is NAMED, exactly as case 4 names it.
+     */
+    const OVERFLOW_WIDTHS = [1280, 553, 480, 400, 320];
+    for (const width of OVERFLOW_WIDTHS) {
+      await admin.setViewport({ width, height: 800 });
+      for (const [path, what] of [
+        ["/admin", "the cockpit"],
+        ["/admin/posts", "the posts list"],
+      ]) {
+        await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
+        const o = await admin.evaluate(() => {
+          const doc = document.documentElement;
+          const over = [];
+          for (const el of document.querySelectorAll("body *")) {
+            const r = el.getBoundingClientRect();
+            // Off-screen by design: the skip link, and the closed drawer, which
+            // is translated fully out of view at the narrow breakpoint.
+            if (r.left < -1000) continue;
+            if (r.right > doc.clientWidth + 0.5) {
+              const cls = typeof el.className === "string" ? el.className : "";
+              over.push(
+                `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
+              );
+            }
+          }
+          return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };
+        });
+        ok(
+          `${path}: ${what} does not scroll sideways at ${width}px`,
+          o.scrollW <= o.clientW,
+          `scrollWidth ${o.scrollW} exceeds clientWidth ${o.clientW} by ` +
+            `${o.scrollW - o.clientW}px. Widest: ${o.over.join(", ") || "(nothing measured wider " +
+              "than the viewport, so the overflow is on an element this scan skipped)"}`,
+        );
+      }
+    }
+
+    /*
+     * AND THE BAR ITSELF FITS, which is a different claim from the document not
+     * scrolling.
+     *
+     * `.admin-topbar` could stay inside the viewport while its own children
+     * overflowed it, if something above it ever gained `overflow: hidden`. Then
+     * the document would not scroll, this section's assertions would all pass,
+     * and the email and Sign out would simply be clipped off the right edge
+     * with nothing reporting it. Asserted at the narrowest width only, because
+     * that is where it would happen.
+     */
+    await admin.setViewport({ width: 320, height: 800 });
+    await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
+    const bar = await admin.evaluate(() => {
+      const el = document.querySelector(".admin-topbar");
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const kids = [...el.children].map((k) => {
+        const kr = k.getBoundingClientRect();
+        const cls = typeof k.className === "string" ? k.className : "";
+        return {
+          sel: `${k.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}`,
+          right: Math.round(kr.right),
+          visible: kr.width > 0,
+        };
+      });
+      const out = kids.filter((k) => k.visible && k.right > Math.round(r.right) + 0.5);
+      return { right: Math.round(r.right), kids, out };
+    });
+    ok(
+      "the admin topbar exists to measure at 320px",
+      bar !== null,
+      "no .admin-topbar, so the containment assertion below would examine nothing",
+    );
+    ok(
+      "no admin topbar child overflows the bar at 320px",
+      bar !== null && bar.out.length === 0,
+      bar === null
+        ? "not measured"
+        : `bar ends at ${bar.right} and ${bar.out
+            .map((k) => `${k.sel}@${k.right}`)
+            .join(", ")} extend past it. The document may not scroll, but the ` +
+          `controls are being clipped.`,
+    );
+
     await admin.close();
   }
 
@@ -700,7 +811,27 @@ try {
  * server that came up but served an error page all produce assertions that
  * never run rather than assertions that fail.
  */
-const MINIMUM_CHECKS = adminCasesRan ? 29 : 13;
+/*
+ * **THE ADMIN FLOOR BELOW IS DERIVED, NOT MEASURED, AND THAT BREAKS HARD RULE
+ * 10's OWN DISCIPLINE. It is written here rather than quietly, because a summed
+ * floor that reads like a measured one is the defect that discipline exists to
+ * prevent.**
+ *
+ * The skip-mode floor, 13, is still measured: this environment runs that mode
+ * and it reports 15.
+ *
+ * The run-mode floor is not. The admin cases need ADMIN_SESSION_COOKIE and
+ * ADMIN_ORIGIN, neither of which was set in the session that added the overflow
+ * cases, so the mode could not be executed and 41 is 29 + 12 counted from the
+ * source: five widths times two paths, plus the two containment assertions. The
+ * previous figure in this file was wrong by one for years for exactly this
+ * reason, and the comment above says why that survived.
+ *
+ * **OWED: run this gate once with a session and replace 41 with the measured
+ * number minus the usual slack of two.** Until then a green run in admin mode
+ * proves less than the floor implies.
+ */
+const MINIMUM_CHECKS = adminCasesRan ? 41 : 13;
 console.log(
   `\n${checks} checks, ${failures} failures` +
     (skipped.length ? `, ${skipped.length} skipped` : "") +
@@ -716,8 +847,10 @@ console.log(
 if (!adminCasesRan) {
   console.log(
     "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
-      "  mount was not checked, and neither mark fill was measured. A green result above\n" +
-      "  is a statement about the public pages only.\n",
+      "  mount was not checked, neither mark fill was measured, and NOTHING ON THIS PLANE\n" +
+      "  WAS MEASURED AT ANY NARROW WIDTH. The public pages are gated at 320 and the admin\n" +
+      "  plane was not, which is how it came to scroll sideways below 576 unnoticed. A\n" +
+      "  green result above is a statement about the public pages only.\n",
   );
 }
 if (checks < MINIMUM_CHECKS) {

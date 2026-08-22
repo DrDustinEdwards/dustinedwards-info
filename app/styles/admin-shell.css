@@ -363,6 +363,13 @@
 .admin-brand:visited {
   display: inline-flex;
   align-items: center;
+  /* THE FLEX ITEM, not just the text inside it. Measured: truncating
+     `.admin-brand-name` alone MADE THE BAR WIDER, from a 519.77px floor to
+     597.26px, because `white-space: nowrap` raises this element's own
+     min-content from "Edwards" to the whole wordmark while `min-width: auto`
+     still refuses to shrink past it. The declaration below is what lets the
+     truncation actually take effect. */
+  min-width: 0;
   /* The SHARED gap, the same one every sidebar item uses, which is what puts
      the wordmark's left edge and the nav labels' left edge on the same x. It is
      still 0.5rem, the value .site-header-brand carries, so sharing it cost the
@@ -549,11 +556,65 @@
   gap: 1rem;
   margin-left: auto;
   font-size: 0.8125rem;
+  /* THE ADMIN PLANE SCROLLED SIDEWAYS BELOW 576px, AND THIS DECLARATION IS THE
+     REPAIR. Measured before it: 23px of overflow at 553, 96 at 480, 176 at 400,
+     256 at 320. Those are all the same number. 553 + 23, 480 + 96, 400 + 176
+     and 320 + 256 are 576 four times, because the bar had a FIXED minimum
+     content width and the viewport was simply narrower than it.
+
+     `min-width: auto` is the flex default and resolves to min-content, so a
+     flex item cannot shrink past the widest thing inside it however willing its
+     `flex-shrink` is. The widest thing inside this one is the operator's email
+     address, a single unbreakable token: measured at 199px, inside a block
+     measured at 343px once the drawer toggle appears at the 800px breakpoint.
+     So the bar could not compress and the document grew instead.
+
+     Three elements yield now rather than one, which is what makes the repair
+     hold instead of moving the failure 40px further down. The email truncates,
+     the wordmark truncates, and the scope chip leaves at 576. What is left is
+     the mark, the drawer toggle and Sign out, which are controls and stay
+     whole. */
+  min-width: 0;
+}
+
+/* The email is INFORMATION, so it yields first and completely. No `title` is
+   set from here: the address is the signed-in account, and the account it
+   belongs to is the only one this plane has. */
+.admin-topbar-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sign-out form is the flex ITEM wrapping the button, so this is where the
+   button's refusal to shrink has to be declared. */
+.admin-topbar-user form {
+  flex: none;
+}
+
+/* Same treatment, one step later. The wordmark only gives way once the email
+   has nothing left to give, because flex distributes shrinkage by base size and
+   the email's is much the larger of the two. */
+.admin-brand-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-signout {
   display: inline-flex;
   align-items: center;
+  /* Sign out is a CONTROL, so its label does not wrap and does not truncate. A
+     broken action label is worse than a narrower bar, and this is the one
+     element in the topbar that performs something worth reading before
+     pressing. Measured at 320: still 95px, still reading "Sign out".
+
+     `white-space`, not `flex`. The flex ITEM here is the wrapping <form>, so a
+     `flex` declaration on this button is inert; the form carries it instead,
+     below. */
+  white-space: nowrap;
   gap: 0.375rem;
   padding: 0.375rem 0.75rem;
   border: 1px solid var(--border);
@@ -721,6 +782,29 @@
   /* The toggle is the rail's control and the rail does not exist here. */
   .admin-sidebar-toggle {
     display: none;
+  }
+
+  /* 576px is MEASURED, not a framework number that happened to be nearby. The
+     four recorded overflows were 23px at 553, 96 at 480, 176 at 400 and 256 at
+     320, and every one of those pairs sums to 576: the topbar had a fixed
+     minimum content width and 576 is it. So the chip leaves at exactly the
+     width where the bar stops fitting, and not one pixel earlier.
+
+     THE SCOPE CHIP IS THE ONLY THING IN THIS BAR THAT IS PURELY AMBIENT.
+     "Private plane" repeats what the mark, the drawer and every page title
+     already say, and it is the one element here that is neither an identity nor
+     a control. Everything else yields by truncating, which keeps it on screen;
+     this one leaves, because a chip reading "Priv..." is worse than no chip.
+
+     Nested inside the 800px block rather than written at the top level, because
+     it is a narrowing of that breakpoint and not an independent one: the drawer
+     toggle it is making room for only exists in here.
+
+     Not `visibility: hidden`, which reserves the box and is the whole problem. */
+  @media (max-width: 576px) {
+    .admin-topbar-scope {
+      display: none;
+    }
   }
 }
 

@@ -490,7 +490,11 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           {/* Decorative: the link's accessible name is the wordmark beside it,
               so naming the mark too would say it twice. */}
           <SiteLogoHeader className="admin-brand-mark" />
-          {SITE.name}
+          {/* WRAPPED so it can truncate. A bare text node cannot carry
+              `text-overflow`, and below 576px the wordmark is the widest thing
+              in the bar that is safe to give up: the mark beside it still
+              identifies the plane and the link keeps its accessible name. */}
+          <span className="admin-brand-name">{SITE.name}</span>
         </Link>
         <span className="admin-topbar-scope">Private plane</span>
 
@@ -518,7 +522,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="muted">{loaderData.email}</span>
+          {/* `.muted` is the colour and `.admin-topbar-email` is the box. Split
+              because the truncation below needs a selector that means THIS
+              element, and `.muted` is used all over the admin plane. */}
+          <span className="muted admin-topbar-email">{loaderData.email}</span>
           <Form method="post" action="/admin/logout">
             <button type="submit" className="admin-signout">
               <svg
