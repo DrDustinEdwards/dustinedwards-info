@@ -1,0 +1,31 @@
+# The admin session for `npm run check:browser`.
+#
+# COPY THIS FILE TO `.admin-session` AND FILL IN `cookie`. That file is
+# gitignored. Never commit it, never paste its contents into a chat.
+#
+# WHEN THE GATE SAYS THE SESSION EXPIRED, REDO THESE FIVE STEPS:
+#
+#   1. Open https://dustinedwards.dustin-edwards.workers.dev/admin in Chrome,
+#      signed in as the admin. You should see the cockpit, not the login page.
+#   2. F12 for DevTools, then the Application tab.
+#   3. Left sidebar: Storage > Cookies > the workers.dev origin.
+#   4. Find the row named `__Secure-better-auth.session_token`. Copy the Name
+#      cell and the Value cell.
+#   5. Paste them below as name=value, on one line, replacing the placeholder.
+#
+# THE NAME HAS TO BE THERE. A bare value used to be accepted and guessed at: the
+# gate asked "does this contain an = sign" to decide whether a name was already
+# present, which cannot tell a `name=value` pair from a value carrying base64
+# `=` padding. Dustin's 85-character cookie was a bare value, it produced a
+# Cookie header with no name, and no server can parse that. The gate refuses a
+# nameless value now and says which name it wanted.
+#
+# Pasting the whole `Cookie:` header from the Network tab works too: the gate
+# picks the session cookie out of it by name and ignores the rest.
+
+cookie = __Secure-better-auth.session_token=PASTE_THE_VALUE_HERE
+
+# The DEPLOYED origin the admin cases drive. Not the preview build: sessions
+# live in the production KV namespace, so a valid session renders the login page
+# against local miniflare storage. Measured, not assumed.
+origin = https://dustinedwards.dustin-edwards.workers.dev
