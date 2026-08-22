@@ -445,15 +445,18 @@ export async function getDraftPostForPreview(env: Env, slug: string) {
 /**
  * THE TWO COUNTS THE ADMIN NAV CAN HONESTLY CARRY.
  *
- * The mockup badges four sections: Sites, Content, Posts and Media. **Only two
- * of those numbers exist.** `/admin/sites` and `/admin/content` are stubbed
- * cockpit sections served by `stubSource()`: Sites renders a hardcoded array of
- * six placeholder cards whose every status is "health check not wired", and
- * Content's own `count` field is literally `null` on all three of its sections
- * and renders as the words "no data". A badge over either one would be a
- * numeral in the sidebar asserting a quantity nothing has measured, which is
- * worse than no badge: the reader has no way to tell a counted section from a
- * decorated one. They get counts when the sections get data.
+ * The mockup badged four sections: Sites, Content, Posts and Media. **Only two
+ * of those numbers ever existed, and one of the other two is now gone.**
+ *
+ * `/admin/sites` was DELETED rather than badged: it rendered a hardcoded array
+ * of six placeholder cards whose every status was "health check not wired", so
+ * the only number available was the length of that array.
+ *
+ * `/admin/content` is still a stubbed cockpit section served by `stubSource()`,
+ * and its `count` field is literally `null` on all three of its sections,
+ * rendering as the words "no data". A badge over it would be a numeral in the
+ * sidebar asserting a quantity nothing has measured, which is worse than no
+ * badge: the reader has no way to tell a counted section from a decorated one.
  *
  * Posts and Media are real rows in D1, so they are real numbers.
  *

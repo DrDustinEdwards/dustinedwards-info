@@ -898,8 +898,7 @@
   gap: 0.75rem;
 }
 
-.stat-card,
-.site-card {
+.stat-card {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
@@ -909,16 +908,14 @@
   background: var(--surface);
 }
 
-.stat-card header,
-.site-card header {
+.stat-card header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.stat-card p,
-.site-card p {
+.stat-card p {
   margin: 0;
 }
 
@@ -934,27 +931,8 @@
   font-weight: 600;
 }
 
-.stat-card-hint,
-.site-card-summary {
+.stat-card-hint {
   font-size: 0.8125rem;
-}
-
-.site-card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.site-card .muted {
-  font-size: 0.8125rem;
-}
-
-.site-card-meta {
-  margin-top: 0.25rem;
-}
-
-.site-card-link {
-  font-size: 0.8125rem;
-  color: var(--brand);
 }
 
 .empty-state {

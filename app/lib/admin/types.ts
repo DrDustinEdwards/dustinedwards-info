@@ -40,17 +40,6 @@ export interface OverviewCard {
   status: HealthStatus;
 }
 
-/** One portfolio site on the sites panel. */
-export interface SiteHealth {
-  id: string;
-  name: string;
-  blurb: string;
-  platform: string;
-  url: string | null;
-  status: HealthStatus;
-  summary: string;
-}
-
 /** One managed content area of this site (blog, protocols, CV). */
 export interface ContentSection {
   id: string;
