@@ -8,7 +8,6 @@
 import type {
   AdminDataSource,
   AdminTool,
-  ContentSection,
   OverviewCard,
 } from "./types";
 
@@ -77,37 +76,6 @@ export const overviewSource = stubSource<OverviewCard[]>(
       value: "Single admin",
       hint: "Better Auth, Google, sessions in KV",
       status: "ok",
-    },
-  ],
-);
-
-/** Content manager shell: the three managed areas of this site. */
-export const contentSource = stubSource<ContentSection[]>(
-  "content",
-  "Site content",
-  "d1",
-  "Counts come from D1 once the editors exist.",
-  [
-    {
-      id: "blog",
-      label: "Blog",
-      description: "Categorized posts with FTS5 search",
-      count: null,
-      status: "unknown",
-    },
-    {
-      id: "protocols",
-      label: "Protocols",
-      description: "Lab protocols knowledgebase with HowTo schema",
-      count: null,
-      status: "unknown",
-    },
-    {
-      id: "cv",
-      label: "CV",
-      description: "Interactive curriculum vitae sections",
-      count: null,
-      status: "unknown",
     },
   ],
 );
