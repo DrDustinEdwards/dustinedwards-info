@@ -205,13 +205,26 @@ export const toolsSource = stubSource<AdminTool[]>(
       provider: "R2",
       ready: false,
     },
-    {
-      id: "capsid-note",
-      label: "Capsid session note",
-      description: "Write an episodic entry to shared memory",
-      provider: "Capsid",
-      ready: false,
-    },
+    /*
+     * **`capsid-note` WAS HERE AND IS DELETED, NOT DEFERRED. Ruled 2026-08-22.**
+     *
+     * It read: "Capsid session note. Write an episodic entry to shared memory."
+     * Building it would have put back in code a ritual that was withdrawn in
+     * prose. Two standing rules say so, and they agree:
+     * `dustinedwards/core.md` says sessions READ Capsid and never write it, and
+     * `capsid/conventions.md` withdrew the end-of-session episodic
+     * portfolio-wide on 2026-08-21, because that rule is what produced roughly
+     * 100 episodics in recova and 49 here, which is what buried the rulings
+     * filed beside them.
+     *
+     * So this was not an unfinished feature. It was a finished decision
+     * pointing the other way, sitting in a list of things still to do. A stub
+     * is a promise, and this one promised to reinstate the thing that was
+     * removed.
+     *
+     * Recorded rather than silently dropped, because the id would otherwise
+     * look like an oversight to the next reader with a spare afternoon.
+     */
     {
       id: "secrets-audit",
       label: "Secrets audit",
