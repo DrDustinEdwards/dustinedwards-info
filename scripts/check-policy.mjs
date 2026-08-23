@@ -543,8 +543,27 @@ permits("admin may create an already published post", () =>
    * a string literal, and it does not parse. A pattern hidden in a trailing
    * comment would still satisfy these matches.
    */
+  /*
+   * **TRAILING `//` COMMENTS ARE STRIPPED TOO, and they were not until
+   * 2026-08-22.** The second replace matched only a line comment that BEGINS a
+   * line, so a comment written after code survived stripping and could satisfy
+   * every needle below.
+   *
+   * PROVEN BY PLANT rather than by reading. Replacing the real
+   * `recordsForPosts(publishableForAsk(posts))` with an unfiltered
+   * `recordsForPosts(posts)` and moving the original text into a trailing
+   * comment left this gate GREEN. The assertion that no unpublished draft
+   * enters the PUBLIC Ask index was satisfiable by a comment, and the absence
+   * of that filter is what put five unpublished drafts on `/search/ask` in
+   * July.
+   *
+   * Same form as `check:invariants` now, including the `[^:]` guard so a
+   * `https://` inside a string literal is not read as the start of a comment.
+   * Four gates still carry their own stripper of differing strength; that is
+   * the class, and it is named in the report rather than half-fixed here.
+   */
   const codeOnly = (/** @type {string} */ src) =>
-    src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+    src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
   const askSource = codeOnly(askRaw);
   const searchSource = codeOnly(searchRaw);
 
