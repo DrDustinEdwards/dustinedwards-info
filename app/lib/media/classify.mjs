@@ -97,6 +97,29 @@ export function classify(pathOrKey) {
  * `public/publications/_headers` is not a control file, is not excluded, and
  * fails loudly, which is what it should do.
  */
+/*
+ * **`/fonts/OFL.txt` DOES NOT BELONG IN THIS MAP, and the temptation to put it
+ * there is why this note exists.**
+ *
+ * `check:media --remote` has been failing on it since it was added: a `public/`
+ * file with no D1 row, direction 3 of the reconciliation. The cheap way to make
+ * that green is an entry here, and it would be WRONG. The `txt` type above was
+ * added to the classifier FOR THIS FILE, with the reason recorded at that line:
+ * the licence has to be SERVED rather than sit beside the binaries unreachable.
+ * A file the site is deliberately serving is an asset, and the index exists to
+ * describe every asset the site has.
+ *
+ * So the gate is not reporting a defect in itself; it is reporting real drift.
+ * A Worker cannot list its own static assets, so `rebuildMediaIndex` is what
+ * writes the static rows, it reads `assetManifest.paths`, and that manifest
+ * already contains `/fonts/OFL.txt`. The row is missing only because nobody has
+ * run a rebuild since the file landed. **The repair is the rebuild button on
+ * `/admin/media`, which needs an admin session**, not a code change here.
+ *
+ * Recorded rather than left implicit because the next reader meets a red gate
+ * and a two-line fix that silences it, and that fix would quietly stop the
+ * licence being indexed at all.
+ */
 const NOT_ASSETS = new Map([
   [
     "/_headers",
