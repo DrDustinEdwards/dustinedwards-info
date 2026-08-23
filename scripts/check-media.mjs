@@ -62,13 +62,19 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
+import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
+import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import { walkPublic } from "./build-assets.mjs";
 import { bucketNames } from "./lib/wrangler-config.mjs";
 
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DB_NAME = "dustinedwards";
 // DERIVED from the wrangler config, never restated. Two buckets split on
 // lifecycle, and both are indexed: an OG card that existed but appeared in no
@@ -95,12 +101,16 @@ function wrangler(args) {
  * Every row in the media index.
  *
  * @param {string} target
- * @returns {Array<{ key: string, storage: string, kind: string, role: string }>}
+ * @returns {Array<{ key: string, storage: string, kind: string, role: string, alt: string | null }>}
  */
 function mediaRows(target) {
   const result = wrangler(
     `d1 execute ${DB_NAME} ${target} --json --command ` +
-      `"SELECT key, storage, kind, role FROM media ORDER BY key;"`,
+      // alt joins the projection so the roster comparison below has an index
+      // side to compare against. It was absent on the first run of that
+      // assertion, which read every row's alt as "" and reported nine
+      // disagreements that were really one missing column.
+      `"SELECT key, storage, kind, role, alt FROM media ORDER BY key;"`,
   );
   if (result.status !== 0) {
     console.error(result.stdout);
@@ -339,6 +349,150 @@ async function main() {
     problems.push(
       `${misclassified.length} row(s) disagree with classify.mjs:\n${sample(misclassified)}`,
     );
+  }
+
+  /*
+   * NO SOCIAL CARD MAY EXIST FOR A POST THE PUBLIC CANNOT SEE.
+   *
+   * MEASURED 2026-08-23, which is why this block exists: the draft
+   * `charts-on-workers-fixture` had a card in the OG bucket answering 200 with
+   * 41,149 bytes of PNG at /media/og/charts-on-workers-fixture-8af354a5.png,
+   * while /blog/charts-on-workers-fixture answered 404. The card renders the
+   * post's TITLE, so an unpublished headline was public. `build-og.mjs` had no
+   * notion of visibility: its loop skipped posts with a cover and nothing else.
+   *
+   * The key is a hash of the template version, slug, title and tags, so it is
+   * not guessable at a glance. That is not a defence and is not treated as one:
+   * the object is public, unauthenticated and served with
+   * `max-age=31536000, immutable`, and the URL is written into D1's og_image
+   * for every post including this one.
+   *
+   * THE VISIBILITY RULE IS IMPORTED. `isPubliclyVisible` is the one JavaScript
+   * owner of it; a second copy here is the shape that put five drafts into Ask
+   * in July.
+   *
+   * Direction: cards that must NOT exist. The other direction, every visible
+   * post HAVING a card, is deliberately not asserted here, because cards are
+   * written by a manual `build:og --remote` and a missing one is a cosmetic
+   * gap, not a disclosure. This gate is the security half.
+   */
+  {
+    const artifactPath = join(root, "content", "generated", "posts.json");
+    const artifactPosts = existsSync(artifactPath)
+      ? (JSON.parse(readFileSync(artifactPath, "utf8")).posts ?? [])
+      : [];
+
+    // SCOPE, PROVEN NON-EMPTY BEFORE ANY CONCLUSION. With no posts read, the
+    // loop below finds no forbidden keys and this reports a clean sweep it
+    // never performed.
+    if (artifactPosts.length === 0) {
+      problems.push(
+        `the OG visibility scan read NO posts from content/generated/posts.json, so it ` +
+          `proved nothing. A clean result here would be indistinguishable from a clean sweep.`,
+      );
+    }
+
+    const liveOg = new Set(objects.map((o) => o.key).filter((k) => k.startsWith("og/")));
+    /** @type {string[]} */
+    const exposed = [];
+    let hidden = 0;
+    for (const post of artifactPosts) {
+      if (post.cover) continue;
+      const visible = isPubliclyVisible({
+        status: statusForDraft(post.draft),
+        publishAt: post.publishAt,
+      });
+      if (visible) continue;
+      hidden += 1;
+      const key = ogImageKey(post);
+      if (liveOg.has(key)) {
+        exposed.push(`${key}  (post "${post.slug}" is not publicly visible)`);
+      }
+    }
+    console.log(
+      `  OG visibility: ${liveOg.size} card(s) live, ${hidden} non-visible post(s) checked`,
+    );
+    if (exposed.length > 0) {
+      problems.push(
+        `${exposed.length} social card(s) are PUBLIC for post(s) that are not. The card ` +
+          `renders the title, so this discloses an unpublished headline. Repair: ` +
+          `npm run build:og -- --remote, whose prune deletes them.\n${sample(exposed)}`,
+      );
+    }
+  }
+
+  /*
+   * THE ROSTER'S ALT TEXT AND THE MEDIA INDEX'S MUST BE THE SAME STRING.
+   *
+   * MEASURED 2026-08-23: they were not. D1 held "Group photo of the 2019 Phage
+   * Discovery Program cohort" for /phage-hunters/2019.webp and the page shipped
+   * "The 2019 research group." Two owners of one fact, and the weaker string was
+   * the one a screen reader actually got, on the only page on this site whose
+   * whole content is photographs of people.
+   *
+   * NOTHING COULD SEE IT. The media library's no-alt lens counts EMPTY alt, so
+   * a row with good text and a page with worse text is invisible to it; the page
+   * renders from a typed data file, so a missing alt is a typecheck failure and
+   * a divergent one is not. Both halves were individually correct.
+   *
+   * The page keeps rendering from the data file rather than querying D1: it is a
+   * static page on a shared-cached route, and a per-request read to fetch a
+   * constant is a cost with no reader. So the data file stays the render source
+   * and THIS is what stops the two drifting.
+   *
+   * The pairs are extracted rather than imported because the data file is .ts
+   * and this gate is .mjs. The extraction is scoped tightly (a src line, then
+   * the next alt line) and its count is asserted, so a parser that stopped
+   * matching reports zero pairs and fails rather than sweeping clean.
+   */
+  {
+    const rosterPath = join(root, "app", "data", "phage-hunters.ts");
+    const rosterSrc = existsSync(rosterPath) ? readFileSync(rosterPath, "utf8") : "";
+    /** @type {Array<[string, string]>} */
+    const pairs = [];
+    let at = rosterSrc.indexOf('src: "/phage-hunters/');
+    while (at !== -1) {
+      const keyStart = at + 'src: "'.length;
+      const keyEnd = rosterSrc.indexOf('"', keyStart);
+      const altAt = rosterSrc.indexOf('alt: "', keyEnd);
+      if (altAt !== -1 && altAt - keyEnd < 220) {
+        const altStart = altAt + 'alt: "'.length;
+        pairs.push([rosterSrc.slice(keyStart, keyEnd), rosterSrc.slice(altStart, rosterSrc.indexOf('"', altStart))]);
+      }
+      at = rosterSrc.indexOf('src: "/phage-hunters/', keyEnd);
+    }
+
+    const rosterRows = new Map(
+      rows.filter((r) => r.key.startsWith("/phage-hunters/")).map((r) => [r.key, r.alt ?? ""]),
+    );
+    if (pairs.length === 0 || rosterRows.size === 0) {
+      problems.push(
+        `the roster alt scan found ${pairs.length} pair(s) in the data file and ` +
+          `${rosterRows.size} row(s) in D1. Either side empty means this comparison ` +
+          `proved nothing, which is indistinguishable from agreement.`,
+      );
+    }
+
+    /** @type {string[]} */
+    const altDrift = [];
+    for (const [key, alt] of pairs) {
+      if (!rosterRows.has(key)) {
+        altDrift.push(`${key}: rendered by the roster but absent from the media index`);
+        continue;
+      }
+      const indexed = rosterRows.get(key);
+      if (indexed !== alt) {
+        altDrift.push(`${key}\n      page:  ${JSON.stringify(alt)}\n      index: ${JSON.stringify(indexed)}`);
+      }
+    }
+    console.log(`  roster alt: ${pairs.length} rendered photo(s) checked against the index`);
+    if (altDrift.length > 0) {
+      problems.push(
+        `${altDrift.length} roster photo(s) render alt text that disagrees with the media ` +
+          `index. A screen reader gets the page's copy, so the index being right is not ` +
+          `enough.\n${sample(altDrift)}`,
+      );
+    }
   }
 
   if (problems.length > 0) {
