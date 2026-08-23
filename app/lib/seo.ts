@@ -248,6 +248,30 @@ export const SHARED_CACHE_CONTROL =
  */
 export const HTML_VARY = "Cookie";
 
+/**
+ * The `headers()` a public HTML route returns. ONE definition, five callers.
+ *
+ * ## THE PAIRING IS THE SAFETY PROPERTY, AND IT WAS COPIED FIVE TIMES
+ *
+ * Four routes returned this object character for character, and /projects
+ * returned nothing at all, so it fell through to hard rule 8's uncached
+ * default and was the one public page never edge-cached. That omission is in
+ * core.md as a known gap; this helper is what closes it.
+ *
+ * The two values must travel TOGETHER. The shared string alone on an HTML
+ * route serves one reader's theme to another, because every document here
+ * embeds reader state in `<html data-theme>` from a cookie. `Vary: Cookie` is
+ * what makes the cookieless downgrade in `workers/app.ts` able to keep the
+ * stored variant cookieless. A copy-paste that drops the Vary line is the
+ * measured theme bug, and a helper is the shape that cannot drop half of it.
+ *
+ * NOT for the routes that negotiate on Accept: those need HTML_VARY_ACCEPT
+ * and say so themselves.
+ */
+export function publicHtmlHeaders() {
+  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
+}
+
 /** For the two routes that also negotiate on Accept. */
 export const HTML_VARY_ACCEPT = "Accept, Cookie";
 

@@ -5,7 +5,7 @@ import { timed, timingsContext } from "~/lib/timing";
 import { getEnv } from "~/lib/context";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { getCommitPatch, readFile } from "~/lib/editor/github.server";
-import { postPath } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import type { Route } from "./+types/admin.posts.$slug.revisions";
 
 /**

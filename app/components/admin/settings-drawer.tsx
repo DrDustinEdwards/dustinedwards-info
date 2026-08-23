@@ -4,7 +4,17 @@ import { useFetcher } from "react-router";
 import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
-const DESCRIPTION_LIMIT = 160;
+/*
+ * ONE DESCRIPTION LIMIT, and it is the SERP number.
+ *
+ * This file carried its own DESCRIPTION_LIMIT = 160 while social-previews.tsx
+ * truncated at SERP_DESCRIPTION_LIMIT = 155, so the drawer told an author they
+ * were inside the limit at 158 characters and the preview beside it cut the
+ * sentence. 155 wins because it is the number Google actually truncates at,
+ * and because the preview is the surface the author believes.
+ */
+import { SERP_DESCRIPTION_LIMIT } from "~/lib/seo";
+
 
 /**
  * Everything about a post that is not the writing.
@@ -97,7 +107,7 @@ export function SettingsDrawer({
     return () => dialog.removeEventListener("close", onNativeClose);
   }, [onClose]);
 
-  const overLimit = description.length > DESCRIPTION_LIMIT;
+  const overLimit = description.length > SERP_DESCRIPTION_LIMIT;
   const coverNeedsAlt = coverSrc.trim() !== "" && coverAlt.trim() === "";
 
   return (
@@ -129,7 +139,7 @@ export function SettingsDrawer({
           <label className="field-label" htmlFor="field-description">
             Description
             <span className={overLimit ? "count over" : "count"}>
-              {description.length}/{DESCRIPTION_LIMIT}
+              {description.length}/{SERP_DESCRIPTION_LIMIT}
             </span>
           </label>
           <input
@@ -147,8 +157,8 @@ export function SettingsDrawer({
               makes the author aware before they hit one. */}
           {overLimit ? (
             <p className="field-alarm" id="description-alarm">
-              {description.length - DESCRIPTION_LIMIT} over. Search results
-              truncate around {DESCRIPTION_LIMIT}.
+              {description.length - SERP_DESCRIPTION_LIMIT} over. Search results
+              truncate around {SERP_DESCRIPTION_LIMIT}.
             </p>
           ) : null}
         </div>

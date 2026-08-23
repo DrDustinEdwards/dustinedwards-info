@@ -1,7 +1,7 @@
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
-import { HTML_VARY, SHARED_CACHE_CONTROL, SITE,
+import { publicHtmlHeaders, SITE,
   pageMeta,
 } from "~/lib/seo";
 
@@ -10,7 +10,7 @@ import { HTML_VARY, SHARED_CACHE_CONTROL, SITE,
  * same downgrade in workers/app.ts.
  */
 export function headers() {
-  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
+  return publicHtmlHeaders();
 }
 
 /**

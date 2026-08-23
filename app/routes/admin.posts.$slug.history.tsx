@@ -9,7 +9,8 @@ import {
   listCommitsForPath,
   readFile,
 } from "~/lib/editor/github.server";
-import { currentHead, postPath } from "~/lib/editor/publish.server";
+import { currentHead } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
 /**

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
+import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
+
 /**
  * A DESTRUCTIVE CONFIRMATION, as a real modal rather than `window.prompt`.
  *
@@ -153,9 +155,11 @@ export function MediaConfirm({
           {requireTyped ? (
             <label className="media-modal-typed">
               <span className="sr-only">Type {requireTyped} to confirm</span>
-              {/* NAMED, because the server is the one that checks it. */}
+              {/* NAMED FROM THE CONSTANT, because the server reads the same
+                  one. A literal here and a CONFIRM_FIELD there is two spellings
+                  of one wire name, and a rename would split them silently. */}
               <input
-                name="confirm-count"
+                name={CONFIRM_FIELD}
                 value={typed}
                 onChange={(event) => setTyped(event.target.value)}
                 placeholder="Type the number to confirm"

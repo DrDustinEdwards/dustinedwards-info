@@ -154,15 +154,6 @@ function oneOf(value, allowed, fallback) {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
 }
 
-/*
- * `confirmationSatisfied` MOVED to `app/lib/destructive.mjs` on 2026-08-16.
- *
- * Three routes now gate a destructive action on it, and two of them are posts
- * routes that have no business importing the media view vocabulary. Re-exported
- * here so existing importers and `test/media-view.test.mjs` keep resolving it
- * from where it used to live.
- */
-export { confirmationSatisfied } from "../destructive.mjs";
 
 /**
  * Reads the view state out of a URLSearchParams-like object.

@@ -1199,6 +1199,68 @@ if (existsSync(HEALTH_PATH)) {
   }
 }
 
+/* ------------------------- every public HTML route sets the shared policy - */
+
+/*
+ * **THE GAP THIS CLOSES EXISTED BECAUSE NOTHING ASSERTED IT.**
+ *
+ * /projects exported no headers() at all and so fell through to hard rule 8's
+ * uncached default: the one public page never edge-cached, every reader paying
+ * an origin hit for a body identical to everyone's. It sat in core.md as a
+ * known gap for weeks, because a missing export has no symptom a human meets
+ * and no gate was looking.
+ *
+ * Asserted on the ROUTE FILES rather than on the helper, because the helper
+ * being correct proves nothing about who calls it. Comments are stripped
+ * first: three of these files discuss headers() in prose while explaining the
+ * Vary pairing, and a raw match would read the explanation as the code.
+ *
+ * The routes that negotiate on Accept are deliberately absent: blog.$slug,
+ * blog._index and search take loaderHeaders or HTML_VARY_ACCEPT and are their
+ * own shape. preview.$token is absent for the opposite reason and has its own
+ * section above.
+ */
+
+console.log("");
+console.log("  public HTML routes share one headers()");
+
+{
+  const PUBLIC_HTML = [
+    "home.tsx",
+    "colophon.tsx",
+    "phage-discovery.tsx",
+    "playground.tsx",
+    "projects.tsx",
+  ];
+
+  ok(
+    "the public HTML route list is not empty",
+    PUBLIC_HTML.length >= 5,
+    "an empty list would make every assertion below pass by examining nothing",
+  );
+
+  for (const name of PUBLIC_HTML) {
+    const routePath = join(root, "app", "routes", name);
+    ok(
+      name + " exists",
+      existsSync(routePath),
+      "the route was renamed or removed, so the assertions below examine nothing",
+    );
+    if (!existsSync(routePath)) continue;
+
+    const routeCode = stripComments(readFileSync(routePath, "utf8"));
+    ok(
+      name + " exports headers()",
+      /export function headers/.test(routeCode),
+      "with no headers() export it falls through to the uncached default, which is what left /projects the only public page never edge-cached",
+    );
+    ok(
+      name + " returns the shared publicHtmlHeaders()",
+      /publicHtmlHeaders/.test(routeCode),
+      "a hand-written pair here is how the Vary line gets dropped: the shared string without Vary: Cookie serves one reader theme to another",
+    );
+  }
+}
 /*
  * FLOOR RE-MEASURED 2026-08-23 BY RUNNING THIS GATE, never summed.
  *

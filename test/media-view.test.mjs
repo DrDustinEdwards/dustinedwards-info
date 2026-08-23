@@ -19,7 +19,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  confirmationSatisfied,
   DEFAULTS,
   DIRS,
   GROUPS,
@@ -38,6 +37,7 @@ import {
   readView,
   sortHref,
 } from "../app/lib/media/view.mjs";
+import { confirmationSatisfied } from "../app/lib/destructive.mjs";
 
 /** A stand-in for URLSearchParams with the one method readView uses. */
 const params = (entries) => ({ get: (n) => (n in entries ? entries[n] : null) });

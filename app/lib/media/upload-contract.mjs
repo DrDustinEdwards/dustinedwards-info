@@ -41,6 +41,20 @@ export const ALLOWED = new Map([
   ["image/svg+xml", "svg"],
 ]);
 
+/**
+ * The `accept` attribute for a file input, DERIVED from the allowlist above.
+ *
+ * Both file inputs said `accept="image/*"`, which is a THIRD answer to what
+ * this site uploads: wider than the map in one direction (it offers tiff and
+ * bmp, which the server refuses) and narrower in none. The picker offering a
+ * file the server will reject is a defect the reader meets after choosing.
+ *
+ * A HINT, NOT A CONTROL. `accept` filters a file dialog and nothing more; a
+ * drag-drop or a scripted post ignores it entirely. The control is the server
+ * check against ALLOWED, which is untouched.
+ */
+export const ACCEPT_ATTRIBUTE = [...ALLOWED.keys()].join(",");
+
 /** 10 MB. */
 export const MAX_BYTES = 10 * 1024 * 1024;
 

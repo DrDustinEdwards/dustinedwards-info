@@ -1,6 +1,9 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
+import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
+
 import {
   bufferDiffers,
   clearAllBuffersFor,
@@ -460,7 +463,7 @@ export function PostEditor({
     window.setTimeout(persist, 0);
   };
 
-  const slugValid = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+  const slugValid = SLUG_PATTERN.test(slug);
   const slugTaken = isNew && slug !== "" && existingSlugs.includes(slug);
   const slugProblem = slug === "" ? null : !slugValid ? "lowercase kebab-case only" : slugTaken ? "already taken" : null;
   const shortHead = headSha ? headSha.slice(0, 7) : "";
@@ -822,6 +825,13 @@ export function PostEditor({
                       setSlug(event.target.value);
                     }}
                     required
+                    /*
+                     * DERIVED FROM SLUG_PATTERN, never a third spelling. The
+                     * attribute anchors implicitly, so `.source` is the right
+                     * half to hand it: adding ^ and $ again would be harmless
+                     * here and wrong the day the pattern gains an alternation.
+                     */
+                    pattern={SLUG_PATTERN.source.replace(/^^|$/g, "")}
                     aria-invalid={slugProblem !== null}
                     aria-describedby={slugProblem ? "slug-problem" : undefined}
                     autoComplete="off"
@@ -1287,7 +1297,12 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
     <section className="editor-upload" aria-label="Insert image">
       <h2>Insert image</h2>
       <div className="editor-upload-row">
-        <input ref={fileRef} type="file" accept="image/*" aria-label="Image file" />
+        <input
+          ref={fileRef}
+          type="file"
+          accept={ACCEPT_ATTRIBUTE}
+          aria-label="Image file"
+        />
         <input
           value={alt}
           onChange={(event) => setAlt(event.target.value)}

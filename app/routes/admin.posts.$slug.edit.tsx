@@ -20,7 +20,8 @@ import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "~/lib/editor/publish-transition.mjs";
-import { currentHead, deletePost, postPath, EditorError, GitHubError } from "~/lib/editor/publish.server";
+import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 

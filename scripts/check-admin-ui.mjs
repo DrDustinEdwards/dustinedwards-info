@@ -43,6 +43,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
 import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
 import {
   DEFAULTS as MEDIA_DEFAULTS,
@@ -3122,7 +3123,16 @@ structural(
 structural(
   "the typed count is a named field, so the server can check it",
   "media, empty trash confirmation",
-  (h) => /<input[^>]*name="confirm-count"/.test(h),
+  /*
+   * THE NEEDLE IS BUILT FROM CONFIRM_FIELD, not from the literal it happens to
+   * equal. The rendered attribute really is the literal, so a hardcoded needle
+   * WORKS today; what it cannot survive is a rename. Renaming the constant
+   * moves the component and the server together and leaves this assertion
+   * looking for a name nothing emits, which passes vacuously in the negative
+   * assertion below and fails confusingly here. Derived, a rename moves all
+   * three at once.
+   */
+  (h) => new RegExp("<input[^>]*name=\"" + CONFIRM_FIELD + "\"").test(h),
 );
 /* Cancel is a link, for the same reason the scrim is. */
 structural(
@@ -3168,7 +3178,7 @@ structural(
 structural(
   "the bulk confirmation asks for no typed count",
   "media, bulk trash confirmation",
-  (h) => modalForm(h).length > 0 && !modalForm(h).includes('name="confirm-count"'),
+  (h) => modalForm(h).length > 0 && !modalForm(h).includes('name="' + CONFIRM_FIELD + '"'),
 );
 
 /* ---- 3. THE FLOATING SELECTION BAR -------------------------------------- */
