@@ -1,11 +1,6 @@
 /**
  * Call it once per request, however many callers ask.
  *
- * `.mjs` and dependency-free for the reason `classify.mjs` and
- * `media-ref-key.mjs` are: the Worker imports it and `node --test` imports it,
- * and a property that only exists inside a `.ts` module behind a `~/` alias is
- * a property no test in this repo can reach.
- *
  * **The property is unobservable without a counter, which is why this is its
  * own module.** A memo that quietly stopped memoizing returns the same value,
  * of the same type, in the same shape. Nothing downstream can tell. Only

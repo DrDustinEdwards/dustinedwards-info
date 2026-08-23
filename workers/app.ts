@@ -212,20 +212,23 @@ function applySecurityHeaders(headers: Headers) {
  * BELOW.** Do not cite this list as a reason; it was one until 2026-08-07 and is
  * not one now.
  *
- * `style-src-attr 'unsafe-inline'` is NOT laziness and must not be "fixed".
- * Measured: 117 inline `style="--shiki-light:…"` attributes on one live post,
- * emitted by the highlighting pipeline. Nonces do not apply to style
- * ATTRIBUTES, and hashing 117 per page is not a real option. CSP Level 3 splits
- * `style-src-attr` from `style-src` precisely so scripts can stay strict while
- * attributes are permitted, which is the trade taken here.
+ * `style-src-attr 'unsafe-inline'` is deliberate and must not be "fixed". The
+ * measurement and the reasoning are on the directive itself, in `./csp.mjs`,
+ * which is the only copy.
  *
  * **THE SOLE ENFORCEMENT BLOCKER: a nonce and a SHARED CACHE. MEASURED.**
- * SEVEN HTML routes are `public, s-maxage=600` for cookieless readers, so the
- * header and the body are cached together: `/`, `/blog`, `/blog/:slug`,
- * `/colophon`, `/phage-discovery`, `/playground`, `/search`. (`/projects` is
- * `private, no-store`.) This said SIX until 2026-08-17 and was written on
- * 2026-08-09, before `/playground` shipped on the 14th, so the exposure was one
- * route wider than recorded. Confirmed against production, not counted here.
+ * The shared-cacheable public HTML routes are `public, s-maxage=600` for
+ * cookieless readers, so the header and the body are cached together.
+ *
+ * **THE LIST IS NOT REPEATED HERE, AND THAT IS DELIBERATE.** `check:headers`
+ * owns it in both directions: every .tsx route referencing the shared string
+ * must be named there, and every name there must still reference it.
+ *
+ * A count in this paragraph had been wrong three times over, in two files at
+ * once, and it also called `/projects` `private, no-store` when that route in
+ * fact exported no `headers()` at all and fell through to hard rule 8's
+ * uncached default. Hard rule 8 names this habit; this paragraph is where it
+ * cost the most.
  *
  * Measured on the live site 2026-08-09, which is the half nothing had ever
  * checked:
@@ -236,18 +239,14 @@ function applySecurityHeaders(headers: Headers) {
  *
  * So the per-request generator is working exactly as intended, and the CACHE is
  * what collapses it. The policy stays internally consistent, which is why
- * nothing looks wrong and why this is easy to miss, but **on those SEVEN routes
- * an attacker who reads one page holds a valid nonce for up to ten minutes**,
- * which is precisely the guarantee the enforcing policy IS relying on.
- *
- * (Six, until 2026-08-20. The paragraph above was corrected from six to seven on
- * 2026-08-17 when `/playground` was found missing from the list, and this
- * sentence was not, so one paragraph documented the fix while the next repeated
- * the number it fixed. The next sentence said "seven" the whole time.)
+ * nothing looks wrong and why this is easy to miss, but **on every
+ * shared-cached route an attacker who reads one page holds a valid nonce for up
+ * to ten minutes**, which is precisely the guarantee the enforcing policy IS
+ * relying on.
  *
  * **RULED 2026-08-17, and the first answer was taken.** The two acceptable
  * answers were to accept the ten-minute window in writing with the reasoning
- * recorded, or to make those seven routes uncacheable and give back the
+ * recorded, or to make those routes uncacheable and give back the
  * shared-cache benefit. Accepted, and recorded PUBLICLY rather than in a comment:
  * `app/lib/colophon-sections.mjs` states it in plain language on /colophon, on
  * the grounds that a showcase listing only its wins is an advertisement. The
@@ -255,11 +254,7 @@ function applySecurityHeaders(headers: Headers) {
  * that it is acceptable only because these pages carry no writing from anyone
  * but Dustin.
  *
- * This paragraph used to open "It changes nothing in Report-Only, which is why
- * it was not solved when found. It must be RULED ON BEFORE the switch." The
- * switch happened, the ruling happened, and the sentence stayed. **The exposure
- * below is now LIVE and accepted, not pending**, which is a different thing for
- * the next reader to do something about.
+ * **The exposure below is LIVE and accepted, not pending.**
  *
  * **A THIRD ANSWER WAS RULED IN AND THEN FALSIFIED BY MEASUREMENT, 2026-08-17.**
  * The ruling was `script-src 'self'` with `'strict-dynamic'` removed, on the

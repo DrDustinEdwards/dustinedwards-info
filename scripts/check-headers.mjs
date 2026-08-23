@@ -43,7 +43,7 @@
  * parsing are each a failure, so "0 problems" can never mean "0 examined".
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -417,8 +417,9 @@ ok(
   !publicStyleSrc.includes("nonce-"),
   "public style-src is " +
     JSON.stringify(publicStyleSrc) +
-    ". Seven public HTML routes are edge-cached, so their nonce is stable for up to ten " +
-    "minutes and a nonce source there widens the accepted script-src exposure to styles. " +
+    ". Every shared-cached public HTML route is edge-cached, so its nonce is stable " +
+      "for up to ten minutes and a nonce source there widens the accepted script-src " +
+      "exposure to styles. " +
     "Nothing public injects an inline stylesheet, so it buys nothing and costs that.",
 );
 ok(
@@ -1238,6 +1239,73 @@ console.log("  public HTML routes share one headers()");
     "an empty list would make every assertion below pass by examining nothing",
   );
 
+  /*
+   * THE ACCEPT-NEGOTIATING THREE, asserted on the string rather than on the
+   * helper. They cannot call publicHtmlHeaders(): each pairs the shared
+   * Cache-Control with its own Vary, because each has a twin representation
+   * (markdown, or JSON) that Accept selects between.
+   */
+  const ACCEPT_NEGOTIATED = ["blog.$slug.tsx", "blog._index.tsx", "search.tsx"];
+  for (const name of ACCEPT_NEGOTIATED) {
+    const routePath = join(root, "app", "routes", name);
+    const routeCode = existsSync(routePath) ? stripComments(readFileSync(routePath, "utf8")) : "";
+    ok(
+      name + " is shared-cacheable with its own Vary",
+      routeCode.includes("SHARED_CACHE_CONTROL") && /Vary|HTML_VARY/.test(routeCode),
+      "this route is counted in the shared-cache nonce exposure; if it stops being " +
+        "shared-cacheable the exposure narrows and the narration in workers/app.ts must follow",
+    );
+  }
+
+  /*
+   * CLOSURE, AND IT IS THE HALF THAT MAKES THESE LISTS AN OWNER RATHER THAN A
+   * SECOND COPY.
+   *
+   * The lists are checked FROM the tree, not against it: every .tsx route that
+   * references the shared string must appear in one of them. A new shared-cached
+   * page therefore cannot ship unlisted, which is how /projects went the other
+   * way and sat uncached for weeks with nothing looking.
+   *
+   * THIS IS WHAT LETS workers/app.ts STATE THE NONCE EXPOSURE WITHOUT A COUNT.
+   * That count read seven, was written when the true value was six, and became
+   * eight the morning /projects gained headers(). Three copies of it existed, in
+   * two files, and all three were wrong at once. A number in prose beside a gate
+   * is a second copy of the gate; hard rule 8 carries the same lesson, and this
+   * is where the habit has cost the most.
+   *
+   * Comments stripped first: preview.$token.tsx NAMES the shared constant in
+   * prose to explain why it refuses it, and an unstripped scan would read that
+   * sentence as a reference and demand the route join the list.
+   */
+  {
+    const listed = new Set([...PUBLIC_HTML, ...ACCEPT_NEGOTIATED]);
+    const found = readdirSync(join(root, "app", "routes"))
+      .filter((f) => f.endsWith(".tsx"))
+      .filter((f) => {
+        const code = stripComments(readFileSync(join(root, "app", "routes", f), "utf8"));
+        return code.includes("SHARED_CACHE_CONTROL") || code.includes("publicHtmlHeaders");
+      });
+    ok(
+      "the closure scan examined a non-empty set of routes",
+      found.length >= listed.size,
+      `only ${found.length} routes matched; a scan finding nothing reports what a clean sweep reports`,
+    );
+    const unlisted = found.filter((f) => !listed.has(f));
+    ok(
+      "every shared-cached HTML route is named in one of the two lists",
+      unlisted.length === 0,
+      `unlisted: ${unlisted.join(", ")}. A new shared-cached page widens the shared-cache ` +
+        `nonce exposure described in workers/app.ts, so it joins a list here`,
+    );
+    const missing = [...listed].filter((f) => !found.includes(f));
+    ok(
+      "every listed route still references the shared string",
+      missing.length === 0,
+      `listed but not found: ${missing.join(", ")}. A stale name here is an assertion ` +
+        `above examining a file that no longer does this`,
+    );
+  }
+
   for (const name of PUBLIC_HTML) {
     const routePath = join(root, "app", "routes", name);
     ok(
@@ -1276,16 +1344,16 @@ console.log("  public HTML routes share one headers()");
  * drifts silently, and only running it says so. I first wrote 108 here by
  * reasoning from the stale 99, and running the gate is what corrected it.
  *
- * Measured now: 152, with the health endpoint's nine. Floored at 143, roughly
+ * Measured now: 174, by RUNNING it. Floored at 163, roughly
  * six percent under, matching the convention the preview-route floor set.
  */
-const MINIMUM_CHECKS = 143;
+const MINIMUM_CHECKS = 163;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-23: 152.`,
+      `rather than failing. Measured 2026-08-23: 174.`,
   );
 }
 
