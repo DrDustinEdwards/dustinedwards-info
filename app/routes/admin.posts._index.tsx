@@ -13,10 +13,10 @@ import { readFile } from "~/lib/editor/github.server";
 import {
   deletePost,
   artifactContext,
-  postPath,
   regenerateAllFromArtifact,
   savePost,
 } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import {
   askAvailable,
   askStatusContext,

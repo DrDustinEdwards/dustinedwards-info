@@ -23,13 +23,13 @@ import {
   currentHead,
   deletePost,
   loadArtifact,
-  postPath,
   savePost,
   EditorError,
   GitHubError,
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { askAvailable } from "~/lib/search/ask.server";

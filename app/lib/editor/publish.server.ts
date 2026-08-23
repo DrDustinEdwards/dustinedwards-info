@@ -111,7 +111,6 @@ const ARTIFACT_PATH = "content/generated/posts.json";
  * "stated ONCE" false by one. Re-exporting keeps all eight importers here
  * unchanged; the string now exists in exactly one place.
  */
-export { postPath };
 
 /** A save rejected by a gate. `field` and `line` are for pointing at the cause. */
 export class EditorError extends Error {

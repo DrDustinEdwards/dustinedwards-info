@@ -1493,9 +1493,21 @@ ok(
   /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
+/*
+ * EITHER SPELLING SATISFIES THIS, and the widening is deliberate rather than a
+ * loosening. The needle was /SHARED_CACHE_CONTROL/ against this route's source,
+ * which stopped matching the day the four identical headers() bodies were
+ * replaced by one publicHtmlHeaders() helper: the route still sets an explicit
+ * Cache-Control, it just no longer names the constant.
+ *
+ * The claim being made is "this route sets one", not "this route spells it a
+ * particular way", so the assertion now accepts the helper OR the constant and
+ * still requires the headers() export. A route that exports nothing fails, which
+ * is the state the assertion exists for.
+ */
 ok(
   "the route sets an explicit Cache-Control",
-  /SHARED_CACHE_CONTROL/.test(playgroundSource) &&
+  /publicHtmlHeaders|SHARED_CACHE_CONTROL/.test(playgroundSource) &&
     /export function headers/.test(playgroundSource),
   "hard rule 8: with the Workers cache on, no header means CACHED rather than skipped",
 );

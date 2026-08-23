@@ -2,7 +2,8 @@ import { renderBody } from "~/lib/content/pipeline.mjs";
 import { getEnv } from "~/lib/context";
 import { ContentError } from "~/lib/content/pipeline.mjs";
 import { normalizeBody } from "~/lib/editor/frontmatter";
-import { EditorError, makeResolveImage, postPath } from "~/lib/editor/publish.server";
+import { EditorError, makeResolveImage } from "~/lib/editor/publish.server";
+import { postPath } from "~/lib/content/pipeline.mjs";
 import type { Route } from "./+types/admin.preview";
 
 /**

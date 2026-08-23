@@ -8,7 +8,7 @@ import {
   PROJECTS_URL,
   projectAnchor,
 } from "~/lib/projects-page.mjs";
-import { SITE_ORIGIN,
+import { publicHtmlHeaders, SITE_ORIGIN,
   pageMeta,
 } from "~/lib/seo";
 
@@ -60,6 +60,19 @@ const PROJECTS = projectsData.projects as Project[];
  */
 const TITLE = PROJECTS_TITLE;
 const DESCRIPTION = PROJECTS_DESCRIPTION;
+
+/**
+ * /projects IS EDGE-CACHED NOW, and was the only public page that was not.
+ *
+ * It exported no headers() at all, so it fell through to hard rule 8's
+ * uncached default in workers/app.ts and every reader paid an origin hit for a
+ * page whose body is identical for all of them. Recorded in core.md as a known
+ * gap; the shared helper is what closes it, and using the helper rather than a
+ * fifth copy is what stops the Vary line being dropped here later.
+ */
+export function headers() {
+  return publicHtmlHeaders();
+}
 
 export function meta() {
   /* Was canonical plus OG text with NO image and NO twitter card, so a shared

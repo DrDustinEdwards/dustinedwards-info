@@ -71,7 +71,11 @@ import {
 } from "~/lib/media/core.server";
 import { rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { resolveCitations, type MediaCitation } from "~/lib/media/resolvers.server";
-import { UPLOAD_FORM_INTENT, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
+import {
+  ACCEPT_ATTRIBUTE,
+  UPLOAD_FORM_INTENT,
+  uploadErrorSentence,
+} from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
 
 /**
@@ -941,7 +945,7 @@ export async function action({ request, context }: Route.ActionArgs) {
      * carried, so a stale page cannot authorise a delete of a different size
      * than the operator was shown.
      */
-    const typed = String(form.get("confirm-count") ?? "").trim();
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
     if (!confirmationSatisfied(typed, keys.length)) {
       return {
         message:
@@ -1967,7 +1971,7 @@ export default function AdminMedia({
             id="media-file"
             type="file"
             name="file"
-            accept="image/*"
+            accept={ACCEPT_ATTRIBUTE}
           />
           <DropAnywhere inputRef={fileRef} />
           {/* The intent rides on the SUBMIT BUTTON rather than in a hidden
