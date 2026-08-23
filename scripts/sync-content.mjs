@@ -45,6 +45,7 @@ import path from "node:path";
 import os from "node:os";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, lastCommitDate } from "./build-content.mjs";
 
 const DB_NAME = "dustinedwards";
@@ -90,8 +91,25 @@ function buildSql(posts) {
     // touched the file. Applied here rather than in the artifact because the
     // artifact is byte-compared and a git date would make it fail on every
     // content commit. Falls back to now when there is no history to read.
-    // A post with a cover never gets a generated card, so it stores none.
-    const ogImage = post.cover ? null : `/media/${ogImageKey(post)}`;
+    /*
+     * og_image IS SET ONLY WHEN A CARD ACTUALLY EXISTS, which is the same
+     * condition `build:og` renders under. Two rules, one predicate.
+     *
+     * A post with a cover never gets a generated card. NEITHER DOES A POST
+     * THE PUBLIC CANNOT SEE, since 2026-08-23: a draft's card was live and
+     * public in R2 while the post itself answered 404, and the card renders
+     * the title.
+     *
+     * This half matters beyond tidiness because `build:og`'s prune guard asks
+     * D1 which cards the live site points at, and refuses to delete any of
+     * them. While a draft's row advertised a card, that card could never be
+     * pruned: the guard would protect the very object the fix exists to
+     * remove. Writing null here is what lets the two agree.
+     */
+    const hasCard =
+      !post.cover &&
+      isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt });
+    const ogImage = hasCard ? `/media/${ogImageKey(post)}` : null;
     const revised = post.updated ?? lastCommitDate(post.sourcePath);
     const updatedAt = revised
       ? Math.floor(Date.parse(`${revised}T00:00:00.000Z`) / 1000)

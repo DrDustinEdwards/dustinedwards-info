@@ -47,6 +47,7 @@ import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
 import { markElement } from "./lib/mark.mjs";
@@ -462,6 +463,32 @@ async function main() {
   const cards = [];
   let skipped = 0;
   for (const post of posts) {
+    /*
+     * A DRAFT NEVER GETS A CARD, and this line is a fix rather than a tidy.
+     *
+     * MEASURED on the live bucket 2026-08-23: the draft
+     * `charts-on-workers-fixture` had a card at
+     * /media/og/charts-on-workers-fixture-8af354a5.png answering 200 with
+     * 41,149 bytes of PNG, while /blog/charts-on-workers-fixture answered
+     * 404. The card RENDERS THE TITLE, so an unpublished post's headline was
+     * public. This loop skipped only posts with a cover and had no notion of
+     * visibility at all.
+     *
+     * The rule is IMPORTED, not restated. `isPubliclyVisible` is the one
+     * JavaScript owner, and the July draft leak into Ask is what a
+     * hand-rolled second copy of it costs.
+     *
+     * The prune below uses this same `cards` list, so a post that stops being
+     * visible has its card DELETED on the next run rather than merely not
+     * rewritten. That is the half that closes the class: unpublishing is as
+     * common as publishing.
+     */
+    if (!isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt })) {
+      skipped += 1;
+      console.log(`  skip   ${post.slug} (not publicly visible)`);
+      continue;
+    }
+
     // A post with its own cover never gets a generated card.
     if (post.cover) {
       skipped += 1;
