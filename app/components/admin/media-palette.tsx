@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { byteSize } from "~/lib/media/byte-size.mjs";
+
 /**
  * THE COMMAND PALETTE, LAYERED OVER THE SEARCH FORM RATHER THAN REPLACING IT.
  *
@@ -50,13 +52,6 @@ type PaletteResult = {
   size: number;
   viewable: boolean;
 };
-
-/** Same rounding the page uses, so a size does not read two ways on one screen. */
-function formatBytes(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} kB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function MediaPalette({
   inputId = "media-q",
@@ -255,7 +250,7 @@ export function MediaPalette({
                   <span className="media-palette-name">{r.name}</span>
                   <span className="media-palette-dir">{r.dir}</span>
                 </span>
-                <span className="media-palette-size">{formatBytes(r.size)}</span>
+                <span className="media-palette-size">{byteSize(r.size)}</span>
                 {i === Math.min(cursor, results.length - 1) ? (
                   <span className="media-palette-hint" aria-hidden="true">
                     enter

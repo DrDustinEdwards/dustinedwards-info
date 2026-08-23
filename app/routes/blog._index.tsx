@@ -7,6 +7,7 @@ import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
+import { longDateUTC } from "~/lib/long-date.mjs";
 import { serverTiming, timed, type Timings } from "~/lib/timing";
 import {
   DEFAULT_OG_IMAGE,
@@ -227,17 +228,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-function formatDate(value: string | Date | null) {
-  if (!value) return null;
-  const date = typeof value === "string" ? new Date(value) : value;
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {
   const { posts, tags, years, activeTag, activeYear, featured, page, pageCount } =
     loaderData;
@@ -386,7 +376,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
                 <p className="post-card-meta">
                   {post.publishAt && (
                     <time dateTime={new Date(post.publishAt).toISOString()}>
-                      {formatDate(post.publishAt)}
+                      {longDateUTC(post.publishAt)}
                     </time>
                   )}
                   {post.readingTimeMinutes && (

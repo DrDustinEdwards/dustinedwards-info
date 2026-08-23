@@ -2,6 +2,7 @@ import { redirect } from "react-router";
 
 import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
+import { byteSize } from "~/lib/media/byte-size.mjs";
 import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
 import {
@@ -109,7 +110,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (file.size > MAX_BYTES) {
     return refuse(
       "too-large",
-      `Image is ${Math.round(file.size / 1024)} kB, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
+      `Image is ${byteSize(file.size)}, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
       413,
     );
   }

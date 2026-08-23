@@ -11,6 +11,7 @@ import {
 } from "react-router";
 
 import { artifactContext } from "~/lib/editor/publish.server";
+import { byteSize } from "~/lib/media/byte-size.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { MediaConfirm } from "~/components/admin/media-confirm";
@@ -1200,12 +1201,6 @@ function describeCitations(citations: MediaCitation[]) {
     return `${list[0].title} (${id}: ${forms}, ${list.map((c) => c.detail).join("; ")})`;
   });
   return `Still cited by ${parts.length} post${parts.length === 1 ? "" : "s"}: ${parts.join(" and ")}.`;
-}
-
-function formatBytes(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} kB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const MONTH_ABBR = [
@@ -2629,7 +2624,7 @@ export default function AdminMedia({
                     <dt>Type</dt>
                     <dd>{detail.mime ?? "unknown"}</dd>
                     <dt>Size</dt>
-                    <dd>{formatBytes(detail.bytes)}</dd>
+                    <dd>{byteSize(detail.bytes)}</dd>
                     <dt>Dimensions</dt>
                     <dd>
                       {detail.width && detail.height
@@ -3169,7 +3164,7 @@ export default function AdminMedia({
                 or a conference poster.
               */}
               <span className="posts-bulk-size">
-                {formatBytes(
+                {byteSize(
                   objects
                     .filter((o) => chosen.includes(o.key))
                     .reduce((sum, o) => sum + o.size, 0),
@@ -3550,7 +3545,7 @@ export default function AdminMedia({
                           where an absence belongs, because there a blank cell
                           is a value; here it is just a phrase in the way. */}
                       <span className="media-caption-meta">
-                        {formatBytes(object.size)}
+                        {byteSize(object.size)}
                         {object.width && object.height
                           ? ` · ${formatDims(object.width, object.height)}`
                           : ""}
@@ -3640,7 +3635,7 @@ export default function AdminMedia({
                     so the tile, the row and the inspector cannot disagree.
                   */}
                   <p className="media-meta">
-                    <span className="chip">{object.role}</span> {formatBytes(object.size)}
+                    <span className="chip">{object.role}</span> {byteSize(object.size)}
                     {scanComplete ? ` · ${usage.label}` : ""}
                   </p>
                 </div>
@@ -3684,7 +3679,7 @@ export default function AdminMedia({
                 <span className="media-col media-col-dims">
                   {formatDims(object.width, object.height)}
                 </span>
-                <span className="media-col media-col-size">{formatBytes(object.size)}</span>
+                <span className="media-col media-col-size">{byteSize(object.size)}</span>
                 <span className="media-col media-col-added">{formatAdded(object.uploaded)}</span>
 
                 {/*
