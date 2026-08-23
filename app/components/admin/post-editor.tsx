@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 
-import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
 
 import {
@@ -826,12 +826,13 @@ export function PostEditor({
                     }}
                     required
                     /*
-                     * DERIVED FROM SLUG_PATTERN, never a third spelling. The
-                     * attribute anchors implicitly, so `.source` is the right
-                     * half to hand it: adding ^ and $ again would be harmless
-                     * here and wrong the day the pattern gains an alternation.
+                     * DERIVED FROM SLUG_PATTERN, never a third spelling, and
+                     * the stripping of the anchors is done at the constant
+                     * rather than here. The first version did it inline and
+                     * shipped a no-op; the docblock on the constant is the
+                     * whole story.
                      */
-                    pattern={SLUG_PATTERN.source.replace(/^^|$/g, "")}
+                    pattern={SLUG_ATTRIBUTE_PATTERN}
                     aria-invalid={slugProblem !== null}
                     aria-describedby={slugProblem ? "slug-problem" : undefined}
                     autoComplete="off"
