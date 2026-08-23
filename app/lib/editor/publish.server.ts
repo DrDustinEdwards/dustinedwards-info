@@ -50,6 +50,7 @@ import {
   readBinaryFile,
   GitHubError,
 } from "./github.server";
+import { artifactPosts } from "./artifact-parse.mjs";
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
@@ -298,15 +299,17 @@ export const artifactContext = createContext<{ load: (() => Promise<any[]>) | nu
 });
 
 export async function loadArtifact(env: PublishEnv) {
+  /*
+   * EVERY REFUSAL LIVES IN artifact-parse.mjs, which is pure so check:tests can
+   * drive a missing file and a malformed one without a GitHub binding. This
+   * function is the read; that module is the decision.
+   *
+   * EditorError is passed IN rather than imported there, so the pure module
+   * stays free of this file's types while the operator still gets the 422 that
+   * an EditorError maps to.
+   */
   const file = await readFile(env, ARTIFACT_PATH);
-  if (!file) return [] as any[];
-  try {
-    return (JSON.parse(file.content).posts ?? []) as any[];
-  } catch {
-    throw new EditorError(
-      `${ARTIFACT_PATH} in the repository is not valid JSON, so it cannot be updated safely.`,
-    );
-  }
+  return artifactPosts(file, ARTIFACT_PATH, (m) => new EditorError(m)) as any[];
 }
 
 /**
