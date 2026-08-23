@@ -69,6 +69,7 @@ import {
 import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
 // The fact needles, and the `statusLabel` call that used to be made here.
 import { colophonFacts } from "./lib/colophon-facts.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 // The card key, DERIVED with the same function the sync and the uploader use.
 // A literal key here survived exactly until the day the hash set changed; see
@@ -1239,11 +1240,10 @@ const ASK_PROBE_LIMIT = 3;
  */
 
 {
-  const appSource = readFileSync(join(root, "workers", "app.ts"), "utf8")
-    // Comments first: the constant's docblock names headers and values while
-    // explaining them, and the prose would parse before the code.
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  // Comments first: the constant's docblock names headers and values while
+  // explaining them, and the prose would parse before the code. One owner:
+  // scripts/lib/strip-comments.mjs.
+  const appSource = stripComments(readFileSync(join(root, "workers", "app.ts"), "utf8"));
   const declBlock = appSource.match(
     /const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/,
   );

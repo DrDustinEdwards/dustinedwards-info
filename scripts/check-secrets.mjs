@@ -68,6 +68,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
+import { stripCommentsAndStrings } from "./lib/strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_TYPES = join(root, "app", "env.d.ts");
@@ -213,30 +214,6 @@ function walk(dir, out = []) {
   return out;
 }
 
-/**
- * Comments and string literals are stripped before anything is matched.
- *
- * This file's own prose names every secret, and so do several docblocks in the
- * tree: `github.server.ts` explains what `GITHUB_TOKEN` is for, and
- * `env.d.ts` annotates each one. A matcher that read prose would report a
- * violation on a comment explaining the rule. That trap has been hit by
- * check:logo, check:contrast, check:features, check:headers and check:urls, so
- * it is the default failure here rather than an edge case.
- *
- * String literals go too: `api.server.ts` reports `githubConfigured` and the
- * operator docs mention token names in user-facing copy.
- *
- * @param {string} source
- */
-function stripped(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ")
-    .replace(/`(?:\\.|[^`\\])*`/g, '""')
-    .replace(/'(?:\\.|[^'\\])*'/g, '""')
-    .replace(/"(?:\\.|[^"\\])*"/g, '""');
-}
-
 /** A file that may read a secret. */
 function isServerOnly(/** @type {string} */ path) {
   return path.startsWith("workers/") || /\.server\.(ts|tsx|mjs|js)$/.test(path);
@@ -306,7 +283,16 @@ let serverReads = 0;
 
 for (const file of files) {
   const path = relative(root, file).split(sep).join("/");
-  const code = stripped(readFileSync(file, "utf8"));
+  /*
+   * COMMENTS AND STRING LITERALS BOTH GO, and the second half is this file's
+   * own reason rather than the shared helper's. This file's prose names every
+   * secret, and so do docblocks across the tree: `github.server.ts` explains
+   * what `GITHUB_TOKEN` is for and `env.d.ts` annotates each one, so a matcher
+   * reading prose would report a violation on a comment explaining the rule.
+   * Strings go too because `api.server.ts` reports `githubConfigured` and the
+   * operator docs name tokens in user-facing copy.
+   */
+  const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
   for (const match of code.matchAll(pattern)) {
     readsFound += 1;
     const name = match[1];
@@ -321,7 +307,7 @@ for (const file of files) {
 
 /*
  * ANTI-VACUITY, and this is the assertion that makes the one below mean
- * something. If the matcher breaks, or the tree moves, or `stripped()` eats too
+ * something. If the matcher breaks, or the tree moves, or `stripCommentsAndStrings()` eats too
  * much, the scan finds zero reads and reports zero violations, which is
  * indistinguishable from a clean repo. Hard rule 10.
  */

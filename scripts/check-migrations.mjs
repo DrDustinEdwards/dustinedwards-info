@@ -62,6 +62,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = join(root, "drizzle");
@@ -255,12 +256,7 @@ console.log(
  * against wrangler output recorded from a real database in both states.
  */
 
-/** @param {string} source Comments out, strings kept. */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-}
+/* One owner: scripts/lib/strip-comments.mjs carries the trap, the guard and the boundary. */
 
 const SHIP = join(root, "scripts", "ship.mjs");
 

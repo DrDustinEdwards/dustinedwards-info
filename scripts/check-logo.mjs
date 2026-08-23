@@ -58,6 +58,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
@@ -106,7 +107,22 @@ function eq(label, actual, expected) {
  * @param {string} source
  * @returns {string}
  */
-function stripComments(source) {
+/*
+ * WEAK ON PURPOSE, and only for SVG. This removes whole-line // comments
+ * only. The shared strong stripper in scripts/lib/strip-comments.mjs must
+ * NOT be pointed at SVG: its line-comment rule eats a PROTOCOL-RELATIVE url
+ * ("//cdn.example.com/x"), whose slashes follow a quote rather than a colon,
+ * and takes the rest of the line with it. Measured 2026-08-23 on a fixture:
+ * the whole xlink:href value and the attributes after it were destroyed.
+ *
+ * The audit that prompted the consolidation said the hazard was the strong
+ * form eating xmlns:xlink="http://...". It is not; that is a colon and the
+ * guard protects it. test/strip-comments.test.mjs asserts the real one.
+ *
+ * The TSX and CSS call sites below DO use the shared helper: a .tsx file has
+ * real // comments and this weak form would leave a trailing one standing.
+ */
+function stripSvgComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
@@ -121,7 +137,7 @@ function stripComments(source) {
  * @returns {{ viewBox: string, paths: MarkPath[] }}
  */
 function readFixture(relative) {
-  const source = stripComments(readFileSync(join(ROOT, relative), "utf8"));
+  const source = stripSvgComments(readFileSync(join(ROOT, relative), "utf8"));
   const viewBox = source.match(/viewBox="([^"]+)"/);
   if (!viewBox) throw new Error(`${relative}: no viewBox`);
 
@@ -139,6 +155,8 @@ function readFixture(relative) {
  * @returns {{ viewBoxes: string[], paths: MarkPath[] }}
  */
 function readComponent() {
+  // TSX: the SHARED strong stripper, because a trailing // on a line of code
+  // is a real comment here and the SVG form above would leave it standing.
   const source = stripComments(
     readFileSync(join(ROOT, "app/components/site-logo.tsx"), "utf8"),
   );
@@ -248,6 +266,14 @@ const EXPECTED_FILL_BINDINGS = [
    * with the tokens in app.css and `.site-header .site-logo-brand` moved to
    * app/styles/public-chrome.css. Reading one path found one of two and failed,
    * which is this section working; reading the set is the fix.
+   */
+  /*
+   * CSS through the SHARED helper. In CSS `//` is never a comment, so the
+   * helper's line rule can only ever remove something real; MEASURED across
+   * all 17 stylesheets in app/, its output is identical to block-only
+   * stripping today. The latent hazard is a protocol-relative url(//host/x),
+   * which none of them has. If one ever appears, this call site is the one
+   * that should go block-only, not the helper that should change.
    */
   const css = stripComments(allSourceCss());
 
@@ -419,7 +445,7 @@ for (const raster of icons.rasters) {
 // prose above names both the hex and the query.
 
 {
-  const svg = stripComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));
+  const svg = stripSvgComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));
   eq(
     `${icons.svg.file} is a full-bleed ${icons.tile} tile`,
     new RegExp(`<rect[^>]*fill="${icons.tile}"`, "i").test(svg),

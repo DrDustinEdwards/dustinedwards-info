@@ -80,6 +80,7 @@ import { isAllowedUrl } from "../app/lib/content/pipeline.mjs";
 // reimplemented, which is the whole claim the playground section verifies.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 import {
   CHART_TYPES,
   buildChartModel,
@@ -125,11 +126,8 @@ const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n")
  *
  * @param {string} source
  */
-function stripped(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => "\n".repeat((m.match(/\n/g) ?? []).length))
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-}
+const stripped = (/** @type {string} */ source) =>
+  stripComments(source, { preserveLines: true });
 
 /**
  * @param {string} label
@@ -576,9 +574,9 @@ if (notAdoptedRecord) {
  * explaining the defect, and a scan that read the explanation would report a
  * literal that is not there. That trap has already been hit by check:logo and
  * check:contrast, and by the routes parser at the top of this file.
+ *
+ * The stripper is shared: scripts/lib/strip-comments.mjs.
  */
-const stripComments = (/** @type {string} */ s) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
 
 const pageCode = stripComments(pageSource);
 for (const status of usedStatuses) {

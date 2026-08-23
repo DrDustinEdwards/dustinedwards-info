@@ -65,6 +65,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { joinConcatenatedLiterals } from "./lib/sql-literals.mjs";
 import { classifySqliteTables, ftsOwnedTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
+import { stripComments, stripCommentsAndStrings } from "./lib/strip-comments.mjs";
+
+/*
+ * WHY THE STRING-BLANKING FORM, here specifically: THIS FILE QUOTES THE VERY
+ * PATTERNS IT HUNTS, so a scan that kept string literals would flag itself and
+ * report its own needles as violations. The general reason comments must go
+ * first, and what happens when they do not, is in the helper.
+ */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -96,42 +104,7 @@ function fail(label, detail = "") {
 
 /* ------------------------------------------------------------------ helpers */
 
-/**
- * Source with comments and string literals removed.
- *
- * Both matter. A comment naming the expression would be found by the scan and
- * reported as a second implementation, which is exactly the trap `check:logo`
- * and `check:contrast` both hit by parsing their own prose. String literals
- * matter because THIS FILE quotes the pattern it looks for, and would otherwise
- * flag itself.
- *
- * @param {string} source
- */
-function stripped(source) {
-  return stripComments(source)
-    .replace(/`(?:\\.|[^`\\])*`/g, '""')
-    .replace(/'(?:\\.|[^'\\])*'/g, '""')
-    .replace(/"(?:\\.|[^"\\])*"/g, '""');
-}
 
-/**
- * Comments removed, strings kept.
- *
- * **This must run before any attempt to find string literals, and that is not a
- * tidiness preference.** An apostrophe in ordinary prose ("does not" written as
- * "doesn't", or a possessive in a doc comment) opens a single-quoted string as
- * far as a regex is concerned, and it runs to the next apostrophe anywhere in
- * the file, swallowing whatever code lies between. Section 5 reported
- * `process.argv`, `window.innerHeight` and `Math.floor` as unknown database
- * columns for exactly this reason before comments were stripped first.
- *
- * @param {string} source
- */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-}
 
 /**
  * Every source file in the tree, derived by walking rather than listed.
@@ -236,7 +209,7 @@ const files = sourceFiles();
 const selectionSites = [];
 
 for (const file of files) {
-  const text = stripped(readFileSync(file, "utf8"));
+  const text = stripCommentsAndStrings(readFileSync(file, "utf8"));
   if (SELECTION.some((re) => re.test(text))) selectionSites.push(file);
 }
 
@@ -983,7 +956,7 @@ function postsBindings(code) {
   /*
    * THE MODULE PATH IS ALLOWED TO BE EMPTY, and that is not sloppiness.
    *
-   * This file's `stripped()` blanks every string literal to `""` so that a
+   * This file's `stripCommentsAndStrings()` blanks every string literal to `""` so that a
    * later pass can find SQL literals without tripping over an apostrophe in
    * prose. By the time this function sees the source,
    *
@@ -1029,13 +1002,13 @@ try {
     const rel = relative(root, file).split(sep).join("/");
     if (rel.endsWith(".d.ts")) continue;
     appFilesScanned += 1;
-    // stripped() ONLY. joinConcatenatedLiterals merges concatenated string
+    // stripCommentsAndStrings() ONLY. joinConcatenatedLiterals merges concatenated string
     // literals across lines, which destroys the column-0 brace structure the
     // function extractor below depends on. It exists for the SQL-literal passes
     // and buys nothing here: `.from(posts)` is not a string literal. Using it
     // scored 18 query sites in a file that has 2, and reported isToolName as a
     // posts reader.
-    const code = stripped(readFileSync(file, "utf8"));
+    const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
     const bindings = postsBindings(code);
     // NON-EMPTY BY CONSTRUCTION, asserted anyway: an empty alternation
     // collapses to `()` and would match every `.from()` in the repo.
@@ -1115,7 +1088,7 @@ try {
   /** Querying functions outside the chokepoint, file-qualified. */
   const outsideQueriers = [];
   for (const f of queryingFiles.filter((q) => q.rel !== CHOKEPOINT)) {
-    const code = stripped(readFileSync(join(root, f.rel), "utf8"));
+    const code = stripCommentsAndStrings(readFileSync(join(root, f.rel), "utf8"));
     const q = queryFor(f.bindings);
     for (const fn of topLevelFunctions(code)) {
       if ((fn.body.match(q) ?? []).length > 0) {
@@ -1157,7 +1130,7 @@ try {
   }
 
   const dbSource = readFileSync(join(root, CHOKEPOINT), "utf8");
-  const dbCode = stripped(dbSource);
+  const dbCode = stripCommentsAndStrings(dbSource);
   const dbBindings = postsBindings(dbCode);
   const QUERY = queryFor(dbBindings);
 
@@ -1381,9 +1354,7 @@ try {
       filesScanned += 1;
 
       const code = joinConcatenatedLiterals(
-        readFileSync(file, "utf8")
-          .replace(/\/\*[\s\S]*?\*\//g, " ")
-          .replace(/(^|[^:])\/\/[^\n]*/g, "$1 "),
+        stripComments(readFileSync(file, "utf8")),
       );
       /*
        * SCOPE, COUNTED ON THE SOURCE. `sqlLiterals` used to count extracted
@@ -3559,7 +3530,7 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
   let callsExamined = 0;
 
   for (const { name, path } of gateFiles) {
-    const code = stripped(readFileSync(path, "utf8").replace(/\r\n/g, "\n"));
+    const code = stripCommentsAndStrings(readFileSync(path, "utf8").replace(/\r\n/g, "\n"));
     for (const m of code.matchAll(/\b(check|ok|assert|assertThat|eq)\s*\(/g)) {
       const idx = conditionIndex.get(m[1]);
       if (idx === undefined) continue;

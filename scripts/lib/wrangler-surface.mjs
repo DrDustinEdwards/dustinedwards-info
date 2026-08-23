@@ -23,6 +23,17 @@ import { readFileSync } from "node:fs";
  * @param {string} path
  * @returns {any}
  */
+/*
+ * WEAK ON PURPOSE. This is JSONC on its way to JSON.parse, so the shared
+ * strong stripper in scripts/lib/strip-comments.mjs must NOT be used: its
+ * line-comment rule eats a protocol-relative url ("//cdn.example.com/x"),
+ * whose slashes follow a quote rather than a colon, and takes the rest of
+ * the line with it. MEASURED 2026-08-23: the config stops parsing.
+ *
+ * Weak is SUFFICIENT here, which is the other half: JSON.parse throws on
+ * any comment this fails to remove, so an under-strip cannot pass quietly.
+ * test/strip-comments.test.mjs asserts both halves.
+ */
 export function parseJsonc(path) {
   const raw = readFileSync(path, "utf8");
   const stripped = raw
