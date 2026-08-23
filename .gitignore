@@ -62,5 +62,11 @@ wrangler.jsonc
 # by hand, which is what happened on 2026-08-14.
 /og-samples/
 
+# Working copies of the 2026-08-22 external audit, kept at the root while its
+# items are being worked. IGNORED for the ship-refuses-untracked reason above.
+# Remove these two lines when both files are deleted.
+/audit-2026-08-22.md
+/audit-write-quality-2026-08-22.md
+
 !.dev.vars.example
 !.env.example
