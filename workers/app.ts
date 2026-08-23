@@ -2,6 +2,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
+import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { serverTiming, timingsContext } from "~/lib/timing";
 import {
   CSP_ENDPOINT_NAME,
@@ -413,6 +414,29 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
 
 export default {
   async fetch(request, env, ctx) {
+    /*
+     * PLAINTEXT GOES TO HTTPS BEFORE ANYTHING ELSE HAPPENS.
+     *
+     * Measured on the live site 2026-08-23: http:// returned 200 with the
+     * full page, and the shared cache did not separate the schemes, so a
+     * plaintext request was answered with the byte-identical cached HTTPS
+     * response INCLUDING ITS CSP NONCE. The grounds, the three consequences
+     * and the part this cannot reach are all on the predicate.
+     *
+     * `no-store` is load-bearing rather than tidy. The scheme is not in the
+     * cache key, so a cacheable redirect stored under a shared key would be
+     * handed to HTTPS readers as well and send them to the URL they already
+     * asked for. Hard rule 8: an absent Cache-Control is CACHED, so this is
+     * stated and not left to a default.
+     */
+    const secure = httpsRedirectTarget(request.url);
+    if (secure !== null) {
+      return new Response(null, {
+        status: httpsRedirectStatus(request.method),
+        headers: { Location: secure, "Cache-Control": "no-store" },
+      });
+    }
+
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
 
