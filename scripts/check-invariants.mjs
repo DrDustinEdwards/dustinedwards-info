@@ -4036,6 +4036,107 @@ console.log("\n  20. every admin loader carries timing");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
+/* ------- 21. savePost never writes D1 before GitHub ---------------------- */
+
+/*
+ * **THE ORDER IS THE SAFETY PROPERTY, and it is invisible at a glance.**
+ *
+ * The repo is the source of truth and D1 is a derived index, so `savePost`
+ * commits first and converges the index second. That order is what makes a
+ * failure survivable in the direction that matters: a D1 failure AFTER the
+ * commit leaves writing safe in git and an index that a rebuild repairs, while
+ * a D1 write BEFORE the commit would leave the database describing a post that
+ * exists on no commit, with nothing to rebuild from.
+ *
+ * The 2026-08-22 audit read this as the defect. It is not; "with no record" was
+ * the defect and is fixed in `converge.mjs`. This section exists so that a
+ * later edit reordering the two, which would look like a harmless tidy, fails
+ * instead.
+ *
+ * SCOPED TO THE FUNCTION BODY, extracted by brace matching rather than a
+ * character window, because a window reaches into the next function and this
+ * file has several that touch both stores. Comments are stripped first: the
+ * prose above `syncPostToD1` in the route names both calls while explaining
+ * their order, and a whole-file scan would read that as code.
+ */
+
+console.log("\n  21. savePost commits before it touches D1");
+
+{
+  const publishSrc = stripComments(
+    readFileSync(join(root, "app", "lib", "editor", "publish.server.ts"), "utf8"),
+  );
+
+  const at = publishSrc.search(/export\s+async\s+function\s+savePost\b/);
+  ok(
+    "savePost exists in publish.server.ts",
+    at !== -1,
+    "the function was renamed or moved, so nothing below examines anything",
+  );
+
+  let body = "";
+  if (at !== -1) {
+    // Brace matching from the first { after the signature, so the body cannot
+    // spill into commitMessage() or syncAskForPost() below it.
+    const open = publishSrc.indexOf("{", publishSrc.indexOf(")", at));
+    let depth = 0;
+    for (let i = open; i < publishSrc.length; i += 1) {
+      if (publishSrc[i] === "{") depth += 1;
+      else if (publishSrc[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          body = publishSrc.slice(open, i + 1);
+          break;
+        }
+      }
+    }
+  }
+
+  ok(
+    "savePost's body was extracted",
+    body.length > 200,
+    `extracted ${body.length} character(s). A short or empty body would make every ` +
+      `assertion below pass by having nothing to find.`,
+  );
+
+  const commitAt = body.indexOf("commitFiles(");
+  const convergeAt = body.indexOf("convergeWithRetry(");
+
+  ok(
+    "savePost calls commitFiles",
+    commitAt !== -1,
+    "the GitHub write is gone from savePost, so the ordering claim is meaningless",
+  );
+  ok(
+    "savePost converges D1 through convergeWithRetry",
+    convergeAt !== -1,
+    "the D1 write no longer goes through the retry-and-record path, so a failed " +
+      "index write is silent again, which is the defect this replaced",
+  );
+  ok(
+    "the D1 convergence happens AFTER the GitHub commit",
+    commitAt !== -1 && convergeAt !== -1 && commitAt < convergeAt,
+    `commitFiles is at ${commitAt} and convergeWithRetry at ${convergeAt}. Writing the ` +
+      `index first would leave D1 describing a post that exists on no commit, with ` +
+      `nothing to rebuild it from. The repo is the source of truth.`,
+  );
+
+  /*
+   * THE OTHER DIRECTION: no bare D1 write in front of the commit. The ordering
+   * assertion above only compares the two calls it knows about; this catches a
+   * NEW write being added earlier, which is how the property would actually be
+   * lost.
+   */
+  const beforeCommit = commitAt === -1 ? "" : body.slice(0, commitAt);
+  ok(
+    "nothing writes to D1 before the commit in savePost",
+    !/\bsyncPostToD1\s*\(|\benv\.DB\b|\bdb\.batch\s*\(/.test(beforeCommit),
+    "a database write appears before commitFiles. A refusal before the commit is a " +
+      "CLEAN refusal with no drift, and that property holds only while nothing has " +
+      "been written yet.",
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
