@@ -13,9 +13,14 @@ consequence of it.
   `check:*` scripts is what stands between a change and production. Since
   2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
   checkout, which is the closest thing here to a second opinion.
-- **Zero JavaScript is a requirement, not a preference.** Every public page
-  works with scripting disabled; client JS only ever upgrades markup that
-  already functions.
+- **Progressive enhancement is a requirement, not a preference.** Every public
+  page works with scripting disabled; client JS only ever upgrades markup that
+  already functions. That includes the ADMIN DOOR: `/login` is a real form, and
+  the browser client is layered on top of it. The admin plane behind that door
+  is exempt and does use script. This used to read "zero JavaScript", which was
+  the wrong name for the law (hard rule 9 calls it progressive enhancement) and
+  was also untrue at the door, where the only way in was a button that did
+  nothing without script.
 
 Rebuilding the platform from nothing is a different job with its own document:
 see **[RECOVERY.md](RECOVERY.md)** for every binding, the order they have to be

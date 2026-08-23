@@ -3068,6 +3068,54 @@ console.log("\n  15b. four rules are bound to the behaviour they describe");
       `Rule 4 keeps the Worker lean by confining the client auth bundle to /login.`,
   );
 
+
+  /* -- rule 9 -------------------------------------------------------------- */
+  /*
+   * THE DOOR IS ON THE PUBLIC PLANE, and it was the counter-example to its own
+   * rule for as long as it existed.
+   *
+   * `/login` offered exactly one way in: a `type="button"` whose `onClick`
+   * called the Better Auth browser client. With script off it rendered, it was
+   * ENABLED, and it did nothing. Meanwhile README declared that every public
+   * page works with scripting disabled. Rule 9 is the law, the admin plane
+   * behind the door is exempt, and the door itself is not.
+   *
+   * Asserted on SHAPE rather than on the word "form" appearing somewhere: the
+   * old file contained a `<form>`-free button and the new one must contain a
+   * submit inside a posting form AND a server action to receive it. A page with
+   * the form and no action is a door that 405s.
+   */
+  const loginPath = join(root, "app", "routes", "login.tsx");
+  ok(
+    "rule 9's door: login.tsx exists",
+    existsSync(loginPath),
+    "the assertions below would examine nothing",
+  );
+  const loginCode = existsSync(loginPath)
+    ? stripComments(readFileSync(loginPath, "utf8"))
+    : "";
+  ok(
+    "rule 9's door: the source was read and comments stripped",
+    loginCode.length > 400,
+    `${loginCode.length} chars. This file explains the defect in prose, so an ` +
+      `unstripped scan would find "form method post" in the explanation.`,
+  );
+  ok(
+    "rule 9 HOLDS: the only door posts a real form, so it works with script off",
+    /<form\s+method="post"/.test(loginCode),
+    "the sign-in control is script-only again: with scripting disabled the site " +
+      "has no way in at all, which is what README promised was impossible",
+  );
+  ok(
+    "rule 9's door: something server-side receives that post",
+    /export\s+async\s+function\s+action\b/.test(loginCode),
+    "a form with no action is a door that answers 405",
+  );
+  ok(
+    "rule 9's door: the control SUBMITS rather than only listening",
+    /type="submit"/.test(loginCode) && !/type="button"/.test(loginCode),
+    "a type=button inside the form is the original defect wearing a form around it",
+  );
   /* -- rule 6 -------------------------------------------------------------- */
   ok(
     "rule 6 still claims the post path is stated ONCE by postPath()",
