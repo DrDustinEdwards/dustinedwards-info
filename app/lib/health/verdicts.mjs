@@ -162,6 +162,106 @@ export function ftsEqualityVerdict(counts) {
 }
 
 /**
+ * How long any one check may take before it is called failed.
+ *
+ * Three seconds. The slowest check is `ask-index-drift`, which pages the AI
+ * Search index and was measured on production 2026-08-19 at a 208ms median and
+ * a 2332ms MAXIMUM across 12 samples. Three seconds clears that measured
+ * maximum with room and still bounds the endpoint at roughly nine seconds
+ * worst case for three checks, which is inside any sane HTTP client's patience.
+ *
+ * Tighter would convert the known 2.3-second tail into a false alarm, and a
+ * monitor that cries wolf on its own slowest healthy path is a monitor people
+ * learn to ignore.
+ */
+export const CHECK_TIMEOUT_MS = 3000;
+
+/**
+ * Races a check against the clock and reports a TIMEOUT AS A FAILURE.
+ *
+ * ## Why a timeout is a failed check and not a skipped one
+ *
+ * One hung binding must not hang the response, because the endpoint that
+ * cannot answer is indistinguishable to the watcher from the site being down,
+ * and the watcher would be right either way. A check that cannot determine an
+ * answer is not a passing check.
+ *
+ * ## WHAT THIS DOES NOT DO, and it matters
+ *
+ * **It does not cancel the underlying work.** There is no cancellation in a
+ * bare promise, so the slow D1 query or R2 listing continues and its result is
+ * discarded. What is bounded here is the RESPONSE, not the work. Saying so
+ * matters because someone reading "timeout" will otherwise assume the binding
+ * was released, and under sustained timeouts the abandoned work is still
+ * accumulating behind this.
+ *
+ * @param {Promise<{ ok: boolean, detail: string }>} promise
+ * @param {number} ms
+ * @param {string} name
+ * @returns {Promise<{ ok: boolean, detail: string }>}
+ */
+export function withTimeout(promise, ms, name) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(
+      () =>
+        resolve({
+          ok: false,
+          detail: `check ${name} did not answer within ${ms}ms and is reported failed`,
+        }),
+      ms,
+    );
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        resolve({
+          ok: false,
+          detail: `check threw: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      },
+    );
+  });
+}
+
+/**
+ * The PUBLIC body of `/api/health`. Names and booleans, nothing else.
+ *
+ * ## THE DETAIL STRINGS ARE DELIBERATELY DROPPED
+ *
+ * Every `detail` on a failing check is useful and none of it belongs on an
+ * unauthenticated endpoint. `ask-index-drift` carries how many records the
+ * corpus holds and how many the index has; `fts-equality` carries five row
+ * counts and the names of the shadow tables; `media-unbacked` carries an R2
+ * OBJECT KEY, which is a path into the bucket.
+ *
+ * None of that is catastrophic and none of it is anyone's business, and the
+ * endpoint is polled by a workflow that needs to know WHICH check failed, not
+ * why. The why is in Workers Logs, behind the dashboard, where the operator
+ * already is when they go looking. So the wire carries the minimum that makes
+ * the alert actionable.
+ *
+ * Shape is stable and the workflow parses it: `ok`, and `checks` as an array of
+ * `{ name, ok }` in a fixed order. An object keyed by name was the alternative
+ * and was rejected because it makes "list the failing names" a key iteration in
+ * jq rather than a filter, and because an array preserves order.
+ *
+ * @param {{ checks: Array<{ name: string, ok: boolean }> }} run
+ * @returns {{ ok: boolean, checks: Array<{ name: string, ok: boolean }> }}
+ */
+export function publicHealthBody(run) {
+  return {
+    ok: run.checks.every((c) => c.ok),
+    // Rebuilt field by field rather than spread, so a field added to
+    // HealthCheck later cannot leak onto the wire by inheritance.
+    checks: run.checks.map((c) => ({ name: c.name, ok: c.ok })),
+  };
+}
+
+/**
  * What a breach looks like when it arrives.
  *
  * ONE SELF-CONTAINED STRING, because most destinations that accept a JSON POST
