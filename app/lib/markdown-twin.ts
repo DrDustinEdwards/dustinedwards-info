@@ -1,5 +1,5 @@
 import { prefersType } from "./negotiate";
-import { HTML_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
+import { NO_STORE_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
 
 /**
  * Every post is reachable as HTML and as its markdown source. The two are the
@@ -37,9 +37,9 @@ export function prefersMarkdown(request: Request) {
  *
  * ## NEVER STORED, and this is not a performance oversight
  *
- * `HTML_CACHE_CONTROL` is `private, no-store`, and it is here to stop a SECOND
+ * `NO_STORE_CACHE_CONTROL` is `private, no-store`, and it is here to stop a SECOND
  * CACHE VARIANT from existing under `/blog/:slug`. Do not "optimise" this back
- * to `PUBLIC_CACHE_CONTROL`.
+ * to `SHARED_CACHE_CONTROL`.
  *
  * **The defect it repairs, measured 2026-08-05 with a paired control on fresh
  * URLs.** `/blog/:slug` sets `Vary: Accept, Cookie`. With only the HTML
@@ -74,7 +74,7 @@ export function markdownResponse(slug: string, body: string) {
   return new Response(body, {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
-      "cache-control": HTML_CACHE_CONTROL,
+      "cache-control": NO_STORE_CACHE_CONTROL,
       link: linkToHtml(slug),
       // Still true and still correct to advertise: the body genuinely depends
       // on Accept. It is inert on a response that is never stored, and removing

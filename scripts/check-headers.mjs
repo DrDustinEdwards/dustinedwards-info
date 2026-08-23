@@ -670,7 +670,7 @@ ok(
  *
  * The failure this is written for is SPECIFIC and it is a copy-paste:
  * `blog.$slug.tsx` sits next to it in the same directory, exports a `headers()`
- * of the same shape, and sets `PUBLIC_CACHE_CONTROL`. Someone reaching for the
+ * of the same shape, and sets `SHARED_CACHE_CONTROL`. Someone reaching for the
  * neighbouring file's version of this function would produce a route that
  * renders perfectly, passes every other gate, and publishes drafts to anyone
  * who asks for the path.
@@ -678,7 +678,7 @@ ok(
  * Two independent sources argue, as above: RATIFIED_PREVIEW is transcribed from
  * the ruling and the actual set is parsed out of the route. The parse accepts an
  * IDENTIFIER as a value as well as a string literal, deliberately: had it only
- * matched quoted values, swapping in `PUBLIC_CACHE_CONTROL` would have read as
+ * matched quoted values, swapping in `SHARED_CACHE_CONTROL` would have read as
  * "Cache-Control is not declared" rather than as the wrong value, and the
  * failure would name the wrong problem on the one edit most likely to happen.
  */
@@ -765,14 +765,14 @@ if (existsSync(PREVIEW_PATH)) {
   /*
    * NO PUBLIC BRANCH, named rather than left to the value comparison.
    *
-   * The value check above catches `"Cache-Control": PUBLIC_CACHE_CONTROL`. This
+   * The value check above catches `"Cache-Control": SHARED_CACHE_CONTROL`. This
    * catches the subtler shape: the constant staying correct while a conditional
    * somewhere else in the file hands back the public value on some path. The
    * rule is that the identifier does not appear in this file AT ALL.
    */
   ok(
-    "the preview route never references PUBLIC_CACHE_CONTROL",
-    !/\bPUBLIC_CACHE_CONTROL\b/.test(preview),
+    "the preview route never references SHARED_CACHE_CONTROL",
+    !/\bSHARED_CACHE_CONTROL\b/.test(preview),
     "blog.$slug.tsx is the neighbouring file and exports a headers() of the same " +
       "shape using it. On this route it would put an unpublished post into a " +
       "shared cache entry keyed by path alone.",

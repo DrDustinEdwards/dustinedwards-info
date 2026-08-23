@@ -2,7 +2,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
   HTML_VARY,
-  PUBLIC_CACHE_CONTROL,
+  SHARED_CACHE_CONTROL,
   DEFAULT_OG_IMAGE,
   personJsonLd,
   SITE,
@@ -20,7 +20,7 @@ import {
  * the request carries a cookie. Grounds on HTML_VARY in seo.ts.
  */
 export function headers() {
-  return { "Cache-Control": PUBLIC_CACHE_CONTROL, Vary: HTML_VARY };
+  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
 }
 
 export function meta() {

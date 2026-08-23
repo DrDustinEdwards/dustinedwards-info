@@ -1,6 +1,6 @@
 import { listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
+import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.feed[.json]";
 
 /**
@@ -41,7 +41,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   return new Response(`${JSON.stringify(feed, null, 2)}\n`, {
     headers: {
       "content-type": "application/feed+json; charset=utf-8",
-      "cache-control": PUBLIC_CACHE_CONTROL,
+      "cache-control": SHARED_CACHE_CONTROL,
     },
   });
 }
