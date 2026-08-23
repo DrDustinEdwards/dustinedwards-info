@@ -12,20 +12,25 @@
  *
  * ## THE SCOPE IS DELIBERATELY SMALL, and the omissions are the design
  *
- * Two checks, not a monitoring platform:
+ * Three checks, not a monitoring platform:
  *
  *   1. `ask-index-drift`   the failure above, by name
  *   2. `media-unbacked`    the R2 acceptance in RECOVERY.md section 3, which
  *                          holds only while the MEDIA bucket is empty
+ *   3. `fts-equality`      the docsize equalities the ship asserts after a sync
  *
- * **The FTS invariants are deliberately NOT re-checked here**, and that is a
- * decision rather than an oversight. `check:invariants` and `check:search`
- * already own them, and a second implementation of an invariant is precisely
- * the drift this repo keeps paying for: two copies, one of which is wrong and
- * nobody knows which. A gate that runs before every push is a better home for
- * an assertion about disk than a cron is. What a cron can see and a gate cannot
- * is state that changes WITHOUT a commit, and both checks above are exactly
- * that.
+ * **`fts-equality` was argued OUT of this file on 2026-08-22 and is now in it**,
+ * so the reasoning is recorded rather than quietly reversed. The objection was
+ * that `check:invariants` and `check:search` already own the FTS invariants and
+ * a second implementation of an invariant is the drift this repo keeps paying
+ * for. What that argument missed is WHICH invariant each one owns. The gates
+ * assert things about SOURCE: that no statement counts an index directly, that
+ * no statement DELETEs from one. `sync-content.mjs` asserts the equality itself,
+ * but only at the end of a sync, so between syncs nothing measures it. The Ask
+ * index lost nine records with no commit anywhere near it, and the FTS indexes
+ * can go stale the same way. **A gate sees disk; this sees the live database
+ * between commits**, and that is a different question rather than a second copy
+ * of the same one.
  *
  * ## WHAT THIS DOES NOT COVER, which matters more than what it does
  *
@@ -50,6 +55,7 @@ import {
   HEARTBEAT_KEY,
   alertText,
   askDriftVerdict,
+  ftsEqualityVerdict,
   mediaUnbackedVerdict,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
@@ -94,6 +100,29 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
        */
       const listed = await env.MEDIA.list({ limit: 1 });
       return mediaUnbackedVerdict(listed.objects);
+    }),
+  );
+
+  checks.push(
+    await guard("fts-equality", async () => {
+      /*
+       * ONE ROUND TRIP, five subqueries. `search_docs` is the real content
+       * table and is counted directly; the three index counts are taken on the
+       * `_docsize` shadows, because COUNT(*) on an external-content fts5 table
+       * reads through to its content table and can never disagree with it.
+       * `check:invariants` section 7 enforces that distinction on this source.
+       */
+      const row = await env.DB.prepare(
+        "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +
+          "(SELECT COUNT(*) FROM posts_fts_docsize) AS postsFts, " +
+          "(SELECT COUNT(*) FROM search_docs) AS docs, " +
+          "(SELECT COUNT(*) FROM search_identity_docsize) AS identity, " +
+          "(SELECT COUNT(*) FROM search_prose_docsize) AS prose",
+      ).first<Record<string, unknown>>();
+
+      // `?? {}` rather than a throw, so a null row reaches the verdict and is
+      // reported as unreadable counts. Fail closed with a sentence, not a stack.
+      return ftsEqualityVerdict(row ?? {});
     }),
   );
 
