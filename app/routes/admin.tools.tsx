@@ -55,9 +55,17 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
               </p>
               <p className="muted">{tool.description}</p>
             </div>
-            <button type="button" className="btn-ghost" disabled={!tool.ready}>
-              {tool.ready ? "Run" : "Not wired"}
-            </button>
+            {/*
+              NOT A BUTTON. It was `<button type="button">` with NO HANDLER, and
+              the one tool here is `ready`, so it rendered ENABLED: a control an
+              operator could click that did nothing at all.
+
+              The comment below already said the right thing, that this tool's
+              answer is rendered rather than run, and the markup just never
+              agreed with it. A chip states the state without offering an
+              action that does not exist.
+            */}
+            <span className="chip">{tool.ready ? "Answered below" : "Not wired"}</span>
           </li>
         ))}
       </ul>
@@ -65,11 +73,12 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
       {/*
         THE AUDIT ITSELF, rendered rather than run behind a button.
 
-        There is no "Run" for this one and that is deliberate: reading eight
+        There is no "Run" for this one and that is deliberate: reading the
         bindings costs nothing, so a button would add a click and a state to a
-        question the page can simply answer. The row above keeps its Run control
-        disabled-free by being `ready`, and the answer is already below it.
-
+        question the page can simply answer. The count is NOT restated here;
+        `REQUIRED_SECRETS` is the owner and the chip below derives from it.
+        The word "five" once sat in this file while check:secrets measured a
+        different number, which is why.
         NAMES AND A WORD, never a value. See `auditSecrets`.
       */}
       <h3 className="tool-audit-heading">

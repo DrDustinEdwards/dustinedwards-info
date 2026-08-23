@@ -3,13 +3,9 @@
  *
  * **IT LIVES HERE RATHER THAN IN `app.ts` BECAUSE THE POLICY IS NOW
  * CONDITIONAL, AND A CONDITIONAL POLICY CAN BE WRONG IN ONE BRANCH.**
- * `check:headers` used to read the builder's SOURCE TEXT and assert on the
- * directives it could parse out. That was adequate while the function returned
- * one string; it is not adequate now, because the interesting failure is not "a
- * directive went missing", it is "the wrong branch was taken". A regex over the
- * source can see both branches exist. It cannot see which one a given request
- * gets, and asserting the branch by reading the caller's `if` would be a mirror
- * of the caller.
+ * A regex over the source can see that both branches exist. It cannot see
+ * which one a given request gets, and asserting the branch by reading the
+ * caller's `if` would be a mirror of the caller.
  *
  * So the gate IMPORTS this and CALLS it, once per branch, and asserts the
  * strings it actually returns. Same module the Worker runs, no second copy to
@@ -144,15 +140,12 @@ export function contentSecurityPolicy(nonce, styleNonce) {
      */
     "style-src-attr 'unsafe-inline'",
     /*
-     * `'self'` ALONE since 2026-08-21, and the 2026-08-17 note that used to sit
-     * here was RIGHT for the wrong reason. It added `'self'` beside gstatic on
-     * the reasoning that self-hosting was coming and a widening cannot break a
-     * working load. Self-hosting arrived, so gstatic goes and this is a
-     * TIGHTENING rather than the widening it anticipated.
+     * `'self'` ALONE: the fonts are self-hosted, so there is no third party
+     * to allow.
      *
-     * That note also called the files in `assets/fonts/` unused. They are not:
-     * Satori loads them to draw the social cards. The fonts served here are a
-     * different pair, the variable latin woff2 subsets, in `public/fonts/`.
+     * NOT the files in `assets/fonts/`, which are NOT unused: Satori loads
+     * those to draw the social cards. The fonts served to readers are a
+     * different pair, the variable latin woff2 subsets in `public/fonts/`.
      */
     "font-src 'self'",
     "img-src 'self' data:",

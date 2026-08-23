@@ -1,10 +1,6 @@
 /**
  * Reading the `intent` field off an editor form submission.
  *
- * Four lines in a module of its own for the reason `media-ref-key.mjs` is one:
- * `action.server.ts` imports the whole publish chain, so nothing in it is
- * reachable from `node:test` without a bundler, and this rule is worth a test.
- *
  * ## THERE IS NO DEFAULT, AND THAT IS THE POINT
  *
  * This used to be `String(form.get("intent") ?? "save")` inline in the action,

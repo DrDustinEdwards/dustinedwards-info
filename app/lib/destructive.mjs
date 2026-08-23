@@ -3,8 +3,7 @@
  *
  * Every destructive intent in this app answers to one predicate, and it lives
  * here rather than in any one feature's module because it is not a media rule
- * or a posts rule. It was in `app/lib/media/view.mjs`, which meant a posts
- * route could only reach it by importing the media view vocabulary.
+ * or a posts rule.
  *
  * ## The class this exists to close
  *
