@@ -23,6 +23,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 import { decide, decideDelete, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
 
@@ -562,10 +563,8 @@ permits("admin may create an already published post", () =>
    * Four gates still carry their own stripper of differing strength; that is
    * the class, and it is named in the report rather than half-fixed here.
    */
-  const codeOnly = (/** @type {string} */ src) =>
-    src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
-  const askSource = codeOnly(askRaw);
-  const searchSource = codeOnly(searchRaw);
+  const askSource = stripComments(askRaw);
+  const searchSource = stripComments(searchRaw);
 
   // SCOPE, ASSERTED. Stripping is only safe if it left something to match. An
   // over-eager stripper would empty the file and every assertion below would

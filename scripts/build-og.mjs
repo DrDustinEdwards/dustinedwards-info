@@ -47,6 +47,7 @@ import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
 import { markElement } from "./lib/mark.mjs";
 import { listForPrune } from "./lib/r2.mjs";
@@ -139,10 +140,18 @@ const {
  * @returns {string}
  */
 function siteName() {
-  const source = readFileSync(path.join("app", "lib", "seo.ts"), "utf8").replace(
-    /\/\*[\s\S]*?\*\//g,
-    "",
-  );
+  /*
+   * THE SHARED STRIPPER, and this site was NOT in the audit's inventory of
+   * nine. It stripped BLOCK comments only, which is weaker than every other
+   * reader of a .ts file in this repo, and the anchor below is an indexOf on a
+   * declaration that seo.ts is exactly the kind of file to quote in prose.
+   *
+   * MEASURED 2026-08-23 by planting `// export const SITE = { name: "WRONG" };`
+   * above the real declaration: block-only stripping found the COMMENT first
+   * and read WRONG as the site name, so every social card would have been
+   * rendered with it. Nothing would have failed; the cards would just be wrong.
+   */
+  const source = stripComments(readFileSync(path.join("app", "lib", "seo.ts"), "utf8"));
   const at = source.indexOf("export const SITE = {");
   if (at === -1) {
     throw new Error("build:og: app/lib/seo.ts no longer declares `export const SITE = {`");

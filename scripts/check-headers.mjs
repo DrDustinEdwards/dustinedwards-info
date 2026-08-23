@@ -49,6 +49,7 @@ import { fileURLToPath } from "node:url";
 
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
@@ -95,9 +96,7 @@ if (!existsSync(APP_PATH)) {
  * find `same-origin` in the sentence saying same-origin is wrong. That trap has
  * already been hit by check:logo, check:contrast and check:features.
  */
-/** @param {string} s */
-const stripComments = (s) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+/* One owner: scripts/lib/strip-comments.mjs carries the trap, the guard and the boundary. */
 
 const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
