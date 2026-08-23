@@ -466,6 +466,54 @@ permits("admin may create an already published post", () =>
     false,
   );
 
+
+  /*
+   * THE ORIGIN GATE, AND ITS POSITION IS THE ASSERTION THAT MATTERS.
+   *
+   * Ask is anonymous, so this is not CSRF in the usual sense: there is no
+   * session to borrow and SameSite does nothing. What a hostile page can do is
+   * make its own readers' browsers spend the shared Ask budget, and the per-IP
+   * limiter is blind to it because a thousand readers are a thousand IPs.
+   *
+   * Asserting the check merely EXISTS would pass on a version that ran it after
+   * the Durable Object had already been consulted, which is most of the cost of
+   * the attack. So the assertion is ORDER: the origin verdict is taken before
+   * checkAskRate, measured by position in the action's own body.
+   *
+   * Comments are stripped first, on this file's established rule: the action's
+   * docblock explains the limiter and the attack in prose, and an unstripped
+   * scan would find both names in the explanation and compare the wrong offsets.
+   */
+  const askCode = stripComments(askRoute);
+  const actionAt = askCode.search(/export\s+async\s+function\s+action\s*\(/);
+  eq("ask: the action was located for the order check", actionAt !== -1, true);
+  const actionBody = actionAt === -1 ? "" : askCode.slice(actionAt);
+  eq(
+    "ask: the action body is non-empty",
+    actionBody.length > 200,
+    true,
+  );
+
+  const originAt = actionBody.indexOf("askOriginVerdict(");
+  const rateAt = actionBody.indexOf("checkAskRate(");
+  eq("ask: the action takes an origin verdict", originAt !== -1, true);
+  eq("ask: the action still rate limits", rateAt !== -1, true);
+  eq(
+    "ask: THE ORIGIN CHECK RUNS BEFORE THE RATE LIMITER",
+    originAt !== -1 && rateAt !== -1 && originAt < rateAt,
+    true,
+  );
+  eq(
+    "ask: a refused origin is answered 403",
+    /status:\s*403/.test(actionBody),
+    true,
+  );
+  eq(
+    "ask: the origin predicate is imported, not restated here",
+    /from\s+"~\/lib\/search\/ask-origin\.mjs"/.test(askCode),
+    true,
+  );
+
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(
     "ask: robots.txt disallows /search/ask",
