@@ -14,6 +14,13 @@ is documentation. This is that documentation.
 Everything below was verified on 2026-08-02 unless a line says otherwise. The
 verification status of each part is recorded at the bottom.
 
+**A DATE HERE IS PART OF THE CLAIM.** Three things in this runbook went stale
+between 2026-08-02 and 2026-08-22 without anything noticing: the secret count,
+the migration count, and the entire description of what R2 holds. None of them
+is gated, because a runbook describes an account rather than the disk every gate
+verifies. So read the date beside a number before acting on the number, and
+re-measure rather than cite.
+
 ---
 
 ## Before you start
@@ -83,11 +90,10 @@ npx wrangler d1 migrations apply dustinedwards --remote
 ```
 
 **The migrations reproduce the live schema exactly, and this was measured rather
-than assumed.** Re-derived 2026-08-04: all **ten** migrations (`0001_init`
-through `0010_media_role`) were applied to an empty SQLite database and the
-result compared against the live remote schema, object by object:
-**57 of 57 objects match**, 27 tables, 27 indexes and 3 triggers, with no object
-on either side that the other lacks.
+than assumed.** Re-derived 2026-08-04: every migration then present was applied
+to an empty SQLite database and the result compared against the live remote
+schema, object by object: **57 of 57 objects match**, 27 tables, 27 indexes and
+3 triggers, with no object on either side that the other lacks.
 
 The live database carries three additional objects created by the D1 platform
 itself rather than by any migration: the tables `d1_migrations` and `_cf_KV`,
@@ -96,10 +102,16 @@ former's primary key. Excluding the two tables but not that index is what turns
 a clean match into a spurious one-object mismatch, which is worth knowing before
 anyone re-runs this and thinks they have found drift.
 
-The earlier form of this paragraph claimed 37 objects across seven migrations,
-measured 2026-08-02, and had gone stale in both numbers: three migrations landed
-after it (`0008_llms_seed`, `0009_media_index`, `0010_media_role`) and the object
-count moved with them. Finding B005.
+**NO MIGRATION COUNT IS WRITTEN HERE ANY MORE, because this paragraph has now
+gone stale twice in three weeks.** First it claimed 37 objects across seven
+migrations (2026-08-02); three migrations landed and it was corrected to ten and
+57 (2026-08-04, finding B005); two more have landed since, `0011_media_trash_tags`
+and `0012_drop_posts_category`, so "ten" was wrong again by 2026-08-22. The count
+is `drizzle/*.sql`. `check:migrations` hashes every file against the manifest in
+both directions and `check:invariants` section 4 binds schema to migrations to
+the live database, so a number here is a copy that nothing reads and nothing can
+fail on. **The 57-object figure is kept as a dated record of one measurement, not
+as a live claim**: re-derive it rather than cite it.
 
 `drizzle-kit` is deliberately not a dependency. Migrations are hand-written. Add a
 new numbered file; never edit an applied one.
@@ -354,7 +366,14 @@ fresh account this may need enabling before the binding resolves at runtime.
 
 ## 7. Secrets
 
-Seven, by name only. Never commit values; never paste one into chat.
+By name only. Never commit values; never paste one into chat.
+
+**THE LIST IS `REQUIRED_SECRETS` in `app/lib/secrets.mjs`, and no count is
+written here on purpose.** This section said "Seven" and set seven, and had been
+wrong since 2026-08-14, when `ANALYTICS_READ_TOKEN` was added: the live Worker
+carries eight, confirmed by `wrangler secret list` on 2026-08-22. The export
+already knew, because `check:secrets` reads it and a runbook prose count reads
+nothing. Set one `wrangler secret put` per name in that array:
 
 ```sh
 npx wrangler secret put GOOGLE_CLIENT_ID
@@ -364,6 +383,7 @@ npx wrangler secret put BETTER_AUTH_URL
 npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
+npx wrangler secret put ANALYTICS_READ_TOKEN
 ```
 
 | Secret | What it is for | Where a new one comes from |
@@ -375,9 +395,11 @@ npx wrangler secret put OPERATOR_TOKEN
 | `ADMIN_EMAIL` | The single address allowed into `/admin` | Your own address. Any other Google account authenticates and is then refused |
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
+| `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
 
-Verified 2026-08-02 with `wrangler secret list`: exactly these seven exist on the
-live Worker, and **no secret has ever lived in `wrangler.jsonc`**.
+Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
+the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
+`wrangler.jsonc`**.
 
 There is no AI Search secret and none is needed. The Worker reaches the instance
 through the binding. An AI Search API token is required only by
@@ -392,8 +414,23 @@ a `.dev.vars` you create yourself. `.dev.vars` stays gitignored, always.
 ### Google OAuth redirect URI
 
 In the same Google credential, set the authorized redirect URI to
-`<BETTER_AUTH_URL>/api/auth/callback/google`. This is not in this repo and is not
-recoverable from it; see below.
+`<BETTER_AUTH_URL>/api/auth/callback/google`.
+
+**The VALUE is derivable from this repo; the SETTING is not, and only the second
+half is a gap.** The path is not a convention to be remembered: `/api/auth` is
+Better Auth's default `basePath`, `app/lib/auth.server.ts` sets no override, and
+`app/routes/api.auth.$.ts` is the splat route that serves it, so the callback
+path follows from the code. Today `BETTER_AUTH_URL` is the `workers.dev` origin,
+which makes the live value
+`https://dustinedwards.dustin-edwards.workers.dev/api/auth/callback/google`;
+at cutover it becomes the apex and the Google credential must be edited in the
+same change or sign-in breaks with a redirect-URI mismatch.
+
+What is genuinely unrecoverable is **which Google Cloud project holds the
+credential**. Nothing in this repo records it, `wrangler secret list` returns
+names only, and the client id is write-only once set. A rebuild that cannot find
+the existing project creates a new OAuth client, which is a supported path and
+costs only the consent screen being set up again.
 
 ---
 
@@ -515,10 +552,12 @@ is a loss without consequence: everyone signs in again.
 account, 0 sessions. Better Auth recreates them on first sign-in, so this is also
 a loss without consequence at single-admin scale.
 
-**The Google OAuth client.** Client id, secret and the authorized redirect URI are
-configuration in a Google Cloud project, not in this repo. A rebuild means
-creating a new OAuth client and setting a new redirect URI. Nothing here records
-which Google project the current one lives in.
+**The Google OAuth client.** Client id and secret are configuration in a Google
+Cloud project, not in this repo, and **nothing here records which Google project
+the current one lives in**, which is the part that is genuinely lost. The
+redirect URI is NOT in that category: its value follows from the code and from
+`BETTER_AUTH_URL`, as section 7 now derives. A rebuild means creating a new OAuth
+client and setting that URI on it.
 
 **Resource ids.** By design. The D1 `database_id` and KV namespace `id` are not in
 git, so a rebuild creates new resources with new ids. That is the intended
@@ -549,11 +588,14 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   `--help` on the installed wrangler 4.107.0.
 - `ai-search create` flags `--type builtin`, `--hybrid-search`, `--reranking`:
   read from `wrangler ai-search create --help` on the same version.
-- Migrations reproduce the schema: **re-measured 2026-08-04** by applying all
-  **ten** to an empty database with `node:sqlite` and diffing object by object
-  against the live schema. **57 of 57 match**, nothing extra on either side. The
-  previous entry said seven migrations and 37 objects and had gone stale in both.
-- The seven secret names: `wrangler secret list`.
+- Migrations reproduce the schema: **measured 2026-08-04** by applying every
+  migration then present to an empty database with `node:sqlite` and diffing
+  object by object against the live schema. **57 of 57 matched**, nothing extra
+  on either side. Two migrations have landed since, so this is a dated record
+  and not a current claim; section 1 says why no count is written down.
+- The secret names: `wrangler secret list`, **re-read 2026-08-22**. Eight, equal
+  to `REQUIRED_SECRETS` in `app/lib/secrets.mjs`. The previous entry said seven
+  and had been stale since `ANALYTICS_READ_TOKEN` landed on 2026-08-14.
 - **R2 contents, measured 2026-08-22**, four independent ways: `dustinedwards-media`
   is EMPTY and `dustinedwards-og` holds 12 regenerable OG cards. Section 3 carries
   the census, the reads behind it, and the acceptance that follows.
