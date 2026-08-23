@@ -55,13 +55,13 @@ jobs:
       # owner can repoint at any commit, so `@v4` means "whatever that account
       # publishes next" running with this repository's token. Audit section 8.
       # This is the commit actions/checkout@v4 pointed at on 2026-08-23.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # The version is READ FROM .nvmrc rather than written here. A second
       # statement of the Node version is a mirror, and this repo has been bitten
       # by mirrors twice this month; .nvmrc is the one place that says 24.14.1.
       # actions/setup-node@v4 as of 2026-08-23, pinned for the same reason.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: .nvmrc
           cache: npm

@@ -25,6 +25,7 @@ import {
   askDriftVerdict,
   ftsEqualityVerdict,
   mediaUnbackedVerdict,
+  publicHealthBody,
 } from "../app/lib/health/verdicts.mjs";
 
 /** The shape a healthy live database returns. Each test perturbs one field. */
@@ -220,4 +221,71 @@ test("the timeout clears the day's slowest measured healthy path", async () => {
     CHECK_TIMEOUT_MS > 2332,
     `${CHECK_TIMEOUT_MS}ms would fire on the measured healthy maximum of 2332ms`,
   );
+});
+
+/* ------------------ the two counts on a failing drift check --------------- */
+
+test("A FAILING drift check carries its two counts, and nothing else new", () => {
+  // The 17:15Z flap: ask-index-drift went false and could not be triaged,
+  // because the body said which check failed and not how far apart the sides
+  // were. One record apart mid-rebuild is not the same event as a hundred.
+  const body = publicHealthBody({
+    checks: [
+      {
+        name: "ask-index-drift",
+        ok: false,
+        detail: "Repair with sync-ask on /admin/posts.",
+        counts: { expected: 113, present: 108 },
+      },
+    ],
+  });
+  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["expected", "name", "ok", "present"]);
+  assert.equal(body.checks[0].expected, 113);
+  assert.equal(body.checks[0].present, 108);
+});
+
+test("A PASSING check stays exactly as narrow as it was", () => {
+  const body = publicHealthBody({
+    checks: [
+      { name: "fts-equality", ok: true, detail: "counts", counts: { expected: 1, present: 1 } },
+    ],
+  });
+  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
+});
+
+test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
+  // detail carries an R2 OBJECT KEY on media-unbacked and the shadow table
+  // names on fts-equality. That is what the names-and-booleans rule is for.
+  const serialised = JSON.stringify(
+    publicHealthBody({
+      checks: [
+        { name: "media-unbacked", ok: false, detail: "og/secret-key.png is unbacked" },
+        { name: "fts-equality", ok: true, detail: "search_identity_docsize=113" },
+      ],
+    }),
+  );
+  assert.doesNotMatch(serialised, /secret-key/, "an R2 key must not reach the wire");
+  assert.doesNotMatch(serialised, /docsize/, "shadow table names must not either");
+  assert.doesNotMatch(serialised, /detail/, "the field itself must be absent");
+});
+
+test("a failing check with NO counts is still just name and ok", () => {
+  // media-unbacked has no two-sided comparison to report, so it opts out by
+  // simply not carrying counts rather than by being special-cased.
+  const body = publicHealthBody({
+    checks: [{ name: "media-unbacked", ok: false, detail: "a key" }],
+  });
+  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
+});
+
+test("askDriftVerdict supplies the counts it fails on", () => {
+  const v = askDriftVerdict({ missing: ["a"], stale: [], expected: 113, present: 112 });
+  assert.equal(v.ok, false);
+  assert.deepEqual(v.counts, { expected: 113, present: 112 });
+});
+
+test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
+  const v = askDriftVerdict({ missing: [], stale: [], expected: 113, present: 113 });
+  assert.equal(v.ok, true);
+  assert.equal(v.counts, undefined);
 });

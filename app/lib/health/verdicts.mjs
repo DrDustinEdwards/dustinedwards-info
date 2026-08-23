@@ -27,7 +27,7 @@
  * never disagree about whether there is a problem.
  *
  * @param {{ expected: number, present: number, missing: string[], stale: string[] }} status
- * @returns {{ ok: boolean, detail: string }}
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function askDriftVerdict(status) {
   const drift = status.missing.length + status.stale.length;
@@ -43,6 +43,8 @@ export function askDriftVerdict(status) {
       `Ask index drift ${drift}: ${status.missing.length} missing, ` +
       `${status.stale.length} stale, ${status.expected} expected, ` +
       `${status.present} present. Repair with sync-ask on /admin/posts.`,
+    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
+    counts: { expected: status.expected, present: status.present },
   };
 }
 
@@ -109,7 +111,7 @@ export function mediaUnbackedVerdict(objects) {
  * fail separately, so both are reported rather than collapsed into one boolean.
  *
  * @param {Record<string, unknown>} counts
- * @returns {{ ok: boolean, detail: string }}
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function ftsEqualityVerdict(counts) {
   const NAMES = ["posts", "postsFts", "docs", "identity", "prose"];
@@ -155,6 +157,16 @@ export function ftsEqualityVerdict(counts) {
       `FTS index drift: ${broken.join("; ")}. ` +
       `Rebuild with INSERT INTO <index>(<index>) VALUES('rebuild'). ` +
       `Do NOT DELETE FROM either index; that corrupts it further.`,
+    /*
+     * THE FIRST DISAGREEING PAIR, not all five counts. `expected` is the
+     * content table's row count and `present` is what its shadow reports,
+     * which is the pair an operator acts on. The full five are in `detail`,
+     * which stays off the wire.
+     */
+    counts:
+      posts !== postsFts
+        ? { expected: posts, present: postsFts }
+        : { expected: docs, present: identity !== docs ? identity : prose },
   };
 }
 
@@ -192,10 +204,10 @@ export const CHECK_TIMEOUT_MS = 3000;
  * was released, and under sustained timeouts the abandoned work is still
  * accumulating behind this.
  *
- * @param {Promise<{ ok: boolean, detail: string }>} promise
+ * @param {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>} promise
  * @param {number} ms
  * @param {string} name
- * @returns {Promise<{ ok: boolean, detail: string }>}
+ * @returns {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>}
  */
 export function withTimeout(promise, ms, name) {
   return new Promise((resolve) => {
@@ -244,17 +256,41 @@ export function withTimeout(promise, ms, name) {
  * Shape is stable and the workflow parses it: `ok`, and `checks` as an array of
  * `{ name, ok }` in a fixed order. An object keyed by name was the alternative
  * and was rejected because it makes "list the failing names" a key iteration in
- * jq rather than a filter, and because an array preserves order.
+ * ## THE TWO COUNTS ON A FAILING DRIFT CHECK DO TRAVEL, since 2026-08-23
  *
- * @param {{ checks: Array<{ name: string, ok: boolean }> }} run
- * @returns {{ ok: boolean, checks: Array<{ name: string, ok: boolean }> }}
+ * A health flap at 17:15Z reported `ask-index-drift` false, recovered by
+ * itself, and COULD NOT BE DIAGNOSED: the body said which check failed and
+ * nothing about how far apart the two sides were. One record apart mid-sync
+ * and a hundred apart are the same alert, and only one of them is an
+ * incident.
+ *
+ * So a FAILING check carries `expected` and `present`, and nothing else
+ * changes. Two integers are not secrets: the corpus size is already public
+ * (every post is on /blog, and llms.txt counts them), and the index size is
+ * the same number when healthy. The strings still do not travel, because
+ * those carry an R2 object key and the shadow table names.
+ *
+ * A PASSING check carries name and ok only, so the quiet case stays exactly
+ * as narrow as it was.
+ *
+ * @param {{ checks: Array<{ name: string, ok: boolean, counts?: { expected: number, present: number } }> }} run
+ * @returns {{ ok: boolean, checks: Array<{ name: string, ok: boolean, expected?: number, present?: number }> }}
  */
 export function publicHealthBody(run) {
   return {
     ok: run.checks.every((c) => c.ok),
-    // Rebuilt field by field rather than spread, so a field added to
-    // HealthCheck later cannot leak onto the wire by inheritance.
-    checks: run.checks.map((c) => ({ name: c.name, ok: c.ok })),
+    checks: run.checks.map((c) => {
+      // Rebuilt field by field rather than spread, so a field added to
+      // HealthCheck later cannot leak onto the wire by inheritance. The two
+      // counts are opted IN by name, one at a time, for the same reason.
+      if (c.ok || !c.counts) return { name: c.name, ok: c.ok };
+      return {
+        name: c.name,
+        ok: c.ok,
+        expected: c.counts.expected,
+        present: c.counts.present,
+      };
+    }),
   };
 }
 
