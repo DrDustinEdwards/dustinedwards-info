@@ -53,6 +53,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { retryRead } from "./lib/retry.mjs";
 
@@ -120,6 +121,11 @@ console.log("  clean.");
 
 const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" });
 const sha = (head.stdout ?? "").trim();
+// The FULL sha as well: `actions/runs?head_sha=` matches on the 40-character
+// form and returns an empty list for an abbreviated one, which would read as
+// "no CI run for this commit" on every ship.
+const headFull = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+const shaFull = (headFull.stdout ?? "").trim();
 console.log(`  HEAD is ${sha}`);
 
 /*
@@ -280,6 +286,100 @@ if (run("npm", ["run", "check"]).code !== 0) {
     "Read the table above for the failing gate NAME before retrying. Nothing was deployed.",
   );
 }
+
+/* ------------------------------------------------------------- 4. CI green */
+
+/*
+ * **CI IS ENFORCED HERE, AT THE DEPLOY PRIMITIVE, AND NOWHERE ELSE.**
+ *
+ * The 2026-08-22 audit, section 8: "CI runs on push to main, after the fact.
+ * Nothing prevents a push that fails CI from being deployed, because deploy is
+ * manual and local. The gate tier runs in `ship`, so in practice the same checks
+ * run, but CI is advisory only." Verified true: nothing consulted CI before.
+ *
+ * Branch protection was the obvious alternative and does not solve this. It
+ * governs what may MERGE; it has no opinion about a local `npm run deploy`, and
+ * this repo is mainline-only until cutover, so there is no merge to protect.
+ * The deploy is the primitive that matters, so the check belongs immediately in
+ * front of it.
+ *
+ * ## WHY IT IS NOT REDUNDANT WITH STEP 3
+ *
+ * Step 3 runs the offline tier ON THIS DISK, with this machine's node_modules,
+ * generated types and real wrangler.jsonc. CI runs it on a clean checkout that
+ * has never seen the repo. They answer different questions, and VERIFICATION.md
+ * names them as two of the four instruments. A dependency installed locally and
+ * absent from the lockfile is invisible to step 3 and fatal in CI.
+ *
+ * ## FAIL CLOSED, IN EVERY DIRECTION, AND NO OVERRIDE FLAG
+ *
+ *   no run for this sha    refuse. Unpushed, or CI never triggered.
+ *   run still in progress  refuse. A green-so-far run is not a green run.
+ *   conclusion not success refuse, naming the conclusion.
+ *   API unreachable        refuse. Ship already needs the network to deploy, so
+ *                          "the network is down" cannot be a reason to skip a
+ *                          safety check and proceed to a step that needs it.
+ *
+ * There is deliberately no `--force`. A flag would be used, and it would be used
+ * on exactly the day the check was right.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * It reads GitHub's view of a sha. It cannot see whether CI's assertions are
+ * meaningful, whether the workflow was edited to assert nothing in the same
+ * commit, or whether a run was re-run until it passed. It proves a green run
+ * exists for this exact commit, which is strictly more than nothing knew before.
+ */
+
+announce("CI must be green for this exact commit");
+
+const remote = spawnSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8" });
+const slug = ((remote.stdout ?? "").trim().match(/github\.com[/:]([^/]+)\/(.+?)(?:\.git)?$/) ?? []).slice(1, 3);
+if (slug.length !== 2) {
+  refuse(
+    "the origin remote is not a GitHub URL, so CI cannot be consulted",
+    `git remote get-url origin said ${JSON.stringify((remote.stdout ?? "").trim())}. ` +
+      "This check fails closed rather than assuming CI passed.",
+  );
+}
+const [owner, repo] = slug;
+
+/*
+ * **THE TOKEN IS REQUIRED, and the brief that specified this check assumed it
+ * was not.** The assumption was that the repository is public, so Actions runs
+ * would be readable unauthenticated. MEASURED 2026-08-23: `private=true`. An
+ * unauthenticated read answers 404, because GitHub returns 404 rather than 403
+ * for a private resource you may not see, so the fallback would refuse every
+ * ship while reporting that the repository does not exist.
+ *
+ * `gh auth token` is the token path. Ship has no token of its own: GITHUB_TOKEN
+ * is a wrangler secret and is not in this process's environment. If `gh` is
+ * absent or logged out, this step refuses, which is the correct direction: a
+ * check that cannot read CI has not confirmed CI.
+ */
+const ghToken = (() => {
+  const t = spawnSync("gh", ["auth", "token"], { cwd: root, encoding: "utf8", shell: process.platform === "win32" });
+  return t.status === 0 ? (t.stdout ?? "").trim() : "";
+})();
+console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
+
+/** @type {unknown} */
+let runs;
+try {
+  runs = await fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken });
+} catch (error) {
+  refuse(
+    `the GitHub API could not be reached: ${error instanceof Error ? error.message : String(error)}`,
+    "Ship needs the network to deploy anyway, so an unreachable API is not a reason to " +
+      "skip the check and proceed. Nothing was deployed.",
+  );
+}
+
+const verdict = ciVerdict(runs, sha);
+if (!verdict.ok) {
+  refuse(verdict.why, verdict.remedy);
+}
+console.log(`  ${verdict.why}.`);
 
 /* -------------------------------------------------------------- 4. deploy */
 
