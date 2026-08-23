@@ -1071,13 +1071,160 @@ if (existsSync(headersPath)) {
     `a long-lived rule on an unhashed path cannot be revoked before it expires`);
 }
 
-const MINIMUM_CHECKS = 99;
+/* --------------------------------- the health endpoint's own headers ------ */
+
+/*
+ * **A HEALTH CHECK THAT CAN BE SERVED FROM CACHE IS NOT A HEALTH CHECK.**
+ *
+ * `/api/health` returned `Response.json({ ok: true })` with no `Cache-Control`.
+ * Hard rule 8: that is CACHED, not skipped. Workers Cache is in front of this
+ * Worker and Cloudflare applies heuristic freshness to a 200 carrying neither
+ * `Cache-Control` nor `Expires`, storing it for two hours. The endpoint could
+ * therefore report health measured two hours ago, identically whether the
+ * Worker was fine or on fire, which is the reassuring silence a monitor exists
+ * to break.
+ *
+ * ## SCOPED STRUCTURALLY, NOT BY A WINDOW
+ *
+ * The tempting assertion is "the file mentions no-store", and it is worthless:
+ * it passes on a comment, and this repo has had a comment both satisfy an
+ * assertion and fail one in the same week. The next temptation is a window
+ * around each `new Response`, and that is the shape that read the NEXT
+ * function's compliance in `df99bf1`.
+ *
+ * So the property asserted is structural: the route constructs a Response in
+ * EXACTLY ONE place, that place is inside `healthJson`, and `healthJson`
+ * applies the constant. A second exit added later without the headers moves the
+ * count and fails here, which is the case that matters once the endpoint grows
+ * a 503 path. Comments are stripped before any of it.
+ */
+
+console.log("\n  the health endpoint");
+
+const HEALTH_PATH = join(root, "app", "routes", "api.health.ts");
+
+/** Transcribed from the ruling. NOT read from the route. */
+const RATIFIED_HEALTH = { "Cache-Control": "no-store" };
+
+ok(
+  "app/routes/api.health.ts exists",
+  existsSync(HEALTH_PATH),
+  "the health route is gone or was renamed, so nothing below examines anything",
+);
+
+if (existsSync(HEALTH_PATH)) {
+  const health = stripComments(readFileSync(HEALTH_PATH, "utf8"));
+
+  const healthBlock = health.match(/const\s+HEALTH_HEADERS\s*(?::[^=]*)?=\s*\{([\s\S]*?)\}\s*;/);
+  ok(
+    "the route declares a HEALTH_HEADERS constant",
+    Boolean(healthBlock),
+    "not found after stripping comments. Without it every assertion below is vacuous.",
+  );
+
+  /** @type {Record<string, string>} */
+  const healthDeclared = {};
+  if (healthBlock) {
+    // Identifiers are captured as values too, so swapping in a constant reads as
+    // a WRONG VALUE rather than as an absent header. Same reason as the preview
+    // route's parse above.
+    for (const m of healthBlock[1].matchAll(
+      /(?:"([A-Za-z-]+)"|([A-Za-z][A-Za-z-]*))\s*:\s*(?:"([^"]*)"|([A-Za-z_$][\w$]*))/g,
+    )) {
+      healthDeclared[m[1] ?? m[2]] = m[3] !== undefined ? m[3] : `<identifier ${m[4]}>`;
+    }
+  }
+
+  ok(
+    "HEALTH_HEADERS is not empty",
+    Object.keys(healthDeclared).length > 0,
+    "parsed to zero entries, so the value assertion below would pass vacuously",
+  );
+
+  for (const [name, expected] of Object.entries(RATIFIED_HEALTH)) {
+    ok(
+      `the health route declares ${name}`,
+      name in healthDeclared,
+      `the ratification includes it and the route does not. Absent, the response ` +
+        `is heuristically cached for two hours and reports stale health.`,
+    );
+    ok(
+      `the health route's ${name} is exactly "${expected}"`,
+      healthDeclared[name] === expected,
+      `declared ${JSON.stringify(healthDeclared[name] ?? "(absent)")}`,
+    );
+  }
+
+  /*
+   * THE APPLICATION SITE, counted rather than searched for. One construction is
+   * the invariant: it is what makes "the header is on every response" provable
+   * without inspecting each response.
+   */
+  const constructions = [
+    ...health.matchAll(/\bnew\s+Response\s*\(|\bResponse\s*\.\s*json\s*\(/g),
+  ];
+  ok(
+    "the health route constructs exactly one Response",
+    constructions.length === 1,
+    `found ${constructions.length}. Every health response must go through the one ` +
+      `helper that applies HEALTH_HEADERS; a second exit is a response that can be ` +
+      `cached, and on a 503 that means alerting after the site recovered.`,
+  );
+
+  const helperAt = health.search(/function\s+healthJson\b/);
+  ok(
+    "the route defines the healthJson helper",
+    helperAt !== -1,
+    "the single-construction assertion above has nothing to be scoped to",
+  );
+
+  if (helperAt !== -1) {
+    // Bounded to the helper's own body: the closing brace at column 0. Not a
+    // character window, which is what read a neighbour's compliance in df99bf1.
+    const helperEnd = health.indexOf("\n}", helperAt);
+    const helperBody = helperEnd === -1 ? "" : health.slice(helperAt, helperEnd + 2);
+
+    ok(
+      "healthJson applies HEALTH_HEADERS",
+      /headers:\s*HEALTH_HEADERS\b/.test(helperBody),
+      "the one construction site does not pass the constant, so the headers are declared and unused",
+    );
+    ok(
+      "the single Response construction is inside healthJson",
+      constructions.length === 1 &&
+        constructions[0].index > helperAt &&
+        constructions[0].index < helperAt + helperBody.length,
+      "a Response is built outside the helper, so it carries whatever headers its own call site set",
+    );
+  }
+}
+
+/*
+ * FLOOR RE-MEASURED 2026-08-23 BY RUNNING THIS GATE, never summed.
+ *
+ * **THE OLD VALUE HAD GONE STALE BY 44 AND NOBODY WOULD HAVE NOTICED.** It read
+ * 99, its comment said "Measured: 99", and the gate was in fact running 143
+ * before this section landed. A floor 44 under the truth is not a floor: two
+ * whole sections could have stopped running and the count would still have
+ * cleared it, which is precisely the failure this assertion exists to catch.
+ * It was a floor that could not fail, hard rule 10's own class, sitting inside
+ * the gate family that names it.
+ *
+ * That is the argument for measuring THROUGH the pipeline every time rather
+ * than adding up what a new block looks like it will contribute: the arithmetic
+ * drifts silently, and only running it says so. I first wrote 108 here by
+ * reasoning from the stale 99, and running the gate is what corrected it.
+ *
+ * Measured now: 152, with the health endpoint's nine. Floored at 143, roughly
+ * six percent under, matching the convention the preview-route floor set.
+ */
+const MINIMUM_CHECKS = 143;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 99.`,
+      `rather than failing. Measured 2026-08-23: 152.`,
   );
 }
 
