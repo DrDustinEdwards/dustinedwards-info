@@ -1199,6 +1199,65 @@ if (existsSync(HEALTH_PATH)) {
   }
 }
 
+
+console.log("");
+console.log("  plaintext requests are upgraded before anything else runs");
+
+{
+  /*
+   * MEASURED ON THE WIRE, 2026-08-23, and it is why this section exists: plain
+   * http:// returned 200 with the full page, and the first plaintext request to
+   * a path already warmed over HTTPS came back CF-Cache-Status: HIT carrying the
+   * SAME CSP nonce. The two schemes shared one cache entry, so the nonce that
+   * the enforced policy relies on was being handed out in the clear.
+   *
+   * Asserted on POSITION, not presence. A redirect that runs after the router
+   * has already produced a response is not a redirect, and presence alone would
+   * pass on exactly that.
+   */
+  const appCode = stripComments(readFileSync(APP_PATH, "utf8"));
+  const fetchAt = appCode.search(/async\s+fetch\s*\(/);
+  ok("the Worker exports a fetch handler", fetchAt !== -1, "nothing below examines anything");
+  const fetchBody = fetchAt === -1 ? "" : appCode.slice(fetchAt);
+  ok("the fetch body is non-empty", fetchBody.length > 200, `${fetchBody.length} chars`);
+
+  const redirectAt = fetchBody.indexOf("httpsRedirectTarget(");
+  const routerAt = fetchBody.indexOf("RouterContextProvider");
+  ok(
+    "the Worker takes an https redirect decision",
+    redirectAt !== -1,
+    "plaintext would reach the router and be answered 200, which is what was measured live",
+  );
+  ok(
+    "THE UPGRADE RUNS BEFORE THE ROUTER IS EVEN CONSTRUCTED",
+    redirectAt !== -1 && routerAt !== -1 && redirectAt < routerAt,
+    "a redirect decided after the response exists is not a redirect",
+  );
+
+  /*
+   * The redirect's own caching, and this one is a safety property rather than
+   * hygiene. The scheme is NOT part of the cache key, which is the whole defect
+   * this closes; a cacheable redirect stored under a shared key would be served
+   * to HTTPS readers too and send them to the URL they already requested.
+   */
+  const redirectBlock = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 420);
+  ok(
+    "the redirect block was located",
+    redirectBlock.includes("Location"),
+    "the assertion below would examine the wrong bytes",
+  );
+  ok(
+    "THE REDIRECT IS no-store, so it cannot be cached under a scheme-blind key",
+    /no-store/.test(redirectBlock),
+    "hard rule 8: with no Cache-Control it is CACHED, and a cached redirect loops HTTPS readers",
+  );
+  ok(
+    "the redirect predicate is imported rather than restated",
+    /from\s+"~\/lib\/https-redirect\.mjs"/.test(appCode),
+    "a second copy of the loopback exemption is how local development breaks",
+  );
+}
+
 /* ------------------------- every public HTML route sets the shared policy - */
 
 /*
