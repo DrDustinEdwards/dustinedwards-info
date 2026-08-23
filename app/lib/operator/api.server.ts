@@ -32,7 +32,13 @@ import {
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { readState } from "~/lib/editor/publish-policy.mjs";
-import { askAvailable } from "~/lib/search/ask.server";
+import {
+  askAvailable,
+  askIndexStatus,
+  pruneAskCorpus,
+  syncAskCorpus,
+} from "~/lib/search/ask.server";
+import { askSyncReport } from "./ask-sync-report.mjs";
 import { readFile } from "~/lib/editor/github.server";
 
 
@@ -73,6 +79,7 @@ const TOOLS = [
   "save_post",
   "delete_post",
   "sync_status",
+  "sync_ask",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -112,6 +119,9 @@ export async function runTool(
         return await deletePostTool(env, actor, args);
       case "sync_status":
         return { ok: true, data: await syncStatus(env) };
+
+      case "sync_ask":
+        return await syncAsk(env);
     }
   } catch (error) {
     return translate(error);
@@ -306,6 +316,67 @@ async function deletePostTool(
   return {
     ok: true,
     data: { slug, commitSha: result.commitSha, askRemoved: result.askRemoved },
+  };
+}
+
+
+/**
+ * THE FULL-CORPUS ASK UPLOAD, as an operator operation.
+ *
+ * ## Why this exists at all
+ *
+ * `savePost` keeps Ask in step for a post published THROUGH the editor. Nothing
+ * kept it in step for a post published by COMMIT, which is how most of this
+ * site's writing lands: `ship` runs `sync:content`, which rebuilds D1 and both
+ * FTS indexes and does not touch AI Search. So every git-authored change left
+ * the answer index behind, silently, until somebody read an alert.
+ *
+ * Measured 2026-08-23: the scheduled health check went red four polls running
+ * with `expected 91, present 90`, and shipping nine post updates widened it to
+ * `expected 99, present 90`, tracking `search_docs` growth exactly. The repair
+ * was a human clicking sync-ask in the admin, which is a step nobody is holding.
+ *
+ * ## IDEMPOTENT, and that is what makes it safe as a pipeline step
+ *
+ * The upload writes every record under a key derived from its URL, so running
+ * it twice writes the same keys with the same content; the prune then removes
+ * anything in the index that the corpus no longer names. Running it when there
+ * is nothing to do is a no-op that costs a listing.
+ *
+ * ## THE COUNTS ARE READ BACK, NOT ACCUMULATED
+ *
+ * `uploaded` is what the loop thinks it wrote. `expected` and `present` come
+ * from D1 and from AI Search AFTERWARDS, and `converged` is derived from those
+ * two. A caller cannot be told this succeeded by an operation that merely ran.
+ */
+async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
+  if (!askAvailable(env)) {
+    // Same stance the Ask endpoint takes: absent binding means the feature is
+    // not here, rather than here and broken.
+    return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
+  }
+
+  const posts = await loadArtifact(env);
+  const { uploaded, keys, cacheDropped } = await syncAskCorpus(env, posts);
+  const removed = await pruneAskCorpus(env, keys);
+
+  /*
+   * READ BACK AFTER BOTH WRITES. Between the upload and this read the index is
+   * eventually consistent, so a drift reported here can be a moment behind
+   * rather than a fault; ship says exactly that when it refuses, and the next
+   * scheduled health poll is the tiebreaker.
+   */
+  const status = await askIndexStatus(env);
+
+  return {
+    ok: true,
+    data: askSyncReport({
+      uploaded,
+      removed: removed.length,
+      cacheDropped,
+      expected: status.expected,
+      present: status.present,
+    }),
   };
 }
 

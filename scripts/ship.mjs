@@ -49,6 +49,7 @@
  * command succeeded, because "it seemed to work" is not a deploy record.
  */
 
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,7 +75,13 @@ function announce(title) {
 
 /**
  * Refuse, loudly, naming the step and the remedy. Never a bare exit.
+ *
+ * Declared `never` because it genuinely never returns: it exits the process.
+ * Saying so lets a caller narrow a value it has just refused on, instead of
+ * casting around a check that has already happened.
+ *
  * @param {string} why @param {string} remedy
+ * @returns {never}
  */
 function refuse(why, remedy) {
   console.error(`\n  REFUSED at step ${step}: ${why}\n  ${remedy}\n`);
@@ -98,6 +105,51 @@ function run(command, args, { capture = false } = {}) {
 }
 
 /* ---------------------------------------------------------------- 1. tree */
+
+
+/*
+ * THE OPERATOR TOKEN IS CHECKED BEFORE ANYTHING DEPLOYS, and the split is
+ * deliberate.
+ *
+ * Step 10 calls the operator API to bring the Ask index into step, because
+ * `sync:content` rebuilds D1 and both FTS indexes and does not touch AI Search.
+ * A CONFIGURATION problem is not the same as a failed call: missing the token
+ * is fixable in a second and should not cost a deploy, so it refuses here,
+ * before the build. A call that FAILS after the deploy is a different thing and
+ * is handled where it happens, loudly, with the deploy left standing.
+ *
+ * Sourced the way `operator-roundtrip.mjs` already sources it: a path in
+ * OPERATOR_TOKEN_FILE pointing at a file holding the token. The token itself is
+ * never an argument, never an environment value that a child process inherits
+ * by name, and never printed. The length floor is the one `auth.server.ts`
+ * enforces, so a truncated file is refused here rather than 401ing after a
+ * deploy.
+ */
+const TOKEN_FILE = process.env.OPERATOR_TOKEN_FILE;
+if (!TOKEN_FILE) {
+  refuse(
+    "OPERATOR_TOKEN_FILE is not set, so ship cannot bring the Ask index into step",
+    "Point OPERATOR_TOKEN_FILE at a file holding the operator token. It is a " +
+      "wrangler secret, it is not in the repository, and it must not be pasted " +
+      "into a command line. Nothing has been built or deployed.",
+  );
+}
+let OPERATOR_TOKEN = "";
+try {
+  OPERATOR_TOKEN = readFileSync(TOKEN_FILE, "utf8").trim();
+} catch {
+  refuse(
+    `OPERATOR_TOKEN_FILE points at a file that cannot be read: ${TOKEN_FILE}`,
+    "Nothing has been built or deployed.",
+  );
+}
+if (OPERATOR_TOKEN.length < 32) {
+  refuse(
+    "the token in OPERATOR_TOKEN_FILE is shorter than the 32 characters the Worker requires",
+    "auth.server.ts treats a short secret as a misconfiguration and answers 503. " +
+      "Nothing has been built or deployed.",
+  );
+}
 
 announce("Working tree must be clean");
 
@@ -468,10 +520,124 @@ if (!(docs === identity && identity === prose)) {
   );
 }
 
-/* -------------------------------------------------------------- 7. record */
+
+/* ------------------------------------------------- 7. the Ask index, last */
+
+/*
+ * THE ANSWER INDEX IS THE ONE DERIVED STORE `sync:content` DOES NOT REBUILD.
+ *
+ * D1 and both FTS indexes are rebuilt above. AI Search is not: the only things
+ * that ever wrote it were `savePost`, for a post published through the editor,
+ * and a human clicking sync-ask in the admin. So every post that landed by
+ * COMMIT left the answer index behind, and this site's writing mostly lands by
+ * commit.
+ *
+ * MEASURED 2026-08-23: the scheduled health check went red four polls running
+ * at `expected 91, present 90`, and shipping nine post updates widened it to
+ * `expected 99, present 90`, tracking search_docs growth exactly. Nothing was
+ * broken; nothing was holding the step.
+ *
+ * ## WHY THIS RUNS AFTER THE DEPLOY AND FAILS THE RUN ANYWAY
+ *
+ * It cannot run before: it uploads what the DEPLOYED Worker serves, through
+ * that Worker's own bindings. So by the time it can run, the deploy has landed
+ * and rolling back on its account would be the wrong trade, because a deployed
+ * site with a stale answer index is better than no deploy and the same stale
+ * index.
+ *
+ * So the deploy STANDS, the record below still prints, and ship exits nonzero
+ * at the very end. Both surfaces then carry the miss: this output, and the
+ * scheduled health poll that will read the same drift fifteen minutes later.
+ *
+ * The operation is idempotent, so a failed run is safe to repeat: rerunning
+ * ship, or calling sync_ask directly, writes the same keys again.
+ */
+
+announce("Bring the Ask index into step");
+
+/** Set when the Ask index did not converge. Read at the very end. */
+let askMiss = "";
+
+{
+  const url = `${ORIGIN}/api/operator`;
+  /** @type {Response | null} */
+  let response = null;
+  /** @type {any} */
+  let body = null;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        // The token goes in a header on a request this process builds. It is
+        // never an argv entry, which every process on the machine can read.
+        authorization: `Bearer ${OPERATOR_TOKEN}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ tool: "sync_ask", args: {} }),
+    });
+    body = await response.json().catch(() => null);
+  } catch (error) {
+    askMiss = `the sync_ask call did not complete: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
+  if (!askMiss && response && !response.ok) {
+    // The status is the story. The token is NOT echoed, and neither is the
+    // request; a 401 here means the secret and the file disagree.
+    askMiss = `the operator API answered ${response.status} to sync_ask`;
+  }
+
+  const report = body && typeof body === "object" ? (body.data ?? body) : null;
+  if (!askMiss && (!report || typeof report.converged !== "boolean")) {
+    askMiss = "the operator API answered without a converged verdict, so nothing was proven";
+  }
+
+  if (!askMiss && report.converged !== true) {
+    askMiss =
+      `the Ask index did not converge: ${report.expected} expected, ` +
+      `${report.present} present, drift ${report.drift}, after uploading ` +
+      `${report.uploaded} and removing ${report.removed}`;
+  }
+
+  if (askMiss) {
+    console.log(`  MISSED: ${askMiss}`);
+  } else {
+    console.log(
+      `  converged: ${report.expected} expected, ${report.present} present, ` +
+        `${report.uploaded} uploaded, ${report.removed} removed, ` +
+        `${report.cacheDropped} cached answer(s) dropped.`,
+    );
+  }
+}
+
+/* -------------------------------------------------------------- 8. record */
 
 announce("Shipped");
 console.log(`  commit       ${sha}`);
 console.log(`  version      ${version}`);
 console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
+
+/*
+ * THE EXIT CODE IS LAST, AND IT IS NONZERO ON A MISS.
+ *
+ * The record above has already printed, because the deploy landed and saying so
+ * is true. What did not happen is the answer index catching up, and a pipeline
+ * that reported success on that would be the same green-light-meaning-nothing
+ * this step was added to remove.
+ *
+ * Nothing is rolled back. The remedy is to run it again.
+ */
+if (askMiss) {
+  console.error(`\n${"!".repeat(64)}`);
+  console.error(`  DEPLOYED, BUT THE ASK INDEX IS BEHIND.`);
+  console.error(`  ${askMiss}`);
+  console.error(
+    `\n  The deploy at ${sha} STANDS and the site is serving it. What is stale is\n` +
+      `  the answer index, so Ask can miss or mis-cite recent writing until this\n` +
+      `  succeeds. The operation is idempotent: re-run \`npm run ship\`, or call\n` +
+      `  sync_ask on the operator API directly.\n\n` +
+      `  The scheduled health check reads the same drift and will report it too.`,
+  );
+  console.error(`${"!".repeat(64)}\n`);
+  process.exit(1);
+}

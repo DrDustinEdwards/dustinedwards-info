@@ -522,6 +522,92 @@ permits("admin may create an already published post", () =>
   );
 }
 
+/* --------------------------------- the Ask index is kept in step by ship -- */
+
+/*
+ * `sync:content` REBUILDS D1 AND BOTH FTS INDEXES AND DOES NOT TOUCH AI SEARCH.
+ *
+ * For a long time the only writers of the answer index were `savePost`, for a
+ * post published through the editor, and a human clicking sync-ask in the
+ * admin. This site's writing mostly lands by COMMIT, so the index fell behind
+ * on every content ship and stayed behind until somebody read an alert.
+ *
+ * MEASURED 2026-08-23: the scheduled health check went red four polls running
+ * at expected 91, present 90, and shipping nine post updates widened it to
+ * expected 99, present 90, tracking search_docs growth exactly.
+ *
+ * Asserted on POSITION and on the FAILURE PATH, not merely on presence. A call
+ * that ran before the deploy would upload to a Worker that is about to be
+ * replaced, and a call whose result nobody checked would be a step that cannot
+ * fail. Both of those pass a presence assertion.
+ */
+{
+  const apiSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
+  );
+  const shipSource = stripComments(readFileSync(join(root, "scripts/ship.mjs"), "utf8"));
+
+  eq("ask sync: the operator API was read", apiSource.length > 2000, true);
+  eq("ask sync: ship.mjs was read", shipSource.length > 2000, true);
+
+  eq(
+    "ask sync: the operator API exposes sync_ask",
+    /"sync_ask"/.test(apiSource),
+    true,
+  );
+  eq(
+    "ask sync: the tool derives its verdict from a report module, not inline",
+    /askSyncReport\(/.test(apiSource),
+    true,
+  );
+
+  eq("ask sync: SHIP CALLS sync_ask", /"sync_ask"/.test(shipSource), true);
+
+  /*
+   * ORDER. The upload writes what the DEPLOYED Worker serves, through that
+   * Worker's own bindings, so it has to run after the deploy and after the D1
+   * sync that produced the records it uploads.
+   */
+  const deployAt = shipSource.indexOf('announce("Deploy")');
+  const syncAt = shipSource.indexOf('announce("Sync content to remote D1")');
+  const askAt = shipSource.indexOf("sync_ask");
+  eq("ask sync: the deploy step was located", deployAt !== -1, true);
+  eq("ask sync: the D1 sync step was located", syncAt !== -1, true);
+  eq(
+    "ask sync: THE ASK UPLOAD RUNS AFTER THE DEPLOY AND AFTER THE D1 SYNC",
+    askAt !== -1 && deployAt !== -1 && syncAt !== -1 && askAt > deployAt && askAt > syncAt,
+    true,
+  );
+
+  /*
+   * THE FAILURE PATH, which is the half that makes the step worth having. A
+   * step whose result is discarded is a step that cannot fail, and this one
+   * exists precisely because a green ship over a stale index is the defect.
+   */
+  eq(
+    "ask sync: ship reads a converged verdict rather than a status code alone",
+    /converged/.test(shipSource),
+    true,
+  );
+  eq(
+    "ask sync: SHIP EXITS NONZERO WHEN THE INDEX DID NOT CONVERGE",
+    /askMiss[\s\S]{0,900}process\.exit\(1\)/.test(shipSource),
+    true,
+  );
+  /*
+   * And the deploy STANDS. The record must print before the exit, or a missed
+   * sync would hide the version that is actually live, which is the one thing
+   * an operator needs at that moment.
+   */
+  const recordAt = shipSource.indexOf('announce("Shipped")');
+  const exitAt = shipSource.lastIndexOf("process.exit(1)");
+  eq(
+    "ask sync: the shipped record prints BEFORE the nonzero exit",
+    recordAt !== -1 && exitAt !== -1 && recordAt < exitAt,
+    true,
+  );
+}
+
 /**
  * Drafts must never reach the AI index.
  *
