@@ -3279,6 +3279,100 @@ console.log("\n  16. the CI workflow runs the derived tier");
     /on:/.test(yaml) && /push:/.test(yaml) && /pull_request:/.test(yaml),
     "a workflow that runs on neither is a file, not a review",
   );
+
+  /* ----- the health workflow: the dead man's switch ---------------------- */
+
+  /*
+   * **THE ONLY THING ON THIS SITE THAT REACHES A HUMAN WITHOUT A HUMAN
+   * LOOKING.** A failing scheduled run is the alert; GitHub emails the owner.
+   *
+   * Three properties are asserted and each has a specific way of rotting:
+   *
+   *   - it EXISTS. Deleting it removes all alerting and nothing else notices,
+   *     because the absence of an alert is what health looks like.
+   *   - it TARGETS the health route. A workflow polling `/` would pass every
+   *     run while the Ask index rotted, which is the 31 July failure exactly.
+   *   - its checkout is PINNED BY SHA. A tag is a moving pointer, and this
+   *     workflow runs on a schedule with the repository's token.
+   *
+   * OBSERVATION BOUNDARY: this reads a file. It cannot see whether Actions is
+   * enabled, whether a run fired, whether GitHub disabled the schedule after
+   * 60 days of inactivity, or whether the owner's notification settings deliver
+   * the mail. Every one of those is a silent failure this cannot reach, and the
+   * workflow's own header says so at length.
+   */
+  const HEALTH_WF = join(root, ".github", "workflows", "health.yml");
+  const healthPresent = existsSync(HEALTH_WF);
+  ok(
+    "the health workflow exists at .github/workflows/health.yml",
+    healthPresent,
+    "the dead man's switch is gone, so nothing polls the site and the silence " +
+      "that follows is indistinguishable from health",
+  );
+
+  const healthRaw = healthPresent ? readFileSync(HEALTH_WF, "utf8") : "";
+  const healthYaml = stripHashComments(healthRaw);
+
+  ok(
+    "the health workflow is not all comment",
+    healthRaw.length > 400 && healthYaml.length > 200,
+    `${healthRaw.length} byte(s) raw, ${healthYaml.length} stripped. This file is ` +
+      `mostly prose by design, so the stripped length is what proves there is a job ` +
+      `left underneath it and that every assertion below has something to read.`,
+  );
+
+  ok(
+    "the health workflow runs on a schedule",
+    /schedule:/.test(healthYaml) && /cron:/.test(healthYaml),
+    "without a schedule it only runs when someone asks, which is the state this " +
+      "whole mechanism exists to replace",
+  );
+
+  ok(
+    "the health workflow polls the health route",
+    /\/api\/health\b/.test(healthYaml),
+    "it does not name /api/health. A workflow polling some other path passes every " +
+      "run while the checks it was built for go unmeasured.",
+  );
+
+  /*
+   * SHA-PINNED, asserted POSITIVELY and NEGATIVELY.
+   *
+   * The positive form alone is satisfiable by adding a pinned action beside a
+   * floating one, so the negative half is what actually closes it: no `uses:`
+   * line in EITHER workflow may end in a version tag. Scoped to `uses:` lines
+   * rather than the whole file, because the prose above them names `@v4` while
+   * explaining why it is wrong, and a whole-file match would read that comment
+   * as the violation it warns about. Comments are stripped first as well.
+   */
+  const usesLines = [
+    ...healthYaml.matchAll(/^\s*-?\s*uses:\s*(\S+)\s*$/gm),
+    ...yaml.matchAll(/^\s*-?\s*uses:\s*(\S+)\s*$/gm),
+  ].map((m) => m[1]);
+
+  ok(
+    "the workflows declare actions to check",
+    usesLines.length >= 3,
+    `${usesLines.length} uses: line(s) parsed across both workflows. A zero-scope ` +
+      `parse agrees that everything is pinned by examining nothing.`,
+  );
+
+  const floating = usesLines.filter((u) => /@v?\d+(\.\d+)*$/.test(u));
+  ok(
+    "every action in every workflow is pinned by commit SHA, not by tag",
+    floating.length === 0,
+    `${floating.join(", ")} pin to a tag. A tag is a moving pointer the upstream ` +
+      `owner can repoint at any commit, so it means "whatever that account publishes ` +
+      `next" running with this repository's token. Audit section 8.`,
+  );
+
+  const healthCheckout = usesLines.find((u) => u.startsWith("actions/checkout@"));
+  ok(
+    "the health workflow's checkout is pinned to a full 40-character SHA",
+    Boolean(healthCheckout) && /@[0-9a-f]{40}$/.test(healthCheckout ?? ""),
+    `checkout is ${JSON.stringify(healthCheckout ?? "(absent)")}. A short SHA is ` +
+      `ambiguous and a tag is mutable; only the full commit id is a fixed target.`,
+  );
 }
 
 /* ------- 17. one helper name, one argument order, no string conditions ---- */
@@ -3898,13 +3992,34 @@ console.log("\n  20. every admin loader carries timing");
  * drop several at once; three of its eight assertions exist to catch exactly
  * that and the floor catches the section vanishing whole.
  */
-const MINIMUM_CHECKS = 160;
+/*
+ * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
+ *
+ * **THIS FLOOR HAD GONE STALE BY 66 AND ITS MESSAGE BY 142.** The constant read
+ * 160 while the gate ran 226, and the failure text it would have printed said
+ * "Measured: 84 offline", a number from several sections ago. A floor 66 under
+ * the truth cannot fail on anything short of a catastrophe: three whole
+ * sections could stop running and the count would still clear it, which is the
+ * unfailable-condition class in hard rule 10, in the gate that enforces hard
+ * rule 10.
+ *
+ * The same drift was found in `check:headers` on the same day, where the floor
+ * read 99 against a measured 143. Two independent instances of one shape, and
+ * the shape is this: a floor is raised when a section lands and then never
+ * again, so it decays every time an existing section grows an assertion. Both
+ * are now re-measured by RUNNING the gate, which is the only method that would
+ * have caught either.
+ *
+ * Floor 160 to 214, roughly five percent under the measurement, matching the
+ * slack this file's own history settled on.
+ */
+const MINIMUM_CHECKS = 214;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured: 84 offline.`,
+      `rather than failing. Measured 2026-08-23: 226 offline.`,
   );
 }
 
