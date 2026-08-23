@@ -82,6 +82,86 @@ export function mediaUnbackedVerdict(objects) {
 }
 
 /**
+ * Do the FTS indexes still agree with the table they are built from?
+ *
+ * ## COUNTED ON THE `_docsize` SHADOWS, NEVER ON THE INDEX
+ *
+ * This is the one trap that makes the whole check worth having. `posts_fts`,
+ * `search_identity` and `search_prose` are external-content fts5 tables, so
+ * `COUNT(*)` on any of them reads THROUGH to its content table and equals the
+ * content table's count no matter how broken the index is. Measured in this
+ * repo: after `DELETE FROM posts_fts` the count still read 1 of 1 while MATCH
+ * returned nothing, and `posts_fts_docsize` went to 0. The shadow holds one row
+ * per INDEXED document, so it is the only number here that can actually fail.
+ * `check:invariants` section 7 forbids the wrong form in source, both
+ * directions.
+ *
+ * ## FAIL CLOSED ON A COUNT IT CANNOT READ
+ *
+ * A missing or non-numeric count is a FAILING check, not a skipped one. The
+ * query returning no row, or a column renamed out from under this, would
+ * otherwise compare `undefined === undefined` and pass, which is the shape of
+ * every gate defect this repo has recorded: a check that examined nothing and
+ * reported what a clean run reports.
+ *
+ * ## TWO INDEPENDENT EQUALITIES
+ *
+ * `posts` against `posts_fts_docsize` is the blog index. `search_docs` against
+ * `search_identity_docsize` and `search_prose_docsize` is the three-way the
+ * ship asserts after every sync. They are rebuilt by different statements and
+ * fail separately, so both are reported rather than collapsed into one boolean.
+ *
+ * @param {Record<string, unknown>} counts
+ * @returns {{ ok: boolean, detail: string }}
+ */
+export function ftsEqualityVerdict(counts) {
+  const NAMES = ["posts", "postsFts", "docs", "identity", "prose"];
+
+  const unreadable = NAMES.filter((n) => !Number.isInteger(counts[n]) || Number(counts[n]) < 0);
+  if (unreadable.length > 0) {
+    return {
+      ok: false,
+      detail:
+        `FTS counts unreadable: ${unreadable.join(", ")} ` +
+        `${unreadable.length === 1 ? "is" : "are"} missing or not a whole number. ` +
+        `A count that cannot be read is not a passing check.`,
+    };
+  }
+
+  const posts = Number(counts.posts);
+  const postsFts = Number(counts.postsFts);
+  const docs = Number(counts.docs);
+  const identity = Number(counts.identity);
+  const prose = Number(counts.prose);
+
+  const broken = [];
+  if (posts !== postsFts) broken.push(`posts=${posts} but posts_fts_docsize=${postsFts}`);
+  if (identity !== docs || prose !== docs) {
+    broken.push(
+      `search_docs=${docs} but search_identity_docsize=${identity} and ` +
+        `search_prose_docsize=${prose}`,
+    );
+  }
+
+  if (broken.length === 0) {
+    return {
+      ok: true,
+      detail:
+        `FTS indexes agree: posts=${posts}=posts_fts_docsize, ` +
+        `search_docs=${docs}=identity=prose.`,
+    };
+  }
+
+  return {
+    ok: false,
+    detail:
+      `FTS index drift: ${broken.join("; ")}. ` +
+      `Rebuild with INSERT INTO <index>(<index>) VALUES('rebuild'). ` +
+      `Do NOT DELETE FROM either index; that corrupts it further.`,
+  };
+}
+
+/**
  * What a breach looks like when it arrives.
  *
  * ONE SELF-CONTAINED STRING, because most destinations that accept a JSON POST

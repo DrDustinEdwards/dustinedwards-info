@@ -25,8 +25,12 @@ import {
   HEARTBEAT_KEY,
   alertText,
   askDriftVerdict,
+  ftsEqualityVerdict,
   mediaUnbackedVerdict,
 } from "../app/lib/health/verdicts.mjs";
+
+/** The shape a healthy live database returns. Each test perturbs one field. */
+const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
 
 test("nine missing records is a breach, and the nine reaches the message", () => {
   const verdict = askDriftVerdict({
@@ -95,4 +99,53 @@ test("the alert text is self-contained, because destinations render one field", 
 
 test("the heartbeat key is stable, because a rename orphans the last run", () => {
   assert.equal(HEARTBEAT_KEY, "health:last-run");
+});
+
+test("agreeing FTS counts are healthy", () => {
+  const verdict = ftsEqualityVerdict(HEALTHY_FTS);
+  assert.equal(verdict.ok, true);
+  assert.match(verdict.detail, /search_docs=46/);
+});
+
+test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", () => {
+  // The measured defect: after DELETE FROM posts_fts the index count still read
+  // 1 of 1 through the content table while the docsize shadow went to 0.
+  const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, postsFts: 0 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /posts=12 but posts_fts_docsize=0/);
+  assert.match(verdict.detail, /'rebuild'/, "the breach must carry the repair");
+  assert.match(verdict.detail, /Do NOT DELETE FROM/, "and the way to make it worse");
+});
+
+test("one half of the three-way going stale is a breach", () => {
+  const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, prose: 37 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /search_prose_docsize=37/);
+});
+
+test("both equalities are reported, not just the first", () => {
+  const verdict = ftsEqualityVerdict({ posts: 12, postsFts: 9, docs: 46, identity: 46, prose: 40 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /posts_fts_docsize=9/, "the blog index half");
+  assert.match(verdict.detail, /search_prose_docsize=40/, "and the search half");
+});
+
+test("FAIL CLOSED: a count that could not be read is not a passing check", () => {
+  // An empty row is what `.first()` returns when the query matched nothing. A
+  // verdict that compared undefined against undefined would report health.
+  for (const row of [{}, { ...HEALTHY_FTS, docs: undefined }, { ...HEALTHY_FTS, prose: null }]) {
+    const verdict = ftsEqualityVerdict(row);
+    assert.equal(verdict.ok, false, `${JSON.stringify(row)} must not read as healthy`);
+    assert.match(verdict.detail, /unreadable/);
+  }
+});
+
+test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
+  // A string "46" compares unequal to 46 under ===, so a lenient verdict would
+  // report drift; a coercing one would report health. Both are wrong answers to
+  // "can this check determine anything".
+  const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, identity: "46" });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /unreadable/);
+  assert.match(verdict.detail, /identity/);
 });
