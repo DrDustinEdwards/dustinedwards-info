@@ -27,6 +27,8 @@
  * budget, so gate 3 sits AFTER the cache, not with gate 1.
  */
 
+import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
+
 /**
  * Requests per IP per minute.
  *
@@ -45,6 +47,22 @@ export const ASK_RATE_LIMIT_PERIOD_SECONDS = 60;
  * reader will never reach and a distributed scraper will.
  */
 const DAILY_ANSWER_BUDGET = 200;
+
+/**
+ * Answers available immediately, on top of the day's paced share.
+ *
+ * Twenty-five, and the number is chosen so that PACING IS INVISIBLE TO REAL
+ * READERS. Observed demand on this site is a handful of questions a day, so a
+ * genuine reader arriving at any hour finds headroom well above anything they
+ * or the other readers that hour will use. Without a burst the first question
+ * after UTC midnight would be refused, because an evenly paced share is zero at
+ * 00:00:01, which would be a worse bug than the one being fixed.
+ *
+ * It is also the size of the outage a burst can still buy: an attacker can take
+ * these 25 at any moment, and then moves at the paced rate. That is the trade,
+ * and 25 answers is a cheap one.
+ */
+const ASK_BURST_ALLOWANCE = 25;
 
 /** How long a cached answer stays valid. Also the ceiling on staleness. */
 const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -193,9 +211,32 @@ export async function checkAskRate(env: Env, ip: string): Promise<GuardVerdict> 
  */
 export async function reserveAskBudget(env: Env): Promise<GuardVerdict> {
   const budget = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("global"));
-  const { ok } = await budget.consume(DAILY_ANSWER_BUDGET);
+
+  /*
+   * THE CEILING IS PACED, since 2026-08-23, and the Durable Object is unchanged.
+   *
+   * `consume` takes the ceiling as an argument, so the policy can live in a
+   * pure function that `check:tests` can reach while the object stays a
+   * synchronous counter with no clock policy of its own. That split is the
+   * reason this needed no migration and no new binding.
+   *
+   * What it fixes is the SHAPE of the failure rather than the size of the bill.
+   * A flat 200 is a cliff: a distributed caller spends it in minutes, every
+   * request inside the per-IP limit, and Ask is dead for real readers until UTC
+   * midnight. Paced, the same 200 is released across the day, so the denial
+   * ends when the abuse does. Full reasoning, and what this does NOT fix, are
+   * on `pacedAllowance`.
+   */
+  const ceiling = pacedAllowance(DAILY_ANSWER_BUDGET, ASK_BURST_ALLOWANCE, new Date());
+  const { ok } = await budget.consume(ceiling);
   if (!ok) {
-    return { ok: false, reason: "budget", retryAfter: secondsUntilUtcMidnight() };
+    /*
+     * `secondsPerPacedUnit`, NOT `secondsUntilUtcMidnight`. That value was
+     * correct under a flat cap, where nothing changed until the day rolled
+     * over. Under pacing it would be wrong by up to a day and would send a
+     * reader away from a feature that recovers in minutes.
+     */
+    return { ok: false, reason: "budget", retryAfter: secondsPerPacedUnit(DAILY_ANSWER_BUDGET) };
   }
   return { ok: true };
 }
@@ -217,16 +258,6 @@ export async function readAskBudget(env: Env): Promise<{ day: string; count: num
 export async function resetAskBudget(env: Env): Promise<void> {
   const budget = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("global"));
   await budget.reset();
-}
-
-function secondsUntilUtcMidnight(): number {
-  const now = new Date();
-  const midnight = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1,
-  );
-  return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
 }
 
 export async function readCachedAnswer(
