@@ -191,15 +191,75 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
 /* --- 3. The shipped stylesheet carries the v3 palette ------------------- */
 
 {
+  /*
+   * TWO PLANES, TWO STYLESHEETS, SINCE 2026-08-23.
+   *
+   * This block used to take the FIRST `/assets/*.css` linked on `/` and treat
+   * it as "the stylesheet". That was true while `app.css` imported all sixteen
+   * parts. The admin sheets then moved to `app/admin.css`, and the very next
+   * run failed on `css: .btn-danger uses --fill-danger`, because that rule
+   * lives in `admin-posts.css` and had left the public bundle. The instrument
+   * was right to fail: it was asserting a property of a file it could no
+   * longer see.
+   *
+   * FOURTH INSTANCE OF ONE CLASS IN A SINGLE CHANGE. `check:contrast`,
+   * `check:logo` (through `stylesheetPaths`) and
+   * `test/code-block-padding.test.mjs` all narrowed the same way, all failed
+   * rather than passing, and all are repaired the same way: follow every
+   * stylesheet the site actually serves.
+   *
+   * `/login` is where the admin bundle is reachable WITHOUT a session, which is
+   * what makes this checkable from here at all. It is unauthenticated by design
+   * and links both sheets.
+   *
+   * ## EACH PROPERTY IS ASSERTED WHERE IT BELONGS, IN BOTH DIRECTIONS
+   *
+   * Concatenating the two and asserting against the union would pass, and would
+   * stop distinguishing "the tokens reach every reader" from "the tokens exist
+   * somewhere". The palette must be in the PUBLIC sheet; `.btn-danger` must be
+   * in the ADMIN one and must NOT have drifted back into the public bundle,
+   * because a rule that reappears there is weight every reader pays for and
+   * nothing else would notice.
+   */
   const { text: home } = await get("/");
-  const href = (home.match(/href="(\/assets\/[^"]+\.css)"/) ?? [])[1];
-  check("css: a stylesheet is linked", Boolean(href), home.slice(0, 200));
+  const publicHref = (home.match(/href="(\/assets\/[^"]+\.css)"/) ?? [])[1];
+  check("css: a stylesheet is linked on /", Boolean(publicHref), home.slice(0, 200));
 
-  if (href) {
-    const { text: css, status } = await get(href);
-    check("css: stylesheet fetches", status === 200);
+  const { text: login } = await get("/login");
+  const loginHrefs = [...login.matchAll(/href="(\/assets\/[^"]+\.css)"/g)].map((m) => m[1]);
+  const adminHref = loginHrefs.find((h) => h !== publicHref);
 
-    // v3 values, read from the doc rather than from our own source file.
+  /*
+   * SCOPE, before anything is read. Two DISTINCT stylesheets have to be found
+   * or every assertion below is being made about a corpus nobody has proven
+   * non-empty, and a split that quietly collapsed back into one bundle would
+   * look identical to a healthy one.
+   */
+  check(
+    "css: /login links the public stylesheet and a second, admin one",
+    Boolean(adminHref) && loginHrefs.includes(publicHref),
+    `linked: ${loginHrefs.join(", ") || "(none)"}`,
+  );
+  check(
+    "css: / does NOT link the admin stylesheet",
+    Boolean(adminHref) && !home.includes(adminHref ?? " "),
+    "the admin bundle is back on the public plane, which is the split undone",
+  );
+
+  if (publicHref && adminHref) {
+    const { text: css, status } = await get(publicHref);
+    check("css: public stylesheet fetches", status === 200);
+    const { text: adminCss, status: adminStatus } = await get(adminHref);
+    check("css: admin stylesheet fetches", adminStatus === 200);
+    check(
+      "css: the admin stylesheet is not empty",
+      adminCss.length > 10000,
+      `${adminCss.length} bytes`,
+    );
+
+    // v3 values, read from the doc rather than from our own source file. These
+    // are TOKENS and they are asserted on the PUBLIC sheet, because a token
+    // that only reaches the admin plane has not shipped.
     for (const [label, needle] of [
       ["dark sage locked to #93B29B", "93b29b"],
       ["dark body text #E3DBD0", "e3dbd0"],
@@ -221,17 +281,36 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
       "css: base anchor rule underlines",
       /a\{[^}]*text-decoration:underline/.test(css),
     );
+    /*
+     * `.btn-danger` IS ADMIN-PLANE NOW, and both halves are asserted. The
+     * positive proves the delete button still reads its fill from the token;
+     * the negative proves the admin bundle has not leaked back into the sheet
+     * every public reader downloads.
+     */
     check(
-      "css: .btn-danger uses --fill-danger",
-      /\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(css),
+      "css: .btn-danger uses --fill-danger, in the admin stylesheet",
+      /\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(adminCss),
+    );
+    check(
+      "css: .btn-danger is NOT in the public stylesheet",
+      !/\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(css),
     );
     check(
       "css: search mark uses --mark-bg, not brand",
       /\.search-snippet mark\{[^}]*background:var\(--mark-bg\)/.test(css),
     );
+    /*
+     * SITE-WIDE, so it runs against BOTH sheets. Scoping it to the public one
+     * would have let an admin focus ring go back to box-shadow unseen, and the
+     * rule this asserts is a palette law, not a plane's preference.
+     */
     check(
-      "css: no :focus-visible rule relies on box-shadow",
+      "css: no :focus-visible rule relies on box-shadow, public",
       !/:focus-visible\{[^}]*box-shadow/.test(css),
+    );
+    check(
+      "css: no :focus-visible rule relies on box-shadow, admin",
+      !/:focus-visible\{[^}]*box-shadow/.test(adminCss),
     );
     check(
       "css: theme selectors survived minification",
