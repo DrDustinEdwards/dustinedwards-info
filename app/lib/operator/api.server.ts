@@ -13,6 +13,8 @@
  * does, so an operator sees what the editor sees.
  */
 
+import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
+import { listDivergences } from "~/lib/editor/divergence.server";
 import { count } from "drizzle-orm";
 
 import { getDb, publiclyVisible } from "~/db/index";
@@ -139,6 +141,34 @@ function translate(error: unknown): ToolResult {
   }
 
   // A conflict means main moved under the caller. Retryable after a re-read.
+  /*
+   * DIVERGENCE IS ITS OWN BRANCH, ahead of the generic 500.
+   *
+   * It is distinguishable from the three failures above in the way that
+   * matters to a caller: a PolicyError (403) and an EditorError (422) both mean
+   * NOTHING HAPPENED and the request should be corrected and retried. A
+   * GitHubError (409/502) means nothing was committed. This one means the
+   * OPPOSITE: the commit landed, the writing is safe, and retrying is the one
+   * response that does not help.
+   *
+   * Matched on `name` rather than `instanceof`, because the error is
+   * constructed in a `.mjs` module and a cross-module identity check through
+   * two build graphs holds only until something duplicates the module.
+   *
+   * 500 rather than a 4xx: the caller did nothing wrong. Not 502, which this
+   * file already uses for GitHub, because the upstream that failed is ours.
+   * `detail.code` is the machine-readable half so a client can branch without
+   * parsing prose.
+   */
+  if (error instanceof Error && error.name === DIVERGENCE_ERROR_NAME) {
+    return {
+      ok: false,
+      status: 500,
+      error: error.message,
+      detail: { code: "d1-divergence", committed: true, retrySave: false },
+    };
+  }
+
   if (error instanceof GitHubError) {
     return {
       ok: false,
@@ -321,5 +351,18 @@ async function syncStatus(env: OperatorEnv) {
     searchIndexDocs: indexed?.n ?? 0,
     askConfigured: askAvailable(env),
     githubConfigured: Boolean(env.GITHUB_TOKEN),
+    /*
+     * COMMITS THAT LANDED WHILE D1 DID NOT FOLLOW.
+     *
+     * The fourth store this tool reports on, and the only one whose absence is
+     * the interesting state: an empty list is the normal answer. Read from KV
+     * rather than D1 on purpose, because a record of a D1 failure kept in D1 is
+     * missing exactly when it matters.
+     *
+     * `known: false` is a distinct answer from an empty list. A status tool
+     * that cannot read one of its stores must say so rather than report zero,
+     * which is the same distinction `d1Posts` would need if the query threw.
+     */
+    divergences: await listDivergences(env),
   };
 }

@@ -50,6 +50,8 @@ import {
   readBinaryFile,
   GitHubError,
 } from "./github.server";
+import { convergeWithRetry } from "./converge.mjs";
+import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 
@@ -387,8 +389,45 @@ export async function savePost(
     ],
   });
 
-  // Only now, with the commit landed, does the database change.
-  await syncPostToD1(env, record);
+  /*
+   * ONLY NOW, WITH THE COMMIT LANDED, DOES THE DATABASE CHANGE, and from here
+   * the repo is ahead until the index catches up.
+   *
+   * **THE ORDER IS THE DESIGN AND IS NOT THE DEFECT.** The repo is the source
+   * of truth; D1 is a derived index. So there is no compensating revert, and
+   * there must never be one: undoing the commit to tidy the index would destroy
+   * the authoritative copy to repair the derived one. A stale index serves
+   * slightly old data; a reverted commit is lost writing.
+   *
+   * What the 2026-08-22 audit actually caught is the other half of its own
+   * sentence, "with no record". A transient D1 failure now retries once, and a
+   * persistent one is RECORDED where `sync_status` can see it and raised as an
+   * error that names the post, the commit and the repair. Grounds on
+   * `convergeWithRetry`.
+   *
+   * The recorder writes to KV, never to D1, because D1 is the store that just
+   * failed and a record of that failure kept there is absent exactly when it is
+   * wanted.
+   */
+  const converged = await convergeWithRetry({
+    write: () => syncPostToD1(env, record),
+    recordDivergence: (facts) => recordDivergence(env, facts),
+    slug: options.slug,
+    commitSha,
+  });
+
+  /*
+   * A SUCCESSFUL WRITE CLEARS ANY EARLIER DIVERGENCE FOR THIS SLUG. Without
+   * this the status surface would keep reporting a fault that a later save had
+   * already repaired, and a stale alarm is how a real one stops being read.
+   * It does not throw: failing to clear a record is strictly less bad than
+   * failing the save that just succeeded.
+   */
+  try {
+    await clearDivergence(env, options.slug);
+  } catch (error) {
+    console.error("failed to clear a divergence record after a successful save", error);
+  }
 
   /*
    * DRAFT PREVIEW LINKS DIE WHEN THE POST STOPS BEING A DRAFT. Feature G.
@@ -431,6 +470,13 @@ export async function savePost(
     commitSha,
     record,
     askSync,
+    /**
+     * True when the first D1 write failed and the retry succeeded. The save is
+     * fine; this exists so a retry is visible rather than silent, because a
+     * database that needs a second attempt on every save is a fault that would
+     * otherwise never surface.
+     */
+    d1Retried: converged.retried,
     /**
      * How many preview links this save revoked. `null` when the post did not
      * move out of draft and nothing was attempted, `-1` when the attempt threw.
