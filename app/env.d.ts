@@ -47,27 +47,6 @@ declare global {
      */
     ANALYTICS_READ_TOKEN?: string;
 
-    /**
-     * Where the scheduled health run POSTs a breach. See `workers/health.ts`.
-     *
-     * OPTIONAL BY CONTRACT, on the `ANALYTICS_READ_TOKEN` precedent above: a
-     * local dev machine will never have it and an unset secret must not throw.
-     * Unlike that one, absence here is LOGGED AT ERROR LEVEL rather than
-     * passed over, because an undelivered breach and no breach at all are
-     * otherwise the same silence.
-     */
-    ALERT_WEBHOOK_URL?: string;
-
-    /**
-     * A dead-man's-switch ping, sent after every clean run.
-     *
-     * The destination is one that alerts when a ping does NOT arrive inside a
-     * grace window, which is the only mechanism here that can report this
-     * Worker having died: anything watching from inside dies with it. Unset,
-     * the run still records its timestamp to KV under `HEARTBEAT_KEY`, which
-     * makes staleness readable but alerts nobody.
-     */
-    ALERT_HEARTBEAT_URL?: string;
   }
 }
 

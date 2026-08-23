@@ -17,9 +17,6 @@
  * @see test/health-verdicts.test.mjs
  */
 
-/** KV key holding the last completed run, so its AGE is readable in-app. */
-export const HEARTBEAT_KEY = "health:last-run";
-
 /**
  * Is the Ask index in step with D1?
  *
@@ -261,19 +258,3 @@ export function publicHealthBody(run) {
   };
 }
 
-/**
- * What a breach looks like when it arrives.
- *
- * ONE SELF-CONTAINED STRING, because most destinations that accept a JSON POST
- * render a single field and drop the rest of the envelope. A payload whose
- * meaning is spread across sibling keys arrives as the word "2".
- *
- * @param {Array<{ name: string, detail: string }>} failed
- * @returns {string}
- */
-export function alertText(failed) {
-  return (
-    `dustinedwards.info health check FAILED (${failed.length}):\n` +
-    failed.map((c) => `- ${c.name}: ${c.detail}`).join("\n")
-  );
-}

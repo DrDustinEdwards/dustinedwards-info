@@ -22,8 +22,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  HEARTBEAT_KEY,
-  alertText,
   askDriftVerdict,
   ftsEqualityVerdict,
   mediaUnbackedVerdict,
@@ -80,25 +78,6 @@ test("one uploaded original ends the acceptance and names the key", () => {
   assert.match(verdict.detail, /posts\/first-upload\.png/, "name the object, not just the count");
   assert.match(verdict.detail, /not regenerable/);
   assert.match(verdict.detail, /re-decided/);
-});
-
-test("the alert text is self-contained, because destinations render one field", () => {
-  const text = alertText([
-    { name: "ask-index-drift", detail: "Ask index drift 9: 9 missing, 0 stale." },
-    { name: "media-unbacked", detail: "MEDIA bucket is NO LONGER EMPTY." },
-  ]);
-
-  // Everything a person needs must survive being read as a bare string, with
-  // no sibling keys in the envelope to fall back on.
-  assert.match(text, /dustinedwards\.info/, "which site");
-  assert.match(text, /FAILED \(2\)/, "how many");
-  assert.match(text, /ask-index-drift/, "which check");
-  assert.match(text, /9 missing/, "the numbers");
-  assert.match(text, /media-unbacked/, "and the other check, not just the first");
-});
-
-test("the heartbeat key is stable, because a rename orphans the last run", () => {
-  assert.equal(HEARTBEAT_KEY, "health:last-run");
 });
 
 test("agreeing FTS counts are healthy", () => {

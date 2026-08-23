@@ -405,12 +405,6 @@ npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put ANALYTICS_READ_TOKEN
-# SUPERSEDED, do not set. Section 11 explains: alerting is a scheduled
-# GitHub Actions run, and these two would need a third-party destination,
-# which the same ruling excluded. Declared in REQUIRED_SECRETS so
-# check:secrets keeps guarding the names; deliberately unprovisioned.
-# npx wrangler secret put ALERT_WEBHOOK_URL
-# npx wrangler secret put ALERT_HEARTBEAT_URL
 ```
 
 | Secret | What it is for | Where a new one comes from |
@@ -423,8 +417,6 @@ npx wrangler secret put ANALYTICS_READ_TOKEN
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
-| `ALERT_WEBHOOK_URL` | **SUPERSEDED, leave unset.** Was where the hourly cron POSTed a breach | Nothing to set. Alerting is `.github/workflows/health.yml`; see section 11 |
-| `ALERT_HEARTBEAT_URL` | **SUPERSEDED, leave unset.** Was the dead-man's-switch ping | Nothing to set. The scheduled workflow failing IS the dead man's switch now; see section 11 |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
 the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
@@ -578,20 +570,28 @@ all of it at the top, where somebody editing it will meet it.
 - **It sees no layout, no admin plane, no bill.**
 - **Between polls it sees nothing.** Worst case fifteen minutes.
 
-### SUPERSEDED, and still present in the code
+### The webhook design that came before it, now REMOVED
 
-The 2026-08-22 design was an hourly Worker cron posting to `ALERT_WEBHOOK_URL`
-with a heartbeat to `ALERT_HEARTBEAT_URL`. Both secrets are still declared in
-`REQUIRED_SECRETS`, the `scheduled` handler is still in `workers/app.ts`, and
-the cron trigger is still in `wrangler.jsonc`. **Neither secret is set and
-neither can be**, because the ruling that chose GitHub Actions also ruled out
-third-party services, which is what those URLs would have to point at.
+The 2026-08-22 design was an hourly Worker cron posting breaches to
+`ALERT_WEBHOOK_URL` with a heartbeat to `ALERT_HEARTBEAT_URL`. **It was deleted
+on 2026-08-23**, not merely marked superseded: the cron trigger, the `scheduled`
+handler, `workers/health.ts`, both secret declarations and both entries in
+`REQUIRED_SECRETS` are gone.
 
-The consequence is bounded and worth stating plainly: on a failing check the
-hourly handler logs `health-alert-undeliverable` at error level and withholds
-its heartbeat. It costs one Worker invocation an hour and reaches nobody. It is
-harmless and it is dead weight, and removing it is a separate change that has
-not been made.
+It had to go rather than sit dormant. Its destinations would have to be
+third-party services, which the ruling that chose GitHub Actions excluded, so
+neither URL could ever be set. Left in place it cost one Worker invocation an
+hour, logged `health-alert-undeliverable` to nobody on every failing check, and
+presented a second alerting mechanism to anyone reading the code, which is the
+two-copies-one-wrong shape this repo keeps paying for.
+
+**Neither secret was ever set on the deployed Worker**, so there is nothing to
+revoke. If `wrangler secret list` ever shows them, the removal commands are:
+
+```sh
+npx wrangler secret delete ALERT_WEBHOOK_URL
+npx wrangler secret delete ALERT_HEARTBEAT_URL
+```
 
 ---
 
