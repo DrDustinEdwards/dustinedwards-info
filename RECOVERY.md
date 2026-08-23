@@ -149,7 +149,67 @@ Worker's `/media/*` route, which is what allows the thumbnail transforms and the
 immutable cache headers. Enabling public access would create a second, unmanaged
 read path to the same bytes.
 
-Live bucket for reference: location `ENAM`, storage class `Standard`.
+Live buckets for reference, read from the API 2026-08-22: `dustinedwards-media`
+is location `ENAM`, `dustinedwards-og` is location `WNAM`, both storage class
+`Standard`. This line named one location as though it covered both.
+
+### Backup posture, and why there is no backup
+
+**MEASURED 2026-08-22, and the measurement is the whole answer: there is
+nothing in R2 that a restore could not reproduce.**
+
+| Bucket | Objects | Bytes | Recoverable from |
+| --- | --- | --- | --- |
+| `dustinedwards-media` (`MEDIA`) | **0** | 0 | nothing needed; it is empty |
+| `dustinedwards-og` (`OG`) | 12 | 505,712 | `npm run build:og -- --remote` |
+
+Read four independent ways so that a zero is not taken on trust, which is the
+failure this repo has already paid for: `listAllObjects` against the live
+binding, three times, one of those runs clean of the workerd teardown error;
+`check:media --remote`, which reports the same 0 and 12 through its own pipeline;
+the D1 `media` table, whose 70 rows are 12 `storage='r2-derived'` and 58
+`storage='static'` **and not one `storage='r2'`**, which is the value an uploaded
+original would carry; and the corpus, where no post cites `/media/` and no post
+carries a `cover`.
+
+So the paragraph above is right about the RULE and was wrong about the FACT.
+`dustinedwards-media` is the irreplaceable bucket by design and holds nothing.
+Every byte in R2 today is an OG card, and the split this section describes is
+what makes that recoverable rather than lucky.
+
+**The decision is therefore ACCEPTANCE, not a backup**, and the basis is that
+copying 505,712 bytes of regenerable PNG into a second bucket would buy nothing
+a command does not already buy, while adding a bucket, a schedule and a second
+thing to go stale. The other candidates were checked rather than assumed:
+
+- **R2 object versioning does not exist.** Not "not enabled here": the R2 API
+  has no versioning endpoint at all (checked against the OpenAPI spec
+  2026-08-22, which carries lifecycle, lock, CORS, domains and sippy and nothing
+  else). Any plan resting on it is resting on a feature that is not there.
+- **Lifecycle and lock rules exist and both buckets carry neither.** Read live
+  2026-08-22: each bucket has only the default multipart-abort rule and an empty
+  lock rule set. A bucket lock is the mechanism if retention is ever wanted, and
+  it protects against DELETION, never against loss of the account.
+
+**WHAT MAKES THIS ACCEPTANCE SAFE IS THAT IT IS DATED AND CONDITIONAL.** It holds
+exactly while `MEDIA` is empty. The first upload through the admin media drawer
+makes the unrecoverable set non-zero, and nothing in this repo announces that.
+Whoever lands the first upload owns re-deciding this section; until then there is
+no backup because there is nothing to back up.
+
+### What restoring actually involves
+
+In the order it would be done, and none of it is a restore from a backup:
+
+1. **Static assets** (58 rows, `public/`): `git clone`. All 60 files under
+   `public/` are tracked, verified 2026-08-22 by `git ls-files public`.
+2. **OG cards** (12 objects): `npm run build:og -- --remote`, after step 9's
+   content sync, because it renders from the artifact.
+3. **The `media` index rows**: rebuilt from R2 and `public/`, then reconciled by
+   `check:media --remote`, which is the gate that would report any of the above
+   being incomplete.
+4. **Uploaded originals**: none exist. If that has changed since 2026-08-22, this
+   step is a real gap and this section is stale.
 
 ---
 
@@ -431,12 +491,18 @@ document's own gap analysis to be turned into a fix.
 
 ### Permanently lost
 
-**R2 objects.** 15 objects, 848 kB, in two groups:
-- `og/` social cards. **Regenerable** with `npm run build:og -- --remote`.
-- `posts/` editor uploads. **Not regenerable.** Every image ever dropped into a
-  post body or set as a cover exists only in the bucket. Posts citing a lost
-  object render a broken image; the markdown still holds the URL, so the citation
-  survives and the bytes do not.
+**R2 objects: NOTHING, as measured 2026-08-22.** This entry read "15 objects,
+848 kB, in two groups" and named `posts/` editor uploads as not regenerable. Both
+halves are now false. There are 12 objects, 505,712 bytes, all of them `og/`
+social cards, and there is no `posts/` group: `dustinedwards-media` is empty and
+the D1 index carries no `storage='r2'` row. The census and the four ways it was
+read are in section 3.
+
+The CLASS stays described here because it is the thing that will come back. An
+editor upload would be not regenerable, would exist only in the bucket, and would
+leave a post rendering a broken image while the markdown kept the URL. None exist
+yet. When one does, this entry becomes true again and section 3's acceptance
+stops holding.
 
 **The `media` table rows** (alt text, captions, dimensions) go with the objects.
 Alt already written into post markdown survives, because that copy lives in the
@@ -488,6 +554,12 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   against the live schema. **57 of 57 match**, nothing extra on either side. The
   previous entry said seven migrations and 37 objects and had gone stale in both.
 - The seven secret names: `wrangler secret list`.
+- **R2 contents, measured 2026-08-22**, four independent ways: `dustinedwards-media`
+  is EMPTY and `dustinedwards-og` holds 12 regenerable OG cards. Section 3 carries
+  the census, the reads behind it, and the acceptance that follows.
+- **R2 has no versioning to enable**, checked against the R2 API surface
+  2026-08-22; both buckets carry no lifecycle rule beyond the default
+  multipart-abort and no lock rules.
 - The `llms.txt` divergence, since FIXED: the live row was captured byte-exact
   into `content/llms.txt` and is now written by `sync:content` and gated by
   `check:llms`.
