@@ -43,6 +43,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
 import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
 import {
@@ -1975,7 +1976,41 @@ structural("a republication IS a plain submit", "edit, draft that published befo
   return button.includes('type="submit"');
 });
 
-// The slug is editable in exactly one place.
+// The slug is editable in exactly one place: a new post. An existing post
+// renders no slug input at all, which is why only the fresh state is asserted.
+/*
+ * THE SLUG INPUT'S PATTERN, BOTH DIRECTIONS, and the second direction is the
+ * one with a history.
+ *
+ * The attribute was derived inline from `SLUG_PATTERN.source` by a strip that
+ * silently did nothing, so the anchored source shipped as the attribute. An
+ * HTML `pattern` anchors implicitly, so this validated identically and no
+ * render, typecheck or gate could see it. The POSITIVE assertion alone would
+ * still not have seen it, because it was written against a constant that did
+ * not exist yet; what catches that exact shape is the negative, which names
+ * the anchored form and refuses it.
+ *
+ * Needles are plain `includes` rather than a built RegExp on purpose: the
+ * pattern is full of regex metacharacters, and interpolating it into a RegExp
+ * would compile the rule instead of looking for it.
+ */
+/** @param {string} h @returns {string} */
+const slugInput = (h) => /<input[^>]*name="slug"[^>]*>/.exec(h)?.[0] ?? "";
+structural(
+  "the slug input carries the pattern derived from SLUG_ATTRIBUTE_PATTERN",
+  "new post, fresh",
+  (h) => slugInput(h).includes('pattern="' + SLUG_ATTRIBUTE_PATTERN + '"'),
+);
+structural(
+  "the slug pattern ships UNANCHORED, because the attribute anchors itself",
+  "new post, fresh",
+  (h) => {
+    const input = slugInput(h);
+    // Scope proven non-empty first: with no slug input the negative below is
+    // true of the empty string and this passes having examined nothing.
+    return input.length > 0 && !input.includes('pattern="' + SLUG_PATTERN.source + '"');
+  },
+);
 /*
  * THE RULED SELECT-ALL LABEL, gated because the fixture structurally cannot
  * see it: the payload baseline records METHOD, intent and field NAMES, and this
@@ -3914,15 +3949,22 @@ assert(
 );
 
 /*
- * FLOOR RAISED 405 -> 412 by the three delete-confirmation states.
+ * FLOOR RAISED 412 -> 414 by the two slug-pattern assertions.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 438,
- * from 68 rendered states. Never summed. Slack of 15 absorbs a state being
- * retired; dropping the whole no-script section is 20 assertions and still
- * fails. The message below prints the same number as this comment, which is
- * the discipline the previous note was written to enforce.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-23 by RUNNING it: 441.
+ * Never summed. Slack of 27 absorbs a state being retired; dropping the whole
+ * no-script section is 20 assertions and still fails.
+ *
+ * BOTH COPIES OF THE OLD NUMBER WERE STALE, in the same direction. The
+ * comment and the message below each said 438 and the gate had been running
+ * 439 since before this session; the change that added the 439th did not
+ * touch either number. That is the point the previous note tried to make and
+ * could not: stating a number TWICE is not a check on it, because the two
+ * copies drift together and agreeing with each other is all they can do. The
+ * only thing that reads the count is the comparison against MINIMUM_CHECKS,
+ * and it passed throughout. Re-measured here rather than carried.
  */
-const MINIMUM_CHECKS = 412;
+const MINIMUM_CHECKS = 414;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -3931,7 +3973,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 438.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 441.`,
   );
 }
 

@@ -134,6 +134,48 @@ const isoDateTime = z.preprocess(
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
+ * The same rule in the shape an HTML `pattern` attribute takes.
+ *
+ * The attribute ANCHORS IMPLICITLY: the browser compiles it as `^(?:...)$`,
+ * so the anchors in `SLUG_PATTERN.source` have to come off rather than being
+ * handed over with the rest.
+ *
+ * ## WHY THIS IS A CONSTANT AND NOT AN EXPRESSION AT THE INPUT
+ *
+ * It WAS an expression at the input, for about an hour, and it was wrong. The
+ * strip was written as a regex whose two anchor characters each needed a
+ * backslash, and neither backslash survived the tool that wrote the file. What
+ * reached disk was an alternation of two BARE anchors, which are zero-width, so
+ * it replaced the empty string with the empty string: a no-op that shipped the
+ * anchors it was written to remove.
+ *
+ * Nothing caught it. It typechecked, and the anchors are harmless inside the
+ * browser's own anchoring, so the attribute still validated the same strings
+ * and no gate and no render could tell the difference. What WAS false was the
+ * comment directly above it, which said the anchors had been stripped.
+ *
+ * So the strip lives here, with no regex in it at all, and `check:tests`
+ * drives it. A derivation that cannot be written wrong is better than one a
+ * gate has to watch.
+ */
+export const SLUG_ATTRIBUTE_PATTERN = unanchor(SLUG_PATTERN.source);
+
+/**
+ * A regex source with its start and end anchors removed, if it had them.
+ *
+ * String methods on purpose: see above. This function is the reason the
+ * defect it replaces cannot recur in it.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
+function unanchor(source) {
+  let out = source.startsWith("^") ? source.slice(1) : source;
+  if (out.endsWith("$")) out = out.slice(0, -1);
+  return out;
+}
+
+/**
  * WHERE A POST LIVES IN THE REPOSITORY. Stated once, here.
  *
  * Hard rule 6 says this string is stated ONCE, by the exported `postPath()`.
