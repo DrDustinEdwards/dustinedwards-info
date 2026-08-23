@@ -3274,6 +3274,50 @@ console.log("\n  16. the CI workflow runs the derived tier");
       "says it; a copy there is a mirror and mirrors drift.",
   );
 
+  /*
+   * THE ENGINES FLOOR IS BOUND TO `.nvmrc`, because it had already drifted.
+   *
+   * Measured 2026-08-23: `.nvmrc` said 24.14.1 and `package.json` engines said
+   * `>=22.22.0`. CI installs the `.nvmrc` version, so a contributor on Node 22
+   * satisfied `engines`, installed happily, and ran a DIFFERENT runtime from the
+   * one every gate result in CI was produced on. Nothing said so.
+   *
+   * The 2026-08-22 audit reported this and got both halves wrong: it said
+   * ".nvmrc says 22.22.0" (it says 24.14.1) and "local development on 24 would
+   * silently differ" (24 is what CI runs; 22 and 23 are what differ). The
+   * direction was inverted, which is worth recording because acting on the
+   * audit's version would have LOWERED the floor.
+   *
+   * `package.json` is static JSON and cannot read `.nvmrc`, so the two values
+   * are unavoidably a mirror. This assertion is what stops a mirror drifting:
+   * it does not care what the version IS, only that the floor equals the pin.
+   *
+   * A FLOOR rather than an exact pin, deliberately. `"node": "24.14.1"` would
+   * refuse to install on 24.14.2, which breaks every contributor on the next
+   * Node patch release to buy nothing: the defect was a floor two majors low,
+   * not a floor one patch loose.
+   */
+  const nvmrcPath = join(root, ".nvmrc");
+  const nvmrcVersion = existsSync(nvmrcPath)
+    ? readFileSync(nvmrcPath, "utf8").trim()
+    : "";
+  ok(
+    ".nvmrc names a Node version",
+    /^\d+\.\d+\.\d+$/.test(nvmrcVersion),
+    `read ${JSON.stringify(nvmrcVersion)}. Without it the comparison below has ` +
+      `nothing to compare against and would pass on any package.json.`,
+  );
+
+  const pkgEngines = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).engines?.node ?? "";
+  ok(
+    "package.json engines.node floors at exactly the .nvmrc version",
+    pkgEngines === `>=${nvmrcVersion}`,
+    `engines.node is ${JSON.stringify(pkgEngines)} and .nvmrc is ` +
+      `${JSON.stringify(nvmrcVersion)}, so the two disagree about which runtime this ` +
+      `repo supports. CI installs the .nvmrc one, so a looser floor lets a ` +
+      `contributor run a Node that no gate result was ever produced on.`,
+  );
+
   ok(
     "the workflow triggers on push to main and on pull requests",
     /on:/.test(yaml) && /push:/.test(yaml) && /pull_request:/.test(yaml),
@@ -4010,8 +4054,10 @@ console.log("\n  20. every admin loader carries timing");
  * are now re-measured by RUNNING the gate, which is the only method that would
  * have caught either.
  *
- * Floor 160 to 214, roughly five percent under the measurement, matching the
- * slack this file's own history settled on.
+ * Floor 160 to 214. RE-MEASURED AGAIN 2026-08-23 after the engines binding
+ * landed: 228, so the margin is 14, about six percent. Stated as a margin
+ * rather than a percentage because the property that matters is how many
+ * assertions can vanish before this notices, and that is a count.
  */
 const MINIMUM_CHECKS = 214;
 if (checks < MINIMUM_CHECKS) {
@@ -4019,7 +4065,7 @@ if (checks < MINIMUM_CHECKS) {
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-23: 226 offline.`,
+      `rather than failing. Measured 2026-08-23: 228 offline.`,
   );
 }
 
