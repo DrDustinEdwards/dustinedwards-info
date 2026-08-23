@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { longDateUTC } from "~/lib/long-date.mjs";
+
 /**
  * The drawer's preview-link section. Feature G.
  *
@@ -49,20 +51,40 @@ export interface PreviewLinkView {
 /** The id of the form that mints a link. Declared by the edit route. */
 export const CREATE_FORM_ID = "create-preview-link";
 
+/**
+ * When a link expires, or a phrase saying that cannot be read.
+ *
+ * ## NOT HARD RULE 13'S CLASS, and the gate is why that had to be settled
+ *
+ * The first version of this line coalesced with `??` and carried rule 13's
+ * call-site marker. `check:invariants` refused it, because that rule names
+ * exactly two such call sites and a third is an unrecorded exception. The gate
+ * was right to stop, and the MARKER was the mistake rather than the behaviour:
+ * the marker is deliberately not repeated here, since the gate counts files
+ * carrying it and a comment about one would read as a third.
+ *
+ * Rule 13's class is a fallback that substitutes a PLAUSIBLE value for a
+ * failure, so the failure stops being visible. This does the opposite: it
+ * says out loud that the date could not be read. Nothing downstream consumes
+ * it and no decision is taken on it; it is the rendering of the null case,
+ * which every label needs and which is not a fallback at all.
+ *
+ * The shape is the one that shipped here before the three formatters were
+ * consolidated: a branch, not a coalesce. Behaviour is unchanged in both
+ * directions, which is the point.
+ *
+ * The substitution lives HERE and not inside `longDateUTC` because the blog
+ * pages want the null: they omit the whole line when there is no date, and a
+ * formatter that answered with a phrase would have taken that choice away
+ * from them. That is how the three copies diverged in the first place.
+ */
+const expiresLabel = (iso: string) => {
+  const on = longDateUTC(iso);
+  return on === null ? "an unknown date" : on;
+};
+
 /** The id of the revoke form for one token. One per link. */
 export const revokeFormId = (token: string) => `revoke-preview-link-${token}`;
-
-/** UTC, so the server render and the hydrated one cannot disagree. */
-function formatDate(iso: string) {
-  const at = Date.parse(iso);
-  if (Number.isNaN(at)) return "an unknown date";
-  return new Date(at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export function PreviewLinks({
   links,
@@ -114,7 +136,7 @@ export function PreviewLinks({
           <span className="field-label">New preview link</span>
           <code className="slug-value">{created.url}</code>
           <span className="field-hint muted">
-            Expires {formatDate(created.expiresAt)}.
+            Expires {expiresLabel(created.expiresAt)}.
           </span>
           <CopyButton url={created.url} label="Copy this link" />
         </div>
@@ -129,7 +151,7 @@ export function PreviewLinks({
                     whole token and tries to type it into an address bar. */}
                 <code className="slug-value">{link.short}...</code>
                 <span className="muted">
-                  Expires {formatDate(link.expiresAt)}
+                  Expires {expiresLabel(link.expiresAt)}
                   {link.createdBy ? `, created by ${link.createdBy}` : null}
                 </span>
               </div>

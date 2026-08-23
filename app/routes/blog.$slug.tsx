@@ -7,6 +7,7 @@ import { SiteHeader } from "~/components/site-header";
 import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
 import { blogPostView } from "~/lib/blog-view";
 import { getEnv } from "~/lib/context";
+import { longDateUTC } from "~/lib/long-date.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -107,17 +108,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-function formatDate(value: string | Date | null) {
-  if (!value) return null;
-  const date = typeof value === "string" ? new Date(value) : value;
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 /**
  * Shows a revision date only when it is meaningfully later than publication.
  *
@@ -134,7 +124,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
   const revisedLabel =
     published !== null && revised !== null && revised - published > REVISED_THRESHOLD_MS
-      ? formatDate(post.updatedAt)
+      ? longDateUTC(post.updatedAt)
       : null;
 
   return (
@@ -170,7 +160,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             <p className="post-card-meta">
               {post.publishAt && (
                 <time dateTime={new Date(post.publishAt).toISOString()}>
-                  {formatDate(post.publishAt)}
+                  {longDateUTC(post.publishAt)}
                 </time>
               )}
               {post.readingTimeMinutes && <> · {post.readingTimeMinutes} min read</>}
