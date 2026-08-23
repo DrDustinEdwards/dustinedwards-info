@@ -655,6 +655,44 @@ ok(
   "one source in workers/app.ts, several readers; a second generator would drift",
 );
 
+/*
+ * THE SECOND SPECULATION BLOCK, and it is the one on every public page.
+ *
+ * `SiteSpeculation` rides in `SiteHeader`, so it renders on seven public routes
+ * against `BlogSpeculation`'s two. Under an ENFORCED policy an un-nonced
+ * `type="speculationrules"` element is refused by `script-src` on every one of
+ * them, silently: the page renders identically, nothing is logged where anyone
+ * looks, and the enhancement is simply absent. That is the same failure the
+ * block above is written for, at three and a half times the blast radius.
+ *
+ * WHAT THIS DOES NOT ASSERT: that the rules name the right paths. That is
+ * `test/header-speculation.test.mjs`, which holds the derivation from
+ * `~/lib/nav` in both directions and is the reason this gate does not carry a
+ * second copy of the path list.
+ */
+const siteSpeculation = stripComments(
+  readFileSync(join(root, "app", "components", "site-speculation.tsx"), "utf8"),
+);
+ok(
+  "SiteSpeculation stamps a nonce on its speculationrules script",
+  /nonce=\{/.test(siteSpeculation),
+  "this block renders on every public page, so an un-nonced one is refused site-wide " +
+    "under the enforced policy and the loss is invisible in a render",
+);
+ok(
+  "SiteSpeculation takes the nonce from the root loader, not its own source",
+  /useRouteLoaderData/.test(siteSpeculation),
+  "one source in workers/app.ts, several readers; a second generator would drift",
+);
+ok(
+  "SiteHeader renders SiteSpeculation, which is what puts it on every public page",
+  /<SiteSpeculation\s*\/>/.test(
+    stripComments(readFileSync(join(root, "app", "components", "site-header.tsx"), "utf8")),
+  ),
+  "an imported-but-unrendered component is the shape that passes both assertions " +
+    "above while shipping nothing to any reader",
+);
+
 /* ------------------------------- the draft preview route (feature G) ------ */
 
 /*
@@ -1403,16 +1441,24 @@ console.log("  public HTML routes share one headers()");
  * drifts silently, and only running it says so. I first wrote 108 here by
  * reasoning from the stale 99, and running the gate is what corrected it.
  *
- * Measured now: 174, by RUNNING it. Floored at 163, roughly
+ * Measured now: 184, by RUNNING it. Floored at 173, roughly
  * six percent under, matching the convention the preview-route floor set.
+ *
+ * **AND THE 174 THIS PARAGRAPH USED TO CARRY HAD ALREADY DRIFTED BY SEVEN.**
+ * Measured 2026-08-23 by extracting HEAD's copy of this gate and running it
+ * against the current tree: 181, before the three SiteSpeculation assertions
+ * above landed. So the value was stale within the same day it was written, by
+ * ordinary commits doing ordinary work, which is the whole argument for the
+ * floor being a floor rather than an equality. The delta is stated as a
+ * measurement of two runs, never as arithmetic on the new block.
  */
-const MINIMUM_CHECKS = 163;
+const MINIMUM_CHECKS = 173;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-23: 174.`,
+      `rather than failing. Measured 2026-08-23: 184.`,
   );
 }
 

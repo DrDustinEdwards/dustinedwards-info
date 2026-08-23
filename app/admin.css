@@ -1,0 +1,43 @@
+/*
+ * THE ADMIN PLANE'S STYLESHEETS, split out of `app/app.css` on 2026-08-23.
+ *
+ * Imported by `routes/admin.tsx`, which is the layout route every `/admin/*`
+ * child nests under, and by `routes/login.tsx`. Vite emits it as its own CSS
+ * chunk and React Router links it only on the routes that import it, so a
+ * reader of the public plane never requests these bytes.
+ *
+ * ## WHY IT EXISTS
+ *
+ * `app.css` imported all sixteen stylesheets, so the single built bundle was
+ * 109,318 bytes and every visitor to the home page downloaded the media
+ * library, the post editor and the revision drawer. `admin-media.css` alone is
+ * 72KB of source. Nothing was wrong with the CSS; it was in the wrong bundle.
+ *
+ * ## THE ORDER IS THE CASCADE, AND IT IS THE SAME ORDER
+ *
+ * These seven are listed in the relative order they held inside `app.css`, and
+ * that is not cosmetic. `app/styles/admin-media-later.css` exists ONLY because
+ * `admin-media.css` and it were separated by the whole of `playground.css` in
+ * the original file; its own header says merging them would reorder them.
+ *
+ * What DOES change is that on an admin page these seven now arrive after all
+ * nine public sheets rather than interleaved with them. Proven harmless by
+ * cascading all sixteen both ways with postcss and comparing the winner of
+ * every (selector-context, property) key: 3,657 declarations, ZERO winner
+ * differences on an admin page and ZERO on a public page, with a control
+ * showing the comparison discriminates. The one real conflict that measurement
+ * found was repaired first; see `admin-media-later.css`.
+ *
+ * ## NO `@import "tailwindcss"` HERE, DELIBERATELY
+ *
+ * `app.css` carries it and is loaded on every route including these, so the
+ * utilities and the `@theme` tokens are already present. A second import would
+ * emit a second copy of the preflight into this chunk.
+ */
+@import "./styles/admin-shell.css";
+@import "./styles/admin-posts.css";
+@import "./styles/admin-editor.css";
+@import "./styles/admin-media.css";
+@import "./styles/admin-editor-feedback.css";
+@import "./styles/admin-history.css";
+@import "./styles/admin-media-later.css";

@@ -30,7 +30,39 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const CSS_PATH = join(root, "app", "app.css");
 
 /**
- * EVERY source stylesheet, in CASCADE ORDER, derived from app.css's own imports.
+ * THE ADMIN PLANE'S ENTRY, since the CSS split of 2026-08-23.
+ *
+ * `app.css` stopped being the whole site's stylesheet that day: the seven admin
+ * parts moved to `app/admin.css` so a public reader stops downloading them.
+ * Every gate that reasons about "the stylesheets" has to follow BOTH entries or
+ * it silently narrows to the public plane, which is the identical failure the
+ * comment on `stylesheetPaths` below records from the 2026-08-21 split.
+ *
+ * It happened again, and it FAILED AGAIN RATHER THAN PASSING QUIETLY:
+ * `check:contrast`'s resolution scan dropped from 69 var() uses to 38 and
+ * tripped its own floor. Two splits, two narrowings, two catches by the same
+ * anti-vacuity assertion. That is the floor earning its place twice.
+ *
+ * NOT the token block. The tokens, the `@theme` block and the three theme
+ * selectors all stay in `app.css`, which is why `tokenBlock` still reads
+ * `CSS_PATH` alone and this constant is only ever used for the SWEEP.
+ */
+export const ADMIN_CSS_PATH = join(root, "app", "admin.css");
+
+/**
+ * The stylesheet ENTRY POINTS, in the order an admin page loads them.
+ *
+ * `app/root.tsx` imports `app.css` on every route; `routes/admin.tsx` and
+ * `routes/login.tsx` import `admin.css` on top. So this order is the cascade an
+ * admin page actually sees, and a gate reading the concatenation sees what the
+ * browser sees there. A public page loads the first entry alone, which is a
+ * strict prefix of this, so a rule that wins here and comes from the first
+ * entry also wins there.
+ */
+const CSS_ENTRIES = [CSS_PATH, ADMIN_CSS_PATH];
+
+/**
+ * EVERY source stylesheet, in CASCADE ORDER, derived from the entries' own imports.
  *
  * ## WHY THIS EXISTS
  *
@@ -44,10 +76,13 @@ export const CSS_PATH = join(root, "app", "app.css");
  *
  * ## DERIVED, NOT RESTATED
  *
- * The order comes from parsing app.css's `@import` lines, so adding a part
- * means editing app.css and nothing else. A hand-kept list here would be the
+ * The order comes from parsing each ENTRY's `@import` lines, so adding a part
+ * means editing that entry and nothing else. A hand-kept list here would be the
  * mirror this repo keeps paying for, and it would go stale in exactly the
- * direction that hides CSS from a gate.
+ * direction that hides CSS from a gate. The ENTRIES themselves are a list, in
+ * `CSS_ENTRIES` above, and that is the one thing a third entry has to be added
+ * to; nothing in the CSS says which files a route imports, so it cannot be
+ * derived.
  *
  * `@import "tailwindcss"` is skipped: it is a package, not a file in this repo,
  * and no gate asserts anything about what Tailwind generates.
@@ -55,11 +90,16 @@ export const CSS_PATH = join(root, "app", "app.css");
  * @returns {string[]} absolute paths, app.css first, then its imports in order
  */
 export function stylesheetPaths() {
-  const entry = readFileSync(CSS_PATH, "utf8").replace(/\r\n/g, "\n");
-  const imported = [...entry.matchAll(/@import\s+"(\.[^"]+)"/g)].map((m) =>
-    join(root, "app", m[1].replace(/^\.\//, "")),
-  );
-  return [CSS_PATH, ...imported];
+  /** @type {string[]} */
+  const out = [];
+  for (const entry of CSS_ENTRIES) {
+    const text = readFileSync(entry, "utf8").replace(/\r\n/g, "\n");
+    out.push(entry);
+    for (const m of text.matchAll(/@import\s+"(\.[^"]+)"/g)) {
+      out.push(join(root, "app", m[1].replace(/^\.\//, "")));
+    }
+  }
+  return out;
 }
 
 /**
