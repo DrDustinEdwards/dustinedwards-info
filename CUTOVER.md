@@ -79,3 +79,34 @@ does not include.
 **3.9 `workflow-mainline.md` SUNSETS.** Mainline-only was ratified for this repo
 until the DNS cutover and no longer. The PR workflow resumes, and `CLAUDE.md`'s
 workflow section becomes wrong on that day.
+
+**3.10 `Strict-Transport-Security` gains `includeSubDomains`, and DOES NOT gain
+`preload`.** The header has shipped since 2026-08-06 as bare
+`max-age=31536000`; `workers/app.ts` says to revisit it here and this is that
+revisit, written down before the day rather than on it.
+
+*Why it changes at all:* the current value omits `includeSubDomains` because
+`dustinedwards.dustin-edwards.workers.dev` sits under a parent domain we do not
+own, and asserting a transport policy across someone else's namespace is not
+ours to do. At the apex that objection disappears, because we own
+`dustinedwards.info` and every name under it.
+
+*What `includeSubDomains` commits us to:* every subdomain of the apex becomes
+HTTPS-only in any browser that has seen the header, for a year from its last
+visit. **Confirm before adding it that no subdomain is serving plain HTTP**,
+including anything left over from the legacy WordPress host. Reversal is
+untidy but possible: drop the token and wait out `max-age`.
+
+*Why NOT `preload`, decided rather than deferred:* preload is a ONE-WAY DOOR.
+It is baked into browser binaries, removal takes months and a release cycle, and
+there is no way to hurry it. It also requires `includeSubDomains` and a
+`max-age` of at least a year, so it is strictly the larger commitment. Weigh
+that against what it buys, which is protection on a visitor's very FIRST request
+only, before any header has been seen. This site has no accounts, no payments and
+one admin login; the `max-age` header already covers every request after the
+first. Committing every future subdomain of a personal domain to HTTPS in
+shipped browser binaries, permanently, is not a trade worth making for that.
+
+Changing the value means editing `scripts/check-headers.mjs` in the same commit,
+by design: the gate holds the ratified value against the source in both
+directions, and `verify-live` section 14 then asserts it on the wire.
