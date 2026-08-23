@@ -59,15 +59,6 @@ export async function listPublicPosts(env: Env) {
     .orderBy(desc(posts.publishAt));
 }
 
-export async function getPublicPostBySlug(env: Env, slug: string) {
-  const rows = await getDb(env)
-    .select()
-    .from(posts)
-    .where(and(eq(posts.slug, slug), publiclyVisible()))
-    .limit(1);
-  return rows[0] ?? null;
-}
-
 /**
  * Which of these slugs are still publicly visible, as a Set.
  *
@@ -878,40 +869,6 @@ export async function mediaRoleCounts(env: Env) {
     .groupBy(media.role);
 }
 
-/**
- * How many rows nothing the renderer emitted cites.
- *
- * The Unused chip was the only one without a number, and that was not a cost
- * decision: the chips take their counts from `mediaRoleCounts`, `unused` is not
- * a role, so the lookup missed and the span was skipped. This is the query that
- * gives it one, and it SHARES `uncited()` with the filter so the count and the
- * page it leads to can never disagree.
- *
- * **DELIBERATELY UNREFERENCED SINCE THE v6 REBUILD. DO NOT TIDY IT AWAY.**
- *
- * The Unused chip was dropped (v6 ruling 2) because it read "70 of 70": it
- * selected everything, narrowed nothing, and sat permanently lit, and an alarm
- * that never stops is not a signal. This function lost its only caller then.
- *
- * It is kept because `uncited()` is the DEFINITION the page's usage note
- * describes, and that note is the one thing standing between a reader and
- * deleting a file the site serves. Keeping the query that counts the predicate
- * beside the predicate is what makes the note checkable the day somebody asks
- * "how many is that actually". Deleting it would leave the sentence with no
- * executable meaning.
- *
- * If the chip is never coming back and nobody has asked that question in a
- * year, delete it then, on purpose, rather than as tidying.
- */
-export async function mediaUnusedCount(env: Env) {
-  const [row] = await getDb(env)
-    .select({ n: count() })
-    .from(media)
-    // Both predicates, in the same order the filter composes them, so the chip
-    // and the page it leads to still cannot disagree now that there are two.
-    .where(and(notTrashed(), uncited()));
-  return Number(row?.n ?? 0);
-}
 
 /**
  * TWINS: rows whose bytes are identical, found by CONTENT HASH ALONE.

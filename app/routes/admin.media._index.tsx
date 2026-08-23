@@ -25,10 +25,6 @@ import {
   mediaRecord,
   mediaRefsFor,
   mediaRoleCounts,
-  // `mediaUnusedCount` is no longer imported: the Unused chip is
-  // gone (v6 ruling 2) and the function has no other caller. Left in `~/db`
-  // rather than deleted, because the predicate it shares with the filter is
-  // still the definition the usage note describes.
   mediaLensCounts,
   mediaTagCounts,
   mediaTrashedCount,

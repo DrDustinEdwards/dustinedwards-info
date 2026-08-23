@@ -215,7 +215,6 @@ export const mediaRefs = sqliteTable(
 );
 
 export type Post = typeof posts.$inferSelect;
-export type NewPost = typeof posts.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Media = typeof media.$inferSelect;
