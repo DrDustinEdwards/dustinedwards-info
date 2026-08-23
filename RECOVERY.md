@@ -167,22 +167,43 @@ is location `ENAM`, `dustinedwards-og` is location `WNAM`, both storage class
 
 ### Backup posture, and why there is no backup
 
-**MEASURED 2026-08-22, and the measurement is the whole answer: there is
-nothing in R2 that a restore could not reproduce.**
+**MEASURED 2026-08-22 AND RE-MEASURED FROM SCRATCH 2026-08-23, and the
+measurement is the whole answer: there is nothing in R2 that a restore could not
+reproduce.**
 
-| Bucket | Objects | Bytes | Recoverable from |
+Every class of thing this site stores, and where its second copy is:
+
+| Class | Where it lives | Count | Second copy |
 | --- | --- | --- | --- |
-| `dustinedwards-media` (`MEDIA`) | **0** | 0 | nothing needed; it is empty |
-| `dustinedwards-og` (`OG`) | 12 | 505,712 | `npm run build:og -- --remote` |
+| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **0** | none needed: the class is EMPTY |
+| Social cards | `dustinedwards-og` (`OG`), all under `og/` | 12 (505,712 bytes) | **regenerable**: `npm run build:og -- --remote` |
+| Static assets | `public/`, not R2 at all | 60 files | **git**: 60 of 60 tracked |
+| Roster photo WebPs | `public/phage-hunters/` | 9 | **git**: all nine tracked |
+| Roster photo JPG SOURCES | gitignored, would be `public/phage-hunters/*.jpg` | **0** | **nowhere, if any existed** |
 
-Read four independent ways so that a zero is not taken on trust, which is the
-failure this repo has already paid for: `listAllObjects` against the live
-binding, three times, one of those runs clean of the workerd teardown error;
-`check:media --remote`, which reports the same 0 and 12 through its own pipeline;
-the D1 `media` table, whose 70 rows are 12 `storage='r2-derived'` and 58
+**No class currently has zero second copies.** The last row is the one to watch
+and it is empty today: `.gitignore` line 11 excludes those sources, so a JPG
+dropped there would exist on one machine and in no clone. None exists.
+
+The OG cards are regenerable in the strong sense, not the hopeful one: the
+object key is a hash of the template version, slug, title and description, all
+of which are tracked in `content/`, so a rebuild writes the SAME twelve keys
+rather than twelve new ones beside the old.
+
+Read independently rather than inherited, because a finding repeated is not a
+finding re-measured: `listAllObjects` against the live binding; `check:media
+--remote`, which reports the same 0 and 12 through its own pipeline; the D1
+`media` table, whose 70 rows are 12 `storage='r2-derived'` and 58
 `storage='static'` **and not one `storage='r2'`**, which is the value an uploaded
-original would carry; and the corpus, where no post cites `/media/` and no post
-carries a `cover`.
+original would carry; and `git ls-files public`, which returns 60 of 60.
+
+**The audit's section 14 says "`RECOVERY.md` does not mention R2 at all". That
+was false when it was written.** This file has carried section 3, section 3a on
+the bucket event notifications, and an R2 entry under "Permanently lost" since
+2026-08-02. What WAS true is that those paragraphs had gone stale: the
+"Permanently lost" entry claimed 15 objects in two groups including
+unrecoverable `posts/` uploads, and there is no `posts/` group. Stale is a real
+defect and absent is a different one; only the first applied.
 
 So the paragraph above is right about the RULE and was wrong about the FACT.
 `dustinedwards-media` is the irreplaceable bucket by design and holds nothing.
@@ -384,8 +405,12 @@ npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put ANALYTICS_READ_TOKEN
-npx wrangler secret put ALERT_WEBHOOK_URL
-npx wrangler secret put ALERT_HEARTBEAT_URL
+# SUPERSEDED, do not set. Section 11 explains: alerting is a scheduled
+# GitHub Actions run, and these two would need a third-party destination,
+# which the same ruling excluded. Declared in REQUIRED_SECRETS so
+# check:secrets keeps guarding the names; deliberately unprovisioned.
+# npx wrangler secret put ALERT_WEBHOOK_URL
+# npx wrangler secret put ALERT_HEARTBEAT_URL
 ```
 
 | Secret | What it is for | Where a new one comes from |
@@ -398,8 +423,8 @@ npx wrangler secret put ALERT_HEARTBEAT_URL
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
-| `ALERT_WEBHOOK_URL` | Where the hourly health run POSTs a breach | Any endpoint accepting an HTTP POST. Vendor deliberately not chosen; see section 11. Absent, a breach is logged at error level and reaches nobody |
-| `ALERT_HEARTBEAT_URL` | The dead-man's-switch ping, sent after every run that could report | A service that alerts on a MISSING ping, not one that receives messages. Section 11 says why this is the load-bearing half. Absent, only KV records the run |
+| `ALERT_WEBHOOK_URL` | **SUPERSEDED, leave unset.** Was where the hourly cron POSTed a breach | Nothing to set. Alerting is `.github/workflows/health.yml`; see section 11 |
+| `ALERT_HEARTBEAT_URL` | **SUPERSEDED, leave unset.** Was the dead-man's-switch ping | Nothing to set. The scheduled workflow failing IS the dead man's switch now; see section 11 |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
 the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
@@ -507,95 +532,66 @@ Then check by hand:
 
 ---
 
-## 11. Alerting, and what its silence is worth
+## 11. Alerting: a scheduled GitHub Actions run is the alert
 
-**Added 2026-08-22, because there was none.** The Ask index lost nine records on
-31 July and it was found on 21 August, by a badge on a page somebody happened to
-open. `askIndexStatus` had been returning 9 for three weeks. Nothing was broken
-about the detection; there was no path from the number to a person.
+**Added 2026-08-22, because there was none. RULED AGAIN 2026-08-23, and this
+section is the replacement rather than an edit.** The Ask index lost nine
+records on 31 July and it was found on 21 August, by a badge on a page somebody
+happened to open. `askIndexStatus` had been returning 9 for three weeks. Nothing
+was broken about the detection; there was no path from the number to a person.
 
-An hourly cron runs `workers/health.ts`. Two checks, and the shortness is the
-design: `ask-index-drift` is the failure above by name, and `media-unbacked`
-watches the one condition section 3's no-backup acceptance depends on. The FTS
-invariants are deliberately not re-checked, because `check:invariants` and
-`check:search` already own them and a second copy of an invariant is the drift
-this repo keeps paying for.
+`.github/workflows/health.yml` polls `/api/health` every 15 minutes and fails
+its run on any non-200, on a body that does not parse, or on `ok: false`.
+**GitHub emails the repository owner when a scheduled run fails, by default, and
+that is the whole delivery mechanism.** No notification service, no webhook, no
+secret to set or rotate.
+
+The endpoint runs three checks: `ask-index-drift` (the failure above, by name),
+`media-unbacked` (the one condition section 3's no-backup acceptance depends on)
+and `fts-equality` (the docsize equalities a ship asserts after a sync, which
+nothing measured between syncs). Each is individually timed out, so one wedged
+binding cannot hang the response. The body carries check NAMES and BOOLEANS
+only; the numbers behind a failure are in Workers Logs, because the endpoint is
+unauthenticated.
+
+**Why an outside watcher and not a cron in the Worker.** A watcher that runs
+inside the thing it watches dies with it, and its silence then looks exactly
+like health. GitHub Actions is outside Cloudflare entirely, so it still speaks
+when the Worker is broken, which is the property that makes it a dead man's
+switch rather than a second opinion.
 
 ### WHAT IT DOES NOT COVER
 
-Read this before treating a quiet inbox as good news.
+Read this before treating a quiet inbox as good news. The workflow file repeats
+all of it at the top, where somebody editing it will meet it.
 
-- **It cannot report its own death.** A cron that stops firing, a Worker that
-  fails to deploy, a handler that throws before delivery: all of them send
-  nothing, and nothing is what a healthy hour also sends.
-- **It sees no reader.** It fetches no public URL. A site returning 500 to
-  everyone passes both checks. That is `verify-live`, which needs a deploy.
+- **A STOPPED SCHEDULE IS SILENT.** GitHub disables scheduled workflows on
+  repositories with no activity for 60 days, quietly. Nothing here can detect
+  that: the thing that would report it is the thing that stopped. The mitigation
+  is that this repo is active, and the residual risk is accepted, not solved.
+- **Scheduled runs are best effort and are often late.** Fifteen minutes is a
+  request, not a promise, and a missed run is invisible for the same reason.
+- **Delivery depends on the owner's notification settings.** With Actions
+  notifications off, the run fails and nobody is told.
+- **It sees no reader.** A page that renders wrongly but returns 200 passes.
+  That is `verify-live`, which needs a deploy.
 - **It sees no layout, no admin plane, no bill.**
-- **Between runs it sees nothing.** Worst case an hour of drift, by design.
+- **Between polls it sees nothing.** Worst case fifteen minutes.
 
-The first bullet is the one that matters, and it is why there are two
-destinations rather than one.
+### SUPERSEDED, and still present in the code
 
-### The two destinations, and what you have to do
+The 2026-08-22 design was an hourly Worker cron posting to `ALERT_WEBHOOK_URL`
+with a heartbeat to `ALERT_HEARTBEAT_URL`. Both secrets are still declared in
+`REQUIRED_SECRETS`, the `scheduled` handler is still in `workers/app.ts`, and
+the cron trigger is still in `wrangler.jsonc`. **Neither secret is set and
+neither can be**, because the ruling that chose GitHub Actions also ruled out
+third-party services, which is what those URLs would have to point at.
 
-Both are secrets you set; **neither vendor is chosen here on purpose**, because
-the choice is about where Dustin wants to be interrupted.
-
-**`ALERT_WEBHOOK_URL`, the breach alert.** The handler POSTs JSON on a failed
-check. It arrives as one self-contained line, `dustinedwards.info health check
-FAILED (1): - ask-index-drift: Ask index drift 9: 9 missing, 0 stale, 46
-expected, 37 present. Repair with sync-ask on /admin/posts.` Any destination
-that accepts an HTTP POST works: a chat workspace's incoming webhook, a
-push-to-phone relay, an HTTP-to-email bridge. Setup is create the endpoint
-there, then `npx wrangler secret put ALERT_WEBHOOK_URL`.
-
-**`ALERT_HEARTBEAT_URL`, the dead-man's switch, and the load-bearing one.** The
-handler pings it after every run it could report on. **Nothing in this
-repository can watch for that ping to stop**, because any watcher written here
-runs inside the Worker whose death is the event, and dies with it. So this
-destination must be a service whose feature is ABSENCE detection: it expects a
-ping on a period and alerts when one does not arrive. That is a different
-product category from the webhook above, and it is the only thing here that
-survives the Worker being broken. Configure its period as hourly with a grace
-window LONGER than an hour, or ordinary scheduling jitter will page you. Setup
-is create the check there, then
-`npx wrangler secret put ALERT_HEARTBEAT_URL`.
-
-**The ping is withheld when a breach could not be delivered**, which is
-deliberate: if the webhook is unset or its destination is down, the watchdog
-firing is the only way anyone learns anything. The alarm will say the Worker is
-down when really it ran and could not get a word out. That is the right trade.
-
-**Until `ALERT_HEARTBEAT_URL` is set, the heartbeat is just another silent
-thing.** The run still writes `health:last-run` to KV with its timestamp, which
-makes staleness readable to anyone who asks, and alerts nobody.
-
-### The Cloudflare notification backstop, measured rather than assumed
-
-Asked for directly, and the honest result is **partly unanswerable from here**:
-
-- `workers_observability_alert`, display name "Alert Policy", **is** listed in
-  this account's available alert types, group "Workers Observability".
-- `GET /accounts/<id>/workers/observability/alerts` returns 200 and an **empty
-  array**: the surface exists and nothing is configured on it.
-- It is **absent from the `alert_type` enum** of `POST /alerting/v3/policies`,
-  so the Notifications API cannot create it. It is configured from the Workers
-  Observability dashboard.
-- **Its trigger conditions are undocumented.** `developers.cloudflare.com/workers/observability/`
-  has no alerts page, `/workers/observability/alerts/` 404s, and the endpoint is
-  absent from the public OpenAPI spec. **So whether it can fire on a custom log
-  match, or only on error-rate and CPU thresholds, was not established.**
-- Destinations: **email and webhook are both eligible and ready** on this
-  account; PagerDuty is not. Two policies exist today, Passive Origin Monitoring
-  and the default budget alert.
-
-What follows for the design: **the Cloudflare notification cannot yet be relied
-on as the dead-man's switch**, because a below-threshold or absence condition is
-exactly the capability that was not confirmed. If the dashboard turns out to
-offer one over `alert: "health-check-failed"` events, it would duplicate the
-heartbeat service from outside the Worker and be strictly better. That is worth
-ten minutes in the dashboard and is not worth assuming. Until then the external
-heartbeat destination is the backstop, and it is the one to set up first.
+The consequence is bounded and worth stating plainly: on a failing check the
+hourly handler logs `health-alert-undeliverable` at error level and withholds
+its heartbeat. It costs one Worker invocation an hour and reaches nobody. It is
+harmless and it is dead weight, and removing it is a separate change that has
+not been made.
 
 ---
 
