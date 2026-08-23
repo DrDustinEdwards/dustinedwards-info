@@ -8,6 +8,614 @@
  * Moving an import, or moving a rule between files, can change what renders.
  */
 
+/* ---- MOVED HERE FROM playground.css, 2026-08-23 -------------------------
+ *
+ * Everything from `MEDIA v6 session 5` to the end of this file was the TAIL of
+ * playground.css. It is 42 admin-only classes and one `.search-chip.is-active
+ * .media-lens-dot` rule, all of them referenced by `admin.media._index.tsx`
+ * and by nothing else. They were cut into playground.css on 2026-08-21 because
+ * that is where they sat in the 9,269-line app.css, not because they have
+ * anything to do with /playground.
+ *
+ * THE MOVE PRESERVES THE CASCADE EXACTLY, which is the property this file's
+ * header refuses to change: playground.css was imported IMMEDIATELY before
+ * this file, so its tail sat immediately before `.panel-actions` below, and it
+ * still does. Nothing public was imported between them then and nothing is now.
+ *
+ * WHY IT HAD TO MOVE: splitting the admin stylesheets out of the public bundle
+ * would otherwise have left these rules in the PUBLIC one, where they would
+ * have stopped overriding `admin-media.css`. Measured before the split, by
+ * parsing all sixteen sheets and comparing winners per (context, property):
+ * SEVEN declarations changed winner on an admin page, all of them here, all
+ * `.media-col-usage` and `.media-usage-dot`. `.media-usage-dot` was a verbatim
+ * DUPLICATE of admin-media.css's, so it changed nothing; `.media-col-usage` is
+ * the correction whose own comment below says the cell rendered
+ * "in template no a..." clipped before it, and reverting that is what the move
+ * prevents. Re-measured after: zero winner changes on either plane.
+ * ---------------------------------------------------------------------- */
+
+/* MEDIA v6 session 5: the three-state usage model and the surfaces it feeds.
+ *
+ * THE MOCKUP'S USAGE COLOURS DO NOT SHIP AS DRAWN. Its dots are #6E8F62 (sage),
+ * #4F2D7F (brand) and #CE7F44 (rust) as literals, and its muted usage label is
+ * #A79C8A at 2.34:1. Two of the three hues map onto tokens this palette already
+ * ratifies and the third does not need inventing:
+ *
+ *   used         --fill-success   the state that needs no action
+ *   in template  --brand          the site places it. Brand is not signalling a
+ *                                 SEMANTIC state here, it is signalling "this
+ *                                 belongs to the site itself", which is what
+ *                                 brand means. Rule 6 forbids purple carrying
+ *                                 danger, success or warning; this is none of
+ *                                 those.
+ *   unattached   --text-accent    rust, decorative by rule 6, and paired with
+ *                                 the WORD "unattached" in every place it
+ *                                 appears, so the colour carries nothing alone.
+ *
+ * Every dot is aria-hidden with its sentence beside it in text, which is rule 1:
+ * colour is never the only channel. */
+
+.media-usage-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The dot is 5px, so it is a graphical object at the 1.4.11 floor rather than
+   text. It sits beside a word that says the same thing, so it is emphasis. */
+.media-usage-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.media-usage-dot[data-usage="used"] {
+  background: var(--fill-success);
+}
+
+.media-usage-dot[data-usage="template"] {
+  background: var(--brand);
+}
+
+.media-usage-dot[data-usage="unattached"] {
+  background: var(--text-accent);
+}
+
+/* THE USAGE CELL IS A COLUMN, and this is a correction.
+   `.media-col-usage` is `display: flex` for the dot, so a second child became a
+   second item on the SAME ROW: the cell rendered "in template no a..." with both
+   the state and its flags clipped. The dot's row is its own element now, and the
+   cell stacks. */
+.media-col-usage {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1px;
+}
+
+/* THE PER-ROW FLAGS, under the usage word in the list.
+ *
+ * --text-accent rather than the mockup's #CE7F44 literal, which is the same
+ * rust through the token. Quiet by SIZE, because a flag is a note and not an
+ * alarm: three of them on one row should read as a list, not a siren. */
+.media-row-flags {
+  display: block;
+  overflow: hidden;
+  color: var(--text-accent);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* THE TILE'S CORNER FLAG. One dot, top right, with a white ring so it reads on
+   any photograph underneath. The ring is the mockup's own device and it is what
+   makes a 7px dot legible over an arbitrary image without knowing the image. */
+/* GRID ONLY. In the list the frame is a 44px thumbnail and an absolutely
+   positioned dot lands ON the picture, which is what it did: every row carried a
+   coloured spot over its thumbnail. The row already prints the same information
+   as words in the Usage cell, so the list needs no dot at all. */
+.media-grid[data-view="list"] .media-tile-flag {
+  display: none;
+}
+
+.media-tile-flag {
+  position: absolute;
+  z-index: 1;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-accent);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.media-tile-flag[data-flag="no-alt"] {
+  background: var(--fill-warning);
+}
+
+.media-tile-flag[data-flag="duplicate"],
+.media-tile-flag[data-flag="unattached"] {
+  background: var(--text-accent);
+}
+
+/* THE LENS CHIP DOT, shown only on a non-zero count. */
+.media-lens-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--text-accent);
+}
+
+.media-lens-dot[data-lens="no-alt"] {
+  background: var(--fill-warning);
+}
+
+/* On the active chip the fill is brand, so a rust dot on it is invisible. The
+   dot inverts to the on-brand token rather than being hidden, because its job
+   there is to say "this lens has a count" and that is still true. */
+.search-chip.is-active .media-lens-dot {
+  background: var(--on-brand);
+}
+
+/* THE LENS NOTE, which is what stops a narrowed view reading as an accusation.
+ *
+ * A warm left rule, which is the mockup's device. It takes --border-warning:
+ * there is no --border-accent in this palette, and reaching for one was the
+ * --surface-2 mistake repeated, an undeclared token that resolves to nothing
+ * and that check:contrast structurally cannot see, because the participation
+ * assertion walks DECLARED tokens and a token nobody declares is in no block to
+ * walk. Caught here by grepping the declarations before shipping rather than by
+ * any gate. The surface is --surface rather than the mockup's white-on-cream,
+ * because separation here is fill and not a 1.35:1 hairline. */
+.media-lens-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  padding: 0.6875rem 0.875rem;
+  background: var(--surface);
+  border-left: 3px solid var(--border-warning);
+  border-radius: 0.5rem;
+}
+
+.media-lens-note p {
+  flex: 1 1 20rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.media-lens-clear {
+  flex: none;
+  margin-left: auto;
+  font-size: 0.78125rem;
+  font-weight: 500;
+}
+
+/* THE EMPTY STATES. Three of them, because they mean three different things.
+ *
+ * The library-empty case is the only one that gets a heading, a paragraph and a
+ * button: it is the only state where the reader has nothing to undo and needs
+ * to be told what the thing is for. The other two are a sentence and a way
+ * back, because the reader already has a view and wants a different one. */
+.media-empty {
+  margin: 1rem 0;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 0.75rem;
+}
+
+/* The two recoverable states are quieter: a solid edge and less air, because
+   they are a correction rather than an introduction. */
+.media-empty[data-empty="search"],
+.media-empty[data-empty="lens"] {
+  padding: 2.25rem 1.5rem;
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.media-empty-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.media-empty[data-empty="search"] .media-empty-title,
+.media-empty[data-empty="lens"] .media-empty-title {
+  font-size: 0.96875rem;
+}
+
+.media-empty-body {
+  max-width: 48ch;
+  margin: 0 auto;
+  font-size: 0.84375rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.media-empty-action {
+  display: inline-block;
+  margin-top: 1.375rem;
+  cursor: pointer;
+}
+
+/* THE ALT SUGGESTION AND THE TAG CHIPS.
+ *
+ * A DASHED OUTLINE MEANS "OFFERED", a solid one means "applied". That is the
+ * mockup's distinction and it is doing real work: the suggestion and the tag
+ * chip are the same size and sit on the same row, so shape is what separates
+ * them for a reader who cannot separate the colours. */
+.media-suggestion,
+.media-tag-suggestion {
+  padding: 0.1875rem 0.5rem;
+  color: var(--brand);
+  font: inherit;
+  font-size: 0.75rem;
+  background: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.media-suggestion:hover,
+.media-tag-suggestion:hover,
+.media-suggestion:focus-visible,
+.media-tag-suggestion:focus-visible {
+  background: var(--tint-brand);
+  border-style: solid;
+}
+
+.media-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+  margin-top: 0.5rem;
+}
+
+.media-tag-suggestion {
+  border-radius: 1.25rem;
+}
+
+.media-tag-chip {
+  padding: 0.1875rem 0.5rem;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  background: var(--surface-popover);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  cursor: pointer;
+}
+
+.media-tag-chip:hover,
+.media-tag-chip:focus-visible {
+  color: var(--text-destructive);
+  border-color: var(--border-danger);
+}
+
+/* An empty alt field on an image that needs one takes the accent edge, which is
+   the mockup's rust border. Only when it is BOTH empty and required: a field
+   that is merely blank on a file nobody has got to yet is not a defect. */
+.media-alt-input[data-missing="yes"] {
+  border-color: var(--border-warning);
+}
+
+/* THE USAGE CLAIM in the inspector: the title in bold, its boundary after it. */
+.media-usage-claim {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.78125rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.media-usage-claim .media-usage-dot {
+  align-self: center;
+}
+
+/* The source files that place an asset. Monospace, because they are paths. */
+.media-template-refs code {
+  font-size: 0.6875rem;
+  overflow-wrap: anywhere;
+}
+
+.media-twin-note {
+  margin: 0 0 0.375rem;
+  font-size: 0.78125rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* MEDIA v6 session 5, part two: the command palette, the shortcuts panel, the
+ * toast, and the marks the keyboard navigator leaves.
+ *
+ * Every one of these needs script and every one degrades to nothing. The
+ * mockup's colours are again resolved to tokens: its dropdown border is #4F2D7F
+ * (brand, which does ship), its hint row is #8B8274 at 3.27:1 and its toast is
+ * #2A2622 with #F3EEE3 text, which are the text and mark colours respectively
+ * and are reached here through --scrim and --on-scrim, already ratified for the
+ * caption bar and already carried by check:contrast. */
+
+/* The search form becomes the positioning context for the dropdown under it. */
+.media-search {
+  position: relative;
+}
+
+/* The keyboard badge in the bar. A picture of a key combination, hidden from
+   assistive technology, which reads the binding out of the shortcuts panel. */
+.media-search-kbd {
+  flex: none;
+  padding: 0.125rem 0.375rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+}
+
+/* THE PALETTE, hung under the bar it belongs to.
+ *
+ * --surface-popover with --border-strong, per hard rule 5: this is popover
+ * elevation and the elevated step never takes --border. */
+.media-palette {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  background: var(--surface-popover);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.625rem;
+}
+
+.media-palette-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.media-palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* THE HIGHLIGHTED ROW, marked by FILL and by the `enter` chip beside it, which
+   is two channels. A row highlighted by background alone is a row a reader who
+   cannot separate two warm neutrals cannot find. */
+.media-palette-row[data-active="yes"] {
+  background: var(--tint-brand);
+}
+
+.media-palette-row:hover,
+.media-palette-row:focus-visible {
+  background: var(--tint-brand);
+}
+
+.media-palette-kind {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 1.625rem;
+  color: var(--brand);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  background: var(--surface);
+  border-radius: 0.25rem;
+}
+
+.media-palette-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.media-palette-name {
+  overflow: hidden;
+  font-size: 0.84375rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-palette-dir {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-palette-size {
+  flex: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+.media-palette-hint {
+  flex: none;
+  padding: 0.125rem 0.375rem;
+  color: var(--brand);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.25rem;
+}
+
+.media-palette-empty {
+  margin: 0;
+  padding: 1.25rem 0.875rem;
+  font-size: 0.84375rem;
+  color: var(--text-muted);
+}
+
+/* THE HINT ROW, which is the only place these bindings are discoverable from
+   the keyboard path itself. On --surface so it separates from the rows by fill
+   rather than by the mockup's 1.16:1 rule. */
+.media-palette-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8125rem;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+}
+
+.media-palette-hints b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.media-palette-count {
+  margin-left: auto;
+}
+
+/* THE SHORTCUTS PANEL, on the Display popover's own grammar. */
+.media-shortcuts > summary {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.media-shortcuts-panel {
+  right: 0;
+  left: auto;
+  min-width: 15rem;
+}
+
+.media-shortcut-list {
+  display: grid;
+  gap: 0.4375rem;
+  margin: 0;
+}
+
+.media-shortcut {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.media-shortcut dt {
+  margin: 0;
+}
+
+.media-shortcut dd {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.media-shortcut kbd {
+  display: inline-block;
+  padding: 0.0625rem 0.3125rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+}
+
+/* THE TOAST. Bottom centre, over everything, and it never takes pointer events:
+ * a message that can be clicked is a message that can swallow a click meant for
+ * the grid underneath it.
+ *
+ * --scrim and --on-scrim, the pair minted for the caption bar and already a
+ * matrix row at 18:1. The mockup's #2A2622 on #F3EEE3 is the same idea reached
+ * through two literals. */
+.media-toast {
+  position: fixed;
+  z-index: 60;
+  bottom: 1.5rem;
+  left: 50%;
+  margin: 0;
+  padding: 0.625rem 1.125rem;
+  max-width: min(32rem, calc(100vw - 2rem));
+  overflow: hidden;
+  background: var(--scrim);
+  color: var(--on-scrim);
+  font-size: 0.8125rem;
+  border-radius: 0.625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(0.75rem);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.media-toast[data-showing="yes"] {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* An EMPTY live region must not be a visible empty box, and must still be in
+   the DOM: a region inserted at the moment it gains content is frequently never
+   announced, because the assistive technology never observed the container. */
+.media-toast:not([data-showing="yes"]) {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-toast {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* THE TILE UNDER THE KEYBOARD CURSOR. A brand ring, which is the mockup's own
+   mark for it, and distinct from selection (a fill) and from the open inspector
+   (a strong border), so all three can be true at once and still be told apart. */
+.media-card[data-active-tile="yes"] {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+/* The selection size, beside the count in the bulk bar. */
+.posts-bulk-size {
+  margin-left: 0.5rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+/* MEDIA v6 session 6: the page head, the floating selection bar, and the type
+ * treatments the mockup carries.
+ *
+ * THE FIVE FAILING COLOURS ARE STILL REFUSED. Nothing below reintroduces
+ * #F3EEE3, #E5DDCE, #C9BFA9, #A79C8A or #8B8274; separation is still fill and
+ * quietness is still size, weight and tracking. */
+
 /* ---- THE PAGE HEAD ------------------------------------------------------
  *
  * The grid started at y 625 with seven rows above it, where the mockup starts

@@ -9,6 +9,32 @@ import { createAuth, getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/login";
 
+/*
+ * THE ADMIN STYLESHEET, ON A PUBLIC ROUTE, DELIBERATELY.
+ *
+ * This page is unauthenticated and therefore public, but it is the admin
+ * plane's door and it is styled like one. Measured 2026-08-23 while splitting
+ * the admin CSS out of the public bundle: `/login` is the ONLY non-admin file
+ * in `app/` that uses a class defined solely in an admin stylesheet.
+ * TWO dependencies, both measured with postcss rather than assumed, and the
+ * first draft of this comment got the second one wrong:
+ *
+ *   `.field-alarm`         admin-editor.css line 855, and NOWHERE else. It
+ *                          carries the sign-in error at line 122 below, so
+ *                          without this import the failure state renders with
+ *                          no colour and no size.
+ *   `.btn-brand:disabled`  admin-posts.css line 318. The button's ordinary
+ *                          appearance comes from `app.css`, which is public,
+ *                          so that half needs nothing; it is the DISABLED
+ *                          state, `disabled={busy}` below, that lives only in
+ *                          an admin sheet.
+ *
+ * The alternative was moving two rules into a public sheet, which would have
+ * changed their cascade position for the admin plane to save bytes on a page
+ * essentially one person loads. Not worth it.
+ */
+import "~/admin.css";
+
 export function meta() {
   return [{ title: "Sign in" }, { name: "robots", content: "noindex" }];
 }

@@ -91,7 +91,7 @@ import { apca, contrast } from "../app/lib/contrast.mjs";
  * the two sources; it is the answer to "which files does the site ship", and
  * having two answers to that would be the drift, not the safeguard.
  */
-import { allSourceCss } from "./lib/tokens.mjs";
+import { allSourceCss, stylesheetPaths } from "./lib/tokens.mjs";
 
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
@@ -853,7 +853,20 @@ for (const [mode, theme, block] of shikiCases) {
  */
 const assetDir = join(root, "build", "client", "assets");
 let builtNote = "no build present, skipped";
-const cssMtime = statSync(CSS_PATH).mtimeMs;
+/*
+ * THE NEWEST OF EVERY SOURCE STYLESHEET, not app.css alone.
+ *
+ * This was `statSync(CSS_PATH).mtimeMs` and it narrowed the moment there was a
+ * second entry: from 2026-08-23 an edit to `app/admin.css` or any admin part
+ * leaves app.css untouched, so a build predating that edit compared as FRESH
+ * and the shipped-value section below examined a stylesheet that no longer
+ * matched the source. That is the same silence this block was written to end,
+ * arriving through a file it could not see.
+ *
+ * Derived from `stylesheetPaths()`, the one owner of which files the site
+ * ships, so a future entry is covered without editing this line.
+ */
+const cssMtime = Math.max(...stylesheetPaths().map((p) => statSync(p).mtimeMs));
 if (existsSync(assetDir)) {
   const sheets = readdirSync(assetDir).filter((f) => f.endsWith(".css"));
   const newest = Math.max(
@@ -877,9 +890,10 @@ if (existsSync(assetDir)) {
    * source and this gate would have told them nothing.
    */
   if (newest < cssMtime) {
-    builtNote = "build is OLDER than app.css";
+    builtNote = "build is OLDER than a source stylesheet";
     fail(
-      "the built stylesheet is not stale: a build exists but predates app.css, so the " +
+      "the built stylesheet is not stale: a build exists but predates a source " +
+        "stylesheet, so the " +
         "shipped-value comparison would silently examine nothing. Run npm run build.",
     );
     sheets.length = 0;

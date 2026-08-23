@@ -839,19 +839,45 @@ a:hover {
  * builds its whole two-source argument on it. Moving them would have been a
  * gate change wearing a refactor's clothes.
  */
+/*
+ * THE PUBLIC STYLESHEETS ONLY, SINCE 2026-08-23. The seven admin ones moved to
+ * `app/admin.css`, which `routes/admin.tsx` imports.
+ *
+ * MEASURED BEFORE: this file was the whole site's CSS. One bundle,
+ * `root-*.css`, 109,318 built bytes, downloaded by every reader of every public
+ * page, and 62% of it was the admin plane: `admin-media.css` alone is 72KB of
+ * source, larger than every public sheet put together.
+ *
+ * ## THE ORDER IS STILL THE CASCADE, and the split had to prove it
+ *
+ * These files are imported in the order they were cut out of the 9,269-line
+ * app.css, so a rule that won by source position still wins. Removing seven
+ * imports from the middle of that list moves every remaining rule's neighbours,
+ * and on an admin page the seven now arrive AFTER all nine of these rather than
+ * interleaved with them.
+ *
+ * PROVEN, not assumed, by cascading all sixteen sheets both ways with postcss
+ * and comparing the winning declaration for every (selector-context, property)
+ * key: 3,657 declarations, 3,613 keys, ZERO winner differences on an admin page
+ * and ZERO on a public page. 2,347 keys stop resolving in the public bundle,
+ * which is the admin CSS no public reader downloads any more. The comparison
+ * was proven able to discriminate by dropping one admin sheet from the probe,
+ * which produced 364 differences.
+ *
+ * That measurement found ONE real conflict and it was repaired first: the tail
+ * of `playground.css` was 42 admin-only classes, and seven of its declarations
+ * were overriding `admin-media.css`. They moved into `admin-media-later.css`,
+ * which is where they already sat in the cascade. See that file's header.
+ *
+ * `/login` imports `app/admin.css` too. It is a public route that uses
+ * `.field-alarm` from `admin-editor.css`, and it is the admin plane's door.
+ */
 @import "./styles/public-chrome.css";
 @import "./styles/projects.css";
 @import "./styles/page-shell.css";
-@import "./styles/admin-shell.css";
 @import "./styles/blog-index.css";
 @import "./styles/post.css";
-@import "./styles/admin-posts.css";
-@import "./styles/admin-editor.css";
-@import "./styles/admin-media.css";
-@import "./styles/admin-editor-feedback.css";
 @import "./styles/blog-enhancements.css";
-@import "./styles/admin-history.css";
 @import "./styles/search.css";
 @import "./styles/palette.css";
 @import "./styles/playground.css";
-@import "./styles/admin-media-later.css";

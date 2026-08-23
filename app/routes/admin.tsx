@@ -13,6 +13,19 @@ import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/a
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
 
+/*
+ * THE ADMIN PLANE'S CSS, and this import is what keeps it off the public plane.
+ *
+ * `app/app.css` used to import all sixteen stylesheets, so every reader of the
+ * home page downloaded the media library and the post editor: 109,318 built
+ * bytes, 62% of them admin. This route is the layout every `/admin/*` child
+ * nests under, so importing here covers the whole subtree exactly once. Vite
+ * emits a separate chunk and React Router links it only on matched routes.
+ *
+ * `/login` imports it too and is the one other place that may; see app/admin.css.
+ */
+import "~/admin.css";
+
 export function meta() {
   return [{ title: "Admin" }, { name: "robots", content: "noindex" }];
 }

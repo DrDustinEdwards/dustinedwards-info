@@ -2,7 +2,9 @@ import { Link, NavLink, useRouteLoaderData } from "react-router";
 
 import { SearchTrigger } from "~/components/search-trigger";
 import { SiteLogoHeader } from "~/components/site-logo";
+import { SiteSpeculation } from "~/components/site-speculation";
 import { ThemeToggle } from "~/components/theme-toggle";
+import { NAV } from "~/lib/nav";
 import { SITE } from "~/lib/seo";
 
 import type { loader as rootLoader } from "~/root";
@@ -48,13 +50,26 @@ import type { loader as rootLoader } from "~/root";
  * is upgraded in place into a button that opens the command palette; with
  * scripting off it stays a link and search still works. Nothing in the header
  * depends on the palette existing.
+ *
+ * THE LINK LIST MOVED TO `~/lib/nav`, because `SiteSpeculation` needs the same
+ * paths and a second hand-written copy would drift silently: a link added
+ * without a speculation entry still navigates, just slower. Four NavLinks
+ * mapped from one array render exactly what four literals rendered.
+ *
+ * `prefetch="intent"` on the nav and the brand. react-router's `Link` defaults
+ * to `prefetch="none"` (8.3.0, `lib/dom/lib.js`: `prefetch = "none"`), and
+ * NavLink spreads its rest props into Link rather than setting its own, so
+ * every menu click paid a round trip that a hover could have prepaid. It costs
+ * the no-script plane NOTHING: the prefetch handlers are React event props and
+ * the `<link>` elements are rendered from client state, so the server-rendered
+ * anchors are byte-identical either way.
  */
 export function SiteHeader() {
   const data = useRouteLoaderData<typeof rootLoader>("root");
 
   return (
     <header className="site-header">
-      <Link to="/" className="site-header-brand">
+      <Link to="/" className="site-header-brand" prefetch="intent">
         {/* Decorative: the link's accessible name is the wordmark beside it, so
             naming the mark too would make a screen reader say it twice. Inline
             so the purple follows the theme token; see site-logo.tsx. */}
@@ -68,10 +83,11 @@ export function SiteHeader() {
           header carried nothing, so that sentence was false on every page and
           the pair it describes never existed. */}
       <nav className="site-header-nav" aria-label="Main">
-        <NavLink to="/blog" end>Blog</NavLink>
-        <NavLink to="/projects">Projects</NavLink>
-        <NavLink to="/playground">Playground</NavLink>
-        <NavLink to="/phage-discovery">Roster</NavLink>
+        {NAV.map((item) => (
+          <NavLink key={item.to} to={item.to} end={item.end} prefetch="intent">
+            {item.label}
+          </NavLink>
+        ))}
         <SearchTrigger />
         {/*
           JUSTIFIED SUBSTITUTION (hard rule 13). Ruled 2026-08-10,
@@ -94,6 +110,11 @@ export function SiteHeader() {
         */}
         <ThemeToggle theme={data?.theme ?? "system"} />
       </nav>
+      {/* Hover speculation for the paths this header links to. It rides HERE
+          rather than in root's Layout so its scope is exactly the header's:
+          every public page, never the admin plane, which does not render this
+          component. See site-speculation.tsx for the nonce and the cost. */}
+      <SiteSpeculation />
     </header>
   );
 }

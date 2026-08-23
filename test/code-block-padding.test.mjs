@@ -34,8 +34,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { allSourceCss } from "../scripts/lib/tokens.mjs";
 
 /**
  * COMMENTS STRIPPED FIRST, and the plant is what proved this necessary.
@@ -48,24 +47,28 @@ import { fileURLToPath } from "node:url";
  * hard rule 10, caught by planting rather than by reading.
  */
 /**
- * THE WHOLE STYLESHEET SET, not app.css alone, since the 2026-08-21 split.
+ * THE WHOLE STYLESHEET SET, and it now comes from the SHARED derivation rather
+ * than a second copy of it.
  *
- * app.css was one 9,269-line file and is now an entry that imports sixteen
- * parts. The fence rules moved to `app/styles/blog-enhancements.css`, so
- * reading the entry alone parsed the tokens and found no `.prose pre` at all.
- * This test FAILED rather than passing over an empty search, which is the
- * scope assertion below doing its job.
+ * app.css was one 9,269-line file and is now an ENTRY that imports its parts.
+ * The fence rules moved to `app/styles/blog-enhancements.css`, so reading the
+ * entry alone parsed the tokens and found no `.prose pre` at all. This test
+ * FAILED rather than passing over an empty search, which is the scope
+ * assertion below doing its job.
  *
- * The paths are DERIVED from app.css's own `@import` lines, so adding a part
- * means editing app.css and nothing else. A list here would go stale in the
- * direction that hides rules from this test.
+ * IT THEN FAILED A SECOND TIME, on 2026-08-23, for the same reason one layer
+ * out: the admin parts moved to a SECOND entry, `app/admin.css`, and this
+ * file's own copy of the import walk followed only the first. The parsed rule
+ * count fell below the floor below and the test went red.
+ *
+ * So the walk is gone and `allSourceCss()` from `scripts/lib/tokens.mjs` is
+ * the one owner. That function had to learn about the second entry anyway,
+ * because `check:contrast` and `check:logo` read it; re-implementing the walk
+ * here is what made this the THIRD place to fix rather than the second. One
+ * derivation, several readers, which is the rule this repo applies to the CSP
+ * nonce and had not applied to its own stylesheet list.
  */
-const entryUrl = new URL("../app/app.css", import.meta.url);
-const entry = readFileSync(fileURLToPath(entryUrl), "utf8");
-const parts = [...entry.matchAll(/@import\s+"(\.[^"]+)"/g)].map((m) =>
-  readFileSync(fileURLToPath(new URL(`../app/${m[1].replace(/^\.\//, "")}`, import.meta.url)), "utf8"),
-);
-const css = [entry, ...parts].join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+const css = allSourceCss().replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
  * Every style rule in the sheet, with the at-rules it sits inside.
