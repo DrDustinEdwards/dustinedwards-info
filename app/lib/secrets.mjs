@@ -33,14 +33,13 @@
  * the cockpit's origin-requests panel reads Analytics Engine with. It is TYPED
  * AND GUARDED BEFORE IT IS PROVISIONED, which is the intended order.
  *
- * EIGHT BECAME TEN on 2026-08-22 with the two alert destinations the scheduled
- * health run posts to, on that same order: typed and guarded here first, set
- * later. Both are URLs rather than credentials in the usual sense, and both are
- * guarded anyway, because a webhook URL IS the bearer token for its
- * destination: anyone holding it can post to Dustin's inbox, and a heartbeat
- * URL held by someone else can keep a dead-man's switch quiet while this site
- * is down. That second one is the more interesting failure and it is why
- * `ALERT_HEARTBEAT_URL` is on this list rather than treated as configuration.
+ * TEN BECAME EIGHT AGAIN on 2026-08-23, when the webhook alerting was
+ * deleted. `ALERT_WEBHOOK_URL` and `ALERT_HEARTBEAT_URL` were added on
+ * 2026-08-22 for an hourly cron that posted breaches to a third-party
+ * destination. The ruling that replaced it chose a scheduled GitHub Actions
+ * run polling /api/health, and excluded third-party services, so neither URL
+ * had a destination it could ever point at. Both were removed unprovisioned;
+ * they were never set on the deployed Worker.
  *
  * NOT ON THIS LIST: `CLOUDFLARE_ACCOUNT_ID`. It is a plain var in
  * `wrangler.jsonc` and an identifier rather than a credential, so guarding it
@@ -58,6 +57,4 @@ export const REQUIRED_SECRETS = [
   "GITHUB_TOKEN",
   "OPERATOR_TOKEN",
   "ANALYTICS_READ_TOKEN",
-  "ALERT_WEBHOOK_URL",
-  "ALERT_HEARTBEAT_URL",
 ];
