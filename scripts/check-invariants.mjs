@@ -1700,14 +1700,58 @@ try {
       `two). The SELECT shape changed and this scan no longer sees it.`,
   );
 
+  /**
+   * Readers deliberately without the predicate, each with the reason.
+   *
+   * A NAMED LIST, on the same rule as every other exemption map here: a pattern
+   * would let a new reader match by accident, and a name cannot. Both directions
+   * are policed below, so an entry that stops being needed fails rather than
+   * standing as a permanent excuse.
+   *
+   * @type {Record<string, string>}
+   */
+  const SEARCH_DOCS_EXEMPT = {
+    "app/lib/health/checks.server.ts::runHealthChecks":
+      "COUNTS ROWS, SERVES NONE. The fts-equality health check compares " +
+      "COUNT(*) FROM search_docs against search_identity_docsize and " +
+      "search_prose_docsize. The FTS indexes are built from ALL of search_docs, " +
+      "drafts included, so composing visibilityClause on one side of that " +
+      "comparison and not the other would MANUFACTURE drift on every run: the " +
+      "check would fail permanently and for a reason no reader could act on. " +
+      "It returns one integer, never a row, and /api/health publishes only a " +
+      "boolean derived from it. This became visible on 2026-08-23 when the " +
+      "checks moved from workers/ into app/, which is the only tree this " +
+      "section scans; the query is unchanged and was simply out of scope before.",
+  };
+
   const bare = readers.filter((r) => !r.direct && !r.indirect);
+  const unexplainedBare = bare.filter((r) => !(r.key in SEARCH_DOCS_EXEMPT));
   ok(
-    "every search_docs reader composes visibilityClause, directly or via filters.clause",
-    bare.length === 0,
-    bare.map((r) => `${r.key} selects from search_docs with no visibility predicate`).join("\n        ") +
+    "every search_docs reader composes visibilityClause, or is a named exemption",
+    unexplainedBare.length === 0,
+    unexplainedBare
+      .map((r) => `${r.key} selects from search_docs with no visibility predicate`)
+      .join("\n        ") +
       "\n        Hard rule 1 reaches the search index too. Compose visibilityClause(), " +
-      "passing NO_ALIAS for an unaliased query.",
+      "passing NO_ALIAS for an unaliased query, or add the reader to " +
+      "SEARCH_DOCS_EXEMPT with the reason.",
   );
+
+  /*
+   * THE OTHER DIRECTION. An exemption naming a reader that has since gained the
+   * predicate, or that no longer reads search_docs at all, is a stale excuse
+   * rather than a standing decision, and a stale excuse is how the next real
+   * bypass gets waved through under an old name.
+   */
+  for (const key of Object.keys(SEARCH_DOCS_EXEMPT)) {
+    ok(
+      `search_docs exemption ${key} still names a bare reader`,
+      bare.some((r) => r.key === key),
+      readers.some((r) => r.key === key)
+        ? `${key} now composes the predicate, so the exemption is stale. Remove it.`
+        : `${key} no longer reads search_docs, or was renamed or moved. Remove the exemption.`,
+    );
+  }
 
   // The indirection is only worth trusting if its source composes the rule.
   const searchSrc = stripComments(

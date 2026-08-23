@@ -52,99 +52,13 @@
  */
 
 import {
-  HEARTBEAT_KEY,
-  alertText,
-  askDriftVerdict,
-  ftsEqualityVerdict,
-  mediaUnbackedVerdict,
-} from "~/lib/health/verdicts.mjs";
-import { askIndexStatus } from "~/lib/search/ask.server";
+  type HealthCheck,
+  type HealthRun,
+  runHealthChecks,
+} from "~/lib/health/checks.server";
+import { HEARTBEAT_KEY, alertText } from "~/lib/health/verdicts.mjs";
 
 export { HEARTBEAT_KEY };
-
-/** One check's verdict. `ok: false` is what turns into an alert. */
-export interface HealthCheck {
-  name: string;
-  ok: boolean;
-  /** One sentence a person reads at 2am, with the numbers in it. */
-  detail: string;
-}
-
-export interface HealthRun {
-  checks: HealthCheck[];
-  failed: HealthCheck[];
-}
-
-/**
- * Runs every check and returns all verdicts, never throwing for a failed check.
- *
- * A check that THROWS is reported as a failed check rather than allowed to
- * abort the run, because the alternative is that one broken check silences
- * every other one. That is the same fail-open-by-accident shape as a listing
- * that errors and returns zero.
- */
-export async function runHealthChecks(env: Env): Promise<HealthRun> {
-  const checks: HealthCheck[] = [];
-
-  checks.push(
-    await guard("ask-index-drift", async () => askDriftVerdict(await askIndexStatus(env))),
-  );
-
-  checks.push(
-    await guard("media-unbacked", async () => {
-      /*
-       * NOT a reconciliation. `check:media --remote` owns that and does it in
-       * four directions. This asks the one question that gate does not: is the
-       * bucket still EMPTY? A reconciler is perfectly happy for there to be
-       * more objects, as long as they all have rows.
-       */
-      const listed = await env.MEDIA.list({ limit: 1 });
-      return mediaUnbackedVerdict(listed.objects);
-    }),
-  );
-
-  checks.push(
-    await guard("fts-equality", async () => {
-      /*
-       * ONE ROUND TRIP, five subqueries. `search_docs` is the real content
-       * table and is counted directly; the three index counts are taken on the
-       * `_docsize` shadows, because COUNT(*) on an external-content fts5 table
-       * reads through to its content table and can never disagree with it.
-       * `check:invariants` section 7 enforces that distinction on this source.
-       */
-      const row = await env.DB.prepare(
-        "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +
-          "(SELECT COUNT(*) FROM posts_fts_docsize) AS postsFts, " +
-          "(SELECT COUNT(*) FROM search_docs) AS docs, " +
-          "(SELECT COUNT(*) FROM search_identity_docsize) AS identity, " +
-          "(SELECT COUNT(*) FROM search_prose_docsize) AS prose",
-      ).first<Record<string, unknown>>();
-
-      // `?? {}` rather than a throw, so a null row reaches the verdict and is
-      // reported as unreadable counts. Fail closed with a sentence, not a stack.
-      return ftsEqualityVerdict(row ?? {});
-    }),
-  );
-
-  return { checks, failed: checks.filter((c) => !c.ok) };
-}
-
-/** Turns a throwing check into a failing one, never into a missing one. */
-async function guard(
-  name: string,
-  run: () => Promise<{ ok: boolean; detail: string }>,
-): Promise<HealthCheck> {
-  try {
-    const { ok, detail } = await run();
-    return { name, ok, detail };
-  } catch (error) {
-    return {
-      name,
-      ok: false,
-      detail: `check threw: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-}
 
 /**
  * The whole scheduled run: check, alert on breach, then heartbeat.

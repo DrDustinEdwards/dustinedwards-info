@@ -28,6 +28,12 @@
  * route needs. Stated as one value so the gate compares one string.
  */
 
+import { getEnv } from "~/lib/context";
+import { runHealthChecks } from "~/lib/health/checks.server";
+import { publicHealthBody } from "~/lib/health/verdicts.mjs";
+
+import type { Route } from "./+types/api.health";
+
 /**
  * The headers on EVERY health response, success and failure alike.
  *
@@ -53,6 +59,62 @@ function healthJson(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: HEALTH_HEADERS });
 }
 
-export function loader() {
-  return healthJson({ ok: true }, 200);
+/**
+ * Runs every health check and answers 200 only if all of them passed.
+ *
+ * ## THE STATUS CODE IS THE ALERT
+ *
+ * `.github/workflows/health.yml` polls this and fails its run on any non-200,
+ * and a failed scheduled run is what emails the repository owner. So anything
+ * this endpoint wants a human to know it must say in the STATUS LINE. A 200
+ * carrying `{"ok": false}` is read by `curl --fail` as health and the alert is
+ * never sent. That is why the body is not the contract and the code is.
+ *
+ * 503 rather than 500: the site is serving, a stated invariant is not holding.
+ *
+ * ## FAIL CLOSED, and the outer catch is the point
+ *
+ * `runHealthChecks` already turns a throwing or hanging CHECK into a failing
+ * check, each under its own timeout, so one wedged binding cannot hang this
+ * response or silence the other two. Reaching the catch below therefore means
+ * the run itself could not be assembled. An endpoint that cannot run its checks
+ * reports unhealthy; it does not report nothing, and it does not report health.
+ *
+ * The body carries names and booleans only. Every `detail` string is dropped by
+ * `publicHealthBody`, because they carry row counts and an R2 object key and
+ * this route is unauthenticated. The why lives in Workers Logs.
+ */
+export async function loader({ context }: Route.LoaderArgs) {
+  try {
+    const run = await runHealthChecks(getEnv(context));
+    const body = publicHealthBody(run);
+
+    if (!body.ok) {
+      // Logged as well as returned. Workers Logs keeps custom logs for 7 days
+      // with observability enabled, and `invocation_logs: false` does not touch
+      // them: that setting drops the automatic per-request record, which is a
+      // privacy decision, not this. So the DETAIL the wire deliberately omits
+      // is still recoverable by the operator.
+      console.error(
+        JSON.stringify({
+          alert: "health-check-failed",
+          failed: run.failed.map((c) => c.name),
+          detail: run.failed.map((c) => c.detail),
+        }),
+      );
+    }
+
+    return healthJson(body, body.ok ? 200 : 503);
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        alert: "health-run-threw",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    // Same shape, so the workflow's parse succeeds and reports a named failure
+    // rather than falling into its "body did not parse" branch, which would be
+    // true but less useful.
+    return healthJson({ ok: false, checks: [{ name: "health-run", ok: false }] }, 503);
+  }
 }
