@@ -27,4 +27,3 @@ const instantiate = (imports: unknown) => wasm.instantiate(onigModule, imports);
 
 setWasmLoader(() => instantiate);
 
-export const WASM_LOADER_READY = true;
