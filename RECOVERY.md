@@ -29,11 +29,19 @@ You need: the repo, a Cloudflare account, a Google Cloud project (for OAuth), an
 a GitHub account with access to this repo.
 
 ```sh
-npm install          # postinstall copies wrangler.jsonc.example into place
+npm ci               # postinstall copies wrangler.jsonc.example into place
 npx wrangler login
 ```
 
-`npm install` runs `scripts/bootstrap-config.mjs`, which copies
+**`npm ci`, NOT `npm install`, and this line was the audit's one real supply-chain
+finding.** Section 7 says "a compromised patch release of any of them reaches
+production on the next `npm ci`", which is false as written: `npm ci` installs
+the exact tree in `package-lock.json` and never re-resolves a range. What was
+true is that THIS runbook said `npm install`, which does re-resolve, so the one
+documented path a new engineer follows was the one path where a fresh malicious
+patch inside an existing `^` range would be picked up. CI already used `npm ci`.
+
+`npm ci` runs `scripts/bootstrap-config.mjs`, which copies
 `wrangler.jsonc.example` to `wrangler.jsonc` if and only if no config exists. It
 never overwrites. The copy carries **placeholder resource ids**, so it is enough
 to typecheck and deliberately not enough to deploy. You will replace two of those
