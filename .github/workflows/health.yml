@@ -72,10 +72,15 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      # actions/checkout v4, pinned to the commit that tag pointed at on
-      # 2026-08-23. Needed because the ORIGIN is READ OUT OF THE REPO below
-      # rather than written here.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/checkout v7.0.1, pinned to the commit that tag pointed at on
+      # 2026-08-23. Bumped from the v4 pin because GitHub is retiring the Node 20
+      # runner and that pin targeted it; every run was printing a deprecation
+      # warning and being forced onto Node 24 anyway. v7.0.1 declares node24
+      # itself, which was checked in its action.yml rather than assumed.
+      #
+      # Needed because the ORIGIN is READ OUT OF THE REPO below rather than
+      # written here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Poll the health endpoint
         run: |
@@ -123,10 +128,22 @@ jobs:
             exit 1
           fi
 
-          # Every failing check by name, into the run log, so the notification
-          # email leads somewhere. `// empty` keeps jq quiet if the shape ever
-          # changes rather than turning a real failure into a jq error.
-          FAILED=$(jq --raw-output '[.checks[]? | select(.ok == false) | .name] | join(", ") // empty' body.json)
+          # Every failing check by name AND WITH ITS TWO COUNTS, into an
+          # ::error:: annotation, because the annotation is what reaches the
+          # notification EMAIL. The whole body is printed above, but nobody
+          # reads a run log they have not been given a reason to open.
+          #
+          # The 17:15Z flap on 2026-08-23 is the reason: ask-index-drift went
+          # false, recovered by itself, and could not be triaged, because
+          # "which check failed" was all anyone had. One record apart during a
+          # rebuild and a hundred apart are the same alert, and only one of
+          # them is an incident.
+          #
+          # A failing check now carries expected and present; a passing one
+          # still carries name and ok only. The `.expected != null` arm keeps
+          # this working against the OLD body shape rather than turning a real
+          # failure into a jq error, which was checked against both shapes.
+          FAILED=$(jq --raw-output '[.checks[]? | select(.ok == false) | .name + (if .expected != null then " (expected " + (.expected|tostring) + ", present " + (.present|tostring) + ")" else "" end)] | join("; ") // empty' body.json)
           if [ -n "$FAILED" ]; then
             echo "::error::Failing checks: ${FAILED}"
           fi

@@ -52,6 +52,14 @@ export interface HealthCheck {
   ok: boolean;
   /** One sentence a person reads at 2am, with the numbers in it. */
   detail: string;
+  /**
+   * The two counts a drift check compares, present only when it FAILED.
+   *
+   * These are the only part of a failing check that reaches the wire besides
+   * its name. Grounds are on `publicHealthBody`: a flap that says which check
+   * failed and not how far apart the sides were cannot be triaged.
+   */
+  counts?: { expected: number; present: number };
 }
 
 export interface HealthRun {
@@ -123,13 +131,13 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
  */
 async function guard(
   name: string,
-  run: () => Promise<{ ok: boolean; detail: string }>,
+  run: () => Promise<{ ok: boolean; detail: string; counts?: { expected: number; present: number } }>,
 ): Promise<HealthCheck> {
   // The extra async wrapper turns a SYNCHRONOUS throw inside `run` into a
   // rejection. Without it such a throw escapes before `withTimeout` has a
   // promise to guard, and one broken check would silence every later one.
   const started = (async () => run())();
-  const { ok, detail } = await withTimeout(started, CHECK_TIMEOUT_MS, name);
-  return { name, ok, detail };
+  const { ok, detail, counts } = await withTimeout(started, CHECK_TIMEOUT_MS, name);
+  return counts ? { name, ok, detail, counts } : { name, ok, detail };
 }
 
