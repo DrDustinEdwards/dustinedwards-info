@@ -9,6 +9,7 @@ import {
   contentSecurityPolicy,
   isAdminPath,
 } from "./csp.mjs";
+import { runScheduledHealth } from "./health";
 import { handleMediaEvents } from "./media-events";
 
 // Re-exported so the runtime can find the class its binding names. The Ask
@@ -565,5 +566,24 @@ export default {
    */
   async queue(batch, env) {
     await handleMediaEvents(batch, env);
+  },
+
+  /**
+   * The scheduled health run. Cron is in `wrangler.jsonc`.
+   *
+   * Separate from `fetch` for the same reason `queue` is: no reader ever waits
+   * on it and no HTTP request triggers it. What is different, and is the point
+   * of the whole handler, is that nobody has to be LOOKING at anything for this
+   * to run. Grounds, the two checks, and the list of what it cannot see are in
+   * `health.ts`.
+   */
+  async scheduled(_controller, env, ctx) {
+    /*
+     * `waitUntil`, not a bare await, so the delivery and the heartbeat survive
+     * the handler returning. A scheduled invocation is allowed to finish its
+     * extended work this way, and the alternative has a failure mode this file
+     * cannot accept: an alert cut off mid-POST is an alert nobody receives.
+     */
+    ctx.waitUntil(runScheduledHealth(env));
   },
 } satisfies ExportedHandler<Env>;

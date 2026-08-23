@@ -34,6 +34,21 @@
 			"invocation_logs": false
 		}
 	},
+	// THE ONE THING HERE THAT REACHES A HUMAN. Grounds in `workers/health.ts`.
+	//
+	// Hourly, and the interval is a decision rather than a default. The failure
+	// this exists for went unnoticed for 21 days; the difference between finding
+	// that in one hour and in six is not worth optimising, but the difference
+	// between one hour and one day is, because a drifted Ask index answers
+	// readers wrongly for the whole time it is drifted.
+	//
+	// This is also the heartbeat period, so it sets the grace window any external
+	// dead-man's switch must be configured with. A watchdog expecting a ping
+	// every hour needs a grace LONGER than an hour, or it alerts on ordinary
+	// scheduling jitter rather than on this Worker being dead.
+	"triggers": {
+		"crons": ["0 * * * *"]
+	},
 	"upload_source_maps": true,
 	// Workers Cache, in front of the Worker. Added for the Images binding: its
 	// responses are NOT cached by Cloudflare and every uncached call is a full

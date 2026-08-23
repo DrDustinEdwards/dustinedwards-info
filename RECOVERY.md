@@ -384,6 +384,8 @@ npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put ANALYTICS_READ_TOKEN
+npx wrangler secret put ALERT_WEBHOOK_URL
+npx wrangler secret put ALERT_HEARTBEAT_URL
 ```
 
 | Secret | What it is for | Where a new one comes from |
@@ -396,6 +398,8 @@ npx wrangler secret put ANALYTICS_READ_TOKEN
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
+| `ALERT_WEBHOOK_URL` | Where the hourly health run POSTs a breach | Any endpoint accepting an HTTP POST. Vendor deliberately not chosen; see section 11. Absent, a breach is logged at error level and reaches nobody |
+| `ALERT_HEARTBEAT_URL` | The dead-man's-switch ping, sent after every run that could report | A service that alerts on a MISSING ping, not one that receives messages. Section 11 says why this is the load-bearing half. Absent, only KV records the run |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
 the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
@@ -500,6 +504,98 @@ Then check by hand:
 - `/admin` redirects to Google and then admits only `ADMIN_EMAIL`
 - `/media/<some key>?w=320` returns `image/webp` with `x-media-thumb: w=320`
 - `/search/ask` answers, once the corpus is synced
+
+---
+
+## 11. Alerting, and what its silence is worth
+
+**Added 2026-08-22, because there was none.** The Ask index lost nine records on
+31 July and it was found on 21 August, by a badge on a page somebody happened to
+open. `askIndexStatus` had been returning 9 for three weeks. Nothing was broken
+about the detection; there was no path from the number to a person.
+
+An hourly cron runs `workers/health.ts`. Two checks, and the shortness is the
+design: `ask-index-drift` is the failure above by name, and `media-unbacked`
+watches the one condition section 3's no-backup acceptance depends on. The FTS
+invariants are deliberately not re-checked, because `check:invariants` and
+`check:search` already own them and a second copy of an invariant is the drift
+this repo keeps paying for.
+
+### WHAT IT DOES NOT COVER
+
+Read this before treating a quiet inbox as good news.
+
+- **It cannot report its own death.** A cron that stops firing, a Worker that
+  fails to deploy, a handler that throws before delivery: all of them send
+  nothing, and nothing is what a healthy hour also sends.
+- **It sees no reader.** It fetches no public URL. A site returning 500 to
+  everyone passes both checks. That is `verify-live`, which needs a deploy.
+- **It sees no layout, no admin plane, no bill.**
+- **Between runs it sees nothing.** Worst case an hour of drift, by design.
+
+The first bullet is the one that matters, and it is why there are two
+destinations rather than one.
+
+### The two destinations, and what you have to do
+
+Both are secrets you set; **neither vendor is chosen here on purpose**, because
+the choice is about where Dustin wants to be interrupted.
+
+**`ALERT_WEBHOOK_URL`, the breach alert.** The handler POSTs JSON on a failed
+check. It arrives as one self-contained line, `dustinedwards.info health check
+FAILED (1): - ask-index-drift: Ask index drift 9: 9 missing, 0 stale, 46
+expected, 37 present. Repair with sync-ask on /admin/posts.` Any destination
+that accepts an HTTP POST works: a chat workspace's incoming webhook, a
+push-to-phone relay, an HTTP-to-email bridge. Setup is create the endpoint
+there, then `npx wrangler secret put ALERT_WEBHOOK_URL`.
+
+**`ALERT_HEARTBEAT_URL`, the dead-man's switch, and the load-bearing one.** The
+handler pings it after every run it could report on. **Nothing in this
+repository can watch for that ping to stop**, because any watcher written here
+runs inside the Worker whose death is the event, and dies with it. So this
+destination must be a service whose feature is ABSENCE detection: it expects a
+ping on a period and alerts when one does not arrive. That is a different
+product category from the webhook above, and it is the only thing here that
+survives the Worker being broken. Configure its period as hourly with a grace
+window LONGER than an hour, or ordinary scheduling jitter will page you. Setup
+is create the check there, then
+`npx wrangler secret put ALERT_HEARTBEAT_URL`.
+
+**The ping is withheld when a breach could not be delivered**, which is
+deliberate: if the webhook is unset or its destination is down, the watchdog
+firing is the only way anyone learns anything. The alarm will say the Worker is
+down when really it ran and could not get a word out. That is the right trade.
+
+**Until `ALERT_HEARTBEAT_URL` is set, the heartbeat is just another silent
+thing.** The run still writes `health:last-run` to KV with its timestamp, which
+makes staleness readable to anyone who asks, and alerts nobody.
+
+### The Cloudflare notification backstop, measured rather than assumed
+
+Asked for directly, and the honest result is **partly unanswerable from here**:
+
+- `workers_observability_alert`, display name "Alert Policy", **is** listed in
+  this account's available alert types, group "Workers Observability".
+- `GET /accounts/<id>/workers/observability/alerts` returns 200 and an **empty
+  array**: the surface exists and nothing is configured on it.
+- It is **absent from the `alert_type` enum** of `POST /alerting/v3/policies`,
+  so the Notifications API cannot create it. It is configured from the Workers
+  Observability dashboard.
+- **Its trigger conditions are undocumented.** `developers.cloudflare.com/workers/observability/`
+  has no alerts page, `/workers/observability/alerts/` 404s, and the endpoint is
+  absent from the public OpenAPI spec. **So whether it can fire on a custom log
+  match, or only on error-rate and CPU thresholds, was not established.**
+- Destinations: **email and webhook are both eligible and ready** on this
+  account; PagerDuty is not. Two policies exist today, Passive Origin Monitoring
+  and the default budget alert.
+
+What follows for the design: **the Cloudflare notification cannot yet be relied
+on as the dead-man's switch**, because a below-threshold or absence condition is
+exactly the capability that was not confirmed. If the dashboard turns out to
+offer one over `alert: "health-check-failed"` events, it would duplicate the
+heartbeat service from outside the Worker and be strictly better. That is worth
+ten minutes in the dashboard and is not worth assuming. Until then the external
+heartbeat destination is the backstop, and it is the one to set up first.
 
 ---
 
