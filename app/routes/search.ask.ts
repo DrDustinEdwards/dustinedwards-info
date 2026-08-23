@@ -27,6 +27,7 @@ import {
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
 import { slugForKey } from "~/lib/search/ask-keys.mjs";
+import { ASK_ORIGIN_REFUSAL, askOriginVerdict } from "~/lib/search/ask-origin.mjs";
 import { publiclyVisibleSlugs } from "~/db";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import type { Route } from "./+types/search.ask";
@@ -107,6 +108,31 @@ export function loader() {
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
+  /*
+   * GATE 0, AND IT IS FIRST BECAUSE IT IS FREE. One header read, no env, no
+   * body, no binding, no Durable Object. Everything below this line either
+   * costs a round trip or costs money.
+   *
+   * A foreign page cannot be allowed to spend the shared Ask budget using its
+   * own readers' browsers. The per-IP limiter cannot see that attack at all:
+   * a thousand readers of one hostile page are a thousand IPs, each well
+   * inside its own allowance. Origin is the one field on a cross-site POST
+   * that the attacking page does not control.
+   *
+   * ABSENT Origin is ALLOWED and the reasoning is on the predicate. Short
+   * version: a client that sends none is spending its own IP's allowance,
+   * which is already bounded, and refusing it would break the no-script form
+   * this route's body parsing was written to accept without buying anything
+   * against the attack.
+   */
+  const origin = askOriginVerdict(request.headers.get("origin"), request.url);
+  if (!origin.ok) {
+    return new Response(ASK_ORIGIN_REFUSAL, {
+      status: 403,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
   const env = getEnv(context);
 
   // 404 rather than 503. With the binding absent this endpoint does not exist,
