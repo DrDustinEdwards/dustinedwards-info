@@ -33,7 +33,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2025.webp",
       width: 1080,
       height: 720,
-      alt: "The 2025 research group.",
+      alt: "Group photo of the 2025 Phage Discovery Program cohort",
     },
     researchers: [
       "Alexandra Aguilar",
@@ -61,7 +61,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2024.webp",
       width: 1080,
       height: 720,
-      alt: "The 2024 research group.",
+      alt: "Group photo of the 2024 Phage Discovery Program cohort",
     },
     researchers: [
       "Gustave Allen",
@@ -87,7 +87,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2023.webp",
       width: 1080,
       height: 720,
-      alt: "The 2023 research group.",
+      alt: "Group photo of the 2023 Phage Discovery Program cohort",
     },
     researchers: [
       "Anna Buchholz",
@@ -115,7 +115,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2022.webp",
       width: 1080,
       height: 720,
-      alt: "The 2022 research group.",
+      alt: "Group photo of the 2022 Phage Discovery Program cohort",
     },
     researchers: [
       "Selina Alvarado",
@@ -143,7 +143,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2021.webp",
       width: 1080,
       height: 720,
-      alt: "The 2021 research group.",
+      alt: "Group photo of the 2021 Phage Discovery Program cohort",
     },
     researchers: [
       "Ivy Adame",
@@ -175,7 +175,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2020.webp",
       width: 1080,
       height: 720,
-      alt: "The 2020 research group.",
+      alt: "Group photo of the 2020 Phage Discovery Program cohort",
     },
     researchers: [
       "Selina Alvarado",
@@ -199,7 +199,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2019.webp",
       width: 1080,
       height: 720,
-      alt: "The 2019 research group.",
+      alt: "Group photo of the 2019 Phage Discovery Program cohort",
     },
     researchers: [
       "Skyler Adams",
@@ -230,7 +230,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2018.webp",
       width: 1080,
       height: 720,
-      alt: "The 2018 research group.",
+      alt: "Group photo of the 2018 Phage Discovery Program cohort",
     },
     researchers: [
       "Michaela Aguirre",
@@ -258,7 +258,7 @@ export const PHAGE_YEARS: PhageYear[] = [
       src: "/phage-hunters/2017.webp",
       width: 1080,
       height: 810,
-      alt: "The 2017 research group.",
+      alt: "Group photo of the 2017 Phage Discovery Program cohort",
     },
     researchers: [
       "Megan Adams",
