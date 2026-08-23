@@ -1,3 +1,4 @@
+import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
 import {
   and,
   asc,
@@ -45,7 +46,7 @@ export type DB = ReturnType<typeof getDb>;
  */
 export function publiclyVisible() {
   return and(
-    eq(posts.status, "published"),
+    eq(posts.status, PUBLISHED_STATUS),
     or(isNull(posts.publishAt), lte(posts.publishAt, new Date())),
   );
 }

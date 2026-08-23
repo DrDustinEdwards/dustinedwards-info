@@ -588,6 +588,57 @@ permits("admin may create an already published post", () =>
   );
 
   /*
+   * THE ASK FILTER COMPOSES THE SHARED PREDICATE RATHER THAN RESTATING IT.
+   *
+   * The two assertions above prove the filter is CALLED. They cannot see what it
+   * DOES, and what it did until 2026-08-23 was restate the visibility rule in a
+   * third shape: `draft === true` out, `publishAt > now` out. That agreed with
+   * `publiclyVisible()` by inspection and by these greps and by nothing else,
+   * and a third hand-rolled copy is exactly what leaked five drafts into Ask on
+   * 2026-07-29.
+   *
+   * So the rule now has ONE JavaScript owner and this binds Ask to it. Scoped to
+   * `publishableForAsk`'s own body by brace matching, not to the file: the
+   * module's prose names both symbols while explaining them, and a whole-file
+   * match would read the comment as the code.
+   */
+  const askAt = askSource.search(/function publishableForAsk\b/);
+  eq("publishableForAsk exists in ask.server.ts", askAt !== -1, true);
+
+  let askBody = "";
+  if (askAt !== -1) {
+    const open = askSource.indexOf("{", askSource.indexOf(")", askAt));
+    let depth = 0;
+    for (let i = open; i < askSource.length; i += 1) {
+      if (askSource[i] === "{") depth += 1;
+      else if (askSource[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          askBody = askSource.slice(open, i + 1);
+          break;
+        }
+      }
+    }
+  }
+  eq("publishableForAsk's body was extracted", askBody.length > 40, true);
+
+  eq(
+    "publishableForAsk composes isPubliclyVisible, the shared owner of the rule",
+    /isPubliclyVisible\s*\(/.test(askBody),
+    true,
+  );
+  eq(
+    "publishableForAsk maps draft to status rather than testing draft itself",
+    /statusForDraft\s*\(/.test(askBody) && !/\.draft\s*===/.test(askBody),
+    true,
+  );
+  eq(
+    "publishableForAsk does not restate the publish-date rule",
+    !/Date\.parse\s*\([^)]*publishAt/.test(askBody),
+    true,
+  );
+
+  /*
    * THE DRIFT CHECK'S EXPECTED SET, re-scoped 2026-08-19 to the mechanism that
    * replaced the one this used to watch.
    *
