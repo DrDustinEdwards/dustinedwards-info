@@ -103,13 +103,48 @@ const UNCACHED = "private, no-store";
  * - **`X-Frame-Options: DENY` is a LEGACY MIRROR of `frame-ancestors`,** which
  *   does not exist until Phase B ships a CSP. Delete this line only when Phase
  *   B is enforcing, never before, or the site spends that window framable.
+ *
+ * ## THE PERMISSIONS-POLICY LIST IS DERIVED, and the derivation is the value
+ *
+ * Widened 2026-08-23 from the original four. The four were right and were also
+ * the shape of a copied snippet, which is a bad way for a list like this to be
+ * correct: nothing recorded what the site actually uses, so the next person to
+ * "improve" it had no way to tell a safe addition from a breaking one.
+ *
+ * **WHAT THE SITE USES: `clipboard-write`, AND IT MUST NEVER BE DENIED HERE.**
+ * Measured across `app/` and `workers/` on 2026-08-23. It is on the PUBLIC
+ * plane, not just the admin one: `app/enhance/blog.ts` calls
+ * `navigator.clipboard.writeText` three times, for the copy-code button on
+ * every fenced block, the copy-link on heading permalinks, and the copy-markdown
+ * control. Four admin components use it as well. Denying `clipboard-write`
+ * would break the copy button on every blog post, and it would break it
+ * SILENTLY, because the enhancement already swallows a refusing clipboard.
+ * That is the exact trap a longer copied snippet walks into.
+ *
+ * **WHAT THE SITE DOES NOT USE, verified by the same sweep and therefore denied:**
+ * no `getUserMedia` or `navigator.mediaDevices` (camera, microphone,
+ * display-capture), no `navigator.geolocation`, no `PaymentRequest`, no
+ * `navigator.usb`, `navigator.serial`, `navigator.bluetooth` or MIDI access.
+ * Zero matches for any of them.
+ *
+ * Kept OUT of the list deliberately, rather than forgotten: the motion sensors,
+ * `fullscreen`, `autoplay` and the rest of the registry. They are unused too,
+ * but each additional token is a value `check:headers` and `verify-live` must
+ * both carry, and denying a feature nothing can reach buys nothing. The five
+ * added are the ones where a future dependency reaching for them silently would
+ * actually matter.
  */
 const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  // ONE STRING LITERAL, never a concatenation. `check:headers` and
+  // `verify-live` both parse this object with a `"name": "value"` regex, so a
+  // `+`-joined value would parse as its FIRST fragment only: the gate would
+  // compare half a header and the wire check would then fail against the whole
+  // one. Same trap `check:invariants` already had to join literals to survive.
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), midi=(), display-capture=()",
   "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
   "Cross-Origin-Resource-Policy": "cross-origin",
 };
