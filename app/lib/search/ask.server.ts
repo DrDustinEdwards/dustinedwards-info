@@ -24,6 +24,7 @@ import {
   writeCachedDrift,
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
+import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askExpectedUrls } from "./search.server";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
@@ -301,12 +302,21 @@ async function listAllAskItems(env: Env, timings?: Timings) {
 function publishableForAsk<T extends { draft?: boolean; publishAt?: string | null }>(
   posts: readonly T[],
 ): T[] {
+  /*
+   * COMPOSED, NOT RESTATED, since 2026-08-23. This used to be its own filter:
+   * `draft === true` out, `publishAt > now` out. It agreed with
+   * `publiclyVisible()` by inspection and by a grep in `check:policy`, and by
+   * nothing else. A third hand-rolled copy of the visibility rule is the exact
+   * shape that leaked five drafts into Ask on 2026-07-29.
+   *
+   * `statusForDraft` is the mapping between the artifact's boolean and the row's
+   * string, so this asks the SAME predicate the D1 read path asks rather than
+   * asking an equivalent question a different way.
+   */
   const now = Date.now();
-  return posts.filter((p) => {
-    if (p.draft === true) return false;
-    if (p.publishAt && Date.parse(p.publishAt) > now) return false;
-    return true;
-  });
+  return posts.filter((p) =>
+    isPubliclyVisible({ status: statusForDraft(p.draft), publishAt: p.publishAt }, now),
+  );
 }
 
 /** True when this one post is allowed in the index. */
