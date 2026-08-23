@@ -3499,6 +3499,30 @@ console.log("\n  18. the cutover checklist is complete and current");
     ["the gray-cloud facts", /gray-clouded/i],
     ["the 2017 delegation date", /2017-03-20/],
     ["the legacy origin address", /50\.116\.84\.36/],
+    /*
+     * The HSTS revisit. `workers/app.ts` has said "revisit for the apex at DNS
+     * cutover" since 2026-08-06 and this checklist did not carry the step, so
+     * the instruction pointed at a document that had never heard of it.
+     *
+     * ## ALL THREE NEEDLES ARE ANCHORED, and the first draft of this was not
+     *
+     * Written as bare `/includeSubDomains/` and `/preload/i`, and the plant that
+     * was supposed to prove it worked went GREEN: renaming the token to
+     * `includeSubDomainsXX` still matched, because an unanchored needle matches
+     * any string that merely CONTAINS it. That is hard rule 10's unanchored-
+     * needle class, caught by planting rather than by reading, which is the
+     * whole argument for planting.
+     *
+     * `\b` on both sides fixes that case. The preload needle gets a different
+     * repair, because `preload` is a word this repo will plausibly use again:
+     * `<link rel="preload">` on an LCP image is an open suggestion in the
+     * 2026-08-22 audit, section 11. A bare match would then be satisfied by an
+     * unrelated sentence while the HSTS decision had been deleted. So it is
+     * required to appear WITHIN the HSTS step rather than anywhere in the file.
+     */
+    ["the HSTS cutover step", /Strict-Transport-Security/],
+    ["the HSTS includeSubDomains decision", /\bincludeSubDomains\b/],
+    ["the HSTS preload refusal, inside that step", /Strict-Transport-Security[\s\S]{0,2500}?\bpreload\b/i],
   ];
 
   for (const [name, needle] of ITEMS) {
