@@ -1495,7 +1495,7 @@ ok(
 );
 ok(
   "the route sets an explicit Cache-Control",
-  /PUBLIC_CACHE_CONTROL/.test(playgroundSource) &&
+  /SHARED_CACHE_CONTROL/.test(playgroundSource) &&
     /export function headers/.test(playgroundSource),
   "hard rule 8: with the Workers cache on, no header means CACHED rather than skipped",
 );

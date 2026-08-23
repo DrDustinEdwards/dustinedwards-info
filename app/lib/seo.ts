@@ -194,18 +194,36 @@ export function personJsonLd(origin: string) {
 }
 
 /**
- * Cache policy for public NON-HTML surfaces: the markdown twins, the feeds,
- * `llms-full.txt`, and the JSON half of a content-negotiated route.
+ * THE STRING THAT PERMITS SHARED CACHING. Ten minutes at the edge, then a day
+ * of stale-while-revalidate, so a deploy or a content sync propagates quickly
+ * without every reader paying for an origin hit.
  *
- * Ten minutes at the edge, then a day of serving stale while revalidating, so a
- * deploy or a content sync propagates quickly without every reader paying for an
- * origin hit.
+ * ## RENAMED 2026-08-23, because the old name and comment were both wrong
  *
- * **Not for HTML.** See `HTML_CACHE_CONTROL` below for why that is a different
- * question, and note the discriminator: these bodies are identical for every
- * reader, and an HTML document on this site is not.
+ * It was `PUBLIC_CACHE_CONTROL` and its comment read "Cache policy for public
+ * NON-HTML surfaces" and "**Not for HTML.**" That was false on both counts, and
+ * it had been false for some time: SEVEN HTML routes set this value. home, the
+ * blog index, the post route, colophon, phage-discovery, playground and search
+ * all return it from `headers()`.
+ *
+ * The name now says what the value DOES rather than which surfaces were
+ * imagined to use it, because a name that encodes a surface claim goes stale
+ * the first time a surface changes its mind, and nothing fails when it does.
+ *
+ * ## HTML MAY USE IT, BUT ONLY WITH `HTML_VARY`
+ *
+ * The old comment was reaching for something true: an HTML document here
+ * embeds reader state, because the theme is read from a cookie and written
+ * into `<html data-theme>` in the first byte. A bare `public` on that WOULD
+ * serve one reader's theme to another.
+ *
+ * What makes it safe is the pairing, not the value: an HTML route returns this
+ * WITH `Vary: Cookie`, and `workers/app.ts` refuses to store any response
+ * generated for a cookie-bearing request. The only variant ever written is the
+ * cookieless one. Copy this constant onto an HTML route without `HTML_VARY`
+ * and that protection is gone.
  */
-export const PUBLIC_CACHE_CONTROL =
+export const SHARED_CACHE_CONTROL =
   "public, s-maxage=600, stale-while-revalidate=86400";
 
 /**
@@ -234,17 +252,23 @@ export const HTML_VARY = "Cookie";
 export const HTML_VARY_ACCEPT = "Accept, Cookie";
 
 /**
- * Cache policy for a response that must never be shared.
+ * THE STRING THAT REFUSES STORAGE. Nothing may keep this response: not a
+ * shared cache, not an intermediary, not the browser.
  *
- * Still the value hard rule 8's default uses in `workers/app.ts`, and still what
- * a cookie-bearing request gets on the HTML routes after the downgrade there.
+ * ## RENAMED 2026-08-23, because the old name named the wrong thing
  *
- * **Every HTML document on this site embeds reader state.** The theme is read
- * from a cookie in the root loader and written into `<html data-theme>` in the
- * first byte, which is what makes the no-flash design work with no inline
- * script. That is why these routes cannot simply be `public`.
+ * It was `HTML_CACHE_CONTROL`, which read as "the cache policy for HTML". It is
+ * not: the HTML routes return the SHARED string above. What actually sets this
+ * is the NON-HTML half of the site, the markdown twin and the JSON branch of
+ * `/search`, plus two mechanisms rather than routes.
+ *
+ * Those two are why the value matters more than its callers. It is hard rule
+ * 8's default in `workers/app.ts`, applied to every response that declares no
+ * `Cache-Control` of its own, and it is what a cookie-bearing request gets on
+ * the HTML routes after the downgrade there. Both are the fail-closed
+ * direction, and both are invisible from any route file.
  */
-export const HTML_CACHE_CONTROL = "private, no-store";
+export const NO_STORE_CACHE_CONTROL = "private, no-store";
 
 export type ArticleSeo = {
   slug: string;

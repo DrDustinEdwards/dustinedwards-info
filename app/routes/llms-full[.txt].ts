@@ -1,6 +1,6 @@
 import { listBlogPostsFullText } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL } from "~/lib/seo";
+import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import type { Route } from "./+types/llms-full[.txt]";
 
 /**
@@ -59,7 +59,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       // Served for language models, kept out of the search index, same as
       // llms.txt.
       "x-robots-tag": "noindex",
-      "cache-control": PUBLIC_CACHE_CONTROL,
+      "cache-control": SHARED_CACHE_CONTROL,
     },
   });
 }

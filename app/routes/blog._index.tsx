@@ -11,7 +11,7 @@ import { serverTiming, timed, type Timings } from "~/lib/timing";
 import {
   DEFAULT_OG_IMAGE,
   HTML_VARY,
-  PUBLIC_CACHE_CONTROL,
+  SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
@@ -159,7 +159,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   // this to private, no-store whenever the request carries a cookie, so the only
   // variant ever stored is the themeless one. Grounds on HTML_VARY in seo.ts.
   const headers = new Headers({
-    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    "Cache-Control": SHARED_CACHE_CONTROL,
     Vary: HTML_VARY,
   });
   // Carried through from the loader. `headers` does not inherit them, so a

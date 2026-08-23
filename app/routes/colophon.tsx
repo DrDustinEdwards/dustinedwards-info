@@ -13,7 +13,7 @@ import {
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE,
+import { HTML_VARY, SHARED_CACHE_CONTROL, SITE,
   pageMeta,
 } from "~/lib/seo";
 
@@ -22,7 +22,7 @@ import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE,
  * same downgrade in workers/app.ts.
  */
 export function headers() {
-  return { "Cache-Control": PUBLIC_CACHE_CONTROL, Vary: HTML_VARY };
+  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
 }
 
 /**

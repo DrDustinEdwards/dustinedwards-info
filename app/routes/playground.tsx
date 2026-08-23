@@ -16,7 +16,7 @@ import {
   demoAnchor,
 } from "~/lib/playground-page.mjs";
 import { search } from "~/lib/search/search.server";
-import { HTML_VARY, PUBLIC_CACHE_CONTROL, SITE_ORIGIN,
+import { HTML_VARY, SHARED_CACHE_CONTROL, SITE_ORIGIN,
   pageMeta,
 } from "~/lib/seo";
 
@@ -108,7 +108,7 @@ export function meta() {
 }
 
 export function headers() {
-  return { "Cache-Control": PUBLIC_CACHE_CONTROL, Vary: HTML_VARY };
+  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
 }
 
 const serialize = (children: any[]) =>

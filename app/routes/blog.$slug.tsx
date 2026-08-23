@@ -10,7 +10,7 @@ import { getEnv } from "~/lib/context";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
-  PUBLIC_CACHE_CONTROL,
+  SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
   articleJsonLd,
@@ -62,7 +62,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
     // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
     // it when a cookie is present. Varies on Accept (the markdown twin) AND on
     // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
-    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    "Cache-Control": SHARED_CACHE_CONTROL,
     Vary: HTML_VARY_ACCEPT,
   });
   const link = loaderHeaders.get("Link");

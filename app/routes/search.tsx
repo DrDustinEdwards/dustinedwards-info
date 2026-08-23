@@ -14,9 +14,9 @@ import {
   type SearchHit,
 } from "~/lib/search/search.server";
 import {
-  HTML_CACHE_CONTROL,
+  NO_STORE_CACHE_CONTROL,
   HTML_VARY_ACCEPT,
-  PUBLIC_CACHE_CONTROL,
+  SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
 } from "~/lib/seo";
@@ -103,7 +103,7 @@ export const middleware: Route.MiddlewareFunction[] = [
         headers: {
           "content-type": "application/json; charset=utf-8",
           // NEVER STORED, and this is not a performance oversight. Do not
-          // "optimise" this back to PUBLIC_CACHE_CONTROL.
+          // "optimise" this back to SHARED_CACHE_CONTROL.
           //
           // `/search` sets `Vary: Accept, Cookie`. Measured 2026-08-05 with a
           // paired control on fresh URLs: with only the HTML representation in
@@ -126,7 +126,7 @@ export const middleware: Route.MiddlewareFunction[] = [
           // Documented repair is a Cache Rule with `bypass` on `Cookie`, which
           // needs a proxied zone, so it is a DNS-cutover item. Citations in
           // `media.$.ts`.
-          "cache-control": HTML_CACHE_CONTROL,
+          "cache-control": NO_STORE_CACHE_CONTROL,
           // Still true and still correct to advertise: the body genuinely
           // depends on Accept. Inert on a response that is never stored.
           vary: "Accept",
@@ -160,7 +160,7 @@ export function headers() {
     // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
     // it when a cookie is present. Varies on Accept (the JSON twin) AND on
     // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
-    "Cache-Control": PUBLIC_CACHE_CONTROL,
+    "Cache-Control": SHARED_CACHE_CONTROL,
     Vary: HTML_VARY_ACCEPT,
   });
 }

@@ -22,7 +22,7 @@ import type { Route } from "./+types/preview.$token";
  * second path segment on `/blog/:slug`. That would be wrong, and not by a
  * little.
  *
- * `blog.$slug.tsx` exports `headers()` returning `PUBLIC_CACHE_CONTROL` with
+ * `blog.$slug.tsx` exports `headers()` returning `SHARED_CACHE_CONTROL` with
  * `Vary: Accept, Cookie`. Workers Cache sits in front of this Worker and THE
  * CACHE KEY DOES NOT INCLUDE COOKIES. What makes that safe today is the
  * cookieless-only downgrade in `workers/app.ts`: a request that carries a cookie
@@ -67,7 +67,7 @@ import type { Route } from "./+types/preview.$token";
  *
  * `check:headers` parses this constant and compares it against its own
  * transcription of the ratification, which is why the values are literals here
- * rather than imported constants. Importing `PUBLIC_CACHE_CONTROL` is the exact
+ * rather than imported constants. Importing `SHARED_CACHE_CONTROL` is the exact
  * mistake a copy-paste from `blog.$slug.tsx` would make, and the gate is written
  * to name it.
  */

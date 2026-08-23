@@ -1,6 +1,6 @@
 import { listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import { PUBLIC_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
+import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.rss[.xml]";
 
 /** XML text escaping. Applied to every interpolated value without exception. */
@@ -56,7 +56,7 @@ ${items}
   return new Response(body, {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
-      "cache-control": PUBLIC_CACHE_CONTROL,
+      "cache-control": SHARED_CACHE_CONTROL,
     },
   });
 }
