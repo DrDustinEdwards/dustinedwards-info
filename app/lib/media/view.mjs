@@ -349,17 +349,54 @@ export function folderOf(key) {
  * @returns {string}
  */
 export function monthOf(uploaded) {
-  if (!uploaded) return "No upload date";
-  const at = Date.parse(uploaded);
-  if (Number.isNaN(at)) return "No upload date";
-  const d = new Date(at);
+  const d = utcDate(uploaded);
+  if (!d) return "No upload date";
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+/**
+ * THE ONE UTC PARSE, and the one place an unusable value is decided.
+ *
+ * `monthOf` and `formatAdded` each carried this three-line sequence verbatim.
+ * Two copies of a parse is two answers to "is this timestamp usable", and they
+ * are read on the SAME SCREEN: the month heading and the Added cell under it.
+ * The failure that shape produces is not a crash, it is a row filed under
+ * "No upload date" while its own Added cell prints a date, or the reverse.
+ *
+ * The callers still choose their own words for the unusable case, because they
+ * genuinely differ: a heading says the date is missing, a cell says where the
+ * file came from instead. What they no longer disagree about is WHEN it is
+ * missing.
+ *
+ * NO CLOCK IS READ here or in either caller.
+ *
+ * @param {string | null | undefined} uploaded ISO 8601
+ * @returns {Date | null} null when absent or unparseable
+ */
+function utcDate(uploaded) {
+  if (!uploaded) return null;
+  const at = Date.parse(uploaded);
+  return Number.isNaN(at) ? null : new Date(at);
+}
+
+/**
+ * Month names, and the ONLY list of them in this module.
+ *
+ * `MONTH_ABBR` sat below as a second hand-written list of the same twelve
+ * facts. It is now derived, which is legal precisely because English month
+ * abbreviations ARE the first three letters of the name for all twelve, with no
+ * exception: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec. That is checked
+ * rather than assumed, in `test/media-view-dates.test.mjs`.
+ *
+ * Two lists could disagree; one list and a slice cannot.
+ */
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+/** The Added column's short form. DERIVED, never a second list. */
+const MONTH_ABBR = MONTHS.map((m) => m.slice(0, 3));
 
 /* -------------------------------------------------------------------------
  * HOW ONE ROW READS, moved here from `app/routes/admin.media._index.tsx` on
@@ -374,11 +411,6 @@ const MONTHS = [
  * `displayName`'s docblock had drifted onto `folderPrefix` in the route, so
  * the two functions arrive here with the comments that describe them.
  * ---------------------------------------------------------------------- */
-
-const MONTH_ABBR = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
 
 /**
  * The Added column, as a date a person reads.
@@ -397,10 +429,8 @@ const MONTH_ABBR = [
  * @returns {string}
  */
 export function formatAdded(uploaded) {
-  if (!uploaded) return "in repo";
-  const at = Date.parse(uploaded);
-  if (Number.isNaN(at)) return "in repo";
-  const d = new Date(at);
+  const d = utcDate(uploaded);
+  if (!d) return "in repo";
   return `${String(d.getUTCDate()).padStart(2, "0")} ${MONTH_ABBR[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
