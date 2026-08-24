@@ -361,6 +361,145 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/* -------------------------------------------------------------------------
+ * HOW ONE ROW READS, moved here from `app/routes/admin.media._index.tsx` on
+ * 2026-08-24 with their comments. Bodies are unchanged; the TypeScript
+ * annotations became JSDoc because this module is JavaScript.
+ *
+ * They sit beside `folderOf` and `monthOf` because they are the same kind of
+ * fact: a pure function from a row to the string the page shows for it. In
+ * the route they were reachable only by that route, which is how a second
+ * copy gets written the next time a page needs one.
+ *
+ * `displayName`'s docblock had drifted onto `folderPrefix` in the route, so
+ * the two functions arrive here with the comments that describe them.
+ * ---------------------------------------------------------------------- */
+
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * The Added column, as a date a person reads.
+ *
+ * UTC, for the same reason the month HEADINGS are UTC: a file uploaded at 23:30
+ * UTC must not show one date here and a different month in the heading directly
+ * above it. The two would disagree on the same screen.
+ *
+ * NO CLOCK IS READ. This formats a string the loader supplied; it never asks
+ * what today is, which is the rule the scheduled-post fixture exists to hold.
+ *
+ * A static asset has no upload event, and NULL is the honest value, so it says
+ * where the file comes from instead of borrowing a date from somewhere.
+ *
+ * @param {string | null | undefined} uploaded ISO 8601
+ * @returns {string}
+ */
+export function formatAdded(uploaded) {
+  if (!uploaded) return "in repo";
+  const at = Date.parse(uploaded);
+  if (Number.isNaN(at)) return "in repo";
+  const d = new Date(at);
+  return `${String(d.getUTCDate()).padStart(2, "0")} ${MONTH_ABBR[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/**
+ * The Dims column, and an EM DASH IS NOT AVAILABLE, so an unmeasured row says
+ * so in a character that is allowed here.
+ *
+ * A document has no pixel dimensions and never will; a vector may have none
+ * recorded. Both are "not measured" rather than zero, and printing 0x0 would be
+ * a claim.
+ *
+ * @param {number | null | undefined} width
+ * @param {number | null | undefined} height
+ * @returns {string}
+ */
+export function formatDims(width, height) {
+  return width && height ? `${width}×${height}` : "not measured";
+}
+
+/**
+ * The directory a key sits in, with its trailing slash, for the list row.
+ *
+ * The COUNTERPART to `displayName` dropping it. A content-addressed key has no
+ * directory, and saying "Uploads" here would invent a folder that does not
+ * exist in the key; the empty string is the honest answer and the cell simply
+ * carries nothing. `folderOf` is not reused because it substitutes that word
+ * deliberately, for a HEADING, where a bucket does need a name.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+export function folderPrefix(key) {
+  const at = key.lastIndexOf("/");
+  return at > 0 ? `${key.slice(0, at)}/` : "";
+}
+
+/**
+ * THE LAST SEGMENT, because a directory is the part these names SHARE.
+ *
+ * Measured on the rendered page: a tile showed `/phage-hunters/2024-cohort-gro`
+ * with the rest cut off. The nine roster photos share every character of that
+ * prefix and differ only at the end, so nine tiles rendered as nine copies of
+ * one string while the distinguishing half was the half thrown away.
+ *
+ * Dropping the directory rather than de-emphasising it, because a de-emphasised
+ * prefix still spends horizontal space on the segment that fails to tell these
+ * rows apart, and at 109px of room there is none to spend. The full key stays a
+ * hover away in the `title` and a click away in the detail view, which is also
+ * the no-script route to the address.
+ *
+ * A content-addressed key has no directory, so this returns it unchanged. What
+ * remains is still too long for the tile, which `middleTruncate` below handles.
+ *
+ * @param {{ originalName: string | null, key: string }} object
+ * @returns {string}
+ */
+export function displayName(object) {
+  if (object.originalName) return object.originalName;
+  const last = object.key.split("/").pop();
+  return last && last.length > 0 ? last : object.key;
+}
+
+/**
+ * TRUNCATION FROM THE MIDDLE, because both ends carry meaning and the tail
+ * carries more of it.
+ *
+ * Measured in a browser, and NO line clamp fixes this. Two lines at 13px cut a
+ * 39-character roster name; three lines at 12px still cut a 58-character
+ * document name. The cut always lands on the end, which is exactly where these
+ * names differ: `...session-01` against `...session-02`, `...paper-1` against
+ * `...paper-2`.
+ *
+ * So the middle goes and both ends stay, with the tail given the larger share.
+ *
+ * THE CAP IS 13 BECAUSE THE NAME GETS 109px, and every number here was read off
+ * a rendered page rather than estimated. The tile is 153px, the body pads 8 each
+ * side, the icon takes 22 and the gap 4, which leaves 109 for the name. At the
+ * page's own font that holds 13 characters: cap 14 measured 110px and clipped 7
+ * of 24 tiles by one pixel, cap 16 measured 125, cap 20 measured 144 to 156, and
+ * cap 22 measured 158 to 169. That progression is also why the control beside it
+ * is a glyph rather than the word Copy: the word cost 41px and left the name 104,
+ * so the browser ellipsised the END again and undid this function in the same
+ * commit that added it.
+ *
+ * Character-based rather than pixel-based, for the same reason the social card's
+ * title cap is: this renders on a server that cannot measure a font, and the CSS
+ * ellipsis stays on as the backstop for a name that is short in characters and
+ * wide in pixels.
+ *
+ * @param {string} name
+ * @param {number} [max]
+ * @param {number} [tail]
+ * @returns {string}
+ */
+export function middleTruncate(name, max = 13, tail = 9) {
+  if (name.length <= max) return name;
+  return `${name.slice(0, max - tail - 1)}…${name.slice(-tail)}`;
+}
+
 /**
  * THE URL A SORT CHOICE PRODUCES, and there is exactly one of them per key.
  *
