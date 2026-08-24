@@ -14,8 +14,22 @@ import { docTitle } from "~/lib/media/view.mjs";
  * reader sees everywhere else on this page and a mime type disagreeing with a
  * filename is a distinction nobody wants explained on a tile. Falls back to the
  * mime subtype when a key genuinely carries no extension.
+ *
+ * **RENAMED FROM `extensionOf` ON 2026-08-24, and the rename IS the fix.**
+ * `app/lib/media/classify.mjs` exports a function of that name which is not
+ * this one: it takes a plain string, returns LOWERCASE, and returns the empty
+ * string for a key with no extension, because `classify()` depends on that
+ * empty string to THROW on an unknown type. This one takes a row, returns
+ * UPPERCASE for display, caps at five characters, and falls back to the mime
+ * subtype rather than returning nothing.
+ *
+ * Two functions, one name, different inputs and different outputs is the shape
+ * VERIFICATION.md calls a vacuity machine: a body copied from one to the other
+ * type-checks at neither call site and changes behaviour at both. They are not
+ * merged because the difference is real and each is right where it is. What is
+ * removed is the collision.
  */
-function extensionOf(object: { key: string; mime: string | null }) {
+function extensionLabel(object: { key: string; mime: string | null }) {
   const fromKey = /\.([a-z0-9]{1,5})$/i.exec(object.key.split("/").pop() ?? "")?.[1];
   if (fromKey) return fromKey.toUpperCase();
   return (object.mime ?? "file").split("/").pop()?.toUpperCase() ?? "FILE";
@@ -67,7 +81,7 @@ export function DocumentCard({
   const base = object.originalName ?? object.key.split("/").pop() ?? object.key;
   return (
     <span className="media-doc">
-      <span className="media-doc-ext">{extensionOf(object)}</span>
+      <span className="media-doc-ext">{extensionLabel(object)}</span>
       <span className="media-doc-main">
         <span className="media-doc-title">{docTitle(base)}</span>
         {/* Three rules, the last one short, which is what a paragraph of text

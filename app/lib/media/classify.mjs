@@ -45,7 +45,24 @@ const TYPES = new Map([
 /** Extensions the Images binding can measure and transform. */
 const RASTER = new Set(["png", "jpg", "jpeg", "webp", "avif", "gif"]);
 
-/** @param {string} pathOrKey */
+/**
+ * The extension, LOWERCASE, for classification.
+ *
+ * The empty string for a key with no extension is load-bearing rather than a
+ * convenience: `classify()` below looks the result up in `BY_EXTENSION` and
+ * THROWS on a miss, which is how a new file type under `public/` stops a build.
+ * A fallback here would turn that throw into a plausible default and remove the
+ * only thing this map exists to do.
+ *
+ * NOT the display one. `media-document-card.tsx` renders the extension on a
+ * tile and needs the opposite of all three properties: uppercase, capped at
+ * five characters, and falling back to the mime subtype rather than to "". It
+ * is called `extensionLabel` there, renamed on 2026-08-24 when it still shared
+ * this name, because two different functions under one name is a body somebody
+ * eventually copies between them.
+ *
+ * @param {string} pathOrKey
+ */
 export function extensionOf(pathOrKey) {
   const base = pathOrKey.split("/").pop() ?? "";
   const dot = base.lastIndexOf(".");

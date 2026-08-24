@@ -138,7 +138,7 @@ export function PreviewLinks({
           <span className="field-hint muted">
             Expires {expiresLabel(created.expiresAt)}.
           </span>
-          <CopyButton url={created.url} label="Copy this link" />
+          <PreviewCopyButton url={created.url} label="Copy this link" />
         </div>
       ) : null}
 
@@ -156,7 +156,7 @@ export function PreviewLinks({
                 </span>
               </div>
               <div className="preview-link-actions">
-                <CopyButton url={link.url} label="Copy" />
+                <PreviewCopyButton url={link.url} label="Copy" />
                 <button
                   type="submit"
                   form={revokeFormId(link.token)}
@@ -195,8 +195,33 @@ export function PreviewLinks({
  * plane is exempt from the progressive-enhancement law, and the same control
  * already exists on the slug field. Without script the button does nothing,
  * which is the state the whole editor is in.
+ *
+ * ## NOT `~/components/admin/media-copy-button`, AND NOT MERGED INTO IT
+ *
+ * That one is the media library's, and the difference is not styling taste. It
+ * renders `.btn-ghost.media-copy` as a GLYPH, sized against a measurement made
+ * on a 131px grid row; it reports through `toast()` from `media-keyboard`,
+ * which is the media page's live region; and it holds no React state at all,
+ * because that page carries none by ruling and uses a data attribute plus a
+ * `::after`. This is a text button in a `.row-action` list on a page that
+ * already holds state.
+ *
+ * Pointing this at the shared one would import the media page's keyboard and
+ * toast module into the editor to get a glyph styled for a grid this panel does
+ * not have. The mechanism they share is one `navigator.clipboard.writeText`
+ * call, which is not a fact that needs an owner.
+ *
+ * **RENAMED FROM `CopyButton` ON 2026-08-24.** What WAS worth removing is the
+ * name: two different components called `CopyButton`, one exported and one
+ * private, in the same directory, is the collision that gets resolved by
+ * whichever import the editor happens to have.
+ *
+ * STATED DIFFERENCE, not fixed here because it is a change to how the editor
+ * behaves rather than a deduplication: the shared button announces through a
+ * live region and resets after 1500ms, and this one changes its own label
+ * permanently and announces nothing until the control is refocused.
  */
-function CopyButton({ url, label }: { url: string; label: string }) {
+function PreviewCopyButton({ url, label }: { url: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button

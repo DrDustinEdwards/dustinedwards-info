@@ -139,32 +139,19 @@ export function meta() {
 }
 
 /**
- * The filter vocabulary, in ONE place, used to build the chips and to read the
- * URL back. A second list would be a second answer to "is this a valid filter".
+ * THE filter vocabulary. One list, and now genuinely the only one.
  *
- * `?role=` values are the role column verbatim; `unused` is the one view that is
- * not a role, which is why it is a member here rather than a separate parameter.
+ * A `FILTERS` array sat above this carrying the same four ids plus a label and
+ * a hint for each, and its own docblock claimed to be the single place the
+ * vocabulary lives. It was read by nothing: not by the chips, not by the URL
+ * parse, not by any other file. This set is what both call sites below use.
+ *
+ * The labels and hints went with it because they were rendered nowhere, and the
+ * usage caveat its comment carried is stated where usage is actually computed.
+ * Deleted 2026-08-24 under rule 17: a comment is a claim, not an owner.
+ *
+ * `?role=` values are the role column verbatim.
  */
-const FILTERS = [
-  { id: "content", label: "Content", hint: "Images and documents you can use in a post" },
-  { id: "generated", label: "Generated", hint: "Social cards and diagrams, rebuilt by command" },
-  { id: "brand", label: "Brand", hint: "Logos and marks the site code references" },
-  { id: "icon", label: "Icons", hint: "Favicons and touch icons the browser asks for" },
-  /*
-   * THE UNUSED CHIP IS GONE, v6 ruling 2, and it is worth saying why rather
-   * than just deleting a line.
-   *
-   * It read "70 of 70". The corpus has zero image references, so the chip
-   * selected everything, narrowed nothing, and sat there permanently lit. A
-   * filter that never filters is furniture, and an alarm that never stops is
-   * not a signal.
-   *
-   * What was TRUE about it survives as the usage note, because the limitation
-   * is real: usage means "the renderer emitted a citation", so an asset placed
-   * by route code reads as uncited. Dropping the chip must not drop the caveat.
-   */
-] as const;
-
 const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 
 /**
