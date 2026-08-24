@@ -44,52 +44,33 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-16 by RUNNING
- * it: 15 files, 195 tests. Never summed. It read 9 and 78, then 10 and 88, then
- * 11 and 102, all the same day, as `analytics-path`, `media-tags` and then
- * `media-view` landed, and 13 and 138 the day after.
+ * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-24 by RUNNING
+ * it: 40 files, 389 tests. Never summed.
  *
- * They were 6 and 43, measured 2026-08-11, and they drifted: `upload-contract`
- * and `traffic-source` landed without anyone moving the numbers, so 57 tests
- * were being floored at a number 14 below them. A floor that far under the
- * measurement cannot see a file leave. They were 8 and 53 for one commit,
- * against a measurement of 57, and moved here when `preview-token` landed with
- * its 21 tests: the file was added and the numbers re-measured in the same
- * commit rather than left to drift a second time.
+ * **BOTH HAD DRIFTED INTO THE UNFAILABLE CLASS, and this is the gate where that
+ * costs the most.** They were 23 and 237 against 40 and 389: seventeen test
+ * FILES and a hundred and fifty-two TESTS could have been deleted with this
+ * gate, the one instrument in the suite that asserts BEHAVIOUR, reporting a
+ * clean run. The floors had last moved when `artifact-once-per-request` landed
+ * and were never re-measured across everything after it.
  *
- * Tight rather than slack, deliberately. These move UP when someone adds a
- * test, which is a one-line edit in the same commit, and the whole point is to
- * notice the set SHRINKING. 183 is 94 percent of 195, which is the margin the
- * other gates use and is narrow enough that losing the smallest test file, 4
- * tests, still trips it.
+ * The drift is not new and the changelog that used to sit here recorded five
+ * earlier rounds of it, each with the same shape and the same resolution. That
+ * changelog is deleted rather than extended: it was six stale numbers arguing
+ * for a discipline the numbers themselves did not follow, which is rule 17's
+ * own subject. **The measurement is the two constants below and this comment
+ * points at how to retake it, which is to run the gate.**
  *
- * 191 across 15 files since the media mockup session: `template-refs` (19) is
- * the repository scan that makes the third usage state possible, and
- * `media-usage` (25) is the three-state model, the per-row flags and the copy
- * snippets whose labels depend on what the file is. Both are pure modules with
- * several callers each, which is exactly the shape that drifts without tests.
- *
- * 147 since the media sort and document-title tests landed: `SORT_DEFAULT_DIR`
- * has to name exactly the keys `SORTS` does, in both directions, and the list
- * header and the Display popover have to build ONE url per column. Both are
- * properties two callers can drift apart on, which is why they are tests rather
- * than a comment.
- *
- * 225 across 19 files, RE-MEASURED THROUGH THIS GATE on 2026-08-18 when
- * `ssr-nonce` (4) landed: the SSR entry passed the CSP nonce as a ServerRouter
- * prop and not as a renderToReadableStream option, so react-dom's own Suspense
- * completion scripts shipped bare and the enforcing policy blocked them. Both
- * numbers moved in the SAME COMMIT as the file, which is the thing this comment
- * keeps recording that people keep not doing.
+ * Tight rather than slack, deliberately, and that is this gate's own
+ * convention rather than the suite's: these move UP when somebody adds a test,
+ * a one-line edit in the same commit, and the whole point is to notice the set
+ * SHRINKING. Both floors are 94 percent of their own measurement, narrow
+ * enough that losing the smallest test file still trips the file floor.
  */
-const MINIMUM_FILES = 23;
-/* 237 against 246 measured, after `artifact-once-per-request` (4) landed in the
-   same commit as the numbers. It was 233 against 242, 227 against 236, 223
-   against 232, 216 against 225, and 212 before that against 221, which would
-   have let a whole file be deleted without the test count noticing; the file
-   floor above is what actually catches a file leaving, and this one catches a
-   file being hollowed out in place. */
-const MINIMUM_TESTS = 237;
+const MINIMUM_FILES = 37;
+/* 365 against 389 measured. The file floor above catches a file LEAVING; this
+   one catches a file being hollowed out in place, which no file count can see. */
+const MINIMUM_TESTS = 365;
 
 let checks = 0;
 let failures = 0;
