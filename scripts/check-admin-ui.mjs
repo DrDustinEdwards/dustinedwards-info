@@ -1893,9 +1893,44 @@ for (const name of Object.keys(actual)) {
   }
 }
 
-// Same rule again, one level up: a baseline of empty arrays would compare equal
-// to a render that found no forms at all.
-assert("the comparison actually read submissions", submissionsCompared > 20, `${submissionsCompared} compared`);
+/*
+ * Same rule again, one level up: a baseline of empty arrays would compare equal
+ * to a render that found no forms at all.
+ *
+ * **THE FLOOR WAS 20 AGAINST A MEASURED 351, WHICH IS NOT A FLOOR.** It is the
+ * shape hard rule 10 calls an unreachable threshold and VERIFICATION.md records
+ * as a 10,000-character ceiling on an 8,479-character file: this page's whole
+ * submission surface could have gone dark, taking 94% of the comparison with
+ * it, and the assertion that exists to notice exactly that would have passed.
+ * It was written when the harness compared one route.
+ *
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-08-24: 351.
+ * Never summed over the fixtures. The floor is 330, so the slack is 21, which
+ * absorbs a state being retired and does not absorb a route going quiet: the
+ * media library alone contributes far more than 21.
+ */
+assert(
+  "the comparison actually read submissions",
+  submissionsCompared >= 330,
+  `${submissionsCompared} compared, floor 330, measured 351`,
+);
+
+/*
+ * AND THE STATES THEMSELVES ARE FLOORED, which the baseline cannot do.
+ *
+ * "baseline covers exactly the states rendered" above looks like it protects
+ * this and does not, for one reason: `--update` REWRITES the baseline. A state
+ * dropped from STATES and then blessed by an update run leaves that assertion
+ * comparing two shortened lists and agreeing. The floor is the copy `--update`
+ * cannot reach, which is the whole difference between a fixture and a gate.
+ *
+ * Measured by running this gate, 2026-08-24: 75. Floor 70.
+ */
+assert(
+  "the harness rendered its full set of states",
+  STATES.length >= 70,
+  `${STATES.length} state(s), floor 70, measured 75`,
+);
 
 /* -------------------------------------------------------------------------
  * Section 3: the editor's structure, from the same renders.
@@ -3951,8 +3986,8 @@ assert(
 /*
  * FLOOR RAISED 412 -> 414 by the two slug-pattern assertions.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-23 by RUNNING it: 441.
- * Never summed. Slack of 27 absorbs a state being retired; dropping the whole
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 442.
+ * Never summed. Slack of 28 absorbs a state being retired; dropping the whole
  * no-script section is 20 assertions and still fails.
  *
  * BOTH COPIES OF THE OLD NUMBER WERE STALE, in the same direction. The
@@ -3973,7 +4008,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 441.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 442.`,
   );
 }
 
