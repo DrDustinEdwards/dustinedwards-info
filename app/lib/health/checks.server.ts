@@ -17,10 +17,15 @@
  *
  * ## THE SCOPE IS DELIBERATELY SMALL
  *
- *   1. `ask-index-drift`   the failure above, by name
- *   2. `media-unbacked`    the R2 acceptance in RECOVERY.md section 3, which
- *                          holds only while the MEDIA bucket is empty
- *   3. `fts-equality`      the docsize equalities the ship asserts after a sync
+ *   1. `ask-index-drift`    the failure above, by name
+ *   2. `media-index-drift`  the media index against R2 and the asset manifest,
+ *                           the same reconciliation `sync_media` proves
+ *   3. `media-unbacked`     the R2 acceptance in RECOVERY.md section 3, which
+ *                           holds only while the MEDIA bucket is empty
+ *   4. `fts-equality`       the docsize equalities the ship asserts after a sync
+ *
+ * The two drift checks are the two the workflow can REPAIR by itself, through
+ * the same operator operations ship calls. Everything else here alerts a human.
  *
  * A gate sees disk; these see the LIVE state between commits, which is a
  * different question rather than a second copy of one a gate already answers.
@@ -41,10 +46,12 @@ import {
   CHECK_TIMEOUT_MS,
   askDriftVerdict,
   ftsEqualityVerdict,
+  mediaDriftVerdict,
   mediaUnbackedVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
+import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 
 /** One check's verdict. `ok: false` is what turns into an alert. */
 export interface HealthCheck {
@@ -80,6 +87,17 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
 
   checks.push(
     await guard("ask-index-drift", async () => askDriftVerdict(await askIndexStatus(env))),
+  );
+
+  /*
+   * ADDED 2026-08-24 with the media sync at ship. Before it, the media index
+   * was the one derived store nothing watched between commits: a gate saw it
+   * only when somebody ran the gate. It is placed before `media-unbacked`
+   * because the two are easy to confuse and this is the reconciliation; that
+   * one is the recovery acceptance.
+   */
+  checks.push(
+    await guard("media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
   );
 
   checks.push(

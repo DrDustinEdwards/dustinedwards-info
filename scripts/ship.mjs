@@ -582,14 +582,30 @@ let askMiss = "";
  */
 let askLateConverge = false;
 
-{
-  const url = `${ORIGIN}/api/operator`;
+/**
+ * ONE AUTHENTICATED OPERATOR CALL, and one statement of what a usable answer is.
+ *
+ * Shared by the Ask step and the media step since 2026-08-24. Both need the
+ * same four refusals in the same order, and a second copy of them would be a
+ * second answer to "did this operation prove anything", which is the question
+ * ship exits nonzero on. Rule 17.
+ *
+ * Returns the report and a MISS STRING rather than throwing, because every one
+ * of these failures happens AFTER the deploy has landed: the caller has to
+ * record the miss and let the deploy stand, never abort.
+ *
+ * @param {string} tool
+ * @returns {Promise<{ report: any, miss: string }>}
+ */
+async function operatorSync(tool) {
   /** @type {Response | null} */
   let response = null;
   /** @type {any} */
   let body = null;
+  let miss = "";
+
   try {
-    response = await fetch(url, {
+    response = await fetch(`${ORIGIN}/api/operator`, {
       method: "POST",
       headers: {
         // The token goes in a header on a request this process builds. It is
@@ -597,23 +613,30 @@ let askLateConverge = false;
         authorization: `Bearer ${OPERATOR_TOKEN}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ tool: "sync_ask", args: {} }),
+      body: JSON.stringify({ tool, args: {} }),
     });
     body = await response.json().catch(() => null);
   } catch (error) {
-    askMiss = `the sync_ask call did not complete: ${error instanceof Error ? error.message : String(error)}`;
+    miss = `the ${tool} call did not complete: ${error instanceof Error ? error.message : String(error)}`;
   }
 
-  if (!askMiss && response && !response.ok) {
+  if (!miss && response && !response.ok) {
     // The status is the story. The token is NOT echoed, and neither is the
     // request; a 401 here means the secret and the file disagree.
-    askMiss = `the operator API answered ${response.status} to sync_ask`;
+    miss = `the operator API answered ${response.status} to ${tool}`;
   }
 
   const report = body && typeof body === "object" ? (body.data ?? body) : null;
-  if (!askMiss && (!report || typeof report.converged !== "boolean")) {
-    askMiss = "the operator API answered without a converged verdict, so nothing was proven";
+  if (!miss && (!report || typeof report.converged !== "boolean")) {
+    miss = `the operator API answered ${tool} without a converged verdict, so nothing was proven`;
   }
+
+  return { report, miss };
+}
+
+{
+  const { report, miss } = await operatorSync("sync_ask");
+  askMiss = miss;
 
   if (!askMiss && report.converged !== true) {
     /*
@@ -717,7 +740,82 @@ let askLateConverge = false;
   }
 }
 
-/* -------------------------------------------------------------- 8. record */
+/* --------------------------------------------- 8. the media index, likewise */
+
+/*
+ * THE MEDIA INDEX IS THE THIRD DERIVED STORE, AND IT WAS THE ONE LEFT MANUAL.
+ *
+ * D1 and both FTS indexes are rebuilt by `sync:content`. The Ask index is
+ * brought into step above. The media index was rebuilt by exactly one thing: a
+ * person clicking a button in `/admin/media`. So every ship that added or
+ * removed a static asset left the index describing the previous build, and the
+ * standing repair was a click that waited weeks. `/fonts/OFL.txt` is the
+ * measured instance: one public file with no row, red in `check:media --remote`
+ * since the fonts landed.
+ *
+ * Ruled 2026-08-24 under the AUTOMATE directive. The button STAYS, as manual
+ * repair; what changes is that the routine case no longer needs it.
+ *
+ * ## SAME PLACE IN THE ORDER, AND FOR THE SAME REASON
+ *
+ * After the deploy, because the rebuild runs inside the deployed Worker through
+ * its own bindings: it reads the R2 buckets and the ASSETS binding of the build
+ * that is actually serving. Running it before would index the previous build's
+ * static assets. So, exactly like the Ask step, this cannot run early enough to
+ * roll anything back, and a deployed site with a stale media index is better
+ * than no deploy and the same stale index.
+ *
+ * ## NO POLL HERE, DELIBERATELY, AND IT IS NOT AN OVERSIGHT
+ *
+ * The Ask step waits out a two minute window because AI Search is a separate
+ * eventually consistent service. This store is D1: `rebuildMediaIndex` awaits
+ * every upsert and delete, and `mediaIndexStatus` reads back inside the SAME
+ * Worker request, which reads its own writes. There is no interval in which a
+ * correct rebuild reports drift, so a window would only delay a real failure.
+ * The reason is written down because the absence of a poll beside a step that
+ * has one looks like an omission, and the next reader deserves to know it was a
+ * decision. The evidence is the first ship's own output.
+ */
+
+announce("Bring the media index into step");
+
+/** Set when the media index did not reconcile. Read at the very end. */
+let mediaMiss = "";
+
+{
+  const { report, miss } = await operatorSync("sync_media");
+  mediaMiss = miss;
+
+  if (!mediaMiss && report.converged !== true) {
+    const why = [
+      report.missing?.length ? `${report.missing.length} missing` : "",
+      report.extra?.length ? `${report.extra.length} extra` : "",
+      report.failures?.length ? `${report.failures.length} failed to derive` : "",
+    ]
+      .filter(Boolean)
+      .join(", ");
+    mediaMiss =
+      `the media index did not reconcile: ${report.expected} expected, ` +
+      `${report.present} present${why ? ` (${why})` : ""}, after indexing ` +
+      `${report.indexed} and removing ${report.removed}`;
+  }
+
+  if (mediaMiss) {
+    console.log(`  MISSED: ${mediaMiss}`);
+    // The KEYS, not just the counts. A miss naming "1 missing" sends the reader
+    // to run a reconciliation by hand; a miss naming the path is the answer.
+    for (const key of (report?.missing ?? []).slice(0, 10)) console.log(`    missing: ${key}`);
+    for (const key of (report?.extra ?? []).slice(0, 10)) console.log(`    extra:   ${key}`);
+    for (const failure of (report?.failures ?? []).slice(0, 10)) console.log(`    failed:  ${failure}`);
+  } else {
+    console.log(
+      `  converged: ${report.expected} expected, ${report.present} present, ` +
+        `${report.indexed} indexed, ${report.removed} removed.`,
+    );
+  }
+}
+
+/* -------------------------------------------------------------- 9. record */
 
 announce("Shipped");
 console.log(`  commit       ${sha}`);
@@ -726,25 +824,37 @@ console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
 /*
- * THE EXIT CODE IS LAST, AND IT IS NONZERO ON A MISS.
+ * THE EXIT CODE IS LAST, AND IT IS NONZERO ON EITHER MISS.
  *
  * The record above has already printed, because the deploy landed and saying so
- * is true. What did not happen is the answer index catching up, and a pipeline
+ * is true. What did not happen is a derived index catching up, and a pipeline
  * that reported success on that would be the same green-light-meaning-nothing
- * this step was added to remove.
+ * these steps were added to remove.
  *
- * Nothing is rolled back. The remedy is to run it again.
+ * BOTH ARE REPORTED, never just the first. Two indexes fail independently and
+ * for unrelated reasons, and a run that printed only the Ask miss would send
+ * somebody to re-run ship, watch Ask converge, and never learn that the media
+ * index was also short. That is the N-1-of-N shape FAILURES.md opens with.
+ *
+ * Nothing is rolled back. Both operations are idempotent; the remedy is to run
+ * it again.
  */
-if (askMiss) {
+if (askMiss || mediaMiss) {
+  const behind = [askMiss ? "THE ASK INDEX" : "", mediaMiss ? "THE MEDIA INDEX" : ""]
+    .filter(Boolean)
+    .join(" AND ");
   console.error(`\n${"!".repeat(64)}`);
-  console.error(`  DEPLOYED, BUT THE ASK INDEX IS BEHIND.`);
-  console.error(`  ${askMiss}`);
+  console.error(`  DEPLOYED, BUT ${behind} ${askMiss && mediaMiss ? "ARE" : "IS"} BEHIND.`);
+  if (askMiss) console.error(`  ask:   ${askMiss}`);
+  if (mediaMiss) console.error(`  media: ${mediaMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. What is stale is\n` +
-      `  the answer index, so Ask can miss or mis-cite recent writing until this\n` +
-      `  succeeds. The operation is idempotent: re-run \`npm run ship\`, or call\n` +
-      `  sync_ask on the operator API directly.\n\n` +
-      `  The scheduled health check reads the same drift and will report it too.`,
+      `  a derived index: Ask can miss or mis-cite recent writing, and the media\n` +
+      `  library can describe assets that are gone or omit ones that are there,\n` +
+      `  until this succeeds. Both operations are idempotent: re-run\n` +
+      `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n\n` +
+      `  The scheduled health check reads the same drift and will report it too,\n` +
+      `  and now attempts the same repair itself before it alerts.`,
   );
   console.error(`${"!".repeat(64)}\n`);
   process.exit(1);
