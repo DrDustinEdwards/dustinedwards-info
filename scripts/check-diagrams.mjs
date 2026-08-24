@@ -315,6 +315,32 @@ if (!existsSync(ARTIFACT)) {
   for (const name of onDisk) {
     assert(`${name} is referenced by a post (run build:diagrams to prune)`, live.has(name));
   }
+
+  /*
+   * SCOPE FLOORS, added by the 2026-08-24 floor sweep. Both counts were
+   * PRINTED and neither was asserted, which is the shape this repo keeps
+   * paying for: a number on the console that no run can fail on.
+   *
+   * The key-integrity, token-audit and on-disk loops above all iterate one of
+   * these two collections. An `artifact.posts` that parsed to nothing, or a
+   * `post.diagrams` that stopped being populated, empties `referenced` and
+   * every one of those loops reports a clean sweep over zero items. The
+   * executed-count floor at the end of the file cannot see it: the per-diagram
+   * assertions are a small share of the total, so the corpus can collapse
+   * entirely while the count stays over its floor.
+   *
+   * MEASURED THROUGH THIS GATE 2026-08-24 by running it: 3 referenced, 6 on
+   * disk. **These are the one place in the sweep where the floor is not set
+   * just under the measurement, and the reason is stated rather than left to
+   * look like slack: these counts are CONTENT, not scope.** A post may
+   * legitimately drop a diagram, and a floor that fails on that is a gate
+   * telling an author what to write. What these must catch is the walk
+   * collapsing, so they sit low enough to permit an editorial change and high
+   * enough that zero and near-zero fail.
+   */
+  assert(`the artifact yielded diagrams to check (${referenced.size} referenced)`, referenced.size >= 2);
+  assert(`the diagram directory yielded assets to check (${onDisk.length} on disk)`, onDisk.length >= 4);
+
   console.log(
     `check:diagrams ${referenced.size} diagrams referenced, ${onDisk.length} assets on disk`,
   );

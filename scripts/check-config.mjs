@@ -120,6 +120,27 @@ assertThat(
   "surfaceOf() found none, so every comparison below would pass vacuously.",
 );
 
+/*
+ * AND A FLOOR, not just a non-empty check, added by the 2026-08-24 floor sweep.
+ *
+ * `> 0` is the weakest form of this assertion and it was the only form here.
+ * The failure it cannot see is the one that actually happens: `surfaceOf()`
+ * stops recognising a binding TYPE, so nine of ten bindings parse and the tenth
+ * silently drops out of both sides of the comparison. Two configs that both
+ * omit the same binding compare equal, which is exactly the drift this gate
+ * exists to catch, and `> 0` reports it as a clean run.
+ *
+ * MEASURED THROUGH THIS GATE 2026-08-24 by running it: 10. Floored one under,
+ * because the binding set is small and hand-maintained: it moves when a binding
+ * is added, in the same commit that adds it to both files.
+ */
+assertThat(
+  realSurface.size >= 9,
+  "the real config's binding surface parsed to its full size",
+  `surfaceOf() found ${realSurface.size}, floor 9, measured 10 on 2026-08-24. A binding ` +
+    `type it stopped recognising drops out of BOTH sides and compares equal.`,
+);
+
 for (const [key, settings] of realSurface) {
   assertThat(
     exampleSurface.has(key),

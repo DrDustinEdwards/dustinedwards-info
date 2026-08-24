@@ -227,6 +227,30 @@ async function workerHashes() {
 async function main() {
   console.log("check:charts");
 
+  /*
+   * SCOPE FLOOR, added by the 2026-08-24 floor sweep.
+   *
+   * Every block below iterates FIXTURES: the in-process determinism loop, the
+   * cross-process one and the node-versus-workerd parity comparison. An empty
+   * or shortened list makes all three agree about nothing, and the two loops
+   * that compare hashes are the ones that would say "identical" loudest.
+   *
+   * The executed-count floor at the end catches a large truncation, because
+   * assertions scale with fixtures, but it is a floor on OUTPUT and this is a
+   * floor on INPUT: they fail on different bugs, and a fixture list rebuilt to
+   * be shorter while some other block grew would slip past the first.
+   *
+   * EXACT rather than under, uniquely here, and the reason is that this list is
+   * not measured, it is CONSTRUCTED: four mark types crossed with the single
+   * and multi-series shapes. It moves only when a mark type is added, which is
+   * a deliberate edit to the array directly above.
+   */
+  assertThat(
+    FIXTURES.length >= 8,
+    `only ${FIXTURES.length} fixture(s), expected the four mark types in both shapes. ` +
+      `Every determinism and parity comparison below would agree by comparing nothing.`,
+  );
+
   // 1. Determinism, in-process.
   /** @type {string[]} */
   const baseline = [];
