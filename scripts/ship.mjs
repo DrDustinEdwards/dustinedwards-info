@@ -57,6 +57,11 @@ import { fileURLToPath } from "node:url";
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { retryRead } from "./lib/retry.mjs";
+import {
+  ASK_POLL_INTERVAL_MS,
+  ASK_POLL_WINDOW_MS,
+  awaitAskConvergence,
+} from "./lib/ask-converge.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -551,12 +556,31 @@ if (!(docs === identity && identity === prose)) {
  *
  * The operation is idempotent, so a failed run is safe to repeat: rerunning
  * ship, or calling sync_ask directly, writes the same keys again.
+ *
+ * ## A MISS IS NOT DECLARED ON THE FIRST READING, since 2026-08-24
+ *
+ * `syncAsk` reads the counts back immediately after its writes and AI Search is
+ * eventually consistent, so the first reading can be early rather than wrong.
+ * A non-converged write-back now opens a bounded read-only window against
+ * `/api/health` before anything is called a miss. The window, the bound and the
+ * reason it re-reads health rather than re-running `sync_ask` are all at the
+ * poll itself; what matters here is that NOTHING BELOW CHANGED. A miss that
+ * survives the window still exits nonzero, still after the deploy stands, still
+ * with the record printed.
  */
 
 announce("Bring the Ask index into step");
 
 /** Set when the Ask index did not converge. Read at the very end. */
 let askMiss = "";
+
+/**
+ * Set when convergence arrived during the poll window rather than on the
+ * write-back read. It exists so the summary line below cannot report the
+ * write-back's counts as if they were the converged ones: those numbers are
+ * precisely the stale pair the window was opened to outlive.
+ */
+let askLateConverge = false;
 
 {
   const url = `${ORIGIN}/api/operator`;
@@ -592,14 +616,98 @@ let askMiss = "";
   }
 
   if (!askMiss && report.converged !== true) {
-    askMiss =
-      `the Ask index did not converge: ${report.expected} expected, ` +
-      `${report.present} present, drift ${report.drift}, after uploading ` +
-      `${report.uploaded} and removing ${report.removed}`;
+    /*
+     * THE CONVERGENCE WINDOW, ruled 2026-08-24 after a false alarm.
+     *
+     * `syncAsk` reads `expected` and `present` back IMMEDIATELY after its two
+     * writes, and AI Search is eventually consistent, so a drift reported there
+     * can be a moment behind rather than a fault. That is not a hypothesis:
+     * measured 2026-08-24, ship read drift 1 at 02:20:18Z, NO REMEDY WAS
+     * APPLIED, and the scheduled health check read ok 75 seconds later and
+     * stayed ok. The index converges on its own inside about a minute, which is
+     * upload visibility lag.
+     *
+     * So the miss is not declared on the first reading. It is declared after
+     * the index has been given a window to catch up.
+     *
+     * ## THE RE-READ IS READ-ONLY, AND THAT IS THE WHOLE DESIGN
+     *
+     * Polling by calling `sync_ask` again would re-upload the entire corpus,
+     * which REPAIRS the thing being measured. A run that then converged could
+     * not be distinguished from one that had self-healed, and that exact
+     * ambiguity is what the 2026-08-24 watch item recorded as unresolvable.
+     *
+     * `/api/health` runs `ask-index-drift`, which derives its verdict from the
+     * SAME `askIndexStatus()` that `syncAsk` derives `converged` from, and it
+     * writes nothing. `publicHealthBody` opts `expected` and `present` onto the
+     * wire by name for failing checks, so the counts are readable without a
+     * token. Convergence inside this window is therefore evidence of self-heal,
+     * not of a remedy this loop applied.
+     *
+     * ## THE BOUND
+     *
+     * At most ASK_POLL_ATTEMPTS iterations, AND no iteration begins after the
+     * deadline, so the loop cannot outlast the window by more than the single
+     * health request already in flight when the deadline passes. Health caps
+     * each of its own checks at three seconds. Two independent bounds rather
+     * than one, because a `while` on the clock alone would spin without limit
+     * if the clock were ever wrong, and a count alone would not honour the
+     * stated two minutes if a request hung.
+     */
+    /** One read-only reading of the deployed ask-index-drift check. */
+    const driftReading = async () => {
+      const res = await fetch(`${ORIGIN}/api/health`, {
+        headers: { "user-agent": "ship", "cache-control": "no-cache" },
+      });
+      // Parsed regardless of status: health answers 503 when ANY check fails,
+      // including ones this loop is not asking about, and the body is still
+      // the answer.
+      const health = await res.json().catch(() => null);
+      return health?.checks?.find((/** @type {any} */ c) => c?.name === "ask-index-drift") ?? null;
+    };
+
+    const firstReading =
+      `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
+    console.log(
+      `  not converged on the write-back (${firstReading}). Re-reading /api/health for up ` +
+        `to ${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
+    );
+
+    const { converged, polls, latest } = await awaitAskConvergence({
+      reading: driftReading,
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+      onPoll: ({ poll, reading }) => {
+        if (!reading) console.log(`  poll ${poll}: health unreadable`);
+        else if (!reading.ok)
+          console.log(`  poll ${poll}: still behind (${reading.expected} expected, ${reading.present} present)`);
+      },
+    });
+
+    if (converged) {
+      askLateConverge = true;
+      console.log(
+        `  CONVERGED after ${polls} poll(s), roughly ${polls * (ASK_POLL_INTERVAL_MS / 1000)}s. ` +
+          `The write-back read was early, not wrong: nothing was re-uploaded during the ` +
+          `window, so the index caught up on its own.`,
+      );
+    } else {
+      const last = latest
+        ? `${latest.expected} expected, ${latest.present} present`
+        : `health was unreadable on every poll, last write-back reading: ${firstReading}`;
+      askMiss =
+        `the Ask index did not converge within ${ASK_POLL_WINDOW_MS / 1000}s (${last}), ` +
+        `after uploading ${report.uploaded} and removing ${report.removed}`;
+    }
   }
 
   if (askMiss) {
     console.log(`  MISSED: ${askMiss}`);
+  } else if (askLateConverge) {
+    console.log(
+      `  converged inside the window: ${report.uploaded} uploaded, ${report.removed} removed, ` +
+        `${report.cacheDropped} cached answer(s) dropped. The counts are deliberately not ` +
+        `restated here; the write-back pair was stale and health reported the current one.`,
+    );
   } else {
     console.log(
       `  converged: ${report.expected} expected, ${report.present} present, ` +
