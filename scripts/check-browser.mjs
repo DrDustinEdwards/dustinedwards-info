@@ -457,11 +457,33 @@ try {
       }
     }, 0),
   );
+  /*
+   * RE-MEASURED 2026-08-24, AND THE FLOOR WAS THE THING THAT WAS WRONG.
+   *
+   * This read `> 500` and went RED when `app/admin.css` was split out of
+   * `app/app.css`. Nothing about the page had broken: the public bundle simply
+   * stopped carrying the admin plane's seven stylesheets, which is what the
+   * split was FOR. Measured on the preview build: 351 rules from `root-*.css`,
+   * and the page is genuinely styled (body background resolves to the token
+   * colour, not to white).
+   *
+   * So this was a floor set against a stylesheet that no longer exists, and it
+   * had been failing ever since. It is the unfailable-floor class inverted: a
+   * threshold ABOVE its subject cannot pass rather than cannot fail, and it is
+   * just as useless, because a red that is always red stops being read.
+   *
+   * Floored at 320, about eight percent under the measurement.
+   *
+   * **AND THIS ASSERTION IS ABOUT THE PUBLIC PLANE ONLY.** It runs on `/blog`.
+   * It never said anything about the admin pages, which load a second sheet;
+   * they now have their own scope check where they are measured.
+   */
   ok(
     "the app stylesheet is actually applied",
-    css > 500,
-    `${css} CSS rule(s) reachable. Under ~500 the page is effectively unstyled and ` +
-      `every layout assertion below is measuring browser defaults.`,
+    css >= 320,
+    `${css} CSS rule(s) reachable on the public plane, floor 320, measured 351 on ` +
+      `2026-08-24. Below this the page is effectively unstyled and every layout ` +
+      `assertion below is measuring browser defaults.`,
   );
 
   /* ------------------------------------- 1. the search field and the column */
@@ -902,6 +924,40 @@ try {
      * CONTENT, not the bar, and the bar's own repair did what it claimed: its
      * min-content is no longer the binding constraint.
      *
+     * ## RE-READ 2026-08-24 ON A PAGE PROVEN STYLED, AND THE PARAGRAPH ABOVE
+     * ## IS A PREDICTION THAT DID NOT HOLD
+     *
+     * The two assertions above this loop now prove `admin.css` is applied where
+     * these numbers are taken, which is what the re-read was for. All EIGHT
+     * failures survive, so they were never the artefact of an unstyled page
+     * that the public stylesheet assertion's unrelated red made them look like.
+     *
+     * What did NOT survive is the prediction. Measured against the deployed
+     * build, the document floor is **582**, uniform across all four widths:
+     *
+     *   553 -> 29px over    480 -> 102px over
+     *   400 -> 182px over   320 -> 262px over
+     *
+     * Three specifics differ from what was written above, and each matters to
+     * whoever fixes this:
+     *
+     *   1. **553 did not go green.** It is 29px over, not 0.
+     *   2. **The floor is 582, higher than both 576 and the predicted 542.**
+     *   3. **The binding chain is the TOPBAR again**, not the cockpit content:
+     *      `header.admin-topbar@582` over `div.admin-topbar-user@558`,
+     *      `form@558`, `button.admin-signout@558`. No `.stat-card` or
+     *      `.card-grid` appears in the widest set at any width; at 400 and 320
+     *      the third widest is `span.muted@446`.
+     *
+     * The earlier reading was taken by swapping a stylesheet into a response
+     * rather than by observing the built page, which is the simulated-element
+     * class: a probe that is not the element measures the probe. The numbers
+     * here come from the deployed build through the same harness that reports
+     * them.
+     *
+     * NOTHING ABOUT THE LAYOUT IS CHANGED HERE. The fix is Dustin's design
+     * call, and it now rests on readings whose scope is asserted.
+     *
      * This assertion stays exactly as it is. Narrowing it to pass on the half
      * that is fixed would be tuning the assertion to the defect.
      *
@@ -918,6 +974,63 @@ try {
      *
      * The offending element is NAMED, exactly as case 4 names it.
      */
+    /*
+     * THE ADMIN PLANE'S OWN STYLESHEET CHECK, added 2026-08-24.
+     *
+     * The public check near the top of this file runs on `/blog` and says
+     * nothing about these pages: since the CSS split, `/admin/*` loads a SECOND
+     * sheet, `app/admin.css`, linked only by `routes/admin.tsx`. Every number
+     * the overflow loop below reads is a layout measurement, and a layout
+     * measurement on a page missing its stylesheet is a measurement of the
+     * browser's defaults. The scope check belongs where the measurement is
+     * taken, and it was not here.
+     *
+     * That gap had a cost. With the public assertion red for an unrelated
+     * reason, the eight overflow failures were recorded as INCONCLUSIVE, and
+     * the design decision resting on them was parked waiting for a styled
+     * re-read. MEASURED 2026-08-24: the admin pages were styled the whole time,
+     * 965 rules against the public plane's 351, with `.admin-sidebar`
+     * resolving to `display: flex` at 240px. The readings were sound and the
+     * instrument that would have said so did not exist.
+     *
+     * ASSERTED THREE WAYS, because a rule count alone is the weakest of them.
+     * A count proves bytes arrived; the computed style proves the cascade
+     * applied them to the element the overflow loop is about to measure.
+     */
+    await admin.setViewport({ width: 1280, height: 900 });
+    await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
+    const adminCss = await admin.evaluate(() => {
+      const rules = [...document.styleSheets].reduce((n, s) => {
+        try {
+          return n + s.cssRules.length;
+        } catch {
+          return n;
+        }
+      }, 0);
+      const sidebar = document.querySelector(".admin-sidebar");
+      const style = sidebar ? getComputedStyle(sidebar) : null;
+      return {
+        rules,
+        sheets: [...document.styleSheets].length,
+        display: style?.display ?? "",
+        width: style ? Math.round(parseFloat(style.width)) : 0,
+      };
+    });
+    ok(
+      "the ADMIN stylesheet is actually applied where the layout is measured",
+      adminCss.rules >= 880,
+      `${adminCss.rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 880, ` +
+        `measured 965 on 2026-08-24 (351 public + 614 admin). Below this admin.css did ` +
+        `not load and every overflow number below is about browser defaults.`,
+    );
+    ok(
+      "the admin shell is laid out by admin.css, not by the browser default",
+      adminCss.display === "flex" && adminCss.width > 100,
+      `.admin-sidebar computed display=${adminCss.display || "(none)"} width=${adminCss.width}px. ` +
+        `An unstyled sidebar is a block at full width, which would make the overflow ` +
+        `readings below meaningless while looking like a real measurement.`,
+    );
+
     const OVERFLOW_WIDTHS = [1280, 553, 480, 400, 320];
     for (const width of OVERFLOW_WIDTHS) {
       await admin.setViewport({ width, height: 800 });
@@ -1048,6 +1161,12 @@ try {
  * The cross-check that makes 43 credible rather than merely observed: the
  * recorded pre-overflow measurement was 31, twelve assertions were added, and
  * the run reports 43.
+ *
+ * RE-MEASURED 2026-08-24 by running it: **45** with the admin cases, after the
+ * two admin-stylesheet assertions landed beside the overflow loop. The same
+ * cross-check holds, 43 plus two. The floor stays at 41, which is about nine
+ * percent under and inside the margin this repo uses; it is not raised on every
+ * pair of assertions, only when the gap stops meaning anything.
  */
 const MINIMUM_CHECKS = adminCasesRan ? 41 : 13;
 console.log(
