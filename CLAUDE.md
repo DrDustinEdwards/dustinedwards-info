@@ -25,57 +25,81 @@ Do this before touching code. It is not a formality: the recurring failure in th
 
 ## Hard rules
 
-**THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Fourteen source files cite them; `check:invariants` section 15 now binds every cited number to a rule that exists here.
+**THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Source files across `app/`, `scripts/`, `workers/` and `test/` cite them, as do the root documents; `check:invariants` section 15 binds every cited number to a rule that exists here. **The count that used to sit in this sentence had gone badly stale, and the gate is the only place it belongs, so this is a pointer now rather than a digit. Rule 17.**
 
 **Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document.
 
-**Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22, and the result was that the recovery is COMPLETE.** All fifteen rules carry their subject, rule 10 carries all thirteen disciplines, and rule 12 carries all four. Six clauses differ from 1684 and every one is a deliberate correction of something 1684 asserts that is no longer true: boundary-note presence is no longer gated (7), section 5 was deleted (11), the lint form is gone (13), `check:hooks` is gone (15), the seven-repos claim was falsified by measurement (15), and the numbering freeze was lifted. Two clauses gained material 1684 never had: the plant-revert law (12) and the ungateability note (5).
+**Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22, and the result was that the recovery is COMPLETE.** All fifteen rules THEN DEFINED carry their subject, rule 10 carries all thirteen disciplines, and rule 12 carries all four. Six clauses differ from 1684 and every one is a deliberate correction of something 1684 asserts that is no longer true: boundary-note presence is no longer gated (7), section 5 was deleted (11), the lint form is gone (13), `check:hooks` is gone (15), the seven-repos claim was falsified by measurement (15), and the numbering freeze was lifted. Two clauses gained material 1684 never had: the plant-revert law (12) and the ungateability note (5).
 
 **The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half both earlier recoveries skipped: rule 6 claimed one statement of `postPath` where there were three (the code moved, `f45316b`), and rule 8 carried an assertion count that had drifted (the count is gone). Check a rule against the CODE, not against 1684.
 
-Each rule is ONE-LINER (a gate enforces it, and the gate is the detail) or PROSE (no gate can see it, so read it). What could be gated and is not: `dustinedwards/gate-backlog.md`.
+**EVERY RULE CARRIES A TAG: `GATED by <instrument>` or `UNGATED`.** It replaces the older ONE-LINER and PROSE labels, which encoded the same axis without naming the instrument, and keeping both would have been two owners for one fact.
+
+The tag answers one question and only one: **can `npm run check` fail on this rule.** Read it before you trust a rule to be enforced. A tag is derived by READING THE GATE, never from the rule's own claim about itself, because a rule that says it is checked is exactly the shape that goes stale first. Where a rule has two halves with different answers it carries two tags, and the halves are named.
+
+UNGATED does not mean optional. It means the only thing standing between the rule and a violation is somebody reading it, which is why the ungated ones carry the longest prose. What could be gated and is not: `dustinedwards/gate-backlog.md`.
 
 **Numbering is APPEND-ONLY but no longer frozen.** Nothing pins a number to a line any more; see the note after rule 15.
 
-### 1. ONE-LINER. Every public read goes through `publiclyVisible()`.
+### 1. GATED by check:invariants. Every public read goes through `publiclyVisible()`.
 
 `check:invariants` sections 2, 6 (alias-resolving, two named exemptions) and 8 (every `search_docs` reader composes `visibilityClause()`).
 
-### 2. ONE-LINER. `wrangler d1 export` is BROKEN here.
+**AND EVERY PUBLIC OBJECT DERIVED FROM A POST, not only the row reads.** A public URL that can name a draft is a visibility bug whether it is HTML, a feed, a search record, an Ask answer or an OG card. The draft-card leak bypassed this rule precisely because an R2 key is not a row read: the object was live, immutable and reachable while the post it belonged to was unpublished. The sites are named because a rule that says "everywhere" is checked nowhere: `blog.$slug.tsx`, `blog.rss[.xml].ts`, `blog.feed[.json].ts`, `sitemap.ts`, `search.server.ts`, `ask.server.ts` and `build-og.mjs`, which uploads and prunes against the keys the live rows imply.
 
-Per-table backups via `check:backup`. FTS `DELETE FROM` is gated by section 7; the repair is `('rebuild')`.
+**CONTENT-ADDRESSED `/media/*` IS OUT, deliberately and by measurement.** A key from `contentKey()` in `app/lib/media/classify.mjs` is a digest of the bytes, so it cannot name a draft, cannot be guessed from a slug and reveals nothing by existing. Composing visibility in `app/routes/media.$.ts` would add a D1 read to the hot image path to protect a fact the key does not carry.
 
-### 3. ONE-LINER. Secrets are read only inside the server boundary.
+### 2. GATED by check:backup and check:invariants, UNGATED for the export fact itself. `wrangler d1 export` is BROKEN here.
+
+Per-table backups via `check:backup`. FTS `DELETE FROM` is gated by `check:invariants` section 7; the repair is `('rebuild')`. That the export command is broken is an ops fact about a vendor binary, which no gate can assert; what IS gated is that the repo does not depend on it.
+
+### 3. GATED by check:secrets. Secrets are read only inside the server boundary.
 
 `check:secrets`, both directions, per-root floors.
 
-### 4. PROSE. Keep the Worker lean; inline SVG over an icon library.
+### 4. UNGATED. Keep the PUBLIC PAYLOAD lean, which is more than the Worker.
 
-CodeMirror is lazy-split. Client auth is imported by `/login` alone.
+The subject is everything a reader downloads to see a page: the Worker bundle, the CSS, the route JavaScript and whatever the page speculatively fetches. Inline SVG over an icon library. CodeMirror is lazy-split. Client auth is imported by `/login` alone.
 
-### 5. PROSE. Popover elevation and pinned bars take `--border-strong`, never `--border`.
+**WIDENED 2026-08-24, because as written it succeeded at the small thing and ignored the large one.** "Keep the Worker lean" was satisfied while `app.css` imported the admin stylesheets and every visitor to the home page downloaded the media library and the post editor. The Worker was lean and the page was not. A rule scoped to one artifact grades that artifact.
+
+**Prefetch is a JS-only extra and never a progressive-enhancement requirement.** Hover speculation and `prefetch="intent"` may make a click feel instant; nothing may depend on them, and a scriptless reader must lose only the speed. Weigh what a speculation costs the reader against what it saves them, and say which when you add one.
+
+### 5. UNGATED. Popover elevation and pinned bars take `--border-strong`, never `--border`.
 
 Not gateable: it would need a hand-maintained selector list, which is the mirror anti-pattern.
 
-### 6. ONE-LINER. URL protocols are allowlisted, SCHEMA AND RENDER.
+### 6. GATED by check:urls. URL protocols are allowlisted, SCHEMA AND RENDER.
 
 `check:urls`. Operator READ paths validate against the exported `SLUG_PATTERN`, and `content/posts/<slug>.md` is stated ONCE, by the exported `postPath()`.
 
-### 7. PROSE. A gate that feeds a module its own stored output cannot see the TRANSPORT.
+### 7. UNGATED. A gate that feeds a module its own stored output cannot see the TRANSPORT.
 
 Live claims verify on the live path. **A boundary note is a CLAIM that ages**: two have gone false since being written, one of them falsified in the same commit that wrote it.
 
 **Boundary-note presence is NO LONGER GATED, since 2026-08-21.** `check:assertions` asserted it and was deleted in audit tier 4.1. Presence was all it could ever assert, and this rule's own second sentence is why that was never the valuable half: nothing can check that a note is still TRUE. The 34 notes stay and are worth writing. Writing one is now a convention, not a build failure.
 
-### 8. ONE-LINER. WORKERS CACHE IS ON. A response with no `Cache-Control` is CACHED, not skipped.
+### 8. GATED by check:headers. WORKERS CACHE IS ON, and the Worker's stamp IS the statement.
 
-`check:headers` asserts it, in its `cache-control default` section. **No count here on purpose: this line said "three ways" while that section asserted FOUR, measured 2026-08-22.** A number in prose beside a gate is a second copy of the gate, and this file is where that habit has cost the most.
+Two halves, and a route that knows only the first will still get it wrong.
 
-### 9. PROSE for the law, ONE-LINER for the inventory. PROGRESSIVE ENHANCEMENT, not "zero JS".
+**The platform caches silence.** A response with no `Cache-Control` is CACHED under RFC 9111 heuristic freshness, not skipped.
+
+**So `workers/app.ts` stamps `private, no-store` on any response that declares none.** A route therefore opts IN to sharing and never opts out of refusal. That inversion is the point: a route relying on "the default" is relying on something it never stated, which is how `/api/health` came to be correct for a reason no reader of the route could see.
+
+**The cookie pairing, stated because it is the half people reconstruct wrongly:** a route that sets `Vary: Cookie` and receives a request carrying ANY cookie is downgraded to `private, no-store` and BYPASSES the shared cache. Presence of a cookie, not a particular cookie. The full matrix, including why an absent `Cookie` header is not its own variant, is `dustinedwards/workers-cache-vary.md`.
+
+**No count here on purpose: this line said "three ways" while `check:headers` asserted FOUR, measured 2026-08-22.** A number in prose beside a gate is a second copy of the gate, which is rule 17, and this file is where that habit has cost the most.
+
+### 9. GATED by check:features for the inventory, UNGATED for the law and the door. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
 `content/enhancements.json` is reconciled in both directions by `check:features`. The admin plane is exempt. Law: `progressive-enhancement.md`.
 
-### 10. PROSE. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
+**THE DOOR IS ON THE PUBLIC PLANE AND OBEYS THE LAW.** `/login` is unauthenticated, so it is a public reading route and its form works with scripting off, even though everything behind it is exempt. This sentence exists because the rule kept being compressed to its slogan and the exemption kept being read as covering the sign-in page: the seat's own translation flattened it, the README asserted the flattened version, and login shipped script-only until 2026-08-23.
+
+**A slogan is not the rule.** "Zero JS" is the forbidden phrasing precisely because it is the one that survives paraphrase, and it is false in both directions: enhancements are allowed, and the fallback is mandatory.
+
+### 10. GATED by check:invariants for the tenth class, UNGATED for the other nine and for every discipline below. A PASS COUNT IS NOT COVERAGE. Count assertions that CAN FAIL.
 
 Ten named classes: unfailable conditions, unreachable thresholds, zero-scope searches, unanchored needles, over-wide exclusions, empty alternations, source-counted floors, comment-satisfied anchors, alias-blind scans, helper-signature drift.
 
@@ -94,14 +118,17 @@ Ten named classes: unfailable conditions, unreachable thresholds, zero-scope sea
 - **Re-measure carried claims.** That discipline has corrected an AUDITOR, a PROMPT, and the RULING LOG ITSELF.
 - **A declared token must participate in a measured pair**, which is `check:contrast`'s participation assertion.
 - **A GATE'S EXPECTED VALUES ARE NEVER PRODUCED BY THE PROCESS IT CHECKS.** Fixture independence, and it is what justifies `check:logo` and `check:contrast` existing in the shape they do: `scripts/fixtures/icon-suite.json` is deliberately NOT generator output.
+- **VERIFY A NEEDLE AT THE BYTE LEVEL.** A `\b` written into a script arrived as an actual backspace, 0x08; `grep` and `sed` DISPLAYED it correctly while the regex matched nothing. Read the failing line's bytes and replicate the needle standalone before believing what it reports.
+- **AFTER ANY SCRIPTED EDIT, GREP FOR LEFTOVERS AND DIFF AGAINST THE PRE-EDIT COPY.** A deletion script whose end anchor matched the newline inside its own start anchor joined lines instead of removing them and EXITED ZERO. A zero exit and a changed byte count are not evidence the edit did what it claimed.
+- **NEVER READ A RESULT THROUGH `head` OR `tail`.** A truncated importer search reported a clean answer about the part it printed and said nothing about the part it dropped, which is indistinguishable from the clean answer it was mistaken for.
 
 Only the tenth class is gated. The rest are METHOD, which is what they always were. See `VERIFICATION.md`, in this repo.
 
-### 11. ONE-LINER. `app/db/schema.ts` IS the source of truth.
+### 11. GATED by check:invariants. `app/db/schema.ts` IS the source of truth.
 
 `check:invariants` section 4 binds schema to migrations to the live database. Prefer the query builder over raw SQL. **Section 5 was DELETED on 2026-08-16**: its regex could desync on a regex literal and examine nothing while printing a clean result. Do not rebuild it as regex.
 
-### 12. PROSE. A new gate is tested by REPLAYING THE DEFECT it was written for.
+### 12. UNGATED. A new gate is tested by REPLAYING THE DEFECT it was written for.
 
 EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied before any result is read.** A green run after a failed plant proves nothing; a mangled path once made a plant a silent no-op and the gate went green. `check:migrations` is the recorded plants-only exception.
 
@@ -111,17 +138,19 @@ EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied befor
 
 **When a file carries uncommitted work, revert a plant by TARGETED EDIT, never `git checkout`.** Skipping this once duplicated a lint rule whose stale copy then mis-guarded a plant.
 
-### 13. PROSE, class only; all instances resolved.
+**A REFACTOR PROVES EQUIVALENCE BY DIFFERENTIAL, not by reading.** Lift the OLD body verbatim, compile it, and run it against the new one over REAL inputs, not invented ones. Then prove the comparison can discriminate, by running a knowingly different implementation through it and watching the comparison report a difference; a differential that cannot tell two things apart agrees with everything. This is how the nine `stripComments` sites were consolidated, and the discriminating control is the half that makes the 720 identical comparisons mean anything.
+
+### 13. UNGATED, class only; all instances resolved.
 
 A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `?? "system"` on the theme, `REMOTE_ARGS ?? []`, each marked `JUSTIFIED SUBSTITUTION` at its call site.
 
 **The lint form is GONE since 2026-08-21**: `check:assertions` rule (e) enforced it and the gate was deleted in audit tier 4.1. In `app/` this class is stronger than a lint anyway, because a map keyed by its own union is a typecheck failure. In `scripts/` it is now unenforced, and that is the accepted cost.
 
-### 14. ONE-LINER. Migrations are hand-written, drizzle-kit is deliberately absent, and an applied migration is never edited.
+### 14. GATED by check:migrations. Migrations are hand-written, drizzle-kit is deliberately absent, and an applied migration is never edited.
 
 `check:migrations` hashes every file against the manifest, both directions.
 
-### 15. PROSE. Do not modify `.claude/settings.json` without explicit instruction.
+### 15. UNGATED. Do not modify `.claude/settings.json` without explicit instruction.
 
 **UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
 
@@ -130,6 +159,44 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 **Measured at origin, by blob sha, across every repo Capsid maps: ONE is fail-open, not seven.** Six carry canonical `11d59813`; this repo adopted it in `6b59ee5` and was never fail-open, only carrying a stale header over an identical body; `foxhound` carries fail-open `2d4155fb` and is its own authority, with a PR open against it. The two legacy Vercel repos have no hooks directory at all.
 
 **The lesson is the clause, not the count**, and it is the reason this paragraph is kept rather than deleted: *a claim inherited from a document gets the same treatment as one from memory.* Restoring it verbatim from version history put a stale fact back into the one file every session reads first. See `FAILURES.md`.
+
+### 16. GATED by ship. The ship contract: CI for this sha, token before build, Ask converged last.
+
+Three steps, in `scripts/ship.mjs`, each failing closed and none of them optional.
+
+**CI concluded success for the EXACT HEAD sha.** No run, still running, any other conclusion, or an unreachable API all refuse. There is no override flag, because a flag would be used on exactly the day the check was right. The repo is private, so `gh auth` is required.
+
+**`OPERATOR_TOKEN_FILE` is checked BEFORE the build**, not at the step that needs it. A missing token is a configuration problem fixable in a second and must not cost a deploy that has already run its gates.
+
+**The Ask index is brought into step as the LAST step, after the deploy and after the D1 sync, and a failure there is LOUD while the deploy STANDS.** Index freshness is worth less than write reliability, and health catches a failed sync within its poll interval. Ship reads the operation's converged verdict rather than its status code.
+
+**Separate sentence, UNGATED, process class: a ship window owns the tree from its first step to its last.** Nobody edits the working tree or lands on `main` while one is open. A prior ship deployed and then refused mid-run because the session deleted a file underneath it, and the deploy was coherent only because the build had already finished. No gate can see this, and it is deliberately not folded into the three steps above, so that a session never learns to fail a deploy over it.
+
+### 17. UNGATED. ONE OWNER PER FACT. A measured value lives in the gate that measures it, or nowhere.
+
+Prose may POINT AT the gate. It may not restate the value. A pointer carrying no digits is legal and is the preferred form.
+
+The rule is a class, so it has no single instrument even though many of its instances do; that is why the tag is UNGATED. Every second copy of a number found in August had already drifted, in both directions and often within the same day: gate counts in three places disagreeing with the one in `check-all.mjs`, floors declared under what their own gate ran, a cached-route count wrong in two directions across two sentences, and the count of citing files in this file's own preamble, which had more than quadrupled underneath it.
+
+The test before writing a number down: can something re-run and re-derive it. If yes, it belongs there and nowhere else. If no, it is a dated observation and says so, with its date, on the same rule as a commit message.
+
+### 18. UNGATED. Indexes converge toward the repo, never the reverse.
+
+D1, both FTS indexes, the Ask index, the media table and the social cards are all DERIVED. The repository and the bucket are the sources; every one of those stores is a projection that can be rebuilt.
+
+**A derived store is repaired THROUGH ITS DERIVATION, never by a hand-written INSERT.** A hand insert makes the index a second truth, which is the exact property the drift gates exist to hold; the row must arrive the way every other row arrived. That is why `OFL.txt`'s missing row waits for the media rebuild rather than for a `INSERT`.
+
+**A failed index write NEVER reverts the source.** The write that already succeeded stands and the failure is reported; the alternative silently trades a durable fact for a rebuildable one.
+
+No gate can see how a row got where it is, which is what makes this UNGATED. The gates see DRIFT, which is the symptom.
+
+### 19. GATED by check:policy. Money paths refuse foreign origins and spend in cheapest-first order.
+
+**The order is: ORIGIN, then RATE, then CACHE, then BUDGET, then MODEL.** Named rather than sloganised, because "cheapest first" is satisfied by any number of wrong arrangements. Each stage refuses before the next one spends anything: an origin verdict costs nothing, a rate check is one Durable Object call, a cache hit is one KV read, a budget reservation is a second DO call, and only then does a request reach a billed model.
+
+**AN ABSENT `Origin` HEADER IS ALLOWED, and that is in the rule rather than left to the predicate**, because it looks like a hole and is not: a scriptless form post carries no `Origin`, and refusing it would break the no-script door that rule 9 requires. What is refused is a `Origin` that is present and foreign.
+
+`check:policy` asserts the chain by POSITION in the route's own body, comments stripped, scoped to the action that owns it. Asserting that a stage merely EXISTS would pass on an arrangement that runs it after the money is already spent.
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
 

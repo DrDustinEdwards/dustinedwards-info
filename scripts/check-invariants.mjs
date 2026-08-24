@@ -2859,9 +2859,19 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
    * "unresolved" and the failure would read as fourteen broken comments rather
    * than as one broken parse, which sends the next reader to the wrong file.
    */
+  /*
+   * FLOOR RAISED 15 to 19 ON 2026-08-24, when rules 16 to 19 landed.
+   *
+   * It is a floor rather than an equality because numbering is APPEND-ONLY: a
+   * rule is never removed and never renumbered, so the count only ever rises,
+   * and an equality here would fail on the commit that adds a rule rather than
+   * on the commit that loses one. A floor left at 15 against 19 defined is four
+   * rules that could vanish unnoticed, which is hard rule 10's own
+   * over-wide-threshold class sitting in the gate that binds hard rule 10.
+   */
   ok(
     "CLAUDE.md defines numbered hard rules",
-    defined.size >= 15,
+    defined.size >= 19,
     `parsed ${defined.size} rule heading(s) of the form "### N.". If this is 0 the ` +
       `citation check below is measuring the parser, not the comments.`,
   );
@@ -2919,19 +2929,40 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
     }
   }
 
+  /*
+   * BOTH FLOORS RE-MEASURED 2026-08-24 THROUGH THIS WALK: 247 files scanned,
+   * 126 citations found, against floors of 40 and 10.
+   *
+   * The citation floor was the slack one, by 116. Ten citations is cleared by
+   * two files, so the walk could have stopped opening `test/` entirely and this
+   * assertion would still have passed while reporting a clean resolve for every
+   * citation it never read. That is not hypothetical: PLANTED on 2026-08-24 by
+   * dropping `workers` and `test` from the directory list, this walk fell to
+   * 203 files and 97 citations, which the old floors passed and the new ones
+   * fail. Raised to 230 and 118, margins of 17 and 8, stated as counts because
+   * the property that matters is how many can vanish before this notices.
+   *
+   * MEASURED THROUGH THE WALK, never by counting files on disk. A separate
+   * count taken with an ad-hoc directory walk said 129 citations across 65
+   * files, and it was answering a different question: this walk skips `.d.ts`
+   * and carries `sourceFiles`'s own extension filter, so only what it actually
+   * OPENS is in scope. The number that lives in the gate is the number the gate
+   * produced.
+   */
   ok(
     "the source walk found hard-rule citations to resolve",
-    scanned >= 40 && cited >= 10,
+    scanned >= 230 && cited >= 118,
     `scanned ${scanned} file(s) and found ${cited} citation(s). A zero-scope walk ` +
-      `resolves every citation it did not find.`,
+      `resolves every citation it did not find. Measured 2026-08-24: 247 and 126.`,
   );
 
   /*
    * THE SCOPE CHECK ABOVE CANNOT SEE THE ROOT DOCUMENTS DROP OUT, which is the
-   * whole reason they were added. Four files out of a hundred-odd is noise
-   * against `scanned >= 40`, so deleting `rootDocs` would leave VERIFICATION.md
-   * unchecked while the gate went on reporting a clean pass: hard rule 10's
-   * over-wide-threshold class, one line below a threshold written to catch it.
+   * whole reason they were added. Four files out of two hundred and forty-seven
+   * is noise against the scanned floor at any value it could sensibly take, so
+   * deleting `rootDocs` would leave VERIFICATION.md unchecked while the gate
+   * went on reporting a clean pass: hard rule 10's over-wide-threshold class,
+   * one line below a threshold written to catch it.
    *
    * ## WHY ONLY VERIFICATION.md IS REQUIRED TO CITE
    *

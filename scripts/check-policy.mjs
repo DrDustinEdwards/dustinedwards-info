@@ -503,6 +503,62 @@ permits("admin may create an already published post", () =>
     originAt !== -1 && rateAt !== -1 && originAt < rateAt,
     true,
   );
+  /*
+   * THE REST OF THE CHAIN: RATE, then CACHE, then BUDGET, then MODEL.
+   *
+   * Hard rule 19 names the whole order, and until 2026-08-24 only its first
+   * pair was asserted. The origin-before-rate assertion above is untouched and
+   * deliberately not rebuilt here; this is the TAIL it stops at.
+   *
+   * ## WHY POSITION AND NOT PRESENCE
+   *
+   * Every one of these four calls exists in any arrangement of them, so a
+   * presence assertion passes on an action that reserves budget before checking
+   * the cache, which spends a Durable Object write on a question already
+   * answered, and on one that reaches the model before either. The ORDER is the
+   * property; the names are only how it is located.
+   *
+   * ## WHY EACH STAGE SITS WHERE IT DOES, cheapest refusal first
+   *
+   *   rate    one Durable Object call, and it is in front of the cache on
+   *           purpose: a cached answer is cheap but not free, and hammering for
+   *           cached answers is still hammering.
+   *   cache   one KV read. It reaches no model and consumes no budget.
+   *   budget  the second Durable Object call, the exact daily ceiling, reserved
+   *           here and nowhere else.
+   *   model   the only billed step, and the last thing the action does.
+   *
+   * SCOPED to the action body already extracted above, with comments stripped
+   * by the same call, because the action's docblock names all four in prose and
+   * an unstripped scan would compare the offsets of the explanation.
+   *
+   * ABSENT `Origin` IS ALLOWED and is NOT asserted here: it is the predicate's
+   * behaviour, not the route's ordering, and `test/ask-origin.test.mjs` owns it.
+   */
+  const cacheAt = actionBody.indexOf("readCachedAnswer(");
+  const budgetAt = actionBody.indexOf("reserveAskBudget(");
+  const modelAt = actionBody.indexOf("askStream(");
+
+  eq("ask: the action reads the answer cache", cacheAt !== -1, true);
+  eq("ask: the action reserves daily budget", budgetAt !== -1, true);
+  eq("ask: the action reaches a model", modelAt !== -1, true);
+
+  eq(
+    "ask: THE RATE LIMITER RUNS BEFORE THE CACHE READ",
+    rateAt !== -1 && cacheAt !== -1 && rateAt < cacheAt,
+    true,
+  );
+  eq(
+    "ask: THE CACHE READ RUNS BEFORE THE BUDGET RESERVATION",
+    cacheAt !== -1 && budgetAt !== -1 && cacheAt < budgetAt,
+    true,
+  );
+  eq(
+    "ask: THE BUDGET RESERVATION RUNS BEFORE THE MODEL CALL",
+    budgetAt !== -1 && modelAt !== -1 && budgetAt < modelAt,
+    true,
+  );
+
   eq(
     "ask: a refused origin is answered 403",
     /status:\s*403/.test(actionBody),
