@@ -1,16 +1,35 @@
-# THE DEAD MAN'S SWITCH. A failing run here IS the alert.
+# THE DEAD MAN'S SWITCH, AND SINCE 2026-08-24 THE REPAIR CREW.
 #
-# There is no notification service, no webhook and no secret. GitHub emails the
-# repository owner when a SCHEDULED workflow run fails, by default, and that is
-# the entire delivery mechanism. It was chosen because it is free, already
-# configured, and lives OUTSIDE Cloudflare, so it still speaks when the Worker
-# it watches is broken. A watcher that runs inside the thing it watches dies
-# with it, which is the property that made every in-Worker design fail.
+# A failing run here IS the alert. GitHub emails the repository owner when a
+# SCHEDULED workflow run fails, by default, and that is the entire delivery
+# mechanism: no notification service and no webhook. It was chosen because it is
+# free, already configured, and lives OUTSIDE Cloudflare, so it still speaks
+# when the Worker it watches is broken. A watcher that runs inside the thing it
+# watches dies with it, which is the property that made every in-Worker design
+# fail.
 #
-# What it catches: the site not answering at all, and any of the three health
-# checks failing. That covers the 31 July incident, where the Ask index lost
-# nine records and nobody knew for three weeks because the only surface saying
-# so was a badge on a page somebody had to open.
+# What it catches: the site not answering at all, and any health check failing.
+# That covers the 31 July incident, where the Ask index lost nine records and
+# nobody knew for three weeks because the only surface saying so was a badge on
+# a page somebody had to open.
+#
+# ## IT NOW REPAIRS THE TWO CLASSES IT CAN, BEFORE IT WAKES ANYBODY
+#
+# Two of the checks describe a derived store that has drifted from its source,
+# and both have a repair that goes through the front door. Under the AUTOMATE
+# directive an alert whose only remedy is a human running the command the
+# machine could have run is a chore, and chores are defects. So an unhealthy run
+# consults a repair plan, performs what it allows, re-polls once, and fails only
+# if that did not work or the failing class is one nobody has classified.
+#
+# **THIS WORKFLOW NOW TAKES ONE SECRET, `OPERATOR_TOKEN`.** Without it the run
+# still polls, still alerts, and SAYS in the log that self-repair is disabled;
+# it does not silently become a plain monitor again. Set it once with:
+#
+#     gh secret set OPERATOR_TOKEN < <path to the operator token file>
+#
+# The decision about whether to repair is deliberately NOT in this file. See the
+# comment at the call site.
 #
 # ============================ WHAT IT DOES NOT CATCH =========================
 #
@@ -32,9 +51,17 @@
 # 3. **The email depends on the owner's notification settings.** If Actions
 #    notifications are off, the run still fails and nobody is told.
 #
-# 4. It sees only what /api/health measures: the Ask index, the R2 trip-wire and
-#    the FTS equalities. Not layout, not the admin plane, not the bill, and not
-#    whether a page renders correctly to a reader.
+# 4. It sees only what /api/health measures: the two index reconciliations, the
+#    R2 trip-wire and the FTS equalities. Not layout, not the admin plane, not
+#    the bill, and not whether a page renders correctly to a reader.
+#
+# 5. **SELF-REPAIR CAN MASK A RECURRING FAULT.** A drift that returns every
+#    interval is now repaired every interval, silently, and the inbox stays
+#    quiet. The run log records each repair, and nothing reads those logs on a
+#    schedule. Accepted rather than solved: the alternative is alerting on a
+#    condition that has already been fixed, which is the noise that gets
+#    monitors muted. If a repair ever becomes routine, that is the signal to
+#    find why the source and its projection keep parting company.
 #
 # ============================================================================
 #
@@ -148,17 +175,49 @@ jobs:
             echo "::error::Failing checks: ${FAILED}"
           fi
 
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::Health endpoint returned HTTP ${STATUS}, expected 200."
-            exit 1
+          # A healthy run stops here. Everything below is the unhealthy path.
+          if [ "$STATUS" = "200" ] && [ "$(jq --raw-output '.ok' body.json)" = "true" ]; then
+            echo "Healthy."
+            exit 0
           fi
 
-          # Belt to the status code's braces. A 200 carrying ok:false is a
-          # contradiction in the endpoint itself, and treating it as healthy
-          # would trust the half of the response that is not the contract.
-          if [ "$(jq --raw-output '.ok' body.json)" != "true" ]; then
-            echo "::error::Health endpoint returned HTTP 200 with ok=false, which is a contradiction."
-            exit 1
+          # ================= SELF-REPAIR, THEN ONE RE-POLL ====================
+          #
+          # Ruled 2026-08-24 under the AUTOMATE directive. Two of the checks
+          # here describe a DERIVED store that has drifted from its source, and
+          # both have a repair that runs through the front door: the same
+          # operator operations `ship` calls, which are the same derivations the
+          # admin buttons call. An alert whose only remedy is a human running
+          # the command the machine could have run is a chore.
+          #
+          # WHAT IS NOT AUTOMATED: deciding what to do about a class nobody has
+          # classified. `scripts/lib/health-repair.mjs` refuses to repair
+          # anything when an unknown check is failing, including the known ones
+          # failing beside it, and the run fails so a person reads it.
+          #
+          # THE DECISION IS NOT IN THIS FILE, deliberately. Bash inside YAML on
+          # a schedule is the least testable code in this repository, and this
+          # decides both whether to perform an authenticated write and whether
+          # to wake somebody. It lives in a module `check:tests` drives.
+          #
+          # A NON-200 IS PASSED THROUGH THE SAME PATH rather than exiting here,
+          # because a 503 IS how this endpoint reports a failing check: exiting
+          # on the status alone would mean the repair never ran for the exact
+          # responses it exists for. A body that named no failing check is
+          # alert-only, so a genuine outage still wakes somebody.
+          echo "Unhealthy (HTTP ${STATUS}). Consulting the repair plan."
+
+          if [ -z "${OPERATOR_TOKEN:-}" ]; then
+            # STATED, not silent. A monitor that quietly lost the ability to act
+            # looks exactly like one that never needed to.
+            echo "OPERATOR_TOKEN is not set on this workflow: self-repair is DISABLED and this run is alert-only."
+            echo "Set it once with: gh secret set OPERATOR_TOKEN < <path to the operator token file>"
           fi
 
-          echo "Healthy."
+          # Node is on the runner image; no setup-node step and no install. The
+          # script imports two local modules and uses fetch, which is built in.
+          node scripts/health-repair.mjs --origin "$ORIGIN" --body body.json
+        env:
+          # Absent secret resolves to the empty string, which the script reports
+          # as a named configuration state rather than as a failed repair.
+          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
