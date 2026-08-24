@@ -45,7 +45,7 @@ const TEST_DIR = join(root, "test");
 
 /**
  * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-24 by RUNNING
- * it: 42 files, 426 tests. Never summed.
+ * it: 43 files, 440 tests. Never summed.
  *
  * **BOTH HAD DRIFTED INTO THE UNFAILABLE CLASS, and this is the gate where that
  * costs the most.** They were 23 and 237 against 40 and 389: seventeen test
@@ -67,10 +67,10 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-const MINIMUM_FILES = 39;
-/* 400 against 426 measured. The file floor above catches a file LEAVING; this
+const MINIMUM_FILES = 40;
+/* 413 against 440 measured. The file floor above catches a file LEAVING; this
    one catches a file being hollowed out in place, which no file count can see. */
-const MINIMUM_TESTS = 400;
+const MINIMUM_TESTS = 413;
 
 let checks = 0;
 let failures = 0;
