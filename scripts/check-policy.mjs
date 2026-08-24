@@ -955,18 +955,24 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-19 by RUNNING it: 64,
- * after the drift check moved off the corpus and the comment stripper landed. It was 59,
- * after the Ask-method block landed. Never summed. It was 45 against a floor of
- * 42, then 52. Floored at 60, slack of four: most cases are inline state fixtures driven
- * through the real decide(), so the count moves only when a transition is added
- * to the table or a source assertion is added beside it.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 96.
+ * Never summed. Floored at 88, about eight percent under.
+ *
+ * **THE FLOOR WAS 60 AGAINST 96, which is a third of this gate able to stop
+ * running unnoticed.** It was set against a measurement of 59 and never moved
+ * while the Ask origin check, the ordered cost chain for hard rule 19 and the
+ * operator-token assertions all landed on top of it. That is the largest single
+ * gap the 2026-08-24 floor sweep found in a gate whose subject is money paths
+ * and delete authority, which is why the slack is not being preserved here:
+ * most cases are inline state fixtures driven through the real decide(), so the
+ * count moves only when a transition is added to the table or a source
+ * assertion is added beside it.
  */
-const MINIMUM_CHECKS = 60;
+const MINIMUM_CHECKS = 88;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 59.`,
+      `A block was SKIPPED rather than failing. Measured 2026-08-24: 96.`,
   );
 }
 

@@ -2190,8 +2190,8 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
   // pass by examining nothing, which is this repo's most-repeated defect class.
   assert(
     "the evaporation scan found view links to examine",
-    hrefs.length >= 8,
-    `${hrefs.length} link(s) back to /admin/media. A green result below would mean nothing.`,
+    hrefs.length >= 26,
+    `${hrefs.length} link(s) back to /admin/media, floor 26, measured 29 on 2026-08-24. A green result below would mean nothing.`,
   );
 
   /**
@@ -3832,8 +3832,8 @@ const displayStates = [...renderedHtml.entries()].filter(
  */
 assert(
   "the no-script section found states that render the display controls",
-  displayStates.length >= 3,
-  `only ${displayStates.length} rendered state(s) contain the layout toggle`,
+  displayStates.length >= 44,
+  `only ${displayStates.length} rendered state(s) contain the layout toggle, floor 44, measured 48 on 2026-08-24`,
 );
 
 /** @param {string} html */
