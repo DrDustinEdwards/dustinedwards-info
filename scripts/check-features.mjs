@@ -220,19 +220,20 @@ ok(
   "no features, so every check below would pass vacuously",
 );
 /*
- * FLOOR: was >= 10, MEASURED 34 this session through declaredRoutes(), now
- * >= 30 (about 12 percent under).
+ * FLOOR: RE-MEASURED 2026-08-24 through declaredRoutes() by running this gate:
+ * 36. Now >= 33, about eight percent under. It was 30 against 34 measured, and
+ * before that 10.
  *
- * The old value could not detect the failure most likely to happen here. The
- * admin subtree contributes TWELVE nested children; if the parser ever stopped
- * seeing nested `route()` calls it would return 22, comfortably over 10, and
- * nothing would say so. The admin features anchor to gates rather than routes,
- * so no other assertion would have failed either.
+ * The original value could not detect the failure most likely to happen here.
+ * The admin subtree contributes TWELVE nested children; if the parser ever
+ * stopped seeing nested `route()` calls it would return 24, comfortably over
+ * 10, and nothing would say so. The admin features anchor to gates rather than
+ * routes, so no other assertion would have failed either.
  */
 ok(
   "routes.ts parsed to a plausible number of routes",
-  routes.size >= 30,
-  `parsed ${routes.size}; expected at least 30. The parser has stopped matching this ` +
+  routes.size >= 33,
+  `parsed ${routes.size}, floor 33, measured 36. The parser has stopped matching this ` +
     `file's style, most likely for the nested children under the admin subtree.`,
 );
 ok(
@@ -653,11 +654,13 @@ const ENHANCE_DIR = join(root, "app", "enhance");
 const EXPECTED_ENHANCE_MODULES = 4;
 
 /**
- * Measured THROUGH this gate's own reading on 2026-08-11: 10 entries across the
- * 4 modules, because `blog.ts` carries seven. Set under, because the job is
- * catching a file that stopped being read, not tracking growth.
+ * Measured THROUGH this gate's own reading, re-measured 2026-08-24: 10 entries
+ * across the 4 modules, because `blog.ts` carries seven. Set under, because the
+ * job is catching a file that stopped being read, not tracking growth. At the
+ * previous 8 the three modules that are not `blog.ts` could all have stopped
+ * being read at once and this would have passed.
  */
-const MINIMUM_ENHANCEMENT_ENTRIES = 8;
+const MINIMUM_ENHANCEMENT_ENTRIES = 9;
 
 ok(
   "content/enhancements.json exists",
@@ -741,19 +744,25 @@ const serverSources = serverRenderedSources(join(root, "app"));
 // assertion below fail closed rather than pass, but the count is asserted so
 // the reason is named rather than inferred from a wall of failures.
 /*
- * FLOOR: was > 20, MEASURED 105 this session through this gate's own walk, now
- * >= 92 (about 12 percent under).
+ * FLOOR: RE-MEASURED 2026-08-24 through this gate's own walk by running it:
+ * 173. Now >= 159, about eight percent under.
  *
- * The old value left an 81 percent blind zone: four fifths of app/ could stop
- * being walked and the selector sweep would still report itself satisfied. A
- * floor that only catches a walk returning nothing is not catching the failure
- * that actually happens, which is a walk that stops descending.
+ * **THIS FLOOR IS ITS OWN CAUTIONARY TALE and the comment is kept for that.**
+ * It was raised from 20 to 92 against a measured 105, with the note below
+ * about the 81 percent blind zone the old value left. app/ then grew to 173
+ * without the floor moving, so by 2026-08-24 the same floor left a 47 percent
+ * blind zone: eighty-one files could stop being walked and the selector sweep
+ * would still report itself satisfied. **A floor is not repaired once. It goes
+ * stale in exactly the direction its own subject grows.**
+ *
+ * A floor that only catches a walk returning nothing is not catching the
+ * failure that actually happens, which is a walk that stops descending.
  */
 ok(
   "the server-rendered source scope is non-empty and complete",
-  serverSources.length >= 92,
-  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/; expected at ` +
-    `least 92. The walker has stopped matching this tree, or stopped descending into it.`,
+  serverSources.length >= 159,
+  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/, floor 159, ` +
+    `measured 173. The walker has stopped matching this tree, or stopped descending into it.`,
 );
 
 const sourceBlobs = serverSources.map((file) => normalizeEol(readFileSync(file, "utf8")));
@@ -898,7 +907,9 @@ const vocabulary = projectsDoc.stackVocabulary ?? [];
 const projectsChecksBefore = checks;
 
 // FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
-const MINIMUM_PROJECTS = 4;
+// Measured through this gate 2026-08-24: 6 projects. Floor one under, because
+// a roster of this size cannot absorb more slack than that.
+const MINIMUM_PROJECTS = 5;
 ok(
   "the roster is non-empty",
   projects.length >= MINIMUM_PROJECTS,
