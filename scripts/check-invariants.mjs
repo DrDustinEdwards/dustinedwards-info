@@ -215,7 +215,7 @@ for (const file of files) {
 
 ok(
   "the scan examined a plausible number of source files",
-  files.length >= 50,
+  files.length >= 235,
   `only ${files.length} file(s) walked, so a green result would mean nothing`,
 );
 
@@ -1031,7 +1031,7 @@ try {
 
   ok(
     "the caller scan examined a plausible number of files under app/",
-    appFilesScanned >= 80,
+    appFilesScanned >= 140,
     `${appFilesScanned} scanned; a green result below would mean nothing`,
   );
 
@@ -1156,12 +1156,13 @@ try {
       `missed some, so the per-function assertions below do not cover the file.`,
   );
 
-  // Anti-vacuity floors, set just under the measured 2026-08-10 counts:
-  // 13 sites, 10 querying functions, 9 composing.
+  // Anti-vacuity floors, RE-MEASURED THROUGH THIS SCAN 2026-08-24 by running
+  // the gate: 14 sites, 8 composing. They were set against the 2026-08-10
+  // counts and had not moved since.
   ok(
     "the posts-reader scan found a plausible number of query sites",
-    totalSites >= 10,
-    `${totalSites} found; expected at least 10. A broken matcher reports zero violations.`,
+    totalSites >= 13,
+    `${totalSites} found, floor 13, measured 14. A broken matcher reports zero violations.`,
   );
 
   const composing = queriers.filter((f) => PREDICATE.test(f.body));
@@ -1424,14 +1425,14 @@ try {
    */
   ok(
     "the source scan examined a plausible number of files",
-    filesScanned >= 110,
+    filesScanned >= 193,
     `${filesScanned} scanned; expected the whole of app, workers and scripts`,
   );
   ok(
     "the source scan found SQL to examine",
-    sqlLiterals >= 131,
-    `${sqlLiterals} SQL-ish match(es) found; expected at least 131. The walk is ` +
-      `broken, so a green result below would mean nothing.`,
+    sqlLiterals >= 169,
+    `${sqlLiterals} SQL-ish match(es) found, floor 169, measured 184 on ` +
+      `2026-08-24. The walk is broken, so a green result below would mean nothing.`,
   );
 
   ok(
@@ -1451,16 +1452,19 @@ try {
   );
 
   /*
-   * The companion, and it is the positive half. Enumerated before asserting:
-   * `sync-content.mjs` is the only FTS health check in the repo, and it counts
-   * posts_fts_docsize, search_identity_docsize and search_prose_docsize. If
-   * that disappears, the drift check has gone and nothing else would say so.
+   * The companion, and it is the positive half. Enumerated before asserting,
+   * and RE-ENUMERATED 2026-08-24 because the old sentence here had gone false:
+   * `sync-content.mjs` is no longer the only FTS health check in the repo. The
+   * three shadow counts moved into `app/lib/health/checks.server.ts` when the
+   * health endpoint landed, `app/lib/operator/api.server.ts` counts one, and
+   * sync-content keeps one. If these disappear, the drift check has gone and
+   * nothing else would say so.
    */
   ok(
     "at least one FTS health check counts a *_docsize shadow",
-    docsizeCounts >= 3,
-    `${docsizeCounts} found; sync-content.mjs counts three. If this dropped, the only ` +
-      `check that can detect FTS drift has been removed or rewritten to count the index.`,
+    docsizeCounts >= 5,
+    `${docsizeCounts} found, floor 5, measured 6 on 2026-08-24. If this dropped, the ` +
+      `checks that can detect FTS drift have been removed or rewritten to count the index.`,
   );
 
   console.log(
@@ -1651,7 +1655,7 @@ try {
 
   ok(
     "the search_docs reader scan examined a plausible number of files",
-    scanned >= 80,
+    scanned >= 140,
     `${scanned} scanned; a green result below would mean nothing`,
   );
   /*
@@ -1666,7 +1670,7 @@ try {
    */
   ok(
     "the scan found search_docs readers at all",
-    readers.length >= 4,
+    readers.length >= 5,
     `${readers.length} found; expected at least 4 (runIndex, runBrowse, and zeroState's ` +
       `two). The SELECT shape changed and this scan no longer sees it.`,
   );
@@ -2189,7 +2193,7 @@ console.log("\n  10. every route-level artifact read goes through the shared rea
    */
   ok(
     "the route walk found files and at least one resolveCitations call",
-    routeFiles >= 10 && resolveCalls >= 3,
+    routeFiles >= 34 && resolveCalls >= 3,
     `${routeFiles} route file(s), ${resolveCalls} call(s). A zero-scope walk agrees with anything.`,
   );
 
@@ -2522,7 +2526,7 @@ console.log("\n  12. every rendered <main> is the skip link's target");
    */
   ok(
     "the route walk found files, and some of them render a <main>",
-    scanned >= 10 && withMain >= 5,
+    scanned >= 19 && withMain >= 9,
     `scanned ${scanned} route file(s), ${withMain} render a <main>. A zero-scope walk ` +
       `agrees with anything.`,
   );
@@ -2602,7 +2606,7 @@ console.log("\n  13. every public page's meta comes from a builder");
    */
   ok(
     "the public route walk found files that export meta()",
-    scanned >= 8 && withMeta >= 5,
+    scanned >= 9 && withMeta >= 9,
     `scanned ${scanned} public route file(s), ${withMeta} export meta(). A zero-scope ` +
       `walk agrees with anything.`,
   );
@@ -2821,7 +2825,7 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
    */
   ok(
     "the document has sections to order",
-    headings.length >= 3,
+    headings.length >= 5,
     `${headings.length} \`## \` heading(s) parsed; with fewer than three the ` +
       `ordinal check means nothing.`,
   );
@@ -3533,7 +3537,7 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
    */
   ok(
     "the helper scan read the gate scripts",
-    gateFiles.length >= 20,
+    gateFiles.length >= 36,
     `${gateFiles.length} .mjs file(s) under scripts/; the directory read has broken.`,
   );
 
@@ -3555,7 +3559,7 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
   // and every consistency claim below would be about nothing.
   ok(
     "the signature scan found assertion helpers to compare",
-    signatures.size >= 4,
+    signatures.size >= 5,
     `${signatures.size} helper name(s) across ${gateFiles.length} file(s); the ` +
       `definition matcher has stopped reading this repo's style.`,
   );
@@ -3644,7 +3648,7 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
    */
   ok(
     "the condition-slot scan examined assertion calls",
-    callsExamined >= 300,
+    callsExamined >= 510,
     `${callsExamined} call(s) examined across ${gateFiles.length} file(s). A ` +
       `zero-scope scan finds no string conditions because it read nothing.`,
   );
@@ -3843,7 +3847,7 @@ console.log("\n  19. FAILURES.md stays short, cited, and reachable");
 
   ok(
     "FAILURES.md parses into shapes",
-    shapes.length >= 8,
+    shapes.length >= 15,
     `${shapes.length} shape(s) parsed. Below that the citation check is measuring ` +
       `the parser rather than the page.`,
   );
