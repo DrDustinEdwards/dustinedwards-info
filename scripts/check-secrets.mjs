@@ -229,14 +229,16 @@ function isServerOnly(/** @type {string} */ path) {
  * Durable Object: the outermost layer of the server boundary this gate exists
  * to police.
  *
- * MEASURED THIS SESSION through this gate's own walk: app 108, workers 3. The
- * `workers` floor is deliberately tight rather than slack, because three files
- * cannot absorb slack: any floor below 3 cannot detect the root vanishing,
- * which is the only thing it is for.
+ * RE-MEASURED 2026-08-24 through this gate's own walk by running it: app 158,
+ * workers 4. app/ had grown from 108 without the floor moving, so 95 had
+ * drifted to leave a 40 percent blind zone in the root that matters most. The
+ * `workers` floor is deliberately tight rather than slack, because a set that
+ * small cannot absorb slack: any floor that low cannot detect the root
+ * vanishing, which is the only thing it is for.
  *
  * @type {Record<string, number>}
  */
-const ROOT_FLOORS = { app: 95, workers: 3 };
+const ROOT_FLOORS = { app: 145, workers: 3 };
 
 /** @type {string[]} */
 const files = [];
@@ -266,8 +268,9 @@ for (const r of Object.keys(ROOT_FLOORS)) {
 
 ok(
   "the scan examined a plausible number of files overall",
-  files.length >= 100,
-  `${files.length} found under ${SCAN_ROOTS.join(", ")}; expected the whole app`,
+  files.length >= 149,
+  `${files.length} found under ${SCAN_ROOTS.join(", ")}, floor 149, measured 162 on ` +
+    `2026-08-24; expected the whole app`,
 );
 
 /**
@@ -492,7 +495,7 @@ if (checks < MINIMUM_CHECKS) {
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 29.`,
+      `rather than failing. Measured 2026-08-24: 33.`,
   );
 }
 

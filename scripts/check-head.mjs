@@ -126,7 +126,7 @@ const EXCLUDED = {
 };
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */
-const MINIMUM_EXECUTED = 15;
+const MINIMUM_EXECUTED = 18;
 
 const args = process.argv.slice(2);
 const refFlag = args.indexOf("--ref");
@@ -215,18 +215,20 @@ ok(
 );
 
 /*
- * FLOOR: was >= 50, MEASURED 158 this session through this walk, now >= 138
- * (about 13 percent under).
+ * FLOOR: RE-MEASURED 2026-08-24 through this walk by running the gate: 239.
+ * Now >= 220, about eight percent under. It was 138 against 158, and 50 before
+ * that.
  *
  * 50 left a 68 percent blind zone: `scripts/` and `workers/` could both drop
- * out and `app/` alone would clear it. The class this preflight guards is a
- * file whose bytes defeat text tooling, so a scan that quietly stops covering
- * two thirds of the tree is precisely the failure it must not have.
+ * out and `app/` alone would clear it. 138 had drifted back to a 42 percent
+ * one as the tree grew. The class this preflight guards is a file whose bytes
+ * defeat text tooling, so a scan that quietly stops covering a third of the
+ * tree is precisely the failure it must not have.
  */
 ok(
   "the NUL scan examined files",
-  scanned.length >= 138,
-  `${scanned.length} found under ${NUL_ROOTS.join(", ")}; expected at least 138. A root ` +
+  scanned.length >= 220,
+  `${scanned.length} found under ${NUL_ROOTS.join(", ")}, floor 220, measured 239. A root ` +
     `has stopped being walked, or the walk stopped descending.`,
 );
 console.log(`  NUL preflight: ${scanned.length} file(s) under ${NUL_ROOTS.join(", ")}`);
@@ -253,8 +255,8 @@ const runnable = offline.filter((n) => !(n in EXCLUDED));
 
 ok(
   "the offline tier was parsed from check-all.mjs",
-  offline.length >= 15,
-  `parsed ${offline.length}; the TIERS table did not read, so the set below is wrong`,
+  offline.length >= 21,
+  `parsed ${offline.length}, floor 21, measured 23; the TIERS table did not read, so the set below is wrong`,
 );
 ok(
   "every exclusion names a gate that exists",
@@ -412,7 +414,7 @@ if (checks < MINIMUM_CHECKS) {
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 30.`,
+      `rather than failing. Measured 2026-08-24: 31.`,
   );
 }
 

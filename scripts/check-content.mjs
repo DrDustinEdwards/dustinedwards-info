@@ -157,18 +157,23 @@ async function checkTemplateRefs() {
   // a repository that cites nothing are the same bytes; these are the numbers
   // that discriminate. Floors rather than equalities, so adding a source file
   // does not fail the gate, but losing the whole tree does.
-  if (!(parsed.filesRead >= 100)) {
+  //
+  // RE-MEASURED 2026-08-24 through this gate by running it: 183 files read, 59
+  // assets considered. Both floors are about eight percent under. The file
+  // floor had been 100 against 183, which let nearly half the tree stop being
+  // walked while the assertion that exists to notice that reported clean.
+  if (!(parsed.filesRead >= 168)) {
     console.error(
       `check:content failed. the template scan read ${parsed.filesRead} source file(s), ` +
-        `expected at least 100. A zero-scope scan reports "no references" and looks correct.`,
+        `floor 168, measured 183. A zero-scope scan reports "no references" and looks correct.`,
     );
     process.exit(1);
     return;
   }
-  if (!(parsed.assetsConsidered >= 50)) {
+  if (!(parsed.assetsConsidered >= 54)) {
     console.error(
       `check:content failed. the template scan considered ${parsed.assetsConsidered} asset(s), ` +
-        `expected at least 50. The asset manifest is empty or was not loaded.`,
+        `floor 54, measured 59. The asset manifest is empty or was not loaded.`,
     );
     process.exit(1);
     return;
