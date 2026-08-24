@@ -645,9 +645,30 @@ permits("admin may create an already published post", () =>
     /converged/.test(shipSource),
     true,
   );
+  /*
+   * THE EXIT CONDITION ITSELF, not a mention of the variable near the exit.
+   *
+   * REWRITTEN 2026-08-24 BECAUSE A PLANT CAUGHT IT. This read
+   * `/mediaMiss[\s\S]{0,900}process\.exit\(1\)/`, and the plant that removed
+   * `mediaMiss` from the final guard PASSED: the block still PRINTS the miss on
+   * the way out, so the name was inside the window while the control flow no
+   * longer consulted it. A 900-character window around an anchor reading its
+   * neighbour's compliance is this repo's own recorded class, and the same
+   * window shape was already here for the Ask half.
+   *
+   * The condition is extracted by walking back from the LAST `process.exit(1)`
+   * to the `if (` that guards it, so what is asserted is the expression the
+   * process actually branches on.
+   */
+  const lastExit = shipSource.lastIndexOf("process.exit(1)");
+  const guardOpen = shipSource.lastIndexOf("\nif (", lastExit);
+  const guard =
+    guardOpen === -1 ? "" : shipSource.slice(guardOpen, shipSource.indexOf(") {", guardOpen) + 1);
+  eq("sync: the final exit guard was located", guard.length > 0 && guard.length < 200, true);
+
   eq(
     "ask sync: SHIP EXITS NONZERO WHEN THE INDEX DID NOT CONVERGE",
-    /askMiss[\s\S]{0,900}process\.exit\(1\)/.test(shipSource),
+    /\baskMiss\b/.test(guard),
     true,
   );
   /*
@@ -660,6 +681,66 @@ permits("admin may create an already published post", () =>
   eq(
     "ask sync: the shipped record prints BEFORE the nonzero exit",
     recordAt !== -1 && exitAt !== -1 && recordAt < exitAt,
+    true,
+  );
+
+  /*
+   * THE MEDIA INDEX, THE SAME CONTRACT, ASSERTED SEPARATELY.
+   *
+   * Added 2026-08-24 with the media sync at ship. Deliberately not folded into
+   * the assertions above by widening a regex to match either name: the two
+   * steps fail independently, and an assertion satisfied by whichever one
+   * happens to be present would pass on the commit that deleted the other. That
+   * is the N-1-of-N shape, and this gate has been the one to catch it before.
+   */
+  eq(
+    "media sync: the operator API exposes sync_media",
+    /"sync_media"/.test(apiSource),
+    true,
+  );
+  eq(
+    "media sync: the tool derives its verdict from a report module, not inline",
+    /mediaSyncReport\(/.test(apiSource),
+    true,
+  );
+  /*
+   * RULE 18, ASSERTED RATHER THAN TRUSTED. The repair goes through the
+   * derivation. A tool that wrote rows itself, or took keys from the caller,
+   * would make the index a second truth, which is the property check:media
+   * exists to hold.
+   */
+  eq(
+    "media sync: the tool repairs THROUGH the derivation, not by writing rows",
+    /rebuildMediaIndex\(env\)/.test(apiSource),
+    true,
+  );
+  /*
+   * AND THE VERDICT IS READ BACK, not taken from the rebuild's own counters.
+   * `rebuildMediaIndex` returns what its loops think they wrote; only
+   * `mediaIndexStatus` re-enumerates the sources and reads D1 afterwards.
+   */
+  eq(
+    "media sync: the verdict comes from a read-back reconciliation",
+    /mediaIndexStatus\(env\)/.test(apiSource),
+    true,
+  );
+
+  eq("media sync: SHIP CALLS sync_media", /"sync_media"/.test(shipSource), true);
+
+  const mediaAt = shipSource.indexOf('"sync_media"');
+  eq(
+    "media sync: THE REBUILD RUNS AFTER THE DEPLOY",
+    mediaAt !== -1 && deployAt !== -1 && mediaAt > deployAt,
+    true,
+  );
+  eq(
+    "media sync: SHIP EXITS NONZERO WHEN THE INDEX DID NOT RECONCILE",
+    /\bmediaMiss\b/.test(guard),
+    true,
+  );
+  eq(
+    "media sync: the shipped record prints BEFORE the media miss can exit",
+    recordAt !== -1 && exitAt !== -1 && recordAt < exitAt && mediaAt < recordAt,
     true,
   );
 }
@@ -955,8 +1036,9 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 96.
- * Never summed. Floored at 88, about eight percent under.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 104,
+ * after the media-sync contract landed beside the Ask one. Never summed.
+ * Floored at 96, about eight percent under.
  *
  * **THE FLOOR WAS 60 AGAINST 96, which is a third of this gate able to stop
  * running unnoticed.** It was set against a measurement of 59 and never moved
@@ -968,11 +1050,11 @@ permits("admin may create an already published post", () =>
  * count moves only when a transition is added to the table or a source
  * assertion is added beside it.
  */
-const MINIMUM_CHECKS = 88;
+const MINIMUM_CHECKS = 96;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-08-24: 96.`,
+      `A block was SKIPPED rather than failing. Measured 2026-08-24: 104.`,
   );
 }
 

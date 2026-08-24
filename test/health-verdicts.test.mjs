@@ -23,6 +23,7 @@ import assert from "node:assert/strict";
 
 import {
   askDriftVerdict,
+  mediaDriftVerdict,
   ftsEqualityVerdict,
   mediaUnbackedVerdict,
   publicHealthBody,
@@ -288,4 +289,58 @@ test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
   const v = askDriftVerdict({ missing: [], stale: [], expected: 113, present: 113 });
   assert.equal(v.ok, true);
   assert.equal(v.counts, undefined);
+});
+
+/* -------------------------------------------------------------------------
+ * media-index-drift. The check that makes the media self-repair possible, and
+ * the one whose drift a count comparison can miss entirely.
+ * ---------------------------------------------------------------------- */
+
+test("media drift: agreement is ok and says both counts", () => {
+  const v = mediaDriftVerdict({ expected: 69, present: 69, missing: [], extra: [] });
+  assert.equal(v.ok, true);
+  assert.match(v.detail, /69 expected/);
+  assert.match(v.detail, /69 present/);
+  // A passing check carries no counts onto the wire. publicHealthBody opts them
+  // in only for failures, so a green body stays names and booleans.
+  assert.equal(v.counts, undefined);
+});
+
+test("media drift: THE OFL.txt SHAPE, one file with no row", () => {
+  const v = mediaDriftVerdict({
+    expected: 69,
+    present: 68,
+    missing: ["/fonts/OFL.txt"],
+    extra: [],
+  });
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /drift 1/);
+  assert.match(v.detail, /1 missing/);
+  assert.deepEqual(v.counts, { expected: 69, present: 68 });
+});
+
+test("media drift: BOTH DIRECTIONS AT ONCE, which equal totals would hide", () => {
+  // One asset unindexed and one row for something deleted. The totals agree;
+  // the index is wrong twice. Summing the key sets is what sees it.
+  const v = mediaDriftVerdict({
+    expected: 69,
+    present: 69,
+    missing: ["/fonts/OFL.txt"],
+    extra: ["/gone.png"],
+  });
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /drift 2/);
+  assert.deepEqual(v.counts, { expected: 69, present: 69 });
+});
+
+test("media drift: a row for a deleted object is drift on its own", () => {
+  const v = mediaDriftVerdict({ expected: 68, present: 69, missing: [], extra: ["/gone.png"] });
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /1 extra/);
+});
+
+test("media drift: the detail names a repair a reader can actually run", () => {
+  const v = mediaDriftVerdict({ expected: 2, present: 1, missing: ["/a.png"], extra: [] });
+  assert.match(v.detail, /sync_media/);
+  assert.match(v.detail, /admin\/media/);
 });

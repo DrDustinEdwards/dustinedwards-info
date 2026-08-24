@@ -77,17 +77,44 @@ async function dimensionsFor(env: Env, body: ReadableStream) {
   }
 }
 
-export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
-  /** @type {string[]} */
-  const failures: string[] = [];
+/** One object as both the rebuild and the reconciliation see it. */
+export type MediaSource = { key: string; size: number; uploaded: string };
 
-  // ---- 1. Enumerate BOTH buckets, exhaustively and to the end of the cursor.
-  //
-  // Two buckets, split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
-  // command can regenerate. Both are indexed, because the index describes every
-  // asset the site has and an OG card that existed but appeared nowhere would be
-  // exactly the invisible-object problem the index exists to end.
-  const objects: Array<{ key: string; size: number; uploaded: string }> = [];
+/**
+ * EVERY ASSET THAT ACTUALLY EXISTS: both buckets, plus the static manifest.
+ *
+ * Extracted from `rebuildMediaIndex` on 2026-08-24 so that the rebuild and the
+ * reconciliation below CANNOT disagree about what the sources are. Before this
+ * there was one enumeration, inside the rebuild, and any verdict about whether
+ * the rebuild worked had to re-derive the same set by different code. Two
+ * enumerations of the same thing is two answers to "what exists", and the one
+ * used to grade the other would have been the one nobody checked.
+ *
+ * Rule 18: the bucket and the repository are the SOURCES; the index is the
+ * projection. This function is that sentence in code, and it is why the verdict
+ * cannot be supplied by a caller.
+ *
+ * EXHAUSTIVE, to the end of the cursor. A partial listing makes every absent key
+ * look like a deletion, which this repo has already shipped once when
+ * `items.list()` returned one page and a prune reported "removed 0" for items
+ * that were real. The throw on a truncated page with no cursor is what stops a
+ * half-read listing being mistaken for the whole bucket.
+ *
+ * Two buckets, split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
+ * command can regenerate. Both are indexed, because the index describes every
+ * asset the site has and an OG card that existed but appeared nowhere would be
+ * exactly the invisible-object problem the index exists to end.
+ *
+ * The static half comes from the committed manifest because a Worker CANNOT
+ * list its own static assets: the assets binding has exactly one method,
+ * `fetch()`, so it can serve any path it is given and discover none of them.
+ * `build:assets` walks public/ and commits the list; `check:media` compares that
+ * list against the filesystem so a stale one is named as stale.
+ */
+export async function enumerateMediaSources(
+  env: Env,
+): Promise<{ objects: MediaSource[]; files: string[] }> {
+  const objects: MediaSource[] = [];
   for (const bucket of [env.MEDIA, env.OG]) {
     let cursor: string | undefined;
     for (;;) {
@@ -108,11 +135,6 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
     }
   }
 
-  // ---- 2. The static half, from the committed manifest. --------------------
-  // A Worker cannot list its own static assets: the assets binding has exactly
-  // one method, `fetch()`, so it can serve any path it is given and discover
-  // none of them. `build:assets` walks public/ and commits the list; check:media
-  // compares that list against the filesystem so a stale one is named as stale.
   const files: string[] = assetManifest.paths;
 
   if (objects.length === 0 && files.length === 0) {
@@ -121,6 +143,59 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         "'everything was deleted' and remove every row.",
     );
   }
+
+  return { objects, files };
+}
+
+/**
+ * WHAT THE INDEX WOULD HAVE TO HOLD, AGAINST WHAT IT HOLDS.
+ *
+ * The read-back verdict for a media sync, on exactly the footing
+ * `askIndexStatus` has for the answer index: `expected` comes from the SOURCES
+ * and `present` from the index, both read AFTER any write, so a caller cannot
+ * be told a sync succeeded by an operation that merely ran.
+ *
+ * `rebuildMediaIndex` returns `indexed` and `removed`, which are what its loop
+ * THINKS it wrote. Those are useful for a human and are not evidence: a loop
+ * that ran cleanly over a set it enumerated wrongly reports a healthy `indexed`
+ * and leaves the index short, and only this comparison can tell.
+ *
+ * BOTH DIRECTIONS, and `missing` and `extra` are not symmetric in what they
+ * mean. A missing key is an asset the site has and the index cannot describe.
+ * An extra key is a row for something that no longer exists, which is how a
+ * deleted object keeps appearing in the library. Both are drift; neither is
+ * allowed to average out against the other, which is why `drift` is computed
+ * from their SUM and not from the difference of the two totals.
+ */
+export async function mediaIndexStatus(env: Env): Promise<{
+  expected: number;
+  present: number;
+  missing: string[];
+  extra: string[];
+}> {
+  const [{ objects, files }, rows] = await Promise.all([
+    enumerateMediaSources(env),
+    listMediaRecords(env),
+  ]);
+
+  const expected = new Set<string>([...objects.map((o) => o.key), ...files]);
+  const present = new Set<string>(rows.map((r) => r.key));
+
+  return {
+    expected: expected.size,
+    present: present.size,
+    missing: [...expected].filter((k) => !present.has(k)).sort(),
+    extra: [...present].filter((k) => !expected.has(k)).sort(),
+  };
+}
+
+export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
+  /** @type {string[]} */
+  const failures: string[] = [];
+
+  // ---- 1 and 2. The sources, enumerated once, by the same function the
+  // reconciliation uses. See `enumerateMediaSources`.
+  const { objects, files } = await enumerateMediaSources(env);
 
   let indexed = 0;
 

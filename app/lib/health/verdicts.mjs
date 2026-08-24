@@ -49,6 +49,49 @@ export function askDriftVerdict(status) {
 }
 
 /**
+ * Does the media index still describe the assets that actually exist?
+ *
+ * The sibling of `askDriftVerdict`, added 2026-08-24 when the media index
+ * gained a sync at ship. Until then nothing between commits watched this store:
+ * `check:media --remote` is a GATE, so it sees drift only when somebody runs
+ * it, and the one instance it did find (`/fonts/OFL.txt`, a public file with no
+ * row) sat red for weeks because the repair was a click.
+ *
+ * DRIFT IS THE SUM OF BOTH DIRECTIONS, for the same reason as the answer index
+ * and with a sharper edge here: an asset with no row is a file the library
+ * cannot describe, a row with no asset is the library offering something that
+ * is gone, and the two can cancel in a count comparison while both are true.
+ * `mediaIndexStatus` compares KEY SETS, so this adds their sizes rather than
+ * subtracting totals.
+ *
+ * NOT the same question as `media-unbacked` below, which asks whether the MEDIA
+ * bucket is still empty. That one guards a recovery acceptance; this one guards
+ * a projection. They fail independently.
+ *
+ * @param {{ expected: number, present: number, missing: string[], extra: string[] }} status
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function mediaDriftVerdict(status) {
+  const drift = status.missing.length + status.extra.length;
+  if (drift === 0) {
+    return {
+      ok: true,
+      detail: `Media index agrees with R2 and public/: ${status.expected} expected, ${status.present} present.`,
+    };
+  }
+  return {
+    ok: false,
+    detail:
+      `Media index drift ${drift}: ${status.missing.length} missing, ` +
+      `${status.extra.length} extra, ${status.expected} expected, ` +
+      `${status.present} present. Repair with sync_media on the operator API, ` +
+      `or the rebuild action on /admin/media.`,
+    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
+    counts: { expected: status.expected, present: status.present },
+  };
+}
+
+/**
  * Does RECOVERY.md section 3's no-backup acceptance still hold?
  *
  * It rests entirely on the `MEDIA` bucket being empty, measured 2026-08-22: an

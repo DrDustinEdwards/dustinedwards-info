@@ -18,6 +18,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 
 import { ciVerdict, fetchCiRuns } from "../scripts/lib/ci-status.mjs";
 
@@ -120,11 +121,77 @@ test("PLANT 3: an unreachable API throws rather than returning a pass", async ()
 });
 
 test("a non-2xx API answer throws with its status", async () => {
-  // 404 from a real host: the repo path is nonsense, so GitHub answers 404
-  // rather than an empty run list. An empty list would have been the dangerous
-  // reading, and this proves the code never gets one.
-  await assert.rejects(
-    () => fetchCiRuns({ owner: "x", repo: "this-repo-does-not-exist-91a7f", sha: SHA }),
-    /GitHub API answered 4\d\d/,
-  );
+  /*
+   * A 404 must throw rather than read as an empty run list, which is the
+   * dangerous reading: no runs for this sha and a refused request look
+   * identical to a caller that only counts.
+   *
+   * ## THIS ASKED GITHUB UNTIL 2026-08-24, AND THAT WAS THE DEFECT
+   *
+   * It called the real API with a nonsense repo path and asserted `4\d\d`,
+   * relying on GitHub to answer 404. On 2026-08-24 GitHub answered **504** for
+   * that path, repeatably, and the assertion failed: the code under test was
+   * behaving perfectly, throwing with the status it received, and the only
+   * broken thing was the test's assumption about a third party.
+   *
+   * Two separate faults, and the second is the one worth naming. It was FLAKY,
+   * and it was in the OFFLINE TIER, whose stated contract is "safe on a plane".
+   * A behavioural test that needs the public internet to pass is not offline,
+   * and this is the one gate in the suite that asserts behaviour, so its
+   * flakiness lands on `ship`, which runs that tier before every deploy. A
+   * transient at the wrong moment refuses a deploy for a reason that has
+   * nothing to do with the deploy.
+   *
+   * `apiBase` was always the seam. The status is now chosen by a local server,
+   * so the test asserts what it always meant to assert and nothing else.
+   */
+  const server = createServer((_request, response) => {
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ message: "Not Found" }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+
+  try {
+    await assert.rejects(
+      () =>
+        fetchCiRuns({
+          owner: "x",
+          repo: "this-repo-does-not-exist-91a7f",
+          sha: SHA,
+          apiBase: `http://127.0.0.1:${port}`,
+        }),
+      /GitHub API answered 404/,
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("a 5xx is thrown with ITS status, not flattened into the 404 hint", async () => {
+  /*
+   * The paired negative, and the case that exposed the flake above. A gateway
+   * error must be reported as what it is: the 404 branch carries a private-repo
+   * hint that would be actively misleading here, sending a reader to run
+   * `gh auth login` over an upstream outage.
+   */
+  const server = createServer((_request, response) => {
+    response.writeHead(504, { "content-type": "text/plain" });
+    response.end("gateway timeout");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+
+  try {
+    await assert.rejects(
+      () => fetchCiRuns({ owner: "x", repo: "y", sha: SHA, apiBase: `http://127.0.0.1:${port}` }),
+      (error) => {
+        assert.match(error.message, /GitHub API answered 504/);
+        assert.doesNotMatch(error.message, /gh auth login/);
+        return true;
+      },
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

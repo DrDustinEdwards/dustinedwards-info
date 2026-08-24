@@ -38,7 +38,8 @@ import {
   pruneAskCorpus,
   syncAskCorpus,
 } from "~/lib/search/ask.server";
-import { askSyncReport } from "./ask-sync-report.mjs";
+import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
+import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { readFile } from "~/lib/editor/github.server";
 
 
@@ -80,6 +81,7 @@ const TOOLS = [
   "delete_post",
   "sync_status",
   "sync_ask",
+  "sync_media",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -122,6 +124,9 @@ export async function runTool(
 
       case "sync_ask":
         return await syncAsk(env);
+
+      case "sync_media":
+        return await syncMedia(env);
     }
   } catch (error) {
     return translate(error);
@@ -376,6 +381,65 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
       cacheDropped,
       expected: status.expected,
       present: status.present,
+    }),
+  };
+}
+
+/**
+ * REBUILDS THE MEDIA INDEX, THROUGH THE DERIVATION, AND PROVES IT AFTERWARDS.
+ *
+ * The door that lets `ship` and the health workflow do what previously only a
+ * human clicking a button in `/admin/media` could do. Ruled 2026-08-24 under
+ * the standing AUTOMATE directive: a chore that ends in a person's hands and is
+ * not a decision is a defect. The OFL.txt row waited weeks for that click.
+ *
+ * ## THE BUTTON IS NOT REPLACED, AND THAT IS DELIBERATE
+ *
+ * `/admin/media`'s rebuild intent calls `rebuildMediaIndex` too, and keeps
+ * doing so. It is the MANUAL REPAIR: the thing you reach for when something has
+ * gone wrong out of band. What changes is that the routine case, an index that
+ * drifts because a ship added or removed an asset, no longer needs it.
+ *
+ * ## RULE 18, WHICH IS THE WHOLE SHAPE OF THIS FUNCTION
+ *
+ * The index converges toward the repository and the bucket, never the reverse,
+ * and a derived store is repaired THROUGH ITS DERIVATION rather than by a hand
+ * written INSERT. So this takes no arguments describing what to write: it calls
+ * the same derivation the button calls, and the row arrives the way every other
+ * row arrived. There is deliberately no way to ask this endpoint to index one
+ * key, because that is the shape that turns an index into a second truth.
+ *
+ * ## THE VERDICT IS RECONCILED, NEVER SUPPLIED
+ *
+ * `rebuildMediaIndex` returns what its loops think they wrote. `converged`
+ * comes from `mediaIndexStatus`, which re-enumerates both buckets and the
+ * manifest and reads D1 back afterwards, and from the failure list. A caller
+ * cannot be told this worked by an operation that merely ran.
+ *
+ * ## NO POLL, AND THE REASON IS STRUCTURAL RATHER THAN OPTIMISTIC
+ *
+ * `sync_ask` waits out a convergence window because AI Search is a separate,
+ * eventually consistent service: its write is visible to a later read on its
+ * own schedule. This store is D1, the rebuild AWAITS every upsert and delete
+ * before returning, and the read-back happens in the SAME Worker request, which
+ * reads its own writes. There is no interval during which a correct rebuild
+ * reports drift, so a window would only slow a real failure down. Measured
+ * rather than assumed: see the ship report for this batch.
+ */
+async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
+  const rebuilt = await rebuildMediaIndex(env);
+  const status = await mediaIndexStatus(env);
+
+  return {
+    ok: true,
+    data: mediaSyncReport({
+      indexed: rebuilt.indexed,
+      removed: rebuilt.removed,
+      failures: rebuilt.failures,
+      expected: status.expected,
+      present: status.present,
+      missing: status.missing,
+      extra: status.extra,
     }),
   };
 }
