@@ -233,7 +233,7 @@ if (checks < MINIMUM_CHECKS) {
     false,
     "this gate executed its assertions",
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 6 offline.`,
+      `rather than failing. Measured 2026-08-24: 9 offline.`,
   );
 }
 
