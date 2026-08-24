@@ -568,16 +568,22 @@ const DECLARED_ELSEWHERE = new Map([
    * SCOPE, ASSERTED, BOTH SIDES. An empty `used` set finds no undeclared token
    * because it looked at nothing, and an empty `declaredAnywhere` set reports
    * every token as undeclared, which fails for the wrong reason and sends the
-   * reader to the stylesheet instead of to this parser. Measured 2026-08-21:
-   * 69 used, 79 declared.
+   * reader to the stylesheet instead of to this parser. Measured 2026-08-21 and
+   * unchanged when re-measured 2026-08-24: 69 used, 79 declared. The floors were
+   * 50 and 60, roughly a quarter under, and are now about eight percent under.
+   *
+   * The participation floor further down is DELIBERATELY NOT set this way: it is
+   * bound to the token count `design-tokens.md` states, which is an independent
+   * source, and moving it to track the measurement would make this gate check
+   * its own output.
    */
   assert(
     `resolution scope: ${used.size} var() token(s) found in app.css`,
-    used.size >= 50,
+    used.size >= 63,
   );
   assert(
     `resolution scope: ${declaredAnywhere.size} token declaration(s) found in app.css`,
-    declaredAnywhere.size >= 60,
+    declaredAnywhere.size >= 72,
   );
 
   const unresolved = [...used]

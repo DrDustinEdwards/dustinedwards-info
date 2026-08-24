@@ -72,8 +72,13 @@ const args = process.argv.slice(2);
 const WRITE = args.includes("--write");
 const FORCE = args.includes("--force");
 
-/** Below this the directory is not a migrations directory and something is wrong. */
-const MINIMUM_MIGRATIONS = 8;
+/**
+ * Below this the directory is not a migrations directory and something is wrong.
+ * Measured through this gate 2026-08-24: 12 on disk. It was 8, which could not
+ * notice a third of the directory being deleted, and 0001_init.sql is the only
+ * copy of the CREATE TABLE statements that exists anywhere.
+ */
+const MINIMUM_MIGRATIONS = 11;
 
 let checks = 0;
 let failures = 0;

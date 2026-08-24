@@ -184,9 +184,9 @@ if (!existsSync(ROUTES)) {
 
 const files = readdirSync(ROUTES).filter((f) => f.endsWith(".tsx") || f.endsWith(".ts"));
 assertThat(
-  files.length >= 30,
+  files.length >= 34,
   "the route directory yielded files to scan",
-  `found ${files.length}; a glob that stops matching would otherwise report zero problems`,
+  `found ${files.length}, floor 34, measured 37 on 2026-08-24; a glob that stops matching would otherwise report zero problems`,
 );
 
 /** Every `file:intent` pair the routes actually handle. */
@@ -259,14 +259,14 @@ for (const file of files) {
 }
 
 assertThat(
-  actionFiles >= 8,
+  actionFiles >= 12,
   "route modules exporting an action were found",
-  `only ${actionFiles} matched; the action detector stopped matching`,
+  `only ${actionFiles} matched, floor 12, measured 13 on 2026-08-24; the action detector stopped matching`,
 );
 assertThat(
-  found.size >= 15,
+  found.size >= 17,
   "the intent vocabulary is non-empty",
-  `parsed ${found.size} intent(s); every per-intent assertion above is vacuous if this is empty`,
+  `parsed ${found.size} intent(s), floor 17, measured 19 on 2026-08-24; every per-intent assertion above is vacuous if this is empty`,
 );
 
 /*
