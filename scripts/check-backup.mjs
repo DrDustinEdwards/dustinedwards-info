@@ -178,6 +178,38 @@ async function main() {
   /** @type {string[]} */
   const problems = [];
 
+  /*
+   * SCOPE FLOORS, added by the 2026-08-24 floor sweep. This gate had NO floor
+   * of any kind, and it is the one that decides whether this database can be
+   * recovered at all.
+   *
+   * The two comparison loops below are BOTH DIRECTIONS between two independent
+   * sources, which is a strong shape and has one blind spot: it is satisfied by
+   * the two sources shrinking TOGETHER. If the migration parser stops matching
+   * `CREATE TABLE` and the sqlite_master filter over-excludes in the same edit,
+   * both sets go small, every loop agrees, the export writes the handful that
+   * survived, and the run reports "ok" with a table count nobody floors.
+   *
+   * MEASURED THROUGH THIS GATE 2026-08-24 by running it BOTH WAYS, because the
+   * offline tier runs --local and check:all runs --remote: local and remote
+   * agree on every structural count (11 declared, 11 held, 3 virtual, 12
+   * shadow) and differ only in bytes, which is why the floors are on structure
+   * and not on size. A byte floor would be a floor on how much has been
+   * written, which is content, and it would read differently on the two targets.
+   */
+  const floor = (/** @type {string} */ label, /** @type {number} */ actual, /** @type {number} */ min) => {
+    if (actual < min) {
+      problems.push(
+        `${label}: ${actual}, expected at least ${min}. Both sources shrinking together is the ` +
+          `one thing the two-direction comparison below cannot see.`,
+      );
+    }
+  };
+  floor("migrations declare too few tables", expected.size, 10);
+  floor("the database holds too few tables", real.size, 10);
+  floor("too few fts5 virtual tables", virtual.size, 3);
+  floor("too few fts5 shadow tables", shadow.size, 11);
+
   // Both directions. A missing table means the backup would silently skip real
   // data; an unexpected one means something reached the database outside a
   // migration and nothing is backing it up.
@@ -252,6 +284,23 @@ async function main() {
     throw new Error(
       `every one of the ${real.size} exports contained zero rows. The export path is broken, ` +
         `not the data.`,
+    );
+  }
+  /*
+   * AND A FLOOR ON HOW MANY CARRIED ROWS, because the check above is the
+   * weakest form of this test: it fails only when EVERY export is empty, so an
+   * export path that broke for all but one table reads as a pass.
+   *
+   * MEASURED BOTH WAYS 2026-08-24: 5 tables carry rows (post_tags, posts,
+   * search_docs, settings, tags), local and remote alike. The other six are
+   * legitimately empty. Floored one under, and this one moves with CONTENT
+   * rather than schema, so it is deliberately the loosest floor in the file.
+   */
+  const withRows = real.size - empty.length;
+  if (withRows < 4) {
+    throw new Error(
+      `only ${withRows} of ${real.size} exports carried any rows, expected at least 4. The ` +
+        `all-empty check above passes whenever a single table still exports.`,
     );
   }
   if (empty.length > 0) {

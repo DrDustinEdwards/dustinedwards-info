@@ -260,6 +260,37 @@ async function main() {
     throw new Error("walked public/ and found 0 files, which cannot be right");
   }
 
+  /*
+   * AND FLOORS, not just the two `=== 0` guards above, added by the 2026-08-24
+   * floor sweep. This gate had no floor of any kind, and `=== 0` is the weakest
+   * form of an anti-vacuity check: it catches a listing that returned NOTHING
+   * and nothing else.
+   *
+   * The failure it cannot see is the one this gate is for. Every comparison
+   * below is a set difference between three enumerations, so they are satisfied
+   * by the enumerations shrinking TOGETHER: a listing that paginates once and
+   * stops, a walk that stops descending, a `mediaRows` query that grows a
+   * WHERE clause. Ten objects against ten rows reconcile perfectly, and the
+   * fifty-nine that vanished are reported by no one. `rows` had no guard at all,
+   * not even `=== 0`.
+   *
+   * MEASURED THROUGH THIS GATE 2026-08-24 by running it --remote: 11 R2
+   * objects, 59 public files, 69 D1 rows. Floors about eight percent under.
+   * These track CONTENT, so they are expected to move up as media is added and
+   * they are deliberately not tight.
+   */
+  const scopeFloor = (/** @type {string} */ what, /** @type {number} */ n, /** @type {number} */ min) => {
+    if (n < min) {
+      throw new Error(
+        `${what}: ${n}, expected at least ${min}. Three enumerations shrinking together ` +
+          `reconcile perfectly against each other, which is what the zero-checks above miss.`,
+      );
+    }
+  };
+  scopeFloor("R2 objects listed", objects.length, 10);
+  scopeFloor("files walked under public/", files.length, 54);
+  scopeFloor("D1 media rows read", rows.length, 63);
+
   console.log(`  public/:               ${files.length} file(s)`);
   console.log(`  D1 media:              ${rows.length} row(s)`);
 
@@ -465,11 +496,18 @@ async function main() {
     const rosterRows = new Map(
       rows.filter((r) => r.key.startsWith("/phage-hunters/")).map((r) => [r.key, r.alt ?? ""]),
     );
-    if (pairs.length === 0 || rosterRows.size === 0) {
+    /*
+     * FLOORED rather than zero-checked, since the 2026-08-24 sweep. The nine
+     * cohort photographs are a FIXED set in a committed data file, so a scan
+     * that returns eight has stopped matching one of them and the missing one
+     * is precisely where a drifted alt would hide.
+     */
+    if (pairs.length < 8 || rosterRows.size < 8) {
       problems.push(
         `the roster alt scan found ${pairs.length} pair(s) in the data file and ` +
-          `${rosterRows.size} row(s) in D1. Either side empty means this comparison ` +
-          `proved nothing, which is indistinguishable from agreement.`,
+          `${rosterRows.size} row(s) in D1, floor 8, measured 9 on 2026-08-24. Either side ` +
+          `short means this comparison covered less than it reports, and either side empty ` +
+          `means it proved nothing, which is indistinguishable from agreement.`,
       );
     }
 
