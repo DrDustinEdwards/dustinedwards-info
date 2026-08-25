@@ -46,6 +46,21 @@ declare global {
      * api.cloudflare.com and only the read path needs a credential.
      */
     ANALYTICS_READ_TOKEN?: string;
+    /**
+     * Bearer token for the READ-ONLY smoke credential that lets `check:browser`
+     * drive the real admin plane without the single admin's session cookie.
+     *
+     * OPTIONAL BY CONTRACT, the third on the `OPERATOR_TOKEN` precedent. Absent
+     * or under 32 characters means NOT CONFIGURED, and the middleware refuses a
+     * presented token with 503 rather than serving. A deployment without it is
+     * an ordinary deployment: the admin plane still answers Dustin's session and
+     * nothing else changes.
+     *
+     * Read in exactly one place, `app/lib/smoke.server.ts`. The full contract,
+     * the least-privilege argument and the stated residue are there and on the
+     * `smoke` row of `WRITE_CAPABILITIES`.
+     */
+    SMOKE_TOKEN?: string;
 
   }
 }

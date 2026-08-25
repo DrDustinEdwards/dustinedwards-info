@@ -110,5 +110,38 @@ export async function getAdminSession(
 /**
  * Set by the admin middleware after the gate passes, so loaders under /admin
  * read the session without a second KV round trip.
+ *
+ * **SET FOR THE HUMAN ADMIN ONLY.** The read-only smoke credential has no
+ * Better Auth session and never will, so anything reading this context is
+ * asserting a human is present. That is the right failure mode for the one
+ * remaining reader on a write path (`admin.posts.$slug.edit.tsx` stamps
+ * `createdBy` with the signed-in address): if it were ever reached by a machine
+ * actor it would throw rather than attribute a revision to nobody. It cannot be
+ * reached, because the middleware refuses the method first, and a second
+ * guarantee at the point of use costs nothing.
+ *
+ * Anything that only needs to know WHO IS ASKING reads `adminActorContext`.
  */
 export const adminSessionContext = createContext<AdminSession>();
+
+/**
+ * WHO IS ASKING, for the whole `/admin` subtree. Always set once the gate passes.
+ *
+ * Split from `adminSessionContext` on 2026-08-24 with the smoke credential.
+ * The distinction is not decorative: one of these is a Better Auth session and
+ * the other is an identity, the plane now has two kinds of caller, and only one
+ * of them has a session. Collapsing them would have meant either synthesising a
+ * fake `AdminSession` for the machine, which is the stub this repo refuses on
+ * the grounds that it authenticates through a path production does not have, or
+ * teaching every reader to handle a null session it can never see.
+ *
+ * `email` is present for both kinds and is the same address for both, which is
+ * deliberate and is part of the stated residue: the smoke render has to be the
+ * page Dustin sees, down to the topbar's widest unbreakable token, or the
+ * layout numbers taken through it are numbers about a different page.
+ */
+export type AdminActor =
+  | { kind: "admin"; email: string }
+  | { kind: "smoke"; id: string; email: string };
+
+export const adminActorContext = createContext<AdminActor>();

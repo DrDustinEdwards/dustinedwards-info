@@ -22,7 +22,7 @@
  * one. `secrets.server.ts` is the only consumer that touches `env`, and it
  * reports presence.
  *
- * All eight are guarded, including the two that are arguably public. An OAuth
+ * EVERY name below is guarded, including the two that are arguably public. An OAuth
  * client id appears in the authorization URL a browser follows, and
  * `BETTER_AUTH_URL` is a public origin, so neither is a credential. They are
  * guarded anyway because both are read in exactly one `.server` module today,
@@ -41,6 +41,12 @@
  * had a destination it could ever point at. Both were removed unprovisioned;
  * they were never set on the deployed Worker.
  *
+ * EIGHT BECAME NINE on 2026-08-24 with `SMOKE_TOKEN`, the read-only machine
+ * credential that lets `check:browser` render the admin plane in CI. TYPED AND
+ * GUARDED BEFORE IT IS PROVISIONED, the same order `ANALYTICS_READ_TOKEN` went
+ * in: the audit reports it absent until Dustin runs `wrangler secret put`, and
+ * absent is a state this list is supposed to be able to show.
+ *
  * NOT ON THIS LIST: `CLOUDFLARE_ACCOUNT_ID`. It is a plain var in
  * `wrangler.jsonc` and an identifier rather than a credential, so guarding it
  * would spend the gate's signal on a value already published in the core doc.
@@ -57,4 +63,5 @@ export const REQUIRED_SECRETS = [
   "GITHUB_TOKEN",
   "OPERATOR_TOKEN",
   "ANALYTICS_READ_TOKEN",
+  "SMOKE_TOKEN",
 ];

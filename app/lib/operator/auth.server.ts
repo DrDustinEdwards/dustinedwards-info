@@ -8,7 +8,14 @@
  *
  * The token is the whole boundary, so it is compared in constant time and it is
  * never echoed, logged, or included in an error.
+ *
+ * The comparison and the caller label moved to `~/lib/bearer.server` on
+ * 2026-08-24 when the SMOKE credential became the second static bearer here.
+ * Both bodies went across verbatim; see that file for why a second copy of a
+ * constant-time compare is the expensive kind of duplication.
  */
+
+import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
 
 export const OPERATOR_RATE_LIMIT = 30;
 export const OPERATOR_RATE_PERIOD_SECONDS = 60;
@@ -21,31 +28,6 @@ export type OperatorEnv = Env & { OPERATOR_TOKEN?: string };
 export type AuthResult =
   | { ok: true; id: string }
   | { ok: false; status: number; error: string; retryAfter?: number };
-
-/**
- * Compares two strings without leaking where they diverge.
- *
- * A plain `===` on a secret returns as soon as two bytes differ, so the time it
- * takes is a function of how much of the prefix the caller guessed correctly,
- * and that is enough to recover a token a byte at a time over enough requests.
- *
- * Both sides are hashed to a fixed 32 bytes FIRST, then compared. Comparing the
- * raw strings would still leak their LENGTH through the loop bound, and hashing
- * makes both operands the same size whatever was sent.
- */
-async function constantTimeEqual(a: string, b: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const [ha, hb] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(a)),
-    crypto.subtle.digest("SHA-256", encoder.encode(b)),
-  ]);
-  const va = new Uint8Array(ha);
-  const vb = new Uint8Array(hb);
-
-  let diff = 0;
-  for (let i = 0; i < va.length; i += 1) diff |= va[i] ^ vb[i];
-  return diff === 0;
-}
 
 /**
  * Authenticates a request and consumes one unit of its rate budget.
@@ -82,7 +64,7 @@ export async function authenticateOperator(
     return { ok: false, status: 401, error: "Invalid or missing bearer token." };
   }
 
-  const id = operatorId(presented);
+  const id = tokenLabel(presented);
 
   if (!env.ASK_BUDGET) {
     // The same stance the Ask guards take: a metered or privileged endpoint
@@ -108,21 +90,3 @@ export async function authenticateOperator(
   return { ok: true, id };
 }
 
-/**
- * A short, stable, non-reversing label for the token holder.
- *
- * It goes into commit messages, so it must identify the caller without being
- * the secret. Eight hex characters of a hash of the token: stable across
- * requests, changes if the token is rotated, and reveals nothing.
- *
- * Synchronous FNV-1a rather than SHA-256, because this runs after the token has
- * already been verified and is a label rather than a boundary.
- */
-function operatorId(token: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < token.length; i += 1) {
-    hash ^= token.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}

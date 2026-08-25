@@ -20,12 +20,20 @@
  * publish the same post.
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
 
-import { decide, decideDelete, forceFirstPublished, readState, PolicyError } from "../app/lib/editor/publish-policy.mjs";
+import {
+  decide,
+  decideDelete,
+  forceFirstPublished,
+  readState,
+  PolicyError,
+  SMOKE_READ_ONLY_POLICY,
+  WRITE_CAPABILITIES,
+} from "../app/lib/editor/publish-policy.mjs";
 
 /** Repo root, so the source assertions below read real files. */
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -91,6 +99,7 @@ function file(o) {
 
 const OPERATOR = /** @type {const} */ ({ kind: "operator", id: "abcd1234" });
 const ADMIN = /** @type {const} */ ({ kind: "admin" });
+const SMOKE = /** @type {const} */ ({ kind: "smoke", id: "beef0001" });
 
 // --- readState ------------------------------------------------------------
 
@@ -215,6 +224,253 @@ permits("admin may publish a post for the first time", () =>
 permits("admin may create an already published post", () =>
   decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: null }),
 );
+
+// --- The policy: smoke, the read-only machine actor -----------------------
+
+/*
+ * THE CLAIM UNDER TEST: the smoke actor appears in NO WRITE BRANCH.
+ *
+ * That claim has two halves and they are proven by different instruments,
+ * because they are enforced in different places and one of them is not a policy
+ * decision at all:
+ *
+ *   THE PUBLISH PATH   `decide()` and `decideDelete()` refuse it, from the
+ *                      capability table. Proven by RUNNING them, below.
+ *   EVERY OTHER ACTION the eleven media intents, the tag writes, the trash and
+ *                      the rebuild consult no policy module. They are refused
+ *                      by the `/admin` middleware's method gate. Proven by
+ *                      reading that guard out of the route source, below.
+ *
+ * Asserting only the first would leave the larger half unexamined while reading
+ * like a complete answer, which is this repo's recorded N-1-of-N shape.
+ */
+
+/*
+ * EVERY TRANSITION AN OPERATOR OR THE ADMIN IS PERMITTED, refused for smoke.
+ *
+ * Driven off a TABLE rather than written out, so the cases here are the same
+ * cases the permitting blocks above use. A smoke refusal list that drifted out
+ * of step with the permit list would leave a transition permitted for the
+ * machine actor and unasserted, which is exactly the gap the table closes.
+ */
+const EVERY_TRANSITION = [
+  ["create a draft", file({ draft: true }), null],
+  ["edit an existing draft", file({ draft: true }), file({ draft: true })],
+  [
+    "edit a live post",
+    file({ draft: false, firstPublished: "2026-01-01" }),
+    file({ draft: false, firstPublished: "2026-01-01" }),
+  ],
+  ["unpublish a live post", file({ draft: true }), file({ draft: false, firstPublished: "2026-01-01" })],
+  ["republish a withdrawn post", file({ draft: false }), file({ draft: true, firstPublished: "2026-01-01" })],
+  ["publish for the first time", file({ draft: false }), file({ draft: true })],
+  ["create an already published post", file({ draft: false }), null],
+];
+
+// SCOPE, ASSERTED. An empty table would run this loop zero times and report a
+// clean sweep, which is the zero-scope class hard rule 10 names.
+eq("the transition table is not empty", EVERY_TRANSITION.length >= 7, true);
+
+for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
+  refuses(
+    `smoke cannot ${what}`,
+    () => decide({ actor: SMOKE, incomingRaw: String(incomingRaw), priorRaw: /** @type {string | null} */ (priorRaw) }),
+    SMOKE_READ_ONLY_POLICY,
+  );
+}
+
+refuses("smoke cannot delete a post", () => decideDelete({ actor: SMOKE }), SMOKE_READ_ONLY_POLICY);
+
+/*
+ * THE FORGERY CASE, for this actor too. An operator cannot assert the fact the
+ * gate checks; a smoke credential must not be able to either, and it must be
+ * refused as READ ONLY rather than as a first-publish, because the read-only
+ * refusal is the one that is true of it.
+ */
+refuses(
+  "smoke cannot forge first_published to buy itself a write",
+  () =>
+    decide({
+      actor: SMOKE,
+      incomingRaw: file({ draft: false, firstPublished: "2020-01-01" }),
+      priorRaw: file({ draft: true }),
+    }),
+  SMOKE_READ_ONLY_POLICY,
+);
+
+/*
+ * THE CAPABILITY TABLE ITSELF, in both directions.
+ *
+ * Iterated over `Object.entries` rather than naming the three capabilities, so
+ * a FOURTH capability added to the table and granted to smoke fails here rather
+ * than passing unexamined. Naming them would freeze this assertion at the shape
+ * the table has today, which is the same defect as a hand-maintained mirror.
+ */
+{
+  const smokeRow = Object.entries(WRITE_CAPABILITIES.smoke);
+  eq("the smoke capability row is not empty", smokeRow.length >= 3, true);
+  for (const [name, granted] of smokeRow) {
+    eq(`smoke is denied the ${name} capability`, granted, false);
+  }
+
+  /*
+   * THE PAIRED POSITIVE, and it is not a formality. Every assertion above is
+   * satisfied by a table in which NOBODY may write, and such a table would take
+   * the whole publish path down while this gate reported a perfect score.
+   */
+  eq("admin may still write", WRITE_CAPABILITIES.admin.write, true);
+  eq("admin may still publish for the first time", WRITE_CAPABILITIES.admin.firstPublish, true);
+  eq("admin may still delete", WRITE_CAPABILITIES.admin.destroy, true);
+  eq("operator may still write", WRITE_CAPABILITIES.operator.write, true);
+
+  // And the table covers exactly the kinds that exist, no more.
+  eq(
+    "the capability table names the three actor kinds",
+    Object.keys(WRITE_CAPABILITIES).sort().join(","),
+    "admin,operator,smoke",
+  );
+}
+
+/*
+ * THE METHOD GATE IN THE MIDDLEWARE, read out of the route source.
+ *
+ * **THE GUARD EXPRESSION IS EXTRACTED BY WALKING BACK FROM THE EXIT**, not
+ * matched near it. That is the needle class recorded 2026-08-24: a proximity
+ * needle stays satisfied by a PRINT of the name after control flow has stopped
+ * consulting it, so `SMOKE_READ_ONLY_POLICY` appearing within N characters of a
+ * `403` proves only that the string is nearby. What has to be true is that the
+ * refusal is CONDITIONED on the method, so the condition itself is what gets
+ * read.
+ */
+{
+  const adminRoute = readFileSync(join(root, "app", "routes", "admin.tsx"), "utf8");
+  const src = stripComments(adminRoute);
+
+  /*
+   * THE EXIT: the 403 that names the policy. Located in COMMENT-STRIPPED
+   * source, because a comment quoting the refusal has both satisfied an
+   * assertion about code and failed one in this repo, within one week.
+   *
+   * **NOT THE FIRST MENTION OF THE CONSTANT, and this gate caught itself on
+   * exactly that.** The first occurrence in the stripped file is the IMPORT
+   * line, which sits above every `if` in the module, so the backward walk found
+   * no guard and three assertions failed reporting a missing gate that was
+   * present. An import is a mention, not a use. Import lines are skipped by
+   * looking at the line the occurrence sits on, rather than by assuming the
+   * last occurrence is the interesting one, which would break the moment a
+   * second refusal is added below this one.
+   */
+  const mentions = [];
+  for (let at = src.indexOf("SMOKE_READ_ONLY_POLICY"); at !== -1; at = src.indexOf("SMOKE_READ_ONLY_POLICY", at + 1)) {
+    const lineStart = src.lastIndexOf("\n", at) + 1;
+    if (!/^\s*import\b/.test(src.slice(lineStart, at))) mentions.push(at);
+  }
+  eq("the smoke refusal exists in admin.tsx, outside comments and imports", mentions.length > 0, true);
+  const exitAt = mentions[0] ?? -1;
+
+  // Walk BACK to the nearest enclosing `if (`, then take its balanced parens.
+  const ifAt = src.lastIndexOf("if (", exitAt);
+  let guard = "";
+  if (ifAt !== -1) {
+    let depth = 0;
+    for (let i = ifAt + 3; i < exitAt; i += 1) {
+      if (src[i] === "(") depth += 1;
+      else if (src[i] === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          guard = src.slice(ifAt + 3, i + 1);
+          break;
+        }
+      }
+    }
+  }
+
+  // SCOPE, ASSERTED, twice. An extractor returning "" would make every
+  // assertion below report a missing guard that is present; one that ran away
+  // to the top of the file would let a neighbour's condition satisfy them.
+  eq("the guard expression was extracted", guard.length > 10, true);
+  eq("and it is a condition, not a span of the file", guard.length < 200, true);
+
+  eq(
+    "the smoke refusal is conditioned on the request METHOD",
+    /request\.method/.test(guard),
+    true,
+  );
+  eq(
+    "the method gate is an ALLOWLIST: it names GET and HEAD and refuses the rest",
+    /!==\s*"GET"/.test(guard) && /!==\s*"HEAD"/.test(guard),
+    true,
+  );
+  /*
+   * AND IT IS NOT A DENYLIST. `method === "POST"` would pass every assertion
+   * above and let PUT, PATCH and DELETE through, which is the whole reason the
+   * allowlist form was chosen. Asserted as the absence of an equality test on
+   * the method, inside the guard alone.
+   */
+  eq(
+    "the gate does not name the methods it refuses",
+    !/request\.method\s*===/.test(guard),
+    true,
+  );
+
+  /*
+   * REFUSED BEFORE ANYTHING RUNS. A method gate that fired after `next()` would
+   * refuse the response and leave the write already done, which is a 403 that
+   * lies. Position in the middleware body is the assertion.
+   */
+  const nextAt = src.indexOf("return next()");
+  eq("the middleware calls next()", nextAt > 0, true);
+  eq("the smoke method gate refuses BEFORE next() is reached", exitAt < nextAt, true);
+
+  /*
+   * THE OTHER DIRECTION: the smoke actor is CONSTRUCTED in exactly one place.
+   *
+   * This is the assertion that keeps "appears in no write branch" true as the
+   * code moves. A future edit that hands `{ kind: "smoke" }` to `savePost`, to
+   * `deletePost`, or to the operator API would be refused by the capability
+   * table at runtime, but it would also be a caller that believed it could
+   * write, and this fails on the day it is written rather than at the throw.
+   *
+   * Scoped to app/, comment-stripped, and the permitted sites are NAMED.
+   *
+   * **TWO FILES, NOT ONE, and the second is listed rather than excluded.** The
+   * needle matches the `AdminActor` type union in `auth.server.ts`, which
+   * DECLARES the shape, as well as the object literal in the middleware, which
+   * CONSTRUCTS it. Telling a type annotation from a value with a regex is the
+   * parser that section 5 of check:invariants was deleted for, and an exclusion
+   * that names a file excludes everything else in it too. So both are named,
+   * with their roles, and a THIRD file appearing still fails, which is the
+   * property this assertion is for.
+   */
+  /** @type {string[]} */
+  const constructors = [];
+  const walk = (/** @type {string} */ dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(ts|tsx|mjs)$/.test(entry.name)) {
+        const text = stripComments(readFileSync(full, "utf8"));
+        if (/kind:\s*"smoke"/.test(text)) {
+          constructors.push(relative(root, full).split(sep).join("/"));
+        }
+      }
+    }
+  };
+  walk(join(root, "app"));
+
+  // The scan is proven non-empty before its result is read: a walk that
+  // examined nothing reports exactly what a clean sweep reports.
+  eq(
+    "the smoke-actor scan found the one construction site it expects",
+    constructors.length > 0,
+    true,
+  );
+  eq(
+    "the smoke actor is declared in auth.server and constructed in the middleware, nowhere else",
+    constructors.sort().join(", "),
+    "app/lib/auth.server.ts, app/routes/admin.tsx",
+  );
+}
 
 // --- What decide() stamps -------------------------------------------------
 
@@ -1036,9 +1292,14 @@ permits("admin may create an already published post", () =>
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 104,
- * after the media-sync contract landed beside the Ask one. Never summed.
- * Floored at 96, about eight percent under.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 134,
+ * after the smoke actor's section landed. Never summed. Floored at 124, about
+ * seven percent under.
+ *
+ * The previous pair was 104 measured against a floor of 96, and the floor is
+ * moved with the measurement rather than left where it was, because thirty
+ * assertions of slack is most of a section able to stop running unnoticed. That
+ * is the same arithmetic the entry below this one is about.
  *
  * **THE FLOOR WAS 60 AGAINST 96, which is a third of this gate able to stop
  * running unnoticed.** It was set against a measurement of 59 and never moved
@@ -1050,11 +1311,11 @@ permits("admin may create an already published post", () =>
  * count moves only when a transition is added to the table or a source
  * assertion is added beside it.
  */
-const MINIMUM_CHECKS = 96;
+const MINIMUM_CHECKS = 124;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-08-24: 104.`,
+      `A block was SKIPPED rather than failing. Measured 2026-08-24: 134.`,
   );
 }
 

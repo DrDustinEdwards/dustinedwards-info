@@ -3,13 +3,98 @@ import matter from "gray-matter";
 /**
  * Who is asking to write, and what they are allowed to do.
  *
- * The distinction exists for two rules now: an agent may not be the one to make
- * a post public for the first time, and an agent may not DELETE a post at all.
- * Everything else an operator can do, the admin can do, on an identical path.
+ * The distinction exists for three rules now: an agent may not be the one to
+ * make a post public for the first time, an agent may not DELETE a post at all,
+ * and the SMOKE actor may not write anything. Everything else an operator can
+ * do, the admin can do, on an identical path.
  */
 /**
- * @typedef {{ kind: "admin" } | { kind: "operator", id: string }} Actor
+ * @typedef {{ kind: "admin" } | { kind: "operator", id: string } | { kind: "smoke", id: string }} Actor
  */
+
+/**
+ * THE POLICY NAME THE SMOKE ACTOR IS REFUSED UNDER, stated once.
+ *
+ * Three places quote it: this module's refusals, the `/admin` middleware's
+ * method gate, and `check:policy`. A second spelling of it would be the rule 17
+ * defect in the one place a refusal has to be recognisable, so it is a constant
+ * rather than four string literals that happen to agree today.
+ */
+export const SMOKE_READ_ONLY_POLICY = "smoke-is-read-only";
+
+/**
+ * WHAT EACH ACTOR KIND MAY DO. Keyed by the kind, so a NEW kind is a TYPECHECK
+ * FAILURE rather than a silent permission.
+ *
+ * **THIS TABLE IS THE "BY CONSTRUCTION" IN THE SMOKE CREDENTIAL'S RULING, and
+ * it replaces a shape that did not have that property.** Both refusals used to
+ * read `if (actor.kind === "operator")`, which is DEFAULT-ALLOW: it names the
+ * one kind that is restricted and lets every other kind fall through. Adding a
+ * third kind to that shape would have handed the machine actor a full publish
+ * and delete authority, in silence, with every gate green, because there is no
+ * assertion anywhere that fires on a kind nobody wrote a branch for.
+ *
+ * A `Record` keyed by `Actor["kind"]` inverts that. `tsc` requires every member
+ * of the union to have an entry, so the question "what may this new kind do"
+ * has to be ANSWERED in the diff that introduces the kind. That is hard rule
+ * 13's own stated idiom (a map keyed by its own union is a typecheck failure),
+ * used here for the reason it was written down.
+ *
+ * Chosen over an exhaustive `switch` deliberately: a switch with a missing case
+ * compiles, runs, and falls through to whatever follows it. The compiler only
+ * objects when a `default` is written to make it object, which makes the
+ * property depend on remembering to ask for it. This does not.
+ *
+ * @type {Readonly<Record<Actor["kind"], Readonly<{ write: boolean, firstPublish: boolean, destroy: boolean }>>>}
+ */
+export const WRITE_CAPABILITIES = {
+  /** The single human admin. Everything. */
+  admin: { write: true, firstPublish: true, destroy: true },
+  /**
+   * The publish agent. May create, edit, unpublish and republish; may not make
+   * a post public for the first time and may not destroy one.
+   */
+  operator: { write: true, firstPublish: false, destroy: false },
+  /**
+   * THE SMOKE CREDENTIAL. Reads only, and every one of these is false.
+   *
+   * It exists so `check:browser` can drive the real authenticated admin plane
+   * in CI instead of in Dustin's hands. It is a machine principal, its own
+   * credential rather than a copy of the admin's session, and it is revocable
+   * on its own with `wrangler secret delete SMOKE_TOKEN`.
+   *
+   * The three falses are not a configuration. They are the whole point of the
+   * kind existing, and `check:policy` asserts that EVERY capability on this row
+   * is false, so a fourth capability added above and granted here fails rather
+   * than passing unexamined.
+   *
+   * ## THE RESIDUE. WHAT A READ-ONLY CREDENTIAL STILL EXPOSES
+   *
+   * **The claim this credential supports is BOUNDED, NOT SAFE**, and the
+   * difference is the whole of this paragraph. "Read only" answers what it can
+   * CHANGE. It does not answer what it can SEE, and what it can see is the
+   * entire admin plane:
+   *
+   *   - **UNPUBLISHED DRAFTS.** `/admin/posts` lists every post whatever its
+   *     state, and an edit route serves the full markdown. Hard rule 1 keeps
+   *     drafts off every PUBLIC surface; this is not a public surface, and the
+   *     smoke actor is inside the gate rather than outside it.
+   *   - **THE OPERATOR EMAIL**, rendered in the topbar on every admin page.
+   *     Deliberately not stubbed: the topbar's binding constraint at narrow
+   *     widths IS that email, one unbreakable 199px token, so a smoke render
+   *     showing a placeholder would move the very measurement the credential
+   *     exists to take. The overflow readings have to come off the page Dustin
+   *     sees, which means they come off a page carrying his address.
+   *   - Media keys, trash contents, D1 counts, and the cockpit's panels.
+   *
+   * So a leaked SMOKE_TOKEN is a disclosure of unpublished work and one email
+   * address. It is NOT a write, not a delete, not a publish, and not a path to
+   * the admin's Google session. That is a real reduction in blast radius and it
+   * is not zero, which is why it is written here rather than implied by the
+   * word "read-only" three lines up.
+   */
+  smoke: { write: false, firstPublish: false, destroy: false },
+};
 
 /** A write refused by policy rather than by a content gate. */
 export class PolicyError extends Error {
@@ -157,7 +242,20 @@ function classify(state) {
  * @throws {PolicyError} when the actor may not delete
  */
 export function decideDelete(options) {
-  if (options.actor.kind === "operator") {
+  const may = WRITE_CAPABILITIES[options.actor.kind];
+
+  // The read-only refusal comes FIRST, so a machine actor is refused as what it
+  // is rather than being told deletion is reserved to the admin, which would be
+  // true and useless: it may not save either.
+  if (!may.write) {
+    throw new PolicyError(
+      "Refused: this credential is READ ONLY. It may render admin pages and it " +
+        "may not change anything, delete included.",
+      SMOKE_READ_ONLY_POLICY,
+    );
+  }
+
+  if (!may.destroy) {
     throw new PolicyError(
       "Refused: deleting a post is reserved to the human admin. An operator " +
         "may create, edit, unpublish and republish a post, but not destroy it. " +
@@ -181,7 +279,20 @@ export function decide(options) {
   const wantsPublished = !incoming.draft;
   const everPublished = priorFirstPublished !== null;
 
-  if (options.actor.kind === "operator" && wantsPublished && !everPublished) {
+  const may = WRITE_CAPABILITIES[options.actor.kind];
+
+  // BEFORE any transition is computed. A read-only actor is refused for every
+  // save, not only for the one transition the operator rule is about, so the
+  // question "which transition is this" is never reached on its behalf.
+  if (!may.write) {
+    throw new PolicyError(
+      "Refused: this credential is READ ONLY. It may render admin pages and it " +
+        "may not save a post, in any state, new or existing.",
+      SMOKE_READ_ONLY_POLICY,
+    );
+  }
+
+  if (!may.firstPublish && wantsPublished && !everPublished) {
     throw new PolicyError(
       "Refused: publishing a post for the first time is reserved to the human " +
         "admin. This post has never been public, so an operator cannot set " +
