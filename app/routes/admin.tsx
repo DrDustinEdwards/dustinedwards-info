@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Form, Link, NavLink, Outlet, data, redirect, useRouteLoaderData } from "react-router";
 
+import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
@@ -456,6 +457,56 @@ function Glyph({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Sign out, in the two places the topbar renders it: the wide bar, and the
+ * overflow menu it folds into below 640px.
+ *
+ * ONE STATEMENT OF THE FORM, because both sites are the same action and the
+ * responsive fold is the only reason there are two. A copied `<Form>` is a
+ * second owner of the logout route and of the fact that this must be a POST;
+ * the two would drift on the day one of them gained a confirmation or a
+ * redirect target.
+ *
+ * A REAL FORM in both branches, deliberately. `menu` changes the presentation
+ * and nothing else: it is still `method="post"` to the same action, so the
+ * folded control works with scripting off exactly as the wide one does, which
+ * is what rule 9 requires of a door on a page a reader can reach.
+ */
+function SignOutForm({ menu = false }: { menu?: boolean }) {
+  return (
+    <Form method="post" action="/admin/logout">
+      <button
+        type="submit"
+        {...(menu ? { "data-menu-item": "", className: "overflow-menu-item" } : { className: "admin-signout" })}
+      >
+        {menu ? null : (
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
+        )}
+        Sign out
+        {menu ? (
+          <span className="overflow-menu-item-hint">
+            Ends this session. You will need to sign in again with Google.
+          </span>
+        ) : null}
+      </button>
+    </Form>
+  );
+}
+
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /*
    * The CSP nonce, from the root loader through useRouteLoaderData, the same
@@ -585,26 +636,33 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               because the truncation below needs a selector that means THIS
               element, and `.muted` is used all over the admin plane. */}
           <span className="muted admin-topbar-email">{loaderData.email}</span>
-          <Form method="post" action="/admin/logout">
-            <button type="submit" className="admin-signout">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <path d="M16 17l5-5-5-5" />
-                <path d="M21 12H9" />
-              </svg>
-              Sign out
-            </button>
-          </Form>
+          <SignOutForm />
+          {/*
+            THE FOLD, below 640px. Grounds: decisions vol 8, 2026-08-25.
+
+            The wide bar above and this menu below are BOTH in the document and
+            CSS picks one, which is the only arrangement that works with no
+            script: a JS-measured breakpoint would leave a scriptless reader
+            with whichever branch the server guessed. `display: none` takes the
+            hidden branch out of the accessibility tree too, so exactly one
+            email and one Sign out are ever exposed.
+
+            The menu is the EXISTING OverflowMenu, not a new pattern, and the
+            sign-out inside it is a real `<Form method="post">` submit button,
+            so rule 9 holds on the folded side as well: the menu opens with no
+            script because it is a `<details>`, and the button posts with no
+            script because it is a form.
+          */}
+          <div className="admin-topbar-account">
+            <OverflowMenu label="Account">
+              {/* The signed-in address, as INFORMATION. It is the one thing the
+                  wide bar shows that is not a control, so it stays visible
+                  rather than being dropped: knowing which account you are in is
+                  the reason it was ever in the bar. */}
+              <p className="admin-account-identity">{loaderData.email}</p>
+              <SignOutForm menu />
+            </OverflowMenu>
+          </div>
         </div>
       </header>
 

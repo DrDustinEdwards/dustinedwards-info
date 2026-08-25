@@ -588,9 +588,70 @@
 }
 
 /* The sign-out form is the flex ITEM wrapping the button, so this is where the
-   button's refusal to shrink has to be declared. */
-.admin-topbar-user form {
+   button's refusal to shrink has to be declared.
+
+   DIRECT CHILD since the account menu landed: the folded branch renders a
+   second sign-out form inside the menu panel, which is not a flex item of this
+   bar, and a descendant selector would reach in and declare `flex` on it for
+   no reason. */
+.admin-topbar-user > form {
   flex: none;
+}
+
+/* ------------------------------------------------------------------ THE FOLD
+
+   THE ADMIN PLANE SCROLLED SIDEWAYS AT EVERY WIDTH BELOW 582px AND THIS IS THE
+   REPAIR. The block above yields three elements and it was not enough: measured
+   on the built page, the document floor was 582 UNIFORM across 553, 480, 400
+   and 320, and the binding chain was `header.admin-topbar` over
+   `.admin-topbar-user`, its form and `button.admin-signout`. Truncation cannot
+   fix that, because what is left after the email has given up everything is two
+   CONTROLS, and a control that shrinks past its own label is not a repair.
+
+   So below the breakpoint the two of them LEAVE THE BAR and reappear inside the
+   account menu, which is the existing overflow-menu component and not a new
+   pattern. What stays in the bar is the mark, the truncatable wordmark, the
+   drawer toggle and one menu button, all of which fit.
+
+   ## WHY 640 AND NOT 582
+
+   640px is the nearest breakpoint this repository already uses that sits ABOVE
+   the measured floor (the others are 800 and 576, and 576 is BELOW 582, which
+   is exactly why the earlier narrowing could not have closed this). Folding at
+   the floor itself would put the layout's correctness on the exact pixel a
+   measurement landed on, and that measurement is a function of a string: the
+   floor is what it is because the operator's address is one unbreakable token.
+   A longer address moves it. 58px of headroom is the margin that survives
+   that, and the widths the browser gate asserts (553, 480, 400, 320) are all
+   comfortably inside the folded branch. */
+.admin-topbar-account {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .admin-topbar-email,
+  .admin-topbar-user > form {
+    display: none;
+  }
+
+  .admin-topbar-account {
+    display: block;
+  }
+}
+
+/* The signed-in address inside the menu. Not an `.overflow-menu-item`: it is
+   not activatable, and giving it the item's hover affordance would promise a
+   control that is not there. */
+.admin-account-identity {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  /* The panel has a min-width and an address can exceed it. Breaking on any
+     character is right here and wrong in the bar: there is no competing content
+     to protect, and the whole address is worth more than one line of it. */
+  overflow-wrap: anywhere;
 }
 
 /* Same treatment, one step later. The wordmark only gives way once the email
