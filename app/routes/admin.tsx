@@ -4,7 +4,9 @@ import { Form, Link, NavLink, Outlet, data, redirect, useRouteLoaderData } from 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
-import { adminSessionContext, getAdminSession } from "~/lib/auth.server";
+import { adminActorContext, adminSessionContext, getAdminSession } from "~/lib/auth.server";
+import { authenticateSmoke } from "~/lib/smoke.server";
+import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
@@ -35,6 +37,14 @@ export function meta() {
  * action; anyone without the single-admin session is 302'd to the login
  * screen. The verified session is stashed on the context so children read it
  * without a second lookup.
+ *
+ * **TWO WAYS IN SINCE 2026-08-24, and only one of them may write.** The human
+ * admin arrives with a Better Auth session and is unchanged. A machine may
+ * instead present the read-only SMOKE bearer token, which gets GET and HEAD and
+ * is refused every other method here, before any child runs. That refusal is
+ * the enforcement point for the whole plane's action surface, because route
+ * actions do not consult a policy module; the capability table covers the
+ * publish path and this covers the rest. Grounds: `app/lib/smoke.server.ts`.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
@@ -52,8 +62,85 @@ export const middleware: Route.MiddlewareFunction[] = [
     const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
     context.set(timingsContext, { timings });
     const session = await getAdminSession(env, request, timings);
-    if (!session) throw redirect("/login");
-    context.set(adminSessionContext, session);
+    if (session) {
+      context.set(adminSessionContext, session);
+      context.set(adminActorContext, { kind: "admin", email: session.user.email });
+    } else {
+      /*
+       * THE SMOKE DOOR, and it is only reachable with no admin session.
+       *
+       * Ordered this way so the human path is untouched: a browser request
+       * carries no `Authorization` header, `authenticateSmoke` returns `absent`
+       * without reading the secret or touching the limiter, and the redirect
+       * below is the same redirect as before this existed.
+       */
+      const smoke = await authenticateSmoke(env, request);
+      if (smoke.kind === "refused") {
+        /*
+         * A PRESENTED CREDENTIAL GETS AN ANSWER, not a login page. Whoever set
+         * SMOKE_TOKEN in CI is entitled to know whether it was rejected, not
+         * configured, or rate limited, because those need three different
+         * repairs and a 302 to /login names none of them.
+         *
+         * `no-store` and `noindex` on the same grounds as the operator API: it
+         * is an authenticated surface behind a secret.
+         */
+        throw new Response(smoke.error, {
+          status: smoke.status,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "private, no-store",
+            "x-robots-tag": "noindex, nofollow",
+            ...(smoke.retryAfter ? { "retry-after": String(smoke.retryAfter) } : {}),
+          },
+        });
+      }
+      if (smoke.kind !== "ok") throw redirect("/login");
+
+      /*
+       * READ ONLY, AND THIS IS WHERE IT IS ENFORCED FOR THE WHOLE PLANE.
+       *
+       * The capability table in `publish-policy.mjs` refuses the smoke actor
+       * from `decide()` and `decideDelete()`, which covers the publish path. It
+       * does NOT cover the eleven media intents, the tag writes, the trash, the
+       * rebuild, or any action added tomorrow: those are route actions that
+       * never consult a policy module. So the method itself is the gate, at the
+       * one place every `/admin/*` action must pass through.
+       *
+       * **A METHOD ALLOWLIST, NOT A DENYLIST.** GET and HEAD are named and
+       * everything else is refused, so a route that starts answering PUT or
+       * DELETE tomorrow is refused on the day it is written rather than on the
+       * day someone remembers to add it here. That inversion is the whole
+       * point: hard rule 19's chain is ordered for the same reason, and this
+       * repo's recorded failure shape is a fix landing in N-1 of N sites.
+       *
+       * Refused BEFORE `next()`, so no child loader, action, or middleware runs
+       * and nothing has read a row by the time the refusal is written.
+       */
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        throw new Response(
+          `Refused (${SMOKE_READ_ONLY_POLICY}): the smoke credential is READ ONLY. ` +
+            `${request.method} is not available to it on any admin route. ` +
+            `It may render pages and it may not change anything.`,
+          {
+            status: 403,
+            headers: {
+              "content-type": "text/plain; charset=utf-8",
+              "cache-control": "private, no-store",
+              "x-robots-tag": "noindex, nofollow",
+            },
+          },
+        );
+      }
+
+      /*
+       * THE SAME EMAIL THE ADMIN SEES, and it is the stated residue rather than
+       * an oversight. The topbar's binding constraint at narrow widths IS this
+       * string; a placeholder here would silently change the measurement the
+       * whole credential exists to take. Grounds on the `smoke` capability row.
+       */
+      context.set(adminActorContext, { kind: "smoke", id: smoke.id, email: smoke.email });
+    }
     // Lazy and memoized: this layout's loader wants a drift COUNT for the nav
     // badge and /admin/posts wants the full status for its alert. Sharing the
     // reader means one listing per request rather than two, and a route that
@@ -131,7 +218,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
   ]);
   const payload = {
-    email: context.get(adminSessionContext).user.email,
+    email: context.get(adminActorContext).email,
     /**
      * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
      *
