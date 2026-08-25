@@ -173,6 +173,28 @@ jobs:
           KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
         run: node scripts/apply-config-ids.mjs
 
+      # TEMPORARY DIAGNOSTIC, 2026-08-25. Ship refused at step 2 with Cloudflare
+      # API code 7403 on the D1 query, which is one message covering two very
+      # different causes: an account id that is not valid, or a token with no
+      # D1 permission. This step names which, and is removed once it has.
+      - name: Diagnose the Cloudflare credential
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -uo pipefail
+          # Lengths, never values. A trailing newline in a secret is invisible
+          # in every other reading and produces exactly this error.
+          echo "account id bytes: $(printf %s "$CLOUDFLARE_ACCOUNT_ID" | wc -c)"
+          echo "api token bytes:  $(printf %s "$CLOUDFLARE_API_TOKEN" | wc -c)"
+          echo "--- wrangler whoami (accounts the token can see, and its scopes)"
+          npx wrangler whoami || echo "whoami exited $?"
+          echo "--- direct D1 list probe, status and errors only"
+          url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database"
+          code=$(curl -sS -o /tmp/d1probe.json -w "%{http_code}" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url")
+          echo "http $code"
+          jq -c "{success, errors, messages}" /tmp/d1probe.json
+
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
       # it is not being widened. `printf %s` rather than `echo`, so the file
       # holds the token and nothing else.
