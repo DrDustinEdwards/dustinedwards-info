@@ -727,6 +727,109 @@ a:hover {
   color: var(--text);
 }
 
+/* ------------------------------------------------------------- The front door
+
+   IN app.css AND NOT A ROUTE-SPLIT SHEET, deliberately, and the trade is the
+   opposite of the admin one. `admin.css` is split because its 60-odd KB were
+   being downloaded by every reader of the home page to style a plane they
+   cannot reach. This is under 2KB and it styles THE PAGE EVERY READER LANDS ON
+   FIRST: splitting it would move those bytes off the other routes and onto the
+   critical path of the one page where a second stylesheet request costs a round
+   trip before first paint. Rule 4 is about what the reader downloads to see a
+   page, and this is the arrangement where that number is smallest for the page
+   that matters most.
+
+   The post cards below reuse `.post-list` and `.post-card-*` from
+   blog-index.css, which app.css already imports. A second card style for the
+   same object would be two owners of one appearance. */
+.home {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 5rem;
+  display: grid;
+  gap: 4rem;
+}
+
+.home-intro {
+  /* No `min-height: 100dvh`. The hero it replaces filled the viewport and put
+     everything that answers "why believe you" below the fold, which is the one
+     place the proof cannot do its job. */
+  max-width: 40rem;
+}
+
+.home-section-heading {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.proof-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  /* `auto-fit` with a floor, so three tiles sit in a row where there is room
+     and stack where there is not, with no breakpoint to keep in step with the
+     rest of the site. The floor is what stops a tile compressing to the point
+     where its number wraps. */
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1.5rem;
+}
+
+.proof {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+/* THE WHOLE TILE IS THE LINK TARGET except its detail line, which is prose
+   about the number rather than part of the control. The link carries both the
+   value and the label so its accessible name is "25 automated checks" rather
+   than a bare digit. */
+.proof-link {
+  display: grid;
+  gap: 0.125rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.proof-link:hover .proof-value {
+  color: var(--brand-hover);
+}
+
+.proof-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--brand);
+}
+
+.proof-label {
+  font-size: 0.9375rem;
+}
+
+.proof-detail {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.home-more {
+  margin: 1.5rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.home-machines p {
+  margin: 0;
+  max-width: 44rem;
+  line-height: 1.7;
+}
+
 /* Auth gate (login + admin) */
 .gate {
   min-height: 100dvh;

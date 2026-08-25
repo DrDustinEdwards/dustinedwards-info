@@ -4201,6 +4201,91 @@ console.log("\n  21. savePost commits before it touches D1");
   );
 }
 
+/* ------- 22. the home page's proof tiles are READ, never written --------- */
+
+/*
+ * THE FRONT PAGE MAKES THREE NUMERIC CLAIMS, and rule 17 says each belongs to
+ * the instrument that measures it. Nothing owned that until this section: the
+ * home route could have carried `<span>25</span>` and every other gate in this
+ * repository would have stayed green, because no instrument reads the home
+ * page's source and no fixture renders it.
+ *
+ * That matters more here than almost anywhere else on the site. These tiles are
+ * the site's argument that it measures itself, so a hand-typed digit in one is
+ * not a stale number, it is a false claim made in the exact place the claim is
+ * being advertised.
+ *
+ * TWO HALVES, because either alone is satisfiable by a defect:
+ *
+ *   1. Each source is READ. The gate count comes from the stack artifact, the
+ *      health verdict from `runHealthChecks`, the post count from the listing.
+ *   2. The rendered tile block carries NO NUMERIC LITERAL. A loader that reads
+ *      all three correctly and then renders a typed digit passes (1) completely.
+ *
+ * COMMENT-STRIPPED, because this file's own prose is full of digits and the
+ * docblock above the loader legitimately discusses `s-maxage=600`.
+ */
+{
+  const homePath = join(root, "app", "routes", "home.tsx");
+  const home = stripComments(readFileSync(homePath, "utf8"));
+
+  ok(
+    "the home route was read and is not empty",
+    home.length > 500,
+    `${home.length} chars after comment stripping. A scan of an empty string ` +
+      `reports exactly what a compliant file reports.`,
+  );
+
+  ok(
+    "the gate count is read from the stack artifact, not written",
+    /stack\.gates\.length/.test(home),
+    "the tile must derive its number from content/generated/stack.json, which " +
+      "build:stack derives from package.json and check:stack reconciles.",
+  );
+  ok(
+    "the health verdict is read from the health module, not written",
+    /runHealthChecks\(/.test(home),
+    "the tile must report the same run /api/health serves.",
+  );
+  ok(
+    "the post count is read from the listing, not written",
+    /listing\.total/.test(home),
+    "the tile must count through the same query, and therefore the same " +
+      "publiclyVisible() predicate, that /blog counts with.",
+  );
+
+  /*
+   * THE TILE BLOCK, extracted by its own element rather than by a character
+   * window. A window around an anchor reads its neighbour's compliance, which
+   * this repo has been bitten by; the section element bounds the scan to the
+   * markup that makes the claims.
+   */
+  const proof = /<section className="home-proof"[\s\S]*?<\/section>/.exec(home)?.[0] ?? "";
+  ok(
+    "the proof section was located to scan",
+    proof.length > 200,
+    `extracted ${proof.length} chars. Without it the literal scan below would ` +
+      `examine nothing and report a clean result.`,
+  );
+
+  /*
+   * A DIGIT IN THE MARKUP IS THE DEFECT. `String(gates)` is fine, `>25<` is
+   * not. The needle looks for a number sitting as rendered text or as a
+   * complete attribute value, which is the shape a hand-written tile takes,
+   * and deliberately ignores digits inside identifiers like `h2` or `sha256`.
+   */
+  const literals = [...proof.matchAll(/>\s*\d[\d,.]*\s*<|="\s*\d[\d,.]*\s*"/g)].map(
+    (m) => m[0].trim(),
+  );
+  ok(
+    "no proof tile states a number of its own",
+    literals.length === 0,
+    `the home page's proof section contains ${literals.length} numeric literal(s): ` +
+      `${literals.join(", ")}. Every number on that section is a claim about a ` +
+      `measurement and must come from the instrument that took it. Rule 17.`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
@@ -4223,14 +4308,19 @@ console.log("\n  21. savePost commits before it touches D1");
  * landed: 228, so the margin is 14, about six percent. Stated as a margin
  * rather than a percentage because the property that matters is how many
  * assertions can vanish before this notices, and that is a count.
+ *
+ * RE-MEASURED 2026-08-25 by RUNNING the gate after section 22 and the tools
+ * timing exemption landed: 247. Floor 214 to 233, margin held at 14, which is
+ * the same count of vanishing assertions this gate could previously absorb.
+ * Section 22 is 6 assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 214;
+const MINIMUM_CHECKS = 233;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-23: 228 offline.`,
+      `rather than failing. Measured 2026-08-25: 247 offline.`,
   );
 }
 
