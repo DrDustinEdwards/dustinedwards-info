@@ -54,6 +54,16 @@ wrangler.jsonc
 # the repo by hand.
 .admin-session
 
+# The smoke credential for check:browser, read by scripts/check-browser.mjs via
+# SMOKE_TOKEN_FILE. A bearer token, so it never lands in git, on the same
+# footing as .dev.vars and .admin-session above. Minted with
+# `node scripts/mint-smoke-token.mjs`; README.md carries the three places it
+# then has to be set.
+#
+# IGNORED rather than merely untracked, for the .admin-session reason: ship
+# refuses on any dirty tree, untracked files included.
+.smoke-token
+
 # Social card review renders, written by `build:og -- --out og-samples`.
 # Untracked because the PNG bytes are not deterministic and are deliberately
 # kept out of the gated artifact, and IGNORED rather than merely untracked

@@ -413,6 +413,7 @@ npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put ANALYTICS_READ_TOKEN
+npx wrangler secret put SMOKE_TOKEN
 ```
 
 | Secret | What it is for | Where a new one comes from |
@@ -425,10 +426,25 @@ npx wrangler secret put ANALYTICS_READ_TOKEN
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
+| `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases fall back to the pasted session cookie and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
 the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
-`wrangler.jsonc`**.
+`wrangler.jsonc`**. `SMOKE_TOKEN` was added to the ratified list on 2026-08-24
+and is TYPED AND GUARDED BEFORE IT IS PROVISIONED, so until it is set the tools
+page reports it absent, which is the state that line exists to be able to show.
+
+**MINTING AND SETTING THE SMOKE TOKEN, in full.** It goes to three places and
+never onto a command line; every one of these reads stdin:
+
+```sh
+node scripts/mint-smoke-token.mjs > .smoke-token   # gitignored, 64 chars, one line
+npx wrangler secret put SMOKE_TOKEN < .smoke-token # the deployed Worker
+gh secret set SMOKE_TOKEN < .smoke-token           # CI, so the browser gate runs unattended
+```
+
+Then `SMOKE_TOKEN_FILE=.smoke-token` in the shell that runs `check:browser`, or
+leave the file at the repo root where the gate looks for it by default.
 
 There is no AI Search secret and none is needed. The Worker reaches the instance
 through the binding. An AI Search API token is required only by

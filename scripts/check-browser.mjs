@@ -28,10 +28,23 @@
  * mis-coloured, or has its z-order inverted passes here. Screenshots would need a
  * human or a baseline, and a baseline is a fixture that drifts.
  *
- * **THE ADMIN CASES ARE OPT-IN.** They read a session from `.admin-session`, a
- * gitignored file whose tracked `.example` sibling carries the refill
- * instructions. ABSENT, they skip loudly. SUPPLIED AND UNUSABLE, they FAIL,
- * because a file on disk is a request for them. See SESSION_COOKIE_NAME below.
+ * **THE ADMIN CASES ARE OPT-IN, AND THERE ARE NOW TWO WAYS TO OPT IN.**
+ * Preferred: the read-only SMOKE credential, a bearer token in `.smoke-token`
+ * or at `SMOKE_TOKEN_FILE`, which authenticates as its own machine principal
+ * and is the one a CI run can hold. Fallback: a real admin session cookie in
+ * `.admin-session`, pasted out of Chrome by a human. Either way, ABSENT they
+ * skip loudly, and SUPPLIED AND UNUSABLE they FAIL, because a file on disk is a
+ * request for them.
+ *
+ * **WHICH ONE RAN DECIDES WHAT A GREEN RESULT MEANS, and the run says so.** The
+ * smoke actor is read-only by construction, so under it these cases prove what
+ * a machine can RENDER and nothing about any write surface. Under the cookie
+ * they run as Dustin, which proves more and proves it only when Dustin is
+ * sitting there. The banner names the credential and the residue.
+ *
+ * **NOTHING HERE SUBMITS ANYTHING, under either credential.** The interaction
+ * cases click client state and read numbers back; the destructive ladder is
+ * asserted by whether its button is ENABLED, never by pressing it.
  *
  * **THE ADMIN CASES DO NOT OBSERVE THE PREVIEW BUILD.** They cannot, and that is
  * measured rather than assumed: sessions live in the PRODUCTION KV namespace,
@@ -289,6 +302,71 @@ const REFILL_HINT = process.env.ADMIN_SESSION_COOKIE
 const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? fileSession?.origin ?? "").replace(/\/+$/, "");
 
 /**
+ * THE SMOKE CREDENTIAL, and it is the preferred way in since 2026-08-24.
+ *
+ * A read-only bearer token that authenticates as its own machine principal
+ * rather than as Dustin. It is what moves these cases out of his hands: a
+ * session cookie has to be pasted out of Chrome by a human, expires, and cannot
+ * be minted by CI, so the admin block had NEVER RUN unattended and the header
+ * above still records its floor as derived rather than measured because of it.
+ *
+ * Read from a FILE, on the `.admin-session` precedent and for the same reason:
+ * a variable exported in one shell cannot survive the next one, and that cost
+ * three consecutive sessions. `SMOKE_TOKEN_FILE` names the path; absent, the
+ * gitignored `.smoke-token` at the repo root is used if it is there.
+ *
+ * **THE VALUE IS NEVER PRINTED, and no diagnostic below quotes it.** The
+ * failures report the SOURCE and the LENGTH only, which is everything needed to
+ * repair a bad token and nothing that helps anyone use a good one.
+ *
+ * ## THREE STATES, AND THE MIDDLE ONE IS A FAILURE
+ *
+ *   env set, file missing   FAILURE. Naming a path is a request for this path,
+ *                           and falling back to the cookie silently would run a
+ *                           different credential than the one CI asked for.
+ *   nothing anywhere        absent. Fall back to the cookie, saying so.
+ *   file present, unusable  FAILURE, exactly as a malformed cookie is.
+ */
+const SMOKE_TOKEN_ENV = process.env.SMOKE_TOKEN_FILE;
+const SMOKE_TOKEN_PATH = SMOKE_TOKEN_ENV ?? join(root, ".smoke-token");
+const SMOKE_SOURCE = SMOKE_TOKEN_ENV ? `SMOKE_TOKEN_FILE (${SMOKE_TOKEN_ENV})` : ".smoke-token";
+/** The Worker's own floor, restated here so a short token fails before a request. */
+const SMOKE_MIN_LENGTH = 32;
+
+let SMOKE_TOKEN = "";
+let SMOKE_ERROR = "";
+if (existsSync(SMOKE_TOKEN_PATH)) {
+  SMOKE_TOKEN = readFileSync(SMOKE_TOKEN_PATH, "utf8").trim();
+  if (!SMOKE_TOKEN) {
+    SMOKE_ERROR = `${SMOKE_SOURCE} exists and is empty. Mint one: node scripts/mint-smoke-token.mjs > .smoke-token`;
+  } else if (SMOKE_TOKEN.length < SMOKE_MIN_LENGTH) {
+    SMOKE_ERROR =
+      `the token in ${SMOKE_SOURCE} is ${SMOKE_TOKEN.length} characters and the Worker ` +
+      `requires at least ${SMOKE_MIN_LENGTH}, so it would be refused before it was compared.`;
+  }
+} else if (SMOKE_TOKEN_ENV) {
+  SMOKE_ERROR =
+    `SMOKE_TOKEN_FILE points at ${SMOKE_TOKEN_ENV}, which does not exist. Naming a path is a ` +
+    `request for the smoke path, so this is a failure rather than a fall back to the cookie.`;
+}
+
+/** Whether the smoke path was ASKED for, which is not the same as usable. */
+const SMOKE_REQUESTED = Boolean(SMOKE_TOKEN || SMOKE_ERROR);
+
+/**
+ * WHICH CREDENTIAL THE ADMIN CASES USE, decided once, here.
+ *
+ * Smoke wins when it is present, because it is the one that runs unattended.
+ * The cookie remains a complete fallback rather than a deprecated path: a
+ * machine credential proves what a machine can reach, and there are things only
+ * a real signed-in session can (see the remaining-human list at the end).
+ */
+const CREDENTIAL = SMOKE_REQUESTED ? "smoke" : "cookie";
+const CREDENTIAL_PRESENT = SMOKE_REQUESTED || Boolean(RAW_COOKIE);
+const CREDENTIAL_ERROR = SMOKE_REQUESTED ? SMOKE_ERROR : COOKIE_ERROR;
+const CREDENTIAL_SOURCE = SMOKE_REQUESTED ? SMOKE_SOURCE : COOKIE_SOURCE;
+
+/**
  * Puts the session in the browser's COOKIE JAR rather than on a pinned header.
  *
  * MEASURED, 40 navigations: `setExtraHTTPHeaders({ cookie })` bounced to /login
@@ -316,6 +394,34 @@ async function applySession(page, origin) {
 }
 
 /**
+ * Puts the smoke credential on the page as a pinned `Authorization` header.
+ *
+ * **A PINNED HEADER IS WRONG FOR THE COOKIE AND RIGHT FOR THIS**, and the
+ * difference is worth stating because the note above says the opposite. The
+ * cookie was measured bouncing to /login on 6 of 16 navigations when pinned,
+ * because a pinned `Cookie` is sent INSTEAD of whatever the server most
+ * recently `Set-Cookie`d and therefore fights Better Auth's session refresh. A
+ * bearer token has no refresh and no server-side counterpart: it is a constant,
+ * so there is nothing for a pin to fight.
+ *
+ * @param {import("puppeteer").Page} page
+ */
+async function applySmoke(page) {
+  await page.setExtraHTTPHeaders({ authorization: `Bearer ${SMOKE_TOKEN}` });
+}
+
+/**
+ * Applies whichever credential this run selected. ONE NAME, ONE ARGUMENT ORDER.
+ *
+ * @param {import("puppeteer").Page} page
+ * @param {string} origin
+ */
+async function applyCredential(page, origin) {
+  if (CREDENTIAL === "smoke") await applySmoke(page);
+  else await applySession(page, origin);
+}
+
+/**
  * Does this origin accept the supplied session? Answered over the WIRE, before
  * a browser is driven at it.
  *
@@ -326,17 +432,58 @@ async function applySession(page, origin) {
  *
  * @param {string} origin
  */
-async function sessionAuthenticates(origin) {
+async function credentialAuthenticates(origin) {
   try {
     const res = await fetch(`${origin}/admin`, {
-      headers: { cookie: ADMIN_COOKIE },
+      headers:
+        CREDENTIAL === "smoke"
+          ? { authorization: `Bearer ${SMOKE_TOKEN}` }
+          : { cookie: ADMIN_COOKIE },
       redirect: "manual",
       signal: AbortSignal.timeout(20_000),
     });
-    return res.status === 200;
-  } catch {
-    return false;
+    /*
+     * THE STATUS IS THE ANSWER, and for the smoke path it is a RICHER answer
+     * than for the cookie. The middleware refuses a PRESENTED bearer token with
+     * a status that names the repair rather than redirecting: 401 wrong token,
+     * 503 not configured on that deployment, 429 rate limited. Those need three
+     * different fixes, so the status is carried out of here rather than
+     * collapsed into a boolean the caller cannot interpret.
+     */
+    return { ok: res.status === 200, status: res.status };
+  } catch (error) {
+    return { ok: false, status: 0, error: String(error) };
   }
+}
+
+/**
+ * The repair a refused smoke credential needs, named from its status.
+ *
+ * @param {number} status
+ */
+function smokeRepair(status) {
+  if (status === 401) {
+    return (
+      `401: the deployment did not recognise this token. The SMOKE_TOKEN wrangler secret and ` +
+      `${SMOKE_SOURCE} have drifted apart. Re-set it: npx wrangler secret put SMOKE_TOKEN < .smoke-token`
+    );
+  }
+  if (status === 503) {
+    return (
+      `503: SMOKE_TOKEN is not set on this deployment at all, so the credential is not ` +
+      `configured rather than wrong. Set it: npx wrangler secret put SMOKE_TOKEN < .smoke-token`
+    );
+  }
+  if (status === 429) {
+    return `429: rate limited. A previous run left the window full; wait a minute and re-run.`;
+  }
+  if (status === 302 || status === 301) {
+    return (
+      `${status}: redirected, which means the middleware never saw a bearer token. Either this ` +
+      `deployment predates the smoke credential, or something stripped the Authorization header.`
+    );
+  }
+  return `status ${status || "(no response)"}`;
 }
 
 let checks = 0;
@@ -352,6 +499,14 @@ const skipped = [];
  * second must not be reported as a collapsed run on top of its real failure.
  */
 let adminCasesRan = false;
+
+/**
+ * The wire pre-check's full result, kept so the failure branch can name a
+ * repair from the STATUS rather than from a boolean that discarded it.
+ *
+ * @type {{ ok: boolean, status: number, error?: string }}
+ */
+let AUTH_RESULT = { ok: false, status: 0 };
 
 /** @param {string} label @param {boolean} condition @param {string} [detail] */
 function ok(label, condition, detail = "") {
@@ -392,26 +547,122 @@ if (built.status !== 0) {
   process.exit(1);
 }
 
+/*
+ * THE SERVER'S OUTPUT IS KEPT, and until 2026-08-24 it was thrown away.
+ *
+ * `stdio: "ignore"` meant that when the startup poll timed out, the gate could
+ * say only that nothing answered on the port. The server had usually said
+ * exactly what was wrong on its own stderr (a port already bound, a config it
+ * could not read, a crash on boot) and the gate discarded it and then reported
+ * a symptom with no cause. That cost a session, which is why this is here.
+ *
+ * A RING BUFFER, not a transcript. `vite preview` is quiet, but a crash loop is
+ * not, and a gate that prints an unbounded server log buries its own result.
+ * The last 40 non-empty lines are what a startup failure needs.
+ */
+/** @type {string[]} */
+const serverLog = [];
+const SERVER_LOG_LINES = 40;
+/** @param {unknown} chunk */
+const recordServerOutput = (chunk) => {
+  for (const line of String(chunk).split(/\r?\n/)) {
+    if (line.trim()) serverLog.push(line.trimEnd());
+  }
+  if (serverLog.length > SERVER_LOG_LINES) {
+    serverLog.splice(0, serverLog.length - SERVER_LOG_LINES);
+  }
+};
+
 const server = spawn("npx", ["vite", "preview", "--port", String(PORT)], {
   cwd: root,
   shell: true,
-  stdio: "ignore",
+  stdio: ["ignore", "pipe", "pipe"],
   detached: false,
 });
+server.stdout?.on("data", recordServerOutput);
+server.stderr?.on("data", recordServerOutput);
+server.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}`));
 
-/** Polls until the server answers, rather than sleeping a guessed interval. */
+/*
+ * WHETHER THE SERVER PROCESS IS STILL ALIVE, which is the half the poll could
+ * not see.
+ *
+ * A process that exited immediately and a process still booting look identical
+ * to a fetch that refuses to connect. The old loop treated both as "not up
+ * yet" and waited out the entire bound before saying anything, so the single
+ * commonest startup failure, the server dying on boot, took a full minute to
+ * report and reported the wrong thing.
+ */
+let serverExit = /** @type {{ code: number | null, signal: string | null } | null} */ (null);
+server.on("exit", (code, signal) => {
+  serverExit = { code, signal };
+});
+
+/**
+ * Polls until the server answers, rather than sleeping a guessed interval.
+ *
+ * ## THE BOUND, AND A CORRECTION TO WHAT THIS COMMENT FIRST CLAIMED
+ *
+ * The 2026-08-24 watch item asked whether the 60s bound was the real problem,
+ * given the gate's own `npm run build` completes first. This comment answered
+ * "`vite preview` answers in about a second" and cut the bound to 30s.
+ *
+ * **THAT NUMBER WAS A PREDICTION WRITTEN AS A MEASUREMENT, and the very first
+ * run refuted it: 17,277ms.** Not one second, seventeen. So the 30s bound this
+ * file briefly carried had 1.7x of headroom, which is TIGHTER than the 60s it
+ * replaced and would have started failing on a loaded machine. Restored to 60s,
+ * which against the worst reading is about 3.5x and is the honest bound.
+ *
+ * THREE SAMPLES, 2026-08-24, same machine, each after the gate's own build:
+ * **17,277ms, 13,782ms, 12,040ms.** A dated observation, not a maintained
+ * value: `npx` resolving through a shell on Windows is most of it, and the
+ * spread across three consecutive runs is already 5 seconds, which is the
+ * argument against a tight bound on its own. The gate PRINTS the figure every
+ * run, so the next reader has a current number rather than this sentence.
+ *
+ * **AND THE BOUND WAS NEVER THE PROBLEM ANYWAY.** The recorded overrun was a
+ * startup that never happened, and against that a tighter bound only shortens
+ * the wait before an undiagnosed message. What actually fixes it is below: the
+ * wait now ENDS EARLY when the process dies, and whatever the server said is
+ * printed either way.
+ */
 async function waitForServer(timeoutMs = 60_000) {
-  const deadline = Date.now() + timeoutMs;
+  const started = Date.now();
+  const deadline = started + timeoutMs;
   while (Date.now() < deadline) {
     try {
       const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(4000) });
-      if (res.ok) return true;
+      if (res.ok) {
+        console.log(`  preview server answered in ${Date.now() - started}ms`);
+        return true;
+      }
     } catch {
       /* not up yet */
     }
+    // The process is gone, so no amount of further waiting will help. Reported
+    // in the caller with the output, which is the point of not waiting here.
+    if (serverExit) return false;
     await new Promise((r) => setTimeout(r, 700));
   }
   return false;
+}
+
+/**
+ * What to print when the server never answered. THE SERVER'S OWN LAST WORDS.
+ *
+ * Named rather than inlined so the failure carries its diagnosis in one place,
+ * and so a run that captured NOTHING says that explicitly instead of printing
+ * an empty region that reads like a clean log.
+ */
+function serverDiagnosis() {
+  const how = serverExit
+    ? `The preview server EXITED before answering (code ${serverExit.code}, signal ${serverExit.signal}).`
+    : `The preview server process was still alive and never answered on ${BASE}.`;
+  const tail = serverLog.length
+    ? `Its last ${serverLog.length} line(s):\n    ${serverLog.join("\n    ")}`
+    : `It produced NO output at all, on either stream, which usually means the ` +
+      `spawn itself never ran the command.`;
+  return `${how}\n  ${tail}`;
 }
 
 function stopServer() {
@@ -430,7 +681,7 @@ function stopServer() {
 let browser;
 try {
   if (!(await waitForServer())) {
-    console.error("check:browser failed. the preview server never answered on " + BASE);
+    console.error(`check:browser failed. ${serverDiagnosis()}`);
     stopServer();
     process.exit(1);
   }
@@ -682,52 +933,78 @@ try {
    * that and names the file that explains the refill rather than describing the
    * clicks here, where they would rot next to a second copy of themselves.
    */
-  if (!RAW_COOKIE) {
+  if (!CREDENTIAL_PRESENT) {
     skip(
-      "the admin plane (6 surfaces, the editor mount, the two mark fills, and the " +
-        "sideways-scroll cases at 1280, 553, 480, 400 and 320)",
-      `no admin session. These cases need a REAL one and are deliberately not stubbed: ` +
-        `a fake auth path would not render what production renders, and the defects they ` +
-        `exist to catch live in the authenticated render.\n` +
-        `        TO RUN THEM: copy ${SESSION_EXAMPLE} to .admin-session and paste a live ` +
-        `session cookie into it. That file carries the five Chrome clicks. It is gitignored.`,
+      "the admin plane (6 surfaces, the editor mount, the two mark fills, the four media " +
+        "interactions, and the sideways-scroll cases at 1280, 553, 480, 400 and 320)",
+      `no admin credential of either kind. These cases need a REAL one and are deliberately ` +
+        `not stubbed: a fake auth path would not render what production renders, and the ` +
+        `defects they exist to catch live in the authenticated render.\n` +
+        `        PREFERRED, and the one that runs unattended: mint a smoke token with ` +
+        `\`node scripts/mint-smoke-token.mjs > .smoke-token\`, set it on the Worker with ` +
+        `\`npx wrangler secret put SMOKE_TOKEN < .smoke-token\`, and set ADMIN_ORIGIN.\n` +
+        `        OR: copy ${SESSION_EXAMPLE} to .admin-session and paste a live session ` +
+        `cookie into it. That file carries the five Chrome clicks. Both are gitignored.`,
     );
-  } else if (COOKIE_ERROR) {
+  } else if (CREDENTIAL_ERROR) {
     ok(
-      `the session supplied in ${COOKIE_SOURCE} is a usable cookie`,
+      `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} is usable`,
       false,
-      `${COOKIE_ERROR}\n` +
-        `        This is a FORMAT problem, not an expired session. See ${SESSION_EXAMPLE}. ` +
+      `${CREDENTIAL_ERROR}\n` +
+        `        This is a FORMAT or CONFIGURATION problem, not a rejected credential. ` +
+        `${CREDENTIAL === "smoke" ? "See RECOVERY.md for the three places the token goes." : `See ${SESSION_EXAMPLE}.`} ` +
         `The admin cases below did not run.`,
     );
   } else if (!ADMIN_ORIGIN) {
     ok(
       "the admin cases have an origin to drive",
       false,
-      `a session was supplied in ${COOKIE_SOURCE} and no origin was. These cases CANNOT run ` +
-        `against the preview server: sessions live in the production KV namespace and the ` +
-        `preview reads local miniflare storage, so a valid session renders the login page ` +
-        `there. Measured, not assumed.\n` +
-        `        Add an \`origin =\` line to .admin-session, or set ADMIN_ORIGIN. The admin ` +
+      `a ${CREDENTIAL} credential was supplied in ${CREDENTIAL_SOURCE} and no origin was. ` +
+        `These cases CANNOT run against the preview server, and that is true of BOTH ` +
+        `credentials for the same underlying reason: neither one exists there. Sessions live ` +
+        `in the production KV namespace and the preview reads local miniflare storage; ` +
+        `SMOKE_TOKEN is a wrangler secret and this repo has no .dev.vars by design, so the ` +
+        `preview would answer 503 not-configured. Measured for the cookie, and structural ` +
+        `for the token.\n` +
+        `        Set ADMIN_ORIGIN, or add an \`origin =\` line to .admin-session. The admin ` +
         `cases below did not run.`,
     );
-  } else if (!(await sessionAuthenticates(ADMIN_ORIGIN))) {
+  } else if (!(AUTH_RESULT = await credentialAuthenticates(ADMIN_ORIGIN)).ok) {
     ok(
-      `the session supplied in ${COOKIE_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
+      `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
       false,
-      `GET /admin with it did not return 200, so the session is almost certainly EXPIRED. ` +
-        `The format parsed fine and the cookie was named ${SESSION_COOKIE_NAME}, so this is ` +
-        `not a broken test and not a code defect.\n` +
-        `        TO FIX: ${REFILL_HINT}\n` +
-        `        The other possibility is that ${ADMIN_ORIGIN} does not share the production ` +
-        `KV namespace. The admin cases below did not run.`,
+      CREDENTIAL === "smoke"
+        ? `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
+          `the smoke path reports one rather than guessing:\n` +
+          `        ${smokeRepair(AUTH_RESULT.status)}\n` +
+          `        The admin cases below did not run.`
+        : `GET /admin with it did not return 200, so the session is almost certainly EXPIRED. ` +
+          `The format parsed fine and the cookie was named ${SESSION_COOKIE_NAME}, so this is ` +
+          `not a broken test and not a code defect.\n` +
+          `        TO FIX: ${REFILL_HINT}\n` +
+          `        The other possibility is that ${ADMIN_ORIGIN} does not share the production ` +
+          `KV namespace. The admin cases below did not run.`,
     );
   } else {
+    /*
+     * THE PATH SELECTION IS STATED, BOTH WAYS, and it is the line a reader needs
+     * most: these cases now have two completely different principals available,
+     * and which one ran decides what the result MEANS. The smoke credential is
+     * read-only, so a green run under it says nothing about any write surface;
+     * the cookie is Dustin, so a green run under it says nothing about whether
+     * CI could have produced it.
+     */
     console.log(
-      `\n  admin session: read from ${COOKIE_SOURCE}` +
-        `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`,
+      CREDENTIAL === "smoke"
+        ? `\n  admin credential: THE SMOKE TOKEN, read from ${SMOKE_SOURCE}` +
+          `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)` +
+          `\n  the smoke actor is READ ONLY: every case below is a GET, and no write surface is exercised\n`
+        : `\n  admin credential: the pasted session cookie, read from ${COOKIE_SOURCE}` +
+          `\n  NO SMOKE TOKEN was found, so these cases needed a human to supply a session.` +
+          `\n  To run them unattended, see RECOVERY.md: node scripts/mint-smoke-token.mjs` +
+          `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`,
     );
-    ok(`the supplied session authenticates against ${ADMIN_ORIGIN}`, true);
+    ok(`the supplied ${CREDENTIAL} credential authenticates against ${ADMIN_ORIGIN}`, true);
     adminCasesRan = true;
 
     const admin = await browser.newPage();
@@ -741,7 +1018,7 @@ try {
     admin.on("response", (r) => {
       if (/markdown-editor.*\.js/.test(r.url())) fetched.push(r.status());
     });
-    await applySession(admin, ADMIN_ORIGIN);
+    await applyCredential(admin, ADMIN_ORIGIN);
     await admin.setViewport({ width: 1280, height: 900 });
 
     /* ---------------------------------------- 6a. every surface renders */
@@ -883,6 +1160,393 @@ try {
         !errors.some((e) => /#419|Minified React error/.test(e)),
         errors.filter((e) => /#419|Minified React error/.test(e)).join(" | "),
       );
+    }
+
+    /* ------------- 6d. THE MEDIA INTERACTIONS, previously Dustin's clicks --- */
+
+    /*
+     * FOUR INTERACTIONS ON /admin/media, ASSERTED, and they used to be a list
+     * of things for Dustin to click after every media change.
+     *
+     * ## WHAT THEY ARE, AND WHY EXACTLY THESE
+     *
+     * The media route split moved 1,699 lines of markup between files, and
+     * `check:admin-ui` proved every number identical across the move. That gate
+     * renders routes with `.server` imports stubbed AND NO STYLESHEET, so what
+     * it cannot see is precisely what these cover: a header that renders but
+     * sorts nothing, an inspector that never opens, a bulk bar that appears
+     * with the wrong arithmetic in it, and a confirmation ladder that is
+     * enforced on the server and silently ungated in the browser.
+     *
+     * ## THE READ-ONLY BOUNDARY IS VISIBLE HERE AND IT IS NOT A LIMITATION
+     *
+     * Every case below is a GET or a click on client state. NOTHING SUBMITS.
+     * Under the smoke credential a submission would be refused by the
+     * middleware anyway, but these are written not to submit under EITHER
+     * credential, because the cookie path runs as Dustin and a gate that
+     * trashes a file to prove the trash button works is not a gate anybody can
+     * afford to run.
+     *
+     * That boundary is why two of the destructive confirmations are NOT here:
+     * see the remaining-human list at the end of this file.
+     */
+    await admin.setViewport({ width: 1280, height: 900 });
+
+    /* --- (i) the list view renders a header, and it marks the sorted column - */
+
+    /*
+     * SORTED BY SIZE, chosen because it is not the default: a header that
+     * hardcoded its active column would pass on `sort=name` and fail here.
+     * The active column is read back from the DOM and compared against the sort
+     * this URL ASKED for, so the assertion cannot be satisfied by whichever
+     * column happens to be marked.
+     */
+    await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=list&sort=size`, {
+      waitUntil: "networkidle0",
+    });
+    const listHead = await admin.evaluate(() => {
+      const head = document.querySelector(".media-list-head");
+      if (!head) return null;
+      const cells = [...head.querySelectorAll(".media-col-head")].map((el) => ({
+        label: (el.textContent || "").trim(),
+        active: el.classList.contains("is-active"),
+        sortable: el.tagName.toLowerCase() === "a",
+        href: el.getAttribute("href") || "",
+        sortKey: el.getAttribute("data-sort") || "",
+        ariaSort: el.getAttribute("aria-sort") || "",
+      }));
+      return { cells, rows: document.querySelectorAll("[data-tile]").length };
+    });
+
+    ok(
+      "/admin/media?view=list: the list view renders its header row",
+      !!listHead && listHead.cells.length >= 5,
+      listHead
+        ? `${listHead.cells.length} header cell(s), expected the five columns`
+        : "no .media-list-head at all, so the sort assertions below examine nothing",
+    );
+    ok(
+      "the list header marks exactly the column the URL sorted by",
+      !!listHead &&
+        listHead.cells.filter((c) => c.active).length === 1 &&
+        listHead.cells.some((c) => c.active && c.label.startsWith("Size")),
+      listHead
+        ? `active: ${listHead.cells.filter((c) => c.active).map((c) => c.label).join(", ") || "(none)"}. ` +
+          `The URL asked for sort=size, so Size and nothing else should carry is-active.`
+        : "not measured",
+    );
+    /*
+     * EVERY SORTABLE CELL IS AN ANCHOR, which is the property. NOT "every href
+     * carries sort=", which is what this asserted first and which was WRONG.
+     *
+     * Measured: 4 anchors, 3 carrying `sort=`. The missing one is Added, and it
+     * is missing correctly. `hrefWith` omits any parameter equal to its default
+     * and `DEFAULTS.sort` is `added`, so the link to the default sort is a
+     * shorter URL by design rather than a link that has lost its sort. The
+     * first assertion could not tell those apart and reported a defect in code
+     * that was behaving exactly as its own URL builder is written to.
+     *
+     * What actually has to hold is that sorting has an ADDRESS: an anchor with
+     * an href, so it is shareable, restored by the back button and usable with
+     * scripting off, which a click handler on a cell is none of.
+     */
+    ok(
+      "every sortable header cell is a real link, so sorting has an address",
+      !!listHead &&
+        listHead.cells.filter((c) => c.sortable).length === 4 &&
+        listHead.cells
+          .filter((c) => c.sortable)
+          .every((c) => c.href.startsWith("/admin/media") && c.sortKey.length > 0),
+      listHead
+        ? `${listHead.cells.filter((c) => c.sortable).length} anchor(s) of the four sortable ` +
+          `columns; hrefs ${JSON.stringify(listHead.cells.filter((c) => c.sortable).map((c) => c.href))}. ` +
+          `A header cell that is not an anchor does not work with scripting off.`
+        : "not measured",
+    );
+    /*
+     * AND EXACTLY ONE COLUMN ANNOUNCES ITSELF SORTED, to assistive technology.
+     * `aria-sort="none"` on the others is not noise: it is what tells a screen
+     * reader the column CAN be sorted and currently is not. Two columns claiming
+     * to be sorted, or none, are both wrong and both render identically.
+     */
+    ok(
+      "exactly one column carries a live aria-sort, and it is the sorted one",
+      !!listHead &&
+        listHead.cells.filter((c) => c.ariaSort && c.ariaSort !== "none").length === 1 &&
+        listHead.cells.some(
+          (c) => c.ariaSort === "descending" && c.label.startsWith("Size"),
+        ),
+      listHead
+        ? `aria-sort values ${JSON.stringify(
+            listHead.cells.filter((c) => c.sortable).map((c) => `${c.label}=${c.ariaSort}`),
+          )}. The URL asked for sort=size and size defaults to descending.`
+        : "not measured",
+    );
+
+    /* --- (ii) the inspector opens on ?key= ---------------------------------- */
+
+    /*
+     * THE KEY COMES OFF THE PAGE, never from a fixture. A hardcoded key would be
+     * a second copy of a content hash that the bucket owns, and it would go red
+     * the day that object is deleted rather than the day the inspector breaks.
+     */
+    const firstKey = await admin.evaluate(() => {
+      const tile = document.querySelector("[data-tile]");
+      return tile ? tile.getAttribute("data-tile") : null;
+    });
+    ok(
+      "the media library lists an object to inspect",
+      !!firstKey,
+      "nothing carries data-tile, so the inspector assertions below examine nothing. " +
+        "An empty bucket would do this legitimately, and it would still be worth failing on: " +
+        "these cases cannot say anything about a library with no rows in it.",
+    );
+
+    if (firstKey) {
+      await admin.goto(
+        `${ADMIN_ORIGIN}/admin/media?view=list&key=${encodeURIComponent(firstKey)}`,
+        { waitUntil: "networkidle0" },
+      );
+      const inspector = await admin.evaluate((wanted) => {
+        const panel = document.querySelector(".media-detail");
+        if (!panel) return null;
+        const r = panel.getBoundingClientRect();
+        return {
+          width: Math.round(r.width),
+          height: Math.round(r.height),
+          dialog: panel.getAttribute("role") || panel.closest("[role]")?.getAttribute("role") || "",
+          namesKey: (panel.textContent || "").includes(wanted.slice(0, 12)),
+          hasClose: !!panel.querySelector(".media-detail-close"),
+        };
+      }, firstKey);
+
+      ok(
+        "/admin/media?key=: the inspector opens on a key in the URL",
+        !!inspector,
+        "no .media-detail rendered for a key taken off the library page itself. The inspector " +
+          "is URL-driven by design, so this is the whole of that contract.",
+      );
+      ok(
+        "the inspector is actually laid out, not present and collapsed",
+        !!inspector && inspector.width > 200 && inspector.height > 100,
+        inspector
+          ? `.media-detail measures ${inspector.width}x${inspector.height}. A panel that exists ` +
+            `in the DOM at zero size is the mount class wearing a different hat.`
+          : "not measured",
+      );
+      ok(
+        "the inspector names the object it was opened for, and offers a way out",
+        !!inspector && inspector.namesKey && inspector.hasClose,
+        inspector
+          ? `namesKey=${inspector.namesKey} close=${inspector.hasClose}. An inspector showing a ` +
+            `DIFFERENT object than the URL asked for is worse than one that does not open.`
+          : "not measured",
+      );
+    }
+
+    /* --- (iii) the bulk bar counts and sizes the selection ------------------ */
+
+    /*
+     * A CLICK, and the only case here that is not a navigation.
+     *
+     * Selection is the one piece of client state this page has, so the bulk bar
+     * cannot be reached by a URL and `check:admin-ui` reaches it only through a
+     * seeded fixture. This is the live version of that fixture: a real click, on
+     * a real hydrated page, with the arithmetic read back out.
+     *
+     * The SIZE is the half worth asserting. A count is hard to get wrong; the
+     * size sums a field over the selected subset, and a sum over the wrong
+     * subset still renders a plausible number.
+     */
+    await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=grid`, { waitUntil: "networkidle0" });
+    const beforeSelect = await admin.evaluate(() => !!document.querySelector(".posts-bulk"));
+    ok(
+      "the bulk bar is absent before anything is selected",
+      !beforeSelect,
+      "a bulk bar rendered with an empty selection would offer actions that act on nothing, " +
+        "and it would make the assertion below pass without a click happening at all",
+    );
+
+    const boxes = await admin.$$('input[type="checkbox"][name="key"]');
+    ok(
+      "the media grid renders row checkboxes to select",
+      boxes.length > 0,
+      "no checkbox carries name=key, so the bulk assertions below examine nothing",
+    );
+
+    if (boxes.length > 0) {
+      await boxes[0].click();
+      // The bar is rendered by React state, so it appears on the next paint
+      // rather than synchronously with the click.
+      await admin
+        .waitForSelector(".posts-bulk", { timeout: 5000 })
+        .catch(() => null);
+      const bulk = await admin.evaluate(() => {
+        const bar = document.querySelector(".posts-bulk");
+        if (!bar) return null;
+        const count = bar.querySelector(".posts-bulk-count");
+        const size = bar.querySelector(".posts-bulk-size");
+        return {
+          count: (count?.textContent || "").trim(),
+          size: (size?.textContent || "").trim(),
+          live: count?.getAttribute("aria-live") || "",
+          label: bar.getAttribute("aria-label") || "",
+        };
+      });
+
+      ok(
+        "selecting one row opens the bulk bar",
+        !!bulk,
+        "clicking a row checkbox did not produce .posts-bulk. Either the page is not hydrated " +
+          "or the selection state is not reaching the bar.",
+      );
+      ok(
+        "the bulk bar reports the count it was given",
+        !!bulk && /^1 selected/.test(bulk.count),
+        bulk ? `count reads ${JSON.stringify(bulk.count)} after exactly one click` : "not measured",
+      );
+      /*
+       * A SIZE, AND NOT A ZERO. `byteSize` over an empty subset renders "0 B",
+       * which is exactly what a bar summing the wrong array would show, so the
+       * assertion has to exclude it explicitly rather than merely require text.
+       */
+      ok(
+        "the bulk bar sizes the selection rather than rendering an empty sum",
+        !!bulk && bulk.size.length > 0 && !/^0\s*B$/i.test(bulk.size),
+        bulk
+          ? `size reads ${JSON.stringify(bulk.size)}. "0 B" is what summing an empty or wrong ` +
+            `subset produces, and one selected object is not zero bytes.`
+          : "not measured",
+      );
+      ok(
+        "the bulk bar announces itself to a screen reader",
+        !!bulk && bulk.live === "polite" && bulk.label.length > 0,
+        bulk ? `aria-live=${JSON.stringify(bulk.live)} aria-label=${JSON.stringify(bulk.label)}` : "not measured",
+      );
+    }
+
+    /* --- (iv) a destructive delete demands the count typed ------------------ */
+
+    /*
+     * THE EMPTY-TRASH LADDER, which is the ONE destructive confirmation a
+     * read-only credential can reach.
+     *
+     * It opens from a URL (`?confirm=empty-trash`), so it is server-rendered and
+     * a GET reaches it. The other two confirmations in this route open from
+     * `actionData`, which means reaching them requires the POST the smoke
+     * credential is refused: they are unreachable BY CONSTRUCTION, not by any
+     * limit of the harness, and they are on the remaining-human list with that
+     * reason.
+     *
+     * ## THE REQUIRED STRING IS READ OFF THE PAGE
+     *
+     * The modal states what to type, and this reads it from there rather than
+     * computing a trash count independently. A gate that derived the expected
+     * count itself would be asserting its own arithmetic against the page's, and
+     * when they disagreed it could not say which was wrong.
+     *
+     * ## IT NEVER SUBMITS
+     *
+     * The button's ENABLED state is the assertion. Pressing it would empty the
+     * trash, and the ladder exists precisely because that is not undoable.
+     *
+     * ## CONDITIONAL, AND THE CONDITION IS REPORTED
+     *
+     * The modal renders only when the trash is non-empty (`trashedCount > 0`),
+     * so on a deployment with an empty bin there is genuinely nothing to
+     * measure. That is a SKIP with the reason, never a silent pass: an
+     * assertion that quietly examines nothing reports what a working ladder
+     * reports.
+     */
+    await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
+      waitUntil: "networkidle0",
+    });
+    const modal = await admin.evaluate(() => {
+      const panel = document.querySelector(".media-modal");
+      if (!panel) return null;
+      const prompt = panel.querySelector(".media-modal-typed .sr-only");
+      const typed = /Type\s+(\S+)\s+to confirm/i.exec(prompt?.textContent || "");
+      return {
+        role: panel.getAttribute("role") || "",
+        modal: panel.getAttribute("aria-modal") || "",
+        required: typed ? typed[1] : "",
+        hasInput: !!panel.querySelector(".media-modal-typed input"),
+        confirmDisabled: !!panel.querySelector(".media-modal-actions .btn-danger[disabled]"),
+      };
+    });
+
+    if (!modal) {
+      skip(
+        "/admin/media?confirm=empty-trash: the typed-confirmation ladder",
+        "the confirmation did not render, which on this deployment means the trash is EMPTY: " +
+          "the modal is gated on trashedCount > 0. Nothing is wrong and nothing was measured. " +
+          "This case covers itself again as soon as one object is trashed.",
+      );
+    } else {
+      ok(
+        "the empty-trash confirmation is a real dialog",
+        modal.role === "dialog" && modal.modal === "true",
+        `role=${JSON.stringify(modal.role)} aria-modal=${JSON.stringify(modal.modal)}. This ` +
+          `replaced window.prompt(), which was unreadable to a screen reader and which did not ` +
+          `run at all with scripting off, submitting the destruction unconfirmed.`,
+      );
+      ok(
+        "it asks for a specific string to be typed",
+        modal.hasInput && modal.required.length > 0,
+        `input=${modal.hasInput} required=${JSON.stringify(modal.required)}. The ladder is the ` +
+          `count, and a modal that asks for nothing is a dialog rather than a confirmation.`,
+      );
+      ok(
+        "the confirm button starts DISABLED on a hydrated page",
+        modal.confirmDisabled,
+        "the destructive button is pressable before anything has been typed. The server still " +
+          "re-checks, so this is early feedback rather than the check, but an ungated button " +
+          "means the ladder exists only on the server and the page contradicts it.",
+      );
+
+      if (modal.hasInput && modal.required) {
+        const field = ".media-modal-typed input";
+        // The WRONG value first. A button that enables on any input at all would
+        // pass an assertion that only ever typed the right answer.
+        await admin.type(field, `${modal.required}x`);
+        const afterWrong = await admin.evaluate(
+          () => !!document.querySelector(".media-modal-actions .btn-danger[disabled]"),
+        );
+        ok(
+          "a WRONG value leaves the confirm button disabled",
+          afterWrong,
+          `typing ${JSON.stringify(`${modal.required}x`)} enabled the destructive button, so the ` +
+            `gate is "something was typed" rather than "the count was typed".`,
+        );
+
+        await admin.evaluate((sel) => {
+          const el = /** @type {HTMLInputElement | null} */ (document.querySelector(sel));
+          if (el) {
+            const setter = Object.getOwnPropertyDescriptor(
+              window.HTMLInputElement.prototype,
+              "value",
+            )?.set;
+            setter?.call(el, "");
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }, field);
+        await admin.type(field, modal.required);
+        const afterRight = await admin.evaluate(
+          () => !!document.querySelector(".media-modal-actions .btn-danger[disabled]"),
+        );
+        ok(
+          "the exact value ENABLES the confirm button",
+          !afterRight,
+          `typing ${JSON.stringify(modal.required)}, which is the string the modal itself asks ` +
+            `for, left the button disabled. The ladder would then be unpassable and the trash ` +
+            `could not be emptied from the browser at all.`,
+        );
+        /*
+         * NOT SUBMITTED. Navigating away is the end of this case, deliberately,
+         * and the navigation is what discards the typed value.
+         */
+        await admin.goto(`${ADMIN_ORIGIN}/admin/media`, { waitUntil: "networkidle0" });
+      }
     }
 
     /* ------------------------- the admin plane does not scroll sideways ---- */
@@ -1167,8 +1831,26 @@ try {
  * cross-check holds, 43 plus two. The floor stays at 41, which is about nine
  * percent under and inside the margin this repo uses; it is not raised on every
  * pair of assertions, only when the gap stops meaning anything.
+ *
+ * ## RE-MEASURED AGAIN 2026-08-24 WITH THE FOUR MEDIA INTERACTIONS: **59**
+ *
+ * Run through this gate's own pipeline, never summed. Floored at 54, about
+ * eight percent under. 45 to 59 is fourteen assertions and the gap at 41 had
+ * stopped meaning anything, which is the condition the paragraph above names
+ * for raising it.
+ *
+ * **59 IS THE FLOOR OF THE RANGE, NOT THE MIDDLE OF IT, and that is why the
+ * floor is not higher.** The empty-trash ladder is gated on the deployment
+ * actually having something in its trash, so it contributes 0 assertions on a
+ * clean bin and 5 on a dirty one. The measured 59 is the 0 case. A floor set
+ * against a run that happened to catch a full trash would go red on the next
+ * clean one and report a collapsed block where nothing had collapsed.
+ *
+ * The cross-check that makes 59 credible rather than merely observed: 45 was
+ * the last measurement, the media block adds three list-header assertions, four
+ * inspector, six bulk-bar and one skip, and 45 + 14 is 59.
  */
-const MINIMUM_CHECKS = adminCasesRan ? 41 : 13;
+const MINIMUM_CHECKS = adminCasesRan ? 54 : 13;
 console.log(
   `\n${checks} checks, ${failures} failures` +
     (skipped.length ? `, ${skipped.length} skipped` : "") +
@@ -1190,6 +1872,42 @@ if (!adminCasesRan) {
       "  green result above is a statement about the public pages only.\n",
   );
 }
+
+/*
+ * WHAT STILL NEEDS A HUMAN, PRINTED EVERY RUN, INCLUDING GREEN ONES.
+ *
+ * The smoke credential moved a list of manual clicks into assertions. It did not
+ * empty the list, and a gate that reports only what it covered lets the
+ * remainder quietly become "everything is covered". Each line names the reason,
+ * because the reasons are different in kind and only one of them is a limit of
+ * this harness:
+ *
+ *   BY CONSTRUCTION  the credential is read-only, so any surface that can only
+ *                    be reached THROUGH a write is unreachable to it. Widening
+ *                    the credential to reach them would give the machine actor
+ *                    the authority the whole design exists to withhold, so
+ *                    these stay human on purpose and are not a backlog item.
+ *   BY THE HARNESS   Puppeteer cannot express it. These ARE backlog items.
+ *   BY JUDGEMENT     it needs an eye rather than a number.
+ */
+console.log(
+  "  REMAINING HUMAN, and why:\n" +
+    "    BY CONSTRUCTION, and deliberately permanent:\n" +
+    "      - the single-delete and index-rebuild confirmations. Both open from actionData,\n" +
+    "        so reaching them needs the POST a read-only credential is refused. Their SERVER\n" +
+    "        half is gated by check:destructive; only the browser half is uncovered.\n" +
+    "      - every write outcome: upload, tag, trash, restore, rebuild. The gate proves the\n" +
+    "        controls RENDER and never that a submission lands.\n" +
+    "    BY THE HARNESS:\n" +
+    "      - hover states, including the heading permalinks. Puppeteer rejects hover\n" +
+    "        emulation, so this is owed as a real-device eyeball.\n" +
+    "      - drag and drop onto the library, and the paste-to-upload path. Both need a real\n" +
+    "        DataTransfer that the automation API does not synthesise faithfully.\n" +
+    "      - the clipboard buttons. The headless permission prompt is not the real one.\n" +
+    "    BY JUDGEMENT:\n" +
+    "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
+    "        attribute; a page that lays out correctly and is unreadable passes.\n",
+);
 if (checks < MINIMUM_CHECKS) {
   console.error(
     `check:browser REFUSED: only ${checks} assertion(s) ran, expected at least ` +
