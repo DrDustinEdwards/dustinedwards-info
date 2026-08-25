@@ -34,10 +34,18 @@
 #
 #   1. Create a SCOPED token at
 #      dash.cloudflare.com/profile/api-tokens -> Create Token
-#      -> "Edit Cloudflare Workers" template.
+#      -> "Edit Cloudflare Workers" template,
+#      -> THEN ADD ONE PERMISSION: Account -> D1 -> Edit.
 #      Account Resources: Include -> this account only.
 #      Zone Resources: not needed while the site is on workers.dev.
 #      Copy it once; the dashboard never shows it again.
+#
+#      THE ADDED D1 PERMISSION IS NOT OPTIONAL and this line is a correction:
+#      the template alone was specified here, a token minted from it was set,
+#      and ship refused at step 2 because the template does not carry D1.
+#      Ship reads the deployed schema and then runs the content sync, both
+#      direct D1 API calls. The step below refuses by name if it is missing
+#      again, in three seconds rather than forty.
 #
 #   2. Set the four secrets:
 #        gh secret set CLOUDFLARE_API_TOKEN      (paste the token)
@@ -173,38 +181,54 @@ jobs:
           KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
         run: node scripts/apply-config-ids.mjs
 
-      # TEMPORARY DIAGNOSTIC, 2026-08-25. Ship refused at step 2 with Cloudflare
-      # API code 7403 on the D1 query, which is one message covering two very
-      # different causes: an account id that is not valid, or a token with no
-      # D1 permission. This step names which, and is removed once it has.
-      - name: Diagnose the Cloudflare credential
+      # THE TOKEN MUST REACH EVERY SURFACE THIS DEPLOY TOUCHES, and it is asked
+      # here rather than discovered forty seconds into ship.
+      #
+      # This step exists because the instruction above USED TO BE WRONG. It said
+      # "Edit Cloudflare Workers template" and nothing else, and a token minted
+      # from exactly that template CANNOT SHIP THIS WORKER: the template grants
+      # Workers Scripts, KV, R2 and Queues, and does not grant D1. Ship refused
+      # at its step 2 with Cloudflare API code 7403, which is one message
+      # covering an invalid account and an unpermitted product, so the log named
+      # neither. Measured on the runner 2026-08-25: workers-scripts, workers-kv,
+      # r2 and queues all answered 200; d1 answered 401.
+      #
+      # THE LIST IS WHAT THE DEPLOY IS MEASURED TO CALL, not every binding:
+      #   workers/scripts   `wrangler deploy` itself
+      #   d1/database       ship reads the deployed schema, then `d1 execute`s
+      #                     the content sync. Both are direct D1 API calls.
+      #   queues            the config declares a consumer, and wrangler
+      #                     registers it at deploy (updateQueueConsumers).
+      # AI Search is deliberately ABSENT: the token has no autorag permission and
+      # does not need one. An `ai_search` binding is serialised as script
+      # metadata and resolved by no API call, read out of wrangler 4.107.0.
+      # Asking for a permission the deploy never uses is a wider credential in
+      # GitHub for nothing.
+      #
+      # A READ probe, because the templates grant Edit: a token that can read a
+      # surface holds that product group. STATED RESIDUE: a hand-built token
+      # carrying only the Read group would pass this and still fail its write.
+      - name: Refuse if the token cannot reach D1, Workers and Queues
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -uo pipefail
-          # Lengths, never values. A trailing newline in a secret is invisible
-          # in every other reading and produces exactly this error.
-          echo "account id bytes: $(printf %s "$CLOUDFLARE_ACCOUNT_ID" | wc -c)"
-          echo "api token bytes:  $(printf %s "$CLOUDFLARE_API_TOKEN" | wc -c)"
-          echo "--- wrangler whoami (accounts the token can see, and its scopes)"
-          npx wrangler whoami || echo "whoami exited $?"
-          echo "--- one read probe per API surface this deploy touches"
-          # Read, not write: an Edit-template token that can read a surface has
-          # that product's permission group, because the templates grant Edit.
-          # A 401 or 403 names a group that is ABSENT, which is the question.
-          # Stated residue: a Read-only group would pass these and fail a write.
+          unreachable=""
           probe() {
             url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/$2"
             code=$(curl -sS -o /tmp/probe.json -w "%{http_code}" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url")
-            echo "  $1 -> http $code $(jq -c .errors /tmp/probe.json)"
+            echo "  $1 -> http $code"
+            if [ "$code" != "200" ]; then unreachable="$unreachable $1"; fi
           }
-          probe "workers-scripts" "workers/scripts"
-          probe "workers-kv" "storage/kv/namespaces"
+          probe "workers" "workers/scripts"
           probe "d1" "d1/database"
-          probe "r2" "r2/buckets"
           probe "queues" "queues"
-          probe "ai-search" "autorag/rags"
+          if [ -n "$unreachable" ]; then
+            echo "::error::The Cloudflare API token cannot reach:${unreachable}. The account id itself is fine if any surface answered 200. Re-mint the token at dash.cloudflare.com/profile/api-tokens with the Edit Cloudflare Workers template AND an added Account -> D1 -> Edit permission, Account Resources scoped to this account only, then: gh secret set CLOUDFLARE_API_TOKEN. Nothing was built and nothing was deployed."
+            exit 1
+          fi
+          echo "The token reaches every surface this deploy calls."
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
       # it is not being widened. `printf %s` rather than `echo`, so the file
