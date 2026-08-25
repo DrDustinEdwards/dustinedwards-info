@@ -108,13 +108,25 @@ const CI_EXCLUDED = {
    */
   "check:head": "vacuous in CI: it compares disk to HEAD, and CI has only HEAD.",
   /*
-   * Not runnable in CI as it stands, for two separate reasons and only the
-   * second is fixable. It reads local D1 state to render a post list, and that
-   * state is gitignored, so the aria-current case would find no post to open.
-   * And its admin case needs a real session cookie, which CI has no way to hold
-   * without a stored credential nobody has ruled on.
+   * Not runnable in CI as it stands, and since 2026-08-25 for ONE reason, not
+   * two. The public cases drive a preview build that reads local D1 state, and
+   * that state is gitignored, so the aria-current case would find no post to
+   * open.
+   *
+   * The second reason this entry used to carry, "its admin case needs a real
+   * session cookie, which CI has no way to hold without a stored credential
+   * nobody has ruled on", was FALSIFIED by the smoke credential: the ruling
+   * happened (decisions vol 8, 2026-08-24), SMOKE_TOKEN is a stored CI secret,
+   * and the admin cases authenticate with it against the DEPLOYED origin, no
+   * session cookie involved. Verified on a live run 2026-08-25: 59 checks, the
+   * admin block fully executed under the smoke token.
+   *
+   * So the admin HALF of this gate is CI-capable today and only the public
+   * half is not. Splitting the tiers so CI runs the admin sweep, or wiring the
+   * whole gate into ship, is Dustin's recorded open call (vol 8); this entry
+   * states the measured blocker and decides nothing.
    */
-  "check:browser": "needs local D1 state for content, and a real session for the admin case.",
+  "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN, pending Dustin's tiering call.",
 };
 
 /**
