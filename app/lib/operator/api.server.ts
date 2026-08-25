@@ -90,9 +90,77 @@ export function isToolName(value: unknown): value is ToolName {
   return typeof value === "string" && (TOOLS as readonly string[]).includes(value);
 }
 
-export function toolNames(): readonly string[] {
+export function toolNames(): readonly ToolName[] {
   return TOOLS;
 }
+
+/**
+ * What GET /api/operator says about each tool, beside the dispatch that runs it.
+ *
+ * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom (hard rule 13): a tool
+ * added to `TOOLS` without a descriptor is a TYPECHECK failure, and a
+ * descriptor for a tool that does not exist is one too, so the self-description
+ * cannot drift from the dispatch in either direction.
+ *
+ * MOVED HERE 2026-08-25 because the route carried a hand-written copy of this
+ * list and it had already drifted the way a second copy does: `sync_ask` and
+ * `sync_media` were callable, ship called both on every run, and the
+ * description a caller wires itself up from named neither. Rule 17: the
+ * dispatch below is the fact, this table is bound to it by the key, and the
+ * route renders what it is handed.
+ */
+export const TOOL_DESCRIPTORS: Readonly<
+  Record<ToolName, { args: Record<string, string>; returns: string; policy?: string }>
+> = {
+  list_posts: {
+    args: {},
+    returns: "Every post in the committed artifact, with the head sha.",
+  },
+  get_post: {
+    args: { slug: "string" },
+    returns: "The complete markdown file, the head sha, and operatorMayPublish.",
+  },
+  save_post: {
+    args: {
+      slug: "string",
+      raw: "string, the complete markdown file including frontmatter",
+      expectedHeadSha: "string, optional, for editor-style conflict detection",
+      isNew: "boolean, optional, inferred from whether the file exists",
+    },
+    returns: "commitSha, and the gate's own message with field and line on rejection.",
+    policy:
+      "An operator may create, edit, unpublish and republish. It may NOT " +
+      "perform a post's first transition to draft:false; that is reserved " +
+      "to the human admin and is refused with 403 " +
+      "first-publish-requires-admin.",
+  },
+  delete_post: {
+    args: { slug: "string" },
+    returns: "commitSha.",
+    policy:
+      "Deleting a post is reserved to the human admin and is refused with " +
+      "403 delete-requires-admin. Unpublish instead (draft: true).",
+  },
+  sync_status: {
+    args: {},
+    returns: "Artifact, D1 and search index counts, reported separately.",
+  },
+  sync_ask: {
+    args: {},
+    returns:
+      "Uploads the full corpus to the Ask index and prunes strays. Idempotent. " +
+      "expected, present, drift and a converged verdict, all read back after " +
+      "the writes rather than taken from the upload's own counters.",
+  },
+  sync_media: {
+    args: {},
+    returns:
+      "Rebuilds the media index from R2 and the asset manifest, through the " +
+      "same derivation the admin button runs. Idempotent. A read-back " +
+      "reconciliation: expected, present, missing and extra keys, and a " +
+      "converged verdict.",
+  },
+};
 
 /**
  * Runs one tool.
