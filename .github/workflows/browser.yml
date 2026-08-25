@@ -110,6 +110,25 @@ jobs:
       - name: Install
         run: npm ci
 
+      # CHROMIUM KEEPS ITS SANDBOX; THE RUNNER GIVES UP A RESTRICTION.
+      #
+      # MEASURED on the first dispatch of this workflow: Chromium aborted at
+      # launch with `FATAL ... No usable sandbox!`, because Ubuntu 23.10 and
+      # later restrict unprivileged user namespaces through AppArmor and
+      # ubuntu-latest is now 24.04. The browser never started and the gate
+      # reported a launch failure rather than anything about the site.
+      #
+      # The obvious repair is Puppeteer's own suggestion, `--no-sandbox`, and it
+      # is REFUSED here. It would mean the gate launches one browser locally and
+      # a different, less isolated one in CI, so the two runs would no longer be
+      # the same instrument, and the flag would sit in the gate forever to serve
+      # one environment. This relaxes the RUNNER instead: the sysctl is scoped
+      # to an ephemeral VM that is destroyed with the job, Chromium keeps its
+      # own sandbox, and scripts/check-browser.mjs needs no knowledge that CI
+      # exists.
+      - name: Allow Chromium's sandbox to start
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       # THE ORIGIN IS DERIVED FROM THE REPO, exactly as health.yml derives it,
       # and that is why this job checks out the source. `app/lib/seo.ts` states
       # SITE_ORIGIN once; a URL typed into this file would be a second copy that
