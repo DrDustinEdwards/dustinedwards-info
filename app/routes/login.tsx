@@ -6,6 +6,7 @@ import { authClient } from "~/lib/auth-client";
 import { authRateRefusal } from "~/lib/auth-rate.mjs";
 import { checkAuthRate } from "~/lib/auth-rate.server";
 import { createAuth, getAdminSession } from "~/lib/auth.server";
+import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/login";
 
@@ -86,7 +87,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
  */
 export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const ip = clientIp(request);
   if (!(await checkAuthRate(env, ip))) return authRateRefusal();
 
   const result = await createAuth(env).api.signInSocial({

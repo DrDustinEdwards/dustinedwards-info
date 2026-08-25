@@ -29,6 +29,7 @@ import {
 import { slugForKey } from "~/lib/search/ask-keys.mjs";
 import { ASK_ORIGIN_REFUSAL, askOriginVerdict } from "~/lib/search/ask-origin.mjs";
 import { publiclyVisibleSlugs } from "~/db";
+import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import type { Route } from "./+types/search.ask";
 
@@ -161,11 +162,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   }
 
-  // `cf-connecting-ip` is set by Cloudflare on every request that reaches a
-  // Worker and cannot be spoofed by the client. The fallback keys every
-  // unknown-origin request together, which is strict rather than lax: it means
-  // they share one bucket instead of each getting their own.
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  // The edge-set client IP; one statement of the read and its fallback in
+  // app/lib/client-ip.ts.
+  const ip = clientIp(request);
 
   // Gate 1, per IP. In front of everything, including the cache: a cached
   // answer is cheap but not free, and hammering for cached answers is still

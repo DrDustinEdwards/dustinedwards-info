@@ -2,6 +2,7 @@ import { data } from "react-router";
 
 import { getDraftPostForPreview, listSeriesParts } from "~/db";
 import { blogPostView } from "~/lib/blog-view";
+import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import {
   PREVIEW_RATE_LIMIT,
@@ -91,11 +92,9 @@ const PREVIEW_HEADERS = {
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
-    // `cf-connecting-ip` is set by Cloudflare on every request that reaches a
-    // Worker and cannot be spoofed. The fallback keys every unknown-origin
-    // request together, which is strict rather than lax: they share one bucket
-    // instead of each getting their own.
-    const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+    // The edge-set client IP; one statement of the read and its fallback in
+    // app/lib/client-ip.ts.
+    const ip = clientIp(request);
     const rate = await checkPreviewRate(getEnv(context), ip);
     if (rate.ok) return next();
 

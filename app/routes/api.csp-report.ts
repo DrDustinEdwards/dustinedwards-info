@@ -1,4 +1,5 @@
 import { readCapped } from "~/lib/read-capped.mjs";
+import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 
 import type { Route } from "./+types/api.csp-report";
@@ -94,9 +95,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   }
 
-  // `CF-Connecting-IP` is set by the edge and cannot be spoofed by the client,
-  // which is why it is the key rather than anything in the body.
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  // Keyed on the edge-set client IP rather than anything in the body, which
+  // the client controls. One statement of the read: app/lib/client-ip.ts.
+  const ip = clientIp(request);
   const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`csp:${ip}`));
   const { ok } = await limiter.hit(RATE_LIMIT, RATE_PERIOD_SECONDS);
   if (!ok) {

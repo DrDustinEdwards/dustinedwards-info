@@ -3205,10 +3205,10 @@ console.log("\n  15b. four rules are bound to the behaviour they describe");
   );
   ok(
     "rule 13 holds: every justified substitution is marked at its call site",
-    marked.length === 2,
+    marked.length === 3,
     `${marked.length} marked: ${marked.map((f) => relative(root, f)).join(", ")}. ` +
-      `Rule 13 names exactly two, so a third is an unrecorded exception and none ` +
-      `means the markers were dropped.`,
+      `Rule 13 names exactly three, so a fourth is an unrecorded exception and fewer ` +
+      `means a marker was dropped.`,
   );
 
   /* -- rule 14 ------------------------------------------------------------- */
