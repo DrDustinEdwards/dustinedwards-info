@@ -49,6 +49,7 @@ import {
   getHead,
   readFile,
   readBinaryFile,
+  readRawFile,
   GitHubError,
 } from "./github.server";
 import { artifactPosts } from "./artifact-parse.mjs";
@@ -242,12 +243,15 @@ export async function validateAndRender(
  * request rather than a policy about freshness. Tier 1.5 forbids caching added
  * to hide a slow path; this hides nothing, and the slow path is named below.
  *
- * **What it costs today, measured on production.** `loadArtifact` is not a
- * database read. It is `readFile` against the GitHub Contents API: an HTTPS
- * round trip off Cloudflare's network to api.github.com, for
- * `content/generated/posts.json`, which is 601,683 bytes and arrives base64
- * encoded at roughly 802,000, then gets `atob`ed, `TextDecoder`ed and
- * `JSON.parse`d in the Worker. Measured at 283 to 528ms per call.
+ * **What it costs today.** `loadArtifact` is not a database read. It is an
+ * HTTPS round trip off Cloudflare's network to api.github.com for
+ * `content/generated/posts.json`, measured on production at 283 to 528ms per
+ * call when it went through `readFile` and the JSON media type. It now goes
+ * through `readRawFile` and the raw media type, which drops the base64
+ * wrapping (about a third of the response weight) and the atob and
+ * TextDecoder passes; the raw form measured no slower on a same-wire
+ * comparison, recorded with dates in that function's docblock. The round trip
+ * itself remains, and remains the slow path this memo deduplicates.
  *
  * **It was happening TWICE on /admin/media.** The layout's Ask drift check
  * loads it for the badge, and the media loader's citation resolver loads it
@@ -307,9 +311,20 @@ export async function loadArtifact(env: PublishEnv) {
    * EditorError is passed IN rather than imported there, so the pure module
    * stays free of this file's types while the operator still gets the 422 that
    * an EditorError maps to.
+   *
+   * THE RAW MEDIA TYPE, since 2026-08-25. The JSON media type stops carrying
+   * content at 1 MB per file, and the artifact is 648 KB at 12 posts: a few
+   * dozen more posts and every save would have failed as "not valid JSON"
+   * with advice to run build:content, which repairs nothing. The raw form is
+   * documented to 100 MB, and check:content refuses at half that long before
+   * either limit is real. Grounds and measurements on `readRawFile`.
    */
-  const file = await readFile(env, ARTIFACT_PATH);
-  return artifactPosts(file, ARTIFACT_PATH, (m) => new EditorError(m)) as any[];
+  const raw = await readRawFile(env, ARTIFACT_PATH);
+  return artifactPosts(
+    raw === null ? null : { content: raw },
+    ARTIFACT_PATH,
+    (m) => new EditorError(m),
+  ) as any[];
 }
 
 /**

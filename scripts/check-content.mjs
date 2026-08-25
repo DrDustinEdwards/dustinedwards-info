@@ -29,6 +29,7 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
+import { ARTIFACT_READ_CEILING_BYTES } from "../app/lib/editor/artifact-limits.mjs";
 import { ARTIFACT_PATH, buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
@@ -87,7 +88,40 @@ async function main() {
 
   if (committed === fresh) {
     const { posts } = JSON.parse(committed);
-    console.log(`check:content ok. ${ARTIFACT_PATH} matches source (${posts.length} posts).`);
+
+    /*
+     * THE SIZE, PRINTED EVERY RUN AND REFUSED AT HALF THE CEILING.
+     *
+     * The editor reads this artifact from GitHub through the raw media type,
+     * whose documented limit is `ARTIFACT_READ_CEILING_BYTES`; the comment on
+     * that constant says plainly that Worker memory binds earlier and is
+     * unmeasured. Half is the honest refusal line for a limit whose true
+     * position is known only to be somewhere below the documented one. The
+     * ceiling is imported and never restated here as a digit, rule 17; the
+     * bytes-per-post figure is printed so the reader who meets this failure
+     * can estimate how many posts of headroom remain.
+     */
+    const bytes = Buffer.byteLength(committed, "utf8");
+    const perPost = posts.length > 0 ? Math.round(bytes / posts.length) : bytes;
+    const refuseAt = ARTIFACT_READ_CEILING_BYTES / 2;
+    if (bytes > refuseAt) {
+      console.error(
+        `check:content failed. ${ARTIFACT_PATH} is ${bytes} bytes ` +
+          `(${posts.length} posts, ${perPost} bytes/post), over half the ` +
+          `${ARTIFACT_READ_CEILING_BYTES} byte raw-read ceiling (refusal at ` +
+          `${refuseAt}). The editor's artifact read is approaching a transport ` +
+          `limit; shrink the artifact or move the read off the Contents API ` +
+          `before this becomes a production failure.`,
+      );
+      process.exit(1);
+      return;
+    }
+
+    console.log(
+      `check:content ok. ${ARTIFACT_PATH} matches source ` +
+        `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, ` +
+        `refusal at ${refuseAt}).`,
+    );
     await checkTemplateRefs();
     await checkAssetManifest();
     return;

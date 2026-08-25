@@ -14,6 +14,11 @@
  * logged; failures report status codes and GitHub's message, never the request.
  */
 
+import {
+  ARTIFACT_READ_CEILING_BYTES,
+  contentsCapMessage,
+} from "./artifact-limits.mjs";
+
 const API = "https://api.github.com";
 const OWNER = "DrDustinEdwards";
 const REPO = "dustinedwards-info";
@@ -98,13 +103,27 @@ export async function getHead(env: GhEnv) {
  * Reads a file at a given ref. Returns null for 404 so a caller can tell
  * "absent" from "failed", which is the difference between creating a post and
  * an outage.
+ *
+ * GUARDED AGAINST THE 1 MB CONTENTS CAP, the same guard `readBinaryFile` has
+ * always had. The JSON media type returns a file over 1 MB with `size` set and
+ * no base64 content, and this function used to decode that to an empty string:
+ * a markdown file crossing the cap would have surfaced downstream as parse
+ * garbage rather than as the transport failure it is. The decision lives in
+ * `contentsCapMessage` (artifact-limits.mjs) so `node:test` can drive it with
+ * a stubbed response.
  */
 export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
   try {
-    const file = await gh<{ content: string; encoding: string; sha: string }>(
-      env,
-      `/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`,
-    );
+    const file = await gh<{
+      content: string;
+      encoding: string;
+      sha: string;
+      size: number;
+    }>(env, `/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`);
+    const capped = contentsCapMessage(file, path);
+    if (capped) {
+      throw new GitHubError(capped, 422);
+    }
     const content =
       file.encoding === "base64"
         ? new TextDecoder().decode(
@@ -118,6 +137,79 @@ export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
     if (error instanceof GitHubError && error.status === 404) return null;
     throw error;
   }
+}
+
+/**
+ * Reads a file at a given ref THROUGH THE RAW MEDIA TYPE, as text.
+ *
+ * Exists for `content/generated/posts.json`, which is 648,449 bytes at 12
+ * posts and growing with every post. The JSON media type this module's other
+ * readers use stops carrying content at 1 MB per file; the raw media type is
+ * documented to 100 MB (`ARTIFACT_READ_CEILING_BYTES`, whose comment also
+ * says what actually binds first). Had the artifact crossed 1 MB, every
+ * editor save would have failed with "not valid JSON" and advice to run
+ * build:content, which repairs nothing, because the artifact was fine and the
+ * transport dropped it.
+ *
+ * The raw form also skips the base64 wrapping, which is a third of the JSON
+ * response's weight: the artifact arrives at its own 648 KB rather than at
+ * roughly 894 KB, and there is no atob or TextDecoder pass over it.
+ *
+ * MEASURED 2026-08-25, from the dev machine through `gh api` (CLI startup
+ * included), five runs: raw form 1020 to 1549 ms for 648,449 bytes; JSON form
+ * 1382 to 1684 ms for 894,455 bytes over three runs on the same wire. The
+ * production figure for the JSON form, measured Worker-to-GitHub, is 283 to
+ * 528 ms per call (see `artifactReader` in publish.server.ts); the raw form
+ * has not been measured from the Worker, and the same-wire comparison above
+ * is the evidence it costs no more.
+ *
+ * Returns the text, or null on 404 for the same reason `readFile` does. There
+ * is no sha in the raw response and no caller wanted one: `loadArtifact` was
+ * the only artifact reader and it uses the content alone.
+ */
+export async function readRawFile(env: GhEnv, path: string, ref = BRANCH) {
+  const response = await fetch(
+    `${API}/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`,
+    {
+      headers: {
+        accept: "application/vnd.github.raw+json",
+        authorization: `Bearer ${token(env)}`,
+        "user-agent": "dustinedwards-info-editor",
+        "x-github-api-version": "2022-11-28",
+      },
+    },
+  );
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const body = (await response.json()) as { message?: string };
+      detail = body.message ? `: ${body.message}` : "";
+    } catch {
+      detail = "";
+    }
+    throw new GitHubError(
+      `GitHub GET ${path} (raw media type) failed with ${response.status}${detail}`,
+      response.status,
+    );
+  }
+
+  const text = await response.text();
+  // Belt and braces on the documented limit. UTF-16 code units never exceed
+  // the UTF-8 byte count, so a text over the ceiling in code units is over it
+  // in bytes; GitHub refuses such a file on this endpoint anyway, and the
+  // check exists so that if that refusal ever changes shape, this function
+  // fails naming the limit rather than handing a caller something no isolate
+  // can hold.
+  if (text.length > ARTIFACT_READ_CEILING_BYTES) {
+    throw new GitHubError(
+      `"${path}" came back ${text.length} characters long, over the documented ` +
+        `${ARTIFACT_READ_CEILING_BYTES} byte raw-media-type ceiling.`,
+      422,
+    );
+  }
+  return text;
 }
 
 /**

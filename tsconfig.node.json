@@ -73,6 +73,10 @@
     // The operator publish policy: the Worker imports it and check:policy
     // imports it, on the same principle as query.mjs and check:search.
     "app/lib/editor/publish-policy.mjs",
+    // The artifact read limits. github.server.ts enforces them on the wire and
+    // check:content refuses at half the ceiling, so both projects must reach
+    // the one statement of the number.
+    "app/lib/editor/artifact-limits.mjs",
     // The editor's transition table. Same principle: the Worker imports it and
     // check:admin-ui imports it, so both projects must reach it.
     "app/lib/editor/publish-transition.mjs",
