@@ -648,6 +648,20 @@
   .admin-topbar-account {
     display: block;
   }
+
+  /* AND THE BLOCK STOPS SHRINKING, which is the half the first fold missed.
+     MEASURED at 320 with the fold live: the bar itself fitted at 320 and its
+     account menu still ended at 325, because `min-width: 0` above lets this
+     block shrink below its own contents and the two controls inside it simply
+     spilled out of it. That declaration is right for the WIDE bar, where the
+     email is the flexible thing inside; here there is no flexible thing left,
+     only a toggle and a menu, and a control that has given up its label has
+     given up its job. So the shrinking moves to the one element that can still
+     do it honestly: the wordmark, which truncates with an ellipsis while the
+     mark beside it keeps identifying the plane. */
+  .admin-topbar-user {
+    flex: none;
+  }
 }
 
 /* The signed-in address inside the menu. Not an `.overflow-menu-item`: it is

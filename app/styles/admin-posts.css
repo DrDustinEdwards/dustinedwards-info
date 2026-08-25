@@ -449,6 +449,26 @@
 .posts-table-scroll {
   min-width: 0;
   overflow-x: auto;
+  /* A SCROLLER MUST ALSO BE A CONTAINING BLOCK, and this is the second time
+     this plane has paid for that. `.admin-content` carries the identical
+     declaration with the identical reasoning, written when 24 escaped
+     `.sr-only` spans dragged the document's scroll HEIGHT to 1685px; this is
+     the same defect on the horizontal axis, at a scroller that did not exist
+     when that one was fixed.
+
+     MEASURED here: with the scrollport clipping the table correctly, the
+     document still scrolled to exactly 510px, and the element at 510 was a
+     one-pixel `.sr-only` label inside a row action. It is not wide; it is
+     DISPLACED. `.sr-only` is `position: absolute` with no offsets, so it keeps
+     its static position, 509px into a table that is 582px wide, and it resolved
+     against `.admin-content` rather than against this box. An absolutely
+     positioned element whose containing block sits OUTSIDE a scroller is not
+     clipped by that scroller: it is laid out in the ancestor's coordinates and
+     drags the document out with it, one pixel at a time.
+
+     `position: relative` moves the containing block here, so the label is
+     clipped by the box it visually belongs to. */
+  position: relative;
 }
 
 .posts-table {
