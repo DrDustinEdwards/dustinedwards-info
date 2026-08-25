@@ -1,0 +1,186 @@
+# THE ADMIN PLANE, WATCHED WITHOUT A HUMAN IN IT.
+#
+# `check:browser` drives a real Chromium over the real authenticated admin and
+# the public pages. Until 2026-08-24 it could only reach the admin by being
+# handed Dustin's own session cookie, pasted out of Chrome into a gitignored
+# file, so the admin cases had never once run unattended and the plane's layout
+# defects were found by him clicking. The smoke credential ended that; this
+# workflow is what makes the machine do the clicking on a schedule.
+#
+# A failing run IS the alert, on health.yml's mechanism exactly: GitHub emails
+# the repository owner when a SCHEDULED run fails, and that is the whole
+# delivery path. No notification service, no webhook, nothing to configure, and
+# it lives outside Cloudflare so it still speaks when the Worker is broken.
+#
+# ## IT WATCHES THE DEPLOYED SITE, AND THAT IS THE POINT
+#
+# `PUBLIC_ORIGIN` puts the gate in its deployed mode: nothing is built, no
+# preview server is started, and every case observes the site that is actually
+# serving. Locally the same gate builds the working tree and drives a preview,
+# which answers the OTHER question. Both are useful and they are not
+# interchangeable:
+#
+#   local, no PUBLIC_ORIGIN   does the WORKING TREE render correctly? Catches a
+#                             defect before it ships. Says nothing about live.
+#   here, PUBLIC_ORIGIN set   does the LIVE SITE render correctly? Catches a
+#                             defect that shipped, or one that arrived without a
+#                             deploy at all: an expired credential, a drifted
+#                             secret, a platform change under a build nobody
+#                             touched. Says nothing about uncommitted work.
+#
+# The gate prints which mode it ran in on every run, because a reader who does
+# not know cannot tell a shipped defect from an unshipped one.
+#
+# ## WHY NOT IN CI, AND WHY NOT IN SHIP
+#
+# NOT in ci.yml: that workflow runs on a clean checkout of a pushed commit and
+# is about THAT COMMIT. This needs a deployed site to look at, which a commit
+# does not have, and a credential a fork's pull request must never hold.
+#
+# NOT in ship: recorded as Dustin's open call and left there deliberately. Ship
+# already refuses on a red gate tier; adding a four-minute browser run to every
+# deploy is a cost decision, not a correctness one.
+#
+# ## WHAT IT CANNOT SEE
+#
+# Everything the gate's own boundary note lists, unchanged and worth repeating
+# here because this is the surface that runs unattended: one engine (Chromium),
+# five widths, and NO JUDGEMENT ABOUT APPEARANCE. Every assertion is a number
+# from getBoundingClientRect or an attribute from the DOM, so a page that lays
+# out correctly and is unreadable passes. The gate prints its own
+# remaining-human list every run; that list is the honest scope of this alert.
+#
+# And the schedule's own limits, identical to health.yml's: GitHub disables
+# schedules on repositories inactive for 60 days and does so SILENTLY, scheduled
+# runs are best effort and are often late, and the email depends on the owner's
+# notification settings.
+
+name: Browser
+
+on:
+  schedule:
+    # Daily, not every 15 minutes. Layout does not drift between deploys the way
+    # a derived index does: the failure this catches arrives WITH a change, and
+    # ship already ran the gate tier before that change went out. A daily sweep
+    # is the backstop for what ship's tier cannot see, and a browser run is two
+    # orders of magnitude more expensive than a health poll.
+    - cron: "17 6 * * *"
+  # So it can be run against the live site the moment a deploy lands, without
+  # waiting for tomorrow or editing the schedule.
+  workflow_dispatch:
+
+# Read-only. This job reads a secret and drives a browser; it writes nothing,
+# and a token that cannot write cannot be turned against the repository if a
+# pinned action is ever compromised.
+permissions:
+  contents: read
+
+# A late scheduled run must not stack on a manual dispatch. cancel-in-progress
+# is false on ci.yml's reasoning: cancelling a run loses the only record that a
+# check was ever made.
+concurrency:
+  group: browser
+  cancel-in-progress: false
+
+jobs:
+  drive:
+    name: Drive the deployed site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # PINNED BY COMMIT SHA, not by tag, for the reason ci.yml states: a tag is
+      # a moving pointer the upstream owner can repoint at any commit. This sha
+      # is the commit the actions/checkout v7.0.1 tag named when it was verified
+      # against the tag list on 2026-08-25, and it is the same sha the other two
+      # workflows pin.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # The Node version is READ FROM .nvmrc, never written here. A second
+      # statement of it is a mirror, and this repo has paid for mirrors.
+      # actions/setup-node v7.0.0, same verification, same date.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci`, from the lockfile exactly. Puppeteer's Chromium download runs
+      # in its postinstall, which is why there is no separate browser step and
+      # no second statement of which Chromium this is.
+      - name: Install
+        run: npm ci
+
+      # THE ORIGIN IS DERIVED FROM THE REPO, exactly as health.yml derives it,
+      # and that is why this job checks out the source. `app/lib/seo.ts` states
+      # SITE_ORIGIN once; a URL typed into this file would be a second copy that
+      # goes stale on precisely one day, the DNS cutover.
+      - name: Read the origin from the repository
+        id: origin
+        run: |
+          set -euo pipefail
+          ORIGIN=$(node -e "
+            const { readFileSync } = require('node:fs');
+            const src = readFileSync('app/lib/seo.ts', 'utf8');
+            const m = /SITE_ORIGIN\s*=\s*[\"'\`]([^\"'\`]+)/.exec(src);
+            if (!m) { console.error('SITE_ORIGIN not found in app/lib/seo.ts'); process.exit(1); }
+            process.stdout.write(m[1].replace(/\/+$/, ''));
+          ")
+          # Proven non-empty before anything is built on it: an empty origin
+          # would make the gate drive http:///blog and report a confusing
+          # network error instead of a configuration one.
+          if [ -z "$ORIGIN" ]; then
+            echo "::error::The origin read from app/lib/seo.ts was empty."
+            exit 1
+          fi
+          echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "Driving $ORIGIN"
+
+      # THE CREDENTIAL BECOMES A FILE, because that is the only shape the gate
+      # accepts and the reason is recorded in the gate: a variable exported in
+      # one shell cannot survive the next, and that cost three consecutive
+      # sessions. Written under RUNNER_TEMP, which is outside the workspace and
+      # is destroyed with the runner.
+      #
+      # `printf %s`, not `echo`: echo would append a newline, and while the gate
+      # trims, a credential file whose contents depend on a shell builtin's
+      # trailing-newline behaviour is a thing to state rather than to hope about.
+      #
+      # REFUSES, NAMED, WHEN THE SECRET IS ABSENT. Without this the gate would
+      # run with no credential, skip the entire admin block, print its own
+      # "NOT COVERED: the admin plane" notice and exit 0 on the public cases
+      # alone. That is a GREEN RUN that watched half of what this workflow
+      # exists for, which is the worst available outcome: it is indistinguishable
+      # from success in an inbox.
+      - name: Stage the smoke credential
+        env:
+          SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SMOKE_TOKEN:-}" ]; then
+            echo "::error::SMOKE_TOKEN is not set on this repository, so the admin cases cannot run and this job would silently watch only the public pages. Set it with: node scripts/mint-smoke-token.mjs > .smoke-token && gh secret set SMOKE_TOKEN < .smoke-token (and the same value must be on the Worker: npx wrangler secret put SMOKE_TOKEN < .smoke-token)"
+            exit 1
+          fi
+          printf '%s' "$SMOKE_TOKEN" > "$RUNNER_TEMP/smoke-token"
+          chmod 600 "$RUNNER_TEMP/smoke-token"
+          # The LENGTH only, never the value. Enough to tell a truncated secret
+          # from a healthy one; useless to anyone reading the log.
+          echo "Staged a $(wc -c < "$RUNNER_TEMP/smoke-token")-byte credential."
+
+      # BOTH ORIGINS ARE PASSED, and they are the same origin here. The gate
+      # keeps them separate because they answer to different things locally: the
+      # admin cases have always driven the deployment, and the public cases
+      # drive the preview build unless PUBLIC_ORIGIN says otherwise. Passing
+      # both is what makes this run speak about ONE build.
+      - name: check:browser against the deployed site
+        env:
+          PUBLIC_ORIGIN: ${{ steps.origin.outputs.origin }}
+          ADMIN_ORIGIN: ${{ steps.origin.outputs.origin }}
+          SMOKE_TOKEN_FILE: ${{ runner.temp }}/smoke-token
+        run: npm run check:browser
+
+      # The credential is removed even when the gate fails. The runner is
+      # ephemeral and this is belt beside braces, but a credential that outlives
+      # its use because a step failed is a habit worth not having.
+      - name: Remove the staged credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/smoke-token"

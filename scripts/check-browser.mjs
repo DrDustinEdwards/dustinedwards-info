@@ -23,6 +23,14 @@
  * live. `verify-live` owns that and needs the wire. **The admin cases are the
  * one exception and they invert this**, for a reason measured below.
  *
+ * **UNLESS `PUBLIC_ORIGIN` IS SET, WHICH INVERTS THE SENTENCE ABOVE.** With it,
+ * the public cases drive a deployed site, nothing is built and no server is
+ * started, and the whole gate speaks about one live build. That is what the
+ * daily CI schedule runs, and it is a DIFFERENT question: a green run there
+ * proves nothing about uncommitted work, exactly as a green local run proves
+ * nothing about what is live. The banner names which one ran, every run,
+ * because these two are easy to confuse and expensive to confuse.
+ *
  * **IT DOES NOT LOOK.** Every assertion is a number from `getBoundingClientRect`
  * or an attribute from the DOM. A page that lays out correctly and is unreadable,
  * mis-coloured, or has its z-order inverted passes here. Screenshots would need a
@@ -98,7 +106,29 @@ import puppeteer from "puppeteer";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
-const BASE = `http://localhost:${PORT}`;
+
+/**
+ * WHERE THE PUBLIC CASES LOOK, and it changes what a green run MEANS.
+ *
+ * Unset, which is every local run: the gate builds the working tree, serves it
+ * with `vite preview`, and the public cases observe THIS DISK. That is the
+ * whole reason the preview exists, and it is the instrument that can see a
+ * layout defect before it ships.
+ *
+ * Set, which is the CI schedule: the public cases observe the DEPLOYED site
+ * instead, no build and no preview server. That is a different question with a
+ * different answer, and the banner says which one ran, because a green run
+ * against production proves nothing about uncommitted work and a green run
+ * against the preview proves nothing about what is live.
+ *
+ * The ADMIN cases have always observed the deployment (the smoke credential is
+ * a wrangler secret and no local server can answer for it), so under this
+ * variable the whole gate speaks about one build for the first time.
+ */
+const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
+/** Whether this run builds and serves the working tree. */
+const DRIVES_PREVIEW = !PUBLIC_ORIGIN;
+const BASE = PUBLIC_ORIGIN || `http://localhost:${PORT}`;
 
 /**
  * A real admin session, read from a FILE first and the environment second.
@@ -534,17 +564,24 @@ console.log("\ncheck:browser\n");
  * would lay out code nobody is looking at and report on it confidently. 24s
  * measured, which is the price of the assertions below meaning anything.
  */
-console.log("  building ...");
-const built = spawnSync("npm", ["run", "build"], {
-  cwd: root,
-  encoding: "utf8",
-  shell: true,
-  maxBuffer: 64 * 1024 * 1024,
-});
-if (built.status !== 0) {
-  console.error("check:browser failed. the build did not succeed, so there is nothing to lay out.");
-  console.error((built.stderr || built.stdout || "").slice(-1200));
-  process.exit(1);
+if (DRIVES_PREVIEW) {
+  console.log("  building ...");
+  const built = spawnSync("npm", ["run", "build"], {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (built.status !== 0) {
+    console.error("check:browser failed. the build did not succeed, so there is nothing to lay out.");
+    console.error((built.stderr || built.stdout || "").slice(-1200));
+    process.exit(1);
+  }
+} else {
+  // Nothing is built and nothing is served: the subject is already running
+  // somewhere else. Said out loud, because "building ..." missing from the log
+  // is exactly the kind of silence a reader fills in wrongly.
+  console.log(`  NOT building: the public cases observe ${PUBLIC_ORIGIN}, a deployed site.`);
 }
 
 /*
@@ -573,15 +610,17 @@ const recordServerOutput = (chunk) => {
   }
 };
 
-const server = spawn("npx", ["vite", "preview", "--port", String(PORT)], {
-  cwd: root,
-  shell: true,
-  stdio: ["ignore", "pipe", "pipe"],
-  detached: false,
-});
-server.stdout?.on("data", recordServerOutput);
-server.stderr?.on("data", recordServerOutput);
-server.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}`));
+const server = DRIVES_PREVIEW
+  ? spawn("npx", ["vite", "preview", "--port", String(PORT)], {
+      cwd: root,
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: false,
+    })
+  : null;
+server?.stdout?.on("data", recordServerOutput);
+server?.stderr?.on("data", recordServerOutput);
+server?.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}`));
 
 /*
  * WHETHER THE SERVER PROCESS IS STILL ALIVE, which is the half the poll could
@@ -594,7 +633,7 @@ server.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}
  * report and reported the wrong thing.
  */
 let serverExit = /** @type {{ code: number | null, signal: string | null } | null} */ (null);
-server.on("exit", (code, signal) => {
+server?.on("exit", (code, signal) => {
   serverExit = { code, signal };
 });
 
@@ -626,8 +665,38 @@ server.on("exit", (code, signal) => {
  * wait now ENDS EARLY when the process dies, and whatever the server said is
  * printed either way.
  */
+/** What a deployed origin said, when it said something. Read by the diagnosis. */
+let originStatus = /** @type {number | null} */ (null);
+/** What a deployed origin threw, when it could not be reached at all. */
+let originError = "";
+
 async function waitForServer(timeoutMs = 60_000) {
   const started = Date.now();
+
+  /*
+   * A DEPLOYED ORIGIN IS NOT BOOTING, so it gets ONE attempt and no loop.
+   *
+   * The retry above exists for a process that has been started and needs a
+   * moment; none of that is true of a site that is already serving. A 404 from
+   * a live origin is a WRONG PATH, and asking it again 85 times over a minute
+   * cannot turn it into a right one: it would spend 60 seconds converting an
+   * answer the origin gave immediately into a timeout, and a timeout is the
+   * one diagnosis that names nothing. So the status is captured and reported.
+   */
+  if (!DRIVES_PREVIEW) {
+    try {
+      const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(10_000) });
+      originStatus = res.status;
+      if (res.ok) {
+        console.log(`  ${BASE} answered in ${Date.now() - started}ms`);
+        return true;
+      }
+    } catch (error) {
+      originError = error instanceof Error ? error.message : String(error);
+    }
+    return false;
+  }
+
   const deadline = started + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -655,6 +724,24 @@ async function waitForServer(timeoutMs = 60_000) {
  * an empty region that reads like a clean log.
  */
 function serverDiagnosis() {
+  // No server was started, so there is nothing to diagnose ABOUT one: the
+  // subject is a deployed origin that did not answer, and saying "the preview
+  // server exited" would name a process this run never had.
+  if (!DRIVES_PREVIEW) {
+    if (originStatus !== null) {
+      return (
+        `${BASE}/blog answered ${originStatus}, not 200. PUBLIC_ORIGIN names a DEPLOYED site ` +
+        `and this run starts no server of its own, so this is the origin ANSWERING and ` +
+        `refusing the path, not a server that failed to come up. Check PUBLIC_ORIGIN: a ` +
+        `404 here means the host is serving something that is not this site.`
+      );
+    }
+    return (
+      `${BASE}/blog could not be reached at all: ${originError || "no response and no error"}. ` +
+      `PUBLIC_ORIGIN names a DEPLOYED site, so the host is down, the name does not resolve, ` +
+      `or the network from here cannot reach it.`
+    );
+  }
   const how = serverExit
     ? `The preview server EXITED before answering (code ${serverExit.code}, signal ${serverExit.signal}).`
     : `The preview server process was still alive and never answered on ${BASE}.`;
@@ -666,6 +753,7 @@ function serverDiagnosis() {
 }
 
 function stopServer() {
+  if (!server) return;
   if (process.argv.includes("--keep")) return;
   try {
     if (process.platform === "win32") {
@@ -678,16 +766,45 @@ function stopServer() {
   }
 }
 
+/** False when the subject never answered, so nothing below was measured. */
+let subjectReachable = true;
 let browser;
 try {
   if (!(await waitForServer())) {
     console.error(`check:browser failed. ${serverDiagnosis()}`);
     stopServer();
-    process.exit(1);
+    /*
+     * `process.exitCode`, NOT `process.exit()`, and this is the recorded
+     * Windows class at a new site.
+     *
+     * MEASURED here on the origin plant: `process.exit(1)` on this path left
+     * the undici handle from the probe above in flight, libuv aborted with
+     * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c`,
+     * and the process died 127 with a C-level assertion printed UNDER the
+     * gate's own diagnosis. The refusal was correct and the last thing on
+     * screen was a crash, which is the one way to make a clear diagnosis
+     * unreadable. Setting the code and letting the loop drain exits 1 cleanly.
+     */
+    process.exitCode = 1;
+    subjectReachable = false;
+    throw new Error("SUBJECT_UNREACHABLE");
   }
 
   browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
+
+  /*
+   * WHICH BUILD THE PUBLIC CASES ARE ABOUT, stated on the same footing as the
+   * admin credential below. Two runs of this gate can now disagree while both
+   * are correct, because they are answering about different artifacts, and a
+   * reader who does not know which one ran cannot tell a shipped defect from an
+   * unshipped one.
+   */
+  console.log(
+    DRIVES_PREVIEW
+      ? `  public cases: observing the PREVIEW BUILD of the working tree (${BASE})`
+      : `  public cases: observing ${BASE} (DEPLOYED). This run says nothing about uncommitted work.`,
+  );
 
   /* ------------------------------------------------- the stylesheet itself */
 
@@ -1778,6 +1895,14 @@ try {
     await admin.close();
   }
 
+} catch (error) {
+  /*
+   * ONLY the sentinel is swallowed. The diagnosis for it is already printed and
+   * the exit code is already set; anything else is a real fault and keeps its
+   * stack, because a harness that eats unknown errors reports a clean failure
+   * for a broken instrument.
+   */
+  if (!(error instanceof Error) || error.message !== "SUBJECT_UNREACHABLE") throw error;
 } finally {
   if (browser) await browser.close().catch(() => {});
   stopServer();
@@ -1850,69 +1975,81 @@ try {
  * the last measurement, the media block adds three list-header assertions, four
  * inspector, six bulk-bar and one skip, and 45 + 14 is 59.
  */
-const MINIMUM_CHECKS = adminCasesRan ? 54 : 13;
-console.log(
-  `\n${checks} checks, ${failures} failures` +
-    (skipped.length ? `, ${skipped.length} skipped` : "") +
-    "\n",
-);
 /*
- * The summary says WHAT WAS NOT COVERED, not just that something was skipped.
+ * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
  *
- * A reader who sees "15 checks, 0 failures" and a SKIP line four screens up has
- * been told the admin plane was not looked at, in a way nobody reads. This is
- * the last line before the exit code, which is the one line that gets read.
+ * When the subject never answered, the diagnosis above is the whole result:
+ * zero assertions ran, so a summary would print `0 checks, 0 failures`, which
+ * reads like a pass, and the floor would refuse with `a block was SKIPPED`,
+ * which names the wrong cause. Nothing was skipped; there was nothing to talk
+ * to. The exit code is already 1.
  */
-if (!adminCasesRan) {
+if (subjectReachable) {
+  const MINIMUM_CHECKS = adminCasesRan ? 54 : 13;
   console.log(
-    "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
-      "  mount was not checked, neither mark fill was measured, and NOTHING ON THIS PLANE\n" +
-      "  WAS MEASURED AT ANY NARROW WIDTH. The public pages are gated at 320 and the admin\n" +
-      "  plane was not, which is how it came to scroll sideways below 576 unnoticed. A\n" +
-      "  green result above is a statement about the public pages only.\n",
+    `\n${checks} checks, ${failures} failures` +
+      (skipped.length ? `, ${skipped.length} skipped` : "") +
+      "\n",
   );
-}
+  /*
+   * The summary says WHAT WAS NOT COVERED, not just that something was skipped.
+   *
+   * A reader who sees "15 checks, 0 failures" and a SKIP line four screens up has
+   * been told the admin plane was not looked at, in a way nobody reads. This is
+   * the last line before the exit code, which is the one line that gets read.
+   */
+  if (!adminCasesRan) {
+    console.log(
+      "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
+        "  mount was not checked, neither mark fill was measured, and NOTHING ON THIS PLANE\n" +
+        "  WAS MEASURED AT ANY NARROW WIDTH. The public pages are gated at 320 and the admin\n" +
+        "  plane was not, which is how it came to scroll sideways below 576 unnoticed. A\n" +
+        "  green result above is a statement about the public pages only.\n",
+    );
+  }
 
-/*
- * WHAT STILL NEEDS A HUMAN, PRINTED EVERY RUN, INCLUDING GREEN ONES.
- *
- * The smoke credential moved a list of manual clicks into assertions. It did not
- * empty the list, and a gate that reports only what it covered lets the
- * remainder quietly become "everything is covered". Each line names the reason,
- * because the reasons are different in kind and only one of them is a limit of
- * this harness:
- *
- *   BY CONSTRUCTION  the credential is read-only, so any surface that can only
- *                    be reached THROUGH a write is unreachable to it. Widening
- *                    the credential to reach them would give the machine actor
- *                    the authority the whole design exists to withhold, so
- *                    these stay human on purpose and are not a backlog item.
- *   BY THE HARNESS   Puppeteer cannot express it. These ARE backlog items.
- *   BY JUDGEMENT     it needs an eye rather than a number.
- */
-console.log(
-  "  REMAINING HUMAN, and why:\n" +
-    "    BY CONSTRUCTION, and deliberately permanent:\n" +
-    "      - the single-delete and index-rebuild confirmations. Both open from actionData,\n" +
-    "        so reaching them needs the POST a read-only credential is refused. Their SERVER\n" +
-    "        half is gated by check:destructive; only the browser half is uncovered.\n" +
-    "      - every write outcome: upload, tag, trash, restore, rebuild. The gate proves the\n" +
-    "        controls RENDER and never that a submission lands.\n" +
-    "    BY THE HARNESS:\n" +
-    "      - hover states, including the heading permalinks. Puppeteer rejects hover\n" +
-    "        emulation, so this is owed as a real-device eyeball.\n" +
-    "      - drag and drop onto the library, and the paste-to-upload path. Both need a real\n" +
-    "        DataTransfer that the automation API does not synthesise faithfully.\n" +
-    "      - the clipboard buttons. The headless permission prompt is not the real one.\n" +
-    "    BY JUDGEMENT:\n" +
-    "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
-    "        attribute; a page that lays out correctly and is unreadable passes.\n",
-);
-if (checks < MINIMUM_CHECKS) {
-  console.error(
-    `check:browser REFUSED: only ${checks} assertion(s) ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was skipped rather than failing.`,
+  /*
+   * WHAT STILL NEEDS A HUMAN, PRINTED EVERY RUN, INCLUDING GREEN ONES.
+   *
+   * The smoke credential moved a list of manual clicks into assertions. It did not
+   * empty the list, and a gate that reports only what it covered lets the
+   * remainder quietly become "everything is covered". Each line names the reason,
+   * because the reasons are different in kind and only one of them is a limit of
+   * this harness:
+   *
+   *   BY CONSTRUCTION  the credential is read-only, so any surface that can only
+   *                    be reached THROUGH a write is unreachable to it. Widening
+   *                    the credential to reach them would give the machine actor
+   *                    the authority the whole design exists to withhold, so
+   *                    these stay human on purpose and are not a backlog item.
+   *   BY THE HARNESS   Puppeteer cannot express it. These ARE backlog items.
+   *   BY JUDGEMENT     it needs an eye rather than a number.
+   */
+  console.log(
+    "  REMAINING HUMAN, and why:\n" +
+      "    BY CONSTRUCTION, and deliberately permanent:\n" +
+      "      - the single-delete and index-rebuild confirmations. Both open from actionData,\n" +
+      "        so reaching them needs the POST a read-only credential is refused. Their SERVER\n" +
+      "        half is gated by check:destructive; only the browser half is uncovered.\n" +
+      "      - every write outcome: upload, tag, trash, restore, rebuild. The gate proves the\n" +
+      "        controls RENDER and never that a submission lands.\n" +
+      "    BY THE HARNESS:\n" +
+      "      - hover states, including the heading permalinks. Puppeteer rejects hover\n" +
+      "        emulation, so this is owed as a real-device eyeball.\n" +
+      "      - drag and drop onto the library, and the paste-to-upload path. Both need a real\n" +
+      "        DataTransfer that the automation API does not synthesise faithfully.\n" +
+      "      - the clipboard buttons. The headless permission prompt is not the real one.\n" +
+      "    BY JUDGEMENT:\n" +
+      "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
+      "        attribute; a page that lays out correctly and is unreadable passes.\n",
   );
-  process.exit(1);
+  if (checks < MINIMUM_CHECKS) {
+    console.error(
+      `check:browser REFUSED: only ${checks} assertion(s) ran, expected at least ` +
+        `${MINIMUM_CHECKS}. A block was skipped rather than failing.`,
+    );
+    process.exitCode = 1;
+  }
+  process.exitCode = failures > 0 ? 1 : 0;
+
 }
-process.exit(failures > 0 ? 1 : 0);
