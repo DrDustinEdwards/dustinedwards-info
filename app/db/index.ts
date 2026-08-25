@@ -1297,20 +1297,38 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   return out;
 }
 
-/** Every visible post with its markdown body, newest first, for llms-full.txt. */
-export async function listBlogPostsFullText(env: Env) {
+/**
+ * Every visible post with its markdown body, newest first.
+ *
+ * Two readers: llms-full.txt takes the whole corpus, and the JSON feed takes
+ * the newest `perPage`. The limit is applied IN THE QUERY, not by slicing a
+ * full read, because the body column is the heavy one and a feed of 20 must
+ * not pay for a corpus of hundreds.
+ *
+ * The card columns (description, updatedAt, coverImage) ride along for the
+ * feed. llms-full.txt ignores them, which costs three narrow columns on a read
+ * that already carries every body.
+ */
+export async function listBlogPostsFullText(
+  env: Env,
+  options: { perPage?: number } = {},
+) {
   const db = getDb(env);
-  const rows = await db
+  const query = db
     .select({
       id: posts.id,
       slug: posts.slug,
       title: posts.title,
       body: posts.body,
+      description: posts.description,
       publishAt: posts.publishAt,
+      updatedAt: posts.updatedAt,
+      coverImage: posts.coverImage,
     })
     .from(posts)
     .where(isBlogPost())
     .orderBy(desc(posts.publishAt));
+  const rows = await (options.perPage ? query.limit(options.perPage) : query);
 
   const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
   return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));

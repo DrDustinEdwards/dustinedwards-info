@@ -1,18 +1,26 @@
-import { listBlogPosts } from "~/db";
+import { listBlogPostsFullText } from "~/db";
 import { getEnv } from "~/lib/context";
+import { feedItem } from "~/lib/json-feed.mjs";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.feed[.json]";
 
 /**
  * JSON Feed 1.1, alongside RSS.
  *
- * Reads through listBlogPosts, so publiclyVisible() applies on exactly the same
- * terms as the index and the RSS feed. `content_text` carries the markdown
- * source rather than the rendered HTML: a feed reader gets clean text, and an
- * agent gets the same bytes the .md twin serves.
+ * Reads through listBlogPostsFullText, so publiclyVisible() applies on exactly
+ * the same terms as the index, the RSS feed and llms-full.txt. Each item is
+ * built by `feedItem` in app/lib/json-feed.mjs, where `node:test` asserts the
+ * shape: this file once promised `content_text` in a comment while the item
+ * map emitted no content field at all, which JSON Feed 1.1 forbids, and no
+ * gate could see a comment disagreeing with a map three lines under it.
+ *
+ * The cap is applied in the query, not by slicing a full read, because every
+ * item now carries its whole markdown body.
  */
+const FEED_ITEMS = 20;
+
 export async function loader({ context }: Route.LoaderArgs) {
-  const { posts } = await listBlogPosts(getEnv(context), { perPage: 20 });
+  const posts = await listBlogPostsFullText(getEnv(context), { perPage: FEED_ITEMS });
 
   const feed = {
     version: "https://jsonfeed.org/version/1.1",
@@ -22,20 +30,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     description: "Writing on building for the web, mostly on Cloudflare.",
     language: "en-US",
     authors: [{ name: SITE.name, url: SITE_ORIGIN }],
-    items: posts.map((post) => ({
-      id: `${SITE_ORIGIN}/blog/${post.slug}`,
-      url: `${SITE_ORIGIN}/blog/${post.slug}`,
-      title: post.title,
-      summary: post.description ?? undefined,
-      date_published: post.publishAt
-        ? new Date(post.publishAt).toISOString()
-        : undefined,
-      date_modified: post.updatedAt
-        ? new Date(post.updatedAt).toISOString()
-        : undefined,
-      tags: post.tags.length > 0 ? post.tags : undefined,
-      image: post.coverImage ? `${SITE_ORIGIN}${post.coverImage}` : undefined,
-    })),
+    items: posts.map((post) => feedItem(post, SITE_ORIGIN)),
   };
 
   return new Response(`${JSON.stringify(feed, null, 2)}\n`, {
