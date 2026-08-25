@@ -1,6 +1,7 @@
 import { createAuth } from "~/lib/auth.server";
 import { authRateRefusal } from "~/lib/auth-rate.mjs";
 import { checkAuthRate } from "~/lib/auth-rate.server";
+import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/api.auth.$";
 
@@ -21,16 +22,6 @@ import type { Route } from "./+types/api.auth.$";
  * Guarding one would leave the other open, and the callback is the expensive
  * half.
  */
-
-/**
- * `cf-connecting-ip` is set by the Cloudflare edge on every request that
- * reaches a Worker and cannot be spoofed by the client. Absent only off the
- * edge, where `unknown` funnels every such caller into one shared counter,
- * which is the safe direction.
- */
-function clientIp(request: Request): string {
-  return request.headers.get("cf-connecting-ip") ?? "unknown";
-}
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
