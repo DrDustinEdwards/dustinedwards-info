@@ -189,11 +189,22 @@ jobs:
           echo "api token bytes:  $(printf %s "$CLOUDFLARE_API_TOKEN" | wc -c)"
           echo "--- wrangler whoami (accounts the token can see, and its scopes)"
           npx wrangler whoami || echo "whoami exited $?"
-          echo "--- direct D1 list probe, status and errors only"
-          url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database"
-          code=$(curl -sS -o /tmp/d1probe.json -w "%{http_code}" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url")
-          echo "http $code"
-          jq -c "{success, errors, messages}" /tmp/d1probe.json
+          echo "--- one read probe per API surface this deploy touches"
+          # Read, not write: an Edit-template token that can read a surface has
+          # that product's permission group, because the templates grant Edit.
+          # A 401 or 403 names a group that is ABSENT, which is the question.
+          # Stated residue: a Read-only group would pass these and fail a write.
+          probe() {
+            url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/$2"
+            code=$(curl -sS -o /tmp/probe.json -w "%{http_code}" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url")
+            echo "  $1 -> http $code $(jq -c .errors /tmp/probe.json)"
+          }
+          probe "workers-scripts" "workers/scripts"
+          probe "workers-kv" "storage/kv/namespaces"
+          probe "d1" "d1/database"
+          probe "r2" "r2/buckets"
+          probe "queues" "queues"
+          probe "ai-search" "autorag/rags"
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
       # it is not being widened. `printf %s` rather than `echo`, so the file
