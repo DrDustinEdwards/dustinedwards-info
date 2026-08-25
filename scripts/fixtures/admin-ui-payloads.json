@@ -496,5 +496,9 @@
   ],
   "origin requests, loaded": [],
   "origin requests, empty": [],
-  "origin requests, error": []
+  "origin requests, error": [],
+  "overview, all healthy": [],
+  "overview, one check failing": [],
+  "tools, all secrets set": [],
+  "tools, one secret missing": []
 }

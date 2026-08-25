@@ -518,7 +518,17 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
  * Deliberately reports the three stores separately, because they can disagree
  * and the whole design assumes they fail independently.
  */
-async function syncStatus(env: OperatorEnv) {
+/**
+ * EXPORTED since 2026-08-25, because the cockpit renders it.
+ *
+ * `/admin` is the human-readable view of the instruments, and rule 17 says the
+ * page renders what an instrument reports rather than computing a second
+ * answer. So the cockpit calls THIS function, the one the `sync_status`
+ * operator tool calls, and there is no admin-side copy of the four store
+ * counts to drift from it. The export is the whole change; nothing about the
+ * body moved.
+ */
+export async function syncStatus(env: OperatorEnv) {
   const artifactPosts = await loadArtifact(env);
 
   // Counted through DRIZZLE, not by interpolating publiclyVisible() into a

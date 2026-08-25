@@ -45,21 +45,23 @@ export function Panel({
   );
 }
 
-/** Marks a panel as live, stubbed or failed, based on its SourceResult. */
+/**
+ * Marks a panel as live or failed, based on its SourceResult.
+ *
+ * THE THIRD BRANCH IS GONE with the `stub` arm it rendered, 2026-08-25. It
+ * printed a "stubbed" chip whose tooltip explained which integration was
+ * pending, and its removal is the point rather than a consequence: a panel can
+ * no longer say "this data is not real", because no source produces data that
+ * is not real. A `never` in the union here is the typecheck refusing to let one
+ * back in without a decision.
+ */
 export function SourceChip({ result }: { result: SourceResult<unknown> }) {
   if (result.status === "live") {
     return <span className="chip chip-live">live</span>;
   }
-  if (result.status === "error") {
-    return (
-      <span className="chip chip-error" title={result.message}>
-        error
-      </span>
-    );
-  }
   return (
-    <span className="chip" title={result.note}>
-      stubbed
+    <span className="chip chip-error" title={result.message}>
+      error
     </span>
   );
 }

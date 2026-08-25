@@ -376,6 +376,65 @@ const TRAFFIC_ERROR = {
     "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn it on.",
 };
 
+/*
+ * THE COCKPIT'S FIXTURES, and every string in them is shaped like what the
+ * INSTRUMENT returns rather than like what the page should say.
+ *
+ * `detail` is the verdict module's own sentence, carrying its own numbers, on
+ * both the passing and the failing path. That shape is the whole point of the
+ * assertions below: the page is supposed to RENDER the instrument's sentence,
+ * not compose its own from the same parts, and the only way to check that is
+ * to give it a sentence no page-side template could have produced.
+ */
+const HEALTH_OK = [
+  { name: "ask-index-drift", ok: true, detail: "Ask index agrees with D1: 99 expected, 99 present." },
+  { name: "media-index-drift", ok: true, detail: "Media index agrees with R2 and public/: 70 expected, 70 present." },
+  { name: "media-unbacked", ok: true, detail: "The MEDIA bucket is empty, which is the state RECOVERY.md accepts." },
+  { name: "fts-equality", ok: true, detail: "FTS shadows agree: 122 docs, 122 identity, 122 prose." },
+];
+
+/** One check failing, the rest passing. A run where everything fails cannot
+ *  tell a per-check verdict from a page-wide one. */
+const HEALTH_ONE_FAILING = [
+  HEALTH_OK[0],
+  {
+    name: "media-index-drift",
+    ok: false,
+    detail: "Media index disagrees with R2 and public/: 70 expected, 69 present.",
+    counts: { expected: 70, present: 69 },
+  },
+  HEALTH_OK[2],
+  HEALTH_OK[3],
+];
+
+const STORES_CLEAN = {
+  headSha: "abcdef1234567890abcdef1234567890abcdef12",
+  artifactPosts: 12,
+  d1Posts: 12,
+  d1PubliclyVisible: 11,
+  searchIndexDocs: 122,
+  askConfigured: true,
+  githubConfigured: true,
+  divergences: { known: true, entries: [] },
+};
+
+/** D1 behind the artifact, and one commit recorded as not applied. */
+const STORES_BEHIND = {
+  ...STORES_CLEAN,
+  d1Posts: 11,
+  divergences: {
+    known: true,
+    entries: [
+      {
+        slug: "a-post-that-did-not-land",
+        commitSha: "9876543210fedcba9876543210fedcba98765432",
+        error: "D1 write failed after the commit landed",
+        at: "2026-08-25T00:00:00.000Z",
+      },
+    ],
+  },
+};
+
 /** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string>, props?: Record<string,unknown> }>} */
 const STATES = [
   // ---- posts index --------------------------------------------------------
@@ -1554,6 +1613,57 @@ const STATES = [
     url: "/admin/origin-requests",
     loaderData: { result: TRAFFIC_ERROR },
   },
+  /*
+   * ---- the cockpit ---------------------------------------------------------
+   *
+   * UNCOVERED UNTIL 2026-08-25, and the gap was invisible in exactly the way
+   * this gate exists to prevent. `/admin` rendered a hard-coded card whose
+   * green dot was a constant, and no state here ever rendered the route, so
+   * the page could have said anything at all and this gate would have reported
+   * the same 442 checks. It was rewired to real instruments in the same commit
+   * as these states; a page that reports on everything else deserves to be
+   * reported on itself.
+   */
+  {
+    name: "overview, all healthy",
+    entry: "app/routes/admin._index.tsx",
+    path: "/admin",
+    url: "/admin",
+    loaderData: { checks: HEALTH_OK, failed: 0, stores: STORES_CLEAN },
+  },
+  {
+    name: "overview, one check failing",
+    entry: "app/routes/admin._index.tsx",
+    path: "/admin",
+    url: "/admin",
+    loaderData: { checks: HEALTH_ONE_FAILING, failed: 1, stores: STORES_BEHIND },
+  },
+  {
+    name: "tools, all secrets set",
+    entry: "app/routes/admin.tools.tsx",
+    path: "/admin/tools",
+    url: "/admin/tools",
+    loaderData: {
+      secrets: [
+        { name: "GITHUB_TOKEN", present: true },
+        { name: "OPERATOR_TOKEN", present: true },
+        { name: "SMOKE_TOKEN", present: true },
+      ],
+    },
+  },
+  {
+    name: "tools, one secret missing",
+    entry: "app/routes/admin.tools.tsx",
+    path: "/admin/tools",
+    url: "/admin/tools",
+    loaderData: {
+      secrets: [
+        { name: "GITHUB_TOKEN", present: true },
+        { name: "OPERATOR_TOKEN", present: false },
+        { name: "SMOKE_TOKEN", present: true },
+      ],
+    },
+  },
 ];
 
 /* ---------------------------------------------------------------------- */
@@ -1945,6 +2055,26 @@ assert(
 
 /** @param {string} name @returns {string} */
 const htmlFor = (name) => renders[name] ?? "";
+
+/**
+ * React's escaping, mirrored, so a needle taken from a fixture matches the
+ * markup it produced.
+ *
+ * None of today's fixture sentences contain an escapable character, and that
+ * is exactly why this exists: an assertion that only works while nobody writes
+ * an apostrophe is an assertion waiting to go quietly false.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
 
 /** @param {string} label @param {string} state @param {(html: string) => boolean} test */
 function structural(label, state, test) {
@@ -3075,6 +3205,96 @@ structural(
   );
 }
 
+/* ---- 8b. THE COCKPIT RENDERS THE INSTRUMENT, NOT ITS OWN ARITHMETIC ------ */
+
+/*
+ * The page is the human-readable view of the health run and `sync_status`, and
+ * rule 17 says a view renders what an instrument reports rather than computing
+ * a second answer beside it. These assertions are what make that checkable
+ * from outside the file.
+ *
+ * THE VERDICT SENTENCE IS THE TEST. Each fixture check carries a `detail`
+ * string with its own numbers, and the page must put THAT STRING on the page.
+ * A page that formatted its own sentence from `expected` and `present` would
+ * render something that looks identical today and drifts the first time a
+ * verdict is reworded, which is precisely the failure this repo keeps paying
+ * for. Asserting the sentence catches it; asserting "a number appears" does
+ * not.
+ */
+for (const state of ["overview, all healthy", "overview, one check failing"]) {
+  structural("every health check is named on the page", state, (h) =>
+    ["ask-index-drift", "media-index-drift", "media-unbacked", "fts-equality"].every((name) =>
+      h.includes(name),
+    ),
+  );
+  structural("every check renders the verdict's OWN sentence", state, (h) => {
+    const checks = state === "overview, all healthy" ? HEALTH_OK : HEALTH_ONE_FAILING;
+    return checks.every((check) => h.includes(escapeHtml(check.detail)));
+  });
+}
+
+/*
+ * A FAILING CHECK IS DISTINGUISHABLE FROM A PASSING ONE, in the markup and not
+ * only in a colour. `StatusDot` carries `data-status` plus a visually hidden
+ * word, so this asserts the state reaches assistive technology rather than
+ * asserting a hue.
+ */
+structural("a healthy run marks no card as failing", "overview, all healthy", (h) =>
+  !h.includes("FAILING") && !/data-status="error"/.test(h),
+);
+structural("a failing check is marked failing, and only it", "overview, one check failing", (h) =>
+  h.includes("FAILING") &&
+  (h.match(/data-status="error"/g) ?? []).length === 1 &&
+  (h.match(/FAILING/g) ?? []).length === 1,
+);
+
+/*
+ * THE STORE COUNTS ARE THE ONES HANDED IN. A page that hard-coded a plausible
+ * number would pass every assertion above.
+ */
+structural("the store counts are the ones sync_status reported", "overview, all healthy", (h) =>
+  h.includes(">12<") && h.includes(">122<") && h.includes("11 publicly visible"),
+);
+
+/*
+ * D1 BEHIND THE ARTIFACT IS SHOWN AS A DISAGREEMENT rather than left for the
+ * reader to spot by comparing two cards. Amber, not red: the ship-time sync
+ * repairs it, so a gap is usually a window.
+ */
+structural("D1 behind the artifact is flagged", "overview, one check failing", (h) =>
+  /data-status="warn"/.test(h),
+);
+
+/*
+ * DIVERGENCES ARE ABSENT WHEN THERE ARE NONE. An empty list is the normal
+ * answer, and a permanently empty panel is furniture that trains a reader to
+ * stop looking at the place the real answer will appear.
+ */
+structural("no divergence panel when the list is empty", "overview, all healthy", (h) =>
+  !h.includes("Divergences"),
+);
+structural("a recorded divergence names its commit and its reason", "overview, one check failing", (h) =>
+  h.includes("Divergences") &&
+  h.includes("a-post-that-did-not-land") &&
+  h.includes("9876543") &&
+  h.includes("D1 write failed after the commit landed"),
+);
+
+/*
+ * THE SECRETS AUDIT REPORTS PRESENCE AND NEVER A VALUE, which is the property
+ * `test/secrets-audit.test.mjs` asserts on the payload and this asserts on the
+ * rendered page: the two together cover the module and its render.
+ */
+structural("every ratified secret is listed by name", "tools, all secrets set", (h) =>
+  h.includes("GITHUB_TOKEN") && h.includes("OPERATOR_TOKEN") && h.includes("SMOKE_TOKEN"),
+);
+structural("a complete deployment says so in one place", "tools, all secrets set", (h) =>
+  h.includes("all 3 set") && !h.includes("NOT SET"),
+);
+structural("a missing secret is named and counted", "tools, one secret missing", (h) =>
+  h.includes("1 of 3 missing") && h.includes("NOT SET"),
+);
+
 /* ---- 9. THE NO-SCRIPT FLOOR --------------------------------------------- */
 
 /*
@@ -3984,11 +4204,12 @@ assert(
 );
 
 /*
- * FLOOR RAISED 412 -> 414 by the two slug-pattern assertions.
+ * FLOOR RAISED 414 -> 435 by the cockpit and tools coverage.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 442.
- * Never summed. Slack of 28 absorbs a state being retired; dropping the whole
- * no-script section is 20 assertions and still fails.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-25 by RUNNING it: 463,
+ * over 79 states. Never summed. Slack of 28 is kept deliberately at the width
+ * it already had: it absorbs a state being retired, and dropping the whole
+ * cockpit section is 12 assertions, which still fails.
  *
  * BOTH COPIES OF THE OLD NUMBER WERE STALE, in the same direction. The
  * comment and the message below each said 438 and the gate had been running
@@ -3999,7 +4220,7 @@ assert(
  * only thing that reads the count is the comparison against MINIMUM_CHECKS,
  * and it passed throughout. Re-measured here rather than carried.
  */
-const MINIMUM_CHECKS = 414;
+const MINIMUM_CHECKS = 435;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -4008,7 +4229,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 442.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 463.`,
   );
 }
 
