@@ -17,6 +17,7 @@ import {
 import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
+import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
@@ -899,12 +900,13 @@ export async function mediaTwins(env: Env) {
     .from(media)
     .where(and(notTrashed(), sql`${media.storage} <> 'static'`));
 
-  /** The 16 hex characters an upload key begins with, or null. */
-  const hashOf = (key: string) => /^([0-9a-f]{16,})\./.exec(key)?.[1] ?? null;
-
+  // The digest comes from the grammar's one reader in classify.mjs. The local
+  // regex this replaces demanded a dot straight after the hex, so a raster key
+  // carrying the dimension segment hashed to null and twin detection could not
+  // see any uploaded raster.
   const byHash = new Map<string, { key: string; originalName: string | null }[]>();
   for (const row of rows) {
-    const hash = hashOf(row.key);
+    const hash = digestFromKey(row.key);
     if (!hash) continue;
     const bucket = byHash.get(hash) ?? [];
     bucket.push({ key: row.key, originalName: row.originalName });

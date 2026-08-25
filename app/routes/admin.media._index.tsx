@@ -46,7 +46,7 @@ import {
 } from "~/db";
 import { getEnv } from "~/lib/context";
 import templateRefs from "../../content/generated/template-refs.json";
-import { storageOf } from "~/lib/media/classify.mjs";
+import { digestFromKey, storageOf } from "~/lib/media/classify.mjs";
 import {
   copySnippetsFor,
   flagsFor,
@@ -524,9 +524,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
          * Keys are content-addressed, so the hash is already in the filename. A
          * static row's key is a path rather than a hash, so it has none and the
          * inspector says nothing rather than showing a truncated path as if it
-         * were a digest.
+         * were a digest. Read through the grammar's one extracting reader: the
+         * local regex this replaces could not see the dimension segment, so
+         * every uploaded raster showed no hash here.
          */
-        hash: /^([0-9a-f]{16,})\./.exec(row.key)?.[1] ?? null,
+        hash: digestFromKey(row.key),
         /** Rows carrying identical bytes. Exact identity only. */
         twins: twins.get(row.key) ?? [],
         /** The third state, from the same three pieces of evidence as a tile. */
