@@ -923,6 +923,21 @@ export default function AdminPosts({
               </div>
             ) : null}
 
+            {/*
+              THE SCROLLPORT, and the table scrolls inside it so the DOCUMENT
+              does not. Measured on the deployed build once the topbar stopped
+              being the widest thing on the page: this table's own min-content
+              is 582px, the same number the topbar had, so for as long as both
+              were 582 the table was invisible behind the bar. Two independent
+              defects wearing one number.
+
+              `tabindex` and the region role are what make a scrollable box
+              usable rather than merely contained: without them a keyboard
+              reader can see the clipped columns and has no way to reach them.
+              The label names what scrolls, because "region" alone announces
+              nothing.
+            */}
+            <div className="posts-table-scroll" tabIndex={0} role="region" aria-label="Posts table">
             <table className="posts-table" data-pending={pending || undefined} aria-busy={pending || undefined}>
               <thead>
                 <tr>
@@ -1033,6 +1048,7 @@ export default function AdminPosts({
               ))}
               </tbody>
             </table>
+            </div>
           </Form>
 
           {/* Reference, not a demand: the numbers that describe the AI layer's
