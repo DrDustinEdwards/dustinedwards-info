@@ -4199,6 +4199,69 @@ console.log("\n  21. savePost commits before it touches D1");
       "CLEAN refusal with no drift, and that property holds only while nothing has " +
       "been written yet.",
   );
+
+  /*
+   * THE MEDIA-REF DEDUP KEY HAS ONE OWNER, and until 2026-08-25 it did not.
+   *
+   * `mediaRefKey` carries the whole correctness argument for a NUL separator
+   * and `test/media-ref-key.test.mjs` proves it, but the LIVE writer joined on
+   * a SPACE and the helper's only caller was `replaceMediaRefsForSource`, which
+   * had no caller at all. The rule was written, tested, and attached to nothing
+   * that ran; the tests stayed green with the defect in place, all 441 of them,
+   * which is why this assertion is here and not another test.
+   *
+   * A printable separator merges two distinct refs, so a post citing two images
+   * records one, the refcount is short, and the media delete guard can then let
+   * a still-cited blob go. That is the failure this binds shut.
+   *
+   * BOTH DIRECTIONS, because either alone is satisfiable by the defect: the
+   * helper must be CALLED, and the body must carry no template join of the
+   * three parts. An `import` on its own would pass a check for the name only.
+   */
+  const refsAt = publishSrc.search(/function\s+mediaRefStatements\b/);
+  ok(
+    "mediaRefStatements exists in publish.server.ts",
+    refsAt !== -1,
+    "the writer was renamed or moved, so nothing below examines anything",
+  );
+
+  let refsBody = "";
+  if (refsAt !== -1) {
+    const open = publishSrc.indexOf("{", publishSrc.indexOf(")", refsAt));
+    let depth = 0;
+    for (let i = open; i < publishSrc.length; i += 1) {
+      if (publishSrc[i] === "{") depth += 1;
+      else if (publishSrc[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          refsBody = publishSrc.slice(open, i + 1);
+          break;
+        }
+      }
+    }
+  }
+
+  ok(
+    "mediaRefStatements' body was extracted",
+    refsBody.length > 200,
+    `extracted ${refsBody.length} character(s). A short or empty body would make ` +
+      `both assertions below pass by having nothing to find.`,
+  );
+
+  ok(
+    "the live media-ref writer composes mediaRefKey",
+    /\bmediaRefKey\s*\(/.test(refsBody),
+    "the dedup key is built inline again. It belongs to app/lib/media-ref-key.mjs, " +
+      "which is the only statement of the separator rule and the only one under test.",
+  );
+
+  ok(
+    "the live media-ref writer builds no dedup key of its own",
+    !/\$\{\s*ref\.\w+\s*\}[^`$]*\$\{\s*ref\.\w+\s*\}/.test(refsBody),
+    "a template literal joins two or more ref fields in the writer's body. That is " +
+      "the space-join defect returning: any printable separator collides, and a " +
+      "collision silently drops a real citation.",
+  );
 }
 
 /* ------- 22. the home page's proof tiles are READ, never written --------- */
@@ -4314,13 +4377,13 @@ console.log("\n  21. savePost commits before it touches D1");
  * the same count of vanishing assertions this gate could previously absorb.
  * Section 22 is 6 assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 233;
+const MINIMUM_CHECKS = 237;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-25: 247 offline.`,
+      `rather than failing. Measured 2026-08-25: 251 offline.`,
   );
 }
 
