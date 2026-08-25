@@ -4,6 +4,7 @@ slug: ten-years-on-cloudflare
 description: "A ten-year Cloudflare customer rebuilds a complete site on Workers, D1, R2, Durable Objects, and AI Search, and reports the measurements: bundle sizes, query latency, rate limiter behavior, and the platform's real constraints."
 date: 2026-07-30
 draft: false
+featured: true
 tags: [cloudflare, workers, d1, platform, architecture]
 first_published: 2026-07-30
 ---
