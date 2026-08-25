@@ -1,6 +1,6 @@
 import { getEnv } from "~/lib/context";
 import { authenticateOperator } from "~/lib/operator/auth.server";
-import { isToolName, runTool, toolNames } from "~/lib/operator/api.server";
+import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
 
 import type { Route } from "./+types/api.operator";
 
@@ -86,6 +86,13 @@ export async function action({ request, context }: Route.ActionArgs) {
  * It is a convenience for a caller wiring itself up, and it is authenticated
  * like everything else: an unauthenticated caller learns nothing, including
  * whether the endpoint exists in a useful form.
+ *
+ * DERIVED from `TOOL_DESCRIPTORS`, never written here. This loader used to
+ * carry its own copy of the list and the copy drifted exactly as rule 17 says
+ * a second copy does: `sync_ask` and `sync_media` were callable and ship
+ * called both, while the description a caller reads named neither. The table
+ * is keyed by `ToolName`, so a tool this list omits is a typecheck failure in
+ * `api.server.ts`, not a silent gap on the wire.
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context) as Parameters<typeof authenticateOperator>[0];
@@ -102,40 +109,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ok: true,
     data: {
       operator: auth.id,
-      tools: [
-        {
-          name: "list_posts",
-          args: {},
-          returns: "Every post in the committed artifact, with the head sha.",
-        },
-        {
-          name: "get_post",
-          args: { slug: "string" },
-          returns:
-            "The complete markdown file, the head sha, and operatorMayPublish.",
-        },
-        {
-          name: "save_post",
-          args: {
-            slug: "string",
-            raw: "string, the complete markdown file including frontmatter",
-            expectedHeadSha: "string, optional, for editor-style conflict detection",
-            isNew: "boolean, optional, inferred from whether the file exists",
-          },
-          returns: "commitSha, and the gate's own message with field and line on rejection.",
-          policy:
-            "An operator may create, edit, unpublish and republish. It may NOT " +
-            "perform a post's first transition to draft:false; that is reserved " +
-            "to the human admin and is refused with 403 " +
-            "first-publish-requires-admin.",
-        },
-        { name: "delete_post", args: { slug: "string" }, returns: "commitSha." },
-        {
-          name: "sync_status",
-          args: {},
-          returns: "Artifact, D1 and search index counts, reported separately.",
-        },
-      ],
+      tools: toolNames().map((name) => ({ name, ...TOOL_DESCRIPTORS[name] })),
     },
   });
 }
