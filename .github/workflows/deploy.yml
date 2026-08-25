@@ -1,0 +1,207 @@
+# THE DEPLOY BUTTON. Ruled 2026-08-25, option C of three.
+#
+# Deploying has been one laptop's job: `npm run ship` on Dustin's machine, with
+# his gh session, his operator token and the one real wrangler.jsonc. That path
+# STAYS and is unchanged; this is a second door to the same pipeline, and the
+# reason it exists is a defect class rather than convenience.
+#
+# **IT KILLS THE TREE-DURING-SHIP CLASS STRUCTURALLY.** `npm run deploy` builds
+# from the WORKING TREE, not from HEAD. On 2026-08-07 a deploy went out from a
+# dirty tree and ran in production for two days as code that existed on no
+# commit; on a later window a session edited a file mid-ship and the deploy was
+# coherent only because the build had already finished. Ship refuses a dirty
+# tree now, and a rule says nobody touches the tree while a window is open, but
+# both of those are a human remembering. A runner checks out a sha into an empty
+# machine and there is no working tree to diverge: the class cannot occur.
+#
+# **DEPLOY STAYS A DECISION.** `workflow_dispatch` only. There is deliberately
+# no `on: push`, because option B (push-to-deploy) was considered and refused in
+# the same ruling: it would make every merge a release and take the last human
+# checkpoint out of the path.
+#
+# ## THE PRICE, STATED
+#
+# A Cloudflare API token now lives in GitHub's trust domain. It is scoped to
+# Edit Cloudflare Workers on ONE account, it can be revoked on its own without
+# touching anything else, and it is the real cost of either option B or C. The
+# creation steps are below and they matter: the GLOBAL API KEY MUST NEVER BE
+# USED HERE, because it carries every permission on every zone the account owns
+# and cannot be scoped or revoked independently.
+#
+# ## WHAT DUSTIN HAS TO DO, ONCE
+#
+# This workflow ships DORMANT: it refuses, by name, until four secrets exist.
+#
+#   1. Create a SCOPED token at
+#      dash.cloudflare.com/profile/api-tokens -> Create Token
+#      -> "Edit Cloudflare Workers" template.
+#      Account Resources: Include -> this account only.
+#      Zone Resources: not needed while the site is on workers.dev.
+#      Copy it once; the dashboard never shows it again.
+#
+#   2. Set the four secrets:
+#        gh secret set CLOUDFLARE_API_TOKEN      (paste the token)
+#        gh secret set CLOUDFLARE_ACCOUNT_ID     (dashboard -> Workers -> Account ID)
+#        gh secret set D1_DATABASE_ID            (the real wrangler.jsonc's value)
+#        gh secret set KV_NAMESPACE_ID           (the real wrangler.jsonc's value)
+#
+#      OPERATOR_TOKEN is already set, for the health workflow, and this reuses
+#      it. SMOKE_TOKEN is not needed here.
+#
+# The two ids are account-scoped identifiers rather than credentials, and they
+# are secrets here for the same reason they are gitignored: the portfolio's
+# public-repo hygiene rule. Only those two come from GitHub; every other line of
+# the config still comes from the tracked example, which is the one description
+# of this Worker's bindings. See scripts/apply-config-ids.mjs.
+#
+# ## IT REUSES ship.mjs. IT DOES NOT REIMPLEMENT IT.
+#
+# `npm run ship` is the pipeline, in ship's own order, with every refusal it
+# already fails closed on: clean tree, no pending migrations, build, THE FULL
+# OFFLINE GATE TIER, CI green for this exact sha, deploy, poll to stability,
+# check:content, D1 sync, then both derived indexes converged with the deploy
+# left standing on a miss. Running the gate tier as a separate step before ship
+# would run it twice and, worse, would run it in a DIFFERENT order from the one
+# that file documents.
+#
+# Ship reads its operator token from a FILE named by OPERATOR_TOKEN_FILE. That
+# contract is not widened here: the secret is written to a file under
+# RUNNER_TEMP and the variable points at it. No flag was added to ship, because
+# a second way to supply the same credential is a second thing to keep in step,
+# and the file contract is satisfiable here in two lines.
+#
+# ## WHAT THIS CANNOT DO
+#
+# It cannot deploy an uncommitted change: it checks out a ref. That is the
+# point, and it is also the one thing the laptop path can still do, which is why
+# the laptop path stays.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or sha to deploy. CI must be green for it."
+        required: false
+        default: main
+
+# `actions: read` is not decoration: ship asks the Actions API whether CI
+# concluded success for this exact sha, and refuses if it cannot read the
+# answer. Without this scope the deploy fails closed at that step, which is the
+# correct direction but a confusing way to learn about a permission.
+permissions:
+  contents: read
+  actions: read
+
+# QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
+# leave the account serving whichever one happened to finish last, which is not
+# necessarily the one dispatched last. cancel-in-progress is FALSE: cancelling a
+# deploy mid-flight is how a half-applied state happens, and ship's own steps
+# (deploy, then D1 sync, then two index convergences) are exactly the sequence
+# that must not be interrupted.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    name: Gates, deploy, sync
+    runs-on: ubuntu-latest
+    # Ship polls to stability for 5 probes 10s apart and waits out an Ask
+    # convergence window of up to 2 minutes, on top of a build and the full gate
+    # tier. Measured locally at roughly 6 to 9 minutes end to end.
+    timeout-minutes: 30
+
+    steps:
+      # SHA-pinned, same commits the other two workflows pin: actions/checkout
+      # v7.0.1 and actions/setup-node v7.0.0, verified against their tag lists
+      # on 2026-08-25.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref }}
+          # Ship reads `git rev-parse HEAD` and asks GitHub about that exact
+          # sha. A shallow clone still has HEAD, which is all it needs.
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # EVERY SECRET IS CHECKED BEFORE ANYTHING IS BUILT OR INSTALLED, and the
+      # refusal names the missing one and the command that fixes it.
+      #
+      # This is ship's own stance applied one layer out: it checks
+      # OPERATOR_TOKEN_FILE before the build because a configuration problem is
+      # fixable in seconds and must not cost a deploy that has already run its
+      # gates. A missing CLOUDFLARE_API_TOKEN discovered at the deploy step
+      # would waste ten minutes and surface as a wrangler authentication stack
+      # trace, which names the symptom rather than the cause.
+      - name: Refuse without the four secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
+          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_DATABASE_ID KV_NAMESPACE_ID OPERATOR_TOKEN; do
+            # Indirect expansion, so the loop reads the value without ever
+            # echoing it.
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::This deploy workflow is DORMANT until its secrets exist. Missing:${missing}. Set each with: gh secret set <NAME>. The Cloudflare token must be a SCOPED token (Create Token -> Edit Cloudflare Workers -> Account Resources: this account only), never the global API key, which cannot be scoped or revoked on its own. Nothing was built and nothing was deployed."
+            exit 1
+          fi
+          echo "All five secrets are present."
+
+      # postinstall bootstraps wrangler.jsonc by COPYING the tracked example,
+      # which carries placeholder ids.
+      - name: Install
+        run: npm ci
+
+      # ...so the two account-scoped ids go in here, before any gate reads the
+      # config and long before wrangler is asked to deploy against it. The
+      # script refuses five ways rather than patching partially; its header says
+      # why each one is a named refusal.
+      - name: Put the account-scoped ids into wrangler.jsonc
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
+        run: node scripts/apply-config-ids.mjs
+
+      # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
+      # it is not being widened. `printf %s` rather than `echo`, so the file
+      # holds the token and nothing else.
+      - name: Stage the operator token
+        env:
+          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$OPERATOR_TOKEN" > "$RUNNER_TEMP/operator-token"
+          chmod 600 "$RUNNER_TEMP/operator-token"
+          echo "Staged a $(wc -c < "$RUNNER_TEMP/operator-token")-byte token."
+
+      # ONE COMMAND, ship's own order, every refusal it already carries.
+      #
+      # GH_TOKEN is what `gh auth token` returns inside a workflow, and ship
+      # needs it for exactly one thing: reading whether CI concluded success for
+      # this sha. `ciVerdict` counts only runs whose event is `push`, so this
+      # dispatch run cannot see itself and report that CI is still running.
+      - name: npm run ship
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPERATOR_TOKEN_FILE: ${{ runner.temp }}/operator-token
+          GH_TOKEN: ${{ github.token }}
+        run: npm run ship
+
+      # Even when ship fails. The runner is ephemeral, so this is belt beside
+      # braces, and a credential that outlives its use because a step failed is
+      # a habit worth not having.
+      - name: Remove the staged token
+        if: always()
+        run: rm -f "$RUNNER_TEMP/operator-token"
