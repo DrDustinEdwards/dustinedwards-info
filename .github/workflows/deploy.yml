@@ -230,6 +230,24 @@ jobs:
           fi
           echo "The token reaches every surface this deploy calls."
 
+      # THE LOCAL D1 HAS TO EXIST, because ship's gate tier includes
+      # `check:backup`, which verifies the per-table export path against the
+      # LOCAL database and fails with "sqlite_master returned no tables" on a
+      # machine that has never applied a migration.
+      #
+      # THE GATE WAS RIGHT AND THE RUNNER WAS WRONG, which is why this is a new
+      # step and not an exclusion. On Dustin's laptop the local database is a
+      # side effect of months of `--local` work; a runner is an empty machine,
+      # so the gate had no subject to examine. Excluding it would have bought a
+      # green deploy by removing an assertion, and a gate that examines nothing
+      # reports what a clean sweep reports.
+      #
+      # `--local` only: this writes miniflare state under .wrangler/ and never
+      # touches the deployed database. The schema it builds is exactly what
+      # drizzle/ declares, which is the schema check:backup should be reading.
+      - name: Create the local D1 the gate tier reads
+        run: npx wrangler d1 migrations apply dustinedwards --local
+
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
       # it is not being widened. `printf %s` rather than `echo`, so the file
       # holds the token and nothing else.
