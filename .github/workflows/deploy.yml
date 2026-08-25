@@ -245,8 +245,22 @@ jobs:
       # `--local` only: this writes miniflare state under .wrangler/ and never
       # touches the deployed database. The schema it builds is exactly what
       # drizzle/ declares, which is the schema check:backup should be reading.
+      # The migrations build the SCHEMA; the sync puts CONTENT in it. Both are
+      # needed, and the second one is here because the first alone moved the
+      # failure rather than fixing it: with an empty database check:backup
+      # reported "only 1 of 11 exports carried any rows, expected at least 4",
+      # the one being the table migration 0008 seeds. A schema with no rows
+      # cannot demonstrate that the export path carries data, which is the
+      # whole assertion.
+      #
+      # `--local` on both, so neither touches the deployed database. This is the
+      # same derivation the laptop's local database was built by, which is why
+      # the gate has always passed there and never here.
       - name: Create the local D1 the gate tier reads
-        run: npx wrangler d1 migrations apply dustinedwards --local
+        run: |
+          set -euo pipefail
+          npx wrangler d1 migrations apply dustinedwards --local
+          npm run sync:content -- --local
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
       # it is not being widened. `printf %s` rather than `echo`, so the file
