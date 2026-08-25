@@ -472,6 +472,65 @@ refuses(
   );
 }
 
+/*
+ * THE ONE WAY A SMOKE GET COULD STILL 500, closed here.
+ *
+ * `adminSessionContext` holds a Better Auth session and the middleware sets it
+ * for the HUMAN ADMIN ONLY, because the smoke actor has no session and a
+ * synthesised one would be the stub this repo refuses. `context.get` on an
+ * unset context THROWS. So a LOADER that reads it would be fine for Dustin and
+ * a 500 for every smoke request, on a page that renders perfectly in every
+ * other gate: `check:admin-ui` stubs the server modules, and `check:browser`
+ * would report it as a surface that failed to render rather than as an
+ * authentication defect.
+ *
+ * Today there is exactly one reader and it is inside an ACTION, which the
+ * method gate makes unreachable for the smoke actor. That is a property of
+ * where one line happens to sit, so it is asserted rather than assumed.
+ *
+ * POSITION IN COMMENT-STRIPPED SOURCE, on the same technique as the guard
+ * extraction above: every read must sit after the `action` export begins. A
+ * file-wide "does it appear" check would pass on a read moved into the loader,
+ * which is the entire failure this is about.
+ */
+{
+  /** @type {string[]} */
+  const readers = [];
+  const routes = join(root, "app", "routes");
+  for (const entry of readdirSync(routes, { withFileTypes: true })) {
+    if (!entry.isFile() || !/\.(ts|tsx)$/.test(entry.name)) continue;
+    const text = stripComments(readFileSync(join(routes, entry.name), "utf8"));
+    if (!text.includes("context.get(adminSessionContext)")) continue;
+    readers.push(entry.name);
+
+    const actionAt = text.indexOf("export async function action(");
+    const reads = [];
+    for (
+      let at = text.indexOf("context.get(adminSessionContext)");
+      at !== -1;
+      at = text.indexOf("context.get(adminSessionContext)", at + 1)
+    ) {
+      reads.push(at);
+    }
+
+    eq(`${entry.name} declares an action to scope the read against`, actionAt > 0, true);
+    eq(
+      `${entry.name} reads the admin SESSION only on the write path, never in a loader`,
+      reads.every((at) => at > actionAt),
+      true,
+    );
+  }
+
+  // Scope, asserted. Zero readers would make the loop above examine nothing and
+  // report exactly what a compliant tree reports.
+  eq("the admin-session reader scan found a reader to check", readers.length > 0, true);
+  eq(
+    "and the readers are the ones this rule was written against",
+    readers.sort().join(", "),
+    "admin.posts.$slug.edit.tsx",
+  );
+}
+
 // --- What decide() stamps -------------------------------------------------
 
 {
@@ -1292,9 +1351,9 @@ refuses(
  * expensive: the policy module would keep its shape while nothing tested the
  * transitions through it.
  *
- * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 134,
- * after the smoke actor's section landed. Never summed. Floored at 124, about
- * seven percent under.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-24 by RUNNING it: 138,
+ * after the smoke actor's section and the admin-session position guard landed.
+ * Never summed. Floored at 128, about seven percent under.
  *
  * The previous pair was 104 measured against a floor of 96, and the floor is
  * moved with the measurement rather than left where it was, because thirty
@@ -1311,11 +1370,11 @@ refuses(
  * count moves only when a transition is added to the table or a source
  * assertion is added beside it.
  */
-const MINIMUM_CHECKS = 124;
+const MINIMUM_CHECKS = 128;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-08-24: 134.`,
+      `A block was SKIPPED rather than failing. Measured 2026-08-24: 138.`,
   );
 }
 
