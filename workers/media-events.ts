@@ -11,10 +11,19 @@ import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/cl
  * upload route already swallowed that failure, which was correct while D1 was a
  * mere annotation and becomes a drift generator the moment D1 is the index.
  *
- * So: **the Worker writes ONLY to R2.** The bucket emits an event, this consumer
- * derives the row, and the platform retries it on failure. R2 is unambiguously
- * the truth, and a permanent failure lands in a dead-letter queue rather than a
- * log line nobody reads.
+ * So: **R2 is the write that matters, and this consumer is the authoritative
+ * row writer.** The upload route does write a D1 row after its put, non-fatally
+ * and for immediacy alone, so the library shows a fresh upload without waiting
+ * on a queue; that write is allowed to fail precisely because this consumer
+ * re-derives the row from the object and overwrites whatever the route managed.
+ * The bucket emits an event, this consumer derives the row from what the object
+ * IS, the platform retries on failure, and a permanent failure lands in a
+ * dead-letter queue rather than a log line nobody reads. R2 wins any
+ * disagreement, in both senses: the row is rebuilt from the object, never the
+ * reverse, and a row whose object is gone is deleted. (An earlier version of
+ * this paragraph claimed R2 was the Worker's only write target, which the
+ * upload route's write-through falsified; the originalName note below already
+ * admitted it.)
  *
  * **Idempotent, and by construction rather than by checking.** Every message is
  * handled by re-deriving the row from the object as it is RIGHT NOW and
