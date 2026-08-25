@@ -541,6 +541,17 @@
      draws over the content below, which is what a pinned bar wants. */
   box-shadow: 0 1px 0 var(--border-strong);
   background: var(--surface);
+  /* THE GRID ITEM, and without this every truncation below it is inert.
+     MEASURED on the deployed build at 320: the bar rendered 376 wide with the
+     wordmark at its full 120px and nothing shrinking, because a grid item's
+     automatic minimum size is min-content. The bar's min-content sized the
+     track, the track sized the document, and the flex layout INSIDE the bar
+     was therefore never over-constrained: with no overflow to distribute,
+     `flex-shrink` had nothing to do and `.admin-brand-name`'s ellipsis never
+     engaged. The document grew instead, which is the same shape the comment on
+     `.admin-brand` records one level down, at the flex level rather than this
+     one. This is the grid-level statement of it. */
+  min-width: 0;
 }
 
 .admin-topbar-scope {

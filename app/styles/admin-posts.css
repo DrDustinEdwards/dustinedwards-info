@@ -432,6 +432,25 @@
   background: var(--tint-brand);
 }
 
+/* The table's own scrollport. THE DOCUMENT MUST NOT SCROLL SIDEWAYS; a wide
+   table may, inside its own box.
+
+   MEASURED on the deployed build at 480, 400 and 320 once the topbar fold
+   landed: `table.posts-table` reaches 582px whatever the viewport, because a
+   table's min-content is the sum of its columns' min-contents and this one
+   carries a checkbox, a title, a slug, a state chip and a date. That is the
+   same 582 the topbar had, which is why this defect was invisible: it sat
+   exactly behind another one wearing the same number.
+
+   `min-width: 0` for the same reason the topbar needed it. This div is a flex
+   item of the form above it, so without the declaration its automatic minimum
+   is the table's min-content and the scrollport would be as wide as the thing
+   it is supposed to be clipping. */
+.posts-table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+
 .posts-table {
   width: 100%;
   border-collapse: collapse;
