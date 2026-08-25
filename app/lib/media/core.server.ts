@@ -166,10 +166,9 @@ export async function listMedia(
 /**
  * Intrinsic dimensions of bytes in hand, before anything has been stored.
  *
- * Split out from `readDimensions` for the upload path, which needs the
- * measurement BEFORE it has a key: since finding B002 the key carries
- * `-<w>x<h>`, so the measurement is an INPUT to the key rather than something
- * looked up after the fact. Measuring once and using it for both the key and
+ * The upload path needs the measurement BEFORE it has a key: since finding
+ * B002 the key carries `-<w>x<h>`, so the measurement is an INPUT to the key
+ * rather than something looked up after the fact. Measuring once and using it for both the key and
  * the row also means those two cannot disagree about the same image.
  */
 export async function measureDimensions(
@@ -188,16 +187,6 @@ export async function measureDimensions(
   } catch {
     return null;
   }
-}
-
-/** Intrinsic dimensions, read from the bytes rather than trusted from a client. */
-export async function readDimensions(
-  env: Env,
-  key: string,
-): Promise<{ width: number; height: number } | null> {
-  const object = await env.MEDIA.get(key);
-  if (!object) return null;
-  return measureDimensions(env, object.body);
 }
 
 /**

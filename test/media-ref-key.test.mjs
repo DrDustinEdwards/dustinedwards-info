@@ -1,7 +1,7 @@
 /**
  * `mediaRefKey()` and the collision the NUL separator prevents.
  *
- * WHAT THIS PROTECTS. `replaceMediaRefsForSource` deduplicates refs before a
+ * WHAT THIS PROTECTS. `mediaRefStatements` deduplicates refs before a
  * batch insert, because the primary key is
  * (media_key, source_type, source_id, form, detail) and inserting the same
  * tuple twice fails the whole batch rather than merging. The dedup key is a
@@ -13,9 +13,9 @@
  * NUL cannot occur in a media key, a form or a detail, so the join is
  * unambiguous.
  *
- * WHY THE FUNCTION IS EXPORTED. `replaceMediaRefsForSource` needs a live D1
- * binding, so this property is unreachable through it in a unit test. The key
- * builder is exported for that reason and for no other, which is stated at its
+ * WHY THE FUNCTION IS EXPORTED. `mediaRefStatements` needs a live D1 binding,
+ * so this property is unreachable through it in a unit test. The key builder
+ * is exported for that reason and for no other, which is stated at its
  * definition so nobody wires it into a second caller.
  *
  * Written as ` ` in the source rather than the literal byte. The literal made
@@ -59,7 +59,7 @@ test("THE COLLISION: a printable separator would merge two distinct refs", () =>
  * `mediaRefStatements` in app/lib/editor/publish.server.ts is the LIVE writer,
  * and it deduplicated on a SPACE join while this NUL-joined helper, with its
  * argument and its tests, was reachable only from `replaceMediaRefsForSource`,
- * which had no caller at all. The rule was written down and attached to nothing
+ * which had no caller at all and has since been deleted. The rule was written down and attached to nothing
  * that ran.
  *
  * WHAT THIS TEST DOES NOT COVER, stated rather than implied: it models the

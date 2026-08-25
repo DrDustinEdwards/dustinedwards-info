@@ -4206,7 +4206,7 @@ console.log("\n  21. savePost commits before it touches D1");
    * `mediaRefKey` carries the whole correctness argument for a NUL separator
    * and `test/media-ref-key.test.mjs` proves it, but the LIVE writer joined on
    * a SPACE and the helper's only caller was `replaceMediaRefsForSource`, which
-   * had no caller at all. The rule was written, tested, and attached to nothing
+   * had no caller at all and has since been deleted. The rule was written, tested, and attached to nothing
    * that ran; the tests stayed green with the defect in place, all 441 of them,
    * which is why this assertion is here and not another test.
    *

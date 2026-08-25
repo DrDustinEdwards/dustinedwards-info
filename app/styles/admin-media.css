@@ -233,10 +233,6 @@
   margin: 0;
 }
 
-.media-summary {
-  margin: 0.75rem 0 0.5rem;
-}
-
 /* THE USAGE HONESTY LINE, from the mockup, and the reason it is a tinted box
    rather than a muted sentence: it is the one thing on this page that stops a
    reader deleting a file the site is serving. It sits on the accent tint, which
@@ -256,27 +252,6 @@
 
 .media-usage-note strong {
   color: var(--text);
-}
-
-/* The disclosure. Closed by default, so seventy cards carry seventy closed rows
-   rather than seventy open forms. */
-.media-alt > summary {
-  cursor: pointer;
-  padding: 0.25rem 0;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-}
-
-.media-alt > summary:hover {
-  color: var(--text);
-}
-
-.media-alt-preview {
-  display: block;
-  overflow: hidden;
-  color: var(--text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .media-alt-form {
@@ -731,22 +706,6 @@
   color: var(--text);
   font: inherit;
   font-size: 0.8125rem;
-}
-
-/* USAGE. Two states, and the difference is carried by the WORD first: "Unused"
-   and "Cited by" are different text, not different colours of the same text.
-   The weight is the second channel, which survives forced-colors. */
-.media-usage {
-  margin: 0;
-  font-size: 0.8125rem;
-}
-
-.media-usage[data-usage="unused"] {
-  color: var(--text-muted);
-}
-
-.media-usage[data-usage="cited"] {
-  font-weight: 600;
 }
 
 /* The picker, inside the drawer, so --border-strong per the elevated-surface
@@ -2124,39 +2083,6 @@
   white-space: nowrap;
 }
 
-.cover-grid {
-  display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
-  margin: 0.5rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.cover-option {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 0.375rem;
-  background: transparent;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.cover-option img {
-  display: block;
-  width: 100%;
-  height: 3.25rem;
-  object-fit: cover;
-}
-
-.cover-option[aria-pressed="true"] {
-  border-color: var(--brand);
-  outline: 2px solid var(--brand);
-  outline-offset: -2px;
-}
-
 /* The publish ceremony. A first publication is the one act the system reserves
    to the human, so it does not happen on a single click. */
 .ceremony {
@@ -2229,9 +2155,6 @@
     border: 1px solid CanvasText;
   }
 
-  .cover-option[aria-pressed="true"] {
-    outline: 2px solid Highlight;
-  }
 }
 
 /* A banner, not a control, so the pastel tint is the right register here and
