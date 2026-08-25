@@ -3983,6 +3983,16 @@ console.log("\n  20. every admin loader carries timing");
       "its loader is `throw redirect(\"/admin\")` and nothing else. There is no " +
         "I/O to time and a mark would measure the cost of throwing.",
     ],
+    [
+      "admin.tools.tsx",
+      "since 2026-08-25 its loader calls `auditSecrets` and nothing else, which " +
+        "reads bindings already in memory and performs no I/O. It DID carry a " +
+        "mark, around `toolsSource.fetch`, and that source was a stubSource " +
+        "returning a literal: the mark measured the cost of returning an object " +
+        "and was kept deliberately, so the day it stopped reading ~0 would be " +
+        "visible. The stub is gone with the fleet typing, so there is no longer " +
+        "a call to wrap. Add a mark the moment this loader reads anything.",
+    ],
   ]);
 
   const routes = readdirSync(join(root, "app", "routes")).filter(

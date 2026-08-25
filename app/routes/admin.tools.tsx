@@ -3,7 +3,6 @@ import { data } from "react-router";
 import { timed, timingsContext } from "~/lib/timing";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
-import { toolsSource } from "~/lib/admin/sources.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin.tools";
 
@@ -11,18 +10,24 @@ export function meta() {
   return [{ title: "Tools · Admin" }, { name: "robots", content: "noindex" }];
 }
 
+/**
+ * THE CONTROLS LIST IS GONE; THE AUDIT IT POINTED AT IS THE PAGE.
+ *
+ * This loader called `toolsSource`, a `stubSource()` wrapping one literal row:
+ * "Secrets audit / Which of the N ratified secrets this deployment holds",
+ * with a chip reading "Answered below". It was a row of indirection announcing
+ * the thing rendered directly underneath it, and its whole envelope existed to
+ * carry a `provider` label and a "stubbed" chip. Both went with the fleet
+ * typing on 2026-08-25.
+ *
+ * The audit itself is unchanged and is still not a button: reading the
+ * bindings costs nothing, so a control would add a click and a state to a
+ * question the page can simply answer.
+ */
 export async function loader({ context }: Route.LoaderArgs) {
-  /*
-   * MARKED even though it is a STUB, and that is the point rather than an
-   * oversight. `toolsSource` returns a literal with no I/O, so this should read
-   * ~0ms forever. A mark that reads 0 is what makes the day it stops reading 0
-   * visible: the whole finding behind this session is that three fixes landed
-   * on 90ms because the expensive call was in the one loader nobody had marked.
-   */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   const env = getEnv(context);
-  const result = await timed(timings, "tools_source", () => toolsSource.fetch(env));
   /*
    * PRESENCE ONLY. `auditSecrets` returns a name and a boolean per ratified
    * secret and nothing else, which is asserted behaviourally in
@@ -33,43 +38,18 @@ export async function loader({ context }: Route.LoaderArgs) {
    */
   const secrets = auditSecrets(env as unknown as Record<string, unknown>);
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({ result, secrets });
+  return data({ secrets });
 }
 
 
 export default function AdminTools({ loaderData }: Route.ComponentProps) {
-  const { result, secrets } = loaderData;
+  const { secrets } = loaderData;
   const missing = secrets.filter((s) => !s.present);
   return (
     <Panel
       title="Tools"
-      description="Admin-side controls. Each activates when its backing API is wired."
-      result={result}
+      description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
-      <ul className="tool-list">
-        {(result.data ?? []).map((tool) => (
-          <li key={tool.id} className="tool-row">
-            <div>
-              <p className="tool-row-label">
-                {tool.label} <span className="chip">{tool.provider}</span>
-              </p>
-              <p className="muted">{tool.description}</p>
-            </div>
-            {/*
-              NOT A BUTTON. It was `<button type="button">` with NO HANDLER, and
-              the one tool here is `ready`, so it rendered ENABLED: a control an
-              operator could click that did nothing at all.
-
-              The comment below already said the right thing, that this tool's
-              answer is rendered rather than run, and the markup just never
-              agreed with it. A chip states the state without offering an
-              action that does not exist.
-            */}
-            <span className="chip">{tool.ready ? "Answered below" : "Not wired"}</span>
-          </li>
-        ))}
-      </ul>
-
       {/*
         THE AUDIT ITSELF, rendered rather than run behind a button.
 

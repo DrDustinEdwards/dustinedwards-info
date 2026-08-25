@@ -7,38 +7,24 @@
 export type HealthStatus = "ok" | "warn" | "error" | "unknown";
 
 /**
- * What every panel receives from its data source. "stub" carries placeholder
- * data plus a note about what real integration is pending; "live" carries the
- * real thing once the source is wired.
+ * What a panel receives from a source that can fail.
+ *
+ * TWO ARMS SINCE 2026-08-25, and the third is what was removed. It was
+ * `{ status: "stub"; data: T; note: string }`, and it existed so a panel could
+ * render invented data while announcing that the real integration was pending.
+ * Nothing renders invented data any more: the cockpit reads the health run and
+ * `sync_status`, and the only remaining source, traffic, was already live or
+ * error. An arm that says "this number is not real" is a licence to show a
+ * number that is not real.
+ *
+ * `AdminDataSource` went with it. It was an interface with a `provider` field
+ * naming Cloudflare, Vercel, Sentry, Recova, Foxing and Capsid, for a cockpit
+ * watching one Worker: typing for a fleet that does not exist, which made the
+ * page look designed rather than measured.
  */
 export type SourceResult<T> =
   | { status: "live"; data: T; fetchedAt: string }
-  | { status: "stub"; data: T; note: string }
   | { status: "error"; data: null; message: string };
-
-/**
- * A cockpit data source. Panels render a SourceResult and never care whether
- * it came from a stub or a real fetch, so wiring Cloudflare, Vercel, Sentry,
- * Recova, Foxing or Capsid later is a change to one fetch body.
- */
-export interface AdminDataSource<T> {
-  /** Stable id for caching and logging. */
-  id: string;
-  /** Human label shown in panel chrome. */
-  label: string;
-  /** Where live data will come from once wired. */
-  provider: string;
-  fetch(env: Env): Promise<SourceResult<T>>;
-}
-
-/** One card on the overview status board. */
-export interface OverviewCard {
-  id: string;
-  label: string;
-  value: string;
-  hint: string;
-  status: HealthStatus;
-}
 
 /**
  * One row of the origin-requests panel.
@@ -70,11 +56,3 @@ export interface TrafficReport {
   pathsReturned: number;
 }
 
-/** One admin-side control on the tools panel. */
-export interface AdminTool {
-  id: string;
-  label: string;
-  description: string;
-  provider: string;
-  ready: boolean;
-}
