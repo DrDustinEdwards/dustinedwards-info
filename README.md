@@ -162,6 +162,8 @@ Seven, all set with `wrangler secret put`, never in a file:
 | `ADMIN_EMAIL` | the single account allowed to sign in |
 | `GITHUB_TOKEN` | the editor's commits (fine-grained, Contents read/write) |
 | `OPERATOR_TOKEN` | the agent publish API, minimum 32 characters |
+| `ANALYTICS_READ_TOKEN` | the cockpit's origin-requests panel, optional |
+| `SMOKE_TOKEN` | the read-only credential `check:browser` renders the admin plane with, minimum 32 characters, optional |
 
 Neither wrangler file has ever held one. Local development uses a gitignored
 `.dev.vars`. Without `GITHUB_TOKEN` the editor still renders and previews and
