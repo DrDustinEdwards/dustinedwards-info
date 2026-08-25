@@ -126,7 +126,7 @@ export async function action({ request, context }: Route.ActionArgs) {
    * writers measured them from two different stores, one of which a clone
    * cannot reach. The key carries `-<w>x<h>` so both resolvers parse rather
    * than fetch. That makes this measurement an input to the key, which is why
-   * it happens here instead of through `readDimensions` after the put.
+   * it happens here rather than by reading the object back after the put.
    *
    * Null is a real answer and not a failure: an SVG has no intrinsic pixel
    * size, so it gets a key with no dimension segment, exactly as the `media`

@@ -301,5 +301,3 @@ export async function getCommitPatch(env: GhEnv, sha: string, path: string) {
   const file = commit.files?.find((entry) => entry.filename === path);
   return file ? { patch: file.patch ?? null, status: file.status } : null;
 }
-
-export const REPO_INFO = { owner: OWNER, repo: REPO, branch: BRANCH };

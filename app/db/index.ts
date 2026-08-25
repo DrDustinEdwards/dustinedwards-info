@@ -17,7 +17,6 @@ import {
 import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
-import { mediaRefKey } from "../lib/media-ref-key.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
@@ -1284,48 +1283,6 @@ export async function existingMediaKeys(env: Env) {
  * Anything that goes through the renderer is indexed by construction.
  */
 
-/**
- * Replaces every ref for one source, atomically in intent.
- *
- * DELETE-then-INSERT scoped to the source, rather than an upsert: an edit that
- * REMOVES the last image from a post has to remove the ref too, and an upsert
- * has no way to express a row that should no longer exist. Scoped to the source
- * so re-rendering one post cannot disturb another post's refs.
- */
-export async function replaceMediaRefsForSource(
-  env: Env,
-  sourceType: string,
-  sourceId: string,
-  refs: Array<{ mediaKey: string; form: string; detail: string | null }>,
-) {
-  const db = getDb(env);
-  await db
-    .delete(mediaRefs)
-    .where(and(eq(mediaRefs.sourceType, sourceType), eq(mediaRefs.sourceId, sourceId)));
-  if (refs.length === 0) return;
-
-  // Deduplicated before insert. The primary key is
-  // (media_key, source_type, source_id, form, detail), so a post citing the same
-  // image twice on the SAME line in the same form is one row, and inserting it
-  // twice would fail the batch rather than being merged.
-  const seen = new Set<string>();
-  const values = [];
-  for (const ref of refs) {
-    // Key shape and the collision it prevents: see mediaRefKey.
-    const id = mediaRefKey(ref);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    values.push({
-      mediaKey: ref.mediaKey,
-      sourceType,
-      sourceId,
-      form: ref.form,
-      detail: ref.detail,
-    });
-  }
-  await db.insert(mediaRefs).values(values);
-}
-
 /** Every ref for a set of keys, for the refcount and for a refusal message. */
 export async function mediaRefsFor(env: Env, keys: string[]) {
   if (keys.length === 0) return new Map<string, MediaRef[]>();
@@ -1336,11 +1293,6 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   const out = new Map<string, MediaRef[]>(keys.map((key) => [key, []]));
   for (const row of rows) out.get(row.mediaKey)?.push(row);
   return out;
-}
-
-/** Wipes every ref for a source type. Used before a full re-sync. */
-export async function clearMediaRefs(env: Env, sourceType: string) {
-  await getDb(env).delete(mediaRefs).where(eq(mediaRefs.sourceType, sourceType));
 }
 
 /** Every visible post with its markdown body, newest first, for llms-full.txt. */

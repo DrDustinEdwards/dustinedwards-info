@@ -345,18 +345,6 @@
   display: none;
 }
 
-.editor-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 48rem) {
-  .editor-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 .field {
   display: grid;
   gap: 0.375rem;
@@ -402,26 +390,6 @@
    the pastel border. The field also carries an error message in words. */
 .field input[aria-invalid="true"] {
   border-color: var(--fill-danger);
-}
-
-.field-draft {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9375rem;
-}
-
-.field-draft-control {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.field-draft input {
-  min-height: 0;
-  width: 1.1rem;
-  height: 1.1rem;
 }
 
 /* Write, split and preview ------------------------------------------------
@@ -856,13 +824,6 @@
   margin: 0;
   color: var(--text-warning);
   font-size: 0.8125rem;
-}
-
-.editor-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
 }
 
 /* Region 3: the settings drawer -------------------------------------------

@@ -69,15 +69,6 @@ export function readBuffer(key: string): DraftBuffer | null {
   }
 }
 
-export function clearBuffer(key: string) {
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // Nothing to do. A buffer that cannot be cleared is offered again and
-    // declined again, which is annoying rather than dangerous.
-  }
-}
-
 /**
  * Drops every buffer for a slug regardless of base commit.
  *

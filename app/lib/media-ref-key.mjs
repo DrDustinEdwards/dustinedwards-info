@@ -9,7 +9,7 @@
  *
  * ## THE SEPARATOR IS THE WHOLE CORRECTNESS ARGUMENT
  *
- * `replaceMediaRefsForSource` deduplicates before a batch insert, because the
+ * `mediaRefStatements` deduplicates before a batch insert, because the
  * primary key is (media_key, source_type, source_id, form, detail) and
  * inserting the same tuple twice fails the ENTIRE batch rather than merging.
  *

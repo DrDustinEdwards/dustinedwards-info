@@ -70,38 +70,6 @@ export interface AskCitation {
 }
 
 /**
- * Turns the `chunks` event payload into citations.
- *
- * Deduplicated by URL and capped, because several chunks of one section are one
- * citation to a reader. Chunks whose key does not resolve are dropped rather
- * than rendered, per `urlForKey`.
- */
-export function citationsFromChunks(
-  chunks: Array<{ text?: string; score?: number; item?: { key?: string } }>,
-): AskCitation[] {
-  const byUrl = new Map<string, AskCitation>();
-  for (const chunk of chunks) {
-    const key = chunk.item?.key;
-    if (!key) continue;
-    const url = urlForKey(key);
-    if (!url) continue;
-    const existing = byUrl.get(url);
-    const score = chunk.score ?? 0;
-    if (existing) {
-      if (score > existing.score) existing.score = score;
-      continue;
-    }
-    byUrl.set(url, {
-      url,
-      title: labelForUrl(url),
-      isSection: url.includes("#"),
-      score,
-    });
-  }
-  return [...byUrl.values()].sort((a, b) => b.score - a.score);
-}
-
-/**
  * Streams an answer. Returns the raw SSE stream from AI Search.
  *
  * The stream is handed to the client untouched rather than parsed and
