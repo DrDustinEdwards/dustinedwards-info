@@ -488,10 +488,20 @@ refuses(
  * method gate makes unreachable for the smoke actor. That is a property of
  * where one line happens to sit, so it is asserted rather than assumed.
  *
- * POSITION IN COMMENT-STRIPPED SOURCE, on the same technique as the guard
- * extraction above: every read must sit after the `action` export begins. A
- * file-wide "does it appear" check would pass on a read moved into the loader,
- * which is the entire failure this is about.
+ * INSIDE THE ACTION'S BRACE-MATCHED BODY, in comment-stripped source. The
+ * first form of this scan asserted only that every read sat AFTER the action
+ * export BEGAN, an unbounded window to end-of-file, and that window had the
+ * exact hole this section exists about: a helper declared below the action,
+ * reading the session and called from the loader, sat "after the action" in
+ * text while running on the read path at runtime. Planted 2026-08-25 and the
+ * old form passed 138/0 over it. The window is now bounded to the action's
+ * own body, the technique `bodyOf` below already uses (a top-level function
+ * ends at the first line that is exactly a closing brace in this codebase's
+ * formatting), so a read anywhere outside that span fails, helper or loader
+ * alike. Fail closed: this cannot see the call graph, so a read the action
+ * itself delegates to a sibling helper is refused too, and the repair is to
+ * move the read inside the action, where its reachability is the method
+ * gate's guarantee.
  */
 {
   /** @type {string[]} */
@@ -504,6 +514,9 @@ refuses(
     readers.push(entry.name);
 
     const actionAt = text.indexOf("export async function action(");
+    // The body's end: the first line that is exactly `}` after the export,
+    // where every top-level function in this repo's formatting closes.
+    const actionEnd = actionAt === -1 ? -1 : text.indexOf("\n}", actionAt);
     const reads = [];
     for (
       let at = text.indexOf("context.get(adminSessionContext)");
@@ -514,9 +527,11 @@ refuses(
     }
 
     eq(`${entry.name} declares an action to scope the read against`, actionAt > 0, true);
+    eq(`${entry.name}'s action body has a measurable end`, actionEnd > actionAt, true);
     eq(
-      `${entry.name} reads the admin SESSION only on the write path, never in a loader`,
-      reads.every((at) => at > actionAt),
+      `${entry.name} reads the admin SESSION only inside the action body, never in ` +
+        `a loader or a helper outside it`,
+      reads.every((at) => at > actionAt && at < actionEnd),
       true,
     );
   }
