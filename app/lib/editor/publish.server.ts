@@ -20,6 +20,7 @@ import { memoizeOnce } from "~/lib/once.mjs";
 import { imageSize } from "image-size";
 
 import { serializeArtifact } from "~/lib/content/artifact.mjs";
+import { mediaRefKey } from "~/lib/media-ref-key.mjs";
 // The page half of the search corpus. Imported rather than read from disk: this
 // runs in the Worker, where both files come from the bundle. Ruling 3 of
 // colophon-page.md.
@@ -698,10 +699,35 @@ function mediaRefStatements(db: D1Database, record: any) {
   ];
   const seen = new Set<string>();
   for (const ref of record.mediaRefs ?? []) {
-    // The primary key includes form and detail, so the same image cited twice on
-    // one line in one form is one row. Deduped rather than left to fail a batch
-    // that also carries the post itself.
-    const id = `${ref.key} ${ref.form} ${ref.detail ?? ""}`;
+    /*
+     * The primary key includes form and detail, so the same image cited twice on
+     * one line in one form is one row. Deduped rather than left to fail a batch
+     * that also carries the post itself.
+     *
+     * THE SEPARATOR IS THE WHOLE CORRECTNESS ARGUMENT, and it lives here now
+     * because this is the LIVE writer. This line joined on a SPACE until
+     * 2026-08-25, while the NUL-joined `mediaRefKey` (whose docblock argues the
+     * point, and whose test proves it) was reachable only from a dead function.
+     * The argument was written down, tested, and attached to nothing that runs.
+     *
+     * A printable separator COLLIDES: under a space, the refs
+     * ("k", "inline", "line 3 alt") and ("k", "inline line", "3 alt") produce
+     * the same key, so the second is dropped as a duplicate and a post citing
+     * two different images silently records one. Details really do carry
+     * spaces; the pipeline emits `detail: "cover image"`. NUL cannot occur in a
+     * media key, a form or a detail, so the join is unambiguous.
+     *
+     * The shapes differ and that is deliberate rather than sloppy: the pipeline
+     * emits `key` and the table column is `media_key`, so the adaptation is
+     * made here at the one call site rather than by widening the helper to
+     * accept two field names, which would make the helper the second owner of
+     * a naming difference.
+     */
+    const id = mediaRefKey({
+      mediaKey: ref.key,
+      form: ref.form,
+      detail: ref.detail ?? null,
+    });
     if (seen.has(id)) continue;
     seen.add(id);
     statements.push(
