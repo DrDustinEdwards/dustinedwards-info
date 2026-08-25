@@ -291,6 +291,19 @@
   border-radius: 0.25rem;
   background: var(--surface);
   font-size: 0.9em;
+  /* INLINE CODE MAY BREAK, because what goes in it here cannot.
+     FOUND BY THE CI BROWSER RUN, on Linux, at 320px: /colophon scrolled
+     sideways by 2px and the widest element was a `code`. It passes on this
+     machine and fails on that one, and neither reading is wrong: the content is
+     file paths and gate names, single unbreakable tokens, and the monospace
+     each platform falls back to is a different width. A defect that depends on
+     which fonts the reader happens to have is a defect for some readers.
+     `anywhere` rather than `break-word`, because only `anywhere` also lowers
+     the element's MIN-CONTENT, which is what stops a long token forcing its
+     container wider than the viewport. It breaks only when it must, so ordinary
+     short spans are unchanged. Fixes the class rather than the two pixels: the
+     same paths appear on post pages, which no width case visits. */
+  overflow-wrap: anywhere;
 }
 
 .prose pre {
