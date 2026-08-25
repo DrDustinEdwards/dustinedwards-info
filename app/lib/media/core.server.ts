@@ -1,5 +1,7 @@
 import { listMediaPage } from "~/db";
 
+import { isContentKey } from "./classify.mjs";
+
 /**
  * MEDIA CORE. Library listing, upload, thumbnails, metadata and delete mechanics.
  *
@@ -17,14 +19,11 @@ import { listMediaPage } from "~/db";
 /** One page. Small enough to be a page rather than a dump of the bucket. */
 export const MEDIA_PAGE_SIZE = 24;
 
-/**
- * The prefix that marks a derived object.
- *
- * Kept only for `isManagedKey`, which is a guard over a key an HTTP request
- * supplied. Listing no longer needs it: the D1 query filters on the `storage`
- * column, which is a fact about the row rather than a guess from its name.
- */
-const DERIVED_PREFIX = "og/";
+/* DERIVED_PREFIX is GONE. It existed for `isManagedKey`, which excluded `og/`
+ * keys by prefix beside its own copy of the key grammar. The grammar now has
+ * one owner, `isContentKey` in classify.mjs, and its pattern admits no slash
+ * and no non-hex lead, so an `og/` key fails the shape test itself and the
+ * prefix check had nothing left to refuse. */
 
 /**
  * Widths the thumbnail route will honour.
@@ -205,14 +204,18 @@ export async function deleteMediaObject(env: Env, key: string) {
 /**
  * True when the key is one this module is willing to touch.
  *
- * It used to be a positive test against the `posts/` prefix. Content addressing
- * removed that anchor, so the test is now the SHAPE of a content key plus an
- * explicit refusal of the derived prefix. Anchored at both ends, so nothing with
- * a slash, a traversal segment or a leading `/` (which would be a static asset,
- * and static assets are not deletable through the UI) can pass.
+ * DELEGATES TO THE GRAMMAR'S OWNER and carries no pattern of its own. The
+ * regex that lived here predated the dimension segment `contentKey` writes
+ * into raster keys, so every uploaded raster was refused by delete, set-alt
+ * and empty-trash while the guard looked correct. A reader that restates a
+ * grammar fails exactly when the writer moves; `isContentKey` sits beside the
+ * writer, where a change to one is a change made looking at the other.
+ *
+ * What the shape test refuses on this module's behalf: anything with a slash
+ * (so a traversal segment, a leading `/` static path and an `og/` derived key
+ * all fail), and anything that is not a digest-plus-extension a real upload
+ * could have produced.
  */
-const CONTENT_KEY = /^[0-9a-f]{16}\.[a-z0-9]+$/;
-
 export function isManagedKey(key: string) {
-  return CONTENT_KEY.test(key) && !key.startsWith(DERIVED_PREFIX);
+  return isContentKey(key);
 }

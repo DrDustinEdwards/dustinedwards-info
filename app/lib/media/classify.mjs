@@ -406,3 +406,73 @@ export function dimensionsFromKey(keyOrPath) {
   if (width <= 0 || height <= 0) return null;
   return { width, height };
 }
+
+/**
+ * The full shape of a key `contentKey` can emit, in one statement.
+ *
+ * Exactly two forms exist: `<16 hex>.<ext>` and `<16 hex>-<w>x<h>.<ext>`.
+ * The dimension segment is `[1-9]\d{0,4}` on each axis because `contentKey`
+ * writes `String(width)` only when the width is positive, so a zero or a
+ * leading-zero dimension is a string that writer cannot produce. The five
+ * digit bound is shared with `dimensionsFromKey` above, which is the one
+ * reader of the segment's VALUES; this pattern is the one statement of the
+ * segment's SHAPE, and the two are kept adjacent so a change to either is a
+ * change made looking at both.
+ *
+ * Anchored at both ends, and no character class admits a slash, so a static
+ * path (leading `/`), an `og/` key, and a traversal segment all fail without
+ * needing to be named.
+ */
+const CONTENT_KEY_SHAPE = /^([0-9a-f]{16})(?:-[1-9]\d{0,4}x[1-9]\d{0,4})?\.[a-z0-9]+$/;
+
+/**
+ * True for exactly the shapes `contentKey` can emit, false for everything else.
+ *
+ * THE ONLY BOOLEAN READER OF THE KEY GRAMMAR, and it lives beside the writer
+ * on purpose. `isManagedKey` in `core.server.ts` carried its own regex, which
+ * predated the dimension segment: every uploaded raster was refused by delete,
+ * by set-alt and by empty-trash, invisibly, because the guard tested a shape
+ * the writer had stopped emitting. Latent only while R2 held no uploaded
+ * originals. A reader that is a second statement of the grammar fails exactly
+ * when the writer moves, which is the one moment it is needed.
+ *
+ * Nothing outside this module may parse a content key. The sweep that holds
+ * that line is test/media-key-grammar.test.mjs, which asserts the three former
+ * copies stayed deleted.
+ *
+ * @param {string} key a bare key, never a `/media/` path
+ * @returns {boolean}
+ */
+export function isContentKey(key) {
+  return typeof key === "string" && CONTENT_KEY_SHAPE.test(key);
+}
+
+/**
+ * The 16 hex digits of the content digest a key carries, or null.
+ *
+ * THE ONLY EXTRACTING READER OF THE KEY GRAMMAR. Two private copies existed,
+ * `hashOf` in `mediaTwins` and the inspector's hash in the media route, both
+ * spelled to require a dot straight after the hex, so a key carrying the
+ * dimension segment yielded null: no hash in the inspector and no twin
+ * detection for any uploaded raster.
+ *
+ * Accepts a bare key or a `/media/` path and strips query and fragment, the
+ * same acceptance rule as `dimensionsFromKey` and for the same reason: the
+ * callers hold both forms, and `?w=320` is a transform request, not a
+ * different object.
+ *
+ * Null is the answer for anything that is not a content key at all, including
+ * an `og/` key and a static path. That is a fact, not a failure: those keys
+ * carry no digest, and pretending a path prefix is a hash was the exact
+ * confusion `original_name` exists to prevent.
+ *
+ * @param {string} keyOrPath
+ * @returns {string | null}
+ */
+export function digestFromKey(keyOrPath) {
+  if (typeof keyOrPath !== "string") return null;
+  const path = keyOrPath.split(/[?#]/)[0];
+  const key = path.startsWith("/media/") ? path.slice("/media/".length) : path;
+  const match = CONTENT_KEY_SHAPE.exec(key);
+  return match ? match[1] : null;
+}
