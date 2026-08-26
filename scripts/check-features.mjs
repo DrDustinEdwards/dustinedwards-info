@@ -490,8 +490,8 @@ console.log(
  * a page that never says it.
  *
  * **No gate could see it, and it is worth being precise about why.**
- * `check:content` byte-compares the artifact against a fresh generation, so it
- * compares the wrong output to itself and agrees. This gate reconciled section
+ * `check:content` compares the generated output against itself (then a byte
+ * gate, a determinism pass today), so a wrong output agrees with itself. This gate reconciled section
  * IDS, not the words inside a section. The comparison that was missing is index
  * against PAGE, and the three assertions below are the offline half of it: the
  * label reaches the index, the raw enum does not, and neither reader carries a
@@ -886,8 +886,8 @@ if (unreferenced.length > 0) {
 /* --- The projects roster ---------------------------------------------------
  *
  * WHY HERE AND NOT IN check:content. The spec guessed check:content; measured,
- * that gate byte-compares the GENERATED posts.json against a fresh generation
- * from content/posts, so it has nothing to regenerate a HAND-AUTHORED file
+ * that gate proves the GENERATED corpus renders deterministically from
+ * content/posts, so it has nothing to regenerate a HAND-AUTHORED file
  * from and a projects section there would be structurally foreign. This gate is
  * already the owner of hand-authored content data: it reads content/, parses
  * routes.ts, knows the gate list, and already reconciles the colophon's page

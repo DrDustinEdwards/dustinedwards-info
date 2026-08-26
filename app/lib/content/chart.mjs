@@ -16,7 +16,8 @@
  * Two properties this module exists to guarantee:
  *
  *   1. **Deterministic.** The SVG is a pure function of the markdown, so
- *      `check:content` can byte-compare it like everything else. Plot's default
+ *      `check:content`'s double-render pass compares it like everything else,
+ *      and the two writers' render hashes agree. Plot's default
  *      class name is a fixed constant and standard marks generate no ids, so
  *      there is nothing random to suppress. `check:charts` proves it rather
  *      than trusting it.

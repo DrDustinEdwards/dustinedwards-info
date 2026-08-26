@@ -8,7 +8,10 @@ something that is. That is the organising idea, and most of what follows is a
 consequence of it.
 
 - **Content is code.** Markdown files in `content/posts/` are the source of
-  truth. D1 is a derived read model, rebuilt from a committed artifact.
+  truth, and they are the ONLY committed form of the content: D1 holds the one
+  rendered copy, written by two writers through one shared pipeline, and it
+  converges to the repository (ship reports drift; a scheduled health check
+  repairs it).
 - **The gates are the review.** There is no second reviewer, so a family of
   `check:*` scripts is what stands between a change and production. Since
   2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
@@ -62,7 +65,7 @@ means editing both files in the same commit.**
 ```
 content/posts/*.md                    the source of truth
         |
-        +- build:content ------------> content/generated/posts.json  (committed, gated)
+        +- build:content ------------> content/generated/posts.json  (LOCAL build product, gitignored)
         |                              rendered HTML, search records,
         |                              diagram keys, media refs
         |
@@ -74,25 +77,30 @@ content/posts/*.md                    the source of truth
 ```
 
 Order matters: `build:content` first, then `build:og` and `build:diagrams`
-(both read the artifact), then `sync:content`.
+(both read the local build product), then `sync:content`. The gate runners
+build before the tier reads, so a checkout never needs the file committed.
 
-**Editing a post** means editing the markdown, running `build:content`,
-committing the artifact alongside it, then `sync:content`. Never hand-edit the
-artifact and never write prose straight into a D1 row; both defeat the gate.
+**Editing a post** means editing and committing the markdown; nothing else is
+committed. `sync:content` (or a ship) renders and lands it in D1, and between
+those, the scheduled health check's content-drift repair does the same within
+one poll. Never write prose straight into a D1 row; it defeats every gate.
 
-There are **two writers** of that artifact, the build script and the admin
-editor, and they must produce byte-identical output. So anything the artifact
-carries is computed in exactly one module that both import (`artifact.mjs`,
-`records.mjs`, `pipeline.mjs`). That rule has been learned more than once and is
-why those modules exist.
+There are **two writers** into D1, the build-plus-sync path and the admin
+editor, and both render through one shared pipeline (`pipeline.mjs`,
+`records.mjs`), which computes a `source_blob_sha` and `render_hash` into
+every row. `sync:content` compares those against a fresh build before every
+write and reports drift by class; same-source different-render is the
+Worker-versus-Node divergence the committed artifact's byte gate used to
+catch, now caught at ship time.
 
 ### The editor is a second writer, not a second path
 
-`/admin/posts` commits to GitHub through the Git Data API, one commit carrying
-both the markdown and the regenerated artifact, and only then writes D1. The
-same zod gates run inside the action, because an API commit bypasses the local
-hooks entirely. `POST /api/operator` exposes that identical machinery to agents
-behind a bearer token. There is exactly one write path.
+`/admin/posts` commits ONE markdown file to GitHub through the Git Data API
+(which is what carries the `expectedHeadSha` conflict guard), and only then
+renders and writes D1 through `renderAndWrite`, the one door to a rendered
+row. The same zod gates run inside the action, because an API commit bypasses
+the local hooks entirely. `POST /api/operator` exposes that identical
+machinery to agents behind a bearer token. There is exactly one write path.
 
 ## Media
 
@@ -123,7 +131,7 @@ after one fails, because stopping at the first red hides the rest.
 
 | Gate | What it protects |
 | --- | --- |
-| `check:content` | the committed artifact matches a fresh generation |
+| `check:content` | the corpus renders validly and deterministically; the committed artifacts match fresh scans |
 | `check:config` | the two wrangler files declare the same bindings |
 | `check:search` | the query parser and rank fusion |
 | `check:policy` | the operator publish policy, including first-publish |

@@ -1,5 +1,5 @@
 /**
- * Pushes the generated content artifact into D1.
+ * Pushes the local content build product into D1, drift report first.
  *
  *   npm run sync:content -- --local
  *   npm run sync:content -- --remote
@@ -88,9 +88,11 @@ function buildSql(posts) {
     const publishAt = Math.floor(Date.parse(post.publishAt) / 1000);
     const status = post.draft ? "draft" : "published";
     // Revision date: explicit frontmatter wins, otherwise the last commit that
-    // touched the file. Applied here rather than in the artifact because the
-    // artifact is byte-compared and a git date would make it fail on every
-    // content commit. Falls back to now when there is no history to read.
+    // touched the file. Applied here rather than in the build product because
+    // a render must depend on the sources alone (the determinism pass renders
+    // twice and compares, and both writers' render hashes must agree; the
+    // Worker has no git history to consult anyway). Falls back to now when
+    // there is no history to read.
     /*
      * og_image IS SET ONLY WHEN A CARD ACTUALLY EXISTS, which is the same
      * condition `build:og` renders under. Two rules, one predicate.

@@ -47,6 +47,10 @@ which is what repeats across people and sessions.
   line counts. `VERIFICATION.md`
 - **A threshold larger than its input is not a threshold.** A 10,000-character
   ceiling on an 8,479-character file could not fail. `VERIFICATION.md`
+- **A plant is proven in the ARTIFACT THE GATE READS, not in the source.** A
+  30 KB constant planted in source was folded to 3e4 by the minifier; the
+  gated chunk grew 17 bytes and the plant was never applied.
+  `scripts/check-script-payload.mjs`
 
 ## Measuring the wrong thing
 
@@ -54,7 +58,8 @@ which is what repeats across people and sessions.
   timing instrument threaded through one call site proved nothing about the
   other. `5940242`
 - **A mark count is not a read count.** One `artifact_load` mark was reported
-  while two reads were happening. `scripts/check-invariants.mjs` section 11
+  while two reads were happening. `scripts/check-invariants.mjs`, retired
+  section 10, in git history since the artifact arc
 - **A simulated element is not the element.** An injected probe anchor measured
   10px and gave a wrapping threshold 10px wrong.
   `app/components/site-header.tsx`

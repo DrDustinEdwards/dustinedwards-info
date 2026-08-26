@@ -323,9 +323,9 @@ export function recordsForPage(page) {
  * Every record for every page, in a stable order.
  *
  * Sorted by uid rather than left in call order, for the reason
- * `recordsForPosts` sorts by slug: `check:content` byte-compares the artifact,
- * so an order that depends on how a caller happened to assemble its list would
- * make the gate fail on unrelated commits.
+ * `recordsForPosts` sorts by slug: the outputs are compared (determinism in
+ * check:content, drift at ship), so an order that depends on how a caller
+ * happened to assemble its list would read as a difference on unrelated runs.
  *
  * @param {any[]} pages page inputs, as `recordsForPage` takes them
  * @returns {Array<Record<string, any>>}

@@ -481,10 +481,11 @@ const RELATED_LIMIT = 3;
  *
  * Must run over ALL posts, in both callers, for the same reason the renderer is
  * shared: relatedness is a property of the set, not of one post. Adding a post
- * changes the related list of every post it shares a tag with, so an editor save
- * that spliced one entry and left the rest would make the committed artifact
- * disagree with the next build. The editor therefore calls this after splicing,
- * over the complete list.
+ * changes the related list of every post it shares a tag with, so a writer
+ * that recomputed one entry against a stale view of the rest would disagree
+ * with the next full build. Both writers therefore run it over the complete
+ * corpus: the build over the files, the editor over the D1 corpus plus the
+ * saved post (`relatedFor`).
  *
  * Ordering is fully determined: shared tags descending, then newest, then slug.
  * No ties are left to array order, because array order is not stable input.
@@ -1377,14 +1378,14 @@ export async function renderBody({ file, body, resolveImage }) {
     // the same principle as `withRelated` and `records.mjs`: anything two callers
     // need is computed once, by the module both of them already import.
     diagrams: diagrams.map((/** @type {any} */ d) => ({ key: d.key, source: d.source })),
-    // Every media citation this render emitted. Rides in the artifact for the
+    // Every media citation this render emitted. Rides in the record for the
     // same reason `diagrams` and `records` do: both writers produce it from one
-    // module, so the editor and the build cannot disagree, and `check:content`
-    // byte-compares it like everything else.
+    // module, so the editor and the build cannot disagree, and the determinism
+    // pass covers it like everything else.
     mediaRefs,
-    // Deliberately NOT written into the artifact. It is a fact about one
-    // render, not about the post, and putting it in the gated artifact would
-    // make a blocked URL churn the byte comparison. The preview reads it to
+    // Deliberately NOT part of the record's durable fields. It is a fact
+    // about one render, not about the post, and folding it into what the
+    // hashes cover would make a blocked URL churn them. The preview reads it to
     // tell the author; the build script reads it to warn.
     blockedUrls,
   };

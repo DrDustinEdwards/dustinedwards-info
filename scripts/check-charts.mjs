@@ -6,13 +6,13 @@
  * looks at a chart in a browser, so nothing here sees whether a chart is legible
  * or correctly scaled.
  *
- * `check:content` already byte-compares the artifact, so it catches a chart
- * whose SVG was hand-edited or has gone stale. What it CANNOT catch is a chart
- * renderer that is not deterministic: a generator that emits a different SVG on
- * every run makes the byte-comparison gate fail at random, which is exactly the
- * failure the shiki JavaScript-engine incident produced and the reason
- * oniguruma is a dependency. This gate proves the property that makes
- * `check:content` meaningful for charts.
+ * `check:content` renders the corpus twice and compares, so a chart renderer
+ * that is not deterministic fails THAT gate too, at corpus scope, naming a
+ * slug. What this gate adds is the chart-scoped half, in-process, across
+ * processes and across the Node/Worker engine split: the shape of failure the
+ * shiki JavaScript-engine incident produced and the reason oniguruma is a
+ * dependency. This gate proves the property that makes both content
+ * comparisons meaningful for charts.
  *
  * Four things are asserted:
  *

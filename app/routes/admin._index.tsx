@@ -51,8 +51,8 @@ export function meta() {
  *
  * ## IT COSTS REAL I/O, STATED RATHER THAN HIDDEN
  *
- * The health run lists the Ask index, lists R2 and reads D1; `syncStatus` reads
- * the committed artifact from GitHub and counts four stores. That is the price
+ * The health run lists the Ask index, lists R2 and reads D1; `syncStatus`
+ * lists the repository's post directory and counts four stores. That is the price
  * of a page whose entire purpose is to be true at the moment it is read, and it
  * is why the two run CONCURRENTLY and why each carries its own `timed` mark: an
  * instrument only sees what it was threaded through, so the cost of this page
@@ -133,7 +133,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
           <StatCard
             label="Artifact"
             value={String(stores.artifactPosts)}
-            hint={`posts in the committed artifact at ${stores.headSha.slice(0, 7)}`}
+            hint={`post files in the repository at ${stores.headSha.slice(0, 7)}`}
             status="ok"
           />
           <StatCard

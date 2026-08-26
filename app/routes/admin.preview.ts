@@ -14,7 +14,7 @@ import type { Route } from "./+types/admin.preview";
  * site and this route does not become a second one: it calls `renderBody` and
  * returns what comes back, unmodified. The preview is what publishes rather
  * than an approximation of it, which is the only reason a preview is worth
- * having on a site whose artifact is byte-compared by a gate.
+ * having on a site whose two writers must render identically.
  *
  * READ ONLY, and that is worth being precise about because it is a POST. It
  * takes markdown in and hands HTML back. It touches no database, writes no
