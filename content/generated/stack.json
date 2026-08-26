@@ -173,6 +173,7 @@
     "check:media-axes",
     "check:migrations",
     "check:policy",
+    "check:script-payload",
     "check:search",
     "check:secrets",
     "check:stack",
