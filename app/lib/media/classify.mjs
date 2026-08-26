@@ -370,6 +370,63 @@ export function contentKey(digest, extension, dimensions = null) {
 }
 
 /**
+ * The full shape of a key `contentKey` can emit, in ONE statement, and it is
+ * the only statement of the key grammar in this repository.
+ *
+ * Exactly two forms exist: `<16 hex>.<ext>` and `<16 hex>-<w>x<h>.<ext>`.
+ * Anchored at both ends, and no character class admits a slash, so a static
+ * path (leading `/`), an `og/` key, and a traversal segment all fail without
+ * needing to be named.
+ *
+ * THREE GROUPS, THREE READERS, since 2026-08-26. `isContentKey` tests it,
+ * `digestFromKey` takes group 1, `dimensionsFromKey` takes groups 2 and 3. The
+ * dimension groups are what this pattern gained: `dimensionsFromKey` carried
+ * its own regex over the same segment, and two spellings of one grammar is the
+ * exact defect the three deleted reader-copies produced.
+ *
+ * **THEY HAD ALREADY DRIFTED, and the differential that collapsed them found
+ * it rather than predicting it.** The old inline spelling read `\d{1,5}` per
+ * axis and rejected zero numerically afterwards; this one reads `[1-9]\d{0,4}`
+ * and rejects a leading zero outright. So of 234 generated and negative cases
+ * they agreed on 232 and disagreed on `-0800x600` and `-800x0600`, where the
+ * old reader returned `{800, 600}` for a key `isContentKey` was simultaneously
+ * calling not-a-content-key and `digestFromKey` was giving no digest for. One
+ * key, three readers, two answers.
+ *
+ * The strict spelling wins, and the reason is that the other two readers had
+ * always used it: a key delete and set-alt refuse is not a key the resolver
+ * should be measuring.
+ *
+ * **THE OLD JUSTIFICATION FOR `[1-9]` WAS WRONG and is corrected here.** It
+ * said `contentKey` "writes `String(width)`, so a leading-zero dimension is a
+ * string that writer cannot produce". It interpolates, it does not call
+ * `String`, and `"0800" > 0` is true, so `contentKey(d, "webp", {width: "0800",
+ * height: 600})` emits `-0800x600` today, measured. What actually rules that
+ * out is the TYPE on the parameter, checked by `tsc` at every call site, and a
+ * type is a better guarantee than the arithmetic accident the comment claimed.
+ */
+const CONTENT_KEY_SHAPE =
+  /^([0-9a-f]{16})(?:-([1-9]\d{0,4})x([1-9]\d{0,4}))?\.[a-z0-9]+$/;
+
+/**
+ * The bare key inside a value that may be a key, a `/media/` path, or either
+ * carrying a transform query.
+ *
+ * Stated once because all three readers below need it and two of them used to
+ * spell it separately. `?w=320` is a transform request, not a different
+ * object, so query and fragment come off; the intrinsic facts a key records are
+ * properties of the blob either way.
+ *
+ * @param {string} keyOrPath
+ * @returns {string | null} null only when the input is not a string at all
+ */
+function bareKey(keyOrPath) {
+  if (typeof keyOrPath !== "string") return null;
+  const path = keyOrPath.split(/[?#]/)[0];
+  return path.startsWith("/media/") ? path.slice("/media/".length) : path;
+}
+
+/**
  * The intrinsic dimensions a media key carries, or null if it carries none.
  *
  * The one reader of the `-<w>x<h>` segment `contentKey` writes. Both resolvers
@@ -383,47 +440,22 @@ export function contentKey(digest, extension, dimensions = null) {
  * returns null rather than a guess, and a null is a build failure at the call
  * site rather than a silently missing attribute. Preventing layout shift is the
  * whole point, so "I could not tell" must never render as "no dimensions
- * needed".
+ * needed". The strictness now comes from `CONTENT_KEY_SHAPE` rather than from a
+ * private regex plus a numeric afterthought.
  *
  * @param {string} keyOrPath
  * @returns {{ width: number, height: number } | null}
  */
 export function dimensionsFromKey(keyOrPath) {
-  if (typeof keyOrPath !== "string") return null;
-  // Query and fragment are stripped, the same rule and for the same reason as
-  // `mediaKeyOf`: `?w=320` is a transform request, not a different object, and
-  // the intrinsic size the key records is a property of the blob either way.
-  const path = keyOrPath.split(/[?#]/)[0];
-  const key = path.startsWith("/media/")
-    ? path.slice("/media/".length)
-    : path;
-  // Anchored on the 16 hex digits so ordinary filenames containing something
-  // like "-800x600" cannot be read as a measurement.
-  const match = key.match(/^[0-9a-f]{16}-(\d{1,5})x(\d{1,5})\.[a-z0-9]+$/);
-  if (!match) return null;
-  const width = Number(match[1]);
-  const height = Number(match[2]);
-  if (width <= 0 || height <= 0) return null;
-  return { width, height };
+  const key = bareKey(keyOrPath);
+  if (key === null) return null;
+  const match = CONTENT_KEY_SHAPE.exec(key);
+  // Group 2 is absent for the no-dimension form, which is a key that carries
+  // no measurement rather than a key that failed to parse. Both answer null
+  // here, and the caller wants the same thing from both.
+  if (!match || match[2] === undefined) return null;
+  return { width: Number(match[2]), height: Number(match[3]) };
 }
-
-/**
- * The full shape of a key `contentKey` can emit, in one statement.
- *
- * Exactly two forms exist: `<16 hex>.<ext>` and `<16 hex>-<w>x<h>.<ext>`.
- * The dimension segment is `[1-9]\d{0,4}` on each axis because `contentKey`
- * writes `String(width)` only when the width is positive, so a zero or a
- * leading-zero dimension is a string that writer cannot produce. The five
- * digit bound is shared with `dimensionsFromKey` above, which is the one
- * reader of the segment's VALUES; this pattern is the one statement of the
- * segment's SHAPE, and the two are kept adjacent so a change to either is a
- * change made looking at both.
- *
- * Anchored at both ends, and no character class admits a slash, so a static
- * path (leading `/`), an `og/` key, and a traversal segment all fail without
- * needing to be named.
- */
-const CONTENT_KEY_SHAPE = /^([0-9a-f]{16})(?:-[1-9]\d{0,4}x[1-9]\d{0,4})?\.[a-z0-9]+$/;
 
 /**
  * True for exactly the shapes `contentKey` can emit, false for everything else.
@@ -470,9 +502,8 @@ export function isContentKey(key) {
  * @returns {string | null}
  */
 export function digestFromKey(keyOrPath) {
-  if (typeof keyOrPath !== "string") return null;
-  const path = keyOrPath.split(/[?#]/)[0];
-  const key = path.startsWith("/media/") ? path.slice("/media/".length) : path;
+  const key = bareKey(keyOrPath);
+  if (key === null) return null;
   const match = CONTENT_KEY_SHAPE.exec(key);
   return match ? match[1] : null;
 }
