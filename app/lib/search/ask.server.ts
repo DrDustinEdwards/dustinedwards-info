@@ -25,7 +25,7 @@ import {
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
-import { askExpectedUrls } from "./search.server";
+import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 
@@ -306,12 +306,15 @@ function askPublishable(post: { draft?: boolean; publishAt?: string | null }): b
  * Upload is an UPSERT keyed by filename, so re-running is idempotent and a
  * retitled section replaces itself rather than accumulating.
  */
-export async function syncAskCorpus(
-  env: Env,
-  posts: Parameters<typeof recordsForPosts>[0],
-): Promise<CorpusSyncResult> {
-  // Drafts and future posts never enter the index. See publishableForAsk.
-  const records = recordsForPosts(publishableForAsk(posts));
+export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
+  /*
+   * THE CORPUS COMES FROM D1, since the artifact arc. The records were
+   * materialised into `search_docs` by the same records.mjs both writers run,
+   * and `askCorpusRecords` reads them back with `visibilityClause` composed
+   * in the SQL, so drafts and future posts never enter the index for the
+   * same one-owner reason `publishableForAsk` protects the per-post path.
+   */
+  const records = await askCorpusRecords(env);
   const keys: string[] = [];
 
   for (const record of records) {

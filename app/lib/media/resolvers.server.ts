@@ -46,16 +46,6 @@ export type MediaCitation = {
 export type ReferenceResolver = (
   env: Env,
   keys: string[],
-  /**
-   * An already-memoized corpus reader, when the caller has one.
-   *
-   * OPTIONAL, and that keeps the seam's two-step promise intact: a new resolver
-   * that ignores this argument still works, and one that honours it stops
-   * re-reading a corpus the request already holds. The posts resolver was
-   * paying a 283 to 528ms GitHub round trip for bytes the admin layout had
-   * loaded moments earlier.
-   */
-  loadPosts?: () => Promise<any[]>,
 ) => Promise<Map<string, MediaCitation[]>>;
 
 import { postsResolver } from "./resolvers/posts.server";
@@ -96,7 +86,6 @@ export type ResolutionResult = {
 export async function resolveCitations(
   env: Env,
   keys: string[],
-  loadPosts?: () => Promise<any[]>,
 ): Promise<ResolutionResult> {
   const citations = new Map<string, MediaCitation[]>(keys.map((key) => [key, []]));
   const failed: string[] = [];
@@ -104,7 +93,7 @@ export async function resolveCitations(
   const answers = await Promise.all(
     RESOLVERS.map(async (resolver) => {
       try {
-        return { name: resolver.name, map: await resolver.resolve(env, keys, loadPosts) };
+        return { name: resolver.name, map: await resolver.resolve(env, keys) };
       } catch (error) {
         console.error(`media resolver ${resolver.name} failed`, error);
         failed.push(resolver.name);

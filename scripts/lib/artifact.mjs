@@ -1,17 +1,15 @@
 /**
- * The on-disk shape of content/generated/posts.json.
+ * The on-disk shape of the local content build product.
  *
- * There are exactly two writers of this file: `scripts/build-content.mjs` and
- * the admin editor's save path. They must produce byte-identical output or
- * `check:content` goes red the first time the editor saves anything. Rather
- * than asking both to remember the same shape, both call this.
- *
- * That is the same lesson `withRelated` taught and then revision dates taught
- * again: anything the artifact carries is computed in ONE place that both
- * callers import, or it drifts.
+ * ONE writer since the artifact arc: `scripts/build-content.mjs`, whose output
+ * is a gitignored local file that sync-content, the gates and the OG and
+ * diagram builders read after building it. The admin editor no longer writes
+ * or reads this shape; it renders straight into D1 through `renderAndWrite`.
+ * Moved from app/lib/content/ to scripts/lib/ with that change, because the
+ * Worker imports nothing from it any more.
  */
 
-import { recordsForPages, recordsForPosts } from "../search/records.mjs";
+import { recordsForPages, recordsForPosts } from "../../app/lib/search/records.mjs";
 
 /**
  * @param {any[]} posts already ordered and with cross-post data applied

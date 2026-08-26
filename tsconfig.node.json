@@ -18,7 +18,6 @@
     // reach the module; one statement, per the module's own header.
     "app/lib/content/hashes.mjs",
     "app/lib/content/diagram.mjs",
-    "app/lib/content/artifact.mjs",
     "app/lib/blog-listing.mjs",
     // The media library's view state. check:admin-ui derives its
     // parameter-evaporation needles from PARAM_NAMES rather than restating

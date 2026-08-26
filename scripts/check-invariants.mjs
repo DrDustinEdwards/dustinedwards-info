@@ -916,6 +916,32 @@ const VISIBILITY_EXEMPT = {
     "form reached the table from inside a sql template. Rewritten through the " +
     "query builder so the chokepoint applies; the extra round trip is the price " +
     "of being observable.",
+  listPostCorpusForRelated:
+    "feeds relatedFor in publish.server.ts. Drafts are included because " +
+    "withRelated does its own draft filtering of CANDIDATES while still " +
+    "computing a related list FOR a draft; pre-filtering here would change " +
+    "that half. It selects slug, title, status and publish_at, never a body, " +
+    "and its output reaches only the posts row's `related` column, whose " +
+    "public readers all sit behind publiclyVisible() at the route. Reached " +
+    "from the save and rebuild paths, which are behind Better Auth or the " +
+    "operator token.",
+  listPostSourcesForCitations:
+    "the media citation scan. A DRAFT citing an image must still refuse that " +
+    "image's deletion, so filtering drafts out would fail OPEN, which is the " +
+    "inversion of every other reader here: visibility filtering is the unsafe " +
+    "direction. Reached only from resolveCitations, whose callers are the " +
+    "/admin/media loader and delete action behind Better Auth; nothing it " +
+    "returns is rendered outside the admin plane.",
+  listPostsForOperator:
+    "the operator list_posts tool, whose contract has always included drafts: " +
+    "an operator stages drafts and must be able to list them. Reached only " +
+    "through the operator API behind its bearer token; the tool's own " +
+    "docblock states the policy.",
+  getAdminPostRow:
+    "the rendered half of the operator get_post response, for a post the " +
+    "caller already named and whose raw markdown the same response carries " +
+    "from the repository. Operator-token gated; a draft's html is exactly " +
+    "what an operator editing a draft is entitled to see.",
   getDraftPostForPreview:
     "draft preview links (feature G). The ONLY exempt reader reachable without a " +
     "session, so the reason has to be stronger than the one above. It does not " +
@@ -2103,114 +2129,13 @@ rmSync(join(root, "node_modules", ".cache", "check-invariants"), {
   force: true,
 });
 
-/* ------- 10. every route-level artifact read goes through the shared reader */
-
 /*
- * ONE 600KB READ PER REQUEST, ENFORCED AT THE CALLER.
- *
- * `loadArtifact` is not a database read. It is an HTTPS round trip off
- * Cloudflare's network to the GitHub Contents API for
- * `content/generated/posts.json`, 601,683 bytes, base64 encoded to roughly
- * 802,000 over the wire, then decoded and parsed inside the Worker. Measured on
- * production at 283 to 632ms per call.
- *
- * `artifactReader` memoizes it per request and the admin middleware installs
- * one on `artifactContext`, so callers that thread it share a single read.
- * `resolveCitations` takes that reader as an OPTIONAL third argument and falls
- * back to its own `loadArtifact` when it is absent, which keeps the resolver
- * usable from the operator path. That fallback is also exactly what makes a
- * missing argument silent: it works, it returns the right answer, and it costs
- * another full round trip.
- *
- * ## THIS IS NOT A TRIPWIRE. IT HAD A LIVE INSTANCE.
- *
- * Written 2026-08-20 after the gap had been NAMED as unasserted twice without
- * anyone looking for instances. There was one: the media loader's detail branch
- * called `resolveCitations(env, [row.key])` with no reader, inside the same
- * loader that had already resolved citations for the grid. So
- * `/admin/media?key=...` fetched the artifact TWICE per request, once for the
- * grid and once for the drawer. Found by grepping the call sites while writing
- * this section, not by measurement, because the detail view was never sampled.
- *
- * ## SCOPE, AND WHAT IT DELIBERATELY DOES NOT COVER
- *
- * ROUTE FILES ONLY. A route runs inside a request that has a context, so it can
- * always thread the reader. `app/lib/` is out of scope: `publish.server.ts`,
- * `operator/api.server.ts` and `posts.server.ts` call `loadArtifact` directly
- * and are reached from paths that hold only an `env`, so requiring a reader
- * there would be requiring something the caller cannot supply.
- *
- * It asserts the ARGUMENT IS PASSED, not that it is the right reader. Passing a
- * freshly constructed `artifactReader(env)` would satisfy this and still read
- * twice. No cheap source check separates those, and stating the limit is worth
- * more than a regex pretending otherwise.
- *
- * Comments are stripped first, because a `resolveCitations(env, keys)` written
- * in a comment would otherwise fail a section whose subject is code. That is the
- * inverse of the defect check:policy carried until 2026-08-19, where a comment
- * SATISFIED an assertion; both directions cost a real reading.
+ * Section 10 (route-level artifact reads go through the shared per-request
+ * reader) was DELETED with the committed artifact itself: `loadArtifact`, the
+ * memo and the 600KB GitHub round trip it deduplicated no longer exist, and
+ * the citation scan reads `posts.body` out of D1. The number is retired, not
+ * reused, on the same rule as CLAUDE.md's numbering.
  */
-
-console.log("\n  10. every route-level artifact read goes through the shared reader");
-
-{
-  const ROUTES_DIR = join(root, "app", "routes");
-  let routeFiles = 0;
-  let resolveCalls = 0;
-  let threaded = 0;
-  const unthreaded = [];
-  const directLoads = [];
-
-  for (const file of sourceFiles(ROUTES_DIR)) {
-    const rel = relative(root, file).split(sep).join("/");
-    if (rel.endsWith(".d.ts")) continue;
-    routeFiles += 1;
-    const code = stripComments(readFileSync(file, "utf8"));
-
-    // Every resolveCitations call in a route must carry a third argument.
-    // Matched to the closing paren of the call rather than to end of line,
-    // because the threaded form wraps and an anchored line match would read a
-    // wrapped call as two-argument.
-    for (const m of code.matchAll(/resolveCitations\(([\s\S]{0,200}?)\)\s*[,;)]/g)) {
-      resolveCalls += 1;
-      const args = m[1];
-      if (/artifactContext/.test(args)) threaded += 1;
-      else unthreaded.push(`${rel}: resolveCitations(${args.replace(/\s+/g, " ").trim()})`);
-    }
-
-    // And no route may reach loadArtifact directly, which bypasses the memo
-    // entirely. admin.tsx is the one permitted site: it is where the reader is
-    // BUILT, and the call there is the memo's own body.
-    if (rel !== "app/routes/admin.tsx") {
-      for (const _m of code.matchAll(/\bloadArtifact\(/g)) directLoads.push(rel);
-    }
-  }
-
-  /*
-   * SCOPE, ASSERTED FIRST. Every assertion below reports "nothing unthreaded"
-   * when the walk found no files, when the stripper emptied them, and when the
-   * code is genuinely clean. Only the third is a pass.
-   */
-  ok(
-    "the route walk found files and at least one resolveCitations call",
-    routeFiles >= 34 && resolveCalls >= 3,
-    `${routeFiles} route file(s), ${resolveCalls} call(s). A zero-scope walk agrees with anything.`,
-  );
-
-  ok(
-    "every route-level resolveCitations threads the shared reader",
-    unthreaded.length === 0,
-    `${unthreaded.length} call(s) fall back to their own loadArtifact, each a separate ` +
-      `600KB GitHub round trip:\n        ${unthreaded.join("\n        ")}`,
-  );
-
-  ok(
-    "no route outside admin.tsx calls loadArtifact directly",
-    directLoads.length === 0,
-    `direct call(s) in: ${[...new Set(directLoads)].join(", ")}. Thread the reader from ` +
-      `artifactContext instead, or state why this route cannot.`,
-  );
-}
 
 /* ---------- 11. the drift badge reads a cache, not the AI Search index ---- */
 
@@ -4349,6 +4274,107 @@ console.log("\n  21. savePost commits before it touches D1");
   );
 }
 
+console.log("\n  23. renderAndWrite is the one door to a rendered row, and writes all of it");
+
+/*
+ * THE DOOR'S COMPOSITION, since the artifact arc. The committed artifact's
+ * byte gate used to catch a writer that dropped a derived table, because the
+ * artifact carried the records and sync-content wrote them wholesale. With
+ * D1 as the only rendered copy, `renderAndWrite` -> `syncPostToD1` is the
+ * live writer for a post's row, its search records, its media refs and the
+ * FTS rebuilds, and NOTHING ELSE verifies that batch's composition: a
+ * dropped `searchStatements` spread would ship a save path whose posts stop
+ * entering search, silently, until the next bulk sync papered over it.
+ *
+ * Source assertions, comments stripped, same instrument shape as section 21.
+ * They see a spread ABSENT, not a spread present and wrong; the statement
+ * bodies are bound to the schema by section 4 and exercised live by the
+ * operator round trip.
+ */
+{
+  const publishSrc = stripComments(
+    readFileSync(join(root, "app", "lib", "editor", "publish.server.ts"), "utf8"),
+  );
+
+  const doorAt = publishSrc.search(/export\s+async\s+function\s+renderAndWrite\b/);
+  ok(
+    "renderAndWrite exists in publish.server.ts",
+    doorAt !== -1,
+    "the door was renamed or moved, so nothing below examines anything",
+  );
+
+  let door = "";
+  if (doorAt !== -1) {
+    const open = publishSrc.indexOf("{", publishSrc.indexOf(")", doorAt));
+    let depth = 0;
+    for (let i = open; i < publishSrc.length; i += 1) {
+      if (publishSrc[i] === "{") depth += 1;
+      else if (publishSrc[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          door = publishSrc.slice(open, i + 1);
+          break;
+        }
+      }
+    }
+  }
+  ok(
+    "renderAndWrite's body was extracted",
+    door.length > 100,
+    `extracted ${door.length} character(s); an empty body passes everything vacuously`,
+  );
+  ok(
+    "renderAndWrite writes through syncPostToD1",
+    /\bsyncPostToD1\s*\(/.test(door),
+    "the door no longer reaches the batch writer, so what it writes is unexamined",
+  );
+  ok(
+    "renderAndWrite verifies the blob sha it was handed",
+    /sourceBlobSha !== blobSha/.test(door),
+    "the transport-integrity check is gone: a truncated fetch would write a row " +
+      "whose provenance lies",
+  );
+
+  const syncAt = publishSrc.search(/export\s+async\s+function\s+syncPostToD1\b/);
+  let sync = "";
+  if (syncAt !== -1) {
+    const open = publishSrc.indexOf("{", publishSrc.indexOf(")", syncAt));
+    let depth = 0;
+    for (let i = open; i < publishSrc.length; i += 1) {
+      if (publishSrc[i] === "{") depth += 1;
+      else if (publishSrc[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          sync = publishSrc.slice(open, i + 1);
+          break;
+        }
+      }
+    }
+  }
+  ok(
+    "syncPostToD1's body was extracted",
+    sync.length > 200,
+    `extracted ${sync.length} character(s); an empty body passes everything vacuously`,
+  );
+  ok(
+    "syncPostToD1's batch spreads the search statements",
+    /\.\.\.searchStatements\(db, record\)/.test(sync),
+    "a save's post would stop entering search_docs, silently, until the next " +
+      "bulk sync papered over it",
+  );
+  ok(
+    "syncPostToD1's batch spreads the media-ref statements",
+    /\.\.\.mediaRefStatements\(db, record\)/.test(sync),
+    "a save would stop recording citations, and the delete guard's precise " +
+      "half would go blind to new posts",
+  );
+  ok(
+    "syncPostToD1 rebuilds the posts FTS index in the same batch",
+    /posts_fts\) VALUES \('rebuild'\)/.test(sync),
+    "the FTS index would drift from the row it indexes within one save",
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
@@ -4377,7 +4403,14 @@ console.log("\n  21. savePost commits before it touches D1");
  * the same count of vanishing assertions this gate could previously absorb.
  * Section 22 is 6 assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 237;
+/*
+ * RE-MEASURED 2026-08-25 by RUNNING the gate after the artifact arc's phase 2:
+ * section 10 deleted, section 23 added, four visibility exemptions gained
+ * their reverse checks. 260 executed. Floor 237 to 246, holding the margin at
+ * 14, the same count of vanishing assertions this gate has historically been
+ * allowed to absorb.
+ */
+const MINIMUM_CHECKS = 246;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

@@ -8,14 +8,14 @@ import type { Route } from "./+types/llms-full[.txt]";
  * one document, so a model can read the whole blog in a single fetch instead of
  * crawling it a page at a time.
  *
- * Composed from D1 at request time rather than emitted as a committed artifact.
- * That is a deliberate departure from how posts.json is handled, for one
- * concrete reason: this document depends on the clock. A post scheduled with a
- * future publish_at must be absent today and present next week. A committed
- * artifact cannot express that. It would either be generated with a timestamp,
- * in which case `check:content` starts failing the moment a scheduled post goes
- * live and the artifact is a booby trap, or it would ignore publish_at, in which
- * case it leaks unpublished writing.
+ * Composed from D1 at request time rather than emitted as an artifact, for
+ * one concrete reason: this document depends on the clock. A post scheduled
+ * with a future publish_at must be absent today and present next week. A
+ * generated document cannot express that. It would either carry a timestamp,
+ * in which case its byte gate would start failing the moment a scheduled post
+ * went live, or it would ignore publish_at, in which case it leaks
+ * unpublished writing. (The post corpus reached the same conclusion later,
+ * for its own reasons: D1 is the only rendered copy site-wide now.)
  *
  * Composing here removes the drift rather than gating it: there is no second
  * copy that can disagree. The markdown itself is still gated, because it comes

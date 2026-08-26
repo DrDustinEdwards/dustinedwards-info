@@ -151,7 +151,7 @@ export function splitSections(markdown, toc) {
  * matches the post as a whole still has somewhere to land. Section records
  * carry only their own text, so their snippets are about the section.
  *
- * @param {any} post an entry from content/generated/posts.json
+ * @param {any} post a rendered post record from the shared pipeline
  * @returns {Array<Record<string, any>>}
  */
 export function recordsForPost(post) {

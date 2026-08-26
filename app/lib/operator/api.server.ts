@@ -9,20 +9,24 @@
  * already took a plain env and options rather than a Request, so the editor
  * action was already a thin adapter over a callable module.
  *
- * The read tools go through the artifact and D1 the same way the admin list
- * does, so an operator sees what the editor sees.
+ * The read tools go through D1 and per-file repository reads the same way the
+ * admin surfaces do, so an operator sees what the editor sees.
  */
 
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { listDivergences } from "~/lib/editor/divergence.server";
 import { count } from "drizzle-orm";
 
-import { getDb, publiclyVisible } from "~/db/index";
+import {
+  getAdminPostRow,
+  getDb,
+  listPostsForOperator,
+  publiclyVisible,
+} from "~/db/index";
 import { posts as postsTable } from "~/db/schema";
 import {
   currentHead,
   deletePost,
-  loadArtifact,
   savePost,
   EditorError,
   GitHubError,
@@ -40,7 +44,7 @@ import {
 } from "~/lib/search/ask.server";
 import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
-import { readFile } from "~/lib/editor/github.server";
+import { listDirectory, readFile } from "~/lib/editor/github.server";
 
 
 import type { OperatorEnv } from "./auth.server";
@@ -114,7 +118,9 @@ export const TOOL_DESCRIPTORS: Readonly<
 > = {
   list_posts: {
     args: {},
-    returns: "Every post in the committed artifact, with the head sha.",
+    returns:
+      "Every post row in D1, drafts included, with the head sha. `updated` " +
+      "is the revision date the row carries.",
   },
   get_post: {
     args: { slug: "string" },
@@ -143,7 +149,7 @@ export const TOOL_DESCRIPTORS: Readonly<
   },
   sync_status: {
     args: {},
-    returns: "Artifact, D1 and search index counts, reported separately.",
+    returns: "Repository, D1 and search index counts, reported separately.",
   },
   sync_ask: {
     args: {},
@@ -269,21 +275,29 @@ function translate(error: unknown): ToolResult {
 }
 
 async function listPosts(env: OperatorEnv) {
-  const posts = await loadArtifact(env);
+  /*
+   * D1, not the repository, since the artifact arc: the rows are what the
+   * site serves, they converge to the repo (rule 18, held by the
+   * content-drift health check), and a listing that needed no GitHub call
+   * before needs none now. Field names are the tool's contract and are
+   * unchanged; `date` derives from publishAt and `updated` is the revision
+   * date, both of which is what they always meant.
+   */
+  const rows = await listPostsForOperator(env);
   return {
     headSha: await currentHead(env),
-    count: posts.length,
-    posts: posts.map((p: any) => ({
+    count: rows.length,
+    posts: rows.map((p) => ({
       slug: p.slug,
       title: p.title,
       description: p.description,
-      date: p.date,
-      publishAt: p.publishAt,
-      draft: p.draft,
+      date: p.publishAt ? p.publishAt.toISOString().slice(0, 10) : null,
+      publishAt: p.publishAt ? p.publishAt.toISOString() : null,
+      draft: p.status === "draft",
       tags: p.tags,
       series: p.series,
       part: p.part,
-      updated: p.updated,
+      updated: p.updatedAt ? p.updatedAt.toISOString().slice(0, 10) : null,
       sourcePath: p.sourcePath,
     })),
   };
@@ -298,8 +312,8 @@ async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise
   if (!file) return { ok: false, status: 404, error: `No post exists with slug "${slug}".` };
   const raw = file.content;
 
-  const posts = await loadArtifact(env);
-  const record = posts.find((p: any) => p.slug === slug) ?? null;
+  // The rendered half comes from the D1 row: the one rendered copy there is.
+  const record = await getAdminPostRow(env, slug);
   const state = readState(raw);
 
   return {
@@ -429,8 +443,7 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
     return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
   }
 
-  const posts = await loadArtifact(env);
-  const { uploaded, keys, cacheDropped } = await syncAskCorpus(env, posts);
+  const { uploaded, keys, cacheDropped } = await syncAskCorpus(env);
   const removed = await pruneAskCorpus(env, keys);
 
   /*
@@ -529,7 +542,17 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
  * body moved.
  */
 export async function syncStatus(env: OperatorEnv) {
-  const artifactPosts = await loadArtifact(env);
+  /*
+   * The repository's post count, from ONE Contents directory listing. The
+   * field is still named `artifactPosts` because the field names are the
+   * tool's contract; what it has always meant is "how many posts the
+   * repository holds", and that is what it still reports now that the
+   * committed artifact is gone.
+   */
+  const repoEntries = await listDirectory(env, "content/posts");
+  const repoPosts = repoEntries.filter(
+    (e) => e.type === "file" && e.name.endsWith(".md"),
+  ).length;
 
   // Counted through DRIZZLE, not by interpolating publiclyVisible() into a
   // template string. It returns a Drizzle expression object, so interpolation
@@ -556,7 +579,7 @@ export async function syncStatus(env: OperatorEnv) {
 
   return {
     headSha: await currentHead(env),
-    artifactPosts: artifactPosts.length,
+    artifactPosts: repoPosts,
     d1Posts: totalRow?.n ?? 0,
     d1PubliclyVisible: visibleRow?.n ?? 0,
     // Counted on the docsize shadow table, never COUNT(*) on the index itself:
