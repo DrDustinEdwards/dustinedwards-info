@@ -75,7 +75,7 @@ import { unified } from "unified";
 import { COLOPHON_ANCHORS, STATUS_LABEL } from "../app/lib/colophon-sections.mjs";
 import { PLAYGROUND_URL, demoAnchor } from "../app/lib/playground-page.mjs";
 import { PROJECTS_URL, projectAnchor } from "../app/lib/projects-page.mjs";
-import { isAllowedUrl } from "../app/lib/content/pipeline.mjs";
+import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 // The three real code paths the playground demos run. Imported rather than
 // reimplemented, which is the whole claim the playground section verifies.
 import { apca, contrast } from "../app/lib/contrast.mjs";
@@ -104,8 +104,8 @@ const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n")
 /**
  * Comments removed, so a match is a property of CODE rather than of prose.
  *
- * ONE implementation, used by BOTH readers in this file. It used to exist only
- * inside `declaredRoutes()`, and the assertion-anchor match a hundred lines
+ * ONE implementation, used by ALL THREE readers in this file. It used to exist
+ * only inside `declaredRoutes()`, and the assertion-anchor match a hundred lines
  * below ran against raw bytes. The pre-audit sweep defeated that directly:
  * deleting the assertion `worker returned a different fixture count` from
  * check-charts.mjs and leaving its text in a comment left this gate reporting
@@ -116,6 +116,13 @@ const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n")
  * existed twenty lines away. That is the part worth remembering: the gate knew
  * about prose matching, applied the cure to one of its two readers, and shipped
  * the other for a month.
+ *
+ * **AND THEN IT HAPPENED AGAIN, 2026-08-26.** The enhancement selector sweep
+ * was added after this paragraph was written, read raw bytes like the reader
+ * this paragraph is about, and this header went on saying "BOTH readers" while
+ * there were three. The sentence describing the failure was, once more, sitting
+ * directly above the code committing it. A shared helper is not adopted by
+ * being documented; count the call sites when you add a reader.
  *
  * LINE STRUCTURE IS PRESERVED. A block comment becomes the same number of
  * newlines it spanned, not a single space, so a MULTI-LINE anchor still matches
@@ -724,6 +731,14 @@ for (const modulePath of [...inventoryModules].sort()) {
  * The exclusion is the whole point. A selector that appears only inside the
  * enhancement module is markup the enhancement CREATES for itself, which is not
  * a fallback; it would make the assertion agree with itself.
+ *
+ * **STYLESHEETS ARE OUT, since 2026-08-26, and that is a correctness fix rather
+ * than a narrowing.** `.css` was in this list, and a stylesheet cannot be the
+ * fallback: it STYLES markup, so a rule naming a class is evidence that someone
+ * intended the class to exist, never that anything renders it. Measured the day
+ * it was removed: with the image anchor deleted from the pipeline and
+ * `.image-link` surviving only in `app/styles/post.css`, this gate reported 585
+ * checks and 0 failures on markup that had ceased to exist.
  */
 function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} */ out = []) {
   for (const name of readdirSync(dir)) {
@@ -731,7 +746,7 @@ function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} *
     if (statSync(full).isDirectory()) {
       if (full === ENHANCE_DIR) continue;
       serverRenderedSources(full, out);
-    } else if (/\.(ts|tsx|mjs|css)$/.test(name)) {
+    } else if (/\.(ts|tsx|mjs)$/.test(name)) {
       out.push(full);
     }
   }
@@ -744,8 +759,14 @@ const serverSources = serverRenderedSources(join(root, "app"));
 // assertion below fail closed rather than pass, but the count is asserted so
 // the reason is named rather than inferred from a wall of failures.
 /*
- * FLOOR: RE-MEASURED 2026-08-24 through this gate's own walk by running it:
- * 173. Now >= 159, about eight percent under.
+ * FLOOR: RE-MEASURED 2026-08-26 through this gate's own walk by running it:
+ * 158. Now >= 145, about eight percent under.
+ *
+ * IT WENT DOWN, and that is the one direction a floor is never re-measured in
+ * by accident, so the reason is written here: the walk stopped taking `.css`
+ * on 2026-08-26, which removed fifteen stylesheets. 173 minus those is 158.
+ * A floor moving DOWN after a deliberate narrowing is correct; a floor moving
+ * down on its own is the walk breaking, which is what this assertion catches.
  *
  * **THIS FLOOR IS ITS OWN CAUTIONARY TALE and the comment is kept for that.**
  * It was raised from 20 to 92 against a measured 105, with the note below
@@ -760,12 +781,83 @@ const serverSources = serverRenderedSources(join(root, "app"));
  */
 ok(
   "the server-rendered source scope is non-empty and complete",
-  serverSources.length >= 159,
-  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/, floor 159, ` +
-    `measured 173. The walker has stopped matching this tree, or stopped descending into it.`,
+  serverSources.length >= 145,
+  `walked ${serverSources.length} file(s) under app/ excluding app/enhance/, floor 145, ` +
+    `measured 158. The walker has stopped matching this tree, or stopped descending into it.`,
 );
 
-const sourceBlobs = serverSources.map((file) => normalizeEol(readFileSync(file, "utf8")));
+/*
+ * COMMENTS STRIPPED, since 2026-08-26, and this is the THIRD reader to learn it.
+ *
+ * The header above says "ONE implementation, used by BOTH readers in this
+ * file", and that sentence was true when it was written and stopped being true
+ * when this sweep was added: it read raw bytes, so any `.tsx` comment
+ * mentioning a class name satisfied the fallback that class was supposed to
+ * name. The header's own closing line already described this exact outcome
+ * about a different reader. It has now happened twice in one file.
+ */
+const sourceBlobs = serverSources.map((file) =>
+  stripped(normalizeEol(readFileSync(file, "utf8"))),
+);
+
+/*
+ * AND WHAT THE SHARED RENDERER EMITS, which is server-rendered markup that no
+ * file under `app/` spells.
+ *
+ * Removing stylesheets and comments above turned `footnote-previews` red, and
+ * the red was CORRECT: `footnotes` lived in exactly two places under `app/`, a
+ * CSS rule in post.css and a sentence inside a comment in blog-index.css.
+ * Neither renders anything. But the fallback is real: `remark-gfm` emits
+ * `<section data-footnotes class="footnotes">` with working bidirectional
+ * links, and it does so from `app/lib/content/pipeline.mjs`, which is the
+ * server and is under `app/`.
+ *
+ * So the honest repair is not to weaken the entry, it is to ASK THE RENDERER.
+ * "Is this markup server-rendered" is a question the server-rendered output
+ * answers directly, where a grep over route source can only answer "did
+ * somebody type this string".
+ *
+ * A FIXTURE RATHER THAN THE CORPUS, deliberately. `content/generated/posts.json`
+ * is what the corpus happens to contain today, and today it contains ZERO
+ * footnotes and ZERO images (measured 2026-08-26), so a corpus-backed sweep
+ * would go red the moment an author deleted the last post using a feature. The
+ * claim under test is about the RENDERER, which is a property of the code.
+ *
+ * This is input, not expected values, so it does not offend the
+ * fixture-independence discipline: nothing here is compared against something
+ * the renderer also produced.
+ */
+const RENDERER_FIXTURE = [
+  "A paragraph with a footnote reference[^1].",
+  "",
+  "[^1]: The note itself, which is a real bidirectional link.",
+  "",
+  "```ts",
+  "const highlighted = true;",
+  "```",
+  "",
+  "## A heading, which gets an autolink",
+  "",
+  "![An image, which gets an anchor to its original](/og-image.png)",
+].join("\n");
+
+const renderedMarkup = await renderBody({
+  file: "check-features fixture",
+  body: RENDERER_FIXTURE,
+  resolveImage: async () => ({ width: 1200, height: 630 }),
+}).then((result) => result.html);
+
+// SCOPE, proven before the blob is trusted. A render that threw or returned
+// nothing would quietly narrow the sweep back to where it started, which is the
+// failure this whole section is about.
+ok(
+  "the renderer fixture produced markup for the selector sweep",
+  renderedMarkup.length > 0 && /<section[^>]*class="footnotes"/.test(renderedMarkup),
+  `the shared renderer emitted ${renderedMarkup.length} byte(s) and no footnotes ` +
+    `section. Either the fixture stopped exercising remark-gfm, or the pipeline ` +
+    `stopped emitting the markup this sweep is about to search.`,
+);
+sourceBlobs.push(renderedMarkup);
 
 /** Identifiers worth checking, out of a selector. Short ones are too generic. */
 function selectorTokens(/** @type {string} */ selector) {
@@ -826,8 +918,11 @@ for (const entry of inventory) {
       ok(
         `enhancements ${id}: ${token} is server-rendered, outside app/enhance/`,
         sourceBlobs.some((blob) => needle.test(blob)),
-        `no file under app/ except app/enhance/ contains ${token} as a whole token. ` +
-          `Markup the enhancement creates for itself is not a fallback.`,
+        `${token} appears as a whole token in NONE of the ${serverSources.length} ` +
+          `.ts/.tsx/.mjs file(s) under app/ outside app/enhance/ (comments stripped), ` +
+          `and the shared renderer does not emit it either. Markup the enhancement ` +
+          `creates for itself is not a fallback, and neither is a class named only ` +
+          `by a stylesheet or a comment.`,
       );
     }
   } else if (kind === "none") {
