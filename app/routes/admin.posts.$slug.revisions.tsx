@@ -4,7 +4,11 @@ import { timed, timingsContext } from "~/lib/timing";
 
 import { getEnv } from "~/lib/context";
 import { parsePost } from "~/lib/editor/frontmatter";
-import { getCommitPatch, readFile } from "~/lib/editor/github.server";
+import {
+  getCommitPatch,
+  listCommitsForPath,
+  readFile,
+} from "~/lib/editor/github.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import type { Route } from "./+types/admin.posts.$slug.revisions";
 
@@ -70,7 +74,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!sha) {
     // The commit list is supplied by the edit route's own loader, so this
     // branch exists for a refresh after a save rather than for first paint.
-    const { listCommitsForPath } = await import("~/lib/editor/github.server");
+    //
+    // STATIC, since 2026-08-26. It was `await import(...)`, which bought
+    // nothing: this file already imports the same module statically three lines
+    // into its own header, and five other modules import it statically too, so
+    // the chunk was in the graph however this line was written. Rolldown said
+    // so on every build, in a warning that had become scenery.
     const commits = await timed(timings, "gh_commits", () =>
       listCommitsForPath(env, postPath(params.slug)),
     );

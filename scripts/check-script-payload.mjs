@@ -54,7 +54,7 @@ import {
   rmSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join, dirname } from "node:path";
+import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 
@@ -447,6 +447,150 @@ function main() {
       guardAt < scriptsAt,
     `expected one <Scripts inside the "hydrates ? (" conditional in app/root.tsx; ` +
       `an unconditional <Scripts> hydrates every public page again.`,
+  );
+
+  /* ------------------------------- no ineffective dynamic import */
+
+  /*
+   * A DYNAMIC IMPORT THAT SPLITS NOTHING, which is the shape Rolldown prints
+   * INEFFECTIVE_DYNAMIC_IMPORT for on every build.
+   *
+   * `admin.posts.$slug.revisions.tsx` carried one for months. It wrote
+   * `await import("~/lib/editor/github.server")` three lines below its own
+   * STATIC import of the same module, and five other modules imported it
+   * statically too, so the chunk was in the graph however that line was
+   * written. The warning was printed on every build and had become scenery,
+   * which is the failure this assertion exists to end: the next one is a red
+   * gate rather than a line in a wall of build output.
+   *
+   * OBSERVATION BOUNDARY, and it is the important paragraph here. **This does
+   * NOT read the build log.** No gate in this repo runs the build, and a log
+   * written by the last build is a claim that ages exactly like the stale build
+   * this gate's own header warns about. So it derives the bundler's criterion
+   * from SOURCE instead: a dynamic import is ineffective when some module in
+   * the same graph also imports that module statically. What it therefore
+   * cannot see is anything the resolver below cannot resolve, which is
+   * deliberate and enumerated: bare package specifiers (`shiki/wasm`) and
+   * virtual modules (`virtual:react-router/server-build`) are skipped, because
+   * this scan has no view of node_modules or of the plugin graph.
+   *
+   * The one dynamic import it does judge is the CodeMirror lazy split, which is
+   * hard rule 4's only lazy boundary on the admin plane, so this doubles as the
+   * assertion that the split is still a split.
+   */
+  const importScopeDirs = [join(root, "app"), join(root, "workers")];
+  /** @type {string[]} */
+  const importScope = [];
+  const walkSources = (/** @type {string} */ dir) => {
+    for (const name of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, name.name);
+      if (name.isDirectory()) walkSources(full);
+      else if (/\.(ts|tsx|mjs)$/.test(name.name)) importScope.push(full);
+    }
+  };
+  for (const dir of importScopeDirs) walkSources(dir);
+
+  ok(
+    "the dynamic-import scan walked a non-empty scope",
+    importScope.length >= 150,
+    `walked ${importScope.length} source file(s) under app/ and workers/. A scan over ` +
+      `nothing reports what a clean scan reports.`,
+  );
+
+  /**
+   * Every ineffective dynamic import in a set of {path, source} records.
+   *
+   * A pure function over its input, not a reader of the disk, because the
+   * self-test below has to be able to run it against synthetic sources. That is
+   * the documented cure for a per-item assertion whose real collection can
+   * legitimately shrink to nothing (VERIFICATION.md, check:secrets): the checks
+   * stay falsifiable no matter what the tree happens to contain.
+   */
+  const findIneffectiveDynamicImports = (/** @type {Array<{path: string, source: string}>} */ files) => {
+    // Resolution is by NORMALISED SPECIFIER rather than by resolved file path.
+    // `~/lib/editor/github.server` and a relative spelling of the same module
+    // would not match here, and that is stated rather than hidden: this catches
+    // the shape that actually occurs, which is one project alias used
+    // consistently. A path resolver would need to replicate the vite alias
+    // table, which is a second statement of a fact tsconfig already owns.
+    const normalise = (/** @type {string} */ spec, /** @type {string} */ from) => {
+      if (spec.startsWith("~/")) return spec.slice(2);
+      if (!spec.startsWith(".")) return null; // bare package or virtual module
+      const parts = dirname(from).split(/[\\/]/);
+      for (const segment of spec.split("/")) {
+        if (segment === ".") continue;
+        else if (segment === "..") parts.pop();
+        else parts.push(segment);
+      }
+      const joined = parts.join("/");
+      const cut = joined.lastIndexOf("/app/") >= 0 ? joined.lastIndexOf("/app/") + 5 : 0;
+      return joined.slice(cut);
+    };
+
+    /** @type {Map<string, string[]>} module -> files importing it statically */
+    const statics = new Map();
+    /** @type {Array<{module: string, path: string}>} */
+    const dynamics = [];
+
+    for (const { path, source } of files) {
+      const code = stripComments(source);
+      for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
+        const key = normalise(m[1], path);
+        if (!key) continue;
+        if (!statics.has(key)) statics.set(key, []);
+        /** @type {string[]} */ (statics.get(key)).push(path);
+      }
+      // `import(` preceded by a type position (`: import(`, `<import(`) is
+      // erased by TypeScript and never reaches the bundler, so it is not one.
+      for (const m of code.matchAll(/(^|[^:<\w])import\(\s*["']([^"']+)["']\s*\)/g)) {
+        const key = normalise(m[2], path);
+        if (key) dynamics.push({ module: key, path });
+      }
+    }
+
+    return dynamics
+      .filter((d) => statics.has(d.module))
+      .map((d) => ({
+        ...d,
+        importers: /** @type {string[]} */ (statics.get(d.module)),
+      }));
+  };
+
+  // SELF-TEST, on every execution. Two synthetic files, one of which MUST be
+  // reported and one of which must not, so the finder is proven able to fire
+  // even on the day the real tree contains no dynamic import at all.
+  const selfTest = findIneffectiveDynamicImports([
+    { path: "app/a.tsx", source: 'import { x } from "~/lib/thing";\nconst y = import("~/lib/thing");' },
+    { path: "app/b.tsx", source: 'const z = import("~/lib/only-dynamic");' },
+  ]);
+  ok(
+    "the dynamic-import finder reports the ineffective case and only that one",
+    selfTest.length === 1 && selfTest[0].module === "lib/thing",
+    `the finder returned ${JSON.stringify(selfTest.map((s) => s.module))} for a pair ` +
+      `built to contain exactly one ineffective import. It cannot be trusted about the ` +
+      `real tree until it can tell these two apart.`,
+  );
+
+  const ineffective = findIneffectiveDynamicImports(
+    importScope.map((path) => ({
+      // Relative to the repo root, so the failure names a path someone can
+      // open. A fixed-depth tail was tried and printed the checkout directory
+      // for anything three levels down, which the first plant showed.
+      path: relative(root, path).split("\\").join("/"),
+      source: readFileSync(path, "utf8"),
+    })),
+  );
+  ok(
+    "no dynamic import is defeated by a static import of the same module",
+    ineffective.length === 0,
+    ineffective
+      .map(
+        (d) =>
+          `${d.path} dynamically imports ${d.module}, which is ALSO imported ` +
+          `statically by ${d.importers.join(", ")}. Rolldown prints ` +
+          `INEFFECTIVE_DYNAMIC_IMPORT for this and splits nothing.`,
+      )
+      .join("\n        "),
   );
 
   if (failures > 0) {
