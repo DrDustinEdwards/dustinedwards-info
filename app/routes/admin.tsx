@@ -465,9 +465,30 @@ function Glyph({ children }: { children: React.ReactNode }) {
 function SignOutForm({ menu = false }: { menu?: boolean }) {
   return (
     <Form method="post" action="/admin/logout">
+      {/*
+        THE NAME IS "Sign out" IN BOTH VARIANTS, and it took an explicit label
+        to make that true. The hint below is a CHILD of the button, so name-from-
+        content swallowed it: measured 2026-08-26 by check:browser, the folded
+        button's accessible name was "Sign outEnds this session. You will need to
+        sign in again with Google." A submit control named with a whole sentence
+        is a defect on its own, and it also broke the property the fold exists to
+        have, which is that the menu holds the SAME control the bar does rather
+        than a second one that has drifted.
+
+        `aria-describedby` keeps the sentence, as a DESCRIPTION, which is what it
+        always was: announced after the name, after a pause, and skippable. No
+        pixel moves, because the span stays exactly where the design put it.
+      */}
       <button
         type="submit"
-        {...(menu ? { "data-menu-item": "", className: "overflow-menu-item" } : { className: "admin-signout" })}
+        {...(menu
+          ? {
+              "data-menu-item": "",
+              className: "overflow-menu-item",
+              "aria-label": "Sign out",
+              "aria-describedby": "admin-signout-hint",
+            }
+          : { className: "admin-signout" })}
       >
         {menu ? null : (
           <svg
@@ -488,7 +509,7 @@ function SignOutForm({ menu = false }: { menu?: boolean }) {
         )}
         Sign out
         {menu ? (
-          <span className="overflow-menu-item-hint">
+          <span className="overflow-menu-item-hint" id="admin-signout-hint">
             Ends this session. You will need to sign in again with Google.
           </span>
         ) : null}

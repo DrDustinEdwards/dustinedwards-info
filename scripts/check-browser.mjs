@@ -2244,7 +2244,16 @@ try {
         `readings below meaningless while looking like a real measurement.`,
     );
 
-    const OVERFLOW_WIDTHS = [1280, 553, 480, 400, 320];
+    /*
+     * 582 AND 375 ADDED 2026-08-26, and each earns its place.
+     *
+     * 582 is the MEASURED FLOOR itself, the widest width that scrolled before
+     * the fold landed. Every other narrow width in this list is comfortably
+     * inside the folded branch; none of them sits on the boundary, and a
+     * breakpoint that drifted from 640 down past 582 would go unnoticed by all
+     * four. 375 is the common phone width the four skip between 400 and 320.
+     */
+    const OVERFLOW_WIDTHS = [1280, 582, 553, 480, 400, 375, 320];
     for (const width of OVERFLOW_WIDTHS) {
       await admin.setViewport({ width, height: 800 });
       for (const [path, what] of [
@@ -2322,6 +2331,109 @@ try {
             .map((k) => `${k.sel}@${k.right}`)
             .join(", ")} extend past it. The document may not scroll, but the ` +
           `controls are being clipped.`,
+    );
+
+    /*
+     * THE FOLD KEEPS EVERY ACTION, which is the half none of the assertions
+     * above can see.
+     *
+     * Everything before this measures WIDTH. A fold that simply deleted the
+     * email and Sign out below the breakpoint would satisfy every one of them:
+     * nothing overflows if nothing is there. That is not a hypothetical repair,
+     * it is the cheapest one, and it is why the ruling asked for the items to
+     * be the same controls rather than a reduced set.
+     *
+     * SUBSET, NOT EQUAL COUNT, and the reason is that the two widths are not
+     * supposed to offer the same things. Narrow legitimately has MORE: the
+     * drawer toggle appears, and the Account disclosure exists only when the
+     * bar has folded. What must never happen is narrow having FEWER. So the
+     * claim is that every action the wide bar offers is still reachable once
+     * the disclosure is open, and the failure names the ones that went missing.
+     *
+     * BY ACCESSIBLE NAME rather than by count, because a count can be held
+     * steady by a swap: lose Sign out, gain something else, and the arithmetic
+     * agrees while the fold has eaten the one control that matters.
+     *
+     * The name is APPROXIMATED, `aria-label` then text content, and that is
+     * stated because it is not the full accname algorithm: no `aria-labelledby`
+     * chase, no `title` fallback, no alt on an image child. It was enough to
+     * find a real one on its first run. The folded Sign out was named
+     * "Sign outEnds this session. You will need to sign in again with Google.",
+     * because the hint span is a CHILD of the button and name-from-content
+     * takes descendants. Fixed at the component with an explicit label and a
+     * description, so the two variants are now the same control by name as well
+     * as by markup.
+     *
+     * OPENED THROUGH THE `open` PROPERTY, which is what a click on a
+     * `<summary>` does with no script running at all. Driving it with a
+     * synthetic click would test the enhancement's listeners instead of the
+     * markup, and the markup is what rule 9 is about here.
+     */
+    const NARROW = 375;
+    /** Focusable controls in the topbar, by accessible name, at this width. */
+    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openDetails) => {
+      await admin.setViewport({ width, height: 800 });
+      await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
+      return admin.evaluate((shouldOpen) => {
+        const bar = document.querySelector(".admin-topbar");
+        if (!bar) return { names: [], details: 0, summary: "" };
+        const detailsEls = [...bar.querySelectorAll("details")];
+        if (shouldOpen) for (const d of detailsEls) d.open = true;
+        const names = [];
+        for (const el of bar.querySelectorAll(
+          'a[href], button, summary, input:not([type="hidden"]), select, textarea',
+        )) {
+          // display:none is out of the accessibility tree, so it is not
+          // reachable and must not be counted at either width.
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 && r.height === 0) continue;
+          const name = (
+            el.getAttribute("aria-label") ||
+            el.textContent ||
+            ""
+          )
+            .replace(/\s+/g, " ")
+            .trim();
+          if (name) names.push(name);
+        }
+        return {
+          names: [...new Set(names)].sort(),
+          details: detailsEls.length,
+          summary: detailsEls[0]?.querySelector("summary")?.tagName ?? "",
+        };
+      }, openDetails);
+    };
+
+    const wide = await topbarActions(1280, false);
+    const narrow = await topbarActions(NARROW, true);
+
+    // Scope, proven before the comparison is read. An empty wide set makes the
+    // subset test vacuously true, which is the shape that passes on a topbar
+    // that has stopped rendering entirely.
+    ok(
+      "the wide admin topbar offers actions to compare against",
+      wide.names.length >= 2,
+      `only ${wide.names.length} named control(s) at 1280px: [${wide.names.join(" | ")}]. ` +
+        `The subset assertion below would agree with anything.`,
+    );
+    ok(
+      `the folded topbar is a native disclosure at ${NARROW}px`,
+      narrow.details >= 1 && narrow.summary === "SUMMARY",
+      `${narrow.details} <details> in the bar, first summary tag ` +
+        `${JSON.stringify(narrow.summary)}. The fold has to open with no script, so a ` +
+        `button plus a state hook is not the shape; hard rule 9 and the admin plane's ` +
+        `own no-script door.`,
+    );
+
+    const lost = wide.names.filter((name) => !narrow.names.includes(name));
+    ok(
+      `every wide topbar action is still reachable at ${NARROW}px through the disclosure`,
+      lost.length === 0,
+      `${lost.length} action(s) disappear when the bar folds: [${lost.join(" | ")}].\n` +
+        `        1280px offers [${wide.names.join(" | ")}]\n` +
+        `        ${NARROW}px offers [${narrow.names.join(" | ")}]\n` +
+        `        A fold that drops controls passes every width assertion above, ` +
+        `because nothing overflows if nothing is there.`,
     );
 
     await admin.close();
