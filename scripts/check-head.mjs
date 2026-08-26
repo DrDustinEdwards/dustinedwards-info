@@ -331,6 +331,26 @@ try {
     (boot.stderr || boot.stdout || "").trim().slice(-160),
   );
 
+  /*
+   * THE LOCAL BUILD PRODUCT, built IN THE WORKTREE. posts.json is gitignored
+   * since the artifact arc, so an extraction has markdown and no build
+   * product; the gates that read it would otherwise fail on a missing file
+   * that is not HEAD's fault. Built here for the same reason check-all.mjs
+   * builds before its tier, against HEAD's own sources.
+   */
+  const bc = spawnSync("npm run build:content", {
+    cwd: worktree,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  ok(
+    "build:content produced the worktree's build product",
+    bc.status === 0,
+    `${(bc.stdout ?? "")}${(bc.stderr ?? "")}`.trim().slice(-200),
+  );
+  if (bc.status !== 0) throw new Error("the worktree build failed; the tier has no subject");
+
   started = Date.now();
   /** @type {Array<{name: string, ok: boolean, ms: number, tail: string}>} */
   const results = [];

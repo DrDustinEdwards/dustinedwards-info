@@ -489,12 +489,24 @@ console.log(`  ${POLL_COUNT} consecutive 200s.`);
 
 /* ------------------------------------------------------- 6. gate, then sync */
 
+/*
+ * BUILT HERE, EXPLICITLY, even though the gate tier's own build step already
+ * ran one: the product is gitignored since the artifact arc, the sync below
+ * reads it off disk, and "whatever the last run left behind" is not a
+ * provenance. A ship window owns the tree, so this rebuild is byte-identical
+ * to the tier's; it exists so the sync's input is the build this ship ran.
+ */
+announce("build:content, the local build product the sync reads");
+if (run("npm", ["run", "build:content"]).code !== 0) {
+  refuse("the content build failed", "NOTHING WAS SYNCED.");
+}
+
 announce("check:content, because sync runs no gate of its own");
 if (run("npm", ["run", "check:content"]).code !== 0) {
   refuse(
-    "the committed artifact does not match a fresh generation",
-    "Run `npm run build:content` and commit the result. NOTHING WAS SYNCED. " +
-      "sync-content.mjs would have pushed the stale artifact into production D1.",
+    "the content gate is red: the corpus fails validation or renders nondeterministically",
+    "Fix the content or the pipeline. NOTHING WAS SYNCED. " +
+      "sync-content.mjs would have pushed a corpus the gate refused into production D1.",
   );
 }
 

@@ -344,6 +344,33 @@ function runGate(name, args) {
 
 function main() {
   const gates = discoverGates();
+
+  /*
+   * THE LOCAL BUILD PRODUCT IS BUILT BEFORE ANY GATE READS IT. Since the
+   * artifact arc, content/generated/posts.json is gitignored: git holds
+   * markdown, D1 holds the rendered copy, and this file exists on disk only
+   * because something built it. Several offline gates read it
+   * (check:content's determinism pass builds its own, check:diagrams,
+   * check:features and the sync path read the file), so a runner that did
+   * not build first would read whatever a previous run left behind, or
+   * nothing. Refused loudly rather than left to each gate's own missing-file
+   * message, because "the build is broken" and "a gate is red" are different
+   * findings and the table below should carry the second kind only.
+   *
+   * Not a gate: it appears in no table and counts toward no floor. It is the
+   * same class of step as `actions/checkout`.
+   */
+  process.stdout.write("  build:content (the local build product the tier reads) ... ");
+  const built = runGate("build:content", []);
+  if (!built.ok) {
+    console.log("FAILED");
+    console.log(built.output.trimEnd());
+    throw new Error(
+      "build:content failed, so the tier's subject does not exist on disk. " +
+        "Nothing below ran; fix the build first.",
+    );
+  }
+  console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
   /*
    * THE CI TIER IS THE OFFLINE TIER MINUS CI_EXCLUDED, derived rather than
    * listed, so a gate added tomorrow is in CI by default and has to be argued

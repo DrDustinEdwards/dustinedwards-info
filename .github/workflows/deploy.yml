@@ -260,6 +260,7 @@ jobs:
         run: |
           set -euo pipefail
           npx wrangler d1 migrations apply dustinedwards --local
+          npm run build:content
           npm run sync:content -- --local
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
