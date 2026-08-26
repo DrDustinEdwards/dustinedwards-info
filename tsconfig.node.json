@@ -13,6 +13,10 @@
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
+    // The two provenance hashes. The pipeline computes them into every record
+    // and sync-content.mjs compares D1 against them at ship, so both projects
+    // reach the module; one statement, per the module's own header.
+    "app/lib/content/hashes.mjs",
     "app/lib/content/diagram.mjs",
     "app/lib/content/artifact.mjs",
     "app/lib/blog-listing.mjs",

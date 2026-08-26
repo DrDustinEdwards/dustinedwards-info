@@ -12,6 +12,7 @@
     "0009_media_index.sql": "8c41767e7a8b03cfa7df43de4a5e87b81b49536bc969d275a7d6bfb009ce6e50",
     "0010_media_role.sql": "a94f2ccf8f577174a7cd5f5d570dd1359f32b2c1ecebfd2001c357953bb0507d",
     "0011_media_trash_tags.sql": "8513941f1b0cf9f7366a506d68758c3a7b2c9720f827fc8adbe1baa66c764a79",
-    "0012_drop_posts_category.sql": "fdeb49e4e1ebca42cdcbcf5f314586efbc4ce23a3e70c95f889fd1c1ba87b7ce"
+    "0012_drop_posts_category.sql": "fdeb49e4e1ebca42cdcbcf5f314586efbc4ce23a3e70c95f889fd1c1ba87b7ce",
+    "0013_content_hashes.sql": "c6b1025ea220786fe4c3ea011eddbc382c7f93989740218f0a139a41d0361b38"
   }
 }

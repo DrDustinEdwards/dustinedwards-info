@@ -117,14 +117,16 @@ function buildSql(posts) {
     out.push(
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
-        `further_reading, og_title, og_description, related, og_image, updated_at) VALUES (` +
+        `further_reading, og_title, og_description, related, og_image, source_blob_sha, ` +
+        `render_hash, updated_at) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
         `${num(post.readingTimeMinutes)}, ${sql(post.sourcePath)}, ` +
         `${sql(JSON.stringify(post.toc))}, ${post.featured ? 1 : 0}, ${sql(post.series)}, ${num(post.part)}, ` +
         `${sql(JSON.stringify(post.furtherReading))}, ${sql(post.ogTitle)}, ${sql(post.ogDescription)}, ` +
-        `${sql(JSON.stringify(post.related))}, ${sql(ogImage)}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
+        `${sql(JSON.stringify(post.related))}, ${sql(ogImage)}, ${sql(post.sourceBlobSha ?? null)}, ` +
+        `${sql(post.renderHash ?? null)}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
@@ -134,6 +136,7 @@ function buildSql(posts) {
         `series = excluded.series, part = excluded.part, further_reading = excluded.further_reading, ` +
         `og_title = excluded.og_title, og_description = excluded.og_description, ` +
         `related = excluded.related, og_image = excluded.og_image, ` +
+        `source_blob_sha = excluded.source_blob_sha, render_hash = excluded.render_hash, ` +
         `updated_at = excluded.updated_at;`,
     );
   }
