@@ -486,9 +486,31 @@ async function main() {
   assertThat(escaped.html.includes("note:this"), "an escaped colon did not survive as text");
   assertThat(!/<div>/.test(escaped.html), "an escaped colon still produced a div");
 
-  // And the known ones still render, so the check is not simply refusing everything.
+  /*
+   * And the known ones still render, so the check is not simply refusing
+   * everything.
+   *
+   * TWO ASSERTIONS RATHER THAN ONE ADJACENCY. This was `/<figure><img/`, which
+   * went red on 2026-08-26 when the pipeline started wrapping every body image
+   * in a link to its original: the figure rendered perfectly and the two tags
+   * had simply stopped being neighbours. A control that pins markup BETWEEN the
+   * things it cares about fails on changes it has no opinion about, and its
+   * label then names the wrong subject.
+   *
+   * What this control needs is that the directive produced a figure and that
+   * the author's src reached an image. Both stay falsifiable, and neither has
+   * an opinion about what sits in between. The anchor itself is owned by
+   * test/post-image-links.test.mjs and is deliberately not restated here.
+   */
   const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
-  assertThat(/<figure><img/.test(known.html), "the figure directive stopped rendering");
+  assertThat(
+    known.html.startsWith("<figure>"),
+    `the figure directive stopped producing a figure. Got: ${known.html.slice(0, 80)}`,
+  );
+  assertThat(
+    /<img[^>]*src="\/og-image\.png"/.test(known.html),
+    `the figure directive stopped rendering its image. Got: ${known.html.slice(0, 160)}`,
+  );
 
   /*
    * EXECUTED-COUNT FLOOR.
@@ -498,7 +520,9 @@ async function main() {
    * fixture list, a parity block that returns early, a determinism loop that
    * runs zero renders. All of them leave `failed` at zero.
    *
-   * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 181.
+   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 181 on
+   * 2026-08-14, 183 on 2026-08-26 when the figure control became two
+   * assertions instead of one adjacency.
    * Never summed. Floored at 170, roughly 6 percent: the count is a fixed
    * function of the eight fixtures crossed with the mark types and the planted
    * negatives, so it moves only when a fixture or a rule is added.
