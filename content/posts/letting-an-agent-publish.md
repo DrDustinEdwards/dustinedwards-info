@@ -33,7 +33,7 @@ The refusal, exactly as the agent receives it from the live system:
 
 Design the refusal as carefully as the permission. This one names its policy, explains the rule, and states the permitted alternative, and the agent-facing tool documentation says in advance that this refusal is correct behavior rather than an error to retry. An agent that understands a refusal as policy cooperates with it; an agent that reads it as a fault will try workarounds.
 
-:::diagram{title="One save, and the single point where it can be refused" alt="A sequence diagram with four participants: the agent, the publish API, GitHub, and the D1 database. The agent sends a save request carrying a bearer token. The API authenticates it and applies its rate limit, then reads the post's existing committed file from GitHub to learn whether that post has ever been published. The diagram then branches. On the first branch the post has never been published and the save asks for draft false, so the API answers 403 with the code first-publish-requires-admin, and a note across GitHub and the database records that nothing is written: no commit, no row. On the second branch the API overwrites the first-publication field from the committed file rather than from the payload, lands one atomic commit (the edge is labelled md plus artifact, the July commit shape; since August 2026 the commit carries the markdown alone), receives the commit hash, writes the database rows, and only then answers 200 with that hash."}
+:::diagram{title="One save, and the single point where it can be refused" alt="A sequence diagram with four participants: the agent, the publish API, GitHub, and the D1 database. The agent sends a save request carrying a bearer token. The API authenticates it and applies its rate limit, then reads the post's existing committed file from GitHub to learn whether that post has ever been published. The diagram then branches. On the first branch the post has never been published and the save asks for draft false, so the API answers 403 with the code first-publish-requires-admin, and a note across GitHub and the database records that nothing is written: no commit, no row. On the second branch the API overwrites the first-publication field from the committed file rather than from the payload, lands one atomic commit carrying the markdown, receives the commit hash, writes the database rows, and only then answers 200 with that hash."}
 ```mermaid
 sequenceDiagram
   participant A as Agent
@@ -49,7 +49,7 @@ sequenceDiagram
     Note over G,D: nothing written
   else everything else
     API->>API: field from file, not payload
-    API->>G: one commit: md + artifact
+    API->>G: one commit: markdown
     G-->>API: sha
     API->>D: sync rows
     API-->>A: 200 + sha
@@ -57,9 +57,7 @@ sequenceDiagram
 ```
 The refusal happens before anything is written, and the durable fact it reads
 comes from the committed file rather than from the caller's payload. That
-ordering is the whole guarantee. The commit edge reads "md + artifact" because
-that was the commit shape when this was drawn; since August 2026 the commit
-carries the markdown alone, and the ordering is unchanged.
+ordering is the whole guarantee.
 :::
 
 ## Decision 3: where the first-published fact lives, and the forgery it must survive
