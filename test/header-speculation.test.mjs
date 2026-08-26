@@ -121,14 +121,23 @@ test("the brand link is the one path NAV does not carry, and it is speculated", 
   );
 });
 
-test("every header link opts into prefetch, including the brand", () => {
+test("no header link carries a prefetch prop, because none could run", () => {
+  /*
+   * INVERTED 2026-08-26 with the unhydration arc. This test used to require
+   * `prefetch="intent"` on the mapped NavLink and the brand Link. The prop
+   * works through React event handlers, which attach only on a hydrated
+   * page, and the public plane no longer hydrates, so a prefetch prop here
+   * is dead configuration that reads as an optimisation. Hover speculation
+   * is SiteSpeculation's job now (the tests above), which is declarative and
+   * needs no script. A prefetch prop reappearing means either someone
+   * re-added a dead prop, or the header moved to a hydrated plane and this
+   * test's premise changed; both deserve a stop.
+   */
   const prefetches = [...headerSource.matchAll(/prefetch="([a-z]+)"/g)].map((m) => m[1]);
   assert.equal(
     prefetches.length,
-    2,
-    "one on the mapped NavLink and one on the brand Link; a third is a link that got its own copy",
+    0,
+    `found prefetch props [${prefetches.join(", ")}] in an unhydrated header, where ` +
+      `the React event handlers that implement them never attach`,
   );
-  for (const value of prefetches) {
-    assert.equal(value, "intent", "render and viewport prefetch on load, which this is not");
-  }
 });

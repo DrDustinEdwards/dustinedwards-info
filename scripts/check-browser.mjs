@@ -1190,13 +1190,17 @@ try {
      * contract: the hint is server-rendered `hidden` and unhidden only once
      * the listener exists.
      */
-    const hintShown = await page.evaluate(
-      () => !document.querySelector("[data-search-hint]")?.hidden,
-    );
+    // The element must EXIST and be unhidden: a missing hint would make a
+    // bare `!hidden` read true and pass on markup that lost the hint.
+    const hintShown = await page.evaluate(() => {
+      const hint = document.querySelector("[data-search-hint]");
+      return hint instanceof HTMLElement && !hint.hidden;
+    });
     ok(
       "the palette hint is unhidden once the palette is listening",
       hintShown,
-      "the [data-search-hint] element is still hidden, so the palette bundle did not run",
+      "the [data-search-hint] element is missing or still hidden, so the palette " +
+        "bundle did not run or the header lost the hint",
     );
     await page.keyboard.press("/");
     await new Promise((r) => setTimeout(r, 250));
