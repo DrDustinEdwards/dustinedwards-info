@@ -1,35 +1,35 @@
 /**
- * Gate for the generated artifacts under `content/generated/`.
+ * Gate for the content build and the committed artifacts under
+ * `content/generated/`.
  *
- * OBSERVATION BOUNDARY: byte-compares each artifact against a fresh generation
- * of itself. It never renders a page, never queries D1, and cannot tell whether
- * the rows an artifact syncs INTO match it. A correct artifact and a stale
- * database look identical here.
+ * OBSERVATION BOUNDARY: it renders and compares locally. It never renders a
+ * page in a Worker, never queries D1, and cannot tell whether the rows the
+ * sync writes match what it rendered; that comparison is ship's drift report
+ * and the content-drift health check.
  *
- * THREE artifacts, one rule: an artifact derived from something in this
- * repository must equal a fresh derivation, offline, before it can ship.
- * `posts.json` from `content/posts`, `template-refs.json` from a source scan,
- * and `assets.json` from a walk of `public/`. The third arrived here on
- * 2026-08-18 and the reason is the whole point of the rule: it was the only one
- * of the three reconciled by a NETWORK gate, so `public/_headers` was committed
- * and deployed inside a ship window with every offline gate green. Nothing
- * offline had ever looked at `public/`.
+ * THREE subjects since the artifact arc:
  *
- * What that third section still cannot see is stated at its definition, and it
- * is not a detail: manifest-to-D1 is not here and is not offline.
+ *   1. THE CORPUS RENDER IS VALID AND DETERMINISTIC. posts.json stopped being
+ *      committed (git holds markdown; D1 holds the only rendered copy), so
+ *      there is no committed copy to byte-compare. What replaced the byte
+ *      gate: the corpus is rendered TWICE in one process and the two outputs
+ *      must be byte-identical, because a nondeterministic render is exactly
+ *      what would surface later as false render-drift between the Worker and
+ *      the Node build. A slug whose two renders differ is named. Rendering at
+ *      all is also the validation half: a post the pipeline refuses fails
+ *      here, offline, before any writer meets it.
+ *   2. `template-refs.json`, byte-compared against a fresh scan. STILL
+ *      COMMITTED, deliberately: it is a repo fact with no database owner.
+ *   3. `assets.json`, byte-compared against a walk of `public/`, with the
+ *      gitignore tripwire. Also still committed.
  *
- * Regenerates from content/posts in memory and compares against the committed
- * content/generated/posts.json. Any difference fails, which is what stops a
- * hand-edited artifact or a stale build from shipping.
- *
- * This check fails closed: an unreadable artifact, a missing artifact, and a
- * generator that throws are all failures, never a pass.
+ * This check fails closed: a generator that throws is a failure, never a pass.
  */
 
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-import { ARTIFACT_PATH, buildArtifact } from "./build-content.mjs";
+import { buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
 
@@ -71,50 +71,60 @@ function firstDifference(committed, fresh) {
 }
 
 async function main() {
-  const fresh = await buildArtifact();
+  /*
+   * TWICE, IN ONE PROCESS. Rendering once proves validity; rendering twice
+   * and comparing proves the render depends on the sources alone. Any clock,
+   * counter or iteration-order dependence shows up as a byte difference
+   * between two back-to-back runs, and that same dependence is what would
+   * later read as Worker-versus-Node render drift in ship's report with
+   * nothing at fault but this pipeline. One process on purpose: a module
+   * memo (the highlighter, the WASM engine) is shared, so a difference here
+   * is the render's own, not an environment's.
+   */
+  const first = await buildArtifact();
+  const second = await buildArtifact();
 
-  /** @type {string} */
-  let committed;
-  try {
-    committed = await readFile(ARTIFACT_PATH, "utf8");
-  } catch {
+  if (first !== second) {
     console.error(
-      `check:content failed. ${ARTIFACT_PATH} is missing or unreadable. Run npm run build:content.`,
+      `check:content failed. Two back-to-back renders of the corpus differ, ` +
+        `so the render is NOT deterministic.`,
     );
+    const a = JSON.parse(first);
+    const b = JSON.parse(second);
+    const bBySlug = new Map(b.posts.map((/** @type {any} */ p) => [p.slug, p]));
+    const differing = [];
+    for (const post of a.posts) {
+      const twin = bBySlug.get(post.slug);
+      if (!twin || JSON.stringify(post) !== JSON.stringify(twin)) differing.push(post.slug);
+    }
+    for (const post of b.posts) {
+      if (!a.posts.some((/** @type {any} */ p) => p.slug === post.slug)) differing.push(post.slug);
+    }
+    if (differing.length > 0) {
+      console.error(`  slug(s) whose renders differ: ${differing.join(", ")}`);
+    } else {
+      console.error(`  every post matches; the difference is in the page records.`);
+    }
+    const diff = firstDifference(first, second);
+    if (diff) {
+      console.error(`  first difference at line ${diff.line}`);
+      console.error(`  run 1: ${diff.committed.trim().slice(0, 200)}`);
+      console.error(`  run 2: ${diff.fresh.trim().slice(0, 200)}`);
+    }
     process.exit(1);
     return;
   }
 
-  if (committed === fresh) {
-    const { posts } = JSON.parse(committed);
+  const { posts } = JSON.parse(first);
+  const bytes = Buffer.byteLength(first, "utf8");
+  const perPost = posts.length > 0 ? Math.round(bytes / posts.length) : bytes;
+  console.log(
+    `check:content ok. the corpus renders deterministically ` +
+      `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, rendered twice).`,
+  );
 
-    /*
-     * The size refusal that sat here (half of GitHub's 100 MB raw-media-type
-     * ceiling) died with the transport it guarded: nothing fetches this file
-     * over the Contents API any more. The size is still printed because it is
-     * the number a reader wants when the build product grows.
-     */
-    const bytes = Buffer.byteLength(committed, "utf8");
-    const perPost = posts.length > 0 ? Math.round(bytes / posts.length) : bytes;
-
-    console.log(
-      `check:content ok. ${ARTIFACT_PATH} matches source ` +
-        `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post).`,
-    );
-    await checkTemplateRefs();
-    await checkAssetManifest();
-    return;
-  }
-
-  const diff = firstDifference(committed, fresh);
-  console.error(`check:content failed. ${ARTIFACT_PATH} differs from a fresh generation.`);
-  if (diff) {
-    console.error(`  first difference at line ${diff.line}`);
-    console.error(`  committed: ${diff.committed.trim().slice(0, 200)}`);
-    console.error(`  fresh:     ${diff.fresh.trim().slice(0, 200)}`);
-  }
-  console.error("  Run npm run build:content and commit the result.");
-  process.exit(1);
+  await checkTemplateRefs();
+  await checkAssetManifest();
 }
 
 /**
