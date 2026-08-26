@@ -10,17 +10,16 @@
  *   code copy + label   the code is already highlighted and selectable
  *   heading copy-link   the anchors are already navigable
  *   footnote previews   the footnote jump links already work
- *   image lightbox      the image itself, at its rendered size
+ *   image lightbox      the image is an anchor to the original file
  *   copy as markdown    the button is an anchor to the .md twin
  *
  * Every animation checks prefers-reduced-motion. Nothing here writes to the
  * network or to storage.
  *
- * The image row said "images already link to their original" until 2026-08-11
- * and that was FALSE, contradicted by this file's own comment on lightbox()
- * below. Measured against the generated post corpus, 2026-08-11: 6 images across 12
- * posts, ZERO wrapped in an anchor. The same false claim is in Capsid's
- * progressive-enhancement.md inventory. The machine-readable inventory is
+ * The image row claimed that anchor from before 2026-08-11, when it was
+ * measured FALSE and corrected to say the fallback was the image itself. The
+ * anchor now exists, written by the shared pipeline, so the original claim is
+ * true for the first time. The machine-readable inventory is
  * content/enhancements.json, gated by check:features.
  */
 
@@ -236,41 +235,78 @@ function footnotePreviews() {
 }
 
 /**
+ * Opens one image over the page. Returns focus where it came from on close.
+ *
+ * `src` is passed in rather than read off the image on screen, and that is the
+ * whole correction. Reading `currentSrc` returns whichever rung of the `srcset`
+ * ladder the browser already downloaded, so the overlay showed the same resized
+ * copy at a larger CSS size and called it full size.
+ */
+function openOverlay(src: string, alt: string, restoreFocus: () => void) {
+  const overlay = document.createElement("div");
+  overlay.className = "lightbox";
+  overlay.tabIndex = -1;
+  if (reduceMotion.matches) overlay.setAttribute("data-reduced", "true");
+
+  const full = document.createElement("img");
+  full.src = src;
+  full.alt = alt;
+  overlay.appendChild(full);
+
+  const close = () => {
+    overlay.remove();
+    restoreFocus();
+  };
+  overlay.addEventListener("click", close);
+  overlay.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+  document.body.appendChild(overlay);
+  overlay.focus();
+}
+
+/**
  * Lightbox for post images.
  *
- * The markup already wraps nothing: an image is just an image, so the fallback
- * is the image itself at its rendered size. The enhancement opens the full
- * original, which for editor uploads is the R2 object behind /media.
+ * THE ANCHOR IS THE SUBJECT, not the image. The shared pipeline wraps every
+ * body image in `<a class="image-link" href="<original>">`, so the click
+ * already did something useful before this file loaded: it navigated to the
+ * unsized file. This intercepts that navigation and shows the same URL in an
+ * overlay instead, which makes the enhancement a genuine upgrade of a working
+ * control rather than the only way to reach the original.
+ *
+ * Binding the anchor is also what makes the keyboard path free. An anchor is
+ * focusable and Enter fires a click on it, so Enter opens the overlay through
+ * this same listener with nothing keydown-shaped written here, and close
+ * returns focus to the anchor the reader was already on.
+ *
+ * DIAGRAMS TAKE THE OTHER PATH. Their image pair is deliberately not wrapped
+ * (pipeline.mjs says why: one of the two is `display: none` and an anchor
+ * around it would be an unnamed focus stop), so they are bound directly. A
+ * diagram asset carries no `srcset`, so its `src` IS the original and nothing
+ * here has to ask the browser which copy it chose.
  */
 function lightbox() {
-  const images = Array.from(
-    document.querySelectorAll<HTMLImageElement>(".prose img"),
+  const links = Array.from(
+    document.querySelectorAll<HTMLAnchorElement>(".prose a.image-link"),
   );
-  if (images.length === 0) return;
+  for (const link of links) {
+    link.addEventListener("click", (event) => {
+      const href = link.getAttribute("href");
+      if (!href) return;
+      event.preventDefault();
+      const image = link.querySelector("img");
+      openOverlay(href, image?.alt ?? "", () => link.focus({ preventScroll: true }));
+    });
+  }
 
-  for (const image of images) {
+  const diagrams = Array.from(
+    document.querySelectorAll<HTMLImageElement>(".prose img.diagram-image"),
+  );
+  for (const image of diagrams) {
     image.classList.add("zoomable");
     image.addEventListener("click", () => {
-      const overlay = document.createElement("div");
-      overlay.className = "lightbox";
-      overlay.tabIndex = -1;
-      if (reduceMotion.matches) overlay.setAttribute("data-reduced", "true");
-
-      const full = document.createElement("img");
-      full.src = image.currentSrc || image.src;
-      full.alt = image.alt;
-      overlay.appendChild(full);
-
-      const close = () => {
-        overlay.remove();
-        image.focus({ preventScroll: true });
-      };
-      overlay.addEventListener("click", close);
-      overlay.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") close();
-      });
-      document.body.appendChild(overlay);
-      overlay.focus();
+      openOverlay(image.src, image.alt, () => image.focus({ preventScroll: true }));
     });
   }
 }

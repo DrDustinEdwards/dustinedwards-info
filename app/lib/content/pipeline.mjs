@@ -1169,15 +1169,23 @@ function textOf(/** @type {any} */ node) {
 }
 
 /**
- * Writes intrinsic width and height onto every img, plus lazy-loading hints.
+ * Everything a body image needs that the markdown did not say: the responsive
+ * sources, the intrinsic dimensions, the lazy-loading hints, and the anchor to
+ * the ORIGINAL file that wraps the whole thing.
+ *
+ * The four are written HERE, in one visitor, on purpose. The anchor's href and
+ * the `srcset` are two statements about the same object and they are derived
+ * from the same `mediaKey`; splitting them into two plugins would let one learn
+ * about a storage tier the other had not, and the way that fails is an anchor
+ * pointing at a URL the transform route refuses.
  *
  * @param {string} file
  * @param {(src: string) => Promise<{ width: number, height: number }>} resolveImage
  * @param {Array<Promise<void>>} pending
  */
-function rehypeImageDimensions(file, resolveImage, pending) {
+function rehypeImageSources(file, resolveImage, pending) {
   return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node) => {
+    visit(tree, "element", (/** @type {any} */ node, index, parent) => {
       if (node.tagName !== "img") return;
       // A diagram's asset is rendered by a LATER build step and legitimately may
       // not exist yet, so measuring it here would make the artifact depend on the
@@ -1206,6 +1214,49 @@ function rehypeImageDimensions(file, resolveImage, pending) {
       const responsive = mediaKey
         ? { srcSet: contentSrcSet(mediaKey), sizes: CONTENT_SIZES }
         : {};
+
+      /*
+       * THE IMAGE IS A LINK TO ITS ORIGINAL.
+       *
+       * `srcset` above hands the browser a closed ladder of widths and it picks
+       * the smallest one that fills the slot, so what a reader has actually
+       * downloaded is never the file the author uploaded. Until 2026-08-26 the
+       * only way to see the original was the lightbox, which opened
+       * `currentSrc`: the enhancement promised the full size and delivered the
+       * same resized copy that was already on screen, and a reader without
+       * script had no route to the original at all.
+       *
+       * The href is the UNSIZED source, derived from the same `mediaKey` that
+       * built `srcset` two lines up rather than by unpicking the `src` string a
+       * second time. An R2 object is `/media/<key>` with no `?w=`; a static
+       * asset never passes through the transform route, so its own path IS the
+       * original.
+       *
+       * DIAGRAM ASSETS ARE OUT, by the same class test that excludes them from
+       * measurement above. A diagram renders as a PAIR of images with one
+       * hidden by `display: none`, and post.css chose that property precisely
+       * so the hidden half leaves the accessibility tree. Wrapping them would
+       * put an anchor AROUND the hidden image, where `display: none` on the
+       * child does not apply, leaving a focusable link with no accessible name
+       * in every article that carries a diagram.
+       *
+       * An image the author already wrapped in a markdown link keeps the
+       * author's link. Their href is a decision; this one is a default.
+       */
+      const wrappable =
+        src.length > 0 &&
+        parent &&
+        typeof index === "number" &&
+        parent.children[index] === node &&
+        !(parent.type === "element" && parent.tagName === "a");
+      if (wrappable) {
+        parent.children[index] = {
+          type: "element",
+          tagName: "a",
+          properties: { className: ["image-link"], href: mediaKey ? `/media/${mediaKey}` : src },
+          children: [node],
+        };
+      }
 
       pending.push(
         resolveImage(src).then(({ width, height }) => {
@@ -1332,7 +1383,7 @@ export async function renderBody({ file, body, resolveImage }) {
       behavior: "append",
       content: { type: "text", value: "#" },
     })
-    .use(rehypeImageDimensions, file, resolveImage, pending)
+    .use(rehypeImageSources, file, resolveImage, pending)
     .use(rehypeShikiFromHighlighter, highlighter, {
       themes: {
         light: "github-light-high-contrast",

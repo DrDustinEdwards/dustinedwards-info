@@ -1689,6 +1689,82 @@ const ASK_PROBE_LIMIT = 3;
   );
 }
 
+/* --- 17. A post image on the wire is a link to its original ------------- */
+
+/*
+ * The deployed half of the image-link fallback. `check:browser` drives the
+ * same claim against a preview build; this asks the DEPLOYED origin, which is
+ * the only instrument that can see a href whose target the live bucket does
+ * not actually hold.
+ *
+ * TWO ASSERTIONS, and the second is the one worth the round trip. That the
+ * markup carries `class="image-link"` is a build fact the offline gates
+ * already cover. That the URL inside it ANSWERS 200 WITH AN IMAGE is a fact
+ * about R2 and the transform route on this deployment, and a fallback that
+ * 404s is worse than the bare image it replaced.
+ *
+ * The post is FOUND, never named: a slug pinned here goes stale the day the
+ * post is retitled, and which post carries a picture is the corpus's business.
+ *
+ * WHEN THE CORPUS CARRIES NO IMAGE this REPORTS and does not fail. Measured
+ * 2026-08-26: zero body images across the 12 posts, so there is nothing on the
+ * wire to look at, and that is a content fact rather than a regression. It is
+ * printed rather than silent for the reason every skip in this repo is: an
+ * unobserved claim and a satisfied one must not look the same from outside.
+ */
+{
+  const artifact = JSON.parse(
+    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+  );
+  const slugs = artifact.posts
+    .filter((/** @type {any} */ p) => p.draft !== true)
+    .map((/** @type {any} */ p) => p.slug);
+
+  check(
+    "image-link: the published corpus is non-empty",
+    slugs.length > 0,
+    "no published post to search, so the search below would report a clean absence",
+  );
+
+  /** @type {{ slug: string, href: string } | null} */
+  let found = null;
+  for (const slug of slugs) {
+    const { text, status } = await get(`/blog/${slug}`);
+    if (status !== 200) continue;
+    // The anchor and its image together. The class alone would match a stylesheet
+    // reference or a stray attribute; this is the pair the fallback consists of.
+    const match = text.match(/<a class="image-link" href="([^"]+)"><img\b/);
+    if (match) {
+      found = { slug, href: match[1] };
+      break;
+    }
+  }
+
+  if (found === null) {
+    console.log(
+      `  REPORT  no body image in the live corpus (${slugs.length} published post(s) ` +
+        `searched), so the image-link fallback has no instance on the wire. The ` +
+        `pipeline wrap is covered by test/post-image-links.test.mjs.`,
+    );
+  } else {
+    const { res, status } = await get(found.href);
+    const type = res.headers.get("content-type") ?? "";
+    check(
+      `image-link: /blog/${found.slug} wraps its image in an anchor to ${found.href}`,
+      // Anchored: `?w=` in the href is exactly the defect this replaces, so a
+      // "contains the key" test would agree with the bug.
+      !found.href.includes("?"),
+      `the href carries a query, so it is a transform of the original rather than ` +
+        `the original: ${found.href}`,
+    );
+    check(
+      `image-link: ${found.href} serves an image`,
+      status === 200 && type.startsWith("image/"),
+      `answered ${status} ${JSON.stringify(type)}`,
+    );
+  }
+}
+
 /* --- Report ------------------------------------------------------------ */
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

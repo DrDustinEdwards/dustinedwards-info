@@ -334,7 +334,7 @@ export function cropSafe(pathOrKey) {
  *
  * THE KEY ALSO CARRIES THE INTRINSIC DIMENSIONS, and that is finding B002.
  *
- * Image dimensions are baked into the stored HTML by `rehypeImageDimensions`,
+ * Image dimensions are baked into the stored HTML by `rehypeImageSources`,
  * so they are part of the gated artifact and BOTH writers have to produce the
  * same ones. They could not: the Node build measured bytes under `public/` and
  * the Worker measured bytes in R2, and an R2 blob is not readable from a clone

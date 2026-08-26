@@ -95,7 +95,7 @@ type PublishEnv = Env & { GITHUB_TOKEN?: string };
  *
  * BOTH BRANCHES EXIST TO AGREE WITH `scripts/lib/content.mjs`, and finding B002
  * is that neither did. Dimensions are written into the stored HTML by
- * `rehypeImageDimensions`, so they are part of the rendered HTML the
+ * `rehypeImageSources`, so they are part of the rendered HTML the
  * determinism gate compares: whatever this returns, `build:content` has to
  * return too, from a clone, with no bindings and no network.
  *

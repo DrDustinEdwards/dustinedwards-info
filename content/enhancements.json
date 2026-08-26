@@ -55,10 +55,10 @@
       "id": "image-lightbox",
       "module": "app/enhance/blog.ts",
       "enhancement": "Intercepts a click on a post image and opens it full size in an overlay.",
-      "fallback": "The image itself, at its rendered size. Only the zoom is lost.",
-      "fallbackKind": "none",
-      "fallbackAt": null,
-      "why": "The markup wraps nothing: an image is an image, with no surrounding anchor to fall back to. Measured 2026-08-11 against content/generated/posts.json: 6 images across 12 posts, ZERO wrapped in a link. blog.ts's own header table and progressive-enhancement.md both claimed images link to their original; the implementation comment at blog.ts lightbox() is the accurate record and the other two were wrong."
+      "fallback": "The image is a link to its original file; clicking it opens the original. Only the overlay is lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".image-link",
+      "why": null
     },
     {
       "id": "copy-as-markdown",
