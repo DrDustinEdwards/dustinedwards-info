@@ -1264,8 +1264,33 @@ try {
    * anchor" is a claim about what the SERVER sent.
    */
   {
+    /*
+     * THE SUBJECT COMES FROM THE ARTIFACT, not from crawling the listing.
+     *
+     * It was a crawl of the same capped `postPaths` the code case uses, and
+     * that was wrong in the way this repo keeps paying for: with a planted
+     * image in an OLDER post the case skipped, and its skip said "the corpus
+     * carries no body image at all" on the strength of a SIX-POST SAMPLE. A
+     * silent cap that reads as full coverage is the exact shape FAILURES.md
+     * names, and here it was writing the false claim into its own reason.
+     *
+     * The artifact knows which posts carry the anchor, over the whole corpus
+     * and with no crawl, so the skip below is now a measurement rather than an
+     * inference. BOUNDARY: it is the artifact on THIS DISK. Driving a deployed
+     * origin (PUBLIC_ORIGIN) can therefore name a post the deployment has not
+     * got, which is why a named candidate that does not show the anchor in the
+     * browser SKIPS naming the discrepancy instead of failing.
+     */
+    const artifact = JSON.parse(
+      readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+    );
+    const candidates = artifact.posts
+      .filter((/** @type {any} */ p) => p.draft !== true)
+      .filter((/** @type {any} */ p) => String(p.html ?? "").includes('class="image-link"'))
+      .map((/** @type {any} */ p) => `/blog/${p.slug}`);
+
     let imagePost = null;
-    for (const path of postPaths) {
+    for (const path of candidates) {
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
       const has = await page.evaluate(
         () => document.querySelectorAll(".prose a.image-link > img").length > 0,
@@ -1289,10 +1314,15 @@ try {
        */
       skip(
         "post images link to their originals, and the lightbox opens the link",
-        `none of the first ${postPaths.length} posts carries a .prose a.image-link, ` +
-          `because the corpus carries no body image at all. The pipeline wrap is ` +
-          `proven by test/post-image-links.test.mjs; this is the WIRE half and it ` +
-          `stays unobserved until a post cites an image.`,
+        candidates.length === 0
+          ? `the artifact's ${artifact.posts.length}-post corpus carries no body image ` +
+              `at all, so there is no anchor on any page to look at. The pipeline wrap ` +
+              `is proven by test/post-image-links.test.mjs; this is the WIRE half and ` +
+              `it stays unobserved until a post cites an image.`
+          : `the artifact names ${candidates.length} post(s) carrying an image-link ` +
+              `(${candidates.join(", ")}) and NONE of them served one. Against a ` +
+              `deployed origin that means the disk is ahead of the deployment; against ` +
+              `the preview build it is a real defect and should be read as one.`,
       );
     } else {
       const scriptless = await browser.newPage();
