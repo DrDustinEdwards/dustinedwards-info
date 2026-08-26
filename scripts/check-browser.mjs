@@ -1237,6 +1237,125 @@ try {
   }
 
   /*
+   * THE IMAGE LINK, both states, because this enhancement has two halves that
+   * fail in opposite directions and no source-reading gate can see either.
+   *
+   * WITHOUT SCRIPT the image's parent must be an anchor, and its href must
+   * actually SERVE an image. An href is a string; a 200 with an image
+   * content-type is the only thing that distinguishes a working fallback from
+   * a plausible one, and the defect this replays produced a URL that was
+   * merely well formed.
+   *
+   * WITH SCRIPT the overlay must show THE ANCHOR'S HREF. That comparison is
+   * the whole case: the bug it replays opened `currentSrc`, the rung of the
+   * srcset ladder already downloaded, which renders an overlay that looks
+   * completely correct while showing the resized copy. Nothing but comparing
+   * the two URLs can tell those apart.
+   *
+   * COMPARED RAW, attribute against attribute, deliberately not as resolved
+   * URLs. `currentSrc` is always ABSOLUTE, so the raw form discriminates on
+   * any image; a resolved comparison only discriminates on an image that
+   * carries a `srcset`, and whether the post that gets found has one is a
+   * content accident. The correct implementation assigns the href verbatim,
+   * so this asserts exactly that and nothing weaker.
+   *
+   * The scriptless half runs on its own page with JavaScript disabled rather
+   * than on a DOM the bundle has already touched, so "the markup carries the
+   * anchor" is a claim about what the SERVER sent.
+   */
+  {
+    let imagePost = null;
+    for (const path of postPaths) {
+      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      const has = await page.evaluate(
+        () => document.querySelectorAll(".prose a.image-link > img").length > 0,
+      );
+      if (has) {
+        imagePost = path;
+        break;
+      }
+    }
+
+    if (imagePost === null) {
+      /*
+       * MEASURED 2026-08-26 against content/posts/: ZERO body images across the
+       * 12 posts, by every form the pipeline recognises (`:::figure`, a
+       * markdown image, a `/media/` citation, a raw `<img>`). The 2026-08-11
+       * record of "6 images across 12 posts" is stale in the numerator: the
+       * charts post's figure was removed. So this is a CONTENT fact and not a
+       * defect, exactly like the no-code-post skip above, and it is loud
+       * because a silent pass here would be indistinguishable from a working
+       * anchor.
+       */
+      skip(
+        "post images link to their originals, and the lightbox opens the link",
+        `none of the first ${postPaths.length} posts carries a .prose a.image-link, ` +
+          `because the corpus carries no body image at all. The pipeline wrap is ` +
+          `proven by test/post-image-links.test.mjs; this is the WIRE half and it ` +
+          `stays unobserved until a post cites an image.`,
+      );
+    } else {
+      const scriptless = await browser.newPage();
+      await scriptless.setJavaScriptEnabled(false);
+      await scriptless.goto(`${BASE}${imagePost}`, { waitUntil: "networkidle0" });
+      const served = await scriptless.evaluate(() => {
+        const image = document.querySelector(".prose img");
+        const parent = image?.parentElement ?? null;
+        return {
+          image: Boolean(image),
+          anchor: parent?.tagName === "A",
+          klass: parent?.className ?? "",
+          href: parent?.getAttribute("href") ?? "",
+        };
+      });
+      await scriptless.close();
+
+      ok(
+        `${imagePost}: with script off, the image's parent is an image-link anchor`,
+        served.image && served.anchor && served.klass.includes("image-link") && served.href !== "",
+        `image ${served.image}, parent is an anchor ${served.anchor}, class ` +
+          `${JSON.stringify(served.klass)}, href ${JSON.stringify(served.href)}. The ` +
+          `pipeline stopped wrapping, or the wrap did not survive to the served HTML.`,
+      );
+
+      let delivered = { status: 0, type: "" };
+      if (served.href) {
+        const response = await fetch(new URL(served.href, BASE));
+        delivered = {
+          status: response.status,
+          type: response.headers.get("content-type") ?? "",
+        };
+      }
+      ok(
+        `${imagePost}: the anchor's href serves an image`,
+        delivered.status === 200 && delivered.type.startsWith("image/"),
+        `${served.href} answered ${delivered.status} ${JSON.stringify(delivered.type)}. ` +
+          `A fallback that 404s is worse than no fallback: the click used to do nothing.`,
+      );
+
+      // The page is already open on imagePost from the walk above.
+      await page.click(".prose a.image-link");
+      await new Promise((r) => setTimeout(r, 250));
+      const overlay = await page.evaluate(() => {
+        const shown = document.querySelector(".lightbox img");
+        return {
+          open: shown instanceof HTMLImageElement,
+          src: shown instanceof HTMLImageElement ? shown.getAttribute("src") : null,
+        };
+      });
+      ok(
+        `${imagePost}: clicking the link opens the overlay on the ORIGINAL`,
+        overlay.open && overlay.src === served.href,
+        `overlay open ${overlay.open}, overlay src ${JSON.stringify(overlay.src)}, ` +
+          `anchor href ${JSON.stringify(served.href)}. A mismatch means the lightbox ` +
+          `went back to reading currentSrc, which is the resized copy already on ` +
+          `screen; overlay absent means the click navigated instead of being caught.`,
+      );
+      await page.keyboard.press("Escape");
+    }
+  }
+
+  /*
    * THE ASK AFFORDANCE, visible and bound, never clicked (clicking bills; see
    * the section header). `data-ask-bound` is the bundle's own idempotence
    * marker, so its presence proves the init ran against this very element.

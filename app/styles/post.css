@@ -119,6 +119,26 @@
   border-radius: 0.375rem;
 }
 
+/*
+ * Every body image is a link to its original file (pipeline.mjs,
+ * rehypeImageSources), so this rule exists on every figure in the corpus.
+ *
+ * RULE 2'S UNDERLINE EXEMPTION, on the same ground `.btn` and `.search-chip`
+ * take it: the exemption is for a link whose affordance is not COLOUR, and
+ * this one's whole content is an image. There is no hue to mistake for body
+ * text, so the underline the rule exists to provide is buying nothing, and a
+ * browser draws it as a line under the picture rather than under text.
+ *
+ * The cursor goes on the anchor rather than the image because the anchor is
+ * the click target and is the thing that still works with script off. Without
+ * the lightbox the click navigates to the original, which is a zoom that
+ * happens to cost a page load, so `zoom-in` is honest in both states.
+ */
+.prose a.image-link {
+  text-decoration: none;
+  cursor: zoom-in;
+}
+
 .prose figure {
   margin: 2rem 0;
 }
