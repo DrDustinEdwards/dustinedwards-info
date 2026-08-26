@@ -2530,6 +2530,24 @@ try {
  * about eight percent under, raised because the old gaps stopped meaning
  * anything. The code-copy case can skip on a corpus with no code post, which
  * is why the slack is not smaller.
+ *
+ * ## RE-MEASURED 2026-08-26 WITH THE TOPBAR FOLD CASES: **78** in run mode
+ *
+ * Run through this gate's own pipeline against the deployment that carries
+ * them. The cross-check: 71 was the last measurement, the fold work adds two
+ * overflow widths across two admin paths, which is four, plus three topbar
+ * action assertions, and 71 + 7 is 78. Floored at 72, about eight percent
+ * under.
+ *
+ * SKIP MODE IS UNCHANGED at 27, floor 25, because every assertion added here
+ * is inside the admin block that skip mode does not reach. A floor that moved
+ * in both modes on an admin-only change would be wrong in the mode that never
+ * saw it.
+ *
+ * **THE RUN-MODE FLOOR WAS NOT MOVED IN THE COMMIT THAT ADDED THE SEVEN**, and
+ * that is the second time in one day the same convention was missed here and in
+ * check-tests.mjs. Both were caught by re-measuring rather than by anything
+ * automatic. A floor is the one value in a gate that nothing else can check.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -2541,7 +2559,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 65 : 25;
+  const MINIMUM_CHECKS = adminCasesRan ? 72 : 25;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
