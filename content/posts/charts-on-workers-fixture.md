@@ -8,9 +8,10 @@ draft: true
 ---
 
 This post is a fixture. It exists so the chart directive has real, recorded data
-in the gated artifact, which is what lets `check:content` byte-compare chart
-output like any other content. The prose is deliberately thin. The numbers are
-not invented: every one was measured while building the guards on `/search/ask`.
+in the corpus, which is what lets `check:content` render chart output twice and
+byte-compare it like any other content. The prose is deliberately thin. The
+numbers are not invented: every one was measured while building the guards on
+`/search/ask`.
 
 ## The GA rate limiting binding does not count
 
