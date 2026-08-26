@@ -309,6 +309,87 @@ async function main() {
     );
   }
 
+  /*
+   * THE SHIP-TIME DRIFT REPORT. What the committed artifact's byte gate used
+   * to prove at commit time, taken at the last moment it is still provable:
+   * the instant before this write overwrites the evidence.
+   *
+   * (slug, source_blob_sha, render_hash) is read for every file-backed row
+   * and compared against the fresh build product. Five classes per slug:
+   *
+   *   unchanged       same source, same render.
+   *   source-changed  a different source_blob_sha: the repository moved and
+   *                   D1 had not caught up yet. Expected on every content
+   *                   ship; the write below is the catch-up.
+   *   RENDER DRIFT    the SAME source with a DIFFERENT render_hash: the
+   *                   Worker and the Node build rendered identical bytes
+   *                   differently. This is the Worker-versus-Node class the
+   *                   byte gate existed for, and the one class that is a
+   *                   pipeline defect rather than ordinary staleness.
+   *   missing-in-d1   a file with no row: a new post, or a lost row.
+   *   extra-in-d1     a row with no file: a deleted post; the write cleans it.
+   *
+   * THE WRITE STILL RUNS, whatever this finds. Converging D1 to the build IS
+   * the repair (rule 18), and refusing to write would preserve wrong rows to
+   * protect a report. The exit goes nonzero at the very END, after every
+   * write and verification, so ship can let the deploy stand, finish both
+   * index convergences, and still fail the run: the same shape as an index
+   * miss.
+   *
+   * A failed read THROWS rather than skipping the report. A drift report
+   * that could not read one side reports nothing, and nothing is exactly
+   * what a clean run reports.
+   */
+  /** @type {string[]} */
+  const renderDrift = [];
+  {
+    const read = wrangler(
+      `d1 execute ${DB_NAME} ${target} --json --command ` +
+        '"SELECT slug, source_blob_sha, render_hash FROM posts WHERE source_path IS NOT NULL;"',
+    );
+    if (read.status !== 0) {
+      console.error(read.stdout);
+      throw new Error("the pre-write drift read failed, so drift cannot be reported");
+    }
+    const rowsMatch = read.stdout.match(/\[[\s\S]*\]/);
+    if (!rowsMatch) throw new Error(`could not parse the drift read:\n${read.stdout}`);
+    /** @type {Array<{slug: string, source_blob_sha: string | null, render_hash: string | null}>} */
+    const rows = JSON.parse(rowsMatch[0])[0].results;
+
+    const rowBySlug = new Map(rows.map((r) => [r.slug, r]));
+    const buildSlugs = new Set(posts.map((/** @type {any} */ p) => p.slug));
+    let unchanged = 0;
+    let sourceChanged = 0;
+    let missing = 0;
+    for (const post of posts) {
+      const row = rowBySlug.get(post.slug);
+      if (!row) {
+        missing += 1;
+        console.log(`  missing-in-d1: ${post.slug}`);
+      } else if (row.source_blob_sha !== post.sourceBlobSha) {
+        sourceChanged += 1;
+        console.log(`  source-changed: ${post.slug} (expected: the repo moved)`);
+      } else if (row.render_hash !== post.renderHash) {
+        renderDrift.push(post.slug);
+        console.log(
+          `  RENDER DRIFT: ${post.slug} renders differently in the Worker and ` +
+            `the Node build from the same source ${post.sourceBlobSha}: ` +
+            `d1=${row.render_hash} build=${post.renderHash}`,
+        );
+      } else {
+        unchanged += 1;
+      }
+    }
+    const extra = rows.filter((r) => !buildSlugs.has(r.slug));
+    for (const row of extra) console.log(`  extra-in-d1: ${row.slug} (the write removes it)`);
+
+    // The counts print EVERY run, greppable, and ship reads this line.
+    console.log(
+      `sync:content drift: unchanged=${unchanged} source-changed=${sourceChanged} ` +
+        `render-drift=${renderDrift.length} missing-in-d1=${missing} extra-in-d1=${extra.length}`,
+    );
+  }
+
   // mkdir returns undefined when the directory already exists, so the path is
   // computed here rather than taken from its return value.
   const dir = path.join(os.tmpdir(), "dustinedwards-sync");
@@ -433,6 +514,23 @@ async function main() {
     );
   }
   console.log("sync:content ok. FTS and search index row counts match.");
+
+  /*
+   * NONZERO LAST, after every write stood. Render drift means the shared
+   * pipeline is not shared in practice, and a run that exits green on it is
+   * the green-light-meaning-nothing this report replaces the byte gate to
+   * avoid. The writes above already converged D1 to the build, so the state
+   * is repaired; the exit is the alarm, not the refusal.
+   */
+  if (renderDrift.length > 0) {
+    console.error(
+      `sync:content: RENDER DRIFT on ${renderDrift.length} slug(s): ` +
+        `${renderDrift.join(", ")}. The Worker and the Node build rendered the same ` +
+        `source bytes differently; D1 has been converged to the build, and the drift ` +
+        `is a pipeline defect to find, not a state to repair.`,
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((/** @type {unknown} */ error) => {
