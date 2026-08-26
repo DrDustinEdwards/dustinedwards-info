@@ -169,3 +169,13 @@ test("THE FULL PATH: a real drifted body decides to repair both", () => {
   assert.deepEqual(plan.repair, ["sync_ask", "sync_media"]);
   assert.equal(plan.alertOnly, false);
 });
+
+test("content drift repairs BEFORE the ask index when both fail", () => {
+  // sync_posts rewrites the search_docs rows the ask upload reads from, so
+  // the map order in REPAIRABLE is load-bearing: reversed, the upload would
+  // push the stale corpus and then fix it. The endpoint's own listing order
+  // must not matter either, which is why the names arrive reversed here.
+  const plan = repairPlan(["ask-index-drift", "content-drift"], WITH);
+  assert.deepEqual(plan.repair, ["sync_posts", "sync_ask"]);
+  assert.equal(plan.alertOnly, false);
+});

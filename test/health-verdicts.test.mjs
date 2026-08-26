@@ -23,6 +23,8 @@ import assert from "node:assert/strict";
 
 import {
   askDriftVerdict,
+  contentDriftCompare,
+  contentDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
   mediaUnbackedVerdict,
@@ -343,4 +345,70 @@ test("media drift: the detail names a repair a reader can actually run", () => {
   const v = mediaDriftVerdict({ expected: 2, present: 1, missing: ["/a.png"], extra: [] });
   assert.match(v.detail, /sync_media/);
   assert.match(v.detail, /admin\/media/);
+});
+
+/* ---- content drift ------------------------------------------------------- */
+
+test("content drift: agreement on every sha is the quiet case", () => {
+  const files = [
+    { slug: "a", sha: "s1" },
+    { slug: "b", sha: "s2" },
+  ];
+  const rows = [
+    { slug: "a", source_blob_sha: "s1" },
+    { slug: "b", source_blob_sha: "s2" },
+  ];
+  const v = contentDriftVerdict(files, rows);
+  assert.equal(v.ok, true);
+  assert.match(v.detail, /2 post file/);
+  assert.equal(v.counts, undefined, "a passing check carries no counts");
+});
+
+test("content drift: one sha changed, one file unrowed, one row unfiled, all three counted", () => {
+  // The fixture the check was built against: every drift direction at once.
+  const files = [
+    { slug: "changed", sha: "new-sha" },
+    { slug: "agreeing", sha: "same" },
+    { slug: "unrowed", sha: "fresh" },
+  ];
+  const rows = [
+    { slug: "changed", source_blob_sha: "old-sha" },
+    { slug: "agreeing", source_blob_sha: "same" },
+    { slug: "unfiled", source_blob_sha: "orphan" },
+  ];
+  const compared = contentDriftCompare(files, rows);
+  assert.deepEqual(compared, {
+    changed: ["changed"],
+    unrowed: ["unrowed"],
+    unfiled: ["unfiled"],
+  });
+  const v = contentDriftVerdict(files, rows);
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /1 sha-changed/, "the detail names the changed count");
+  assert.match(v.detail, /1 file\(s\) with no row/, "the detail names the unrowed count");
+  assert.match(v.detail, /1 row\(s\) with no file/, "the detail names the unfiled count");
+  assert.match(v.detail, /sync_posts/, "the detail names a repair a reader can run");
+  // 3 files, one changed and one unrowed: only 1 is in full agreement.
+  assert.deepEqual(v.counts, { expected: 3, present: 1 });
+});
+
+test("content drift: a NULL source_blob_sha is drift, not agreement", () => {
+  // A row written before migration 0013 carries NULL; the repository file has
+  // a sha. Treating NULL as a match would hide every pre-migration row
+  // forever, which is the substituting-fallback shape.
+  const v = contentDriftVerdict(
+    [{ slug: "old", sha: "s1" }],
+    [{ slug: "old", source_blob_sha: null }],
+  );
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /1 sha-changed/);
+});
+
+test("content drift: equal totals with one sha changed is still drift", () => {
+  const v = contentDriftVerdict(
+    [{ slug: "a", sha: "x" }],
+    [{ slug: "a", source_blob_sha: "y" }],
+  );
+  assert.equal(v.ok, false);
+  assert.deepEqual(v.counts, { expected: 1, present: 0 });
 });
