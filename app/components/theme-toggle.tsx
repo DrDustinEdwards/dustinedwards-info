@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import themeEnhanceUrl from "~/enhance/dist/theme.js?url";
 
+import { EnhancementScript } from "~/components/enhancement-script";
 import { THEMES, type Theme } from "~/lib/theme";
 
 const LABELS: Record<Theme, string> = {
@@ -13,8 +14,11 @@ const LABELS: Record<Theme, string> = {
  *
  * It is a real form posting to /theme, so it works with scripting off: the
  * action writes the cookie and the next render carries the right attribute.
- * The enhancement below intercepts the submit and flips the attribute in place,
- * which removes the round trip but is not what makes the control work.
+ * The enhancement intercepts the submit and flips the attribute in place,
+ * which removes the round trip but is not what makes the control work. It is
+ * loaded by a nonced module script tag beside the form, pointing at the
+ * prebuilt bundle of app/enhance/theme.ts; it was a React effect until the
+ * public plane stopped hydrating (2026-08-26).
  *
  * Semantics are three buttons carrying aria-pressed rather than a role=radio
  * group. A real radiogroup owes the user arrow-key roving focus, which cannot
@@ -23,44 +27,35 @@ const LABELS: Record<Theme, string> = {
  * claimed to be. Toggle buttons are honest with or without the script.
  */
 export function ThemeToggle({ theme }: { theme: Theme }) {
-  useEffect(() => {
-    let cancelled = false;
-    import("~/enhance/theme")
-      .then((m) => {
-        if (!cancelled) m.enhanceThemeToggle();
-      })
-      .catch(() => {
-        // The form still posts. A failed enhancement costs a round trip.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  // If the bundle never loads or throws, the form still posts. A failed
+  // enhancement costs a round trip.
   return (
-    <form
-      method="post"
-      action="/theme"
-      className="theme-toggle"
-      data-theme-toggle=""
-      role="group"
-      aria-label="Colour theme"
-    >
-      {THEMES.map((value) => (
-        <button
-          key={value}
-          type="submit"
-          name="theme"
-          value={value}
-          className="theme-option"
-          aria-pressed={theme === value}
-          title={`${LABELS[value]} theme`}
-        >
-          <ThemeIcon theme={value} />
-          <span className="sr-only">{LABELS[value]} theme</span>
-        </button>
-      ))}
-    </form>
+    <>
+      <form
+        method="post"
+        action="/theme"
+        className="theme-toggle"
+        data-theme-toggle=""
+        role="group"
+        aria-label="Colour theme"
+      >
+        {THEMES.map((value) => (
+          <button
+            key={value}
+            type="submit"
+            name="theme"
+            value={value}
+            className="theme-option"
+            aria-pressed={theme === value}
+            title={`${LABELS[value]} theme`}
+          >
+            <ThemeIcon theme={value} />
+            <span className="sr-only">{LABELS[value]} theme</span>
+          </button>
+        ))}
+      </form>
+      <EnhancementScript src={themeEnhanceUrl} />
+    </>
   );
 }
 

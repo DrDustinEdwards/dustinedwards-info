@@ -1,52 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import askEnhanceUrl from "~/enhance/dist/ask.js?url";
+
+import { EnhancementScript } from "~/components/enhancement-script";
 
 /**
  * The Ask affordance on /search. Search Layer 2.
  *
- * Renders a button and an empty container. The button does nothing without
- * script, so it is not rendered until the client has mounted: an inert control
- * that looks live is worse than no control. Classic results are already on
- * screen by the time any of this exists, and nothing here can delay them.
+ * Server-rendered markup and a script tag, no React island: the button ships
+ * HIDDEN with the question in a data attribute, and the prebuilt bundle of
+ * app/enhance/ask.ts unhides and binds it. A reader without script never sees
+ * an inert control that looks live and does nothing, which is the same rule
+ * the palette's "/" hint follows: it stays hidden until something is actually
+ * listening. Classic results are already rendered by the loader above this,
+ * and nothing here can delay them.
  *
- * The streaming client is a dynamic import, so it is its own chunk and is
- * fetched only when a reader actually asks something. A reader who never clicks
- * Ask never downloads it.
+ * search.tsx renders this only when the binding exists and the query is a
+ * real question, so the bundle's own empty-question guard is a backstop, not
+ * the rule's home.
  */
 export function AskMount({ question }: { question: string }) {
-  const container = useRef<HTMLDivElement>(null);
-  const handle = useRef<{ cancel(): void } | null>(null);
-  // False during SSR and the first paint, so the button appears only where it
-  // can work. This is the same reasoning as the palette upgrading a real link.
-  const [ready, setReady] = useState(false);
-  const [asking, setAsking] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-    return () => handle.current?.cancel();
-  }, []);
-
-  // A new query means the previous answer is about a different question.
-  useEffect(() => {
-    handle.current?.cancel();
-    handle.current = null;
-    setAsking(false);
-  }, [question]);
-
-  async function run() {
-    if (!container.current || !question.trim()) return;
-    setAsking(true);
-    const { ask } = await import("~/enhance/ask");
-    handle.current = ask(container.current, question);
-  }
-
   return (
-    <div className="ask-mount">
-      {ready && !asking ? (
-        <button type="button" className="ask-trigger" onClick={run}>
-          Ask AI about this
-        </button>
-      ) : null}
-      <div ref={container} className="ask-container" hidden />
+    <div className="ask-mount" data-ask-mount="" data-ask-question={question}>
+      <button type="button" className="ask-trigger" data-ask-trigger="" hidden>
+        Ask AI about this
+      </button>
+      <div className="ask-container" data-ask-container="" hidden />
+      <EnhancementScript src={askEnhanceUrl} />
     </div>
   );
 }

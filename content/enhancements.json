@@ -1,5 +1,5 @@
 {
-  "note": "The machine-readable half of the enhancement law (Capsid: progressive-enhancement.md). Hard rule 9: every enhancement on a public reading route declares a NAMED fallback, even when the fallback is nothing. Gated by check:features, which asserts that every file in app/enhance/ appears here, that every entry names a fallback, and that every named selector or route actually exists. It does NOT assert the prose is true, and it cannot see the wire: whether a route is genuinely server-complete with script off is verify-live's job, not a gate's.",
+  "note": "The machine-readable half of the enhancement law (Capsid: progressive-enhancement.md). Hard rule 9: every enhancement on a public reading route declares a NAMED fallback, even when the fallback is nothing. Every module here is bundled by build:enhance and loaded by a nonced module script tag; the public plane does not hydrate React (since 2026-08-26), so these bundles are the whole public script payload. Gated by check:features, which asserts that every file in app/enhance/ appears here, that every entry names a fallback, and that every named selector or route actually exists. It does NOT assert the prose is true, and it cannot see the wire: whether a route is genuinely server-complete with script off is verify-live's job, not a gate's.",
   "fallbackKinds": {
     "route": "The fallback is a server-rendered route. It must be declared in app/routes.ts.",
     "selector": "The fallback is server-rendered markup. Every identifier in the selector must appear in app/ OUTSIDE app/enhance/, because markup an enhancement creates for itself is not a fallback.",
@@ -82,7 +82,7 @@
       "id": "command-palette",
       "module": "app/enhance/palette.ts",
       "enhancement": "Upgrades the header's search link into a modal command palette with live results.",
-      "fallback": "The header ships an ordinary anchor to /search, which is a full server-rendered search page. If the chunk fails to load, fails to parse, or throws on its first line, the anchor is still an anchor.",
+      "fallback": "The header ships an ordinary anchor to /search, which is a full server-rendered search page. If the bundle fails to load, fails to parse, or throws on its first line, the anchor is still an anchor.",
       "fallbackKind": "route",
       "fallbackAt": "/search",
       "why": null
@@ -91,7 +91,7 @@
       "id": "ask-answers",
       "module": "app/enhance/ask.ts",
       "enhancement": "Streams a generated answer with citations above the classic results, on surfaces that already rendered them.",
-      "fallback": "/search is exactly what it was before Layer 2: classic server-rendered results. Loaded by dynamic import only when the server said the binding exists.",
+      "fallback": "/search is exactly what it was before Layer 2: classic server-rendered results. The Ask button ships hidden and is unhidden by the bundle, and the bundle's script tag is rendered only when the server said the binding exists and the query is a real question.",
       "fallbackKind": "route",
       "fallbackAt": "/search",
       "why": null

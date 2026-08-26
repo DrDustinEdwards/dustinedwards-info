@@ -351,6 +351,25 @@ try {
   );
   if (bc.status !== 0) throw new Error("the worktree build failed; the tier has no subject");
 
+  /*
+   * THE ENHANCEMENT BUNDLES, built in the worktree for the same reason:
+   * app/enhance/dist/ is gitignored, so an extraction has the enhancement
+   * source and no bundles, and HEAD's ?url imports name files that would not
+   * exist. Built against HEAD's own sources, like build:content above.
+   */
+  const be = spawnSync("npm run build:enhance", {
+    cwd: worktree,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  ok(
+    "build:enhance produced the worktree's enhancement bundles",
+    be.status === 0,
+    `${(be.stdout ?? "")}${(be.stderr ?? "")}`.trim().slice(-200),
+  );
+  if (be.status !== 0) throw new Error("the worktree bundle build failed; the tier has no subject");
+
   started = Date.now();
   /** @type {Array<{name: string, ok: boolean, ms: number, tail: string}>} */
   const results = [];

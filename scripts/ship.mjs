@@ -330,6 +330,12 @@ console.log(`  ${migrations.reason}.`);
 /* --------------------------------------------------------------- 2. build */
 
 announce("Build");
+// The enhancement bundles first: the app build's ?url imports name files under
+// the gitignored app/enhance/dist/, so a build without this step fails on a
+// missing file that is not the tree's fault.
+if (run("npm", ["run", "build:enhance"]).code !== 0) {
+  refuse("the enhancement bundle build failed", "Fix build:enhance. Nothing was deployed.");
+}
 if (run("npm", ["run", "build"]).code !== 0) {
   refuse("the build failed", "Fix the build. Nothing was deployed.");
 }

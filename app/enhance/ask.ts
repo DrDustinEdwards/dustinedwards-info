@@ -1,13 +1,19 @@
 /**
  * Ask mode's client. Search Layer 2, and the top of the enhancement stack.
  *
- * Loaded by dynamic import, only on surfaces that already rendered classic
- * results, and only when the server said the binding exists. With scripting off
- * none of this runs and /search is exactly what it was before Layer 2.
+ * Loaded two ways, both only on surfaces that already rendered classic
+ * results: /search renders a nonced script tag for this module's own bundle,
+ * and the palette bundle carries an inlined copy (build-enhance.mjs inlines
+ * its lazy import, because a bundle may not import). With scripting off none
+ * of this runs and /search is exactly what it was before Layer 2.
  *
  * It renders into a container the caller owns rather than creating its own
  * placement, so /search and the palette can both use it without this module
- * knowing about either.
+ * knowing about either. The mount binding at the bottom is the /search half:
+ * the server renders the Ask button HIDDEN (an inert control that looks live
+ * is worse than no control), and this unhides and binds it. The binding is
+ * DOM-guarded because on /search both bundles execute this module's body, and
+ * two listeners would stream two billed answers per click.
  */
 
 import { labelForUrl, urlForKey } from "~/lib/search/ask-keys.mjs";
@@ -228,3 +234,34 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     },
   };
 }
+
+/**
+ * Binds the server-rendered Ask affordance on /search.
+ *
+ * The server renders the button only when the binding exists AND the query is
+ * a real question (search.tsx owns that rule), so an empty question here means
+ * markup this module does not own; the button stays hidden rather than being
+ * wired to do nothing. The guard is on the DOM, not module state, because the
+ * palette bundle carries an inlined copy of this module and both copies run on
+ * /search; the discipline is decorateCodeBlock's, ask the element itself.
+ */
+function mountAskTriggers() {
+  for (const mount of document.querySelectorAll<HTMLElement>("[data-ask-mount]")) {
+    const trigger = mount.querySelector<HTMLButtonElement>("[data-ask-trigger]");
+    const container = mount.querySelector<HTMLElement>("[data-ask-container]");
+    if (!trigger || !container) continue;
+    if (trigger.dataset.askBound) continue;
+    trigger.dataset.askBound = "true";
+    const question = (mount.dataset.askQuestion ?? "").trim();
+    if (!question) continue;
+    trigger.hidden = false;
+    trigger.addEventListener("click", () => {
+      // Hidden rather than disabled while streaming: matching what the old
+      // React island did, the control disappears once the answer is running.
+      trigger.hidden = true;
+      ask(container, question);
+    });
+  }
+}
+
+mountAskTriggers();

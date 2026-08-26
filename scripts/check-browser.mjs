@@ -98,7 +98,7 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -566,6 +566,20 @@ console.log("\ncheck:browser\n");
  */
 if (DRIVES_PREVIEW) {
   console.log("  building ...");
+  // The enhancement bundles first: the app build's ?url imports name files
+  // under the gitignored app/enhance/dist/, and this gate runs standalone as
+  // well as inside check:all, so it cannot assume a runner already built them.
+  const bundled = spawnSync("npm", ["run", "build:enhance"], {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (bundled.status !== 0) {
+    console.error("check:browser failed. build:enhance did not succeed, so the build below cannot.");
+    console.error((bundled.stderr || bundled.stdout || "").slice(-1200));
+    process.exit(1);
+  }
   const built = spawnSync("npm", ["run", "build"], {
     cwd: root,
     encoding: "utf8",
@@ -1009,6 +1023,271 @@ try {
     `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
       `carries that id, so keyboard focus goes nowhere`,
   );
+
+  /* --------------------- 5b. THE ENHANCEMENTS RUN, and nothing else ships */
+
+  /*
+   * The public plane stopped hydrating React (2026-08-26), so "works without
+   * script" stopped being the risky half of rule 9's standing ruling: the
+   * server-rendered page is now also what a scripted reader gets, plus four
+   * nonced enhancement bundles. What can silently die is the OTHER half,
+   * "fast with it": a bundle the CSP refuses, a selector that moved, or a
+   * ?url import gone stale produces a page that renders perfectly and
+   * enhances nothing, with every source-reading gate green. These cases run
+   * the bundles in a real browser, which is the only instrument that can see
+   * that class.
+   *
+   * WHAT IS DELIBERATELY NOT DRIVEN: the Ask stream. Clicking the trigger
+   * bills a Workers AI generation per run, which is why the billed probe
+   * lives in verify-live and not in a gate (same ruling as its Ask probes).
+   * Asserted here instead: the affordance is visible and bound, which is the
+   * half that dies silently.
+   *
+   * CONSOLE ERRORS ARE COLLECTED ACROSS THESE CASES and asserted empty at the
+   * end. A CSP refusal of an un-nonced or mis-pathed bundle surfaces exactly
+   * there and nowhere else this gate looks; this assertion is what makes
+   * "remove the nonce" a plant this gate can catch by name.
+   */
+  /** @type {string[]} */
+  const publicConsoleErrors = [];
+  /** @param {import("puppeteer").Page} p */
+  const collectErrors = (p) => {
+    p.on("console", (m) => {
+      if (m.type() === "error") publicConsoleErrors.push(m.text().slice(0, 200));
+    });
+    p.on("pageerror", (e) => publicConsoleErrors.push(String(e).slice(0, 200)));
+  };
+  collectErrors(page);
+
+  /*
+   * The expected script set, derived from the SOURCE listing rather than the
+   * build: an enhancement asset's stem is its module's basename (the ?url
+   * asset is dist/<name>.js emitted as <name>-<hash>.js), and app/enhance/ is
+   * present in any checkout while build/client may belong to another build.
+   * Stems, not names, for the reason chunkStem gives in check-script-payload.
+   */
+  const enhanceStems = new Set(
+    readdirSync(join(root, "app", "enhance"))
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => f.replace(/\.ts$/, "")),
+  );
+  ok(
+    "the enhancement module listing is non-empty",
+    enhanceStems.size > 0,
+    "app/enhance/ lists no modules, so the script-set cases below would assert nothing",
+  );
+
+  await page.setViewport({ width: 1280, height: 900 });
+
+  /*
+   * A post that actually carries code blocks, found by walking the listing
+   * rather than naming a slug: a slug pinned here goes stale the day the post
+   * is retitled, and the corpus is the loader's business. Capped so a corpus
+   * with no code posts skips loudly instead of crawling everything.
+   */
+  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  const postPaths = await page.evaluate(() =>
+    [...new Set(
+      [...document.querySelectorAll('.post-list a[href^="/blog/"]')]
+        .map((a) => a.getAttribute("href"))
+        .filter((h) => h && !h.endsWith(".md")),
+    )].slice(0, 6),
+  );
+  let codePost = null;
+  let probedPost = null;
+  for (const path of postPaths) {
+    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    probedPost = probedPost ?? path;
+    const hasCode = await page.evaluate(
+      () => document.querySelectorAll(".prose pre[data-lang]").length > 0,
+    );
+    if (hasCode) {
+      codePost = path;
+      break;
+    }
+  }
+
+  if (codePost === null) {
+    skip(
+      "code copy buttons appear on a post with code blocks",
+      `none of the first ${postPaths.length} posts carry a pre[data-lang]; the corpus ` +
+        `has no code post to observe, which is a content fact, not a defect`,
+    );
+  } else {
+    // The page is already open on codePost from the loop above.
+    const decorated = await page.evaluate(() => ({
+      copies: document.querySelectorAll(".prose pre[data-lang] .code-copy").length,
+      pres: document.querySelectorAll(".prose pre[data-lang]").length,
+    }));
+    ok(
+      `${codePost}: every code block gained a copy button`,
+      decorated.pres > 0 && decorated.copies === decorated.pres,
+      `${decorated.copies} button(s) on ${decorated.pres} block(s). The blog bundle did ` +
+        `not run, or decorateCodeBlock's selector moved.`,
+    );
+  }
+
+  const postForShape = codePost ?? probedPost;
+  if (postForShape === null) {
+    skip("a post page's enhancements", "the listing yielded no post links at all");
+  } else {
+    await page.goto(`${BASE}${postForShape}`, { waitUntil: "networkidle0" });
+    ok(
+      `${postForShape}: the reading progress bar exists`,
+      await page.evaluate(() => Boolean(document.querySelector(".reading-progress"))),
+      "script-created and absent without script, so its absence here means the blog " +
+        "bundle did not run",
+    );
+
+    /*
+     * THEME FLIPS IN PLACE. The sentinel proves no navigation happened: a
+     * fallback form post would land a fresh document where window.__probe is
+     * gone, and the page would still LOOK right, which is why looking is not
+     * the assertion.
+     */
+    /*
+     * WHEN THE BUNDLE IS DEAD THE CLICK REALLY NAVIGATES, because the form
+     * is the fallback and it works. That navigation destroys the execution
+     * context, and an evaluate racing it throws rather than returning, which
+     * on the first plant run crashed this gate instead of failing it. So the
+     * evaluate is caught, and a destroyed context IS the finding: the submit
+     * was not intercepted.
+     */
+    await page.evaluate(() => {
+      /** @type {any} */ (window).__probe = "same-document";
+    });
+    await page.click('.theme-toggle button[value="dark"]');
+    await new Promise((r) => setTimeout(r, 250));
+    /** @type {{ attr: string | null, sameDocument: boolean, pressed: string | null | undefined } | null} */
+    let flipped = null;
+    try {
+      flipped = await page.evaluate(() => ({
+        attr: document.documentElement.getAttribute("data-theme"),
+        sameDocument: /** @type {any} */ (window).__probe === "same-document",
+        pressed: document
+          .querySelector('.theme-toggle button[value="dark"]')
+          ?.getAttribute("aria-pressed"),
+      }));
+    } catch {
+      flipped = null;
+    }
+    ok(
+      "the theme flips in place, without a navigation",
+      flipped !== null &&
+        flipped.attr === "dark" &&
+        flipped.sameDocument &&
+        flipped.pressed === "true",
+      flipped === null
+        ? "the click caused a real navigation: the theme bundle did not intercept the " +
+            "submit (the form fallback is what carried the click)"
+        : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
+            `aria-pressed=${JSON.stringify(flipped.pressed)}. The theme bundle did not run ` +
+            `or the submit interception broke; the form itself still posts either way.`,
+    );
+
+    /*
+     * THE PALETTE. "/" must open it, which also proves the hint's honesty
+     * contract: the hint is server-rendered `hidden` and unhidden only once
+     * the listener exists.
+     */
+    const hintShown = await page.evaluate(
+      () => !document.querySelector("[data-search-hint]")?.hidden,
+    );
+    ok(
+      "the palette hint is unhidden once the palette is listening",
+      hintShown,
+      "the [data-search-hint] element is still hidden, so the palette bundle did not run",
+    );
+    await page.keyboard.press("/");
+    await new Promise((r) => setTimeout(r, 250));
+    const paletteOpen = await page.evaluate(() => ({
+      open: Boolean(document.querySelector("dialog.palette[open]")),
+      focused: document.activeElement?.classList.contains("palette-input") ?? false,
+    }));
+    ok(
+      'pressing "/" opens the palette with focus in its input',
+      paletteOpen.open && paletteOpen.focused,
+      `open ${paletteOpen.open}, input focused ${paletteOpen.focused}`,
+    );
+    if (paletteOpen.open) {
+      await page.type(".palette-input", "cloudflare");
+      // Debounce is 140ms and the first D1 query on a cold preview has been
+      // measured at 360ms; poll rather than sleep, bounded at 5s.
+      let paletteResult = { options: 0, status: "" };
+      for (let i = 0; i < 25; i += 1) {
+        await new Promise((r) => setTimeout(r, 200));
+        paletteResult = await page.evaluate(() => ({
+          options: document.querySelectorAll(".palette-option").length,
+          status: document.querySelector(".palette-status")?.textContent ?? "",
+        }));
+        if (paletteResult.options > 0 || /result|unavailable/i.test(paletteResult.status)) break;
+      }
+      ok(
+        "the palette returns live results",
+        paletteResult.options > 0,
+        `0 options after 5s; status ${JSON.stringify(paletteResult.status)}. The JSON ` +
+          `endpoint or the palette's fetch path broke.`,
+      );
+      await page.keyboard.press("Escape");
+    }
+  }
+
+  /*
+   * THE ASK AFFORDANCE, visible and bound, never clicked (clicking bills; see
+   * the section header). `data-ask-bound` is the bundle's own idempotence
+   * marker, so its presence proves the init ran against this very element.
+   */
+  await page.goto(`${BASE}/search?q=how+does+search+work`, { waitUntil: "networkidle0" });
+  const askState = await page.evaluate(() => {
+    const trigger = document.querySelector("[data-ask-trigger]");
+    if (!(trigger instanceof HTMLElement)) return { present: false, visible: false, bound: false };
+    return { present: true, visible: !trigger.hidden, bound: trigger.dataset.askBound === "true" };
+  });
+  ok(
+    "the Ask trigger is server-rendered, unhidden and bound",
+    askState.present && askState.visible && askState.bound,
+    `present ${askState.present}, visible ${askState.visible}, bound ${askState.bound}. ` +
+      `Absent means search.tsx stopped rendering the mount (or Ask is unbound on this ` +
+      `deployment); hidden or unbound means the ask bundle did not run.`,
+  );
+
+  /*
+   * THE SCRIPT SET, per page: only enhancement bundles, no framework, no
+   * modulepreload. This is the wire half of check:script-payload's claim, on
+   * the artifact this gate drives; verify-live section 16 makes the same
+   * assertion against the deployed origin.
+   */
+  for (const path of ["/", postForShape, "/search?q=workers"].filter(Boolean)) {
+    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    const shape = await page.evaluate(() => ({
+      srcs: [...document.querySelectorAll("script[src]")].map(
+        (s) => s.getAttribute("src") ?? "",
+      ),
+      preloads: document.querySelectorAll('link[rel="modulepreload"]').length,
+    }));
+    const foreign = shape.srcs.filter((src) => {
+      const name = src.split("/").pop() ?? "";
+      const stem = name.replace(/-[A-Za-z0-9_-]{8}\.js$/, "");
+      return !enhanceStems.has(stem);
+    });
+    ok(
+      `${path}: the script set is enhancement bundles only, with no modulepreload`,
+      foreign.length === 0 && shape.preloads === 0 && shape.srcs.length > 0,
+      `script srcs [${shape.srcs.join(", ")}], ${shape.preloads} modulepreload(s). ` +
+        `A framework chunk is riding on a public page again, or the enhancement ` +
+        `tags vanished entirely.`,
+    );
+  }
+
+  ok(
+    "no console errors across the public enhancement cases",
+    publicConsoleErrors.length === 0,
+    `${publicConsoleErrors.length} error(s):\n        ${publicConsoleErrors
+      .slice(0, 5)
+      .join("\n        ")}`,
+  );
+  page.removeAllListeners("console");
+  page.removeAllListeners("pageerror");
 
   /* ------------------------------- 6. THE ADMIN PLANE, opt-in, DEPLOYED ONLY */
 
@@ -1974,6 +2253,18 @@ try {
  * The cross-check that makes 59 credible rather than merely observed: 45 was
  * the last measurement, the media block adds three list-header assertions, four
  * inspector, six bulk-bar and one skip, and 45 + 14 is 59.
+ *
+ * ## RE-MEASURED 2026-08-26 WITH THE PUBLIC ENHANCEMENT CASES: **71**
+ *
+ * Run through this gate's own pipeline after the public plane stopped
+ * hydrating. The unhydration block (5b) adds twelve assertions in both modes:
+ * one listing scope, one code-copy, one progress bar, one theme flip, one
+ * hint, one palette open, one palette results, one Ask affordance, three
+ * script-set pages, one console-error sweep. 59 + 12 is 71 in run mode, and
+ * the skip mode moves from 15 to 27 by the same twelve. Floors 65 and 25,
+ * about eight percent under, raised because the old gaps stopped meaning
+ * anything. The code-copy case can skip on a corpus with no code post, which
+ * is why the slack is not smaller.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -1985,7 +2276,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 54 : 13;
+  const MINIMUM_CHECKS = adminCasesRan ? 65 : 25;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

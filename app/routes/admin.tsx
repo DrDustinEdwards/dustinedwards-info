@@ -33,6 +33,15 @@ export function meta() {
 }
 
 /**
+ * The admin plane HYDRATES, and this is the one flag that says so for the
+ * whole /admin subtree: root's Layout renders <Scripts> only when a match
+ * carries it, and a layout match covers every child. The public plane stopped
+ * hydrating 2026-08-26; the admin plane is rule 9's stated exemption and its
+ * cockpit is real client UI (editor, media library, bulk actions).
+ */
+export const handle = { hydrate: true };
+
+/**
  * One gate for the whole /admin subtree. Runs before every child loader and
  * action; anyone without the single-admin session is 302'd to the login
  * screen. The verified session is stashed on the context so children read it

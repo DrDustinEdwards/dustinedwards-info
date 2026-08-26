@@ -72,7 +72,7 @@ import { colophonFacts } from "./lib/colophon-facts.mjs";
 // The walk and the stem rule come from the offline gate, never restated: the
 // wire assertion in section 16 must compare against the same set the ceilings
 // were measured over, or the two halves drift into asserting different pages.
-import { chunkStem, walkHydrationSet } from "./check-script-payload.mjs";
+import { chunkStem } from "./check-script-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 
 // The card key, DERIVED with the same function the sync and the uploader use.
@@ -1624,69 +1624,69 @@ const ASK_PROBE_LIMIT = 3;
   );
 }
 
-/* --- 16. The script payload on the wire is the measured build ----------- */
+/* --- 16. The public script set on the wire is the enhancements alone ---- */
 
 /*
- * The offline half, check:script-payload, measures the build ON DISK and can
- * never see the wire. This is the other half: the deployed post page must
- * preload exactly the chunk set that walk measured, so the offline ceilings
- * are proven to be about the page readers actually get.
+ * The offline half, check:script-payload, proves the BUILD's shape: the
+ * bundles are served verbatim and hydration is opt-in in source. This is the
+ * wire half, and since the public plane stopped hydrating (2026-08-26) the
+ * claim inverted: the deployed post page must reference the enhancement
+ * bundles and NOTHING else. No framework chunks, no modulepreloads at all:
+ * a modulepreload reappearing means <Scripts> is back on a public page.
  *
- * MODULEPRELOAD LINKS AND SCRIPT SRC ATTRIBUTES, deliberately not every
- * `/assets/*.js` string in the document. The page body also names the lazy
- * route manifest and the speculation prefetch targets (home, blog._index)
- * inside inline script content; those are deliberate extras fetched on idle
- * or on intent, not hydration payload, and counting them would fail this
- * assertion against a correct page.
+ * The expected stems are the app/enhance/ module basenames (a ?url asset is
+ * dist/<name>.js emitted as <name>-<hash>.js), derived from the SOURCE
+ * listing rather than the build so a standalone run does not need a fresh
+ * build on this disk. Compared by STEM (chunkStem, imported from the gate so
+ * the two halves share one definition): same bundles under different hashes
+ * is a stale-disk observation; a foreign stem is the defect.
  *
- * Compared by STEM (chunkStem, imported from the gate so the two halves share
- * one definition), because a standalone run may face a deploy whose hashes
- * predate the build on this disk. Same chunks under different hashes is a
- * stale-disk observation; a chunk present on one side only is the defect.
+ * The post page is the subject because it carries the largest set (palette,
+ * theme, blog); Ask's bundle rides on /search and is covered by the Ask
+ * probes' own surface.
  */
 {
   const { text, status } = await get(`/blog/${SLUG}`);
   check("payload: post page fetched for the script-set comparison", status === 200);
 
-  try {
-    const { files } = walkHydrationSet();
-    const expected = new Set(files.map(chunkStem));
+  const enhanceStems = new Set(
+    readdirSync(join(root, "app", "enhance"))
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => f.replace(/\.ts$/, "")),
+  );
+  check(
+    "payload: the enhancement module listing is non-empty",
+    enhanceStems.size > 0,
+    "app/enhance/ lists no modules, so the comparison below would expect nothing",
+  );
 
-    /** @type {Set<string>} */
-    const referenced = new Set();
-    for (const link of text.match(/<link[^>]*rel="modulepreload"[^>]*>/g) ?? []) {
-      const href = link.match(/href="\/assets\/([^"]+\.js)"/);
-      if (href) referenced.add(href[1]);
-    }
-    for (const script of text.match(/<script[^>]*\bsrc="\/assets\/[^"]+\.js"[^>]*>/g) ?? []) {
-      const src = script.match(/src="\/assets\/([^"]+\.js)"/);
-      if (src) referenced.add(src[1]);
-    }
-
-    // Scope, proven non-empty before the comparison is read: a page shape
-    // change that removed every match would otherwise agree with any walk.
-    check(
-      "payload: the live page references at least one script",
-      referenced.size > 0,
-      "zero modulepreload or script-src references found; the page shape or this extraction moved",
-    );
-
-    const got = new Set([...referenced].map(chunkStem));
-    const missing = [...expected].filter((stem) => !got.has(stem)).sort();
-    const extra = [...got].filter((stem) => !expected.has(stem)).sort();
-    check(
-      `payload: live script set matches the manifest walk (${expected.size} stem(s))`,
-      missing.length === 0 && extra.length === 0,
-      `walked but not on the wire: [${missing.join(", ")}]; ` +
-        `on the wire but not walked: [${extra.join(", ")}]`,
-    );
-  } catch (error) {
-    check(
-      "payload: the manifest walk is readable on this machine",
-      false,
-      `${error instanceof Error ? error.message : String(error)}`,
-    );
+  /** @type {string[]} */
+  const scriptSrcs = [];
+  for (const script of text.match(/<script[^>]*\bsrc="\/assets\/[^"]+\.js"[^>]*>/g) ?? []) {
+    const src = script.match(/src="\/assets\/([^"]+\.js)"/);
+    if (src) scriptSrcs.push(src[1]);
   }
+  const preloads = text.match(/<link[^>]*rel="modulepreload"[^>]*>/g) ?? [];
+
+  // Scope, proven non-empty before the comparison is read: a page shape
+  // change that removed every match would otherwise agree with any walk.
+  check(
+    "payload: the live page references at least one script",
+    scriptSrcs.length > 0,
+    "zero script-src references found; the enhancement tags vanished or this extraction moved",
+  );
+  check(
+    "payload: the live post page carries no modulepreload",
+    preloads.length === 0,
+    `${preloads.length} modulepreload link(s) on a public page: the framework is ` +
+      `riding on the public plane again`,
+  );
+  const foreign = scriptSrcs.map(chunkStem).filter((stem) => !enhanceStems.has(stem)).sort();
+  check(
+    "payload: every live script src is an enhancement bundle",
+    foreign.length === 0,
+    `non-enhancement stem(s) on the wire: [${foreign.join(", ")}]`,
+  );
 }
 
 /* --- Report ------------------------------------------------------------ */

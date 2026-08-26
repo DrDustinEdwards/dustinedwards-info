@@ -56,7 +56,7 @@
  * examined files, so "0 problems" can never quietly mean "0 things examined".
  */
 
-import { existsSync, readFileSync, readdirSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { dirname, join, relative, sep } from "node:path";
@@ -128,6 +128,12 @@ function sourceFiles(dir = root, out = []) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (SKIP.has(entry.name)) continue;
+      // The gitignored enhancement bundles: build product, not source, and
+      // their presence depends on whether build:enhance has run, so scanning
+      // them would make this gate's needle sweeps machine-state-dependent.
+      // Excluded by full path, not by name, so a real source directory named
+      // dist elsewhere is still walked.
+      if (full === join(root, "app", "enhance", "dist")) continue;
       sourceFiles(full, out);
     } else if (/\.(ts|tsx|mjs|js)$/.test(entry.name)) {
       out.push(full);
@@ -4375,6 +4381,149 @@ console.log("\n  23. renderAndWrite is the one door to a rendered row, and write
   );
 }
 
+console.log("\n  24. no client hooks in an unhydrated tree");
+
+/*
+ * THE DEFECT CLASS THE UNHYDRATION ARC CREATES (2026-08-26). A public route
+ * ships no framework script, so a `useState` in its tree renders once on the
+ * server and then NOTHING: no re-render, no effects, no fetchers. The code
+ * compiles, the page renders, every gate that reads markup stays green, and
+ * the behaviour the hook implemented simply does not exist in the browser.
+ * Dead code that looks alive, found only by clicking.
+ *
+ * So: an unhydrated route module and every module it transitively imports may
+ * not import state or lifecycle hooks from "react", nor the client hooks from
+ * "react-router" (useFetcher, useNavigation, useSubmit, useNavigate).
+ * Render-time hooks (useLoaderData, useRouteLoaderData, useMatches, Link and
+ * friends) are deliberately allowed: they resolve during the server render
+ * and are exactly what an unhydrated tree is built from.
+ *
+ * WHAT THIS SEES AND DOES NOT: it reads IMPORT CLAUSES, comments stripped and
+ * `import type` ignored. A hook imported and unused still fails, which is the
+ * point (the import is the lie). A hook reached through a namespace import
+ * (`React.useState`) or re-exported under another name is invisible here;
+ * neither shape exists in app/ today and the browser gate's enhancement cases
+ * are the behavioural backstop.
+ *
+ * The unhydrated set is DERIVED: every route file minus the ones carrying
+ * `hydrate: true` and minus the admin children, which hydrate through their
+ * layout's flag (route nesting in this repo is the admin.* filename prefix
+ * and nothing else). check:script-payload pins the flag set to exactly
+ * {admin.tsx, login.tsx}, so a third hydrating root fails THERE by name
+ * before this derivation could quietly widen.
+ */
+{
+  const routesDir = join(root, "app", "routes");
+  const routeFiles = readdirSync(routesDir).filter((f) => /\.(ts|tsx)$/.test(f));
+  const hydratingRoots = routeFiles.filter((f) =>
+    /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(routesDir, f), "utf8"))),
+  );
+  const unhydrated = routeFiles.filter(
+    (f) => !hydratingRoots.includes(f) && !f.startsWith("admin."),
+  );
+  ok(
+    "the unhydrated route set is non-empty and the hydrating set is not everything",
+    unhydrated.length >= 20 && hydratingRoots.length >= 1,
+    `${unhydrated.length} unhydrated route file(s), ${hydratingRoots.length} hydrating; ` +
+      `measured 23 and 2 on 2026-08-26. A collapse here means the derivation broke, ` +
+      `not that the app got smaller.`,
+  );
+
+  /**
+   * Import clauses of one stripped source, value imports only.
+   * @param {string} source
+   * @returns {Array<{ clause: string, spec: string }>}
+   */
+  const importsOf = (source) => {
+    /** @type {Array<{ clause: string, spec: string }>} */
+    const found = [];
+    for (const m of source.matchAll(
+      /import\s+((?:[^;'"]|"[^"]*"|'[^']*')*?)\s*from\s*["']([^"']+)["']/g,
+    )) {
+      if (/^type\s/.test(m[1].trim())) continue;
+      found.push({ clause: m[1], spec: m[2] });
+    }
+    for (const m of source.matchAll(/import\s*["']([^"']+)["']/g)) {
+      found.push({ clause: "", spec: m[1] });
+    }
+    return found;
+  };
+
+  /**
+   * A specifier resolved to a file under the repo, or null for packages,
+   * assets and styles.
+   * @param {string} spec @param {string} fromFile
+   */
+  const resolveSpec = (spec, fromFile) => {
+    if (spec.includes("?")) return null;
+    if (spec.endsWith(".css")) return null;
+    let base = null;
+    if (spec.startsWith("~/")) base = join(root, "app", spec.slice(2));
+    else if (spec.startsWith("./") || spec.startsWith("../")) {
+      base = join(fromFile, "..", spec);
+    } else return null;
+    for (const suffix of ["", ".ts", ".tsx", ".mjs", ".js"]) {
+      if (existsSync(base + suffix) && !statSync(base + suffix).isDirectory()) {
+        return base + suffix;
+      }
+    }
+    // ./+types/* and other typegen virtuals resolve nowhere on disk.
+    return null;
+  };
+
+  const FORBIDDEN_ROUTER = ["useFetcher", "useNavigation", "useSubmit", "useNavigate"];
+  /** @type {Map<string, string>} file -> the route that first reached it */
+  const reachedFrom = new Map();
+  /** @type {string[]} */
+  const queue = [];
+  for (const f of unhydrated) {
+    const full = join(routesDir, f);
+    reachedFrom.set(full, f);
+    queue.push(full);
+  }
+  /** @type {string[]} */
+  const violations = [];
+  let scanned = 0;
+  while (queue.length > 0) {
+    const file = /** @type {string} */ (queue.pop());
+    const via = reachedFrom.get(file) ?? "?";
+    const source = stripComments(readFileSync(file, "utf8"));
+    scanned += 1;
+    for (const { clause, spec } of importsOf(source)) {
+      if (spec === "react") {
+        const hooks = [...clause.matchAll(/\buse[A-Z]\w*/g)].map((m) => m[0]);
+        if (hooks.length > 0) {
+          violations.push(`${relative(root, file)} imports ${hooks.join(", ")} from "react" (reached from ${via})`);
+        }
+      } else if (spec === "react-router") {
+        const hooks = FORBIDDEN_ROUTER.filter((h) => new RegExp(`\\b${h}\\b`).test(clause));
+        if (hooks.length > 0) {
+          violations.push(`${relative(root, file)} imports ${hooks.join(", ")} from "react-router" (reached from ${via})`);
+        }
+      } else {
+        const resolved = resolveSpec(spec, file);
+        if (resolved && !reachedFrom.has(resolved)) {
+          reachedFrom.set(resolved, via);
+          queue.push(resolved);
+        }
+      }
+    }
+  }
+  ok(
+    "the unhydrated import closure was actually walked",
+    scanned >= 85,
+    `${scanned} module(s) scanned, measured 96 on 2026-08-26 through this walk; a ` +
+      `closure this small means the resolver stopped resolving, and the assertion ` +
+      `below examined a stub`,
+  );
+  ok(
+    "no unhydrated route tree imports a client hook",
+    violations.length === 0,
+    `a hook in an unhydrated tree is dead code that looks alive:\n` +
+      `        ${violations.join("\n        ")}`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
@@ -4409,8 +4558,12 @@ console.log("\n  23. renderAndWrite is the one door to a rendered row, and write
  * their reverse checks. 260 executed. Floor 237 to 246, holding the margin at
  * 14, the same count of vanishing assertions this gate has historically been
  * allowed to absorb.
+ *
+ * RE-MEASURED 2026-08-26 by RUNNING it after section 24 (no client hooks in
+ * an unhydrated tree) landed with the unhydration arc: 264 executed. Floor
+ * 246 to 250, margin 14 held.
  */
-const MINIMUM_CHECKS = 246;
+const MINIMUM_CHECKS = 250;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",

@@ -14,14 +14,11 @@
 
 import { serializeThemeCookie, isTheme } from "~/lib/theme";
 
-let wired = false;
-
-export function enhanceThemeToggle() {
-  // The header mounts once per document, but a client navigation can re-run the
-  // effect. Listening on the document once keeps that from stacking handlers.
-  if (wired) return;
-  wired = true;
-
+function enhanceThemeToggle() {
+  // Loaded by a script tag whose module executes once per document, so there
+  // is no re-run to guard against: without hydration every navigation is a
+  // fresh document. Listening on the document rather than the form keeps the
+  // handler working wherever the toggle is placed.
   document.addEventListener("submit", (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -39,6 +36,12 @@ export function enhanceThemeToggle() {
     apply(choice, form);
   });
 }
+
+enhanceThemeToggle();
+
+// A module, so the bindings above stay out of the global namespace. Loaded by
+// a nonced script tag rendered beside the form; see theme-toggle.tsx.
+export {};
 
 function apply(choice: "light" | "dark" | "system", form: HTMLFormElement) {
   const root = document.documentElement;

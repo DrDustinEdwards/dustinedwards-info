@@ -57,9 +57,11 @@ Per-table backups via `check:backup`. FTS `DELETE FROM` is gated by `check:invar
 
 `check:secrets`, both directions, per-root floors.
 
-### 4. UNGATED. Keep the PUBLIC PAYLOAD lean, which is more than the Worker.
+### 4. GATED by check:script-payload for the public script payload, UNGATED for the rest. Keep the PUBLIC PAYLOAD lean, which is more than the Worker.
 
 The subject is everything a reader downloads to see a page: the Worker bundle, the CSS, the route JavaScript and whatever the page speculatively fetches. Inline SVG over an icon library. CodeMirror is lazy-split. Client auth is imported by `/login` alone.
+
+**THE PUBLIC PLANE SHIPS NO FRAMEWORK SCRIPT, since 2026-08-26.** Public routes do not hydrate React; hydration is opt-in by route (`handle = { hydrate: true }`, today the admin layout and `/login`) and root's Layout renders `<Scripts>` only behind that flag. A public page's whole script payload is the enhancement bundles from `app/enhance/`, prebuilt by `build:enhance` and loaded by nonced module script tags. `check:script-payload` owns the per-bundle ceilings, pins the opt-in set, and syntax-checks every served asset; `check:invariants` section 24 refuses a client hook in an unhydrated tree, which is the defect class this design creates (code that compiles, renders, and does nothing in the browser). The wire half is `check:browser`'s enhancement cases and verify-live section 16.
 
 **WIDENED 2026-08-24, because as written it succeeded at the small thing and ignored the large one.** "Keep the Worker lean" was satisfied while `app.css` imported the admin stylesheets and every visitor to the home page downloaded the media library and the post editor. The Worker was lean and the page was not. A rule scoped to one artifact grades that artifact.
 
@@ -94,6 +96,8 @@ Two halves, and a route that knows only the first will still get it wrong.
 ### 9. GATED by check:features for the inventory, UNGATED for the law and the door. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
 `content/enhancements.json` is reconciled in both directions by `check:features`. The admin plane is exempt. Law: `progressive-enhancement.md`.
+
+**HOW AN ENHANCEMENT LOADS, since 2026-08-26: a nonced module script tag, never a React effect.** The public plane does not hydrate (rule 4), so the four modules in `app/enhance/` are prebuilt into self-contained bundles by `build:enhance` and rendered as `<script type="module" nonce src>` beside the markup they upgrade. The standing ruling is unchanged and both halves are now instrumented: works without script (the fallback inventory here), fast with it (`check:browser`'s enhancement cases run the bundles in a real browser).
 
 **THE DOOR IS ON THE PUBLIC PLANE AND OBEYS THE LAW.** `/login` is unauthenticated, so it is a public reading route and its form works with scripting off, even though everything behind it is exempt. This sentence exists because the rule kept being compressed to its slogan and the exemption kept being read as covering the sign-in page: the seat's own translation flattened it, the README asserted the flattened version, and login shipped script-only until 2026-08-23.
 

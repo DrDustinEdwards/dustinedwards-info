@@ -91,10 +91,16 @@ jobs:
       #
       # The order is load-bearing: migrations build the schema, build:content
       # renders the corpus, sync reads what build:content wrote.
-      - name: Migrations, content build, local sync
+      # build:enhance rides here too: app/enhance/dist/ is gitignored, so a
+      # checkout has enhancement source and no bundles. The gates that read
+      # the bundles or the build are CI-excluded today, but the tier is
+      # derived, and a future gate that reads them should find them built
+      # rather than silently absent.
+      - name: Migrations, content build, enhancement bundles, local sync
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:content
+          npm run build:enhance
           npm run sync:content -- --local
 
       # ONE COMMAND, derived. The tier is the offline tier minus CI_EXCLUDED,

@@ -256,11 +256,17 @@ jobs:
       # `--local` on both, so neither touches the deployed database. This is the
       # same derivation the laptop's local database was built by, which is why
       # the gate has always passed there and never here.
+      # build:enhance rides with build:content: the gitignored bundles under
+      # app/enhance/dist/ are what ship's app build serves through its ?url
+      # imports. Ship builds them again itself; building here too means a
+      # bundle-build failure surfaces before the gate tier rather than inside
+      # the ship window.
       - name: Create the local D1 the gate tier reads
         run: |
           set -euo pipefail
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:content
+          npm run build:enhance
           npm run sync:content -- --local
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and

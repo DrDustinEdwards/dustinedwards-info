@@ -1,20 +1,22 @@
-import { useEffect } from "react";
+import blogEnhanceUrl from "~/enhance/dist/blog.js?url";
+
+import { EnhancementScript } from "~/components/enhancement-script";
 
 /**
  * Loads the blog reading enhancements, client side only.
  *
- * A dynamic import rather than a script tag: Vite then compiles and code-splits
- * the module into its own chunk, fetched only when a blog route renders. A
- * `?url` import does not do this. It copies the file verbatim as an asset, so
- * the browser is served raw TypeScript. Measured 2026-07-28, which is why this
- * component exists.
+ * A nonced module script tag pointing at the prebuilt bundle of
+ * app/enhance/blog.ts. It used to be a React effect running a dynamic import,
+ * which required the page to hydrate; the public plane stopped hydrating
+ * (2026-08-26), so the bundle is built ahead of time by build-enhance.mjs and
+ * the `?url` import serves it verbatim. That verbatim copy is exactly why the
+ * bundle must be prebuilt: `?url` does not compile, so pointed at the .ts
+ * source it serves raw TypeScript (measured 2026-07-28, re-gated by
+ * check:script-payload's syntax pass).
  *
- * Nothing renders. A reader with JavaScript disabled never fetches the chunk and
- * loses nothing but decoration.
+ * A reader with JavaScript disabled never runs the bundle and loses nothing
+ * but decoration.
  */
 export function BlogEnhancements() {
-  useEffect(() => {
-    void import("~/enhance/blog");
-  }, []);
-  return null;
+  return <EnhancementScript src={blogEnhanceUrl} />;
 }
