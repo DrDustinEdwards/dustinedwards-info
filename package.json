@@ -42,6 +42,7 @@
     "check:admin-ui": "node scripts/check-admin-ui.mjs",
     "check:urls": "node scripts/check-urls.mjs",
     "check:media-axes": "node scripts/check-media-axes.mjs",
+    "check:script-payload": "node scripts/check-script-payload.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",
     "check:stack": "node scripts/check-stack.mjs",
     "check:features": "node scripts/check-features.mjs",

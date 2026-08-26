@@ -69,6 +69,10 @@ import {
 import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
 // The fact needles, and the `statusLabel` call that used to be made here.
 import { colophonFacts } from "./lib/colophon-facts.mjs";
+// The walk and the stem rule come from the offline gate, never restated: the
+// wire assertion in section 16 must compare against the same set the ceilings
+// were measured over, or the two halves drift into asserting different pages.
+import { chunkStem, walkHydrationSet } from "./check-script-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 
 // The card key, DERIVED with the same function the sync and the uploader use.
@@ -1618,6 +1622,71 @@ const ASK_PROBE_LIMIT = 3;
     "the paired assertion: a robots.txt that lost both would satisfy neither, and " +
       "an added line is the likeliest way to break the existing one",
   );
+}
+
+/* --- 16. The script payload on the wire is the measured build ----------- */
+
+/*
+ * The offline half, check:script-payload, measures the build ON DISK and can
+ * never see the wire. This is the other half: the deployed post page must
+ * preload exactly the chunk set that walk measured, so the offline ceilings
+ * are proven to be about the page readers actually get.
+ *
+ * MODULEPRELOAD LINKS AND SCRIPT SRC ATTRIBUTES, deliberately not every
+ * `/assets/*.js` string in the document. The page body also names the lazy
+ * route manifest and the speculation prefetch targets (home, blog._index)
+ * inside inline script content; those are deliberate extras fetched on idle
+ * or on intent, not hydration payload, and counting them would fail this
+ * assertion against a correct page.
+ *
+ * Compared by STEM (chunkStem, imported from the gate so the two halves share
+ * one definition), because a standalone run may face a deploy whose hashes
+ * predate the build on this disk. Same chunks under different hashes is a
+ * stale-disk observation; a chunk present on one side only is the defect.
+ */
+{
+  const { text, status } = await get(`/blog/${SLUG}`);
+  check("payload: post page fetched for the script-set comparison", status === 200);
+
+  try {
+    const { files } = walkHydrationSet();
+    const expected = new Set(files.map(chunkStem));
+
+    /** @type {Set<string>} */
+    const referenced = new Set();
+    for (const link of text.match(/<link[^>]*rel="modulepreload"[^>]*>/g) ?? []) {
+      const href = link.match(/href="\/assets\/([^"]+\.js)"/);
+      if (href) referenced.add(href[1]);
+    }
+    for (const script of text.match(/<script[^>]*\bsrc="\/assets\/[^"]+\.js"[^>]*>/g) ?? []) {
+      const src = script.match(/src="\/assets\/([^"]+\.js)"/);
+      if (src) referenced.add(src[1]);
+    }
+
+    // Scope, proven non-empty before the comparison is read: a page shape
+    // change that removed every match would otherwise agree with any walk.
+    check(
+      "payload: the live page references at least one script",
+      referenced.size > 0,
+      "zero modulepreload or script-src references found; the page shape or this extraction moved",
+    );
+
+    const got = new Set([...referenced].map(chunkStem));
+    const missing = [...expected].filter((stem) => !got.has(stem)).sort();
+    const extra = [...got].filter((stem) => !expected.has(stem)).sort();
+    check(
+      `payload: live script set matches the manifest walk (${expected.size} stem(s))`,
+      missing.length === 0 && extra.length === 0,
+      `walked but not on the wire: [${missing.join(", ")}]; ` +
+        `on the wire but not walked: [${extra.join(", ")}]`,
+    );
+  } catch (error) {
+    check(
+      "payload: the manifest walk is readable on this machine",
+      false,
+      `${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 /* --- Report ------------------------------------------------------------ */

@@ -2733,7 +2733,7 @@
       "url": "/colophon#gates",
       "type": "page",
       "title": "Gates",
-      "body": "Checks that run before anything ships. The list is derived from the scripts themselves rather than maintained beside them, so a gate that is added and forgotten is not possible. check:admin-ui check:backup check:browser check:charts check:config check:content check:contrast check:destructive check:diagrams check:features check:head check:headers check:invariants check:llms check:logo check:media check:media-axes check:migrations check:policy check:search check:secrets check:stack check:tests check:types check:urls",
+      "body": "Checks that run before anything ships. The list is derived from the scripts themselves rather than maintained beside them, so a gate that is added and forgotten is not possible. check:admin-ui check:backup check:browser check:charts check:config check:content check:contrast check:destructive check:diagrams check:features check:head check:headers check:invariants check:llms check:logo check:media check:media-axes check:migrations check:policy check:script-payload check:search check:secrets check:stack check:tests check:types check:urls",
       "tags": "",
       "docTags": "",
       "docUid": "page:colophon",

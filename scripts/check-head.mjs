@@ -123,6 +123,13 @@ const EXCLUDED = {
    *   check:backup failed. could not read sqlite_master
    */
   "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
+  /*
+   * Reads build/client, which is gitignored build output and absent from any
+   * extraction. Building inside the worktree to satisfy it would measure a
+   * build of HEAD that nothing deploys, at a full client build's cost per run.
+   * Same class as check:backup: the input is state a checkout does not have.
+   */
+  "check:script-payload": "reads the gitignored build/client output, absent from an extraction.",
 };
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */
