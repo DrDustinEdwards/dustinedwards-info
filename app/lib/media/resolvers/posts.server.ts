@@ -1,14 +1,14 @@
-import { loadArtifact } from "~/lib/editor/publish.server";
+import { listPostSourcesForCitations } from "~/db";
 
 import type { MediaCitation, ReferenceResolver } from "../resolvers.server";
 
 /**
  * The POSTS resolver. The one registered content type today.
  *
- * It reads the committed artifact, which is the source of truth for content on
- * this site and the thing `check:content` gates, then scans each post's
- * markdown for each key. D1 is derived from the artifact, so scanning rows
- * instead would be scanning a copy.
+ * It reads every post's markdown out of D1, drafts included, then scans each
+ * body for each key. `posts.body` is the markdown both writers converge to,
+ * so this is the corpus scan; the committed artifact it used to fetch from
+ * GitHub is gone.
  *
  * ## Coverage, stated rather than assumed (ruling 5)
  *
@@ -23,7 +23,7 @@ import type { MediaCitation, ReferenceResolver } from "../resolvers.server";
  * **Detected and classified:**
  *   - `markdown-image`   `![alt](/media/posts/2026/x-1234.png)`
  *   - `figure-directive` `:::figure{src="/media/..." alt="..."}`
- *   - `frontmatter-cover` the post's `cover.src`
+ *   - `frontmatter-cover` the post's `cover.src`, from the row's cover column
  *   - `link`             `[the chart](/media/...)`
  *   - `html`             `<img src="/media/...">` written raw in a post
  *   - `other`            any other text containing the URL, counted as a
@@ -40,35 +40,29 @@ import type { MediaCitation, ReferenceResolver } from "../resolvers.server";
  *     scraped social card, an email, a printed link. Nothing in this repo can
  *     know about those. That is precisely why deletion is a considered act
  *     rather than hygiene, and why ruling 2 exists
- *   - a post present in D1 but absent from the committed artifact. The artifact
- *     is gated, so this is repo corruption rather than a routine case
+ *   - a citation COMMITTED FROM A CLONE and not yet synced: D1 lags the
+ *     repository until the next sync, save, or content-drift repair, a window
+ *     the scheduled health check bounds at its poll interval. The artifact
+ *     read this replaces had the mirror-image window: it led D1 and trailed
+ *     nothing, at a 600KB GitHub round trip per scan
  *   - the `og/` social cards, which are not scanned because they are not
  *     listed: they are build output keyed by a content hash and no post cites
  *     them by name, so a usage scan would call every one unused
  */
-export const postsResolver: ReferenceResolver = async (env, keys, loadPosts) => {
+export const postsResolver: ReferenceResolver = async (env, keys) => {
   const out = new Map<string, MediaCitation[]>(keys.map((key) => [key, []]));
   if (keys.length === 0) return out;
 
   // Deliberately NOT caught: a failure here must reach `resolveCitations`, which
   // reports it, so the delete action can fail closed. Swallowing it would turn
   // "we could not check" into "nothing cites it".
-  // The caller's memo when it has one, its own read when it does not. Falling
-  // back rather than requiring one keeps this resolver usable from the operator
-  // path and from anywhere else that holds only an env.
-  const posts = (await (loadPosts ? loadPosts() : loadArtifact(env))) as Array<{
-    slug?: string;
-    title?: string;
-    markdown?: string;
-    cover?: { src?: string } | null;
-  }>;
+  const posts = await listPostSourcesForCitations(env);
 
   for (const post of posts) {
-    const slug = post.slug ?? "";
-    if (!slug) continue;
+    const slug = post.slug;
     const title = post.title || slug;
-    const markdown = post.markdown ?? "";
-    const coverSrc = post.cover?.src ?? "";
+    const markdown = post.body ?? "";
+    const coverSrc = post.coverImage ?? "";
 
     for (const key of keys) {
       const url = `/media/${key}`;

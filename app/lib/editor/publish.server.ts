@@ -1,7 +1,7 @@
 /**
  * The editor's write path, end to end.
  *
- *   browser -> action -> gates -> GitHub commit -> generate -> D1
+ *   browser -> action -> gates -> GitHub commit (one markdown file) -> render -> D1
  *
  * The order matters and is the ruling of 2026-07-28: files are the source of
  * truth, so nothing reaches D1 that is not already committed. If GitHub is
@@ -14,23 +14,9 @@
  * the editor.
  */
 
-import { createContext } from "react-router";
-
-import { memoizeOnce } from "~/lib/once.mjs";
 import { imageSize } from "image-size";
 
-import { serializeArtifact } from "~/lib/content/artifact.mjs";
 import { mediaRefKey } from "~/lib/media-ref-key.mjs";
-// The page half of the search corpus. Imported rather than read from disk: this
-// runs in the Worker, where both files come from the bundle. Ruling 3 of
-// colophon-page.md.
-import stackData from "../../../content/generated/stack.json";
-import featuresData from "../../../content/features.json";
-import projectsData from "../../../content/projects.json";
-import playgroundData from "../../../content/playground.json";
-import { colophonPages } from "~/lib/colophon-sections.mjs";
-import { playgroundPages } from "~/lib/playground-page.mjs";
-import { projectsPages } from "~/lib/projects-page.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
@@ -47,44 +33,19 @@ import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import {
   commitFiles,
   getHead,
+  listDirectory,
   readFile,
   readBinaryFile,
-  readRawFile,
   GitHubError,
 } from "./github.server";
-import { artifactPosts } from "./artifact-parse.mjs";
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
+import { listPostCorpusForRelated } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 
 export { GitHubError, PolicyError };
 export type { Actor };
-
-/**
- * The page half of the corpus, computed ONCE at module scope.
- *
- * A pure function of three committed JSON files, so there is nothing
- * per-request about it. **Known residual, recorded rather than hidden:** these
- * come from the bundle, so they are whatever was deployed. If `stack.json`,
- * `features.json` or `projects.json` changes on main and the Worker is not
- * redeployed, a save from the editor writes page records the next
- * `build:content` will not reproduce, and `check:content` reports it as a byte
- * difference. Same shape as the social-card gap, and the repair is the same:
- * deploy. `npm run ship` does both, which is why a roster change is a deploy
- * AND a sync rather than either alone.
- *
- * The ORDER matches `scripts/build-content.mjs`. It does not have to, because
- * `recordsForPages` sorts by uid before emitting, but two callers assembling
- * the same list differently is a difference waiting to become a defect.
- */
-const PAGE_INPUTS = [
-  ...colophonPages(stackData, featuresData),
-  ...projectsPages(projectsData),
-  ...playgroundPages(playgroundData),
-];
-
-const ARTIFACT_PATH = "content/generated/posts.json";
 
 /**
  * Where a post's source file lives, as ONE statement of the rule.
@@ -134,9 +95,9 @@ type PublishEnv = Env & { GITHUB_TOKEN?: string };
  *
  * BOTH BRANCHES EXIST TO AGREE WITH `scripts/lib/content.mjs`, and finding B002
  * is that neither did. Dimensions are written into the stored HTML by
- * `rehypeImageDimensions`, so they are part of the gated artifact: whatever
- * this returns, `build:content` has to return too, from a clone, with no
- * bindings and no network.
+ * `rehypeImageDimensions`, so they are part of the rendered HTML the
+ * determinism gate compares: whatever this returns, `build:content` has to
+ * return too, from a clone, with no bindings and no network.
  *
  * `/media/*` is resolved from the KEY. Those blobs live only in R2, so reading
  * bytes here was something the Node build could never match; the first
@@ -225,122 +186,86 @@ export async function validateAndRender(
   }
 }
 
-// Serialization lives in app/lib/content/artifact.mjs so this path and
-// scripts/build-content.mjs cannot disagree about the artifact's shape. An
-// editor save that wrote a different shape would redden check:content on main.
+/**
+ * The saved post's related list, computed against the D1 corpus.
+ *
+ * Relatedness is a property of the whole corpus, and the corpus now lives in
+ * D1: the committed artifact that used to carry it is gone. Only THIS post's
+ * list is computed and written, which is exactly what the old save path
+ * persisted too: it recomputed `related` across the artifact but synced only
+ * the saved post's row, so every other row's copy waited for the next bulk
+ * sync then and still does.
+ */
+async function relatedFor(env: PublishEnv, record: any) {
+  const corpus = await listPostCorpusForRelated(env);
+  const others = corpus
+    .filter((p) => p.slug !== record.slug)
+    .map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      tags: p.tags,
+      draft: p.status === "draft",
+      // ISO strings, matching the shape `withRelated` compares in the build:
+      // string order over ISO timestamps IS chronological order.
+      publishAt: p.publishAt ? p.publishAt.toISOString() : "",
+    }));
+  // The saved post goes LAST, so `withRelated`, which maps in input order,
+  // returns its entry at a position that cannot miss. `find` with a fallback
+  // would be a substituting fallback on a can't-happen branch (rule 13).
+  const computed = withRelated([
+    ...others,
+    {
+      slug: record.slug,
+      title: record.title,
+      tags: record.tags,
+      draft: record.draft,
+      publishAt: record.publishAt,
+    },
+  ]);
+  return computed[computed.length - 1].related;
+}
 
 /**
- * Reads the committed artifact and returns its posts, so a save can splice one
- * entry without re-rendering every other post.
+ * THE ONLY DOOR TO A RENDERED ROW.
+ *
+ * Renders one post through the shared pipeline and writes everything a
+ * rendered post owns in D1: the posts row (both provenance hashes included),
+ * the FTS rebuild, its search_docs records, and its media_refs. `savePost`,
+ * the operator API (through `savePost`), the content-drift repair and
+ * `regenerateAllFromRepo` all come through here; nothing else may write a
+ * rendered row, because two writers of one row shape is the drift the
+ * committed artifact used to exist to catch.
+ *
+ * `blobSha`, when given, is the git blob sha of the file the REPOSITORY
+ * holds, from a directory listing, a Contents read, or the commit that just
+ * landed. `renderPost` hashes the bytes it rendered into
+ * `record.sourceBlobSha`, so the equality check proves the rendered bytes ARE
+ * the committed bytes: a truncated fetch or a file changing mid-flight fails
+ * here, by name, instead of writing a row whose provenance lies.
  */
-/**
- * ONE artifact read per request, shared by everything that needs it.
- *
- * **This is deduplication, not a cache, and the distinction is the whole
- * justification.** Nothing here survives the request, nothing is served stale,
- * and no TTL has to be reasoned about. Two callers asking the same question
- * inside one request get one answer instead of two, which is a fact about the
- * request rather than a policy about freshness. Tier 1.5 forbids caching added
- * to hide a slow path; this hides nothing, and the slow path is named below.
- *
- * **What it costs today.** `loadArtifact` is not a database read. It is an
- * HTTPS round trip off Cloudflare's network to api.github.com for
- * `content/generated/posts.json`, measured on production at 283 to 528ms per
- * call when it went through `readFile` and the JSON media type. It now goes
- * through `readRawFile` and the raw media type, which drops the base64
- * wrapping (about a third of the response weight) and the atob and
- * TextDecoder passes; the raw form measured no slower on a same-wire
- * comparison, recorded with dates in that function's docblock. The round trip
- * itself remains, and remains the slow path this memo deduplicates.
- *
- * **It was happening TWICE on /admin/media.** The layout's Ask drift check
- * loads it for the badge, and the media loader's citation resolver loads it
- * again to scan for keys. `askStatusReader` memoized its own use and nothing
- * bridged the two, so the second call paid full price for bytes already in
- * memory.
- *
- * Request scope is enforced by construction: the memo is a closure created per
- * request by the admin middleware and reached through a context. A module-level
- * map keyed on `env` would have looked equivalent and been a CROSS-REQUEST
- * cache, because Workers reuse one `env` object for the life of an isolate,
- * and it would have served a stale corpus after a publish with nothing to say
- * so.
- */
-export function artifactReader(
+export async function renderAndWrite(
   env: PublishEnv,
-  /**
-   * The read itself, injectable for two reasons.
-   *
-   * FIRST, so the memo is testable. The property that matters is "called once
-   * per request no matter how many callers ask", and that is unobservable from
-   * outside unless something can count the calls. Without this parameter the
-   * memo could silently stop memoizing and every test would still pass.
-   *
-   * SECOND, so instrumentation lands INSIDE the memo. `admin.tsx` passes a
-   * timed `loadArtifact`, which makes the `artifact_load` mark fire once, on
-   * whichever caller reaches it first. Wrapping the returned reader instead
-   * would emit a near-zero mark of the same name on every memo hit and make
-   * the Server-Timing header ambiguous about how many reads actually happened,
-   * which is the exact question the mark exists to answer.
-   */
-  load: (env: PublishEnv) => Promise<any[]> = loadArtifact,
+  slug: string,
+  raw: string,
+  blobSha?: string | null,
 ) {
-  // The memo itself lives in `once.mjs`, dependency-free, because the property
-  // "called once" is unobservable without a counter and nothing can import a
-  // `.ts` module behind a `~/` alias to count it.
-  return memoizeOnce(() => load(env));
-}
+  // `related` is corpus-scope and is attached below, which the pipeline's
+  // inferred record type does not carry; the same widening the artifact
+  // writers did implicitly.
+  const record: any = await validateAndRender(env, slug, raw);
 
-/**
- * The per-request reader, for callers that are not handed one directly.
- *
- * `load` is null when no middleware set it, which is every non-admin path.
- * A caller that finds null falls back to reading the artifact itself, so this
- * is an optimisation a route may opt into and never a requirement.
- */
-export const artifactContext = createContext<{ load: (() => Promise<any[]>) | null }>({
-  load: null,
-});
+  if (blobSha && record.sourceBlobSha !== blobSha) {
+    throw new EditorError(
+      `the markdown rendered for "${slug}" is not the markdown the repository holds: ` +
+        `the rendered bytes hash to ${record.sourceBlobSha}, the repository file is ` +
+        `${blobSha}. The read was truncated or the file changed mid-flight; re-read ` +
+        `the file and retry.`,
+    );
+  }
 
-export async function loadArtifact(env: PublishEnv) {
-  /*
-   * EVERY REFUSAL LIVES IN artifact-parse.mjs, which is pure so check:tests can
-   * drive a missing file and a malformed one without a GitHub binding. This
-   * function is the read; that module is the decision.
-   *
-   * EditorError is passed IN rather than imported there, so the pure module
-   * stays free of this file's types while the operator still gets the 422 that
-   * an EditorError maps to.
-   *
-   * THE RAW MEDIA TYPE, since 2026-08-25. The JSON media type stops carrying
-   * content at 1 MB per file, and the artifact is 648 KB at 12 posts: a few
-   * dozen more posts and every save would have failed as "not valid JSON"
-   * with advice to run build:content, which repairs nothing. The raw form is
-   * documented to 100 MB, and check:content refuses at half that long before
-   * either limit is real. Grounds and measurements on `readRawFile`.
-   */
-  const raw = await readRawFile(env, ARTIFACT_PATH);
-  return artifactPosts(
-    raw === null ? null : { content: raw },
-    ARTIFACT_PATH,
-    (m) => new EditorError(m),
-  ) as any[];
-}
-
-/**
- * Orders the artifact and recomputes cross-post data.
- *
- * `withRelated` runs over the WHOLE list, not just the post being saved.
- * Relatedness is a property of the corpus: adding or retagging one post changes
- * the related list of every post it shares a tag with. Splicing one entry and
- * leaving the rest would make the committed artifact disagree with the next
- * build, which is precisely what the gate exists to catch.
- */
-function sortBySlug(posts: any[]) {
-  const ordered = posts
-    .slice()
-    .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
-  return withRelated(ordered);
+  record.related = await relatedFor(env, record);
+  await syncPostToD1(env, record);
+  return record;
 }
 
 /** The head commit, recorded when the editor loads and echoed back on save. */
@@ -349,10 +274,16 @@ export async function currentHead(env: PublishEnv) {
 }
 
 /**
- * Saves a post: gates, commit, then D1.
+ * Saves a post: gates, one-file commit, then the render door.
  *
- * Both the markdown and the regenerated artifact go in one commit, so the check
- * gate is never left red by an editor save.
+ * The commit carries exactly the markdown. The full render runs TWICE by
+ * design: once here as the gate in FRONT of the commit, because a post that
+ * fails frontmatter validation or image resolution must never land on main
+ * (a committed post the pipeline refuses would redden the next build), and
+ * once inside `renderAndWrite` AFTER it, because D1 is written only from a
+ * row the one door produced. Rendering is deterministic; the determinism gate
+ * in check:content proves that on every run, and one duplicated render costs
+ * an admin save less than a second door would cost the repo.
  */
 export async function savePost(
   env: PublishEnv,
@@ -388,23 +319,15 @@ export async function savePost(
   });
   const raw = decision.raw;
 
-  // Rendered from the STAMPED markdown, so the committed file and the artifact
-  // entry describe the same bytes and check:content stays green.
-  const record = await validateAndRender(env, options.slug, raw);
+  // Rendered from the STAMPED markdown, and rendered BEFORE the commit: this
+  // is the gate, and its result is deliberately discarded. The row D1 gets is
+  // the one `renderAndWrite` produces after the commit lands.
+  const gated = await validateAndRender(env, options.slug, raw);
 
-  const posts = await loadArtifact(env);
-  const next = sortBySlug([
-    ...posts.filter((p) => p.slug !== options.slug),
-    record,
-  ]);
-
-  const { commitSha } = await commitFiles(env, {
+  const { commitSha, blobShas } = await commitFiles(env, {
     expectedHeadSha: options.expectedHeadSha,
-    message: commitMessage(actor, options.isNew ? "Add" : "Update", record.title),
-    changes: [
-      { path: postPath(options.slug), content: raw },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next, PAGE_INPUTS) },
-    ],
+    message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
+    changes: [{ path: postPath(options.slug), content: raw }],
   });
 
   /*
@@ -427,8 +350,16 @@ export async function savePost(
    * failed and a record of that failure kept there is absent exactly when it is
    * wanted.
    */
+  let record = gated;
   const converged = await convergeWithRetry({
-    write: () => syncPostToD1(env, record),
+    write: async () => {
+      record = await renderAndWrite(
+        env,
+        options.slug,
+        raw,
+        blobShas[postPath(options.slug)] ?? null,
+      );
+    },
     recordDivergence: (facts) => recordDivergence(env, facts),
     slug: options.slug,
     commitSha,
@@ -557,7 +488,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
   }
 }
 
-/** Deletes a post: the file, the artifact entry, and the rows, in that order. */
+/** Deletes a post: one commit removing the file, then the rows. */
 export async function deletePost(
   env: PublishEnv,
   options: { slug: string; expectedHeadSha?: string | null; actor?: Actor },
@@ -585,16 +516,10 @@ export async function deletePost(
     throw new EditorError(`No post file exists for "${options.slug}".`);
   }
 
-  const posts = await loadArtifact(env);
-  const next = sortBySlug(posts.filter((p) => p.slug !== options.slug));
-
   const { commitSha } = await commitFiles(env, {
     expectedHeadSha: options.expectedHeadSha,
     message: commitMessage(actor, "Remove", options.slug),
-    changes: [
-      { path: postPath(options.slug), content: null },
-      { path: ARTIFACT_PATH, content: serializeArtifact(next, PAGE_INPUTS) },
-    ],
+    changes: [{ path: postPath(options.slug), content: null }],
   });
 
   await deletePostFromD1(env, options.slug);
@@ -819,10 +744,10 @@ function searchStatements(db: D1Database, record: any) {
  * conservative superset, so the union is what makes a refcount safe once blobs
  * are shared. But after a post was deleted the resolver correctly reported zero
  * citations while `media_refs` still claimed one, so the image it had cited
- * could never be removed from the library. `Regenerate all` does not repair it
- * either: it loops the posts still in the artifact and never issues a scoped
- * delete for a slug that is gone. Only a full `sync:content`, which rewrites
- * the table wholesale, cleared it.
+ * could never be removed from the library. `Regenerate all` did not repair it
+ * either at the time: it looped the posts that still existed and never issued
+ * a scoped delete for a slug that was gone. Only a full `sync:content`, which
+ * rewrites the table wholesale, cleared it.
  *
  * In the same batch as the post row, for the reason `mediaRefStatements` gives:
  * a delete either records that the citations are gone or does not happen.
@@ -844,32 +769,51 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
 }
 
 /**
- * Re-syncs every post in the committed artifact into D1.
+ * Re-renders every post in the repository into D1.
+ *
+ * THE REBUILD DOOR, and the one RECOVERY.md points at: one Contents directory
+ * listing (which carries every file's blob sha for free), one read per file,
+ * and `renderAndWrite` per post, so every row arrives through the same door a
+ * save uses (rule 18: a derived store is repaired through its derivation).
+ * The blob sha from the listing rides along so each render proves it rendered
+ * the bytes the repository holds.
  *
  * The recovery path for drift between commits made from a clone and commits
- * made in the editor. It reads the artifact rather than re-rendering, so it
- * republishes exactly what the gate last approved.
+ * made in the editor, and the bulk half of the content-drift repair.
  */
-export async function regenerateAllFromArtifact(env: PublishEnv) {
-  const posts = await loadArtifact(env);
+export async function regenerateAllFromRepo(env: PublishEnv) {
+  const entries = await listDirectory(env, "content/posts");
+  const files = entries.filter((e) => e.type === "file" && e.name.endsWith(".md"));
 
-  const keep = posts.map((p) => p.slug);
-  if (keep.length > 0) {
-    const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
-    await env.DB.prepare(
-      `DELETE FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
-    )
-      .bind(...keep)
-      .run();
-  } else {
-    await env.DB.prepare(
-      `DELETE FROM posts WHERE source_path IS NOT NULL`,
-    ).run();
+  // SCOPE, ASSERTED. An empty listing here is a deleted content directory or
+  // a broken read, and "sync 0 posts, delete every row" is the destructive
+  // reading of both. Refuse rather than converge on an empty corpus.
+  if (files.length === 0) {
+    throw new EditorError(
+      "content/posts listed no markdown files. An empty corpus is not a state " +
+        "this site has ever had, so this refuses rather than deleting every row.",
+    );
   }
 
-  for (const post of posts) {
-    await syncPostToD1(env, post);
+  const keep = files.map((f) => f.name.slice(0, -".md".length));
+  const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
+  await env.DB.prepare(
+    `DELETE FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
+  )
+    .bind(...keep)
+    .run();
+
+  for (const entry of files) {
+    const slug = entry.name.slice(0, -".md".length);
+    const file = await readFile(env, entry.path);
+    if (!file) {
+      throw new EditorError(
+        `"${entry.path}" vanished between the directory listing and the read. ` +
+          `Main moved mid-rebuild; re-run the regenerate.`,
+      );
+    }
+    await renderAndWrite(env, slug, file.content, entry.sha);
   }
 
-  return { synced: posts.length };
+  return { synced: files.length };
 }

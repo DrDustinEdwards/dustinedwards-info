@@ -551,11 +551,10 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  *
  * **WHY THIS EXISTS: the admin layout was fetching 600KB from GitHub to render
  * a nav badge.** `askIndexStatus` built its expected set by running
- * `recordsForPosts(publishableForAsk(posts))` over the committed artifact, and
- * the only way to get that artifact inside a Worker is
- * `readFile` against the GitHub Contents API: an HTTPS round trip off
- * Cloudflare's network for `content/generated/posts.json`, 601,683 bytes,
- * base64 encoded to roughly 802,000 over the wire, then decoded and parsed.
+ * `recordsForPosts(publishableForAsk(posts))` over the committed corpus
+ * artifact this repo no longer has, fetched over the GitHub Contents API: an
+ * HTTPS round trip off Cloudflare's network for 601,683 bytes, base64 encoded
+ * to roughly 802,000 over the wire, then decoded and parsed.
  * Measured on production at 283 to 528ms, on EVERY admin page load, for one
  * integer.
  *
@@ -590,6 +589,33 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * SECONDS, and an ad-hoc query written against milliseconds during this
  * change's own verification silently matched everything.
  */
+/**
+ * The Ask corpus itself: every record the index should hold, with the text to
+ * upload. The reading twin of `askExpectedUrls` below, and the reason
+ * `syncAskCorpus` no longer takes a posts argument: the records were
+ * materialised into `search_docs` by the same records.mjs both writers run,
+ * so the uploader reads the store both converge to rather than re-deriving a
+ * copy from a corpus file that no longer exists.
+ *
+ * Visibility is COMPOSED, not restated (rule 1): `visibilityClause` is the
+ * predicate that kept five drafts out of Ask, and check:invariants section 8
+ * holds every search_docs reader to it.
+ */
+export async function askCorpusRecords(
+  env: Env,
+  now = new Date(),
+): Promise<Array<{ url: string; title: string; body: string }>> {
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+  const rows = await env.DB.prepare(
+    // CONCATENATED, not interpolated, for the reason stated at NO_ALIAS.
+    `SELECT url, title, body FROM search_docs WHERE type = 'post' AND ` +
+      visibilityClause(NO_ALIAS),
+  )
+    .bind(nowSeconds)
+    .all<{ url: string; title: string; body: string }>();
+  return rows.results ?? [];
+}
+
 export async function askExpectedUrls(env: Env, now = new Date()): Promise<string[]> {
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const rows = await env.DB.prepare(

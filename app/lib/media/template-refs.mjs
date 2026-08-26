@@ -32,10 +32,12 @@
  * Storing the answer in D1 does not help, because something still has to compute
  * it, and nothing inside the Worker can.
  *
- * **So it runs at BUILD time and ships as a committed artifact**, which is the
- * pattern this repo already uses three times: `posts.json`, `assets.json` and
- * `stack.json` are all generated, committed, imported at build time and
- * reconciled by a gate. `content/generated/template-refs.json` is the fourth.
+ * **So it runs at BUILD time and ships as a committed artifact**, the
+ * pattern `assets.json` and `stack.json` follow: generated, committed,
+ * imported at build time and reconciled by a gate. (The post corpus used to
+ * be the third such artifact; it is a local build product now, and D1 holds
+ * the rendered copy.) `content/generated/template-refs.json` is committed
+ * because it is a repo fact with no database owner.
  * A build-time import also means the answer cannot drift from the code that
  * produced it: they ship in the same bundle.
  *

@@ -12,8 +12,7 @@ import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
 import {
   deletePost,
-  artifactContext,
-  regenerateAllFromArtifact,
+  regenerateAllFromRepo,
   savePost,
 } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
@@ -237,8 +236,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "regenerate") {
     try {
-      const { synced } = await regenerateAllFromArtifact(env);
-      return { message: `Re-synced ${synced} posts from the committed artifact.` };
+      const { synced } = await regenerateAllFromRepo(env);
+      return { message: `Re-rendered ${synced} posts from the repository.` };
     } catch (error) {
       return {
         message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
@@ -269,30 +268,15 @@ export async function action({ request, context }: Route.ActionArgs) {
      * step states the corpus size instead, which is what is actually at stake.
      */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
-    /*
-     * The request's shared reader, resolved ONCE for both branches below.
-     *
-     * A non-null assertion would be the short version and would hide the
-     * failure: the reader is installed by the /admin middleware, so its absence
-     * means this action ran outside the subtree that gates it, which is a
-     * routing defect and not a missing artifact. Naming that is worth two lines.
-     */
-    const readArtifact = context.get(artifactContext).load;
-    if (!readArtifact) {
-      throw new Error(
-        "no artifact reader on the request context. This action runs under the /admin " +
-          "middleware, which installs one, so reaching here means it did not.",
-      );
-    }
 
     if (!confirmationSatisfied(typed, 1)) {
-      const posts = await readArtifact();
+      // The corpus size at stake, from the store the sync will actually read.
+      const posts = await listAllPostsForAdmin(env);
       return { confirmSyncAsk: posts.length };
     }
 
     try {
-      const posts = await readArtifact();
-      const { uploaded, keys, cacheDropped } = await syncAskCorpus(env, posts);
+      const { uploaded, keys, cacheDropped } = await syncAskCorpus(env);
       const removed = await pruneAskCorpus(env, keys);
       return {
         message:
@@ -575,7 +559,7 @@ export default function AdminPosts({
             >
               Regenerate all
               <span className="overflow-menu-item-hint">
-                Re-sync every post from the committed artifact
+                Re-render every post from the repository
               </span>
             </button>
           </Form>
@@ -755,7 +739,7 @@ export default function AdminPosts({
           <p>
             Every record whose key is not in this run is REMOVED from the AI
             index, and cached answers are dropped. A sync against a partial
-            artifact prunes the index to whatever that artifact held. The corpus
+            corpus prunes the index to whatever that corpus held. The corpus
             currently has <strong>{actionData.confirmSyncAsk}</strong> post(s).
           </p>
           <label>

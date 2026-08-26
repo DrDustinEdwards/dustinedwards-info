@@ -18,7 +18,7 @@
  *
  * The image row said "images already link to their original" until 2026-08-11
  * and that was FALSE, contradicted by this file's own comment on lightbox()
- * below. Measured against content/generated/posts.json: 6 images across 12
+ * below. Measured against the generated post corpus, 2026-08-11: 6 images across 12
  * posts, ZERO wrapped in an anchor. The same false claim is in Capsid's
  * progressive-enhancement.md inventory. The machine-readable inventory is
  * content/enhancements.json, gated by check:features.

@@ -494,6 +494,102 @@ export async function listAllPostsForAdmin(env: Env) {
 }
 
 /**
+ * The corpus facts `withRelated` needs, drafts included, tags attached.
+ *
+ * Feeds `relatedFor` in publish.server.ts: relatedness is a property of the
+ * whole corpus and the corpus lives HERE since the committed artifact left the
+ * repository. Drafts are included because `withRelated` does its own draft
+ * filtering of candidates while still computing a related list FOR a draft,
+ * and pre-filtering here would silently change that half.
+ */
+export async function listPostCorpusForRelated(env: Env) {
+  const rows = await getDb(env)
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      status: posts.status,
+      publishAt: posts.publishAt,
+    })
+    .from(posts)
+    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
+  const tagRows = await listAllPostTagsForAdmin(env);
+
+  const bySlug = new Map(
+    rows.map((r) => [r.slug, { ...r, tags: [] as string[] }]),
+  );
+  for (const row of tagRows) bySlug.get(row.slug)?.tags.push(row.tag);
+  return [...bySlug.values()];
+}
+
+/**
+ * What the media citation scan reads: every post's markdown and cover, drafts
+ * included, because a draft citing an image must still refuse its deletion.
+ *
+ * D1 rather than the repository, since the artifact arc: `posts.body` is the
+ * markdown both writers converge to. BOUNDARY, stated: a citation committed
+ * from a clone is invisible here until the next sync, save, or content-drift
+ * repair lands it, a window the scheduled health check bounds at its poll
+ * interval. The committed-artifact read this replaces was ahead of D1 by the
+ * same class of window in the other direction.
+ */
+export async function listPostSourcesForCitations(env: Env) {
+  return getDb(env)
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      body: posts.body,
+      coverImage: posts.coverImage,
+    })
+    .from(posts)
+    .where(eq(posts.kind, "post"));
+}
+
+/**
+ * The operator list_posts projection: every post row, drafts included, with
+ * the fields the tool has always reported.
+ */
+export async function listPostsForOperator(env: Env) {
+  const rows = await getDb(env)
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      description: posts.description,
+      status: posts.status,
+      publishAt: posts.publishAt,
+      updatedAt: posts.updatedAt,
+      series: posts.series,
+      part: posts.part,
+      sourcePath: posts.sourcePath,
+    })
+    .from(posts)
+    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)))
+    .orderBy(asc(posts.slug));
+  const tagRows = await listAllPostTagsForAdmin(env);
+
+  const tagsBySlug = new Map<string, string[]>();
+  for (const row of tagRows) {
+    const list = tagsBySlug.get(row.slug) ?? [];
+    list.push(row.tag);
+    tagsBySlug.set(row.slug, list);
+  }
+  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+}
+
+/** One post's rendered facts for the operator get_post response. */
+export async function getAdminPostRow(env: Env, slug: string) {
+  return (
+    (await getDb(env)
+      .select({
+        html: posts.html,
+        readingTimeMinutes: posts.readingTimeMinutes,
+      })
+      .from(posts)
+      .where(and(eq(posts.kind, "post"), eq(posts.slug, slug)))
+      .get()) ?? null
+  );
+}
+
+/**
  * Every post's tags, DRAFTS INCLUDED, for the admin list's tag filter.
  *
  * Deliberately not `listBlogTags`, which filters through `isBlogPost()` and so

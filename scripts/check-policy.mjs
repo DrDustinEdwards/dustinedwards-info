@@ -1170,15 +1170,41 @@ refuses(
   // SCOPE, ASSERTED. Stripping is only safe if it left something to match. An
   // over-eager stripper would empty the file and every assertion below would
   // report a missing filter that is present.
+  // A QUARTER, not a third, since 2026-08-25: the module is deliberately
+  // comment-heavy and the artifact-arc change took it to a measured 0.329
+  // code ratio, brushing the old guard. The guard exists to tell an emptied
+  // file (near zero) from a healthy one, and a quarter still does that.
   eq(
     "stripping comments left the module's code behind",
-    askSource.length > askRaw.length / 3 && /export async function syncAskCorpus/.test(askSource),
+    askSource.length > askRaw.length / 4 && /export async function syncAskCorpus/.test(askSource),
     true,
   );
 
+  /*
+   * SINCE THE ARTIFACT ARC the full-corpus uploader takes no posts argument:
+   * it reads `askCorpusRecords`, whose SQL composes `visibilityClause` (rule
+   * 1; check:invariants section 8 holds every search_docs reader to it). What
+   * this gate still owns is the BINDING: the uploader must source from that
+   * one reader and from nothing unfiltered, and the reader's SQL must scope
+   * to type='post' with the shared predicate concatenated in. An uploader
+   * that re-grew its own SELECT, or a reader that lost the clause, is the
+   * five-drafts-in-Ask shape again.
+   */
   eq(
-    "syncAskCorpus filters through publishableForAsk",
-    /recordsForPosts\(publishableForAsk\(posts\)\)/.test(askSource),
+    "syncAskCorpus sources its records from askCorpusRecords",
+    /const records = await askCorpusRecords\(env\)/.test(askSource),
+    true,
+  );
+  eq(
+    "syncAskCorpus does not derive records from an unfiltered corpus",
+    !/recordsForPosts\(posts\)/.test(askSource),
+    true,
+  );
+  eq(
+    "askCorpusRecords composes visibilityClause beside type='post'",
+    /SELECT url, title, body FROM search_docs WHERE type = 'post' AND ` \+\s*visibilityClause\(NO_ALIAS\)/.test(
+      searchSource,
+    ),
     true,
   );
   eq(

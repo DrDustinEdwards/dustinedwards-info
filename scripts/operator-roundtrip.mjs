@@ -192,9 +192,12 @@ if (PHASE === "a") {
       /** @type {any} */
       const c = await gh.json();
       const files = (c.files ?? []).map((/** @type {any} */ f) => f.filename).sort();
+      // INVERTED with the artifact arc: a save used to carry the markdown AND
+      // the regenerated corpus artifact; git holds markdown only now, so a
+      // second file in a save commit is a regression to the two-writer world.
       check(
-        "the commit carries BOTH the markdown and the artifact",
-        files.includes(postPath(SLUG)) && files.includes("content/generated/posts.json"),
+        "the commit carries EXACTLY the markdown and nothing else",
+        files.length === 1 && files[0] === postPath(SLUG),
         files.join(", "),
       );
       check("it is ONE commit, not two", (c.parents ?? []).length === 1);

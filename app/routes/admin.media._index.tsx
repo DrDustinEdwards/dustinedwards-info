@@ -10,7 +10,6 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
-import { artifactContext } from "~/lib/editor/publish.server";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
@@ -403,18 +402,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   //
   // `media_refs` is written by the pipeline at render time, so it is precise:
   // it records what the renderer actually emitted. The resolver scans the
-  // artifact's markdown for the literal URL, so it is a conservative SUPERSET:
-  // it will count a mention inside a code fence that the renderer never turned
-  // into a link. Neither subsumes the other, and for a delete decision the
-  // union is what fails closed.
+  // posts' markdown out of D1 for the literal URL, so it is a conservative
+  // SUPERSET: it will count a mention inside a code fence that the renderer
+  // never turned into a link. Neither subsumes the other, and for a delete
+  // decision the union is what fails closed.
   // NAMED PER LEG AS WELL AS AS A GROUP. The group time is the wall clock the
   // request actually pays; the legs are what says which one is the long pole.
   // Reporting only the group would leave the next session unable to tell three
   // fast queries from one slow one hiding behind two.
-  // NOT a d1_ mark, and the old name is why a whole session went looking for a
-  // query plan. `resolveCitations` touches no database: it reads the committed
-  // artifact over the GitHub Contents API and scans it in memory. The prefix
-  // named the wrong subsystem and sent the search to the wrong place.
   /*
    * SIX CALLS, ONE WALL CLOCK. The three counts below used to be `await`s
    * inside the returned object literal, which evaluates its properties in
@@ -439,9 +434,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     "group_listing",
     () =>
       Promise.all([
-        timed(timings, "resolve_citations", () =>
-          resolveCitations(env, keys, context.get(artifactContext).load ?? undefined),
-        ),
+        timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
         timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
         // Exact content identity only. See `mediaTwins` for why nothing perceptual
         // is coming.
@@ -470,21 +463,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (detailKey) {
     const row = await mediaRecord(env, detailKey);
     if (row) {
-      /*
-       * THE SHARED READER, and its absence here was a live second read.
-       *
-       * This branch runs INSIDE the loader, after the listing above has already
-       * resolved citations for the page. Without the reader, `postsResolver`
-       * falls back to its own `loadArtifact`, so `/admin/media?key=...` fetched
-       * 601,683 bytes from the GitHub Contents API TWICE in one request: once
-       * for the grid and once for the drawer. Measured at 283 to 632ms per read.
-       *
-       * Found by grepping the call sites while writing the gate that now
-       * enforces this, not by measurement, because the detail view was never
-       * sampled.
-       */
       const [detailResolution, detailRefs] = await Promise.all([
-        resolveCitations(env, [row.key], context.get(artifactContext).load ?? undefined),
+        resolveCitations(env, [row.key]),
         mediaRefsFor(env, [row.key]),
       ]);
       detail = {
@@ -513,7 +493,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           form: ref.form,
           detail: ref.detail,
         })),
-        /** The artifact scan, which is the conservative superset. */
+        /** The corpus scan, which is the conservative superset. */
         citations: detailResolution.citations.get(row.key) ?? [],
         scanComplete: detailResolution.complete,
         tags: parseTags(row.tags ?? ""),
@@ -1124,11 +1104,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     // is looking at may be minutes old and a post may have started citing this
     // object since it rendered, so the UI's opinion is never the authority.
     const [resolution, refs] = await Promise.all([
-      // The shared reader, for uniformity rather than for a saving: this action
-      // is its own request and reads the artifact once either way. Threading it
-      // anyway means every call site in this file looks the same, so the next
-      // one written by copy is threaded by default.
-      resolveCitations(env, [key], context.get(artifactContext).load ?? undefined),
+      resolveCitations(env, [key]),
       mediaRefsFor(env, [key]),
     ]);
 

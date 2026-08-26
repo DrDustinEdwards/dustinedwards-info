@@ -11,7 +11,6 @@ import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
-import { artifactContext, artifactReader, loadArtifact } from "~/lib/editor/publish.server";
 import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
@@ -146,29 +145,11 @@ export const middleware: Route.MiddlewareFunction[] = [
     // badge and /admin/posts wants the full status for its alert. Sharing the
     // reader means one listing per request rather than two, and a route that
     // never asks for it never pays for it.
-    /*
-     * ONE artifact read for the whole request, for whoever still needs it.
-     *
-     * **The drift check no longer does, and that is this window's fix.** It
-     * used to build its expected key set from the committed corpus, so every
-     * admin page load paid a 600KB GitHub round trip, 283 to 528ms measured, to
-     * render one integer in the nav. It now reads the same records out of
-     * `search_docs`; grounds at `askExpectedUrls`.
-     *
-     * The reader stays because the media loader's citation resolver genuinely
-     * does need the corpus: it scans post markdown for `/media/<key>`, which is
-     * not a fact D1 holds. On /admin/media that is now ONE read for the request
-     * instead of two, and on every other admin route it is zero.
-     *
-     * `artifact_load` is passed as the reader's loader so the mark fires INSIDE
-     * the memo, once, on whichever caller gets there first. Wrapping outside
-     * would emit a second near-zero mark of the same name on every memo hit and
-     * make the header ambiguous.
-     */
-    const readArtifact = artifactReader(env, (e) =>
-      timed(timings, "artifact_load", () => loadArtifact(e)),
-    );
-    context.set(artifactContext, { load: readArtifact });
+    //
+    // The per-request ARTIFACT reader that used to be installed beside it is
+    // gone with the committed artifact itself: the citation scan reads
+    // `posts.body` out of D1 now, so there is no 600KB GitHub round trip left
+    // to deduplicate.
     context.set(askStatusContext, askStatusReader(env, timings));
     return next();
   },
