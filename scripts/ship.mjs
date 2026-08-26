@@ -511,9 +511,34 @@ if (run("npm", ["run", "check:content"]).code !== 0) {
 }
 
 announce("Sync content to remote D1");
+
+/** Set when the sync reported render drift. Read at the very end. */
+let renderDriftMiss = "";
+
 const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
 if (sync.code !== 0) {
-  refuse("the sync failed", "D1 may be partially written. Re-run `npm run ship`.");
+  /*
+   * TWO DIFFERENT NONZEROES, told apart by the report the sync prints.
+   *
+   * A sync that reported RENDER DRIFT finished every write and every
+   * verification, exited nonzero as an alarm, and printed the counts line;
+   * D1 is converged and the deploy must stand while the run still fails at
+   * the end, exactly like an index miss. A sync that failed for any other
+   * reason may have left D1 partially written and refuses here as it always
+   * has. The discriminator is the drift line's own count, not the exit code,
+   * because the exit code carries one bit and this is a two-fault channel.
+   */
+  const driftLine = sync.text.match(/sync:content drift: .*render-drift=(\d+)/);
+  if (driftLine && Number(driftLine[1]) > 0) {
+    const slugs = sync.text.match(/RENDER DRIFT on \d+ slug\(s\): ([^.]*)\./);
+    renderDriftMiss =
+      `sync:content reported render drift on ${driftLine[1]} slug(s)` +
+      `${slugs ? `: ${slugs[1]}` : ""}. The Worker and the Node build rendered the ` +
+      `same source differently; D1 was converged to the build.`;
+    console.log(`  MISSED: ${renderDriftMiss}`);
+  } else {
+    refuse("the sync failed", "D1 may be partially written. Re-run `npm run ship`.");
+  }
 }
 
 /*
@@ -836,37 +861,47 @@ console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
 /*
- * THE EXIT CODE IS LAST, AND IT IS NONZERO ON EITHER MISS.
+ * THE EXIT CODE IS LAST, AND IT IS NONZERO ON ANY MISS.
  *
  * The record above has already printed, because the deploy landed and saying so
- * is true. What did not happen is a derived index catching up, and a pipeline
- * that reported success on that would be the same green-light-meaning-nothing
- * these steps were added to remove.
+ * is true. What did not happen is a derived index catching up, or the two
+ * writers proving they render alike, and a pipeline that reported success on
+ * either would be the same green-light-meaning-nothing these steps were added
+ * to remove.
  *
- * BOTH ARE REPORTED, never just the first. Two indexes fail independently and
- * for unrelated reasons, and a run that printed only the Ask miss would send
- * somebody to re-run ship, watch Ask converge, and never learn that the media
- * index was also short. That is the N-1-of-N shape FAILURES.md opens with.
+ * ALL ARE REPORTED, never just the first. The faults are independent, and a
+ * run that printed only the Ask miss would send somebody to re-run ship, watch
+ * Ask converge, and never learn about the others. That is the N-1-of-N shape
+ * FAILURES.md opens with.
  *
- * Nothing is rolled back. Both operations are idempotent; the remedy is to run
- * it again.
+ * Nothing is rolled back. The index operations are idempotent and the drift
+ * report's D1 side was already converged by the sync; the render-drift remedy
+ * is finding the pipeline divergence, not a re-run.
  */
-if (askMiss || mediaMiss) {
-  const behind = [askMiss ? "THE ASK INDEX" : "", mediaMiss ? "THE MEDIA INDEX" : ""]
+if (askMiss || mediaMiss || renderDriftMiss) {
+  const behind = [
+    askMiss ? "THE ASK INDEX" : "",
+    mediaMiss ? "THE MEDIA INDEX" : "",
+    renderDriftMiss ? "THE RENDER" : "",
+  ]
     .filter(Boolean)
     .join(" AND ");
+  const several = [askMiss, mediaMiss, renderDriftMiss].filter(Boolean).length > 1;
   console.error(`\n${"!".repeat(64)}`);
-  console.error(`  DEPLOYED, BUT ${behind} ${askMiss && mediaMiss ? "ARE" : "IS"} BEHIND.`);
-  if (askMiss) console.error(`  ask:   ${askMiss}`);
-  if (mediaMiss) console.error(`  media: ${mediaMiss}`);
+  console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
+  if (askMiss) console.error(`  ask:    ${askMiss}`);
+  if (mediaMiss) console.error(`  media:  ${mediaMiss}`);
+  if (renderDriftMiss) console.error(`  render: ${renderDriftMiss}`);
   console.error(
-    `\n  The deploy at ${sha} STANDS and the site is serving it. What is stale is\n` +
-      `  a derived index: Ask can miss or mis-cite recent writing, and the media\n` +
-      `  library can describe assets that are gone or omit ones that are there,\n` +
-      `  until this succeeds. Both operations are idempotent: re-run\n` +
-      `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n\n` +
-      `  The scheduled health check reads the same drift and will report it too,\n` +
-      `  and now attempts the same repair itself before it alerts.`,
+    `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
+      `  means Ask can miss recent writing or the media library can misdescribe\n` +
+      `  assets until its sync succeeds; both operations are idempotent: re-run\n` +
+      `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n` +
+      `  Render drift means the Worker and the Node build disagree about the\n` +
+      `  same bytes; D1 was converged to the build, and the repair is finding\n` +
+      `  the divergence in the pipeline, not a re-run.\n\n` +
+      `  The scheduled health check reads the same index drift and will report\n` +
+      `  it too, and attempts the same repair itself before it alerts.`,
   );
   console.error(`${"!".repeat(64)}\n`);
   process.exit(1);
