@@ -45,7 +45,14 @@ const TEST_DIR = join(root, "test");
 
 /**
  * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-24 by RUNNING
- * it: 43 files, 440 tests. Never summed.
+ * it: 47 files, 461 tests, re-measured 2026-08-26. Never summed.
+ *
+ * **THE CONVENTION BELOW WAS MISSED ONCE ALREADY, on 2026-08-26.**
+ * `post-image-links.test.mjs` landed without these floors moving, so for a few
+ * hours the set could have lost that file and five others and still reported a
+ * clean run. Caught on the next re-measurement rather than by anything, which
+ * is exactly the argument for the tightness: a slack floor does not announce
+ * that it has gone slack.
  *
  * **BOTH HAD DRIFTED INTO THE UNFAILABLE CLASS, and this is the gate where that
  * costs the most.** They were 23 and 237 against 40 and 389: seventeen test
@@ -67,10 +74,10 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-const MINIMUM_FILES = 40;
-/* 413 against 440 measured. The file floor above catches a file LEAVING; this
+const MINIMUM_FILES = 44;
+/* 433 against 461 measured. The file floor above catches a file LEAVING; this
    one catches a file being hollowed out in place, which no file count can see. */
-const MINIMUM_TESTS = 413;
+const MINIMUM_TESTS = 433;
 
 let checks = 0;
 let failures = 0;
