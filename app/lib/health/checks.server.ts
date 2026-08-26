@@ -1,5 +1,5 @@
 /**
- * The three health checks, and the I/O that feeds them.
+ * The health checks, and the I/O that feeds them.
  *
  * MOVED HERE 2026-08-23 from `workers/health.ts`, which kept them while the
  * only caller was the scheduled handler. `/api/health` is now a second caller,
@@ -23,9 +23,14 @@
  *   3. `media-unbacked`     the R2 acceptance in RECOVERY.md section 3, which
  *                           holds only while the MEDIA bucket is empty
  *   4. `fts-equality`       the docsize equalities the ship asserts after a sync
+ *   5. `content-drift`      posts.source_blob_sha against the repository's own
+ *                           blob shas, from one Contents directory listing.
+ *                           Since the artifact arc D1 is the ONLY rendered
+ *                           copy, and this is what watches it converge to git.
  *
- * The two drift checks are the two the workflow can REPAIR by itself, through
- * the same operator operations ship calls. Everything else here alerts a human.
+ * The three drift checks are the ones the workflow can REPAIR by itself,
+ * through the same operator operations ship calls. Everything else here alerts
+ * a human.
  *
  * A gate sees disk; these see the LIVE state between commits, which is a
  * different question rather than a second copy of one a gate already answers.
@@ -45,12 +50,14 @@
 import {
   CHECK_TIMEOUT_MS,
   askDriftVerdict,
+  contentDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaUnbackedVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
+import { listDirectory } from "~/lib/editor/github.server";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 
 /** One check's verdict. `ok: false` is what turns into an alert. */
@@ -110,6 +117,35 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
        */
       const listed = await env.MEDIA.list({ limit: 1 });
       return mediaUnbackedVerdict(listed.objects);
+    }),
+  );
+
+  checks.push(
+    await guard("content-drift", async () => {
+      /*
+       * ADDED with the artifact arc, and it is the arrangement's other half:
+       * the committed corpus artifact could leave the repository because THIS
+       * watches D1 converge to it. A markdown commit from any machine is live
+       * within one health poll with NO DEPLOY, by design: the scheduled
+       * workflow reads this check, and its repair (`sync_posts`, through the
+       * operator door) fetches the drifted files and re-renders them through
+       * the one door to a rendered row.
+       *
+       * One Contents directory listing, which carries every file's git blob
+       * sha for free; blob shas are content-addressed, so nothing fetches a
+       * file to know whether it changed. Needs the editor's GITHUB_TOKEN,
+       * already in env; its absence, a GitHub outage, or the three second
+       * timeout all surface as this check failing, which the repair plan then
+       * refuses to act on alone (an unreadable repository is not drift).
+       */
+      const entries = await listDirectory(env, "content/posts");
+      const files = entries
+        .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+        .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha }));
+      const rows = await env.DB.prepare(
+        "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
+      ).all<{ slug: string; source_blob_sha: string | null }>();
+      return contentDriftVerdict(files, rows.results ?? []);
     }),
   );
 

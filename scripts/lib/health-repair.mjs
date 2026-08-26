@@ -58,6 +58,16 @@
  * fails.
  */
 export const REPAIRABLE = /** @type {const} */ ({
+  /*
+   * CONTENT FIRST, and the map order is the repair order (see the dedup note
+   * in repairPlan). The Ask corpus is read out of `search_docs`, which
+   * `sync_posts` rewrites for every drifted post, so when content drift and
+   * ask drift fail together the content repair must land before the Ask
+   * upload reads the store it feeds from. The reverse order would upload the
+   * stale corpus and then fix it, leaving Ask one interval behind for
+   * nothing.
+   */
+  "content-drift": "sync_posts",
   "ask-index-drift": "sync_ask",
   "media-index-drift": "sync_media",
 });

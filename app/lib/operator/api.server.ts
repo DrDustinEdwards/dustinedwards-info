@@ -27,6 +27,8 @@ import { posts as postsTable } from "~/db/schema";
 import {
   currentHead,
   deletePost,
+  deletePostFromD1,
+  renderAndWrite,
   savePost,
   EditorError,
   GitHubError,
@@ -45,6 +47,7 @@ import {
 import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { listDirectory, readFile } from "~/lib/editor/github.server";
+import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 
 import type { OperatorEnv } from "./auth.server";
@@ -86,6 +89,7 @@ const TOOLS = [
   "sync_status",
   "sync_ask",
   "sync_media",
+  "sync_posts",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -166,6 +170,15 @@ export const TOOL_DESCRIPTORS: Readonly<
       "reconciliation: expected, present, missing and extra keys, and a " +
       "converged verdict.",
   },
+  sync_posts: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's markdown: re-renders every post " +
+      "whose file's blob sha differs from its row (or has no row), removes " +
+      "rows whose file is gone, all through the same render door a save " +
+      "uses. Idempotent. A read-back reconciliation: expected, present, and " +
+      "a converged verdict.",
+  },
 };
 
 /**
@@ -201,6 +214,9 @@ export async function runTool(
 
       case "sync_media":
         return await syncMedia(env);
+
+      case "sync_posts":
+        return await syncPosts(env);
     }
   } catch (error) {
     return translate(error);
@@ -522,6 +538,88 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
       missing: status.missing,
       extra: status.extra,
     }),
+  };
+}
+
+/**
+ * THE CONTENT-DRIFT REPAIR, as an operator operation.
+ *
+ * The third repairable class. The content-drift health check compares
+ * `posts.source_blob_sha` against the repository's blob shas; this is its
+ * repair, and the two derive their work from the SAME `contentDriftCompare`,
+ * so what the check calls drift is exactly what this repairs. It is also what
+ * makes a markdown commit from any machine live within one health poll with
+ * no deploy: the scheduled workflow calls this through the same door ship's
+ * syncs use.
+ *
+ * ## RULE 18, THE WHOLE SHAPE
+ *
+ * Scoped, but never hand-written: every drifted slug is re-rendered through
+ * `renderAndWrite`, the one door to a rendered row, with the listing's blob
+ * sha riding along so the door proves it rendered the bytes the repository
+ * holds. A row whose file is gone loses its rows through the same
+ * `deletePostFromD1` a delete uses. Nothing here can construct a row.
+ *
+ * ## IDEMPOTENT, AND THE VERDICT IS READ BACK
+ *
+ * Running it against a converged corpus repairs nothing and reports
+ * converged. `expected`/`present`/`converged` come from a SECOND listing and
+ * a second row read taken after the writes, never from the loop's own
+ * counters, on the same rule as the other two syncs.
+ */
+async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
+  const readSides = async () => {
+    const entries = await listDirectory(env, "content/posts");
+    const files = entries
+      .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+      .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
+    const rows = await env.DB.prepare(
+      "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
+    ).all<{ slug: string; source_blob_sha: string | null }>();
+    return { files, rows: rows.results ?? [] };
+  };
+
+  const before = await readSides();
+  const drift = contentDriftCompare(before.files, before.rows);
+
+  const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
+  let repaired = 0;
+  for (const slug of [...drift.changed, ...drift.unrowed]) {
+    const entry = fileBySlug.get(slug);
+    if (!entry) continue;
+    const file = await readFile(env, entry.path);
+    if (!file) {
+      throw new EditorError(
+        `"${entry.path}" vanished between the listing and the read; main moved ` +
+          `mid-repair. Re-run sync_posts.`,
+      );
+    }
+    await renderAndWrite(env, slug, file.content, entry.sha);
+    repaired += 1;
+  }
+
+  let removed = 0;
+  for (const slug of drift.unfiled) {
+    await deletePostFromD1(env, slug);
+    removed += 1;
+  }
+
+  // READ BACK AFTER THE WRITES. D1 reads its own writes in-request, so a
+  // correct repair can never report drift here; a reported drift is real.
+  const after = await readSides();
+  const residual = contentDriftCompare(after.files, after.rows);
+  const residualCount =
+    residual.changed.length + residual.unrowed.length + residual.unfiled.length;
+
+  return {
+    ok: true,
+    data: {
+      repaired,
+      removed,
+      expected: after.files.length,
+      present: after.files.length - residual.changed.length - residual.unrowed.length,
+      converged: residualCount === 0,
+    },
   };
 }
 

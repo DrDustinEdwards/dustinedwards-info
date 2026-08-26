@@ -390,6 +390,7 @@ const HEALTH_OK = [
   { name: "ask-index-drift", ok: true, detail: "Ask index agrees with D1: 99 expected, 99 present." },
   { name: "media-index-drift", ok: true, detail: "Media index agrees with R2 and public/: 70 expected, 70 present." },
   { name: "media-unbacked", ok: true, detail: "The MEDIA bucket is empty, which is the state RECOVERY.md accepts." },
+  { name: "content-drift", ok: true, detail: "D1 agrees with the repository: 12 post file(s), every blob sha matched by its row." },
   { name: "fts-equality", ok: true, detail: "FTS shadows agree: 122 docs, 122 identity, 122 prose." },
 ];
 
@@ -405,6 +406,7 @@ const HEALTH_ONE_FAILING = [
   },
   HEALTH_OK[2],
   HEALTH_OK[3],
+  HEALTH_OK[4],
 ];
 
 const STORES_CLEAN = {
@@ -3223,7 +3225,7 @@ structural(
  */
 for (const state of ["overview, all healthy", "overview, one check failing"]) {
   structural("every health check is named on the page", state, (h) =>
-    ["ask-index-drift", "media-index-drift", "media-unbacked", "fts-equality"].every((name) =>
+    ["ask-index-drift", "media-index-drift", "media-unbacked", "content-drift", "fts-equality"].every((name) =>
       h.includes(name),
     ),
   );

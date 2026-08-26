@@ -124,6 +124,89 @@ export function mediaUnbackedVerdict(objects) {
 }
 
 /**
+ * The three ways a D1 row and a repository file can part company.
+ *
+ * Pure and shared: the health check derives its verdict from this, and the
+ * `sync_posts` repair derives its work list from the SAME comparison, so what
+ * the check calls drift and what the repair repairs cannot disagree.
+ *
+ *   changed  a slug present on both sides whose blob sha differs: the file
+ *            moved and the row has not followed (or a row's provenance was
+ *            corrupted, which repairs identically).
+ *   unrowed  a file with no row: a post committed from a clone that no sync
+ *            has landed yet, or a lost row.
+ *   unfiled  a row with no file: a post deleted from the repository whose
+ *            rows outlived it.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files from the Contents
+ *   directory listing, blob sha per markdown file
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ changed: string[], unrowed: string[], unfiled: string[] }}
+ */
+export function contentDriftCompare(files, rows) {
+  const rowBySlug = new Map(rows.map((r) => [r.slug, r]));
+  const fileSlugs = new Set(files.map((f) => f.slug));
+
+  const changed = files
+    .filter((f) => {
+      const row = rowBySlug.get(f.slug);
+      return row !== undefined && row.source_blob_sha !== f.sha;
+    })
+    .map((f) => f.slug)
+    .sort();
+  const unrowed = files
+    .filter((f) => !rowBySlug.has(f.slug))
+    .map((f) => f.slug)
+    .sort();
+  const unfiled = rows
+    .filter((r) => !fileSlugs.has(r.slug))
+    .map((r) => r.slug)
+    .sort();
+
+  return { changed, unrowed, unfiled };
+}
+
+/**
+ * Does D1 still hold what the repository says?
+ *
+ * The check half of the arrangement that let the committed corpus artifact
+ * leave the repository: git holds markdown, D1 holds the only rendered copy,
+ * and THIS is what watches the two converge. A markdown commit from any
+ * machine goes live within one health poll with no deploy, BY DESIGN: the
+ * scheduled workflow sees the sha mismatch and repairs it through the
+ * operator door (`sync_posts`), which fetches the raw file and re-renders it
+ * through the one door to a rendered row.
+ *
+ * `expected` is the repository's file count and `present` is the count of
+ * rows in full agreement, so the public body's two counts say how much of
+ * the corpus is in step, not merely how big each side is: equal totals with
+ * one sha changed is still drift.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function contentDriftVerdict(files, rows) {
+  const { changed, unrowed, unfiled } = contentDriftCompare(files, rows);
+  const drift = changed.length + unrowed.length + unfiled.length;
+  if (drift === 0) {
+    return {
+      ok: true,
+      detail: `D1 agrees with the repository: ${files.length} post file(s), every blob sha matched by its row.`,
+    };
+  }
+  return {
+    ok: false,
+    detail:
+      `Content drift ${drift}: ${changed.length} sha-changed, ${unrowed.length} ` +
+      `file(s) with no row, ${unfiled.length} row(s) with no file, against ` +
+      `${files.length} post file(s). Repair with sync_posts on the operator API.`,
+    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
+    counts: { expected: files.length, present: files.length - changed.length - unrowed.length },
+  };
+}
+
+/**
  * Do the FTS indexes still agree with the table they are built from?
  *
  * ## COUNTED ON THE `_docsize` SHADOWS, NEVER ON THE INDEX
