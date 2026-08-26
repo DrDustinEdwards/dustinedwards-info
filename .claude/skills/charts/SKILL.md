@@ -9,17 +9,19 @@ Two directives, two different mechanisms, and the difference is worth knowing
 before you pick one.
 
 `:::chart` draws MEASUREMENTS from inline CSV, and its SVG lands inline in the
-gated artifact. `:::diagram` draws a STRUCTURE from mermaid source, and its SVG
-is a build-time asset the artifact only points at. Neither can do the other's
+rendered HTML that D1 stores. `:::diagram` draws a STRUCTURE from mermaid
+source, and its SVG is a build-time asset the rendered HTML only points at.
+Neither can do the other's
 job: `:::chart` cannot draw a flowchart, and `:::diagram` must not be used to
 plot numbers.
 
 # Charts
 
-Charts are CONTENT, not a widget. Observable Plot renders them to static SVG at
-build time and the SVG lands inline in `content/generated/posts.json`, so a chart
-is byte-compared by `check:content` exactly like prose and works with scripting
-off. You never write SVG and you never pick a colour.
+Charts are CONTENT, not a widget. Observable Plot renders them to static SVG
+through the shared pipeline, so the SVG lands inline in the rendered HTML both
+writers produce (the local build product and the Worker's saves alike), it is
+covered by `check:content`'s determinism pass exactly like prose, and it works
+with scripting off. You never write SVG and you never pick a colour.
 
 Ruling and measurements: Capsid `dustinedwards/chart-stack.md`. Editorial rules:
 `dustinedwards/blog-content.md`. Mechanics: the repo CLAUDE.md. Renderer:
@@ -131,14 +133,15 @@ table, so the caption carries the METHOD and the caveat instead of repeating the
 
 ## After editing a chart
 
-Charts live in the gated artifact, so the ordinary content workflow applies:
+The ordinary content workflow applies (markdown is the only committed form;
+posts.json is a gitignored local build product):
 
-    npm run build:content     # regenerate the artifact, including the SVG
-    npm run check:content     # byte-compares it against a fresh generation
+    npm run build:content     # regenerate the local build product, SVG included
+    npm run check:content     # validity and render determinism
     npm run check:charts      # determinism, Node/Worker parity, the contract
 
-Commit the markdown and the regenerated artifact TOGETHER. Never hand-edit the
-SVG in the artifact; `check:content` exists to catch exactly that.
+Commit the markdown alone; `sync:content` or the next ship lands the render in
+D1, and the content-drift health check repairs any gap within one poll.
 
 If you bump `@observablehq/plot` or `linkedom` (pinned to exact versions,
 deliberately), rerun `check:charts`: determinism and Node-versus-workerd byte
@@ -151,10 +154,10 @@ layering. It is mermaid source in the markdown, rendered to a pair of static SVG
 assets at build time.
 
 **The one structural difference from charts, and everything follows from it:**
-the SVG is NOT in the artifact. Diagram layout needs real font metrics, so
+the SVG is NOT in the rendered HTML. Diagram layout needs real font metrics, so
 mermaid needs a real browser engine, which a Worker does not have. The assets
 live in `public/diagrams/` under a key that is a hash of the source, and the
-artifact carries the key. Same pattern as the social cards, and the same gap: **a
+rendered HTML carries the key. Same pattern as the social cards, and the same gap: **a
 new or edited diagram has no picture until someone runs `build:diagrams`.**
 
 ## Syntax
@@ -222,10 +225,11 @@ finding, because for a reader who cannot see it, that prose is the diagram.
 
     npm run build:content     # the key changes with the source
     npm run build:diagrams    # renders anything whose key has no asset yet
-    npm run check:content     # the artifact matches its source
+    npm run check:content     # validity and render determinism
     npm run check:diagrams    # the assets exist, and every colour is a token
 
-Commit the markdown, the artifact and the assets TOGETHER. `build:diagrams` is
+Commit the markdown and the assets TOGETHER (posts.json is a gitignored local
+build product and is never committed). `build:diagrams` is
 idempotent (an unchanged diagram is skipped) and prunes assets the corpus no
 longer references, so a re-render is only paid for by what actually changed.
 

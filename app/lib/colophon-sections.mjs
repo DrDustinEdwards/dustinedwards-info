@@ -170,7 +170,7 @@ export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
  * body carried the raw enum, `(refused)` and `(accepted-gap)`. For
  * `accepted-gap` the hyphen means the indexed token appeared on the page in no
  * casing at all, so the index promised a word the page never showed. Nothing
- * caught it: `check:content` byte-compares the artifact against itself and
+ * caught it: `check:content` compared the generated output against itself and
  * `check:features` reconciled ids, not labels. It was found by sweeping every
  * indexed fact against the rendered page.
  *

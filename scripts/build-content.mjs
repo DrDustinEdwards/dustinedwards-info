@@ -1,10 +1,12 @@
 /**
- * Renders content/posts/*.md into the committed artifact at
+ * Renders content/posts/*.md into the LOCAL build product at
  * content/generated/posts.json.
  *
- * `npm run build:content` regenerates it. `npm run check:content` fails when the
- * committed copy differs from a fresh generation, so the artifact cannot drift
- * from its source without someone noticing.
+ * Gitignored since the artifact arc: git holds markdown, D1 holds the only
+ * rendered copy, and everything that reads this file (sync-content, the
+ * gates, build:og and build:diagrams) runs after a build. `check:content`
+ * proves the render is valid and deterministic; ship's drift report compares
+ * D1's hashes against what this wrote.
  */
 
 import { execFileSync } from "node:child_process";
@@ -98,11 +100,10 @@ export async function buildArtifact() {
 /**
  * The date of the last commit that touched a file, as YYYY-MM-DD.
  *
- * Deliberately NOT written into the gated artifact. The artifact is generated
- * before the commit that contains it, so it would record the file's PREVIOUS
- * commit date, and the next build would compute the new one. Every ordinary
- * content commit from a clone would then leave `check:content` red. Git dates
- * are applied at sync time instead, where nothing compares them byte for byte.
+ * Deliberately NOT written into the build product. A render must be a pure
+ * function of the sources (the determinism pass renders twice and compares,
+ * and the Worker writer has no git to consult), so git dates are applied at
+ * sync time instead, where the two writers already legitimately differ.
  *
  * Exported for `sync:content`.
  *

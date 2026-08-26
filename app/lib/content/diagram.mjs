@@ -18,10 +18,10 @@
  *
  * So diagrams take the social-card pattern instead: rendered at build time by
  * `scripts/build-diagrams.mjs` into `public/diagrams/`, under a key that is a
- * pure function of the source, and referenced from the post. The artifact
- * carries the KEY and the SOURCE, never the SVG, so `check:content` still
- * byte-compares everything the pipeline produced while the bytes that came out
- * of a browser engine stay out of a byte-comparison gate.
+ * pure function of the source, and referenced from the post. The rendered
+ * HTML carries the KEY and the SOURCE, never the SVG, so the determinism and
+ * drift comparisons still cover everything the pipeline produced while the
+ * bytes that came out of a browser engine stay out of every byte comparison.
  *
  * The gap that leaves is real and recorded, the same one social cards have: a
  * diagram authored or edited in the admin editor has no asset until someone runs

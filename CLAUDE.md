@@ -170,6 +170,8 @@ Three steps, in `scripts/ship.mjs`, each failing closed and none of them optiona
 
 **The Ask index is brought into step as the LAST step, after the deploy and after the D1 sync, and a failure there is LOUD while the deploy STANDS.** Index freshness is worth less than write reliability, and health catches a failed sync within its poll interval. Ship reads the operation's converged verdict rather than its status code.
 
+**The D1 sync carries the DRIFT REPORT, since the artifact arc.** Before writing, `sync-content` compares every row's `source_blob_sha` and `render_hash` against the fresh build and prints the classes by slug; the write runs regardless, because converging D1 to the build is the repair. RENDER DRIFT, the same source rendered differently by the Worker and the Node build, exits the run nonzero AFTER the deploy stands, the same shape as an index miss: it is the class the committed artifact's byte gate used to catch at commit time, and it names a pipeline defect rather than staleness.
+
 **Separate sentence, UNGATED, process class: a ship window owns the tree from its first step to its last.** Nobody edits the working tree or lands on `main` while one is open. A prior ship deployed and then refused mid-run because the session deleted a file underneath it, and the deploy was coherent only because the build had already finished. No gate can see this, and it is deliberately not folded into the three steps above, so that a session never learns to fail a deploy over it.
 
 ### 17. UNGATED. ONE OWNER PER FACT. A measured value lives in the gate that measures it, or nowhere.
@@ -187,6 +189,8 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are al
 **A derived store is repaired THROUGH ITS DERIVATION, never by a hand-written INSERT.** A hand insert makes the index a second truth, which is the exact property the drift gates exist to hold; the row must arrive the way every other row arrived. That is why `OFL.txt`'s missing row waits for the media rebuild rather than for a `INSERT`.
 
 **A failed index write NEVER reverts the source.** The write that already succeeded stands and the failure is reported; the alternative silently trades a durable fact for a rebuildable one.
+
+**D1 HOLDS THE ONLY RENDERED COPY, since the artifact arc, and is still derived.** Git holds markdown; the committed corpus artifact is gone, and `content/generated/posts.json` is a gitignored local build product. The derivation has one door, `renderAndWrite`, and one bulk form, `regenerateAllFromRepo`; the `content-drift` health check watches `posts.source_blob_sha` converge to the repository's blob shas, and `sync_posts` on the operator API is its repair, the third repairable class. That is why a markdown commit from any machine is live within one health poll with no deploy, by design.
 
 No gate can see how a row got where it is, which is what makes this UNGATED. The gates see DRIFT, which is the symptom.
 
@@ -230,12 +234,12 @@ Every script in `package.json`. Counts, timings and what each gate asserts live 
     npm run bootstrap:config             copy wrangler.jsonc.example into place, never overwrites
     npm run postinstall                  bootstrap:config + wrangler types
 
-    npm run build:content                regenerate content/generated/posts.json
+    npm run build:content                regenerate content/generated/posts.json (LOCAL build product, gitignored)
     npm run build:og -- --remote         render and upload social cards
     npm run build:diagrams [-- --force]  render :::diagram sources to public/diagrams/
     npm run build:stack                  regenerate content/generated/stack.json for the colophon
     npm run build:assets                 static asset derivation
-    npm run sync:content -- --local|--remote   push the artifact into D1, rebuild the FTS index
+    npm run sync:content -- --local|--remote   drift report, then push the build product into D1, rebuild the FTS index
 
     npm run check                        every gate, offline tier
     npm run check:all                    adds the gates needing a deployed database or bucket
