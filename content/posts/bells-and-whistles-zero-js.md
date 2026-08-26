@@ -1,14 +1,14 @@
 ---
 title: "Progressive Enhancement: A Complete Blog UI in 1.6 kB of JavaScript"
 slug: bells-and-whistles-zero-js
-description: "How to build a full reading experience, table of contents, progress bar, copy buttons, footnote previews, lightbox, that works with JavaScript disabled and enhances in 1.59 kB gzipped. Includes the fallback inventory method and two-writer pipeline rules."
+description: "How to build a full reading experience, table of contents, progress bar, copy buttons, footnote previews, lightbox, that works with JavaScript disabled and enhances in under 2 kB gzipped. Includes the fallback inventory method and two-writer pipeline rules."
 date: 2026-07-28
 tags: [cloudflare, performance, accessibility, progressive-enhancement]
 draft: false
 first_published: 2026-07-30
 ---
 
-This article describes how to build a modern blog reading experience under one strict constraint: every public page must work completely with JavaScript disabled, with client-side script permitted only to decorate what the server already rendered. The result on this site is a reading interface with a scroll-synced table of contents, a reading progress indicator, code copy buttons, heading anchor links, footnote hover previews, and an image lightbox, whose entire client-side cost is 1.59 kB of gzipped JavaScript in one lazily loaded chunk, plus a 0.22 kB loader. The article covers the method for holding that constraint, the pipeline rules that emerge when two different programs write the same content, and several decisions about what not to build, with reasons.
+This article describes how to build a modern blog reading experience under one strict constraint: every public page must work completely with JavaScript disabled, with client-side script permitted only to decorate what the server already rendered. The result on this site is a reading interface with a scroll-synced table of contents, a reading progress indicator, code copy buttons, heading anchor links, footnote hover previews, and an image lightbox, whose entire client-side cost is one small bundle of gzipped JavaScript, loaded by a single script tag: 1.67 kB at the current measurement (2026-08-26; it was 1.59 kB as a lazily loaded chunk plus a 0.22 kB loader when first published). The article covers the method for holding that constraint, the pipeline rules that emerge when two different programs write the same content, and several decisions about what not to build, with reasons.
 
 Progressive enhancement is an old idea, and I am not claiming novelty for it. What I can add is a worked example with current tooling, exact costs, and the specific places where the discipline required a decision rather than a habit.
 
@@ -20,7 +20,7 @@ The second part sounds bureaucratic and is the entire method. When each enhancem
 
 ## How a complete blog UI fits in 1.59 kB of gzipped JavaScript
 
-The 1.59 kB figure is not the product of heroic minification. It follows from the architecture: when the server renders everything and script only attaches behavior to existing elements, the script contains event listeners and class toggles, which are cheap. There is no framework runtime in the chunk, no templates, no state management, because there is no client-rendered state. The chunk is lazily loaded and served only on blog routes, so the rest of the site pays nothing.
+The figure (1.59 kB gzipped when this was first published; 1.67 kB re-measured 2026-08-26) is not the product of heroic minification. It follows from the architecture: when the server renders everything and script only attaches behavior to existing elements, the script contains event listeners and class toggles, which are cheap. There is no framework runtime in the bundle, no templates, no state management, because there is no client-rendered state. Since 2026-08-26 that sentence is true of the whole page, not just the bundle: this site's public routes no longer hydrate a client framework at all, so the reading enhancements are prebuilt into a self-contained module and loaded by an ordinary script tag, served only on blog routes. The rest of the site pays nothing.
 
 The measurement itself deserves a paragraph, because my first measurement was wrong in an instructive direction. During verification, a 250-line TypeScript file emitted a 0.05 kB chunk. It was not plausible, and implausibility was the correct alarm: a misconfigured `?url` import had caused the bundler to copy the file verbatim as a static asset, meaning the browser would have been served raw TypeScript. The general procedure I would recommend for any bundle claim: distrust any number that surprises you in either direction, open the emitted files, and confirm the served bytes are the compiled form. A second false signal came from the automated browser harness, where a form-input tool intermittently failed to reach the framework's synthetic event system, making a working autosave feature look broken; real keyboard input resolved it. Verification tooling fails in both directions, and the habit that catches it is treating every surprising result as a claim about the harness first and the code second.
 
