@@ -111,6 +111,15 @@ export const SELF_REFERENTIAL = ["content/generated/assets.json"];
 export function isSourceFile(file) {
   if (SELF_REFERENTIAL.includes(file)) return false;
   if (SOURCE_FILES.includes(file)) return true;
+  /*
+   * The enhancement bundles are BUILD PRODUCT, not source, and they are
+   * gitignored, so counting them would make `filesRead` in the committed
+   * artifact depend on whether build:enhance has run on this machine: the
+   * byte-compare in check:content would then disagree with itself across
+   * checkouts. The exclusion is this one path, not a name pattern, so a future
+   * source directory that happens to be called dist is still scanned.
+   */
+  if (file.startsWith("app/enhance/dist/")) return false;
   const root = file.split("/")[0];
   if (!SOURCE_ROOTS.includes(root)) return false;
   return SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext));

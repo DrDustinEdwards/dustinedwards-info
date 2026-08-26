@@ -40,6 +40,15 @@ export function meta() {
   return [{ title: "Sign in" }, { name: "robots", content: "noindex" }];
 }
 
+/**
+ * /login hydrates for its busy flag and the browser-client fast path on the
+ * button below, and that is DECORATION: the door itself is the plain form
+ * above it, a real no-script POST, which is what rule 9 requires of a public
+ * route. Dropping this flag would cost the spinner and the saved round trip,
+ * never the sign-in.
+ */
+export const handle = { hydrate: true };
+
 /** Where a successful sign-in lands. One statement, used by both paths. */
 const AFTER_SIGN_IN = "/admin";
 

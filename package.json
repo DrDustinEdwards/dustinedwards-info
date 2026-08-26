@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "react-router build",
-    "dev": "react-router dev",
+    "dev": "npm run build:enhance && react-router dev",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "predeploy": "node scripts/require-clean-tree.mjs",
     "deploy": "npm run build && wrangler deploy",
@@ -16,6 +16,7 @@
     "preview": "npm run build && vite preview",
     "cf-typegen": "wrangler types",
     "build:content": "node scripts/build-content.mjs",
+    "build:enhance": "node scripts/build-enhance.mjs",
     "check": "node scripts/check-all.mjs",
     "check:all": "node scripts/check-all.mjs --all",
     "check:ci": "node scripts/check-all.mjs --ci",

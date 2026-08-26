@@ -372,6 +372,25 @@ function main() {
   }
   console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
   /*
+   * THE ENHANCEMENT BUNDLES, same class as build:content: app/enhance/dist/ is
+   * gitignored build product, the app build's ?url imports refuse to resolve
+   * without it, and a stale bundle on disk would be certified as itself by any
+   * gate that reads the build. Built here so the tier never depends on a
+   * previous run having left the right bytes behind. Not a gate: no table row,
+   * no floor.
+   */
+  process.stdout.write("  build:enhance (the bundles the app build's ?url imports serve) ... ");
+  const enhanced = runGate("build:enhance", []);
+  if (!enhanced.ok) {
+    console.log("FAILED");
+    console.log(enhanced.output.trimEnd());
+    throw new Error(
+      "build:enhance failed, so the enhancement bundles do not exist on disk. " +
+        "Nothing below ran; fix the bundle build first.",
+    );
+  }
+  console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
+  /*
    * THE CI TIER IS THE OFFLINE TIER MINUS CI_EXCLUDED, derived rather than
    * listed, so a gate added tomorrow is in CI by default and has to be argued
    * OUT rather than remembered IN. That direction is the whole point: the

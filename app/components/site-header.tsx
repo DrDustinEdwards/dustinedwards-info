@@ -56,20 +56,23 @@ import type { loader as rootLoader } from "~/root";
  * without a speculation entry still navigates, just slower. Four NavLinks
  * mapped from one array render exactly what four literals rendered.
  *
- * `prefetch="intent"` on the nav and the brand. react-router's `Link` defaults
- * to `prefetch="none"` (8.3.0, `lib/dom/lib.js`: `prefetch = "none"`), and
- * NavLink spreads its rest props into Link rather than setting its own, so
- * every menu click paid a round trip that a hover could have prepaid. It costs
- * the no-script plane NOTHING: the prefetch handlers are React event props and
- * the `<link>` elements are rendered from client state, so the server-rendered
- * anchors are byte-identical either way.
+ * NO `prefetch="intent"` any more, removed 2026-08-26 with the unhydration
+ * arc. The prop worked through React event handlers, which exist only on a
+ * hydrated page, and the public plane no longer hydrates: the props had
+ * become dead configuration that reads as an optimisation, which is the
+ * dead-code-that-looks-alive class rule 4's hook gate exists for. Hover
+ * prepayment is not lost, because it never came from here alone:
+ * `SiteSpeculation` below declares the same header destinations as
+ * speculation rules, which are DECLARATIVE and work without any script or
+ * hydration, so the hover speculation this comment used to promise is still
+ * delivered, by the mechanism that survives.
  */
 export function SiteHeader() {
   const data = useRouteLoaderData<typeof rootLoader>("root");
 
   return (
     <header className="site-header">
-      <Link to="/" className="site-header-brand" prefetch="intent">
+      <Link to="/" className="site-header-brand">
         {/* Decorative: the link's accessible name is the wordmark beside it, so
             naming the mark too would make a screen reader say it twice. Inline
             so the purple follows the theme token; see site-logo.tsx. */}
@@ -84,7 +87,7 @@ export function SiteHeader() {
           the pair it describes never existed. */}
       <nav className="site-header-nav" aria-label="Main">
         {NAV.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end} prefetch="intent">
+          <NavLink key={item.to} to={item.to} end={item.end}>
             {item.label}
           </NavLink>
         ))}

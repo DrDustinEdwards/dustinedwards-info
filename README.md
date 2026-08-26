@@ -18,10 +18,14 @@ consequence of it.
   checkout, which is the closest thing here to a second opinion.
 - **Progressive enhancement is a requirement, not a preference.** Every public
   page works with scripting disabled; client JS only ever upgrades markup that
-  already functions. That includes the ADMIN DOOR: `/login` is a real form, and
-  the browser client is layered on top of it. The admin plane behind that door
-  is exempt and does use script. This used to read "zero JavaScript", which was
-  the wrong name for the law (hard rule 9 calls it progressive enhancement) and
+  already functions. Since 2026-08-26 the public plane ships no framework
+  script at all: public pages do not hydrate React, and their only JavaScript
+  is four small prebuilt enhancement bundles loaded by nonced script tags
+  (`app/enhance/`, measured and gated by `check:script-payload`). That
+  includes the ADMIN DOOR: `/login` is a real form, and the browser client is
+  layered on top of it. The admin plane behind that door is exempt, hydrates,
+  and does use script. This used to read "zero JavaScript", which was the
+  wrong name for the law (hard rule 9 calls it progressive enhancement) and
   was also untrue at the door, where the only way in was a button that did
   nothing without script.
 

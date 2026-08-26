@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useMatches,
   useRouteLoaderData,
 } from "react-router";
 
@@ -81,6 +82,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
    */
   const nonce = data?.nonce;
 
+  /*
+   * HYDRATION IS OPT-IN BY ROUTE, since 2026-08-26.
+   *
+   * A route that needs React in the browser exports `handle = { hydrate:
+   * true }`; today that is the admin layout (covering every admin child) and
+   * /login. No public reading route does, so a public page ships NO framework
+   * script and no modulepreloads: its only script tags are the nonced
+   * enhancement bundles, which is rule 4's public payload and rule 9's
+   * standing ruling (works without script, fast with it) with the "with it"
+   * carried by the bundles alone. This is React Router's documented shape:
+   * the framework docs state `<Scripts>` may simply be omitted for a
+   * traditional no-JS app, and matches expose `handle` exactly for decisions
+   * like this one.
+   *
+   * The ERROR-BOUNDARY path has whatever matches existed when the error threw
+   * and hydrates only if one of them had opted in: an admin error page keeps
+   * its scripts, a public error page stays script-free, and a root-level
+   * error (no handle anywhere) renders the boundary below with no framework
+   * script, which is fine because it is plain markup.
+   *
+   * `check:script-payload` pins both halves: the opt-in set is exactly
+   * {admin.tsx, login.tsx}, and <Scripts> renders only behind this guard.
+   */
+  const matches = useMatches();
+  const hydrates = matches.some(
+    (match) => (match.handle as { hydrate?: boolean } | undefined)?.hydrate === true,
+  );
+
   return (
     <html lang="en" data-theme={theme}>
       <head>
@@ -98,8 +127,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* React Router propagates the nonce from here to the scripts it
             generates. The two ld+json blocks are deliberately NOT nonced: see
             `contentSecurityPolicy` in workers/app.ts, unknown 2. */}
-        <ScrollRestoration nonce={nonce} />
-        <Scripts nonce={nonce} />
+        {hydrates ? (
+          <>
+            <ScrollRestoration nonce={nonce} />
+            <Scripts nonce={nonce} />
+          </>
+        ) : null}
       </body>
     </html>
   );

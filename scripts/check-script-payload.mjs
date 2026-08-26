@@ -1,88 +1,105 @@
 /**
- * Gate: the public script payload is measured, and its ceilings are here.
+ * Gate: the public script payload is the enhancement bundles and nothing else,
+ * and its ceilings are here.
  *
  *   npm run check:script-payload
  *
- * OBSERVATION BOUNDARY: this reads the BUILD ON DISK under build/client. It
- * does not build, so it measures whatever the last `npm run build` produced:
- * run against a stale build it certifies the stale build, exactly as
- * `npm run deploy` would ship it. It also cannot see the wire; the deployed
- * page's script set is verify-live's assertion, which imports this module's
- * walk so the two cannot disagree about what "the set" means.
+ * OBSERVATION BOUNDARY: this reads the BUILD ON DISK under build/client and
+ * the bundles under app/enhance/dist. It does not build, so run against a
+ * stale build it certifies the stale build, exactly as `npm run deploy` would
+ * ship it. It also cannot see a RENDERED page: the public plane is
+ * server-rendered at request time, so "the page carries only enhancement
+ * script tags" is a claim about a response, asserted by check:browser against
+ * the preview and by verify-live section 16 against the wire. What this gate
+ * CAN see offline is the build's shape (every bundle emitted verbatim, every
+ * served asset syntactically runnable) and the source's shape (hydration is
+ * opt-in and only the admin plane and its door opt in).
  *
- * ## What it measures and why
+ * ## What changed here, 2026-08-26
  *
- * `app/root.tsx` renders `<Scripts />` unconditionally, so every public page
- * hydrates React: the framework floor is the largest thing any reader
- * downloads and nothing measured it. Hard rule 4 grades everything a reader
- * downloads; the stylesheet was split with ceremony while 331 KB raw of
- * hydration script shipped unfloored. This gate makes both numbers visible on
- * every run and refuses growth past the ceilings below.
+ * Until the public plane stopped hydrating, this gate's subject was the
+ * hydration set: 12 files, 95,456 bytes brotli that every public reader
+ * downloaded, plus one dynamically imported enhancement chunk. The framework
+ * no longer rides on public pages, so the public payload IS the enhancement
+ * bundles, measured per module below. The manifest walk survives as a
+ * structural floor (a manifest that stops listing routes is a broken build,
+ * whoever downloads it), and verify-live imports it for stem comparison; its
+ * brotli ceiling is gone because its subject is now the admin plane's payload,
+ * which rule 4 does not grade.
  *
- * Two subjects:
+ * ## Identifying the enhancement assets
  *
- *   HYDRATION  every module statically reachable from the client entry plus
- *              the root and blog.$slug route modules, the set the SSR page
- *              emits as modulepreloads. The article page is the payload rule's
- *              stated subject, which is why blog.$slug and not some wider
- *              union; a route outside this set can still grow unwatched, and
- *              that is a stated gap, not an oversight.
- *   ENHANCE    the dynamically imported chunk built from app/enhance/blog.ts,
- *              the "1.59 kB" a published post cites. It is reached by dynamic
- *              import, so the hydration walk deliberately does not include it
- *              and it gets its own ceiling.
+ * By BYTE EQUALITY against app/enhance/dist/, not by name (a Vite hash may
+ * contain a dash) and not by content anchors (the old two-factor match, which
+ * existed because the chunk used to be compiled out of the source; a ?url
+ * asset is the dist file verbatim, so equality is available and exact). Each
+ * bundle must match exactly one asset: zero means the ?url import stopped
+ * serving it or the build is stale relative to dist, two means the walk can no
+ * longer tell them apart.
  *
- * ## Finding the manifest, measured 2026-08-25
+ * ## The syntax pass
  *
- * There is NO Vite manifest.json under build/client: the react-router build
- * does not emit one (`find build -name manifest.json` comes back empty). What
- * exists is React Router's browser manifest, `assets/manifest-<hash>.js`,
- * carrying `entry` and per-route `module` + `imports`. Those import arrays are
- * the flattened preload lists the SSR page emits, and the walk below re-closes
- * them transitively over each chunk's own static imports anyway, so a chunk
- * the manifest under-listed is still counted.
- *
- * ## Identifying the enhancement chunk
- *
- * The browser manifest maps no source files, so "the chunk built from
- * app/enhance/blog.ts" is identified two-factor and fails closed on both:
- * it must be a DYNAMIC import target of a chunk in the hydration set (that is
- * how BlogEnhancements loads it), and its minified body must carry the string
- * literals the source file carries. Either factor alone can mislead; the name
- * cannot be used at all, because Vite hashes may contain dashes and
- * `blog-<hash>.js` is not distinguishable from a hyphenated basename by
- * pattern.
+ * `?url` copies bytes verbatim, so a ?url import pointed at the .ts SOURCE
+ * ships raw TypeScript that parses nowhere (measured 2026-07-28). Every .js
+ * asset in the build is therefore syntax-checked with `node --check` on a
+ * .mjs copy, an instrument independent of the bundler that produced them, and
+ * the failure names the file.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 
+// The gate-side comment stripper, per the one-helper discipline: a gate
+// reading source can be satisfied by a comment, so comments go first.
+import { stripComments } from "./lib/strip-comments.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ASSETS_DIR = join(root, "build", "client", "assets");
-const ENHANCE_SOURCE = join(root, "app", "enhance", "blog.ts");
+const DIST_DIR = join(root, "app", "enhance", "dist");
 
 /**
- * CEILINGS AND FLOOR. The only copies of these numbers, rule 17.
+ * CEILINGS AND FLOORS. The only copies of these numbers, rule 17.
  *
- * MEASURED 2026-08-25 through this gate's own pipeline, on a fresh build of
- * HEAD: hydration 12 files, 331,047 bytes raw, 95,456 bytes brotli; the
- * enhancement chunk 4,177 raw, 1,387 brotli.
+ * MEASURED 2026-08-26 through this gate's own pipeline on a fresh build of the
+ * working tree: ask 3,010 raw / 1,342 brotli; blog 4,254 / 1,421; palette
+ * 11,663 / 4,026; theme 714 / 349. Margins are the old enhancement-chunk
+ * discipline: roughly fifty percent over measured, wide in relative terms
+ * because the bundles are tiny and a legitimate feature moves one by whole
+ * percents, tight in absolute terms because the job is catching a dependency
+ * wandering in. The palette carries ask inlined (a bundle may not import), so
+ * a growth in ask moves palette too; that coupling is deliberate and the
+ * ceilings absorb it.
  *
- * Margins, stated: the hydration ceiling is the measured 95,456 plus roughly
- * ten percent, room for ordinary edits and dependency patch bumps but not for
- * a new library riding into the shared chunks. The enhancement ceiling is the
- * measured 1,387 plus roughly fifty percent, wide in relative terms because
- * the chunk is tiny and a legitimate feature moves it by whole percents, tight
- * in absolute terms because its job is to catch a dependency wandering into a
- * chunk a published post calls small. The file floor is the measured 12 less
- * two, the same slack discipline check:secrets applies: a walk that reads
- * fewer files than that has lost a route or gone vacuous, not gotten lean.
+ * A module missing from this map fails: a new enhancement arrives with its own
+ * measured ceiling in the same commit, or not at all.
+ *
+ * @type {Record<string, number>}
  */
-const HYDRATION_BROTLI_CEILING = 105000;
-const ENHANCE_BROTLI_CEILING = 2100;
-const MINIMUM_FILES_WALKED = 10;
+const ENHANCE_BROTLI_CEILINGS = {
+  "ask.js": 2000,
+  "blog.js": 2100,
+  "palette.js": 6000,
+  "theme.js": 550,
+};
+
+/**
+ * Floor on the manifest walk, the old discipline kept: a walk that reads
+ * fewer files than this has lost a route or gone vacuous, not gotten lean.
+ * Re-measured 2026-08-26 after the loaders left the hydration set: 12 files.
+ */
+const MINIMUM_FILES_WALKED = 8;
+
+/** Floor on the syntax pass, so an empty assets directory cannot pass it. */
+const MINIMUM_ASSETS_SYNTAX_CHECKED = 15;
 
 let checks = 0;
 let failures = 0;
@@ -103,10 +120,10 @@ function ok(label, condition, detail = "") {
  * becomes `entry.client`.
  *
  * Exported for verify-live, which compares the DEPLOYED page's script set to
- * this walk. Stems rather than full names, because a standalone verify-live
- * run may face a deploy whose hashes predate the build on this disk, and
- * "same chunks, different hashes" is a stale-hash observation rather than a
- * payload defect. Vite hashes are eight base64url characters, which may
+ * the enhancement set. Stems rather than full names, because a standalone
+ * verify-live run may face a deploy whose hashes predate the build on this
+ * disk, and "same chunks, different hashes" is a stale-hash observation rather
+ * than a payload defect. Vite hashes are eight base64url characters, which may
  * themselves contain a dash; the pattern anchors on the extension for that
  * reason.
  *
@@ -159,9 +176,7 @@ export function readClientManifest() {
  * Static import specifiers of one built chunk, as sibling filenames.
  *
  * Minified output writes `from"./x.js"`, bare `import"./x.js"` and dynamic
- * `import("./x.js")`, any of the three quote characters. Dynamic targets are
- * NOT part of the eager payload and are collected separately, which is how
- * the enhancement chunk is found without being counted as hydration weight.
+ * `import("./x.js")`, any of the three quote characters.
  *
  * @param {string} source
  * @returns {{ static: string[], dynamic: string[] }}
@@ -186,12 +201,12 @@ export function chunkImports(source) {
 }
 
 /**
- * The hydration set: every JS chunk statically reachable from the client
- * entry, the root module and the blog.$slug route module.
+ * Every JS chunk statically reachable from the client entry, the root module
+ * and the blog.$slug route module.
  *
- * Exported for verify-live, which asserts the DEPLOYED post page references
- * exactly this set by filename stem. One derivation, two consumers: a second
- * walk there would drift from this one the first time either moved.
+ * This is the set the framework WOULD hand a hydrating page, kept as a
+ * structural floor on the manifest and for verify-live's stem comparison. No
+ * public page references it any more; the admin plane and /login still do.
  *
  * @returns {{ files: string[], dynamicTargets: Set<string>, manifestFile: string }}
  */
@@ -213,8 +228,7 @@ export function walkHydrationSet() {
     const route = manifest.routes?.[id];
     if (!route?.module) {
       throw new Error(
-        `route "${id}" is missing from the manifest. The walk would silently ` +
-          `measure a smaller page than the one readers get.`,
+        `route "${id}" is missing from the manifest. The build lost a route.`,
       );
     }
     add(route.module);
@@ -243,92 +257,196 @@ export function walkHydrationSet() {
 }
 
 /**
- * The built chunk `app/enhance/blog.ts` became, identified two-factor.
+ * The enhancement bundles as the build serves them, matched by byte equality
+ * against app/enhance/dist/.
  *
- * @param {Set<string>} dynamicTargets dynamic-import targets of the hydration set
- * @returns {string} the chunk filename
+ * Exported for verify-live: the stems of these asset names are the ONLY
+ * script references a live public page may carry.
+ *
+ * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
  */
-export function findEnhancementChunk(dynamicTargets) {
-  const source = readFileSync(ENHANCE_SOURCE, "utf8");
-  // String literals the source carries, matched by CONTENT because esbuild
-  // rewrites quote characters. Length-floored so `"click"` does not match
-  // every chunk on the page.
-  const anchors = [...source.matchAll(/"([^"\\]{8,})"/g)].map((m) => m[1]);
-  if (anchors.length < 3) {
+export function enhancementAssets() {
+  /** @type {string[]} */
+  let distFiles;
+  try {
+    distFiles = readdirSync(DIST_DIR).filter((f) => f.endsWith(".js"));
+  } catch {
     throw new Error(
-      `only ${anchors.length} anchor literal(s) found in ${ENHANCE_SOURCE}; ` +
-        `the identification would be too weak to trust. The source moved or ` +
-        `lost its string literals.`,
+      `${DIST_DIR} is missing. The bundles are built by npm run build:enhance, ` +
+        `which every runner executes before this gate; run it first.`,
     );
   }
-  if (dynamicTargets.size === 0) {
-    throw new Error(
-      "the hydration set dynamically imports nothing, so the enhancement " +
-        "chunk is unreachable from the page and this gate cannot find it. " +
-        "BlogEnhancements stopped loading it, which is itself the defect.",
-    );
+  if (distFiles.length === 0) {
+    throw new Error(`${DIST_DIR} holds no bundles; run npm run build:enhance.`);
   }
 
-  /** @type {string[]} */
-  const matches = [];
-  for (const name of dynamicTargets) {
-    const chunk = readFileSync(join(ASSETS_DIR, name), "utf8");
-    const carried = anchors.filter((a) => chunk.includes(a)).length;
-    if (carried >= 3) matches.push(name);
-  }
-  if (matches.length !== 1) {
-    throw new Error(
-      `expected exactly one dynamic-import target carrying app/enhance/blog.ts ` +
-        `literals, found ${matches.length}${matches.length ? `: ${matches.join(", ")}` : ""} ` +
-        `among ${dynamicTargets.size} target(s).`,
+  const assetNames = readdirSync(ASSETS_DIR).filter((f) => f.endsWith(".js"));
+  return distFiles.sort().map((module) => {
+    const distBytes = readFileSync(join(DIST_DIR, module));
+    const matches = assetNames.filter((name) =>
+      distBytes.equals(readFileSync(join(ASSETS_DIR, name))),
     );
-  }
-  return matches[0];
+    return {
+      module,
+      assetName: matches.length === 1 ? matches[0] : null,
+      matches: matches.length,
+      raw: distBytes.length,
+      brotli: brotliSize(distBytes),
+    };
+  });
 }
 
 function main() {
-  const { files, dynamicTargets, manifestFile } = walkHydrationSet();
-
-  let raw = 0;
-  let brotli = 0;
-  for (const name of files) {
-    const bytes = readFileSync(join(ASSETS_DIR, name));
-    raw += bytes.length;
-    brotli += brotliSize(bytes);
-  }
-
-  const enhanceName = findEnhancementChunk(dynamicTargets);
-  const enhanceBytes = readFileSync(join(ASSETS_DIR, enhanceName));
-  const enhanceRaw = enhanceBytes.length;
-  const enhanceBrotli = brotliSize(enhanceBytes);
+  const { files, manifestFile } = walkHydrationSet();
+  const bundles = enhancementAssets();
 
   console.log(`check:script-payload over ${manifestFile}\n`);
-  console.log(`  hydration set (entry + root + blog.$slug), ${files.length} file(s):`);
-  for (const name of files) console.log(`    ${name}`);
-  console.log(`  hydration total: ${raw} bytes raw, ${brotli} bytes brotli`);
-  console.log(
-    `  enhancement chunk ${enhanceName} (from app/enhance/blog.ts): ` +
-      `${enhanceRaw} bytes raw, ${enhanceBrotli} bytes brotli\n`,
-  );
+  console.log(`  manifest walk (entry + root + blog.$slug), ${files.length} file(s)`);
+  for (const b of bundles) {
+    console.log(
+      `  ${b.module}: ${b.raw} bytes raw, ${b.brotli} bytes brotli` +
+        (b.assetName ? `, served as ${b.assetName}` : `, ${b.matches} byte-equal asset(s)`),
+    );
+  }
+  console.log("");
 
   ok(
-    `the walk read at least ${MINIMUM_FILES_WALKED} file(s)`,
+    `the manifest walk read at least ${MINIMUM_FILES_WALKED} file(s)`,
     files.length >= MINIMUM_FILES_WALKED,
-    `only ${files.length} walked. A route module vanished from the manifest or ` +
-      `the walk went vacuous; a smaller number here is a broken walk, not a lean page.`,
+    `only ${files.length} walked. A route module vanished from the manifest or the ` +
+      `walk went vacuous; a smaller number here is a broken walk, not a lean build.`,
+  );
+
+  /* ---- every bundle is served verbatim, and its ceiling holds ------------ */
+
+  for (const b of bundles) {
+    ok(
+      `${b.module} is served verbatim: exactly one byte-equal asset`,
+      b.matches === 1,
+      `${b.matches} asset(s) in build/client/assets are byte-equal to ` +
+        `app/enhance/dist/${b.module}. Zero means the ?url import stopped serving ` +
+        `the bundle (or the build is stale relative to dist: rebuild both); the ` +
+        `syntax pass below names the file if raw TypeScript is being served.`,
+    );
+
+    const ceiling = ENHANCE_BROTLI_CEILINGS[b.module];
+    ok(
+      `${b.module} has a measured ceiling in this gate`,
+      ceiling !== undefined,
+      `no ceiling for ${b.module}. A new enhancement bundle arrives with its own ` +
+        `measured ceiling in the same commit.`,
+    );
+    if (ceiling !== undefined) {
+      ok(
+        `${b.module} brotli is under ${ceiling}`,
+        b.brotli <= ceiling,
+        `measured ${b.brotli} bytes brotli (${b.raw} raw). A dependency has wandered ` +
+          `into a bundle the public payload rule calls small.`,
+      );
+    }
+  }
+  const ceilingOnly = Object.keys(ENHANCE_BROTLI_CEILINGS).filter(
+    (name) => !bundles.some((b) => b.module === name),
   );
   ok(
-    `hydration brotli total is under ${HYDRATION_BROTLI_CEILING}`,
-    brotli <= HYDRATION_BROTLI_CEILING,
-    `measured ${brotli} bytes brotli (${raw} raw) across ${files.length} file(s). ` +
-      `Something new is riding into every public page's payload; the file list ` +
-      `above names the chunks.`,
+    "every ceiling names a bundle that exists",
+    ceilingOnly.length === 0,
+    `${ceilingOnly.join(", ")} carry ceilings but no bundle; the map is describing ` +
+      `a repo that no longer exists.`,
+  );
+
+  /* ---- the syntax pass: every served .js asset actually parses ----------- */
+
+  const scratch = join(root, "node_modules", ".cache", "check-script-payload");
+  rmSync(scratch, { recursive: true, force: true });
+  mkdirSync(scratch, { recursive: true });
+  /*
+   * .ts AND .tsx TOO, not only .js, because the plant that motivated this
+   * pass produces one: a ?url import pointed at `app/enhance/blog.ts` emits
+   * the raw source as `blog-<hash>.ts` (measured 2026-08-26), so a .js-only
+   * sweep would grade every healthy asset and skip the defective one. A
+   * TypeScript extension under assets/ is also refused outright below, since
+   * no browser parses it whatever its content.
+   */
+  const assetNames = readdirSync(ASSETS_DIR).filter((f) => /\.(js|ts|tsx|mts|mjs)$/.test(f));
+  const tsAssets = assetNames.filter((f) => /\.(ts|tsx|mts)$/.test(f));
+  ok(
+    "no TypeScript source is emitted as an asset",
+    tsAssets.length === 0,
+    `[${tsAssets.join(", ")}] under build/client/assets. A ?url import is pointed at ` +
+      `a .ts source instead of its dist bundle; the browser will be served raw ` +
+      `TypeScript.`,
+  );
+  /** @type {string[]} */
+  const invalid = [];
+  for (const name of assetNames) {
+    // node --check honours the ES-module parse goal only for .mjs, and every
+    // asset here is a module.
+    const copy = join(scratch, `${name}.mjs`);
+    copyFileSync(join(ASSETS_DIR, name), copy);
+    const parsed = spawnSync(process.execPath, ["--check", copy], { encoding: "utf8" });
+    if (parsed.status !== 0) {
+      // The Error line specifically: --check's stderr ends with a blank line
+      // and the Node version, which is what a tail slice grabs instead.
+      const errorLine =
+        (parsed.stderr || "").split("\n").find((line) => /Error/.test(line)) ??
+        (parsed.stderr || "").trim().split("\n")[0] ??
+        "no stderr";
+      invalid.push(`${name}: ${errorLine.trim()}`);
+    }
+  }
+  rmSync(scratch, { recursive: true, force: true });
+  ok(
+    `the syntax pass examined at least ${MINIMUM_ASSETS_SYNTAX_CHECKED} asset(s)`,
+    assetNames.length >= MINIMUM_ASSETS_SYNTAX_CHECKED,
+    `only ${assetNames.length} .js asset(s) under build/client/assets; the pass ` +
+      `below is examining a partial build.`,
   );
   ok(
-    `enhancement chunk brotli is under ${ENHANCE_BROTLI_CEILING}`,
-    enhanceBrotli <= ENHANCE_BROTLI_CEILING,
-    `${enhanceName} measured ${enhanceBrotli} bytes brotli (${enhanceRaw} raw). ` +
-      `A dependency has wandered into the chunk a published post calls small.`,
+    "every served .js asset parses as a module (node --check)",
+    invalid.length === 0,
+    `unparseable asset(s), most likely a ?url import pointed at TypeScript ` +
+      `source instead of its dist bundle:\n        ${invalid.join("\n        ")}`,
+  );
+
+  /* ---- hydration is opt-in, and only the admin plane and its door opt in - */
+
+  /*
+   * The routes that hydrate are found by reading every route file for a
+   * `hydrate: true` handle, comments stripped, and the resulting set is pinned
+   * to exactly admin.tsx (which covers its children) and login.tsx. A public
+   * route gaining the flag fails HERE, by name, before check:browser ever has
+   * to notice the framework riding back onto a reading page.
+   */
+  const routesDir = join(root, "app", "routes");
+  const hydrating = readdirSync(routesDir)
+    .filter((f) => /\.(ts|tsx)$/.test(f))
+    .filter((f) => /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(routesDir, f), "utf8"))))
+    .sort();
+  ok(
+    "hydration opt-in is exactly the admin layout and the login door",
+    hydrating.join(", ") === "admin.tsx, login.tsx",
+    `route file(s) carrying hydrate: true: [${hydrating.join(", ")}], expected ` +
+      `[admin.tsx, login.tsx]. A public route opted into hydration, or the admin ` +
+      `plane lost it.`,
+  );
+
+  /*
+   * And root.tsx only renders the framework's scripts behind that flag. The
+   * window is the Layout return, bounded by the two literals; a gate reading
+   * source can be satisfied by a comment, so comments are stripped first.
+   */
+  const rootSource = stripComments(readFileSync(join(root, "app", "root.tsx"), "utf8"));
+  const scriptsAt = rootSource.indexOf("<Scripts");
+  const guardAt = rootSource.indexOf("hydrates ? (");
+  ok(
+    "root.tsx renders <Scripts> exactly once, behind the hydrate guard",
+    scriptsAt !== -1 &&
+      rootSource.indexOf("<Scripts", scriptsAt + 1) === -1 &&
+      guardAt !== -1 &&
+      guardAt < scriptsAt,
+    `expected one <Scripts inside the "hydrates ? (" conditional in app/root.tsx; ` +
+      `an unconditional <Scripts> hydrates every public page again.`,
   );
 
   if (failures > 0) {

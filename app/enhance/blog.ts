@@ -144,23 +144,23 @@ function decorateCodeBlock(pre: HTMLElement) {
 /**
  * Language label and a copy button on every code block, AND AGAIN AFTERWARDS.
  *
- * **The re-apply is the whole fix, and it is not defensive coding.** The post
- * body is injected with `dangerouslySetInnerHTML` in `blog.$slug.tsx`, so react
- * owns that subtree. It re-renders the container once after hydration and
- * rewrites every child from the loader's html string, which destroys anything
- * script appended into it.
+ * **The rewrite this observer was built against is GONE, and the observer is
+ * kept anyway.** The post body is injected with `dangerouslySetInnerHTML` in
+ * `blog.$slug.tsx`, and while public pages hydrated, react re-rendered the
+ * container once after hydration and rewrote every child from the loader's
+ * html string, destroying anything script had appended. MEASURED on
+ * production, not reasoned: a MutationObserver installed before any page
+ * script recorded all six nodes attaching, then `.prose` losing and regaining
+ * all 67 of its children 23ms later, leaving zero buttons, with a control run
+ * (the enhancement blocked at the network) showing the same replacement.
+ * Decorating once was a race this file lost every time.
  *
- * MEASURED on production, not reasoned. A MutationObserver installed before any
- * page script recorded all six nodes attaching, then `.prose` losing and
- * regaining all 67 of its children 23ms later, leaving zero buttons. The
- * control run, with the enhancement chunk blocked at the network, showed the
- * SAME wholesale replacement, which is what proves the re-render is react's own
- * and not something this file provokes.
- *
- * So decorating once is a race this file loses every time. Observing the
- * container and decorating again is the only version that survives, and the
- * container element itself persists across the rewrite, which is why the
- * observer keeps working.
+ * The public plane stopped hydrating on 2026-08-26, so nothing rewrites the
+ * subtree any more and a single pass would suffice. The observer stays
+ * because it costs nothing at rest, `decorateCodeBlock` is idempotent, and it
+ * makes the decoration independent of WHEN this bundle runs relative to any
+ * future subtree rewrite, which is exactly the assumption that broke last
+ * time.
  *
  * It terminates. Every write happens inside `decorateCodeBlock`, which does
  * nothing to a `pre` already carrying `data-enhanced`, so the mutations this

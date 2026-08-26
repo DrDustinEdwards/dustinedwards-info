@@ -17,6 +17,15 @@
 # committed because they are repo facts with no database owner.
 /content/generated/posts.json
 
+# The enhancement bundles. Same class as posts.json: a build product that
+# exists on disk because build:enhance wrote it (check-all, check-head, ship,
+# CI and dev all build it before anything reads it). Source is app/enhance/;
+# these are its self-contained bundles, served verbatim by the ?url imports in
+# the loader components, so committing them would be committing minified
+# copies of tracked source. The source scans (template-refs, check:invariants)
+# exclude this directory by path for the same reason they skip build/.
+/app/enhance/dist/
+
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json
 
