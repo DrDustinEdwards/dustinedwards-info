@@ -36,6 +36,7 @@ import { visit } from "unist-util-visit";
 import { z } from "zod";
 
 import { classify } from "../media/classify.mjs";
+import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
 import { buildChartModel, renderChartHast } from "./chart.mjs";
 import { buildDiagramModel, renderDiagramHast } from "./diagram.mjs";
@@ -1461,5 +1462,16 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     markdown: parsed.content,
     html,
     sourcePath: postPath(fm.slug),
+    /*
+     * The two provenance hashes, computed HERE so both writers carry them by
+     * construction rather than by each remembering to. `sourceBlobSha` is over
+     * `raw`, the whole file including frontmatter, because that is the blob
+     * git stores; content-addressing is what makes it equal the sha GitHub
+     * reports for the committed file with no API call. `renderHash` is over
+     * the html this very call produced, which is what makes a mismatch
+     * against a fresh Node build MEAN Worker-versus-Node render drift.
+     */
+    sourceBlobSha: await gitBlobSha(raw),
+    renderHash: await renderHash(html),
   };
 }

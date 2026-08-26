@@ -51,6 +51,14 @@ export const posts = sqliteTable(
     related: text("related"),
     /** Generated social card path, set by sync after build:og uploads it. */
     ogImage: text("og_image"),
+    /**
+     * Git blob sha1 of the markdown file this row was rendered from, computed
+     * by `gitBlobSha()` in app/lib/content/hashes.mjs. What the content-drift
+     * health check compares against the Contents directory listing.
+     */
+    sourceBlobSha: text("source_blob_sha"),
+    /** sha256 of the rendered HTML, by `renderHash()` in the same module. */
+    renderHash: text("render_hash"),
   },
   (t) => [
     check("posts_kind_check", sql`${t.kind} in ('page', 'post')`),
