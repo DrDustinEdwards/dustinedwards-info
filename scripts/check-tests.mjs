@@ -74,10 +74,13 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-const MINIMUM_FILES = 44;
-/* 433 against 461 measured. The file floor above catches a file LEAVING; this
-   one catches a file being hollowed out in place, which no file count can see. */
-const MINIMUM_TESTS = 433;
+/* 46 against 49 measured 2026-08-26 by RUNNING the gate, after
+   health-snapshot.test.mjs and readiness.test.mjs landed. */
+const MINIMUM_FILES = 46;
+/* 453 against 482 measured in the same run. The file floor above catches a file
+   LEAVING; this one catches a file being hollowed out in place, which no file
+   count can see. */
+const MINIMUM_TESTS = 453;
 
 let checks = 0;
 let failures = 0;

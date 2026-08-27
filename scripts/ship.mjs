@@ -56,6 +56,7 @@ import { fileURLToPath } from "node:url";
 
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
+import { readinessLines, readinessVerdict } from "./lib/readiness.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import {
   ASK_POLL_INTERVAL_MS,
@@ -69,6 +70,17 @@ const ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 const POLL_PATH = "/colophon";
 const POLL_COUNT = 5;
 const POLL_GAP_MS = 10_000;
+
+/**
+ * What ship asks whether the deploy is READY, as opposed to merely answering.
+ *
+ * A named constant rather than an inline path, so the plant that proves this
+ * step can fail has one place to point somewhere else. `check:policy` asserts
+ * that it is this endpoint and that the step runs between the deploy and the
+ * sync, so pointing it elsewhere permanently is a failing gate rather than a
+ * quiet downgrade.
+ */
+const READINESS_PATH = "/api/health";
 
 let step = 0;
 
@@ -492,6 +504,80 @@ if (streak !== POLL_COUNT) {
   );
 }
 console.log(`  ${POLL_COUNT} consecutive 200s.`);
+
+/* ------------------------------------------------------- 5b. readiness */
+
+/*
+ * FIVE 200s SAY THE WORKER ANSWERS. THEY DO NOT SAY IT IS HEALTHY.
+ *
+ * The poll above requests `/colophon` and reads a status line. That is a real
+ * check and it catches a Worker that failed to boot, a broken route table and
+ * a rollout that has not finished. It is blind to every invariant this site
+ * actually watches: a drifted Ask index, a media index that lost its rows, D1
+ * out of step with the repository, an FTS index that is empty while its
+ * content table is full. All five of those serve `/colophon` with a 200.
+ *
+ * `/api/health` answers exactly those questions and ship has never once asked
+ * it, which is the odd half: the scheduled workflow reads that endpoint every
+ * fifteen minutes and alerts on it, so the deploy path was the ONLY path that
+ * shipped without consulting the instrument the site trusts the rest of the
+ * time.
+ *
+ * ## WHY HERE, BETWEEN THE POLL AND THE SYNC
+ *
+ * After the poll, because a Worker that is still rolling out would answer this
+ * from the previous version and the verdict would be about the wrong build.
+ * Before the D1 sync, because the sync is the first thing in this script that
+ * WRITES, and a refusal after it has run leaves production half converged.
+ * Refusing here costs nothing: the deploy stands and serves, and the index
+ * still describes the previous build, which is the same safe direction the
+ * poll's own refusal takes.
+ *
+ * ## THE STATUS LINE IS NOT ENOUGH, AND THAT IS DELIBERATE
+ *
+ * `ok: true` is read out of the BODY rather than inferred from a 200. The two
+ * agree today, and relying on that agreement would make this step depend on a
+ * property of the endpoint that lives in a different file. The endpoint's own
+ * docblock says the status line is the contract for the WORKFLOW, which reads
+ * it with `curl --fail`; this reads a parsed body because it can, and because
+ * printing the five verdicts is most of the value when it refuses.
+ *
+ * A 429 is called out separately. Since the rate limit landed, a burst from
+ * this address can refuse the check, and "rate limited" and "unhealthy" need
+ * different repairs.
+ */
+announce(`Readiness: ${READINESS_PATH} reports ok`);
+
+{
+  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
+  /** @type {number} */
+  let status = 0;
+  /** @type {string} */
+  let text = "";
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": "ship", "cache-control": "no-cache" },
+      redirect: "manual",
+    });
+    status = res.status;
+    text = await res.text();
+  } catch (error) {
+    refuse(
+      `${READINESS_PATH} could not be reached: ${error instanceof Error ? error.message : error}`,
+      "The deploy landed and the poll passed, so this is a network problem or the " +
+        "endpoint is gone. NOTHING WAS SYNCED.",
+    );
+  }
+
+  const verdict = readinessVerdict(status, text, READINESS_PATH);
+
+  // Printed for BOTH outcomes, before the verdict is acted on, so a reader
+  // never has to run the endpoint by hand to see which check failed.
+  for (const line of readinessLines(verdict.checks)) console.log(line);
+
+  if (!verdict.ok) refuse(verdict.why, verdict.remedy);
+  console.log(`  ${verdict.checks.length} check(s), all ok.`);
+}
 
 /* ------------------------------------------------------- 6. gate, then sync */
 

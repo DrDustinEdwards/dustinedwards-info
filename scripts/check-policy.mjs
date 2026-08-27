@@ -1015,6 +1015,79 @@ refuses(
   );
 
   /*
+   * READINESS: SHIP CONSULTS THE HEALTH ENDPOINT, AND IT DOES SO BETWEEN THE
+   * DEPLOY AND THE FIRST WRITE.
+   *
+   * Five 200s from `/colophon` prove the Worker answers. They are blind to a
+   * drifted Ask index, a media index that lost its rows, D1 out of step with
+   * the repository, and an empty FTS index beside a full content table: all
+   * four serve `/colophon` with a 200, and all four are exactly what
+   * `/api/health` reports. The scheduled workflow has read that endpoint every
+   * fifteen minutes for weeks while the deploy path never asked it once.
+   *
+   * ASSERTED ON POSITION, on the same principle as the Ask upload above. A
+   * readiness check that ran BEFORE the deploy would report on the build being
+   * replaced. One that ran AFTER the sync would refuse with production already
+   * half converged, which is the state this ordering exists to prevent. Both
+   * of those satisfy a presence assertion completely.
+   */
+  const readinessAt = shipSource.indexOf("READINESS_PATH} reports ok");
+  eq(
+    "readiness: the step was located",
+    readinessAt !== -1,
+    true,
+  );
+  eq(
+    "readiness: ship asks the health endpoint",
+    /const\s+READINESS_PATH\s*=\s*"\/api\/health"/.test(shipSource),
+    true,
+  );
+  eq(
+    "readiness: THE CHECK RUNS AFTER THE DEPLOY AND BEFORE THE D1 SYNC",
+    readinessAt !== -1 &&
+      deployAt !== -1 &&
+      syncAt !== -1 &&
+      readinessAt > deployAt &&
+      readinessAt < syncAt,
+    true,
+  );
+  /*
+   * THE VERDICT IS READ OUT OF THE BODY, not inferred from the status line,
+   * and it is ACTED ON. A step that fetched the endpoint and discarded the
+   * answer is a step that cannot fail, which is the shape the Ask assertions
+   * above were written to catch and the same one applies here.
+   *
+   * The decision lives in scripts/lib/readiness.mjs so `node:test` can drive
+   * every branch of it, on the precedent of ci-status.mjs and ask-converge.mjs.
+   * So the assertion is split: ship must CONSULT the verdict and refuse on it,
+   * and the module must decide from the parsed body.
+   */
+  const readinessSource = stripComments(
+    readFileSync(join(root, "scripts/lib/readiness.mjs"), "utf8"),
+  );
+  eq("readiness: the module was read", readinessSource.length > 1000, true);
+  eq(
+    "readiness: the verdict is decided from the parsed body, not the status",
+    /value\.ok\s*!==\s*true/.test(readinessSource),
+    true,
+  );
+  /*
+   * AND A BODY WITH NO CHECKS REFUSES. This is what stops the step passing on
+   * the wrong URL: any JSON on the origin can carry `ok: true`, and only a
+   * health report carries a checks array.
+   */
+  eq(
+    "readiness: a body carrying no checks is refused",
+    /checks\.length\s*===\s*0/.test(readinessSource),
+    true,
+  );
+  eq(
+    "readiness: SHIP REFUSES ON THE VERDICT rather than logging it",
+    /if\s*\(!verdict\.ok\)\s*refuse\(/.test(shipSource),
+    true,
+  );
+
+  /*
    * THE MEDIA INDEX, THE SAME CONTRACT, ASSERTED SEPARATELY.
    *
    * Added 2026-08-24 with the media sync at ship. Deliberately not folded into
@@ -1410,12 +1483,18 @@ refuses(
  * most cases are inline state fixtures driven through the real decide(), so the
  * count moves only when a transition is added to the table or a source
  * assertion is added beside it.
+ *
+ * RE-MEASURED 2026-08-26 by RUNNING it, after ship gained its readiness step
+ * and the four assertions that bind it: 145. The count had already moved to
+ * 141 under the 128 floor before this session touched it, so the slack was
+ * back to thirteen and is now reset. Floor 128 to 135, about seven percent
+ * under, which is the same proportion the 2026-08-24 entry chose.
  */
-const MINIMUM_CHECKS = 128;
+const MINIMUM_CHECKS = 135;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-08-24: 138.`,
+      `A block was SKIPPED rather than failing. Measured 2026-08-26: 145.`,
   );
 }
 
