@@ -12,7 +12,7 @@ import { EnhancementScript } from "~/components/enhancement-script";
  * the `?url` import serves it verbatim. That verbatim copy is exactly why the
  * bundle must be prebuilt: `?url` does not compile, so pointed at the .ts
  * source it serves raw TypeScript (measured 2026-07-28, re-gated by
- * check:script-payload's syntax pass).
+ * check:page-payload's syntax pass).
  *
  * A reader with JavaScript disabled never runs the bundle and loses nothing
  * but decoration.

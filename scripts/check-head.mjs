@@ -129,7 +129,7 @@ const EXCLUDED = {
    * build of HEAD that nothing deploys, at a full client build's cost per run.
    * Same class as check:backup: the input is state a checkout does not have.
    */
-  "check:script-payload": "reads the gitignored build/client output, absent from an extraction.",
+  "check:page-payload": "reads the gitignored build/client output, absent from an extraction.",
 };
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */

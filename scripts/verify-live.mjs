@@ -72,7 +72,7 @@ import { colophonFacts } from "./lib/colophon-facts.mjs";
 // The walk and the stem rule come from the offline gate, never restated: the
 // wire assertion in section 16 must compare against the same set the ceilings
 // were measured over, or the two halves drift into asserting different pages.
-import { chunkStem } from "./check-script-payload.mjs";
+import { chunkStem } from "./check-page-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 
 // The card key, DERIVED with the same function the sync and the uploader use.
@@ -1689,7 +1689,7 @@ const ASK_PROBE_LIMIT = 3;
 /* --- 16. The public script set on the wire is the enhancements alone ---- */
 
 /*
- * The offline half, check:script-payload, proves the BUILD's shape: the
+ * The offline half, check:page-payload, proves the BUILD's shape: the
  * bundles are served verbatim and hydration is opt-in in source. This is the
  * wire half, and since the public plane stopped hydrating (2026-08-26) the
  * claim inverted: the deployed post page must reference the enhancement

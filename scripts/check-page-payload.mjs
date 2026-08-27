@@ -1,8 +1,17 @@
 /**
- * Gate: the public script payload is the enhancement bundles and nothing else,
- * and its ceilings are here.
+ * Gate: what a reader downloads to see a public page, per route, with ceilings.
  *
- *   npm run check:script-payload
+ *   npm run check:page-payload
+ *
+ * ## RENAMED FROM check:script-payload, 2026-08-27, because the old name was
+ * ## the old scope
+ *
+ * It graded the four enhancement bundles, which is the JavaScript, while rule 4
+ * names "everything a reader downloads to see a page". The stylesheet was in
+ * that sentence and in no gate: 45,778 bytes on every route with no ceiling
+ * anywhere, and the largest single resource on the site, the font, had none
+ * either. The whole-page section is at the bottom of this file; everything
+ * above it is the script gate, unchanged and still doing its job.
  *
  * OBSERVATION BOUNDARY: this reads the BUILD ON DISK under build/client and
  * the bundles under app/enhance/dist. It does not build, so run against a
@@ -61,6 +70,13 @@ import { brotliCompressSync, constants } from "node:zlib";
 // The gate-side comment stripper, per the one-helper discipline: a gate
 // reading source can be satisfied by a comment, so comments go first.
 import { stripComments } from "./lib/strip-comments.mjs";
+// The per-route resolution, pure and therefore testable, on the footing
+// ci-status.mjs and ask-converge.mjs stand on. Grounds in that file.
+import {
+  fontsIn,
+  reachableAssets,
+  stylesheetsFor,
+} from "./lib/page-payload.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ASSETS_DIR = join(root, "build", "client", "assets");
@@ -302,7 +318,7 @@ function main() {
   const { files, manifestFile } = walkHydrationSet();
   const bundles = enhancementAssets();
 
-  console.log(`check:script-payload over ${manifestFile}\n`);
+  console.log(`check:page-payload over ${manifestFile}\n`);
   console.log(`  manifest walk (entry + root + blog.$slug), ${files.length} file(s)`);
   for (const b of bundles) {
     console.log(
@@ -359,7 +375,7 @@ function main() {
 
   /* ---- the syntax pass: every served .js asset actually parses ----------- */
 
-  const scratch = join(root, "node_modules", ".cache", "check-script-payload");
+  const scratch = join(root, "node_modules", ".cache", "check-page-payload");
   rmSync(scratch, { recursive: true, force: true });
   mkdirSync(scratch, { recursive: true });
   /*
@@ -595,6 +611,8 @@ function main() {
       .join("\n        "),
   );
 
+  gradeEveryPage();
+
   if (failures > 0) {
     console.log(`\n${failures} FAILED of ${checks} checks\n`);
     process.exit(1);
@@ -602,12 +620,272 @@ function main() {
   console.log(`\n${checks} checks, 0 failures\n`);
 }
 
+/**
+ * THE WHOLE PAGE, PER ROUTE. Rule 4's actual subject.
+ *
+ * The gate above grades the four enhancement bundles, which is the JavaScript.
+ * Rule 4 names "everything a reader downloads to see a page", and until
+ * 2026-08-27 the stylesheet was not in that number at all: a 45,778-byte sheet
+ * rode on every route with no ceiling anywhere, and the font that is the
+ * largest single resource on the site had none either.
+ *
+ * ## WHAT IT RESOLVES, AND FROM WHERE
+ *
+ * Offline, from the build on disk plus the source, per `lib/page-payload.mjs`:
+ *
+ *   stylesheets   React Router's browser manifest, root's plus the route's,
+ *                 which is the list it emits link tags from
+ *   bundles       reachability over the route's import graph for
+ *                 `~/enhance/dist/*.js?url` specifiers
+ *   fonts         `@font-face` src urls inside the stylesheets above
+ *
+ * ## WHAT IT REFUSES
+ *
+ *   a reachable font that is not preloaded, unless exempt with a written reason
+ *   a stylesheet set over its per-route ceiling
+ *   a route's whole cold load over its ceiling
+ *   an enhancement bundle reachable from a route that has no markup for it
+ *
+ * ## WHAT IT DELIBERATELY DOES NOT OWN
+ *
+ * The speculation self-reference. `test/header-speculation.test.mjs` asserts
+ * that a page is excluded from its own prerender list, and asserting it here as
+ * well would be two owners for one fact, which is rule 17 in the direction that
+ * costs most: two copies that can disagree. Named here so a reader looking for
+ * it does not conclude it is ungated.
+ *
+ * It also cannot see a RENDERED page. Reachability over-approximates, which is
+ * the safe direction for a ceiling, and the wire half is `check:browser`.
+ */
+
+/**
+ * PER-ROUTE CEILINGS, in BROTLI bytes. The only copies, rule 17.
+ *
+ * MEASURED 2026-08-27 through this gate's own pipeline on a fresh build, after
+ * the per-route CSS split. `css` is every stylesheet the route links; `total`
+ * adds the enhancement bundles it serves. Fonts are excluded from `total` and
+ * asserted separately, because the normal face is shared by every route and
+ * counting it into eight totals would say the site is eight fonts heavy.
+ *
+ * Margins are roughly twenty percent over measured, which is tighter than the
+ * per-bundle margins above and deliberately so: a stylesheet grows by a rule at
+ * a time rather than by a dependency at a time, so a twenty percent jump is a
+ * decision somebody should have to make in this file.
+ *
+ * A route missing from this map FAILS, in both directions, against the derived
+ * public route set below.
+ *
+ * @type {Record<string, { id: string, css: number, total: number }>}
+ */
+const ROUTE_CEILINGS = {
+  "/": { id: "routes/home", css: 5300, total: 6300 },
+  "/blog": { id: "routes/blog._index", css: 5800, total: 6800 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 7300, total: 10000 },
+  "/search": { id: "routes/search", css: 6100, total: 8700 },
+  "/projects": { id: "routes/projects", css: 5300, total: 6300 },
+  "/colophon": { id: "routes/colophon", css: 5700, total: 6600 },
+  "/playground": { id: "routes/playground", css: 6600, total: 7500 },
+  "/phage-discovery": { id: "routes/phage-discovery", css: 5700, total: 6600 },
+};
+
+/**
+ * Fonts that are reachable and deliberately NOT preloaded, with the reason.
+ *
+ * The italic face is 79,716 bytes and is needed only by a page that renders
+ * italic latin text. Its `unicode-range` already makes the browser fetch it on
+ * demand, and a preload that goes unused within a few seconds is worse than
+ * none: the browser warns, and the bytes compete with the ones that were
+ * needed. That reasoning is root.tsx's; this names the file that owns it rather
+ * than repeating the argument where it could drift.
+ *
+ * @type {Record<string, string>}
+ */
+const PRELOAD_EXEMPT = {
+  "inter-latin-italic": "loaded on demand by unicode-range; see app/root.tsx, links",
+};
+
+/**
+ * Which routes may serve which enhancement bundle, by the markup it upgrades.
+ *
+ * The palette is `false` everywhere on purpose: it is fetched by `theme.ts` on
+ * the first search gesture from a URL on a data attribute, so no import graph
+ * should reach it, and a route that starts reaching it has put a search dialog
+ * back on a document.
+ */
+const BUNDLE_USE = {
+  "theme.js": () => true,
+  "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
+  "ask.js": (/** @type {string} */ id) => id === "routes/search",
+  "palette.js": () => false,
+};
+
+function gradeEveryPage() {
+  const { manifest } = readClientManifest();
+  const appDir = join(root, "app");
+  const clientDir = join(root, "build", "client");
+  const routesDir = join(root, "app", "routes");
+  const rootModule = join(appDir, "root.tsx");
+  const rootSource = readFileSync(rootModule, "utf8");
+
+  /** Source, or null when the path is not a file this walk can read. */
+  const read = (/** @type {string} */ path) => {
+    try {
+      return readFileSync(path, "utf8");
+    } catch {
+      return null;
+    }
+  };
+
+  /** An asset path from the manifest to the file on disk. */
+  const assetFile = (/** @type {string} */ assetPath) =>
+    join(clientDir, assetPath.replace(/^\//, ""));
+
+  /*
+   * THE ROUTE SET IS DERIVED, then reconciled against the ceilings in BOTH
+   * directions. A route that exports the shared cache headers is a public HTML
+   * route, which is the same rule `check:browser` uses to build its
+   * byte-identity list, so the two gates cannot disagree about what public
+   * means. The feeds and the markdown twin are shared-cached and are not HTML,
+   * so they are excluded by the same pattern that file uses.
+   */
+  const publicRoutes = readdirSync(routesDir)
+    .filter((name) => name.endsWith(".tsx"))
+    .filter((name) => {
+      const code = stripComments(readFileSync(join(routesDir, name), "utf8"));
+      return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
+    })
+    .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name))
+    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
+    .sort();
+
+  const declaredIds = Object.values(ROUTE_CEILINGS)
+    .map((r) => r.id)
+    .sort();
+  const missing = publicRoutes.filter((id) => !declaredIds.includes(id));
+  const extra = declaredIds.filter((id) => !publicRoutes.includes(id));
+  ok(
+    "every public HTML route has a measured ceiling, and every ceiling names one",
+    missing.length === 0 && extra.length === 0,
+    `no ceiling: ${missing.join(", ") || "none"}; ceiling but no such public route: ` +
+      `${extra.join(", ") || "none"}. A new public route arrives with its own measured ` +
+      `ceiling in the same commit, or this gate stops grading the page it added.`,
+  );
+
+  /* Root's own reachable assets ride on every route, so they are found once. */
+  const rootAssets = reachableAssets(rootModule, appDir, read).assets;
+
+  console.log("\n  per-route cold load, brotli bytes\n");
+
+  for (const [path, ceiling] of Object.entries(ROUTE_CEILINGS)) {
+    const routeFile = join(routesDir, `${ceiling.id.replace("routes/", "")}.tsx`);
+
+    const sheets = stylesheetsFor(manifest, ceiling.id);
+    const cssText = sheets.map((s) => readFileSync(assetFile(s), "utf8"));
+    const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+
+    ok(
+      `${path}: links at least one stylesheet`,
+      sheets.length > 0,
+      `the manifest lists no CSS for ${ceiling.id} or for root, so every byte assertion ` +
+        `below it would be about an empty set.`,
+    );
+
+    const routeAssets = reachableAssets(routeFile, appDir, read).assets;
+    const bundles = [...new Set([...routeAssets, ...rootAssets])]
+      .filter((a) => a.includes("enhance/dist/"))
+      .map((a) => a.split("/").pop() ?? a)
+      .sort();
+
+    const served = enhancementAssets().filter((b) => bundles.includes(b.module));
+    const bundleTotal = served.reduce((n, b) => n + b.brotli, 0);
+    const total = cssTotal + bundleTotal;
+
+    console.log(
+      `  ${path.padEnd(18)} css ${String(cssTotal).padStart(5)} (${sheets.length} sheet) ` +
+        `bundles ${String(bundleTotal).padStart(5)} [${bundles.join(" ") || "none"}] ` +
+        `total ${String(total).padStart(5)} of ${ceiling.total}`,
+    );
+
+    ok(
+      `${path}: stylesheets are under ${ceiling.css} brotli`,
+      cssTotal <= ceiling.css,
+      `${cssTotal} bytes across ${sheets.length} sheet(s): ${sheets.join(", ")}. A ` +
+        `stylesheet grows by a rule at a time, so this is a decision rather than drift.`,
+    );
+    ok(
+      `${path}: the whole cold load is under ${ceiling.total} brotli`,
+      total <= ceiling.total,
+      `${total} bytes: ${cssTotal} of stylesheet and ${bundleTotal} of enhancement ` +
+        `bundles [${bundles.join(", ")}].`,
+    );
+
+    for (const bundle of bundles) {
+      const permitted = BUNDLE_USE[/** @type {keyof typeof BUNDLE_USE} */ (bundle)];
+      ok(
+        `${path}: serves no enhancement bundle it has no markup for (${bundle})`,
+        permitted ? permitted(ceiling.id) : false,
+        `${bundle} is reachable from ${ceiling.id} and this route has nothing for it to ` +
+          `upgrade. That is bytes downloaded and parsed to find nothing, which is what ` +
+          `the blog bundle did on the listing page until 2026-08-27.`,
+      );
+    }
+
+    /* ---- a reachable font is preloaded, or exempt with a reason ---------- */
+
+    for (const font of fontsIn(cssText)) {
+      const stem = (font.split("/").pop() ?? font).replace(/-[A-Za-z0-9_-]{8}\.woff2$/, "");
+      if (PRELOAD_EXEMPT[stem]) continue;
+      /*
+       * THE BINDING NAME IS DERIVED, NOT GUESSED, and the first version of
+       * this guessed. It turned `inter-latin-normal` into `interLatinNormalUrl`
+       * and root.tsx calls it `interNormalUrl`, so the assertion failed against
+       * a font that IS preloaded. A gate that invents the name it is looking
+       * for is testing its own spelling.
+       *
+       * Read instead: find root's `?url` import whose specifier ends in this
+       * font file, take the local name it bound, and require that name inside a
+       * preload entry. Both halves come from the file being graded.
+       */
+      const bound = rootSource.match(
+        new RegExp(`import\\s+(\\w+)\\s+from\\s+"[^"]*${stem}\\.woff2\\?url"`),
+      );
+      const preloadBlock = rootSource.slice(rootSource.indexOf('rel: "preload"'));
+      ok(
+        `${path}: the reachable font ${stem} is preloaded`,
+        Boolean(bound) &&
+          rootSource.includes('rel: "preload"') &&
+          preloadBlock.slice(0, 400).includes(`href: ${bound?.[1]}`),
+        `${font} is fetched by a @font-face rule on this route and root.tsx declares no ` +
+          `preload for it${bound ? ` naming ${bound[1]}` : " and no ?url import of it"}. ` +
+          `A font inside a stylesheet is discovered LATE: the browser fetches the sheet, ` +
+          `parses it and matches the rule before it asks for the file. Exempt it in ` +
+          `PRELOAD_EXEMPT with a reason, or preload it.`,
+      );
+    }
+  }
+
+  /*
+   * THE PALETTE IS NOT PART OF ANY PAGE'S COLD LOAD, asserted rather than
+   * assumed. It is fetched by `theme.ts` on the first search gesture from a URL
+   * on a data attribute, so no import graph reaches it. If it ever comes back
+   * as a script tag the per-route loop above fails on whichever route regains
+   * it; this states the intended arrangement so the failure reads as a
+   * regression rather than as a puzzle.
+   */
+  ok(
+    "the search palette is not imported into any page's cold load",
+    ![...rootAssets].some((a) => a.includes("enhance/dist/palette")),
+    "root reaches app/enhance/dist/palette.js through an import, so a search dialog is " +
+      "on every document again. It is fetched on the gesture; see search-trigger.tsx.",
+  );
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     main();
   } catch (/** @type {any} */ error) {
     console.error(
-      `check:script-payload failed. ${error instanceof Error ? error.message : String(error)}`,
+      `check:page-payload failed. ${error instanceof Error ? error.message : String(error)}`,
     );
     process.exit(1);
   }

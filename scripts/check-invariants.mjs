@@ -4460,7 +4460,7 @@ console.log("\n  24. no client hooks in an unhydrated tree");
  * The unhydrated set is DERIVED: every route file minus the ones carrying
  * `hydrate: true` and minus the admin children, which hydrate through their
  * layout's flag (route nesting in this repo is the admin.* filename prefix
- * and nothing else). check:script-payload pins the flag set to exactly
+ * and nothing else). check:page-payload pins the flag set to exactly
  * {admin.tsx, login.tsx}, so a third hydrating root fails THERE by name
  * before this derivation could quietly widen.
  */

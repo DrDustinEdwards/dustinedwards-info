@@ -1598,7 +1598,7 @@ try {
    * build: an enhancement asset's stem is its module's basename (the ?url
    * asset is dist/<name>.js emitted as <name>-<hash>.js), and app/enhance/ is
    * present in any checkout while build/client may belong to another build.
-   * Stems, not names, for the reason chunkStem gives in check-script-payload.
+   * Stems, not names, for the reason chunkStem gives in check-page-payload.
    */
   const enhanceStems = new Set(
     readdirSync(join(root, "app", "enhance"))
@@ -2075,7 +2075,7 @@ try {
 
   /*
    * THE SCRIPT SET, per page: only enhancement bundles, no framework, no
-   * modulepreload. This is the wire half of check:script-payload's claim, on
+   * modulepreload. This is the wire half of check:page-payload's claim, on
    * the artifact this gate drives; verify-live section 16 makes the same
    * assertion against the deployed origin.
    */

@@ -228,7 +228,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
    * error (no handle anywhere) renders the boundary below with no framework
    * script, which is fine because it is plain markup.
    *
-   * `check:script-payload` pins both halves: the opt-in set is exactly
+   * `check:page-payload` pins both halves: the opt-in set is exactly
    * {admin.tsx, login.tsx}, and <Scripts> renders only behind this guard.
    */
   const matches = useMatches();

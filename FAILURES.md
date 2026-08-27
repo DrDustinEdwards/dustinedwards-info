@@ -50,7 +50,7 @@ which is what repeats across people and sessions.
 - **A plant is proven in the ARTIFACT THE GATE READS, not in the source.** A
   30 KB constant planted in source was folded to 3e4 by the minifier; the
   gated chunk grew 17 bytes and the plant was never applied.
-  `scripts/check-script-payload.mjs`
+  `scripts/check-page-payload.mjs`
 
 ## Measuring the wrong thing
 
