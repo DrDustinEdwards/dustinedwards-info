@@ -1040,6 +1040,169 @@ try {
     await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   }
 
+  /* ------- 0b. a public document depends on the THEME and nothing else ---- */
+
+  /*
+   * THE PRECONDITION FOR KEYING THE PUBLIC CACHE ON PATH PLUS THEME.
+   *
+   * Today every public HTML route sends `Vary: Cookie` and `workers/app.ts`
+   * downgrades any cookie-bearing request to `private, no-store`, so the only
+   * variant that can ever be stored is the cookieless one. Measured: no cookie
+   * HITs, `theme=system` BYPASSes, and an unrelated `_ga=1` BYPASSes too. The
+   * cost is that a reader who has ever touched the theme toggle, or who is
+   * signed in, gets an origin render on every page for ever.
+   *
+   * Replacing that with a cache key of path plus theme is only sound if a
+   * public document's bytes depend on the theme AND ON NOTHING ELSE ABOUT THE
+   * REQUESTER. If any public page carries session-dependent bytes, the key is
+   * wrong and one reader's page would be served to another. So this asserts
+   * the property FIRST, and it is written to keep asserting it afterwards:
+   * the day somebody renders a signed-in affordance into the public header,
+   * this goes red rather than the cache quietly becoming a leak.
+   *
+   * ## WHAT THE COMPARISON CAN AND CANNOT SEE, stated because it changes
+   * ## between the two run modes
+   *
+   * With PUBLIC_ORIGIN set, the smoke bearer is a REAL credential against that
+   * deployment and the comparison is the strong one: a document rendered for
+   * an authenticated principal against one rendered for a stranger.
+   *
+   * Locally, against the preview, no credential authenticates. The case then
+   * proves the weaker but still useful property: a public route does not
+   * BRANCH on a credential being presented at all. Both are worth running and
+   * the banner already says which origin this is.
+   *
+   * The nonce is masked before comparing. It is supposed to differ per
+   * request, it is the one field documented to do so, and leaving it in would
+   * drown every real difference.
+   */
+  {
+    /*
+     * THE SUBJECT SET, bound to the source rather than restated. Every route
+     * that exports the shared cache headers is here, and the assertion below
+     * fails if the two lists ever disagree, in either direction.
+     */
+    const THEME_CACHED = [
+      { path: "/", module: "home.tsx" },
+      { path: "/blog", module: "blog._index.tsx" },
+      { path: "/blog/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
+      { path: "/projects", module: "projects.tsx" },
+      { path: "/playground", module: "playground.tsx" },
+      { path: "/phage-discovery", module: "phage-discovery.tsx" },
+      { path: "/colophon", module: "colophon.tsx" },
+      { path: "/search?q=cloudflare", module: "search.tsx" },
+    ];
+
+    const routeDir = join(root, "app", "routes");
+    const declaring = readdirSync(routeDir)
+      .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
+      .filter((name) => {
+        const source = readFileSync(join(routeDir, name), "utf8");
+        // The two idioms: the helper, and the constant used directly by the
+        // routes that also negotiate on Accept. `preview.$token.tsx` names the
+        // constant in PROSE only and must not be caught, so comments go first.
+        const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+        return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
+      })
+      // The feeds and llms-full are shared-cached and are not HTML, so they
+      // have no theme dimension and are out of this case's subject.
+      .filter((name) => !/^(blog\.(feed|rss)|llms-full)/.test(name));
+
+    const listed = new Set(THEME_CACHED.map((r) => r.module));
+    const missing = declaring.filter((name) => !listed.has(name));
+    const extra = [...listed].filter((name) => !declaring.includes(name));
+    ok(
+      "the theme-cached route list matches the routes that declare shared cache headers",
+      missing.length === 0 && extra.length === 0,
+      `not in this case: ${missing.join(", ") || "none"}; listed but no longer ` +
+        `declaring: ${extra.join(", ") || "none"}. A route that gained the shared ` +
+        `headers without being byte-checked here is exactly the one that would ` +
+        `carry session bytes into a shared cache entry.`,
+    );
+
+    /** Everything documented to differ per request. @param {string} html */
+    const mask = (html) =>
+      html
+        .replace(/nonce="[^"]*"/g, 'nonce="N"')
+        .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"');
+
+    /** @param {string} path @param {Record<string,string>} headers */
+    const fetchDoc = async (path, headers) => {
+      const sep = path.includes("?") ? "&" : "?";
+      const res = await fetch(`${BASE}${path}${sep}identity=${Date.now()}-${Math.round(Math.random() * 1e9)}`, {
+        headers: { "cache-control": "no-cache", ...headers },
+        redirect: "manual",
+      });
+      return mask(await res.text());
+    };
+
+    /** The first differing region, so a failure names bytes. */
+    const firstDiff = (/** @type {string} */ a, /** @type {string} */ b) => {
+      const n = Math.min(a.length, b.length);
+      let i = 0;
+      while (i < n && a[i] === b[i]) i += 1;
+      if (i === n && a.length === b.length) return null;
+      return { at: i, a: a.slice(Math.max(0, i - 60), i + 80), b: b.slice(Math.max(0, i - 60), i + 80) };
+    };
+
+    /*
+     * WHAT THE THEME IS ALLOWED TO CHANGE, enumerated. Masking both of these
+     * must make the documents identical; anything left over is a byte that
+     * depends on the reader for some other reason, which is the finding.
+     */
+    const maskTheme = (/** @type {string} */ html) =>
+      html
+        .replace(/<html[^>]*>/, "<html>")
+        .replace(/aria-pressed="(true|false)"/g, 'aria-pressed="P"');
+
+    for (const { path } of THEME_CACHED) {
+      const stranger = await fetchDoc(path, {});
+      const credentialed = await fetchDoc(path, {
+        ...(SMOKE_TOKEN ? { authorization: `Bearer ${SMOKE_TOKEN}` } : {}),
+        cookie: "session_probe=1; _ga=GA1.1.99.99",
+      });
+
+      const sessionDiff = firstDiff(stranger, credentialed);
+      ok(
+        `${path}: a credentialed reader gets byte-identical HTML`,
+        sessionDiff === null,
+        `the document differs at byte ${sessionDiff?.at}. THIS ROUTE CANNOT BE ` +
+          `CACHED ON PATH PLUS THEME until the difference is removed, because a ` +
+          `key that does not carry the credential would serve one reader's page ` +
+          `to another.\n        stranger: ...${sessionDiff?.a}...\n        ` +
+          `credentialed: ...${sessionDiff?.b}...`,
+      );
+
+      const dark = await fetchDoc(path, { cookie: "theme=dark" });
+      const light = await fetchDoc(path, { cookie: "theme=light" });
+
+      /*
+       * THE THEME MUST ACTUALLY CHANGE THE DOCUMENT. Without this the two
+       * assertions below would both pass on a site that had stopped rendering
+       * the theme server-side altogether, which is the failure that makes the
+       * whole cache key pointless.
+       */
+      ok(
+        `${path}: the theme changes the served bytes`,
+        firstDiff(light, dark) !== null,
+        `light and dark are byte-identical, so either the theme cookie is no ` +
+          `longer read at render time or this page has no themed markup. A cache ` +
+          `keyed on theme would be keying on nothing.`,
+      );
+
+      const residue = firstDiff(maskTheme(stranger), maskTheme(dark));
+      ok(
+        `${path}: the theme changes ONLY the data-theme attribute and aria-pressed`,
+        residue === null,
+        `with <html> and aria-pressed masked, the dark document still differs ` +
+          `from the cookieless one at byte ${residue?.at}. Something else on this ` +
+          `page depends on the cookie, so the enumerated diff is incomplete and ` +
+          `the cache key would not describe the document.\n        ` +
+          `cookieless: ...${residue?.a}...\n        dark: ...${residue?.b}...`,
+      );
+    }
+  }
+
   /* ------------------------------------- 1. the search field and the column */
 
   /*
@@ -2750,6 +2913,19 @@ try {
  * differential skips; floor 25 to 29. Derived rather than run, on the same
  * basis the 15-to-27 step above was derived: the public block executes
  * identically in both modes and nothing in this case touches a credential.
+ *
+ * ## RE-MEASURED 2026-08-26 WITH THE BYTE-IDENTITY PRECONDITION: **109 to 108**
+ *
+ * Run through this gate's own pipeline, same two skips. The case adds one list
+ * binding plus three assertions on each of the eight public HTML routes that
+ * declare the shared cache headers: a credentialed reader gets identical
+ * bytes, the theme changes the bytes at all, and the theme changes ONLY the
+ * enumerated diff. 84 + 25 is 109, measured, and 108 when the health
+ * differential skips on an empty KV.
+ *
+ * Both modes again, and for the same reason: the case is in the public block.
+ * Skip mode is 33 + 25 = 58, or 57 with the same skip. Floors 76 to 99 and 29
+ * to 52, about eight percent under the low end of each range.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -2761,7 +2937,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 76 : 29;
+  const MINIMUM_CHECKS = adminCasesRan ? 99 : 52;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
