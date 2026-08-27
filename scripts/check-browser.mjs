@@ -102,7 +102,13 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import puppeteer from "puppeteer";
+import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
+
+/*
+ * The profile the /blog layout shift was found on, named rather than restated
+ * so it cannot drift from the measurement that set the ceiling below.
+ */
+const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
 
 /*
  * IMPORTED, NEVER RESTATED. The home tile's freshness assertion compares
@@ -1463,6 +1469,89 @@ try {
    * until this block existed.
    */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+
+  /* ---- the layout does not shift while the font arrives ----------------- */
+
+  /*
+   * WHY THIS LIVES HERE AND NOT IN check:page-payload OR verify-live.
+   *
+   * The audit asked for a CLS ceiling in `check:page-payload`, falling back to
+   * verify-live. Neither can hold one: `check:page-payload` is offline and
+   * reads the build on disk, and verify-live is a fetch client with no
+   * rendering engine. CLS is a rendering measurement, and this file is the only
+   * gate that renders.
+   *
+   * ## WHAT IT IS FOR
+   *
+   * MEASURED on /blog at 390x844 on Slow 4G with a cold cache: CLS 0.0674, one
+   * shift at about six seconds, the tag-chip row re-wrapping when the web font
+   * replaced the fallback and moving everything below it by a line. Blocking
+   * the woff2 and changing nothing else gave 0.0000, which is the
+   * single-variable experiment that named the cause. The repair was
+   * `font-display: optional` on the normal face; this is what stops it coming
+   * back.
+   *
+   * ## THROTTLED, BECAUSE OTHERWISE IT CANNOT FAIL
+   *
+   * Against a localhost preview the font arrives in single-digit milliseconds,
+   * inside any block period, so an unthrottled run reports 0.0000 whatever
+   * `font-display` says. That is the unfailable-threshold class: a ceiling
+   * nothing can breach is not a ceiling. Slow 4G is the profile the shift was
+   * found on and the one that can still expose it.
+   *
+   * ## AND A ZERO IS ONLY BELIEVED IF THE OBSERVER RAN
+   *
+   * A missing PerformanceObserver reports the same 0.0000 a stable page does.
+   * The probe therefore returns null when it never installed, and null fails
+   * rather than passing. That distinction is exactly what made an earlier
+   * reading of this shift wrong: disabling JavaScript to test whether script
+   * caused it also disabled the observer measuring it, so "no script, no shift"
+   * was a statement about the instrument.
+   */
+  {
+    const context = await browser.createBrowserContext();
+    const probe = await context.newPage();
+    await probe.setViewport({ width: 390, height: 844, deviceScaleFactor: 3 });
+    await probe.setCacheEnabled(false);
+    await probe.evaluateOnNewDocument(() => {
+      const w = /** @type {any} */ (window);
+      w.__cls = 0;
+      w.__observed = true;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = /** @type {any} */ (entry);
+          if (!shift.hadRecentInput) w.__cls += shift.value;
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    await probe.emulateNetworkConditions(SLOW_4G);
+    await probe.emulateCPUThrottling(4);
+    await probe.goto(`${BASE}/blog`, { waitUntil: "networkidle0", timeout: 300_000 });
+    // CLS accumulates after load; a reading taken at load is the first frame.
+    await new Promise((r) => setTimeout(r, 4000));
+    const shift = await probe.evaluate(() => {
+      const w = /** @type {any} */ (window);
+      return w.__observed === true ? w.__cls : null;
+    });
+    await context.close();
+
+    ok(
+      "the layout-shift observer ran, so a zero below means stability",
+      shift !== null,
+      "the page reported no observer at all, and a missing observer reports the same " +
+        "0.0000 a stable page does.",
+    );
+    ok(
+      "/blog does not shift while the font arrives (CLS under 0.02)",
+      shift !== null && shift < 0.02,
+      `CLS ${shift === null ? "(unobserved)" : shift.toFixed(4)} on Slow 4G with a cold ` +
+        `cache, ceiling 0.02, measured 0.0000 on 2026-08-28. It was 0.0674 with ` +
+        `font-display: swap, one shift, the tag-chip row re-wrapping when the web font ` +
+        `replaced the fallback. The ceiling is well under Google's 0.1 "good" threshold ` +
+        `on purpose: this page measured zero, so anything approaching a tenth is a ` +
+        `regression rather than a page that is merely acceptable.`,
+    );
+  }
 
   /* ------------------------------------- 1. the search field and the column */
 
@@ -3650,7 +3739,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 132 : 85;
+  const MINIMUM_CHECKS = adminCasesRan ? 134 : 87;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
