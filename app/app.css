@@ -71,6 +71,26 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/*
+ * THE ITALIC IS KEPT AS IT IS, AND THE COST IS 79,716 BYTES. Ruled 2026-08-26.
+ *
+ * It is the LARGER of the two faces, larger than the normal face this site
+ * renders almost everything in. The options were to subset it further or to
+ * keep it and say what it costs; the second was taken.
+ *
+ * What makes that affordable is the `unicode-range` below, which was already
+ * here: a browser fetches this file only when it actually has italic latin text
+ * to render, so a page with no emphasis never pays a byte. That is why it is
+ * also NOT preloaded, unlike the normal face. Preloading it would download
+ * eighty kilobytes on every route to serve the few that need it, and an unused
+ * preload is worse than none.
+ *
+ * Subsetting was refused on effort rather than on principle. It needs a font
+ * pipeline in the build, a new dependency, and a gate to keep the subset in
+ * step with the corpus, and it saves bytes only on the pages that already
+ * decided to pay them. If the corpus ever leans on italics the trade changes;
+ * this is the note that says so.
+ */
 @font-face {
   font-family: "Inter";
   font-style: italic;
@@ -82,9 +102,83 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/*
+ * THE METRIC-ADJUSTED FALLBACK, so the swap does not move the page.
+ *
+ * `font-display: swap` above renders the fallback immediately and replaces it
+ * when Inter arrives. That is the right trade for readability and it has a
+ * cost: the two faces occupy different space, so every line reflows at the
+ * swap. MEASURED on the throttled profile the audits used, cold: CLS 0.0065 on
+ * the home page, 0.0128 on a post, and 0.0737 on /blog where the shift lands in
+ * a list of cards.
+ *
+ * ## INTER IS A VARIABLE FONT WITH AN OPTICAL SIZE AXIS, AND THAT IS THE WHOLE
+ * ## REASON THE FIRST SET OF NUMBERS HERE WAS WRONG
+ *
+ * `font-optical-sizing` computes to `auto` on this site's prose, so Inter's
+ * `opsz` axis moves with the font size: the small-text variant is wider and
+ * more open, the display variant is narrower. Its advance width per em is
+ * therefore NOT a constant, which is the assumption every metric-override
+ * recipe makes. Arial has no such axis and measures the same at every size.
+ *
+ * MEASURED in a real browser against the real deployed font, 2026-08-26, over a
+ * sample weighted like body text:
+ *
+ *   size    Inter/em   Arial/em   size-adjust
+ *     16     82.3313    78.8799     104.38%
+ *     17     81.9303    78.8799     103.87%
+ *     20     80.7406    78.8799     102.36%
+ *     32     75.9556    78.8799      96.29%
+ *
+ * A first pass took the ratio at 1000px, got 96.29%, and adjusted the fallback
+ * in the WRONG DIRECTION for body text: measured after applying it, the
+ * fallback ran 9.2% narrow against Inter where plain Arial was only 5.7% off.
+ * The harness that caught it is the one that measures a `white-space: nowrap`
+ * span, and the harness that missed it counted wrapped LINES, which quantises
+ * to whole lines and reported a matching control.
+ *
+ * **So this face is tuned to 17px, the site's prose size**, and it is a
+ * compromise at every other size by construction: one face carries one set of
+ * overrides, and body text is what there is most of and what reflows most
+ * visibly. Headings are tuned less well and are a handful of lines each.
+ *
+ * The ascent and descent come from the font rather than from the glyphs and do
+ * not move with `opsz`; they are taken at 1000px, where `fontBoundingBox` is
+ * not quantised to whole pixels as it is at 16px. Inter measures 0.969 and
+ * 0.241 of the em; each override is that divided by the size-adjust, because
+ * the override is expressed against the ADJUSTED em.
+ *
+ * ## WHY ARIAL, AND WHY ONLY ARIAL
+ *
+ * `local("Helvetica")` and generic `sans-serif` both measured IDENTICALLY to
+ * Arial on the measuring machine, which is Windows mapping them onto it. Arial
+ * ships on macOS and on most Linux installs too. A face carries only ONE set of
+ * overrides, so naming several `local()` sources would apply Arial's numbers to
+ * whichever resolved: on macOS that would be Helvetica Neue, measured 8.5% away
+ * from Arial, and the adjustment would be worse than none.
+ *
+ * If Arial is absent the face contributes nothing and the stack falls through
+ * to the generic families exactly as before. That is the previous behaviour
+ * rather than a new failure.
+ */
+@font-face {
+  font-family: "Inter Fallback";
+  font-style: normal;
+  font-weight: 100 900;
+  src: local("Arial");
+  size-adjust: 103.87%;
+  ascent-override: 93.29%;
+  descent-override: 23.20%;
+  line-gap-override: 0%;
+}
+
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* "Inter Fallback" sits between the real face and the generic families, so a
+     reader waiting for the download gets Arial at Inter's metrics rather than
+     Arial at Arial's. It is not a font anyone ever sees named; it is the same
+     Arial, measured to occupy the same space. */
+  --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* The mono stack was written out twice, in the editor body and in the prose
      code blocks. It is a token now because CodeMirror needs it a third time,
      and a theme that restated the stack would be a fourth copy to drift. */

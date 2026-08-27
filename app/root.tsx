@@ -17,6 +17,15 @@ import { themeAttribute, themeFromRequest } from "~/lib/theme";
 import type { Route } from "./+types/root";
 import "./app.css";
 
+/*
+ * THE HASHED URL OF THE NORMAL FACE, so the preload below names the same bytes
+ * app.css asks for. Imported rather than written out: the filename carries a
+ * content hash, which is the whole reason self-hosting these could be made
+ * immutable, and a hand-written path would be a second statement of it that
+ * goes stale the day the font is replaced. Rule 17.
+ */
+import interNormalUrl from "./fonts/inter-latin-normal.woff2?url";
+
 /**
  * Reads the theme cookie so the attribute is server-rendered.
  *
@@ -44,11 +53,43 @@ export const links: Route.LinksFunction = () => [
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
   /*
-   * NO FONT LINKS. Inter is self-hosted from /fonts/ since 2026-08-21; the
-   * @font-face blocks are at the top of app.css, which the browser already has.
-   * Removing these took away two external preconnects and one render-blocking
-   * stylesheet, and let style-src and font-src both drop to 'self'.
+   * NO FONT LINKS, EXCEPT THIS PRELOAD. Inter is self-hosted since 2026-08-21;
+   * the @font-face blocks are at the top of app.css. Removing the old links
+   * took away two external preconnects and one render-blocking stylesheet, and
+   * let style-src and font-src both drop to 'self'. None of that changes.
+   *
+   * ## WHY ONE LINK COMES BACK
+   *
+   * A font inside a stylesheet is discovered LATE: the browser has to fetch
+   * app.css, parse it, match the rule, and only then start the download.
+   * MEASURED cold on the throttled profile the audits used: the normal face is
+   * 72,920 bytes of a 91 KB page, the largest single resource on every route,
+   * and it spent 512 to 786 ms in flight after the stylesheet had already
+   * arrived. The preload moves the request to the first byte of the document.
+   *
+   * ## THE NORMAL FACE ONLY
+   *
+   * The italic is 79,716 bytes and is needed by a page only if that page
+   * renders italic latin text. Its `unicode-range` already makes the browser
+   * fetch it on demand, and preloading it would download eighty kilobytes on
+   * every route to serve the few that use it. A preload that is not used within
+   * a few seconds is worse than no preload: the browser warns, and the bytes
+   * competed with the ones that were needed.
+   *
+   * ## `crossorigin` IS MANDATORY AND IS NOT ABOUT CORS HERE
+   *
+   * Fonts are fetched in anonymous CORS mode whatever their origin, so a
+   * preload without the attribute is a DIFFERENT request from the one the font
+   * loader will make, and the browser fetches the file twice. Same-origin does
+   * not exempt it.
    */
+  {
+    rel: "preload",
+    href: interNormalUrl,
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
