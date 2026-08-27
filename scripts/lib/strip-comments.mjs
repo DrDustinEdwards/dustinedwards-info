@@ -99,12 +99,94 @@ export function stripComments(source, options = {}) {
  * unknown database columns for exactly this reason, before comments were
  * stripped first.
  *
+ * ## THAT REASONING WAS RIGHT AND ITS FIX WAS HALF THE PROBLEM. 2026-08-26.
+ *
+ * Stripping comments first closes the apostrophe-in-PROSE case completely. The
+ * identical failure through an apostrophe in a double-quoted STRING was left
+ * open, because three independent passes cannot know that a quote is already
+ * inside a literal opened by a different quote character.
+ *
+ * MEASURED on a two-call fixture whose labels were "the page's verdict" and
+ * "the tile's age". The single-quote pass paired those two apostrophes and
+ * blanked everything between them, so:
+ *
+ *     ok("the page's verdict", someNumber < LIMIT, "detail one");
+ *     ok("the tile's age", otherNumber >= 0, "detail two");
+ *
+ * came out as ONE call reading `ok("""", otherNumber >= 0, "")`. Both
+ * directions are wrong and the second is worse:
+ *
+ *   - FALSE POSITIVE: `""""` sits in the condition slot, so section 17 reports
+ *     a string literal where the source has a boolean expression. That is how
+ *     this was found.
+ *   - FALSE NEGATIVE: the first call VANISHED from the scan entirely. An
+ *     assertion inside a swallowed span is never examined, and `callsExamined`
+ *     silently drops. A tokenizer that hides assertions from the gate whose
+ *     whole subject is assertions that cannot fail is the vacuity class, in the
+ *     instrument that enforces it.
+ *
+ * ONE LEFT-TO-RIGHT PASS, so whichever quote opens first owns the span until
+ * its own match closes it. That is the only shape that can be right, because
+ * "is this quote a delimiter" is a question about everything to its left.
+ *
+ * NEWLINES INSIDE A BLANKED STRING ARE KEPT, which the regex form did not do.
+ * Section 17 reports a file and a LINE, and it computes that line from the
+ * blanked text; a multi-line template collapsing to two characters moved every
+ * line after it, which is why the failure that found this pointed at a line
+ * holding something else entirely.
+ *
+ * REGEX LITERALS ARE STILL NOT UNDERSTOOD, exactly as before. A quote inside a
+ * character class is read as a delimiter. That is unchanged, deliberately: the
+ * distinction between division and a regex literal needs real parsing, no gate
+ * has been bitten by it, and widening this beyond the measured defect is how a
+ * helper that nine gates depend on acquires a new failure mode.
+ *
  * @param {string} source
  * @returns {string}
  */
 export function stripCommentsAndStrings(source) {
-  return stripComments(source)
-    .replace(/`(?:\\.|[^`\\])*`/g, '""')
-    .replace(/'(?:\\.|[^'\\])*'/g, '""')
-    .replace(/"(?:\\.|[^"\\])*"/g, '""');
+  const code = stripComments(source);
+  let out = "";
+  let i = 0;
+  while (i < code.length) {
+    const c = code[i];
+    if (c !== '"' && c !== "'" && c !== "`") {
+      out += c;
+      i += 1;
+      continue;
+    }
+    // A literal opens here. Walk to its own closing quote, honouring escapes,
+    // and emit a pair of double quotes plus whatever newlines it spanned.
+    const quote = c;
+    let j = i + 1;
+    let newlines = "";
+    let closed = false;
+    while (j < code.length) {
+      const d = code[j];
+      if (d === "\\") {
+        j += 2;
+        continue;
+      }
+      if (d === "\n") newlines += "\n";
+      if (d === quote) {
+        closed = true;
+        j += 1;
+        break;
+      }
+      j += 1;
+    }
+    /*
+     * An UNTERMINATED literal is emitted verbatim rather than blanked to the
+     * end of the file. A source that does not parse is a different problem, and
+     * swallowing the remainder of the file is the failure this rewrite exists
+     * to remove; leaving the text in place keeps the damage local and visible.
+     */
+    if (!closed) {
+      out += code.slice(i);
+      break;
+    }
+    out += `""${newlines}`;
+    i = j;
+  }
+  return out;
 }

@@ -116,3 +116,90 @@ test("NOR SVG: the audit named the wrong mechanism, and this is the real one", (
 
   assert.equal(WEAK(SVG).includes("cdn.example.com/mark.png"), true, "the weak form keeps it");
 });
+
+/*
+ * THE PAIRED-APOSTROPHE SWALLOW. Replays the defect found 2026-08-26.
+ *
+ * The module's docblock already named this mechanism for apostrophes in PROSE
+ * and closed it by stripping comments first. The identical failure through an
+ * apostrophe inside a DOUBLE-QUOTED string was open until this landed, because
+ * three independent regex passes cannot know that a quote is already inside a
+ * literal opened by a different quote character.
+ *
+ * The apostrophe is built from its char code so no test fixture in this file
+ * carries a stray quote that a future reader has to reason about.
+ */
+const APOSTROPHE = String.fromCharCode(39);
+
+/** Two assertion calls whose labels are both possessive. @param {string} q */
+function twoPossessiveCalls(q) {
+  return [
+    "ok(",
+    `  "the page${q}s verdict",`,
+    "  someNumber < LIMIT,",
+    '  "detail one",',
+    ");",
+    "ok(",
+    `  "the tile${q}s age",`,
+    "  otherNumber >= 0,",
+    '  "detail two",',
+    ");",
+  ].join("\n");
+}
+
+test("TWO possessive labels do not swallow the code between them", () => {
+  const out = stripCommentsAndStrings(twoPossessiveCalls(APOSTROPHE));
+
+  // THE FALSE NEGATIVE, which is the worse direction: the first call used to
+  // vanish entirely, so an assertion inside the swallowed span was never
+  // examined by the gate whose subject is assertions that cannot fail.
+  assert.equal(
+    (out.match(/ok\(/g) ?? []).length,
+    2,
+    "both calls must survive; the first one used to disappear",
+  );
+
+  // THE FALSE POSITIVE, which is how it was found: the survivor's condition
+  // slot used to read `""""` and was reported as a string literal.
+  assert.match(out, /someNumber < LIMIT/, "the first condition must survive");
+  assert.match(out, /otherNumber >= 0/, "the second condition must survive");
+  assert.doesNotMatch(out, /""""/, "no condition slot may be left holding stacked quotes");
+});
+
+test("THE DISCRIMINATING CONTROL: one possessive label was always fine", () => {
+  // A single apostrophe never paired, so it never swallowed anything. Without
+  // this control the test above could pass against a stripper that simply
+  // deleted every apostrophe, which would be a different bug.
+  const one = ["ok(", `  "the page${APOSTROPHE}s verdict",`, "  someNumber < LIMIT,", ");"].join("\n");
+  const out = stripCommentsAndStrings(one);
+  assert.match(out, /someNumber < LIMIT/);
+  assert.equal((out.match(/ok\(/g) ?? []).length, 1);
+});
+
+test("a genuine single-quoted string is still blanked", () => {
+  // The fix must not have turned single quotes into ordinary characters.
+  const src = `const a = ${APOSTROPHE}secret${APOSTROPHE}; const b = keep;`;
+  const out = stripCommentsAndStrings(src);
+  assert.doesNotMatch(out, /secret/, "a single-quoted literal must still be blanked");
+  assert.match(out, /const b = keep;/);
+});
+
+test("a blanked multi-line template keeps the lines it spanned", () => {
+  // Section 17 reports a file and a LINE and computes it from the blanked text.
+  // A template collapsing to two characters moved every line after it, which is
+  // why the failure that found this pointed at a line holding something else.
+  const src = ["a(", "  `one", "two", "three`,", "  x > 1,", ");"].join("\n");
+  const out = stripCommentsAndStrings(src);
+  assert.equal(
+    (out.match(/\n/g) ?? []).length,
+    (src.match(/\n/g) ?? []).length,
+    "the line count must be preserved across a blanked template",
+  );
+  assert.match(out, /x > 1/);
+});
+
+test("an unterminated literal keeps the rest of the file rather than eating it", () => {
+  const src = `const a = "never closed;\nconst b = keep;`;
+  const out = stripCommentsAndStrings(src);
+  assert.match(out, /const b = keep;/, "the remainder must survive an unterminated literal");
+});
