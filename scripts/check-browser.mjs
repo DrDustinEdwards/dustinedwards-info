@@ -1293,6 +1293,97 @@ try {
           `document is being served to everyone on this path.`,
       );
     }
+
+    /* ------ and it never answers a request that negotiated away from HTML -- */
+
+    /*
+     * THE DEFECT THIS REPLAYS REACHED PRODUCTION, which is why it is a case
+     * here rather than a note on the key.
+     *
+     * `caches.default` is keyed by the Request handed to it and carries no
+     * headers, so `Vary: Accept` cannot reach it. Two routes serve two
+     * representations at ONE URL: `/blog/:slug` answers `Accept:
+     * text/markdown` with markdown, `/search` answers `Accept:
+     * application/json` with JSON. The HTML copy was stored under a key the
+     * markdown request also matched. MEASURED on the wire after the deploy of
+     * 2f0b4d5: 31,869 bytes of `text/html` marked `x-theme-cache: hit` in
+     * answer to a markdown request. `verify-live` caught it AFTER the deploy;
+     * this catches it before one.
+     *
+     * THE ORDER IS THE WHOLE CASE. The HTML must be warmed FIRST, on the same
+     * key, or the alternate representation renders fresh for the ordinary
+     * reason and the case passes on a broken site. That is why the two warming
+     * reads are asserted to have produced a hit before the third read is
+     * believed: an assertion whose setup silently failed reports what a clean
+     * sweep reports.
+     *
+     * `/search` is the second subject rather than a second flavour of the
+     * first: it is a different route with a different negotiated type, and the
+     * defect was one line in the Worker that governed both.
+     */
+    const NEGOTIATED = [
+      {
+        path: "/blog/ten-years-on-cloudflare",
+        accept: "text/markdown",
+        wanted: "text/markdown",
+        label: "the markdown twin",
+      },
+      {
+        path: "/search?q=cloudflare",
+        accept: "application/json",
+        wanted: "application/json",
+        label: "the search JSON twin",
+      },
+    ];
+
+    for (const { path, accept, wanted, label } of NEGOTIATED) {
+      const sep = path.includes("?") ? "&" : "?";
+      const key = `${BASE}${path}${sep}negotiated=${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      /** @param {Record<string,string>} headers */
+      const read = async (headers) => {
+        const res = await fetch(key, {
+          headers: { cookie: "theme=dark", ...headers },
+          redirect: "manual",
+        });
+        const body = await res.text();
+        return {
+          marker: res.headers.get("x-theme-cache") ?? "",
+          type: res.headers.get("content-type") ?? "",
+          bytes: body.length,
+        };
+      };
+
+      const warm = await read({});
+      const warmAgain = await read({});
+      ok(
+        `${label}: the HTML entry is warm before the negotiated read`,
+        warm.marker.startsWith("miss") && warmAgain.marker.startsWith("hit"),
+        `first read marked ${JSON.stringify(warm.marker)} and second marked ` +
+          `${JSON.stringify(warmAgain.marker)}. Expected a miss then a hit. The ` +
+          `assertion below is VACUOUS without this: with nothing stored on this ` +
+          `key, a fresh render of the alternate representation proves nothing ` +
+          `about what the cache would have answered.`,
+      );
+
+      const negotiated = await read({ accept });
+      ok(
+        `${label}: a warm HTML entry does NOT answer an ${accept} request`,
+        negotiated.type.includes(wanted),
+        `got ${JSON.stringify(negotiated.type)} in ${negotiated.bytes} bytes, marker ` +
+          `${JSON.stringify(negotiated.marker)}, against ${warmAgain.bytes} bytes of ` +
+          `HTML already stored on this key. The Worker's cache key does not carry ` +
+          `the negotiated representation and cannot: caches.default sees no ` +
+          `headers, so the request must skip the cache instead. See ` +
+          `negotiatesAwayFromHtml in app/lib/negotiate.mjs.`,
+      );
+      ok(
+        `${label}: the negotiated read is not stored either`,
+        !negotiated.marker.startsWith("hit"),
+        `marker ${JSON.stringify(negotiated.marker)}. An alternate representation ` +
+          `served FROM this cache is the same defect in the other direction: the ` +
+          `next HTML reader on this key would be handed ${wanted}.`,
+      );
+    }
   }
 
   /* ------------------------------------- 1. the search field and the column */
@@ -3030,6 +3121,24 @@ try {
  *
  * Both modes, same reason again. Skip mode is 61, or 60 with that skip. Floors
  * 99 to 102 and 52 to 55, about eight percent under the low end of each range.
+ *
+ * ## RE-MEASURED 2026-08-27 WITH THE NEGOTIATED-REPRESENTATION CASE: **118 to 117**
+ *
+ * Six assertions, three on each of the two routes that serve a second
+ * representation at one URL: the HTML entry is warm before the negotiated read
+ * (the precondition, which is the assertion that keeps the other two from
+ * being vacuous), the warm entry does not answer the negotiated request, and
+ * the negotiated response is not itself served from the cache. 112 + 6 is 118,
+ * measured, and 117 when the health differential skips.
+ *
+ * **THE COUNT IS ALSO THE EVIDENCE THAT THE CASE RAN.** The plant for it lives
+ * in `workers/app.ts` rather than here, so the planted run scores the SAME 118
+ * with four of them red; a case that had quietly examined nothing would have
+ * scored 112 in both runs and gone green in both.
+ *
+ * Both modes, same reason again: the case is in the public block. Skip mode is
+ * 67, or 66 with that skip. Floors 102 to 108 and 55 to 61, about eight percent
+ * under the low end of each range.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -3041,7 +3150,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 102 : 55;
+  const MINIMUM_CHECKS = adminCasesRan ? 108 : 61;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

@@ -1,4 +1,4 @@
-import { prefersType } from "./negotiate";
+import { prefersType } from "./negotiate.mjs";
 import { NO_STORE_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
 
 /**
@@ -23,7 +23,7 @@ export function linkToHtml(slug: string) {
 /**
  * Whether the client asked for markdown in preference to HTML.
  *
- * The q-value parsing moved to app/lib/negotiate.ts when /search gained a JSON
+ * The q-value parsing moved to app/lib/negotiate.mjs when /search gained a JSON
  * representation and needed the same comparison. One parser, two callers: a
  * second copy would drift, and it would drift silently, because a browser that
  * starts being served the wrong representation still renders something.

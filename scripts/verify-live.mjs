@@ -1482,23 +1482,45 @@ const ASK_PROBE_LIMIT = 3;
     }
 
     /*
-     * TWO RESPONSES, BOTH ANSWERED BY THE WORKER.
+     * TWO RESPONSES, BOTH ACTUALLY RENDERED, and the second half of that is
+     * what this case had to learn the hard way.
      *
-     * A cookie is sent DELIBERATELY. Six HTML routes are shared-cached for
-     * cookieless readers, so two plain requests can both be served the SAME
+     * A cookie is sent DELIBERATELY. The public HTML routes are shared-cached
+     * for cookieless readers, so two plain requests can both be served the SAME
      * cached response, header and body together, and their nonces would be
-     * identical for a reason that has nothing to do with the generator. A
-     * cookie-bearing request bypasses the cache and is rendered fresh, which is
-     * the only way to compare two real generations. Removing the cookie here
-     * would make this assertion fail against a perfectly correct site.
+     * identical for a reason that has nothing to do with the generator.
+     *
+     * THE COOKIE USED TO BE ENOUGH AND STOPPED BEING ENOUGH, 2026-08-27. The
+     * note here read "a cookie-bearing request bypasses the cache and is
+     * rendered fresh", which was true of the PLATFORM cache and became false
+     * the day `workers/app.ts` grew a themed cache of its own: a cookied reader
+     * is exactly the reader that layer was built to serve, so the second
+     * request was a hit replaying the first one's stored nonce and this
+     * assertion went red against a site doing precisely what it was designed to
+     * do. That is hard rule 7's shape, a boundary note ageing into a false
+     * claim, and it is fixed by measuring rather than by assuming: each probe
+     * carries its own cache-busting query, so each is its own key, and
+     * `x-theme-cache` is READ BACK to prove both were misses. An assertion
+     * about two generations now fails if it was handed fewer than two.
      */
     const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
-    const first = await get("/", { cookie: "theme=dark" });
-    const second = await get("/", { cookie: "theme=dark" });
+    const nonceProbe = (/** @type {number} */ n) =>
+      get(`/?nonce-probe=${Date.now()}-${n}`, { cookie: "theme=dark" });
+    const first = await nonceProbe(1);
+    const second = await nonceProbe(2);
     const n1 = nonceOf(first.res.headers.get(ENFORCED) ?? "");
     const n2 = nonceOf(second.res.headers.get(ENFORCED) ?? "");
+    const m1 = first.res.headers.get("x-theme-cache") ?? "";
+    const m2 = second.res.headers.get("x-theme-cache") ?? "";
 
     check("csp: the header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
+    check(
+      "csp: both nonce probes were rendered, not replayed from the themed cache",
+      m1.startsWith("miss") && m2.startsWith("miss"),
+      `markers ${JSON.stringify(m1)} and ${JSON.stringify(m2)}. The assertion below ` +
+        `compares two GENERATIONS; served a stored copy it would compare one ` +
+        `generation with itself and report a static nonce on a correct site.`,
+    );
     check(
       "csp: THE NONCE VARIES between two Worker-rendered responses",
       n1.length > 0 && n2.length > 0 && n1 !== n2,

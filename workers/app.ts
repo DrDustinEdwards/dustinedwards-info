@@ -3,6 +3,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
+import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { themeFromRequest } from "~/lib/theme";
 import { serverTiming, timingsContext } from "~/lib/timing";
@@ -583,7 +584,29 @@ export default {
      */
     const url = new URL(request.url);
     const themeForCache = themeFromRequest(request);
-    const cacheable = request.method === "GET" && !isAdminPath(url.pathname);
+    /*
+     * A NEGOTIATED REQUEST IS NOT CACHEABLE HERE, and this clause is a fix for
+     * a defect that reached production.
+     *
+     * The key below is the URL plus the theme plus the build. Two routes serve
+     * more than one representation at ONE URL and say so with `Vary: Accept`,
+     * which the platform honours and `caches.default` cannot see. So the HTML
+     * copy answered the markdown request: MEASURED on the wire after the
+     * deploy of 2f0b4d5, `Accept: text/markdown` on a post returned 31,869
+     * bytes of `text/html` marked `x-theme-cache: hit`.
+     *
+     * ONE EXPRESSION GATES BOTH THE LOOKUP AND THE STORE, which is why the
+     * clause is here rather than beside the `edge.match` below: the store
+     * guard reads `cacheable` too, so the two halves cannot drift apart. The
+     * store was already safe by accident, since an alternate representation
+     * declares `no-store` and only `SHARED_CACHE_CONTROL` is stored; safe by
+     * accident is not a property to leave load-bearing.
+     *
+     * Grounds, the measurement and why this is a bypass rather than a fourth
+     * key dimension are all on `negotiatesAwayFromHtml`.
+     */
+    const cacheable =
+      request.method === "GET" && !isAdminPath(url.pathname) && !negotiatesAwayFromHtml(request);
     const edge = (caches as unknown as { default: Cache }).default;
     if (cacheable) {
       const hit = await edge.match(themedCacheKey(request, themeForCache));

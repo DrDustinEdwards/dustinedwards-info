@@ -4,7 +4,7 @@ import { AskMount } from "~/components/ask-panel";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getEnv } from "~/lib/context";
-import { prefersType } from "~/lib/negotiate";
+import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import {
