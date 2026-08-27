@@ -1179,11 +1179,34 @@ function textOf(/** @type {any} */ node) {
  * about a storage tier the other had not, and the way that fails is an anchor
  * pointing at a URL the transform route refuses.
  *
+ * ## THE FIRST IMAGE IN A POST IS NOT LAZY
+ *
+ * `loading="lazy"` on every image is right for every image except the one the
+ * reader is already looking at. On a post that opens with a figure, that image
+ * is the LCP element, and lazy loading it means the browser deliberately waits
+ * for layout before it will even request the largest thing on the page.
+ *
+ * So the first body image is `loading="eager"` with `fetchpriority="high"` and
+ * every later one keeps `lazy`. The counter is per RENDER, held in the closure
+ * below rather than on the tree, because a single pipeline run renders one
+ * document and "first" means first in that document.
+ *
+ * BOTH WRITERS GET THIS BY CONSTRUCTION, which is the whole reason it is here
+ * and not in a route. The repository build and the operator API's publish path
+ * are two callers of one `renderAndWrite`, and a rule applied in either one of
+ * them would be a rule the other silently lacked. `test/post-image-eager.test.mjs`
+ * runs the pipeline over a fixture and asserts the split.
+ *
+ * DIAGRAMS ARE OUT, and so they cannot claim the eager slot: they return before
+ * the counter is touched, on the same class test that excludes them from
+ * measurement.
+ *
  * @param {string} file
  * @param {(src: string) => Promise<{ width: number, height: number }>} resolveImage
  * @param {Array<Promise<void>>} pending
  */
 function rehypeImageSources(file, resolveImage, pending) {
+  let seen = 0;
   return (/** @type {any} */ tree) => {
     visit(tree, "element", (/** @type {any} */ node, index, parent) => {
       if (node.tagName !== "img") return;
@@ -1258,6 +1281,11 @@ function rehypeImageSources(file, resolveImage, pending) {
         };
       }
 
+      // Counted AFTER every exclusion above, so the first image that actually
+      // gets these attributes is the one that gets the eager pair.
+      seen += 1;
+      const first = seen === 1;
+
       pending.push(
         resolveImage(src).then(({ width, height }) => {
           node.properties = {
@@ -1265,8 +1293,11 @@ function rehypeImageSources(file, resolveImage, pending) {
             ...responsive,
             width,
             height,
-            loading: "lazy",
+            loading: first ? "eager" : "lazy",
             decoding: "async",
+            // Only on the first. `fetchpriority="high"` is a budget, not a
+            // dial: marking several images high is the same as marking none.
+            ...(first ? { fetchpriority: "high" } : {}),
           };
         }),
       );

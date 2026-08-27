@@ -7,7 +7,7 @@ import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { serverTiming, timed, type Timings } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import {
   DEFAULT_OG_IMAGE,
   HTML_VARY,
@@ -33,15 +33,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in.
-  //
-  // It shipped unconditionally during the measurement session, which put an
-  // unratified header on every public response as a side effect of diagnosing
-  // something. The problem was never that durations are sensitive; it is that
-  // the next person to touch this loader could not tell whether anything
-  // depended on that header. Behind a parameter it is a tool, not an API.
-  const wantTiming = url.searchParams.get("timing") === "1";
-  const timings: Timings | undefined = wantTiming ? [] : undefined;
+  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in, and root's
+  // middleware is what reads that parameter and creates the collector, for
+  // this route and every other one. This loader used to make its own, which is
+  // why the public plane answered `?timing=1` on exactly one page.
+  const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
 
   const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
@@ -138,24 +134,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   };
 
   /*
-   * **THIS STAMP IS KEPT, AND IT IS THE ONLY ROUTE-LEVEL ONE LEFT.** The eleven
-   * admin routes carried the same pair of lines and they were all removed,
-   * because `workers/app.ts` writes the header from the SHARED array that the
-   * admin middleware puts on `timingsContext`, with `set`, after the handler
-   * returns. Overwritten by an identical value, on every one of them.
+   * **AND THE LAST ROUTE-LEVEL STAMP IS GONE, 2026-08-27.**
    *
-   * That reasoning does not reach this route. The array on line 40 is LOCAL: no
-   * middleware runs on the public plane, nothing sets `timingsContext`, and the
-   * context's default is `{}`, so the transport reads `undefined` here and
-   * stamps nothing. Removing these three lines would not tidy a duplicate, it
-   * would delete the only Server-Timing the public plane emits.
-   *
-   * No header at all unless it was asked for, so the default response is
-   * byte-identical to what it was before any of this instrumentation existed.
+   * It was kept because the array here was LOCAL: nothing set `timingsContext`
+   * on the public plane, so the transport read `undefined` and stamping here
+   * was the only Server-Timing a public reader could get. Root's middleware
+   * sets it for every route now, so `workers/app.ts` writes the header from the
+   * same array AFTER the handler returns, which is the one point where it is
+   * complete. Stamping here would emit a header built from a list still being
+   * written to, which is the race that transport-side note describes.
    */
-  return timings
-    ? data(payload, { headers: { "Server-Timing": serverTiming(timings) } })
-    : data(payload);
+  return data(payload);
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
@@ -204,31 +193,18 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const path = canonicalQuery ? `/blog?${canonicalQuery}` : "/blog";
 
   /*
-   * THE SHARED BUILDER, plus the two feed links only this page has.
+   * THE SHARED BUILDER, and nothing else any more.
    *
    * The social half was a hand-written array here exactly as it was on five
    * other pages, and it had drifted the same way: no `twitter:image`, so the
-   * card it declared rendered as a bare link. `pageMeta` owns the set and this
-   * file adds what is genuinely local, which is the RSS and JSON feed
-   * alternates.
+   * card it declared rendered as a bare link. `pageMeta` owns that set.
+   *
+   * The two feed alternates used to be added here because this was the only
+   * page that had them. They moved to root's `links` on 2026-08-27, which are
+   * merged onto every route, so a reader arriving on a post can find the feed
+   * too. Nothing about this page is local any more.
    */
-  return [
-    ...pageMeta({ title, description, path }),
-    {
-      tagName: "link",
-      rel: "alternate",
-      type: "application/rss+xml",
-      title: `${SITE.name} blog`,
-      href: `${SITE_ORIGIN}/blog/rss.xml`,
-    },
-    {
-      tagName: "link",
-      rel: "alternate",
-      type: "application/feed+json",
-      title: `${SITE.name} blog`,
-      href: `${SITE_ORIGIN}/blog/feed.json`,
-    },
-  ];
+  return pageMeta({ title, description, path });
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {

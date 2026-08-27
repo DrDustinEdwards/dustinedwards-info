@@ -79,14 +79,45 @@ test("HEADER_PATHS is derived from NAV rather than written out again", () => {
 });
 
 test("the speculation payload is built from HEADER_PATHS, not its own list", () => {
+  /*
+   * The pattern moved on 2026-08-27 and the property did not. It was
+   * `urls: [...HEADER_PATHS]` until the current page was excluded from its own
+   * rule, which made the payload a filter over that same constant. What this
+   * test is about is that the list is DERIVED from the nav rather than written
+   * out again, and both spellings satisfy that; a pattern pinned to the old
+   * expression would have failed a change it has no opinion about.
+   */
   assert.match(
     speculationSource,
-    /urls:\s*\[\s*\.\.\.HEADER_PATHS\s*\]/,
+    /HEADER_PATHS\.filter\(/,
     "a literal urls array here can drift from the nav without any render changing",
   );
   assert.ok(
     !/urls:\s*\[\s*"/.test(speculationSource),
     "the payload names a path literally, which is the drift this test exists for",
+  );
+});
+
+test("THE CURRENT PAGE IS EXCLUDED FROM ITS OWN SPECULATION RULE", () => {
+  /*
+   * A page that prerenders itself spends a request on a navigation that cannot
+   * happen, and on this site that request reaches the ORIGIN for any reader
+   * carrying a cookie. Chrome caps moderate-eagerness prerenders at two, so the
+   * useless one can evict a useful one: it was not merely free waste.
+   *
+   * Asserted on the source rather than on a render, in the same way as the
+   * derivation above, because the alternative is mounting the component and
+   * this file deliberately reads modules rather than rendering them.
+   */
+  assert.match(
+    speculationSource,
+    /filter\(\s*\(\s*path\s*\)\s*=>\s*path\s*!==\s*pathname\s*\)/,
+    "the header rules no longer drop the current path, so every page prerenders itself",
+  );
+  assert.match(
+    speculationSource,
+    /useLocation\(\)/,
+    "the component cannot know which page it is on without reading the location",
   );
 });
 

@@ -539,6 +539,34 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
   }
 }
 
+/**
+ * True for a response no browser will ever treat as a document.
+ *
+ * ## WHY A CSP IS TAKEN OFF THE FEEDS, measured 2026-08-27
+ *
+ * A Content-Security-Policy governs what a DOCUMENT may load and execute. A
+ * feed is parsed by a reader, not rendered as a browsing context, so the policy
+ * on one has nothing to govern. On the wire it was 476 bytes of header on
+ * `/blog/rss.xml`, whose whole body is 2,612, and it carried a PER-REQUEST
+ * NONCE, which makes every response byte-unique for a header nobody applies.
+ *
+ * NAMED TYPES, not a negation of `text/html`. A negation would silently strip
+ * the policy from anything whose content-type this Worker has not thought about
+ * yet, including a route that starts serving a document under an unusual type.
+ * The list is the two feeds and it grows by somebody deciding it should.
+ *
+ * `X-Content-Type-Options: nosniff` is NOT part of this and stays on every
+ * response: it is what stops a browser deciding a feed is HTML in the first
+ * place, so removing the policy is safe only while that header is universal.
+ *
+ * @param contentType the response's own content-type, or null
+ */
+function isFeed(contentType: string | null): boolean {
+  if (!contentType) return false;
+  const type = contentType.split(";")[0].trim().toLowerCase();
+  return type === "application/rss+xml" || type === "application/json";
+}
+
 export default {
   async fetch(request, env, ctx) {
     /*
@@ -838,7 +866,9 @@ export default {
       if (timings) response.headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(response.headers);
       response.headers.set("Reporting-Endpoints", reportTo);
-      response.headers.set("Content-Security-Policy", csp);
+      if (!isFeed(response.headers.get("content-type"))) {
+        response.headers.set("Content-Security-Policy", csp);
+      }
       if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
       }
@@ -863,7 +893,9 @@ export default {
       if (timings) headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(headers);
       headers.set("Reporting-Endpoints", reportTo);
-      headers.set("Content-Security-Policy", csp);
+      if (!isFeed(headers.get("content-type"))) {
+        headers.set("Content-Security-Policy", csp);
+      }
       if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
       return new Response(response.body, {
         status: response.status,

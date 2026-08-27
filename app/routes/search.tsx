@@ -19,6 +19,7 @@ import {
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
+  pageMeta,
 } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
@@ -170,12 +171,33 @@ export function headers() {
   });
 }
 
+/**
+ * ## THE SHARED BUILDER, AND A CANONICAL THAT DROPS THE QUERY
+ *
+ * This page was the last one writing its own social tags by hand, which is the
+ * shape `pageMeta` exists to end: it had a title and a description and no
+ * canonical, no `og:*` and no card, so a shared search link rendered as a bare
+ * URL. It takes the builder now like every other page.
+ *
+ * **THE CANONICAL IS `/search`, WITHOUT THE QUERY, DELIBERATELY.** Every
+ * distinct `?q=` is a distinct URL for what is one page of the site, and there
+ * are unboundedly many of them. Pointing all of them at the bare path says
+ * "this is the search page" rather than minting a canonical per query. The
+ * `noindex` below already keeps results out of an index; the canonical is what
+ * a crawler that ignores it, or a social card, or a link shortener, reads.
+ *
+ * `noindex, follow` survives the merge and is still the ruling: results pages
+ * are not content, and the links out of them are worth following.
+ */
 export function meta({ loaderData }: Route.MetaArgs) {
   const q = loaderData?.params.q;
   const title = q ? `Search: ${q} | ${SITE.name}` : `Search | ${SITE.name}`;
   return [
-    { title },
-    { name: "description", content: `Search the writing and pages on ${SITE.name}'s site.` },
+    ...pageMeta({
+      title,
+      description: `Search the writing and pages on ${SITE.name}'s site.`,
+      path: "/search",
+    }),
     // A search results page is not something a search engine should index.
     { name: "robots", content: "noindex, follow" },
   ];

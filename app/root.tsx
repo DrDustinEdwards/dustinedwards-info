@@ -12,7 +12,9 @@ import {
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
+import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { themeAttribute, themeFromRequest } from "~/lib/theme";
+import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -55,6 +57,41 @@ import interNormalUrl from "./fonts/inter-latin-normal.woff2?url";
  * decides. Cookie parsing only, no binding and no I/O, so it costs nothing on
  * a route that does not care.
  */
+/**
+ * THE TIMING COLLECTOR, created ONCE per request, for every route on the site.
+ *
+ * `?timing=1` opts in and nothing else does. A request that did not ask carries
+ * `undefined` all the way down, every `timed` call degrades to a plain call,
+ * and no header is emitted, so the uninstrumented response is byte-identical to
+ * what shipped before any of this existed.
+ *
+ * ## WHY IT MOVED HERE, 2026-08-27
+ *
+ * It was created in TWO places and reached a third of the site. `admin.tsx`
+ * made one for the admin subtree, `blog._index.tsx` made a LOCAL one for
+ * itself, and every other public route could call `timed` all it liked into an
+ * `undefined` collector that nothing ever created. `/`, a post and `/search`
+ * answered `?timing=1` with no header at all, which reads as "this route is
+ * instant" rather than "this route is not instrumented".
+ *
+ * Root matches every route, so one middleware here covers the public plane and
+ * the admin plane together, and `workers/app.ts` stamps the header from the
+ * same array after the handler returns, which is the one point where it is
+ * complete. `admin.tsx` no longer creates its own: a child that replaced this
+ * array would silently discard whatever a parent had already recorded.
+ *
+ * MIDDLEWARE, NOT THE LOADER, and that is load-bearing rather than stylistic.
+ * A loader runs alongside its siblings, so a collector created in one is not
+ * visible to another; middleware runs BEFORE the whole matched tree.
+ */
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ request, context }, next) => {
+    const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
+    context.set(timingsContext, { timings });
+    return next();
+  },
+];
+
 export function loader({ request, context }: Route.LoaderArgs) {
   // The nonce is generated in `workers/app.ts` BEFORE the render and put in the
   // request context, because the same value has to appear in the CSP header and
@@ -72,6 +109,34 @@ export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
+  /*
+   * FEED AUTODISCOVERY, ON EVERY PAGE since 2026-08-27.
+   *
+   * These two lived on `/blog` alone, so a reader who arrived on a post, which
+   * is where most readers arrive, saw a site with no feed. `links` from every
+   * matched route are merged, which is exactly why the icons and the manifest
+   * are here, and a feed is the same kind of fact about the site rather than
+   * about the page.
+   *
+   * The `type` on the JSON one stays `application/feed+json` even though the
+   * response now travels as `application/json` for compression: a reader scans
+   * autodiscovery links for the FEED types, so this is what the resource is,
+   * and the content-type is how it gets there. Grounds on the route.
+   */
+  {
+    tagName: "link",
+    rel: "alternate",
+    type: "application/rss+xml",
+    title: `${SITE.name} blog`,
+    href: `${SITE_ORIGIN}/blog/rss.xml`,
+  },
+  {
+    tagName: "link",
+    rel: "alternate",
+    type: "application/feed+json",
+    title: `${SITE.name} blog`,
+    href: `${SITE_ORIGIN}/blog/feed.json`,
+  },
   /*
    * NO FONT LINKS, EXCEPT THIS PRELOAD. Inter is self-hosted since 2026-08-21;
    * the @font-face blocks are at the top of app.css. Removing the old links
@@ -176,7 +241,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/*
+          THEME-COLOUR, BOTH THEMES, and it is here rather than in a `meta`
+          export for a mechanical reason: `links` are merged across matched
+          routes and `meta` is NOT, so a root-level meta export would be
+          replaced wholesale by every route that exports one. Rendered into the
+          head directly, beside charSet and viewport, which are here for the
+          same reason.
+
+          The two values are the light and dark `--bg` tokens. They are written
+          out rather than read from a var(), because this attribute is consumed
+          by the browser chrome and the OS, neither of which resolves a custom
+          property. That makes them a second copy of a token, which rule 17 does
+          not like, so `check:contrast` asserts they still match the palette.
+
+          Media-scoped rather than a single value: a bare theme-color paints the
+          address bar one colour in both themes, which is exactly the seam a
+          dark reader sees.
+        */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf7f2" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1614" />
         <Meta />
+        {/*
+          THE NONCE ON THESE LINKS IS NOT REMOVABLE FOR 23 BYTES, measured
+          2026-08-27.
+
+          `<Links>` takes a nonce from the framework context and has no opt-out:
+          `nonce == null && contextNonce` is the only branch. That context value
+          comes from `<ServerRouter nonce>` in entry.server.tsx, which exists to
+          nonce react-router's two STREAMING scripts, including on the
+          error-boundary path where the root loader never ran. So the attribute
+          on nine `<link>` elements is a side effect of a mechanism that is
+          load-bearing elsewhere.
+
+          What it costs, measured on `/blog`: 405 bytes raw and 23 bytes brotli,
+          because the same nonce string repeats and compresses to nothing. The
+          nonce is inert on a `<link>` under `style-src 'self'`. Trading the
+          streaming scripts' nonce for 23 bytes is the wrong way round.
+        */}
         <Links />
       </head>
       <body>
