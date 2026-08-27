@@ -299,9 +299,38 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
       "css: .btn-danger is NOT in the public stylesheet",
       !/\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(css),
     );
+    /*
+     * THE SEARCH RULES ARE ON /search's OWN SHEET, since the per-route CSS
+     * split of 2026-08-27, and this assertion moved with them.
+     *
+     * It read the sheet linked on `/`, which was every rule on the site until
+     * that day and is now the chrome. `.search-snippet mark` went to
+     * `search-page.css`, which only `/search` links, so the assertion started
+     * failing on a site whose mark is perfectly correct. The split is the
+     * thing that made it wrong, and the honest repair is to look where the
+     * rule lives rather than to widen the pattern until it passes.
+     *
+     * The stylesheets `/search` links MINUS the ones `/` links is the route's
+     * own set. Asserting that set is non-empty is what keeps the check below
+     * from being about nothing: if the split ever collapses back into one
+     * bundle, this fails here rather than passing quietly on the chrome sheet.
+     */
+    const searchPage = await get("/search?q=cloudflare");
+    const searchHrefs = [...searchPage.text.matchAll(/href="(\/assets\/[^"]+\.css)"/g)]
+      .map((m) => m[1])
+      .filter((href) => !home.includes(href));
+    check(
+      "css: /search links at least one stylesheet / does not",
+      searchHrefs.length > 0,
+      `/search links nothing of its own, so the per-route split has collapsed back ` +
+        `into one bundle and the assertion below would be about the chrome sheet.`,
+    );
+    let searchCss = "";
+    for (const href of searchHrefs) searchCss += (await get(href)).text;
     check(
       "css: search mark uses --mark-bg, not brand",
-      /\.search-snippet mark\{[^}]*background:var\(--mark-bg\)/.test(css),
+      /\.search-snippet mark\{[^}]*background:var\(--mark-bg\)/.test(searchCss),
+      `searched ${searchHrefs.length} route stylesheet(s): ${searchHrefs.join(", ")}`,
     );
     /*
      * SITE-WIDE, so it runs against BOTH sheets. Scoping it to the public one
