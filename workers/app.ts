@@ -109,6 +109,16 @@ const UNCACHED = "private, no-store";
 const THEME_CACHE_PARAM = "__theme";
 
 /**
+ * The other half of the key: which BUILD produced the document.
+ *
+ * Separate from the theme parameter because they answer different questions
+ * and fail differently. A missing theme serves one reader's colours to
+ * another; a missing build serves last deploy's HTML, which asks for asset
+ * URLs that no longer exist.
+ */
+const BUILD_KEY_PARAM = "__build";
+
+/**
  * Security headers, on EVERY response. Ratified 2026-08-06 (Phase A).
  *
  * Same shape and the same reason as `UNCACHED`: one constant, applied on the
@@ -223,6 +233,24 @@ const SECURITY_HEADERS: Record<string, string> = {
 function themedCacheKey(request: Request, theme: string): Request {
   const keyUrl = new URL(request.url);
   keyUrl.searchParams.set(THEME_CACHE_PARAM, theme);
+  /*
+   * THE BUILD, IN THE KEY. Without it this cache outlives the deploy that
+   * filled it.
+   *
+   * The platform's automatic cache includes the Worker version, so a deploy
+   * invalidates every entry it holds. A hand-built key contains only what is
+   * put in it, and this one held the path and the theme. MEASURED during the
+   * build of this feature: a `check:browser` run was served HTML from a build
+   * several generations old, still inside its ten minute lifetime, asking for
+   * `root-Dhhz26dV.css` when the build on disk had `root-B62ve9c3.css`.
+   * Workers Assets serves the CURRENT manifest only, so that URL answers 404
+   * and the page arrives with no stylesheet. In production it would be every
+   * cookie-bearing reader for up to ten minutes after every deploy.
+   *
+   * The gate caught it as an unstyled page rather than as a cache defect,
+   * which is worth recording: the symptom and the cause were four steps apart.
+   */
+  keyUrl.searchParams.set(BUILD_KEY_PARAM, __BUILD_ID__);
   return new Request(keyUrl.toString(), { method: "GET" });
 }
 

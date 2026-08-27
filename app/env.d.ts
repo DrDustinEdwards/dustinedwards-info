@@ -101,3 +101,19 @@ declare module "*.wasm" {
 }
 
 export {};
+
+/**
+ * A value that differs for every build, injected by `define` in vite.config.ts.
+ *
+ * It namespaces the Worker's own HTML cache and has no other reader. The
+ * grounds, and the measurement that made it necessary, are on `BUILD_ID` in
+ * that file.
+ *
+ * Inside `declare global` because this file carries `export {}` and is
+ * therefore a module: a bare `declare const` here would be scoped to the
+ * module and invisible to workers/app.ts, which is exactly what happened on
+ * the first attempt.
+ */
+declare global {
+  const __BUILD_ID__: string;
+}
