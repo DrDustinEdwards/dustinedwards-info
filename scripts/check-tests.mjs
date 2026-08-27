@@ -44,8 +44,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY on 2026-08-24 by RUNNING
- * it: 47 files, 461 tests, re-measured 2026-08-26. Never summed.
+ * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY by RUNNING it. Never
+ * summed. The measurement is the two constants below and the dates are on
+ * them; re-taking it means running the gate, not reading this sentence.
  *
  * **THE CONVENTION BELOW WAS MISSED ONCE ALREADY, on 2026-08-26.**
  * `post-image-links.test.mjs` landed without these floors moving, so for a few
@@ -74,14 +75,13 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-/* 46 against 49 measured 2026-08-26 by RUNNING the gate, after
-   health-snapshot.test.mjs and readiness.test.mjs landed. */
-const MINIMUM_FILES = 46;
-/* 457 against 487, re-measured 2026-08-26 after the strip-comments tokenizer
-   replay cases landed in the same session. The file floor above catches a file
-   LEAVING; this one catches a file being hollowed out in place, which no file
-   count can see. */
-const MINIMUM_TESTS = 457;
+/* 47 against 50 measured 2026-08-27 by RUNNING the gate, after
+   negotiate.test.mjs landed with the themed cache's negotiation fix. */
+const MINIMUM_FILES = 47;
+/* 464 against 494, re-measured 2026-08-27 in the same commit. The file floor
+   above catches a file LEAVING; this one catches a file being hollowed out in
+   place, which no file count can see. */
+const MINIMUM_TESTS = 464;
 
 let checks = 0;
 let failures = 0;
