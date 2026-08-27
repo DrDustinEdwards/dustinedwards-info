@@ -1343,6 +1343,7 @@ console.log("  public HTML routes share one headers()");
     "phage-discovery.tsx",
     "playground.tsx",
     "projects.tsx",
+    "privacy.tsx",
   ];
 
   ok(

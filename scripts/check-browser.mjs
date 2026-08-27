@@ -1,4 +1,4 @@
-﻿/// <reference lib="dom" />
+/// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 /**
  * Gate: the site as a BROWSER LAYS IT OUT, not as markup.
@@ -1107,6 +1107,7 @@ try {
       { path: "/phage-discovery", module: "phage-discovery.tsx" },
       { path: "/colophon", module: "colophon.tsx" },
       { path: "/search?q=cloudflare", module: "search.tsx" },
+      { path: "/privacy", module: "privacy.tsx" },
     ];
 
     const routeDir = join(root, "app", "routes");
@@ -1194,6 +1195,49 @@ try {
         .replace(/aria-pressed="(true|false)"/g, 'aria-pressed="P"');
 
     for (const { path } of THEME_CACHED) {
+      /*
+       * The footer assertions below need a RENDERED page, and `fetchDoc` reads
+       * bytes rather than driving the browser. One navigation per route, before
+       * the byte comparisons, which the comparisons do not disturb: they fetch
+       * their own copies with their own cache-busting query.
+       */
+      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    /* ---- consistent help: the privacy link is on every public page ------ */
+
+    /*
+     * WCAG 2.2 3.2.6. A help mechanism that appears on some pages and not
+     * others is worse than one that appears nowhere: a reader who found it once
+     * and cannot find it again concludes it moved, or that they misremembered.
+     *
+     * ASSERTED ACROSS THE WHOLE SET, in the same loop that proves these routes
+     * are byte-identical for a credentialed reader, so the subject is the same
+     * derived list rather than a second one that could drift from it. The
+     * relative ORDER is asserted too, not just presence: 3.2.6 is about the
+     * mechanism being in the same relative order, and a link that moves between
+     * the colophon and the feed on different pages satisfies presence while
+     * failing the criterion.
+     */
+    const help = await page.evaluate(() => {
+      const links = [...document.querySelectorAll(".site-footer a")].map(
+        (a) => a.getAttribute("href") ?? "",
+      );
+      return { links, at: links.indexOf("/privacy") };
+    });
+    ok(
+      `${path}: the footer carries the privacy link`,
+      help.at !== -1,
+      `footer links are [${help.links.join(", ")}]. 3.2.6 asks for the same help ` +
+        `mechanism on every page that has one, and every public page has this footer.`,
+    );
+    ok(
+      `${path}: the privacy link keeps its place in the footer`,
+      help.at === 1,
+      `it is at index ${help.at} of [${help.links.join(", ")}], expected 1, after the ` +
+        `colophon. 3.2.6 is about the same relative ORDER, so a link that moves between ` +
+        `pages satisfies presence and fails the criterion.`,
+    );
+
+
       const stranger = await fetchDoc(path, {});
       const credentialed = await fetchDoc(path, {
         ...(SMOKE_TOKEN ? { authorization: `Bearer ${SMOKE_TOKEN}` } : {}),
@@ -1401,6 +1445,24 @@ try {
       );
     }
   }
+
+  /*
+   * THE PAGE GOES BACK TO /blog BEFORE THE COLUMN CASE.
+   *
+   * Everything from here down reads the CURRENT page, and it has always been
+   * /blog because the stylesheet case near the top navigated there and nothing
+   * between moved it. The consistent-help assertions added on 2026-08-28 need a
+   * rendered page per route, so they navigate, and the last route in that list
+   * is /privacy: the column case then measured a page with no `.blog-search`
+   * and reported "a missing element makes the comparison below vacuous".
+   *
+   * That is the third time in this file that adding a navigating case broke a
+   * later case reading the page it left behind, and the second time in one
+   * session. Restoring here rather than making the case below navigate for
+   * itself, because the case below is not mine and its assumption was correct
+   * until this block existed.
+   */
+  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
 
   /* ------------------------------------- 1. the search field and the column */
 
@@ -3588,7 +3650,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 111 : 64;
+  const MINIMUM_CHECKS = adminCasesRan ? 132 : 85;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

@@ -686,6 +686,7 @@ const ROUTE_CEILINGS = {
   "/colophon": { id: "routes/colophon", css: 5700, total: 6600 },
   "/playground": { id: "routes/playground", css: 6600, total: 7500 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 5700, total: 6600 },
+  "/privacy": { id: "routes/privacy", css: 5700, total: 6600 },
 };
 
 /**

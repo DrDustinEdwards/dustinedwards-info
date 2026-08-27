@@ -29,6 +29,9 @@ export default [
   // expects; the page TITLE carries the legibility ("How this site is built")
   // because the word is not universally known. Ruled, do not swap them.
   route("colophon", "routes/colophon.tsx"),
+  // What the site records, in plain English, with every sentence derivable from
+  // the code. Linked from the footer on every page, which is 3.2.6.
+  route("privacy", "routes/privacy.tsx"),
   // The portfolio index. `/projects` rather than `/portfolio`: the audience is
   // technical and "projects" is what they call the thing, while "portfolio" is
   // what this workspace calls the repo fleet, a different object.

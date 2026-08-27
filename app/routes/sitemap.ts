@@ -33,6 +33,7 @@ const STATIC_PATHS = [
   "/colophon",
   "/projects",
   "/playground",
+  "/privacy",
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
