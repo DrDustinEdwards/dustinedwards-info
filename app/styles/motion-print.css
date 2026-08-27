@@ -1,0 +1,95 @@
+/* Reduced motion. Every enhancement above becomes instant rather than absent. */
+@media (prefers-reduced-motion: reduce) {
+  .reading-progress {
+    transition: none;
+  }
+  .lightbox,
+  .lightbox[data-reduced] {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print. The post, nothing else. */
+@media print {
+  .site-header,
+  .site-footer,
+  .reading-progress,
+  .post-toc,
+  .post-actions,
+  .post-nav,
+  .tag-chips,
+  .year-archive,
+  .code-copy,
+  .code-lang,
+  .skip-link,
+  .lightbox {
+    display: none !important;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .post,
+  .further-reading,
+  .related-posts {
+    max-width: none;
+  }
+
+  .prose {
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  /* `[data-enhanced]` is carried too, or it would outrank this by one attribute
+     selector and print a fence with 2.25rem of space above it for a button that
+     this same block sets to display: none. */
+  .prose pre,
+  .prose pre[data-enhanced] {
+    padding-top: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid #999;
+  }
+
+  /* A printed page cannot be clicked, so link targets are spelled out. */
+  .prose a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    word-break: break-all;
+  }
+
+  .prose h2,
+  .prose h3 {
+    break-after: avoid;
+  }
+
+  .prose figure,
+  .prose pre,
+  .prose table {
+    break-inside: avoid;
+  }
+}
+
+/* Cross-document view transitions between blog pages.
+   Declarative, so it works on ordinary link navigation with no client script,
+   and is simply ignored by browsers that do not support it. */
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

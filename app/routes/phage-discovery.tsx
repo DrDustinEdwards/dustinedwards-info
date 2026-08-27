@@ -5,6 +5,8 @@ import { publicHtmlHeaders, SITE,
   pageMeta,
 } from "~/lib/seo";
 
+import "~/styles/prose.css";
+
 /**
  * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
  * same downgrade in workers/app.ts.

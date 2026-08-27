@@ -1,0 +1,45 @@
+/* Index: featured and year archive. */
+.featured-post {
+  max-width: 48rem;
+  margin: 0 auto 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--brand);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.featured-label {
+  margin: 0 0 0.375rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.featured-post p:last-child {
+  margin: 0;
+}
+
+.year-archive {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  max-width: 48rem;
+  margin: 0 auto 1.5rem;
+  font-size: 0.875rem;
+}
+
+.year-archive a {
+  color: var(--text-muted);
+}
+
+.year-archive a[aria-current] {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.post-card-series {
+  margin: 0 0 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--brand);
+}

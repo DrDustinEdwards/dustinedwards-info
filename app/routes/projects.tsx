@@ -12,6 +12,8 @@ import { publicHtmlHeaders, SITE_ORIGIN,
   pageMeta,
 } from "~/lib/seo";
 
+import "~/styles/projects.css";
+
 /**
  * /projects, the portfolio index.
  *

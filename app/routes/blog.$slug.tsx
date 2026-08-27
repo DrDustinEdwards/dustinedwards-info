@@ -21,6 +21,11 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
+import "~/styles/blog-index.css";
+import "~/styles/post-shell.css";
+import "~/styles/prose.css";
+import "~/styles/post-enhancements.css";
+
 /**
  * Content negotiation runs as middleware rather than in the loader.
  *

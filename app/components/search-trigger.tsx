@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 
 import paletteEnhanceUrl from "~/enhance/dist/palette.js?url";
+import paletteDialogCss from "~/styles/palette-dialog.css?url";
+import askCss from "~/styles/ask.css?url";
 
 /**
  * The site-wide search entry point.
@@ -60,6 +62,7 @@ export function SearchTrigger() {
         className="search-trigger"
         data-search-trigger=""
         data-palette={paletteEnhanceUrl}
+        data-palette-css={`${paletteDialogCss},${askCss}`}
         aria-label="Search"
       >
         {/* Inline SVG per the repo's bundle-leanness rule. aria-hidden because

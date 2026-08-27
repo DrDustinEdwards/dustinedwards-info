@@ -1,4 +1,4 @@
-/// <reference lib="dom" />
+﻿/// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 /**
  * Gate: the site as a BROWSER LAYS IT OUT, not as markup.
@@ -867,13 +867,29 @@ try {
    * **AND THIS ASSERTION IS ABOUT THE PUBLIC PLANE ONLY.** It runs on `/blog`.
    * It never said anything about the admin pages, which load a second sheet;
    * they now have their own scope check where they are measured.
+   *
+   * ## RE-MEASURED AGAIN 2026-08-27, FOR THE SAME REASON IN A SMALLER FORM
+   *
+   * Public CSS stopped being one site-wide bundle: a route now loads the sheets
+   * its own markup needs. `/blog` fell from 351 rules to 157, and this floor
+   * went red on a page that is perfectly styled, which is the identical shape
+   * the 2026-08-24 entry above records. Floored at 144, about eight percent
+   * under 157.
+   *
+   * **THE NUMBER IS NOW ROUTE-SPECIFIC AND THIS ASSERTION SAYS SO.** Before the
+   * split, "the public plane" had one answer; now every route has its own, and
+   * a floor measured on `/blog` says nothing about `/playground`. It is kept
+   * because its job is unchanged and crude on purpose: catch a page that
+   * arrived with no stylesheet at all, so that the layout assertions below are
+   * not quietly measuring browser defaults. Per-route BYTE ceilings are
+   * `check:page-payload`'s subject, not this one's.
    */
   ok(
-    "the app stylesheet is actually applied",
-    css >= 320,
-    `${css} CSS rule(s) reachable on the public plane, floor 320, measured 351 on ` +
-      `2026-08-24. Below this the page is effectively unstyled and every layout ` +
-      `assertion below is measuring browser defaults.`,
+    "the blog page's stylesheets are actually applied",
+    css >= 144,
+    `${css} CSS rule(s) reachable on /blog, floor 144, measured 157 on 2026-08-27 ` +
+      `after the per-route CSS split. Below this the page is effectively unstyled ` +
+      `and every layout assertion below is measuring browser defaults.`,
   );
 
   /* ------------------------------------ 0. the home health tile is a READ */
@@ -1823,6 +1839,39 @@ try {
       `open ${paletteOpen.open}, input focused ${paletteOpen.focused}. The gesture is ` +
         `bound in theme.ts and the dialog is built by the bundle it appends, so this ` +
         `fails if either half broke, including a CSP that refuses the injected script.`,
+    );
+
+    /*
+     * THE DIALOG ARRIVES STYLED, which is the half that on-demand CSS can lose.
+     *
+     * `palette-dialog.css` and `ask.css` are no longer on any page: theme.ts
+     * appends them beside the bundle and waits for all three before opening, so
+     * that a reader never sees an unstyled modal. Nothing offline can see
+     * whether that wait works, and the open assertion above passes either way,
+     * since an unstyled `<dialog open>` is still open.
+     *
+     * Asserted against a token-derived value rather than a literal: the border
+     * colour resolves from `--border`, so this is red if the sheet is missing
+     * and red if it arrived after the dialog was already on screen.
+     */
+    const dialogStyled = await page.evaluate(() => {
+      const dialog = document.querySelector("dialog.palette");
+      if (!dialog) return null;
+      const style = getComputedStyle(dialog);
+      return {
+        borderTopWidth: style.borderTopWidth,
+        borderRadius: style.borderTopLeftRadius,
+        background: style.backgroundColor,
+      };
+    });
+    ok(
+      "the palette dialog is styled by the time it opens",
+      dialogStyled !== null &&
+        dialogStyled.borderTopWidth === "1px" &&
+        dialogStyled.borderRadius !== "0px",
+      `computed ${JSON.stringify(dialogStyled)}. The dialog's stylesheet is fetched ` +
+        `on the gesture beside the bundle and awaited before opening; a default ` +
+        `border here means it did not arrive, or arrived after the modal was up.`,
     );
 
     const afterGesture = await paletteFetches();
@@ -3275,6 +3324,17 @@ try {
  * a floor that stays put while the count moves is exactly the shape this file
  * has twice caught as a MISSED update, and the way to tell the two apart is to
  * show the arithmetic. Skip mode is 71, low end 69, so that one moves: 62 to 63.
+ *
+ * ## RE-MEASURED 2026-08-27 WITH THE STYLED-DIALOG CASE: **123**
+ *
+ * One assertion: the palette dialog's computed border comes from the token
+ * rather than from the browser default, by the time it is open. It exists
+ * because the dialog's stylesheet is now fetched on the gesture beside its
+ * bundle, and the open assertion next to it passes either way, since an
+ * unstyled `<dialog open>` is still open. 122 + 1 is 123, measured.
+ *
+ * Public block, so both modes. Skip mode is 72, low end 70. Floors 110 to 111
+ * and 63 to 64, about eight percent under the low end of each range.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -3286,7 +3346,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 110 : 63;
+  const MINIMUM_CHECKS = adminCasesRan ? 111 : 64;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
