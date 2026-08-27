@@ -60,26 +60,56 @@ export function prefersMarkdown(request: Request) {
  * documents the `Accept: text/markdown` form, and `linkToMarkdown` puts it in a
  * `Link` header on every post.
  *
- * COST, stated rather than hidden: this function also serves `/blog/:slug.md`,
- * a distinct URL that never had the variant problem, so that path loses edge
- * caching too. It is one D1 read, and one rule ("the markdown representation is
- * never stored") is worth more than a split that invites the next person to
- * re-enable half of it.
+ * ## THE SPLIT THIS PARAGRAPH REFUSED IS NOW MADE, 2026-08-26
  *
- * The documented repair is a Cache Rule with `bypass` on `Cookie`, which needs
- * a proxied zone and is therefore a DNS-cutover item. See `media.$.ts` for the
- * doc citations.
+ * What stood here: "this function also serves `/blog/:slug.md`, a distinct URL
+ * that never had the variant problem, so that path loses edge caching too. It
+ * is one D1 read, and one rule is worth more than a split that invites the next
+ * person to re-enable half of it."
+ *
+ * The reasoning about the RISK is exactly right and is unchanged below. What
+ * changed is the measured cost. `llms.txt` advertises the twin as the path for
+ * agents and `linkToMarkdown` puts it in a `Link` header on every post, so this
+ * is the machine-readable surface of the whole site, and every fetch of it was
+ * a `BYPASS` and an origin render. Measured on the wire: `Cache-Control:
+ * private, no-store`, `CF-Cache-Status: BYPASS`, on a document that depends on
+ * nothing but its own URL.
+ *
+ * **The policy is now the CALLER'S**, because the two callers face genuinely
+ * different situations and always did:
+ *
+ *   `/blog/:slug` negotiating on Accept   NEVER STORED. Unchanged, and the
+ *                                         whole argument above applies to it.
+ *   `/blog/:slug.md` at its own URL       PUBLICLY CACHED. One representation
+ *                                         under that key, so there is no second
+ *                                         variant for a Cookie dimension to
+ *                                         collapse against.
+ *
+ * That is not "re-enabling half of it". The rule the paragraph above was
+ * protecting is "the markdown representation under `/blog/:slug` is never
+ * stored", and that rule is intact. The twin's own URL was collateral.
+ *
+ * **`Vary: Accept` GOES on the twin, and that is the other half.** The old
+ * comment called it "still true and still correct to advertise". It is neither,
+ * once the response is stored: under `/blog/:slug.md` the body does not depend
+ * on Accept at all, because markdown is the only representation that URL has.
+ * Advertising a dimension the Workers Cache key cannot honour is the mistake
+ * `media.$.ts` records in full, and it is worse than advertising none. It stays
+ * on the negotiated response, where it is true.
  */
-export function markdownResponse(slug: string, body: string) {
+export function markdownResponse(slug: string, body: string, cacheControl: string) {
   return new Response(body, {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
-      "cache-control": NO_STORE_CACHE_CONTROL,
+      "cache-control": cacheControl,
       link: linkToHtml(slug),
-      // Still true and still correct to advertise: the body genuinely depends
-      // on Accept. It is inert on a response that is never stored, and removing
-      // it would misdescribe the resource to any cache that is not Cloudflare's.
-      vary: "Accept",
+      /*
+       * ONLY WHEN THE BODY REALLY DOES VARY, which is only on the negotiated
+       * URL. Keyed off the policy rather than off a second parameter: a
+       * response that is never stored is the negotiated one by construction,
+       * and two flags that must agree are one flag too many.
+       */
+      ...(cacheControl === NO_STORE_CACHE_CONTROL ? { vary: "Accept" } : {}),
     },
   });
 }
