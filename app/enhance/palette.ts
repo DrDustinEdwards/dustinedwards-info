@@ -484,60 +484,37 @@ function close() {
 }
 
 /**
- * Upgrades the header link into a palette trigger.
+ * THE ONE THING THIS FILE BINDS, and it is not a shortcut.
  *
- * The href is left in place. If script later fails, the element is still a
- * working link to /search, and middle-click and "open in new tab" keep working
- * because it is still an anchor.
+ * Until 2026-08-27 this module ended by attaching a document keydown listener
+ * and upgrading the header trigger, which meant it had to be on every page for
+ * the shortcut to exist, which meant every reader downloaded a search dialog in
+ * order to be able to press a key. The gestures moved to `theme.ts`, which is
+ * already on every page and a fraction of the size: it holds the "/" key, the
+ * Cmd-K chord and the trigger click, and it appends a script tag for this
+ * bundle the first time one of them fires. So the palette costs its bytes when
+ * it is asked for, and nothing before.
+ *
+ * What is left here is a single listener for the event that loader dispatches.
+ * The gesture itself is deliberately NOT re-bound: two copies of the shortcut,
+ * one in each module, would both fire and the second would find the dialog
+ * already open. One binding makes that impossible rather than guarded against.
+ *
+ * THE EVENT, NOT AN EXPORT, and the reason is a measurement. The obvious shape
+ * is `export { openPalette }` with a dynamic `import()` on the other side, and
+ * it was written that way first: vite rewrites every `import()` into a call to
+ * its own `__vitePreload` helper, which added roughly 2.3 KB to the 714-byte
+ * bundle that is on every page, to manage a preload graph that does not exist
+ * here. That is a large fraction of what moving the palette off the page saved.
+ * A script element inserted by an already-trusted script is allowed by
+ * `strict-dynamic` without a nonce, costs nothing, and needs no change to
+ * build-enhance's rule that a bundle carries no imports at all.
+ *
+ * The trigger's own affordances stay where they always were: the href is left
+ * in place, so with script absent, broken or still in flight the element is a
+ * working link to /search and middle-click still opens a tab.
  */
-function upgradeTriggers() {
-  // The hint lives inside the trigger, but it is found from the document rather
-  // than from inside the anchor, so this keeps working wherever it is placed.
-  // It ships `hidden`: pressing "/" does nothing until the listeners below are
-  // attached, so the shortcut is not advertised before it exists.
-  for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
-    hint.hidden = false;
-  }
+document.addEventListener("palette:open", () => openPalette());
 
-  for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
-    trigger.dataset.shortcutHint = "shown";
-    trigger.addEventListener("click", (event) => {
-      // Let a modified click do what the browser would do with a link.
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      openPalette();
-    });
-  }
-}
-
-/** True when a keystroke belongs to whatever the reader is typing in. */
-function isTyping(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
-}
-
-document.addEventListener("keydown", (event) => {
-  const meta = event.metaKey || event.ctrlKey;
-  if (meta && event.key.toLowerCase() === "k") {
-    event.preventDefault();
-    openPalette();
-    return;
-  }
-  // A bare slash opens search, but never while someone is typing into a field,
-  // where a slash is just a slash.
-  if (event.key === "/" && !meta && !event.altKey && !isTyping(event.target)) {
-    event.preventDefault();
-    openPalette();
-  }
-});
-
-upgradeTriggers();
-
-// This file is a module: the dynamic import in SearchTrigger requires it, and
-// module scope keeps every binding above out of the global namespace.
+// A module, so every binding above stays out of the global namespace.
 export {};
