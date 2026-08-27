@@ -71,3 +71,8 @@ which is what repeats across people and sessions.
 - **One helper name with two argument orders can never fail.** The string lands
   in the condition slot, is truthy, and the check count still goes up.
   `scripts/check-invariants.mjs` section 17
+- **A hardening change can silently be a change to a value another subsystem
+  reads.** Wrapping the Ask question in delimiters also rewrote the retrieval
+  query, since AI Search searches the last user message; every question then
+  retrieved nothing and the new zero-chunk guard answered every reader with the
+  no-answer text, correctly. `app/lib/search/ask-prompt.mjs`
