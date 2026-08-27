@@ -77,10 +77,11 @@ const TEST_DIR = join(root, "test");
 /* 46 against 49 measured 2026-08-26 by RUNNING the gate, after
    health-snapshot.test.mjs and readiness.test.mjs landed. */
 const MINIMUM_FILES = 46;
-/* 453 against 482 measured in the same run. The file floor above catches a file
+/* 457 against 487, re-measured 2026-08-26 after the strip-comments tokenizer
+   replay cases landed in the same session. The file floor above catches a file
    LEAVING; this one catches a file being hollowed out in place, which no file
    count can see. */
-const MINIMUM_TESTS = 453;
+const MINIMUM_TESTS = 457;
 
 let checks = 0;
 let failures = 0;

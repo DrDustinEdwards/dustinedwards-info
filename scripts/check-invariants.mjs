@@ -3576,10 +3576,36 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
    * guess is a floor set above what the scan can actually see, and the failure
    * mode it is written to catch is a scan that shrinks rather than one that
    * stops.
+   *
+   * **THE PROSE ABOVE HAD GONE STALE AGAINST ITS OWN CONSTANT**, which read 510
+   * against a documented 300. Rule 17, in the gate that enforces rule 17. Both
+   * are re-measured below and the paragraph is kept because the lesson in it is
+   * still the right one.
+   *
+   * ## RE-MEASURED 2026-08-26, AND THE SCAN HAD BEEN BLIND TO A QUARTER OF ITS
+   * ## OWN SUBJECT
+   *
+   * `stripCommentsAndStrings` blanked strings in three independent regex
+   * passes, so two apostrophes inside DOUBLE-quoted labels paired up and the
+   * single-quote pass swallowed every line between them. Measured through this
+   * gate with the old form planted and proven applied, then with the fix, over
+   * the same 44 files:
+   *
+   *     old three-pass form   595 calls examined
+   *     one-pass tokenizer    776 calls examined
+   *
+   * **181 calls, 23 percent, were invisible.** An assertion inside a swallowed
+   * span is never examined, which is the vacuity class this section exists to
+   * catch, hiding inside this section's own instrument. It also produced the
+   * false positive that found it: a boolean condition reported as a string
+   * literal because the survivor's argument list had been corrupted.
+   *
+   * Floored at 675, about 13 percent under 776, the same proportion the
+   * 2026-08-21 entry chose.
    */
   ok(
     "the condition-slot scan examined assertion calls",
-    callsExamined >= 510,
+    callsExamined >= 675,
     `${callsExamined} call(s) examined across ${gateFiles.length} file(s). A ` +
       `zero-scope scan finds no string conditions because it read nothing.`,
   );
