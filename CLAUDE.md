@@ -91,6 +91,12 @@ Two halves, and a route that knows only the first will still get it wrong.
 
 **The cookie pairing, stated because it is the half people reconstruct wrongly:** a route that sets `Vary: Cookie` and receives a request carrying ANY cookie is downgraded to `private, no-store` and BYPASSES the shared cache. Presence of a cookie, not a particular cookie. The full matrix, including why an absent `Cookie` header is not its own variant, is `dustinedwards/workers-cache-vary.md`.
 
+**THOSE READERS ARE NO LONGER SERVED FROM A FULL RENDER, since 2026-08-26, and the pairing above is UNCHANGED.** The bypass was costing every reader who had touched the theme toggle, which sets a cookie for all three choices, and every signed-in reader: measured on the wire, `theme=system` and a stray `_ga=1` both read BYPASS on every HTML page. `workers/app.ts` now keeps its own entry in `caches.default` keyed by the request URL plus the resolved theme, looks it up before rendering, and stores the public copy after the headers are final. The response on the wire is still `private, no-store` for anyone carrying a cookie, so the platform still stores nothing for them and the sentence above stays true exactly as written.
+
+**Why the theme is in the KEY and not in a `Vary`:** the platform's cache key is the entrypoint, the path and query string, and the Worker version, and nothing this Worker can set puts a header into it. `caches.default` is keyed by the Request handed to it and carries no headers at all. `media.$.ts` records the measured consequence of getting that wrong. So the dimension is a synthetic `__theme` query parameter on a key URL that is never served and never linked.
+
+**What licenses reading the cookie for the theme alone is a MEASUREMENT, not an argument.** `check:browser` asserts on every route that declares the shared headers that a credentialed reader receives byte-identical HTML and that the theme changes only `data-theme` and the toggle's `aria-pressed`. The themed cache is sound only while that holds, so the gate is the precondition rather than a regression test, and it landed first.
+
 **No count here on purpose: this line said "three ways" while `check:headers` asserted FOUR, measured 2026-08-22.** A number in prose beside a gate is a second copy of the gate, which is rule 17, and this file is where that habit has cost the most.
 
 ### 9. GATED by check:features for the inventory, UNGATED for the law and the door. PROGRESSIVE ENHANCEMENT, not "zero JS".
