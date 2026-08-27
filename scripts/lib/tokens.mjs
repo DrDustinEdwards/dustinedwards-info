@@ -50,16 +50,15 @@ export const CSS_PATH = join(root, "app", "app.css");
 export const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 
 /**
- * The stylesheet ENTRY POINTS, in the order an admin page loads them.
+ * The module that declares the PUBLIC stylesheet set, and its order.
  *
- * `app/root.tsx` imports `app.css` on every route; `routes/admin.tsx` and
- * `routes/login.tsx` import `admin.css` on top. So this order is the cascade an
- * admin page actually sees, and a gate reading the concatenation sees what the
- * browser sees there. A public page loads the first entry alone, which is a
- * strict prefix of this, so a rule that wins here and comes from the first
- * entry also wins there.
+ * `app/root.tsx` matches on every route, so its CSS imports are the sheets
+ * every page loads and the order they load in. It became the source of that
+ * order on 2026-08-27; before then the order lived in `@import` statements at
+ * the bottom of app.css, which is a position CSS does not allow. See
+ * `stylesheetPaths`.
  */
-const CSS_ENTRIES = [CSS_PATH, ADMIN_CSS_PATH];
+const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
 
 /**
  * EVERY source stylesheet, in CASCADE ORDER, derived from the entries' own imports.
@@ -76,29 +75,70 @@ const CSS_ENTRIES = [CSS_PATH, ADMIN_CSS_PATH];
  *
  * ## DERIVED, NOT RESTATED
  *
- * The order comes from parsing each ENTRY's `@import` lines, so adding a part
- * means editing that entry and nothing else. A hand-kept list here would be the
- * mirror this repo keeps paying for, and it would go stale in exactly the
- * direction that hides CSS from a gate. The ENTRIES themselves are a list, in
- * `CSS_ENTRIES` above, and that is the one thing a third entry has to be added
- * to; nothing in the CSS says which files a route imports, so it cannot be
- * derived.
+ * The order comes from parsing root.tsx's CSS imports and each CSS file's own
+ * `@import` lines, so adding a part means editing the file that loads it and
+ * nothing else. A hand-kept list here would be the mirror this repo keeps
+ * paying for, and it would go stale in exactly the direction that hides CSS
+ * from a gate. The only thing named by hand is the admin ENTRY, because nothing
+ * in the CSS says which routes import it.
  *
- * `@import "tailwindcss"` is skipped: it is a package, not a file in this repo,
- * and no gate asserts anything about what Tailwind generates.
+ * ## THE PUBLIC ORDER MOVED OUT OF CSS, 2026-08-27, AND THIS FOLLOWS IT
  *
- * @returns {string[]} absolute paths, app.css first, then its imports in order
+ * The nine public component sheets were `@import` statements at the BOTTOM of
+ * app.css. CSS requires `@import` before every other rule and drops a late one;
+ * they were surviving on Tailwind's processor hoisting them, so they became
+ * JavaScript imports in `app/root.tsx` when Tailwind left the build. This
+ * function read app.css's `@import` lines, so left alone it would have gone on
+ * returning a list with all nine MISSING, which is the exact failure the
+ * paragraph above records: `check:contrast`'s resolution scan and
+ * `check:logo`'s fill bindings both read this. It derives from root.tsx now,
+ * which is the file that decides the public cascade.
+ *
+ * ## IMPORTS COME BEFORE THE FILE THAT IMPORTS THEM
+ *
+ * The old code pushed an entry and THEN its imports, which matched a file whose
+ * imports sat at the bottom. Nothing may sit at the bottom: `@import` is valid
+ * only before other rules, which is what the hoisting had been hiding. So a
+ * file's imports are expanded first, recursively, and then the file itself.
+ * That is not a convention here, it is what the browser does.
+ *
+ * @returns {string[]} absolute paths, in cascade order
  */
 export function stylesheetPaths() {
   /** @type {string[]} */
   const out = [];
-  for (const entry of CSS_ENTRIES) {
-    const text = readFileSync(entry, "utf8").replace(/\r\n/g, "\n");
-    out.push(entry);
+
+  /** @param {string} file */
+  const expand = (file) => {
+    const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
     for (const m of text.matchAll(/@import\s+"(\.[^"]+)"/g)) {
-      out.push(join(root, "app", m[1].replace(/^\.\//, "")));
+      expand(join(dirname(file), m[1]));
     }
+    out.push(file);
+  };
+
+  /*
+   * The PUBLIC cascade, read off root.tsx's own CSS imports in source order.
+   * Matched as bare module imports, which is the only form a stylesheet import
+   * takes.
+   */
+  const rootSource = readFileSync(ROOT_MODULE_PATH, "utf8").replace(/\r\n/g, "\n");
+  const publicSheets = [...rootSource.matchAll(/^import\s+"(\.[^"]+\.css)";/gm)].map((m) =>
+    join(root, "app", m[1].replace(/^\.\//, "")),
+  );
+  if (publicSheets.length === 0) {
+    throw new Error(
+      `${ROOT_MODULE_PATH} declares no CSS imports. Either the public stylesheet ` +
+        `set moved again or this pattern stopped matching it; either way every ` +
+        `gate reading this would examine a smaller stylesheet than the site ships, ` +
+        `which is the failure this function was written after.`,
+    );
   }
+  for (const sheet of publicSheets) expand(sheet);
+
+  // Then the admin entry, which /login and /admin load on top of the above.
+  expand(ADMIN_CSS_PATH);
+
   return out;
 }
 

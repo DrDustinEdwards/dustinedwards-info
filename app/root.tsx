@@ -18,6 +18,29 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 /*
+ * THE COMPONENT SHEETS, IN CASCADE ORDER. Grounds at the bottom of app.css.
+ *
+ * These were nine `@import` statements at the end of app.css until 2026-08-27.
+ * CSS requires `@import` before every other rule and drops a late one; they had
+ * been surviving on Tailwind's processor hoisting them, so removing Tailwind
+ * took all nine sheets off the site while the build stayed green. Here they are
+ * ordinary module imports, collected into the same root stylesheet in this
+ * order, which is where they already sat in the cascade.
+ *
+ * THE ORDER IS LOAD-BEARING and is the order they were cut out of the original
+ * 9,269-line app.css. Do not sort this list.
+ */
+import "./styles/public-chrome.css";
+import "./styles/projects.css";
+import "./styles/page-shell.css";
+import "./styles/blog-index.css";
+import "./styles/post.css";
+import "./styles/blog-enhancements.css";
+import "./styles/search.css";
+import "./styles/palette.css";
+import "./styles/playground.css";
+
+/*
  * THE HASHED URL OF THE NORMAL FACE, so the preload below names the same bytes
  * app.css asks for. Imported rather than written out: the filename carries a
  * content hash, which is the whole reason self-hosting these could be made
