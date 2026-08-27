@@ -1221,16 +1221,21 @@ function opacityExempt(selectorGroup) {
 }
 
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 593 : 476;
+const MINIMUM_CHECKS = buildPresent ? 603 : 486;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
       `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. Measured 2026-08-28: 642 with the built stylesheet compared. Both ` +
-      `floors move by exactly the assertions added: three theme-color ones on ` +
-      `2026-08-27 and three partial-opacity ones on 2026-08-28. All six read source ` +
-      `only and execute in both branches, which is why the absent-build floor moves ` +
-      `without being re-run.`,
+      `failing. RE-MEASURED 2026-08-28 by RUNNING the gate in BOTH branches, which ` +
+      `is what the audit asked for and what nothing had done for a while: 642 with ` +
+      `the built stylesheet compared, and 518 without it, taken by moving build/ ` +
+      `aside rather than by reasoning about which assertions skip. Floors are 94 ` +
+      `percent of each, 603 and 486.` +
+      `\n        THE ABSENT-BUILD FLOOR WAS THE STALE ONE, and it was stale because ` +
+      `it was DERIVED rather than run: each change added its new assertions to the ` +
+      `previous derived figure, and the chain had drifted about ten below the real ` +
+      `count. A floor arrived at by arithmetic over a floor arrived at by arithmetic ` +
+      `is a number nobody has measured.`,
   );
 }
 
