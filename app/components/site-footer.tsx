@@ -37,6 +37,10 @@ export function SiteFooter() {
           direction. */}
       <nav className="footer-colophon" aria-label="Colophon">
         <Link to="/colophon">Colophon</Link>
+        {/* WCAG 2.2 3.2.6, consistent help: the same mechanism, in the same
+            relative order, on every page that has a footer, which is every
+            public page and the error boundary. */}
+        <Link to="/privacy">Privacy</Link>
         <a href="/llms.txt">llms.txt</a>
         <a href="/blog/rss.xml">RSS</a>
       </nav>

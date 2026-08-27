@@ -308,6 +308,15 @@ export default function Colophon() {
               ))}
             </dl>
           </div>
+
+          {/* The colophon says how the site is BUILT; /privacy says what it
+              RECORDS. They are two halves of one question, and a reader who
+              found either is likely looking for the other, so each names the
+              other rather than leaving it to the footer. */}
+          <p className="muted">
+            For what the site records about a visit, and where each of those facts lives in
+            the code, see <Link to="/privacy">privacy</Link>.
+          </p>
         </div>
       </main>
       <SiteFooter />
