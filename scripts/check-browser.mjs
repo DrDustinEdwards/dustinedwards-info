@@ -2050,7 +2050,71 @@ try {
           `went back to reading currentSrc, which is the resized copy already on ` +
           `screen; overlay absent means the click navigated instead of being caught.`,
       );
+
+      /*
+       * IT IS A REAL MODAL DIALOG, since 2026-08-28.
+       *
+       * It was a `div` with `tabIndex = -1`: no role, no `aria-modal`, no
+       * focus trap, no `inert` on the page behind it and no close button.
+       * Escape worked only while focus happened to be inside it, and a screen
+       * reader was never told a dialog had opened.
+       *
+       * ASSERTED THROUGH THE PLATFORM'S OWN PROPERTIES, not through attributes
+       * the code could set on a div. `matches("dialog:modal")` is true only
+       * for an element opened with `showModal()`, so a hand-rolled overlay
+       * carrying `role="dialog"` and `aria-modal="true"` fails this while
+       * satisfying any attribute check. That distinction is the whole point:
+       * the attributes are a claim and modality is a behaviour.
+       */
+      const modal = await page.evaluate(() => {
+        const el = document.querySelector(".lightbox");
+        return {
+          tag: el?.tagName ?? "(absent)",
+          isModal: el instanceof HTMLDialogElement && el.matches("dialog:modal"),
+          label: el?.getAttribute("aria-label") ?? "",
+          closeButton: Boolean(el?.querySelector("button.lightbox-close")),
+          focusInside: Boolean(el && document.activeElement && el.contains(document.activeElement)),
+        };
+      });
+      ok(
+        `${imagePost}: the lightbox is a modal <dialog>, not a div`,
+        modal.isModal,
+        `element is <${modal.tag}> and dialog:modal is ${modal.isModal}. A div with ` +
+          `role="dialog" passes an attribute check and still has no focus trap, no ` +
+          `inert page behind it and no Escape unless focus is inside it.`,
+      );
+      ok(
+        `${imagePost}: the lightbox carries an accessible name`,
+        modal.label.length > 0,
+        `aria-label ${JSON.stringify(modal.label)}. A dialog announces itself and then ` +
+          `has nothing to say; the image's alt is the only description there is.`,
+      );
+      ok(
+        `${imagePost}: the lightbox has a visible close control`,
+        modal.closeButton,
+        `no button.lightbox-close. Escape and a backdrop click are both real ways out ` +
+          `and neither is discoverable, so a touch reader with no keyboard had none.`,
+      );
+      ok(
+        `${imagePost}: opening the lightbox moves focus into it`,
+        modal.focusInside,
+        `focus is outside the dialog, so the platform's containment has nothing to ` +
+          `contain and the next Tab leaves the modal.`,
+      );
+
       await page.keyboard.press("Escape");
+      await new Promise((r) => setTimeout(r, 200));
+      const afterEscape = await page.evaluate(() => ({
+        gone: document.querySelector(".lightbox") === null,
+        focusedLink: document.activeElement?.classList.contains("image-link") ?? false,
+      }));
+      ok(
+        `${imagePost}: Escape closes it and focus returns to the link`,
+        afterEscape.gone && afterEscape.focusedLink,
+        `dialog removed ${afterEscape.gone}, focus back on the image link ` +
+          `${afterEscape.focusedLink}. Focus left behind on a removed element sends the ` +
+          `next Tab to the top of the document.`,
+      );
     }
   }
 

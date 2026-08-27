@@ -243,27 +243,79 @@ function footnotePreviews() {
  * copy at a larger CSS size and called it full size.
  */
 function openOverlay(src: string, alt: string, restoreFocus: () => void) {
-  const overlay = document.createElement("div");
-  overlay.className = "lightbox";
-  overlay.tabIndex = -1;
-  if (reduceMotion.matches) overlay.setAttribute("data-reduced", "true");
+  /*
+   * A NATIVE <dialog>, OPENED WITH showModal(), SINCE 2026-08-28.
+   *
+   * It was a `div` with `tabIndex = -1` and nothing else: no role, no
+   * `aria-modal`, no focus trap, no `inert` on the rest of the page and no
+   * close button. Escape worked only while focus happened to be inside it,
+   * which is until the reader presses Tab once, and a screen reader was never
+   * told a dialog had opened at all. The palette next door has been a real
+   * `<dialog>` since it was written, so the site had two modal patterns and
+   * only one of them was accessible.
+   *
+   * `showModal()` gives modality, Escape, focus containment and the top layer
+   * from the platform, which is four hand-rolled behaviours removed rather
+   * than four written correctly. Focus return is also the platform's: it goes
+   * back to whatever opened the dialog, and `restoreFocus` is kept because the
+   * OPENER here is not always the element focus should land on.
+   */
+  const dialog = document.createElement("dialog");
+  dialog.className = "lightbox";
+  /*
+   * A NAME, because a dialog announces itself and then has nothing to say. The
+   * image's alt is the only description there is; when the author left it
+   * empty the image is decorative, so the dialog is labelled generically
+   * rather than with an empty string, which announces as "dialog" and nothing.
+   */
+  dialog.setAttribute("aria-label", alt || "Full size image");
+  if (reduceMotion.matches) dialog.dataset.reduced = "true";
 
   const full = document.createElement("img");
   full.src = src;
   full.alt = alt;
-  overlay.appendChild(full);
+  dialog.appendChild(full);
 
-  const close = () => {
-    overlay.remove();
-    restoreFocus();
-  };
-  overlay.addEventListener("click", close);
-  overlay.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") close();
+  /*
+   * A VISIBLE CLOSE BUTTON. Escape and a backdrop click are both real ways
+   * out and neither is discoverable: one is invisible and the other is a
+   * gesture nobody is told about. A touch reader with no keyboard had no
+   * announced way to close this at all.
+   */
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "lightbox-close";
+  close.textContent = "Close";
+  dialog.appendChild(close);
+
+  const dismiss = () => dialog.close();
+  close.addEventListener("click", dismiss);
+
+  /*
+   * The backdrop click, kept. On a `<dialog>` the element itself is the click
+   * target for its backdrop, so this checks the target rather than wrapping
+   * the content in another element. Clicking the image must NOT close it,
+   * which the target check is what gives us.
+   */
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dismiss();
   });
-  document.body.appendChild(overlay);
-  overlay.focus();
+
+  /*
+   * One teardown, on the platform's own `close` event, so every route out
+   * lands here: the button, the backdrop, Escape, and anything added later.
+   * The element is removed rather than reused because the next open builds a
+   * fresh one with its own src and label.
+   */
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    restoreFocus();
+  });
+
+  document.body.appendChild(dialog);
+  dialog.showModal();
 }
+
 
 /**
  * Lightbox for post images.
