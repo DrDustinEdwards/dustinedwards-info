@@ -1710,6 +1710,176 @@ try {
     );
   }
 
+  /* ---- WCAG 2.2 1.4.13, all three parts, on a post with footnotes -------- */
+
+  /*
+   * HOVERABLE, DISMISSIBLE, PERSISTENT. All three were missing, and none of
+   * them is visible in a screenshot or reachable by a source reading, which is
+   * why they are here rather than in check:policy.
+   *
+   * The bubble appeared BELOW the reference and `mouseleave` hid it
+   * immediately, so it vanished the moment the pointer moved toward it: nobody
+   * could read a footnote longer than one glance or select text from one. There
+   * was no Escape. A `scroll` listener destroyed it, including on the scroll a
+   * reader makes to bring a long footnote into view.
+   *
+   * THE POST IS FOUND, NOT NAMED. A slug pinned here goes stale the day the
+   * post is retitled, and the corpus is the loader's business. Skipped loudly
+   * when no post carries a footnote, because a case that silently examines
+   * nothing is what the lightbox case already does on this corpus.
+   */
+  const footnotePost = await (async () => {
+    for (const path of postPaths) {
+      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      const has = await page.evaluate(
+        () => document.querySelectorAll(".prose a[data-footnote-ref]").length > 0,
+      );
+      if (has) return path;
+    }
+    return null;
+  })();
+
+  if (footnotePost === null) {
+    skip(
+      "footnote previews are hoverable, dismissible and persistent",
+      `none of the first ${postPaths.length} posts carry a footnote reference, so there ` +
+        `is nothing to hover. A content fact, not a defect.`,
+    );
+  } else {
+    const bubbleShown = () =>
+      page.evaluate(() => Boolean(document.querySelector(".footnote-preview")));
+
+    // The page is already open on footnotePost from the walk above.
+    await page.hover(".prose a[data-footnote-ref]");
+    await new Promise((r) => setTimeout(r, 150));
+    ok(
+      `${footnotePost}: hovering a footnote reference shows the preview`,
+      await bubbleShown(),
+      `no .footnote-preview after hovering the reference. Every assertion below is ` +
+        `vacuous without this: the three properties are all about a bubble that exists.`,
+    );
+
+    /*
+     * HOVERABLE. The pointer moves from the reference to the bubble, which is
+     * the gesture the old code made impossible. Moved in one step to the
+     * bubble's own centre, because that is what a reader does; a step onto the
+     * gap between them would test the grace period rather than the property.
+     */
+    const box = await page.evaluate(() => {
+      const el = document.querySelector(".footnote-preview");
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    if (box) await page.mouse.move(box.x, box.y);
+    await new Promise((r) => setTimeout(r, 400));
+    ok(
+      `${footnotePost}: 1.4.13 HOVERABLE, the preview survives the pointer entering it`,
+      await bubbleShown(),
+      `the bubble was gone 400ms after the pointer moved onto it, which is longer than ` +
+        `the grace period. mouseleave on the reference is hiding it without waiting to ` +
+        `see whether the pointer arrived, which is the defect: the bubble sits below the ` +
+        `reference, so reaching it always crosses that boundary.`,
+    );
+
+    /*
+     * PERSISTENT. Scrolling must not destroy it. Asserted with the pointer
+     * still inside the bubble, so a failure here is the scroll listener rather
+     * than the pointer having left.
+     */
+    await page.evaluate(() => window.scrollBy(0, 40));
+    await new Promise((r) => setTimeout(r, 150));
+    ok(
+      `${footnotePost}: 1.4.13 PERSISTENT, scrolling does not destroy the preview`,
+      await bubbleShown(),
+      `a scroll removed the bubble. The reader scrolling to bring a long footnote into ` +
+        `view is exactly the person this hurts.`,
+    );
+
+    /*
+     * DISMISSIBLE. Escape removes it WITHOUT moving focus, which is the part
+     * of 1.4.13 that is easy to satisfy wrongly by focusing something else.
+     */
+    const focusBefore = await page.evaluate(() => document.activeElement?.tagName ?? "");
+    await page.keyboard.press("Escape");
+    await new Promise((r) => setTimeout(r, 150));
+    const afterEscape = await page.evaluate(() => ({
+      gone: document.querySelector(".footnote-preview") === null,
+      focus: document.activeElement?.tagName ?? "",
+    }));
+    ok(
+      `${footnotePost}: 1.4.13 DISMISSIBLE, Escape removes the preview`,
+      afterEscape.gone,
+      `Escape left the bubble on screen. A reader who cannot move the pointer away, or ` +
+        `whose bubble covers the text they were reading, had no way out.`,
+    );
+    ok(
+      `${footnotePost}: dismissing does not move focus`,
+      afterEscape.focus === focusBefore,
+      `focus went from ${focusBefore} to ${afterEscape.focus}. Dismissing content must ` +
+        `not cost the reader their place, which is what 1.4.13 asks for.`,
+    );
+
+    /* ---- WCAG 2.2 4.1.3, the copy controls announce ---------------------- */
+
+    /*
+     * All three copy controls said "Copied" VISUALLY and told a screen reader
+     * nothing: two swapped their own textContent and the heading permalink set
+     * an attribute that CSS renders through `::after`, which is not in the
+     * accessibility tree at all.
+     *
+     * ASSERTED ON THE REGION, not on the announcement. Whether a screen reader
+     * SPEAKS is not observable from here; what is observable is that a
+     * `role="status"` region exists and that the copy wrote a message into it.
+     * That is the mechanism 4.1.3 requires, and it is the honest limit of what
+     * a browser gate can see.
+     */
+    const codePost = await page.evaluate(
+      () => document.querySelectorAll(".prose pre[data-lang] .code-copy").length > 0,
+    );
+    if (!codePost) {
+      skip(
+        "the copy controls announce through a status region",
+        "this post carries no code block, so there is no copy control to press",
+      );
+    } else {
+      await page.evaluate(() => {
+        const button = document.querySelector(".prose pre[data-lang] .code-copy");
+        if (button instanceof HTMLElement) button.click();
+      });
+      await new Promise((r) => setTimeout(r, 250));
+      const status = await page.evaluate(() => {
+        const region = document.querySelector('[role="status"]');
+        return {
+          exists: Boolean(region),
+          text: region?.textContent?.trim() ?? "",
+          hidden: region ? !region.classList.contains("sr-only") : false,
+        };
+      });
+      ok(
+        `${footnotePost}: 4.1.3 the copy control writes into a role=status region`,
+        status.exists && status.text.length > 0,
+        `region present ${status.exists}, text ${JSON.stringify(status.text)}. A button ` +
+          `that relabels itself is a change of NAME, not a status message, and generated ` +
+          `::after content is not in the accessibility tree at all.`,
+      );
+      ok(
+        `${footnotePost}: the status region is visually hidden, not a second visible label`,
+        !status.hidden,
+        `the region is not .sr-only, so the announcement is also painted on screen ` +
+          `beside the control's own feedback.`,
+      );
+    }
+  }
+
+  /*
+   * FROM HERE THE PAGE MOVES AGAIN, and the cases below re-navigate for
+   * themselves. The first version of this block sat ABOVE the code-copy case
+   * and walked the corpus looking for a footnote, which left the page on a
+   * different post: the copy-button assertion then reported "0 button(s) on 0
+   * block(s)" about a page that has no code blocks. That is this file's own
+   * recorded failure shape, from the home health-tile case, repeated.
+   */
   const postForShape = codePost ?? probedPost;
   if (postForShape === null) {
     skip("a post page's enhancements", "the listing yielded no post links at all");
@@ -2964,10 +3134,18 @@ try {
     });
     ok(
       "the ADMIN stylesheet is actually applied where the layout is measured",
-      adminCss.rules >= 880,
-      `${adminCss.rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 880, ` +
-        `measured 965 on 2026-08-24 (351 public + 614 admin). Below this admin.css did ` +
-        `not load and every overflow number below is about browser defaults.`,
+      adminCss.rules >= 670,
+      `${adminCss.rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 670, ` +
+        `measured 730 on 2026-08-28. Below this admin.css did not load and every ` +
+        `overflow number below is about browser defaults.` +
+        `
+        RE-MEASURED because the public half shrank, not because the admin ` +
+        `half did. The old figure was 965 on 2026-08-24, read as 351 public plus 614 ` +
+        `admin. The per-route CSS split of 2026-08-27 took the public sheet down to the ` +
+        `chrome, so an admin page now loads roughly 116 public rules beside the same ` +
+        `admin bundle. A floor set against the old sum is a floor no correct build can ` +
+        `clear, which is the unfailable-floor class inverted and is how this same ` +
+        `assertion failed after the 2026-08-23 admin split.`,
     );
     ok(
       "the admin shell is laid out by admin.css, not by the browser default",

@@ -297,28 +297,54 @@
 
 /* Heading anchors. Hidden until the heading is hovered or the link is focused,
    so they never clutter the page but stay reachable by keyboard. */
+/*
+ * WCAG 2.2 2.5.8 as well as 1.4.3. MEASURED at 14.8 x 29 against a 24px floor,
+ * so the width was the problem and the height never was.
+ *
+ * `inline-flex` with a min-width and centred content, rather than padding,
+ * because padding would push the anchor away from the heading text it belongs
+ * to. The heading's own line box already gives the height.
+ */
 .heading-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
   margin-left: 0.375rem;
   color: var(--text-muted);
-  opacity: 0;
 }
 
-.prose h2:hover .heading-anchor,
-.prose h3:hover .heading-anchor,
-.prose h4:hover .heading-anchor,
-.heading-anchor:focus-visible {
-  opacity: 1;
-}
-
-/* ON TOUCH THERE IS NO HOVER, so the rule above never fires and the anchors were
-   invisible for the entire life of the page. `hover: none` is the query for
-   exactly that: a device whose primary pointer cannot hover. They are shown at
-   reduced strength rather than full, because on a phone they are permanent
-   furniture beside every heading rather than something that appears on
-   approach. */
-@media (hover: none) {
+/*
+ * THE REVEAL IS SCOPED TO POINTERS THAT CAN HOVER, since 2026-08-28, and that
+ * is what removes the opacity from the touch path entirely.
+ *
+ * It used to be `opacity: 0` unconditionally with a `hover: none` override
+ * putting it back at 0.55. Two things were wrong with that. The override is a
+ * PARTIAL opacity on text, which composites the token colour against the
+ * background after `check:contrast` has finished measuring it: `--text-muted`
+ * measures fine and 0.55 of it does not, and no gate could see the difference.
+ * And the base rule is only meaningful where hovering exists, so stating it
+ * outside the query was what forced the override in the first place.
+ *
+ * Inside the query the pair is 0 then 1, which is a REVEAL rather than a
+ * shade: nothing is ever painted at a partial value, so nothing is ever painted
+ * at an unmeasured contrast. On touch the anchor is simply `--text-muted`,
+ * which is a measured token at full strength.
+ *
+ * `focus-visible` is inside the query too, and that is safe rather than an
+ * oversight: outside it the anchor is already fully visible, so there is
+ * nothing for focus to reveal.
+ */
+@media (hover: hover) {
   .heading-anchor {
-    opacity: 0.55;
+    opacity: 0;
+  }
+
+  .prose h2:hover .heading-anchor,
+  .prose h3:hover .heading-anchor,
+  .prose h4:hover .heading-anchor,
+  .heading-anchor:focus-visible {
+    opacity: 1;
   }
 }
 

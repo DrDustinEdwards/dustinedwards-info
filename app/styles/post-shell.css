@@ -52,6 +52,21 @@
   padding-left: 1rem;
 }
 
+/*
+ * WCAG 2.2 2.5.8. MEASURED at 497.6 x 22.5 and 493.9 x 22.5, so these are wide
+ * links that are a pixel and a half short in HEIGHT, for the same reason the
+ * pagination links were: a bare anchor's box is its line box.
+ *
+ * Not named by the audit, which listed the pagination and the footer. Found by
+ * measuring every interactive target on a post rather than only the ones on the
+ * list, which is why the list is not the instrument.
+ */
+.post-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 .post-nav {
   display: flex;
   flex-wrap: wrap;

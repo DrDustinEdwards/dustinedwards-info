@@ -100,6 +100,22 @@
   gap: 0.375rem;
 }
 
+/*
+ * WCAG 2.2 2.5.8 for the footer, same measurement and same repair as the
+ * pagination links: bare inline anchors whose box is their line box, which
+ * lands a pixel under the 24px floor.
+ *
+ * Scoped to the footer's own links rather than to every anchor on the site,
+ * because the exception this does NOT take is real: a link inside a sentence
+ * of prose is exempt, and applying a min-height there would change the leading
+ * of every paragraph on the site to fix a criterion it already satisfies.
+ */
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 /* Admin cockpit shell */
 /* The shell owns the viewport, so the editor can own one scroll context inside
    it. Before this the page grew and the browser scrolled it; the editor needs

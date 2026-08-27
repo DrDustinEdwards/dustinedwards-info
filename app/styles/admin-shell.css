@@ -718,6 +718,31 @@
 
 .admin-content {
   flex: 1;
+  /*
+   * WCAG 2.2 2.4.11, focus not obscured (minimum).
+   *
+   * This element is the scrollport, and two bars sit sticky above content that
+   * scrolls under them: the shell topbar at `--admin-topbar-h`, and the
+   * editor's own command bar on the routes that have one. Tabbing to a control
+   * just above the fold scrolls it into view flush with the top of the
+   * scrollport, which is UNDER those bars: the focused element is on screen by
+   * every geometric test and invisible to the person who focused it.
+   *
+   * `scroll-padding-top` is the whole fix. It tells the scrollport that the
+   * first N pixels are spoken for, so every scroll-into-view, including the one
+   * the browser performs for focus, stops short of them.
+   *
+   * DERIVED FROM THE TOKEN, never a literal. The topbar's height is
+   * `--admin-topbar-h` and it is declared once; a number here would be a second
+   * copy that goes stale the day the bar is resized, which is rule 17 in the
+   * place it is least visible, since the symptom is a control that is merely
+   * hard to see rather than a build that fails.
+   *
+   * The editor's command bar is INSIDE the scrollport and sticks at `top: 0`
+   * relative to it, so it stacks below the topbar rather than adding to this
+   * offset. The extra `1rem` is breathing room, not a second bar.
+   */
+  scroll-padding-top: calc(var(--admin-topbar-h) + 1rem);
   /* THE SCROLLER IS ALSO A CONTAINING BLOCK, which fixes the whole admin plane
      at one site rather than one control at a time.
 
