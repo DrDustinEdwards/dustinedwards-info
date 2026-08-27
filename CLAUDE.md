@@ -57,11 +57,11 @@ Per-table backups via `check:backup`. FTS `DELETE FROM` is gated by `check:invar
 
 `check:secrets`, both directions, per-root floors.
 
-### 4. GATED by check:script-payload for the public script payload, UNGATED for the rest. Keep the PUBLIC PAYLOAD lean, which is more than the Worker.
+### 4. GATED by check:page-payload for the public script payload, UNGATED for the rest. Keep the PUBLIC PAYLOAD lean, which is more than the Worker.
 
 The subject is everything a reader downloads to see a page: the Worker bundle, the CSS, the route JavaScript and whatever the page speculatively fetches. Inline SVG over an icon library. CodeMirror is lazy-split. Client auth is imported by `/login` alone.
 
-**THE PUBLIC PLANE SHIPS NO FRAMEWORK SCRIPT, since 2026-08-26.** Public routes do not hydrate React; hydration is opt-in by route (`handle = { hydrate: true }`, today the admin layout and `/login`) and root's Layout renders `<Scripts>` only behind that flag. A public page's whole script payload is the enhancement bundles from `app/enhance/`, prebuilt by `build:enhance` and loaded by nonced module script tags. `check:script-payload` owns the per-bundle ceilings, pins the opt-in set, and syntax-checks every served asset; `check:invariants` section 24 refuses a client hook in an unhydrated tree, which is the defect class this design creates (code that compiles, renders, and does nothing in the browser). The wire half is `check:browser`'s enhancement cases and verify-live section 16.
+**THE PUBLIC PLANE SHIPS NO FRAMEWORK SCRIPT, since 2026-08-26.** Public routes do not hydrate React; hydration is opt-in by route (`handle = { hydrate: true }`, today the admin layout and `/login`) and root's Layout renders `<Scripts>` only behind that flag. A public page's whole script payload is the enhancement bundles from `app/enhance/`, prebuilt by `build:enhance` and loaded by nonced module script tags. `check:page-payload` owns the per-bundle ceilings, pins the opt-in set, and syntax-checks every served asset; `check:invariants` section 24 refuses a client hook in an unhydrated tree, which is the defect class this design creates (code that compiles, renders, and does nothing in the browser). The wire half is `check:browser`'s enhancement cases and verify-live section 16.
 
 **WIDENED 2026-08-24, because as written it succeeded at the small thing and ignored the large one.** "Keep the Worker lean" was satisfied while `app.css` imported the admin stylesheets and every visitor to the home page downloaded the media library and the post editor. The Worker was lean and the page was not. A rule scoped to one artifact grades that artifact.
 

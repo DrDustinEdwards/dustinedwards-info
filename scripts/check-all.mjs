@@ -134,7 +134,7 @@ const CI_EXCLUDED = {
    * from this machine's working tree. Same class as check:backup: the input is
    * state a checkout does not have.
    */
-  "check:script-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
+  "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
 };
 
 /**
@@ -210,7 +210,7 @@ const TIERS = {
   // app/enhance/blog.ts as source. No network, but it measures whatever the
   // last `npm run build` produced, and a stale build is certified as itself;
   // the deployed page's script set is verify-live's assertion.
-  "check:script-payload": "offline",
+  "check:page-payload": "offline",
   // Reads each route's action as SOURCE and proves every destructive intent
   // calls the confirmation predicate inside its own branch. It runs no action,
   // so it sees a guard ABSENT, not a guard present and wrong.

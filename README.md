@@ -21,7 +21,7 @@ consequence of it.
   already functions. Since 2026-08-26 the public plane ships no framework
   script at all: public pages do not hydrate React, and their only JavaScript
   is four small prebuilt enhancement bundles loaded by nonced script tags
-  (`app/enhance/`, measured and gated by `check:script-payload`). That
+  (`app/enhance/`, measured and gated by `check:page-payload`). That
   includes the ADMIN DOOR: `/login` is a real form, and the browser client is
   layered on top of it. The admin plane behind that door is exempt, hydrates,
   and does use script. This used to read "zero JavaScript", which was the

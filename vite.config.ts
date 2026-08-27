@@ -43,7 +43,7 @@ export default defineConfig({
      * Two of the four sit under the default 4096-byte inline limit, and an
      * inlined bundle becomes a data: URI in a <script src>, which works only
      * because the element carries a nonce, bloats every page it rides on, and
-     * is invisible to check:script-payload's byte-equality pass against
+     * is invisible to check:page-payload's byte-equality pass against
      * app/enhance/dist/. Everything else keeps the default behaviour.
      */
     assetsInlineLimit: (filePath) =>

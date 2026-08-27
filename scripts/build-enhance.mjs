@@ -6,7 +6,7 @@
  * OBSERVATION BOUNDARY: this builds and then reads back its OWN output. It
  * proves each bundle is import-free and parses; it cannot prove the app build
  * actually serves these files (the ?url imports decide that, and
- * check:script-payload asserts it against build/client), and it cannot see the
+ * check:page-payload asserts it against build/client), and it cannot see the
  * wire.
  *
  * ## Why the enhancements are prebuilt
