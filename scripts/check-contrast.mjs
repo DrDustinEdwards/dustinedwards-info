@@ -1040,6 +1040,147 @@ for (const a of worst) {
  * Both floors are 94 percent of their own measurement, which is the margin the
  * other gates use: 587 of 625, and 470 of 501.
  */
+/* ---- partial opacity on text is refused ------------------------------- */
+
+/*
+ * THE HOLE THIS CLOSES, and this gate's own header has described it for a week.
+ *
+ * Everything above reads token hexes and computes ratios. `opacity` is
+ * compositing the browser applies AFTERWARDS, so a pair that measures 7:1 here
+ * can reach the reader at 4.35:1 and nothing in this file can tell. The header
+ * calls every opacity on text "a hole of this shape" and enumerates nineteen
+ * declarations by hand. A hand enumeration in a comment is not a gate: it was
+ * right when written and could not notice the twentieth.
+ *
+ * `.heading-anchor` is what made it worth building. Under `(hover: none)` it
+ * was `opacity: 0.55` over `--text-muted`, which is a measured token painted at
+ * an unmeasured strength, on every heading of every post for every touch
+ * reader. It is gone; this is what stops the next one.
+ *
+ * ## WHAT COUNTS AS PARTIAL, AND WHY 0 AND 1 DO NOT
+ *
+ * Only `0 < value < 1` is refused. `opacity: 0` and `opacity: 1` are a REVEAL
+ * PAIR: the element is either absent or painted at full strength, so nothing is
+ * ever composited at a value nobody measured. That is the arrangement
+ * `.heading-anchor` now uses inside `@media (hover: hover)`, and refusing it
+ * would refuse the fix along with the defect.
+ *
+ * ## WHAT IT CANNOT DECIDE, WHICH IS WHY THERE IS A LIST
+ *
+ * Whether a selector paints TEXT needs a rendering, and this gate has none. So
+ * the rule is inverted: every partial opacity is refused unless it is named
+ * here with a reason. A new one fails until somebody classifies it, which is
+ * the direction that cannot go quietly wrong. The reasons below are lifted from
+ * the header's own enumeration rather than invented, so there is one
+ * classification rather than two.
+ *
+ * ## KEYED BY PATTERN, NOT BY SELECTOR TEXT, and the first attempt was not
+ *
+ * The exemptions were written as exact selector strings, and the gate refused
+ * `.row-action:disabled` on its first run: the declaration in the file is a
+ * comma-separated GROUP of eight disabled-control selectors, and the name I had
+ * copied was only its last line. That is the mirror failure in miniature, and
+ * the repair is to describe the CLASS rather than transcribe the instance.
+ *
+ * A group is exempt only when EVERY member of it matches an entry. One
+ * unclassified selector in a group of eight is still an unclassified selector,
+ * and the alternative rule (exempt if ANY member matches) would let a text
+ * selector ride along beside a scrim.
+ *
+ * @type {Array<{ test: RegExp, why: string }>}
+ */
+const OPACITY_EXEMPT = [
+  {
+    test: /:disabled|\[disabled\]/,
+    why: "a disabled control, which WCAG 1.4.3 exempts outright",
+  },
+  {
+    test: /\[data-pending\]/,
+    why: "a transient pending state, seconds at a time, on the admin plane",
+  },
+  { test: /-scrim/, why: "a scrim, not text" },
+  {
+    test: /^\.search-why-sep$/,
+    why: 'incidental punctuation, the "/" between why-terms, recorded as LEFT in this header',
+  },
+];
+
+/**
+ * True when every selector in a group is covered by some exemption.
+ * @param {string} selectorGroup
+ * @returns {boolean}
+ */
+function opacityExempt(selectorGroup) {
+  const members = selectorGroup
+    .split(",")
+    .map((one) => one.trim())
+    .filter(Boolean);
+  if (members.length === 0) return false;
+  return members.every((/** @type {string} */ one) =>
+    OPACITY_EXEMPT.some((entry) => entry.test.test(one)),
+  );
+}
+
+{
+  /** @type {Array<{ file: string, selector: string, value: string }>} */
+  const partial = [];
+  let declarations = 0;
+
+  for (const file of stylesheetPaths()) {
+    const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, "");
+    const name = file.split(/[\\/]/).slice(-1)[0];
+
+    for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = match[1].trim().split("\n").map((l) => l.trim()).join(" ");
+      const block = match[2];
+      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([0-9.]+)\s*(?:;|$)/g)) {
+        declarations += 1;
+        const value = Number(decl[1]);
+        if (value > 0 && value < 1) partial.push({ file: name, selector, value: decl[1] });
+      }
+    }
+  }
+
+  /*
+   * SCOPE FLOOR. A regex that stopped matching would report no partial opacity
+   * anywhere, which is exactly what a clean sweep reports. The site has never
+   * had fewer than a handful of opacity declarations of any value.
+   */
+  assert(
+    `the opacity scan read declarations at all (${declarations} found)`,
+    declarations >= 8,
+  );
+
+  const unclassified = partial.filter((d) => !opacityExempt(d.selector));
+  assert(
+    unclassified.length === 0
+      ? "every partial opacity is classified"
+      : `UNCLASSIFIED partial opacity: ${unclassified
+          .map((d) => `${d.file} ${d.selector} at ${d.value}`)
+          .join("; ")}`,
+    unclassified.length === 0,
+  );
+
+  /*
+   * AND THE LIST DOES NOT ROT. An exemption naming a selector that no longer
+   * carries a partial opacity is a licence nobody is using, and the next reader
+   * would take it as evidence the pattern is fine.
+   */
+  const stale = OPACITY_EXEMPT.filter(
+    (entry) =>
+      !partial.some((d) =>
+        d.selector.split(",").some((/** @type {string} */ one) => entry.test.test(one.trim())),
+      ),
+  ).map((entry) => String(entry.test));
+  assert(
+    stale.length === 0
+      ? "every opacity exemption covers a live declaration"
+      : `STALE opacity exemption(s): ${stale.join(", ")}`,
+    stale.length === 0,
+  );
+}
+
 /* ---- the theme-color meta tags are a SECOND COPY of two tokens ---------- */
 
 /*
@@ -1080,15 +1221,16 @@ for (const a of worst) {
 }
 
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 590 : 473;
+const MINIMUM_CHECKS = buildPresent ? 593 : 476;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
       `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. Measured 2026-08-27: 639 with the built stylesheet compared. Both ` +
-      `floors moved by exactly the three theme-color assertions added that day, ` +
-      `which is why the absent-build floor moved without being re-run: the three ` +
-      `read source only and execute in both branches.`,
+      `failing. Measured 2026-08-28: 642 with the built stylesheet compared. Both ` +
+      `floors move by exactly the assertions added: three theme-color ones on ` +
+      `2026-08-27 and three partial-opacity ones on 2026-08-28. All six read source ` +
+      `only and execute in both branches, which is why the absent-build floor moves ` +
+      `without being re-run.`,
   );
 }
 

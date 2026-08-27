@@ -1092,6 +1092,80 @@ refuses(
     );
   }
 
+  /*
+   * WCAG 2.2 1.4.13 ON SOURCE, because the wire half has nothing to observe.
+   *
+   * `check:browser` has the better instrument and it SKIPS: no post in this
+   * corpus uses footnote syntax, so `.prose a[data-footnote-ref]` matches
+   * nothing on any page and there is nothing to hover. Measured by fetching
+   * the three posts whose prose mentions footnotes: zero `data-footnote-ref`
+   * attributes on any of them.
+   *
+   * That is the same shape as the lightbox above, and the same answer: a wire
+   * assertion that never runs is not a gate, so the offline half asserts the
+   * three properties are IMPLEMENTED. It is weaker on purpose and says so.
+   *
+   * Each is asserted by the mechanism that provides it, not by a comment
+   * claiming it: a scheduled hide rather than an immediate one (hoverable), an
+   * Escape listener (dismissible), and the ABSENCE of a scroll listener
+   * (persistent), which is the only one of the three whose defect is a line
+   * that exists rather than a line that is missing.
+   */
+  {
+    const blog = stripComments(readFileSync(join(root, "app/enhance/blog.ts"), "utf8"));
+    const fn = blog.slice(blog.indexOf("function footnotePreviews"));
+    const body = fn.slice(0, fn.indexOf("\n}"));
+    eq("footnotes: the scan found footnotePreviews", body.length > 200, true);
+    eq(
+      "footnotes: 1.4.13 hoverable, leaving schedules a hide rather than performing one",
+      /scheduleHide/.test(body) && /setTimeout\(hide/.test(body),
+      true,
+    );
+    eq(
+      "footnotes: 1.4.13 hoverable, entering the bubble cancels the hide",
+      /bubble\.addEventListener\("mouseenter", cancelHide\)/.test(body),
+      true,
+    );
+    eq(
+      "footnotes: 1.4.13 dismissible by Escape",
+      /"Escape"/.test(body) && /keydown/.test(body),
+      true,
+    );
+    eq(
+      "footnotes: 1.4.13 persistent, no scroll listener destroys the bubble",
+      !/addEventListener\("scroll"/.test(body),
+      true,
+    );
+
+    /*
+     * 4.1.3, the same way. The three copy controls announce through ONE
+     * `role="status"` region rather than by relabelling themselves, which is a
+     * change of NAME, or by `::after`, which is not in the accessibility tree.
+     */
+    eq(
+      "copy controls: there is a role=status region",
+      /setAttribute\("role", "status"\)/.test(blog),
+      true,
+    );
+    eq(
+      "copy controls: all three announce through it",
+      (blog.match(/announce\(/g) ?? []).length >= 4,
+      true,
+    );
+
+    /*
+     * And the heading permalink LANDS on the heading. Its comment claimed the
+     * anchor still navigated while the code called preventDefault three lines
+     * below, so the assertion is on the focus move rather than on the comment.
+     */
+    const headings = blog.slice(blog.indexOf("function headingLinks"));
+    eq(
+      "heading permalinks: activating one moves focus to the heading",
+      /heading\.focus\(\)/.test(headings.slice(0, 2000)),
+      true,
+    );
+  }
+
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(
     "ask: robots.txt disallows /search/ask",

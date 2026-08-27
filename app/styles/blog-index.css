@@ -133,3 +133,27 @@
   margin: 3rem auto 0;
   font-size: 0.9375rem;
 }
+
+/*
+ * WCAG 2.2 2.5.8, target size (minimum). MEASURED at 39x23 and 33x23 for
+ * "Older" and "Newer", against a 24px floor.
+ *
+ * The width was already fine; the HEIGHT was 23px, one pixel under, because
+ * these are bare inline anchors whose box is exactly their line box. One pixel
+ * is not a rounding artefact here: 2.5.8's floor is 24 and the success
+ * criterion has no tolerance.
+ *
+ * `inline-flex` with a min-height rather than padding, so the target grows
+ * DOWNWARD and UPWARD around the text rather than pushing the row apart: the
+ * pagination's own `align-items: center` then keeps the two links on one
+ * centreline. Padding would have worked and would have moved the layout.
+ *
+ * The undersized-target exception for "inline" targets does NOT apply. That
+ * exception is for a link inside a sentence, where enlarging the target would
+ * break the line; these two sit alone in a nav.
+ */
+.pagination a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}

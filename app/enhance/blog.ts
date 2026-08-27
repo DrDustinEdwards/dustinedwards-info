@@ -105,6 +105,61 @@ function scrollSpy() {
  * padding for a `pre` carrying it, so the space and the thing occupying it
  * arrive together and a reader without script is not left with a gap.
  */
+/**
+ * The ONE live region the three copy controls announce through. WCAG 2.2 4.1.3.
+ *
+ * ## WHAT WAS WRONG
+ *
+ * All three said "Copied" VISUALLY and told a screen reader nothing. The code
+ * button swapped its own `textContent`, the markdown trigger swapped its own,
+ * and the heading permalink set a `data-copied` attribute that CSS renders
+ * through `::after`. Generated content is not in the accessibility tree at all,
+ * and a button that silently relabels itself is a change of name rather than a
+ * status message: a reader who cannot see the swap has no way to learn whether
+ * the copy worked.
+ *
+ * ## WHY A SHARED REGION AND NOT `aria-live` ON EACH CONTROL
+ *
+ * A live region announces CHANGES to its own contents. Putting one on each
+ * control means three regions competing, and it means the announcement is tied
+ * to an element whose visible label is changing for a different reason. One
+ * region that all three write into is one thing for assistive technology to
+ * watch, and it leaves each control's own name alone.
+ *
+ * `role="status"` rather than `aria-live="assertive"`: this is polite by
+ * definition. A copy confirmation must not interrupt whatever is being read.
+ *
+ * ## THE VISUAL AND THE ANNOUNCED ARE SEPARATE ON PURPOSE
+ *
+ * The `::after` text and the button relabel STAY. They are the sighted
+ * feedback and they work; this adds the half that was missing rather than
+ * replacing the half that was not.
+ *
+ * Created lazily and once, so a page with no copy controls carries no extra
+ * element, and the element is visually hidden with the site's own `.sr-only`
+ * rather than a second definition of the same idea.
+ */
+let statusRegion: HTMLElement | null = null;
+
+function announce(message: string) {
+  if (!statusRegion) {
+    statusRegion = document.createElement("p");
+    statusRegion.className = "sr-only";
+    statusRegion.setAttribute("role", "status");
+    document.body.appendChild(statusRegion);
+  }
+  /*
+   * CLEARED FIRST, and this is not superstition. A live region announces a
+   * CHANGE; writing the same string twice in a row is not a change, so copying
+   * a second time would be silent. Emptying it and setting it on the next frame
+   * makes every copy an announcement, including an identical one.
+   */
+  statusRegion.textContent = "";
+  requestAnimationFrame(() => {
+    if (statusRegion) statusRegion.textContent = message;
+  });
+}
+
 function decorateCodeBlock(pre: HTMLElement) {
   if (pre.querySelector(":scope > .code-copy")) return;
 
@@ -127,8 +182,10 @@ function decorateCodeBlock(pre: HTMLElement) {
     try {
       await navigator.clipboard.writeText(code);
       button.textContent = "Copied";
+      announce("Code copied");
     } catch {
       button.textContent = "Press Ctrl C";
+      announce("Copy failed. Press Control C to copy.");
     }
     setTimeout(() => {
       button.textContent = "Copy";
@@ -184,19 +241,59 @@ function headingLinks() {
     ".prose .heading-anchor",
   )) {
     anchor.addEventListener("click", (event) => {
-      // The anchor still navigates for anyone who prefers that; this only adds
-      // the clipboard copy alongside it.
+      /*
+       * THE COMMENT HERE USED TO SAY "the anchor still navigates for anyone who
+       * prefers that", THREE LINES ABOVE A `preventDefault()`. It did not. The
+       * copy replaced the navigation rather than joining it, so a reader who
+       * clicked a heading permalink got a clipboard write and stayed exactly
+       * where they were, with the URL bar changed under them and no focus
+       * moved. That is a boundary note that was false in the commit that wrote
+       * it, which is hard rule 7's own example.
+       *
+       * BOTH THINGS HAPPEN NOW. The URL is copied AND the reader lands on the
+       * heading, which is what an in-page anchor is for and what 2.4.3 expects
+       * of a link that changes the URL: focus follows.
+       *
+       * `focus()` on the heading rather than `scrollIntoView`, because moving
+       * focus is what a screen reader announces and what the next Tab
+       * continues from; scrolling alone moves the eye and leaves the keyboard
+       * behind. Headings are not focusable by default, so `tabindex="-1"` is
+       * set for the duration and removed afterwards: it makes the element
+       * programmatically focusable without adding it to the tab order.
+       */
       if (!navigator.clipboard) return;
       event.preventDefault();
       const url = new URL(anchor.getAttribute("href") ?? "", location.href);
-      void navigator.clipboard.writeText(url.href).then(() => {
+      const heading = anchor.closest("h2, h3, h4") ?? document.getElementById(url.hash.slice(1));
+
+      const land = () => {
         history.replaceState(null, "", url.hash);
-        anchor.setAttribute("data-copied", "true");
-        setTimeout(() => anchor.removeAttribute("data-copied"), 1500);
-      });
+        if (!(heading instanceof HTMLElement)) return;
+        const had = heading.hasAttribute("tabindex");
+        if (!had) heading.setAttribute("tabindex", "-1");
+        heading.focus();
+        // Removed on blur rather than immediately: taking it away while the
+        // element still holds focus drops focus to the body in some engines.
+        if (!had) heading.addEventListener("blur", () => heading.removeAttribute("tabindex"), {
+          once: true,
+        });
+      };
+
+      void navigator.clipboard
+        .writeText(url.href)
+        .then(() => {
+          anchor.setAttribute("data-copied", "true");
+          setTimeout(() => anchor.removeAttribute("data-copied"), 1500);
+          announce("Link copied");
+        })
+        // A refused clipboard must not cost the reader the navigation they
+        // asked for, so landing happens either way.
+        .catch(() => {})
+        .finally(land);
     });
   }
 }
+
 
 /** Hover and focus previews for footnote references. */
 function footnotePreviews() {
@@ -204,9 +301,37 @@ function footnotePreviews() {
   if (!notes) return;
 
   let bubble: HTMLElement | null = null;
+  let pending: ReturnType<typeof setTimeout> | null = null;
+
+  const cancelHide = () => {
+    if (pending !== null) clearTimeout(pending);
+    pending = null;
+  };
+
   const hide = () => {
+    cancelHide();
     bubble?.remove();
     bubble = null;
+  };
+
+  /*
+   * WCAG 2.2 1.4.13, all three parts, and all three were missing.
+   *
+   * HOVERABLE. `mouseleave` on the reference hid the bubble immediately, so the
+   * bubble appeared BELOW the reference and vanished the moment the pointer
+   * moved toward it. Nobody could ever read a footnote longer than one glance,
+   * and nobody could select text from one. The grace period below is the fix:
+   * leaving the reference schedules a hide rather than performing one, and
+   * entering the bubble cancels it.
+   *
+   * The delay is short enough not to feel sticky and long enough to cross the
+   * eight-pixel gap the bubble is positioned with, which is the distance the
+   * pointer actually has to travel.
+   */
+  const HOVER_GRACE_MS = 220;
+  const scheduleHide = () => {
+    cancelHide();
+    pending = setTimeout(hide, HOVER_GRACE_MS);
   };
 
   for (const ref of document.querySelectorAll<HTMLAnchorElement>(
@@ -221,6 +346,13 @@ function footnotePreviews() {
       bubble.setAttribute("role", "note");
       bubble.innerHTML = target.innerHTML;
       for (const back of bubble.querySelectorAll("[data-footnote-backref]")) back.remove();
+
+      // The bubble is part of the hover target, not a separate thing that
+      // steals the pointer. Without these two the grace period above would
+      // expire while the reader is inside the bubble reading it.
+      bubble.addEventListener("mouseenter", cancelHide);
+      bubble.addEventListener("mouseleave", scheduleHide);
+
       document.body.appendChild(bubble);
       const box = ref.getBoundingClientRect();
       bubble.style.top = `${box.bottom + window.scrollY + 8}px`;
@@ -228,11 +360,34 @@ function footnotePreviews() {
     };
     ref.addEventListener("mouseenter", show);
     ref.addEventListener("focus", show);
-    ref.addEventListener("mouseleave", hide);
-    ref.addEventListener("blur", hide);
+    ref.addEventListener("mouseleave", scheduleHide);
+    ref.addEventListener("blur", scheduleHide);
   }
-  addEventListener("scroll", hide, { passive: true });
+
+  /*
+   * DISMISSIBLE. Escape removes the bubble WITHOUT moving focus, which is what
+   * 1.4.13 asks for: a reader who cannot move the pointer away, or who has the
+   * bubble covering the text they were reading, needs a way out that does not
+   * cost them their place. There was none.
+   */
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && bubble) {
+      event.stopPropagation();
+      hide();
+    }
+  });
+
+  /*
+   * PERSISTENT. A `scroll` listener used to hide the bubble, so any scroll,
+   * including the one a reader makes to bring a long footnote into view,
+   * destroyed what they were reading. It is gone.
+   *
+   * Nothing replaces it, and nothing needs to: the bubble is positioned in
+   * DOCUMENT coordinates (`window.scrollY` is added when it is placed), so it
+   * travels with the reference rather than staying stuck to the viewport.
+   */
 }
+
 
 /**
  * Opens one image over the page. Returns focus where it came from on close.
@@ -375,6 +530,7 @@ function copyMarkdown() {
       const response = await fetch(trigger.getAttribute("href") ?? "");
       await navigator.clipboard.writeText(await response.text());
       trigger.textContent = "Copied";
+      announce("Markdown copied");
     } catch {
       // Fall back to what the anchor would have done anyway.
       location.href = trigger.getAttribute("href") ?? "";
