@@ -1,6 +1,5 @@
 import { Form, Link, data, redirect } from "react-router";
 
-import { BlogEnhancements } from "~/components/blog-enhancements";
 import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -414,7 +413,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         )}
       </main>
       <SiteFooter />
-      <BlogEnhancements />
+      {/* NO BlogEnhancements HERE, since 2026-08-27. Every one of that bundle's
+          seven enhancements targets markup the post PIPELINE renders inside
+          `.prose`: the reading bar wants `.post .prose`, the scrollspy wants
+          `.post-toc`, and the code buttons, heading links, footnote previews and
+          lightbox all want elements that exist only inside a rendered post body.
+          This page has none of them, so the bundle was 4,514 bytes downloaded and
+          parsed to find nothing on the site's second most visited page.
+          check:browser asserts on the resource timeline that it is not fetched
+          here, which is the half a source reading cannot give you. */}
       <BlogSpeculation />
     </>
   );
