@@ -1052,6 +1052,46 @@ refuses(
     );
   }
 
+  /*
+   * THE LIGHTBOX IS A REAL MODAL DIALOG, asserted on source.
+   *
+   * ## WHY HERE AND NOT ONLY IN check:browser
+   *
+   * `check:browser` has the better instrument: it opens the thing and asks the
+   * platform whether `dialog:modal` matches, which a div carrying
+   * `role="dialog"` cannot fake. That case is SKIPPED on the current corpus,
+   * and has been for as long as the skip has existed, because no published post
+   * carries a body image, so there is no `.image-link` on any page to click.
+   * verify-live reports the same absence.
+   *
+   * A wire assertion that never runs is not a gate. These are the offline half:
+   * weaker, because source text is a claim about behaviour rather than the
+   * behaviour, and they run on every commit. When a post gains an image the
+   * browser case starts running and becomes the stronger of the two; neither
+   * replaces the other.
+   *
+   * The `div` spelling is refused by name, because that is what this replaced.
+   */
+  {
+    const blog = stripComments(readFileSync(join(root, "app/enhance/blog.ts"), "utf8"));
+    const overlay = blog.slice(blog.indexOf("function openOverlay"));
+    const body = overlay.slice(0, overlay.indexOf("\n}"));
+    eq("lightbox: the scan found openOverlay", body.length > 200, true);
+    eq(
+      "lightbox: it creates a dialog, not a div",
+      /createElement\("dialog"\)/.test(body) && !/createElement\("div"\)/.test(body),
+      true,
+    );
+    eq("lightbox: it opens with showModal", /showModal\(\)/.test(body), true);
+    eq("lightbox: it carries an accessible name", /aria-label/.test(body), true);
+    eq("lightbox: it has a close button", /lightbox-close/.test(body), true);
+    eq(
+      "lightbox: focus is restored on close",
+      /addEventListener\("close"[\s\S]{0,200}restoreFocus\(\)/.test(body),
+      true,
+    );
+  }
+
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(
     "ask: robots.txt disallows /search/ask",

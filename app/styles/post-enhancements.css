@@ -145,22 +145,63 @@
   cursor: zoom-in;
 }
 
+/*
+ * A NATIVE <dialog> SINCE 2026-08-28, so most of what was here is the
+ * platform's now.
+ *
+ * `position: fixed` and `z-index` are gone: a modal dialog is in the TOP
+ * LAYER, above every stacking context on the page, which is the thing a
+ * z-index race can never win reliably. The scrim is `::backdrop` rather than
+ * this element's own background, which is what lets the dialog be sized by its
+ * content while the scrim still covers the viewport.
+ *
+ * The palette's dialog is styled the same way next door; that was the argument
+ * for this change, since the site had two modal patterns and only one of them
+ * was accessible.
+ */
 .lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
   padding: 2rem;
-  background: rgb(0 0 0 / 82%);
-  cursor: zoom-out;
+  border: 0;
+  background: transparent;
+  overflow: visible;
   animation: lightbox-in 0.15s ease-out;
 }
 
+.lightbox::backdrop {
+  background: rgb(0 0 0 / 82%);
+  cursor: zoom-out;
+}
+
 .lightbox img {
+  display: block;
   max-width: 100%;
-  max-height: 100%;
+  max-height: 85vh;
   border-radius: 0.375rem;
+}
+
+/*
+ * THE CLOSE BUTTON. Escape and a backdrop click are both real ways out and
+ * neither is discoverable, so there is a visible one. Positioned against the
+ * dialog rather than the viewport, which is why the dialog keeps
+ * `overflow: visible`.
+ *
+ * Takes `--border-strong` per hard rule 5: this sits on elevated furniture over
+ * a scrim, where `--border` does not hold.
+ */
+.lightbox-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+  cursor: pointer;
 }
 
 @keyframes lightbox-in {
