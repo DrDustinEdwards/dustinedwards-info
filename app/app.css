@@ -1,4 +1,4 @@
-@import "tailwindcss" source(".");
+@import "./styles/reset.css";
 
 /*
  * INTER, SELF-HOSTED SINCE 2026-08-21. Previously three requests to two Google
@@ -172,7 +172,22 @@
   line-gap-override: 0%;
 }
 
-@theme {
+/*
+ * THE TWO FONT STACKS. A plain `:root` block since 2026-08-27.
+ *
+ * This was `@theme`, which is Tailwind v4 syntax and is how a token gets into
+ * Tailwind's own utility generation. Nothing here ever needed that: no utility
+ * on this site is generated from these, they are read with `var()` like every
+ * other token in the file, and `check:contrast` parses the declarations
+ * directly.
+ *
+ * WHAT MADE IT URGENT is that an unknown at-rule is DROPPED, silently and
+ * whole. Removing Tailwind without this turned both stacks into nothing:
+ * MEASURED on the build without it, every element on every page computed
+ * `font-family: "Times New Roman"`, which is what a browser does when the
+ * declaration it was given resolves to an empty custom property.
+ */
+:root {
   /* "Inter Fallback" sits between the real face and the generic families, so a
      reader waiting for the download gets Arial at Inter's metrics rather than
      Arial at Arial's. It is not a font anyone ever sees named; it is the same
@@ -1064,13 +1079,19 @@ a:hover {
  *
  * `/login` imports `app/admin.css` too. It is a public route that uses
  * `.field-alarm` from `admin-editor.css`, and it is the admin plane's door.
+ *
+ * ## WHERE THE IMPORTS WENT, 2026-08-27, and why they had to move
+ *
+ * They were nine `@import` statements at the BOTTOM of this file, and they
+ * were only working because Tailwind was here. CSS puts `@import` before every
+ * other rule; a late one is invalid and is dropped. Tailwind's processor
+ * hoisted them anyway, so removing `@import "tailwindcss"` from the top of this
+ * file silently took all nine sheets off the site: MEASURED on the first build
+ * without it, root CSS fell from 45,778 bytes to 9,229 and the built file
+ * contained no `.site-header` rule at all.
+ *
+ * Hoisting them to the top of this file would have fixed the build and moved
+ * the cascade, since they would then arrive BEFORE everything below rather than
+ * after it. They are JavaScript imports in `app/root.tsx` instead, in the same
+ * order, which puts them after this file's own rules exactly where they sat.
  */
-@import "./styles/public-chrome.css";
-@import "./styles/projects.css";
-@import "./styles/page-shell.css";
-@import "./styles/blog-index.css";
-@import "./styles/post.css";
-@import "./styles/blog-enhancements.css";
-@import "./styles/search.css";
-@import "./styles/palette.css";
-@import "./styles/playground.css";

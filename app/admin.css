@@ -28,11 +28,15 @@
  * showing the comparison discriminates. The one real conflict that measurement
  * found was repaired first; see `admin-media-later.css`.
  *
- * ## NO `@import "tailwindcss"` HERE, DELIBERATELY
+ * ## NO RESET HERE, DELIBERATELY
  *
- * `app.css` carries it and is loaded on every route including these, so the
- * utilities and the `@theme` tokens are already present. A second import would
- * emit a second copy of the preflight into this chunk.
+ * `app.css` imports `styles/reset.css` and is loaded on every route including
+ * these, so the reset and the font tokens are already present. A second import
+ * would emit a second copy of the reset into this chunk.
+ *
+ * This paragraph said `@import "tailwindcss"` until 2026-08-27, when Tailwind
+ * left the build. The reason it gave was the right one and it outlived the
+ * thing it was about, which is why it is reworded rather than deleted.
  */
 @import "./styles/admin-shell.css";
 @import "./styles/admin-posts.css";
