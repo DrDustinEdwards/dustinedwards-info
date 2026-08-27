@@ -1611,6 +1611,43 @@ try {
         .filter((h) => h && !h.endsWith(".md")),
     )].slice(0, 6),
   );
+  /*
+   * THE BLOG BUNDLE IS FOR POSTS, and the index is not a post.
+   *
+   * Every one of blog.ts's enhancements targets markup the post pipeline
+   * renders inside `.prose`: the reading bar, the table-of-contents scrollspy,
+   * the code-block buttons, the heading links, the footnote previews and the
+   * lightbox. The listing has none of them, and it carried the bundle anyway
+   * until 2026-08-27, so 4,514 bytes were downloaded and parsed to find
+   * nothing on the site's second most visited page.
+   *
+   * BOTH DIRECTIONS, and the positive half is the one that matters. Asserting
+   * only "absent from the index" would pass on a commit that deleted the
+   * component from both routes and quietly turned seven enhancements off.
+   *
+   * Read off the resource timeline. A source reading can see the component is
+   * gone; only this can see what the browser fetched.
+   *
+   * @param {string} stem
+   */
+  const bundleFetches = (/** @type {string} */ stem) =>
+    page.evaluate(
+      (/** @type {string} */ s) =>
+        performance
+          .getEntriesByType("resource")
+          .filter((entry) => new RegExp(`/assets/${s}-[^/]*\\.js$`).test(entry.name)).length,
+      stem,
+    );
+
+  const blogOnIndex = await bundleFetches("blog");
+  ok(
+    "the blog reading bundle is NOT fetched by the listing page",
+    blogOnIndex === 0,
+    `${blogOnIndex} request(s) for the blog bundle on /blog. Every enhancement in it ` +
+      `targets markup only a rendered post carries, so this is bytes spent to find ` +
+      `nothing.`,
+  );
+
   let codePost = null;
   let probedPost = null;
   for (const path of postPaths) {
@@ -1623,6 +1660,18 @@ try {
       codePost = path;
       break;
     }
+  }
+
+  if (probedPost !== null) {
+    // The page is sitting on a post, whichever one the loop stopped at.
+    const blogOnPost = await bundleFetches("blog");
+    ok(
+      "the blog reading bundle IS fetched by a post page",
+      blogOnPost === 1,
+      `${blogOnPost} request(s) for the blog bundle on ${probedPost}. Zero means the ` +
+        `component was removed from the post route as well as the listing, which turns ` +
+        `seven enhancements off rather than scoping one bundle.`,
+    );
   }
 
   if (codePost === null) {
@@ -3207,6 +3256,25 @@ try {
  *
  * Both modes, same reason again. Skip mode is 69, or 68 with that skip. Floors
  * 108 to 110 and 61 to 62, about eight percent under the low end of each range.
+ *
+ * ## RE-MEASURED 2026-08-27 WITH THE BLOG-BUNDLE SCOPE CASE: **122**
+ *
+ * Two more resource-timeline assertions, in opposite directions: the blog
+ * reading bundle is not fetched by the listing, and it IS fetched by a post.
+ * 120 + 2 is 122, measured.
+ *
+ * **THE RANGE GREW A SECOND GUARD and the floor is set against the low end of
+ * both.** The positive assertion is inside `probedPost !== null`, which is a
+ * CONTENT condition: a corpus with no posts skips it, the same way the health
+ * differential skips on an empty KV. Two independent skips means the honest low
+ * end is 120, not 121.
+ *
+ * **THE RUN-MODE FLOOR DOES NOT MOVE, and that is arithmetic rather than an
+ * oversight.** Eight percent under 120 is 110.4, and the previous floor was
+ * eight percent under 119, which is 109.5. Both round to 110. Recorded because
+ * a floor that stays put while the count moves is exactly the shape this file
+ * has twice caught as a MISSED update, and the way to tell the two apart is to
+ * show the arithmetic. Skip mode is 71, low end 69, so that one moves: 62 to 63.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -3218,7 +3286,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 110 : 62;
+  const MINIMUM_CHECKS = adminCasesRan ? 110 : 63;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
