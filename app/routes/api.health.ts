@@ -28,12 +28,24 @@
  * route needs. Stated as one value so the gate compares one string.
  */
 
+import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { publicHealthBody } from "~/lib/health/verdicts.mjs";
 import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
 
 import type { Route } from "./+types/api.health";
+
+/**
+ * The per-IP allowance, and the window it is measured over. The only copies.
+ *
+ * Deliberately NOT exported. Nothing outside this route needs the numbers, and
+ * the refusal is asserted over the wire by verify-live rather than by a gate
+ * reading them back, so exporting them would create a second reader with no
+ * caller.
+ */
+const HEALTH_RATE_LIMIT = 20;
+const HEALTH_RATE_PERIOD_SECONDS = 60;
 
 /**
  * The headers on EVERY health response, success and failure alike.
@@ -56,8 +68,22 @@ const HEALTH_HEADERS = {
  * already been bitten by; "exactly one construction, and it is inside this
  * helper" cannot be satisfied by a neighbour.
  */
-function healthJson(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: HEALTH_HEADERS });
+function healthJson(body: unknown, status: number, extra: HeadersInit = {}): Response {
+  /*
+   * SEEDED FROM THE CONSTANT, then overlaid. The rate-limit refusal needs a
+   * `Retry-After` that no other response wants, and the alternative shapes
+   * both break the property above: a second `new Response` at the refusal site
+   * is a second exit, and spreading the constant into an object literal at
+   * each call site is the copy this helper exists to prevent.
+   *
+   * `Headers` rather than a spread so a caller cannot accidentally shadow
+   * `Cache-Control` with a different case. Overlay order is deliberate: the
+   * constant goes in first and `extra` may only ADD to it in practice, because
+   * nothing passes a name the constant already declares.
+   */
+  const headers = new Headers(HEALTH_HEADERS);
+  for (const [name, value] of new Headers(extra)) headers.set(name, value);
+  return new Response(JSON.stringify(body), { status, headers });
 }
 
 /**
@@ -85,8 +111,61 @@ function healthJson(body: unknown, status: number): Response {
  * `publicHealthBody`, because they carry row counts and an R2 object key and
  * this route is unauthenticated. The why lives in Workers Logs.
  */
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
+
+  /*
+   * GATE 0, AND IT IS FIRST BECAUSE EVERYTHING BELOW IT COSTS.
+   *
+   * This endpoint runs five checks against D1, R2 and AI Search. MEASURED
+   * 2026-08-26 over four samples: 0.98, 1.18, 1.18 and 2.01 seconds. It was
+   * unauthenticated and unrated, which made it the most expensive thing an
+   * anonymous caller could ask this site to do, by a wide margin, and it sat
+   * next to `/api/csp-report`, an endpoint that only writes a log line and
+   * carries THREE limits. The cheap path was guarded and the expensive one
+   * was not.
+   *
+   * Same instrument as that route and as the operator path: one `AskBudget`
+   * Durable Object instance, named `health:<ip>`. No new class, no migration.
+   *
+   * WHY 20 AND NOT 60. Every legitimate caller is far under it. The scheduled
+   * workflow polls once every fifteen minutes; ship reads it once per deploy;
+   * `check:browser` reads it twice per run; a person refreshing the page reads
+   * it a handful of times. Twenty is roughly ten times the busiest of those
+   * and it bounds one address to about twenty six seconds of backend work per
+   * minute. `/api/csp-report` sits at sixty because its deliverable is the
+   * report itself and eating one loses data; here the deliverable is a verdict
+   * that is still true thirty seconds later.
+   *
+   * WITHOUT THE LIMITER THIS DOES NOT SERVE, the stance the Ask guards and the
+   * operator path take. It costs nothing here and buys something extra: a
+   * missing `ASK_BUDGET` is itself a broken deployment, and answering 503 is
+   * exactly how this endpoint reports one, so the monitor alerts rather than
+   * quietly losing its guard.
+   */
+  if (!env.ASK_BUDGET) {
+    return healthJson(
+      { ok: false, checks: [{ name: "rate-limiter-unavailable", ok: false }] },
+      503,
+    );
+  }
+  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${clientIp(request)}`));
+  const { ok: withinRate } = await limiter.hit(HEALTH_RATE_LIMIT, HEALTH_RATE_PERIOD_SECONDS);
+  if (!withinRate) {
+    /*
+     * THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the workflow's parse
+     * succeeds and reports a named cause rather than falling into its "body
+     * did not parse" branch. The status line is still the alert: a 429 is a
+     * non-200 and `curl --fail` treats it as one, which is correct. A rate
+     * limited monitor IS a condition worth a human seeing.
+     */
+    return healthJson(
+      { ok: false, checks: [{ name: "rate-limited", ok: false }] },
+      429,
+      { "Retry-After": String(HEALTH_RATE_PERIOD_SECONDS) },
+    );
+  }
+
   try {
     const run = await runHealthChecks(env);
     const body = publicHealthBody(run);

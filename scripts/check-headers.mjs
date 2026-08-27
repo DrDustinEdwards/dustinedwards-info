@@ -1222,10 +1222,25 @@ if (existsSync(HEALTH_PATH)) {
     const helperEnd = health.indexOf("\n}", helperAt);
     const helperBody = helperEnd === -1 ? "" : health.slice(helperAt, helperEnd + 2);
 
+    /*
+     * THE NEEDLE FOLLOWED THE HELPER, 2026-08-26. It read
+     * `headers: HEALTH_HEADERS`, which was exact while the helper passed the
+     * object straight through. The rate limit gave the route one response that
+     * needs a `Retry-After` no other response wants, so the helper now seeds a
+     * `Headers` from the constant and overlays the caller's extras.
+     *
+     * `new Headers(HEALTH_HEADERS)` is asserted rather than a bare mention of
+     * the identifier, and the difference matters: a bare `HEALTH_HEADERS`
+     * anywhere in the body would be satisfied by a line that merely READS the
+     * constant without seeding from it, which is exactly the shape a refactor
+     * that stopped applying it would leave behind. The invariant is unchanged:
+     * the one construction site is built FROM the constant.
+     */
     ok(
-      "healthJson applies HEALTH_HEADERS",
-      /headers:\s*HEALTH_HEADERS\b/.test(helperBody),
-      "the one construction site does not pass the constant, so the headers are declared and unused",
+      "healthJson seeds its headers from HEALTH_HEADERS",
+      /new\s+Headers\(\s*HEALTH_HEADERS\s*\)/.test(helperBody),
+      "the one construction site does not build from the constant, so the headers " +
+        "are declared and unused",
     );
     ok(
       "the single Response construction is inside healthJson",
