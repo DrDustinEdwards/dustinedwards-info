@@ -69,9 +69,11 @@ const DIST_DIR = join(root, "app", "enhance", "dist");
 /**
  * CEILINGS AND FLOORS. The only copies of these numbers, rule 17.
  *
- * MEASURED 2026-08-26 through this gate's own pipeline on a fresh build of the
- * working tree: ask 3,010 raw / 1,342 brotli; blog 4,254 / 1,421; palette
- * 11,663 / 4,026; theme 714 / 349. Margins are the old enhancement-chunk
+ * MEASURED 2026-08-27 through this gate's own pipeline on a fresh build of the
+ * working tree, after the palette stopped riding on every document: ask 3,010
+ * raw / 1,342 brotli; blog 4,514 / 1,477; palette 11,050 / 3,878; theme 1,795 /
+ * 671. Theme carries the palette loader now and roughly doubled; palette lost
+ * the gesture bindings that moved into it. Margins are the old enhancement-chunk
  * discipline: roughly fifty percent over measured, wide in relative terms
  * because the bundles are tiny and a legitimate feature moves one by whole
  * percents, tight in absolute terms because the job is catching a dependency
@@ -88,7 +90,7 @@ const ENHANCE_BROTLI_CEILINGS = {
   "ask.js": 2000,
   "blog.js": 2100,
   "palette.js": 6000,
-  "theme.js": 550,
+  "theme.js": 1000,
 };
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Theme toggle enhancement.
+ * Theme toggle enhancement, and the door the search palette comes through.
  *
  * Everything here removes a round trip and nothing here makes the control work:
  * with this file absent the form posts to /theme, the action sets the cookie
@@ -10,6 +10,20 @@
  * already wrote the attribute from the cookie, so a script that re-applied it
  * could only ever agree, or race. The flash this file does not have is the one
  * it never creates.
+ *
+ * ## WHY THE PALETTE LOADER LIVES HERE, of all places
+ *
+ * Two bundles used to be on every document: this one and the search palette.
+ * The palette is by far the larger of the two and it exists to answer one
+ * gesture, so almost every reader downloaded a search dialog, parsed it, and
+ * navigated away without ever opening it. What the shortcut actually needs on
+ * page load is a keydown listener, which is a few lines.
+ *
+ * So the few lines are here, in the module that is on every page anyway, and
+ * the dialog arrives on the first gesture. This file is the smallest thing on
+ * the site that is genuinely site-wide, which is the whole reason it was
+ * chosen: adding the loader to it costs one document nothing extra, while
+ * adding a second site-wide bundle costs every document.
  */
 
 import { serializeThemeCookie, isTheme } from "~/lib/theme";
@@ -38,10 +52,124 @@ function enhanceThemeToggle() {
 }
 
 enhanceThemeToggle();
+enhanceSearchTrigger();
 
 // A module, so the bindings above stay out of the global namespace. Loaded by
 // a nonced script tag rendered beside the form; see theme-toggle.tsx.
 export {};
+
+/**
+ * The event `app/enhance/palette.ts` listens for. One spelling, two files.
+ *
+ * A custom event rather than a module export, and the reason is a
+ * measurement rather than a preference. The direct shape is a dynamic
+ * `import()` of the bundle and a call to what it exports; vite rewrites every
+ * `import()` into a call to its own `__vitePreload` helper, which MEASURED
+ * 2026-08-27 added roughly 2.3 KB to this 714-byte bundle in order to manage a
+ * preload graph that does not exist here, since build-enhance emits one
+ * self-contained chunk per module. That is a large fraction of what taking the
+ * palette off every page saved in the first place.
+ *
+ * A script element inserted by a script that is already trusted is allowed by
+ * `script-src 'strict-dynamic'` with no nonce, which is why this needs no
+ * access to the request nonce that `EnhancementScript` has and this file does
+ * not.
+ */
+const PALETTE_OPEN = "palette:open";
+
+/** Set when the bundle has been asked for, so a second gesture adds no tag. */
+let requested = false;
+
+/**
+ * Opens the palette, fetching it first if this is the first gesture.
+ *
+ * FAILURE FALLS BACK TO THE PAGE, never to nothing. The caller has already
+ * prevented the anchor's default, so a load error would otherwise leave a
+ * reader who clicked with no response at all. `/search` is the same
+ * destination the anchor carries, so a reader on a broken connection gets the
+ * server-rendered search page, which is rule 9's fallback rather than a
+ * consolation.
+ *
+ * The first gesture dispatches from the script's own `load`, because the
+ * listener on the other side does not exist until the module has executed.
+ * Every later gesture dispatches immediately.
+ */
+function openPalette() {
+  const trigger = document.querySelector<HTMLElement>("[data-palette]");
+  // The URL is hashed by the app build, so it cannot be written down here: the
+  // `?url` import in search-trigger.tsx is the one statement of it and it
+  // arrives on the element this file upgrades. No attribute means no palette,
+  // rather than a broken one.
+  const url = trigger?.dataset.palette;
+  if (!url) {
+    location.assign("/search");
+    return;
+  }
+
+  if (!requested) {
+    requested = true;
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = url;
+    script.addEventListener("load", () => document.dispatchEvent(new Event(PALETTE_OPEN)));
+    script.addEventListener("error", () => location.assign("/search"));
+    document.head.appendChild(script);
+    return;
+  }
+
+  document.dispatchEvent(new Event(PALETTE_OPEN));
+}
+
+/** True when a keystroke belongs to whatever the reader is typing in. */
+function isTyping(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
+/**
+ * Binds the two ways into search and unhides the shortcut hint.
+ *
+ * THE HINT IS UNHIDDEN HERE, and that is the same promise it always made:
+ * `hidden` until the shortcut actually works. It used to wait for the palette
+ * bundle, because the palette bundle held the listener. The listener is now
+ * attached by the line below, so the hint becomes true earlier rather than
+ * later, and it is still never shown to a reader whose script did not run.
+ */
+function enhanceSearchTrigger() {
+  for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
+    hint.hidden = false;
+  }
+
+  for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
+    trigger.dataset.shortcutHint = "shown";
+    trigger.addEventListener("click", (event) => {
+      // Let a modified click do what the browser would do with a link.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      openPalette();
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    const meta = event.metaKey || event.ctrlKey;
+    if (meta && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      openPalette();
+      return;
+    }
+    // A bare slash opens search, but never while someone is typing into a
+    // field, where a slash is just a slash.
+    if (event.key === "/" && !meta && !event.altKey && !isTyping(event.target)) {
+      event.preventDefault();
+      openPalette();
+    }
+  });
+}
 
 function apply(choice: "light" | "dark" | "system", form: HTMLFormElement) {
   const root = document.documentElement;

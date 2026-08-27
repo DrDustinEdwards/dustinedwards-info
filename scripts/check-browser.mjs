@@ -1717,19 +1717,72 @@ try {
     ok(
       "the palette hint is unhidden once the palette is listening",
       hintShown,
-      "the [data-search-hint] element is missing or still hidden, so the palette " +
+      "the [data-search-hint] element is missing or still hidden, so the theme " +
         "bundle did not run or the header lost the hint",
     );
+
+    /*
+     * THE BUNDLE IS NOT ON THE PAGE UNTIL SOMEBODY ASKS FOR IT, since
+     * 2026-08-27, and this is the assertion that says so on the wire.
+     *
+     * The palette is the largest bundle on the public plane and it answers one
+     * gesture, so it used to be a script tag on every document: every reader
+     * downloaded and parsed a search dialog, and almost none of them opened
+     * it. `theme.ts` now holds the gestures and appends a script element for
+     * the palette on the first one.
+     *
+     * Counted from the RESOURCE TIMELINE rather than from the DOM. A missing
+     * script tag proves nothing about what was fetched, and a fetch is the
+     * thing rule 4 grades. The name is matched loosely because the asset
+     * carries a content hash the gate must not restate.
+     */
+    const paletteFetches = () =>
+      page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .filter((entry) => /\/assets\/palette-[^/]*\.js$/.test(entry.name)).length,
+      );
+
+    const beforeGesture = await paletteFetches();
+    ok(
+      "the palette bundle is NOT fetched by a page nobody searched on",
+      beforeGesture === 0,
+      `${beforeGesture} request(s) for the palette bundle before any gesture. It is ` +
+        `back on every document, which is the cost this split removed: a reader who ` +
+        `never opens search should never download the dialog.`,
+    );
+
     await page.keyboard.press("/");
-    await new Promise((r) => setTimeout(r, 250));
-    const paletteOpen = await page.evaluate(() => ({
-      open: Boolean(document.querySelector("dialog.palette[open]")),
-      focused: document.activeElement?.classList.contains("palette-input") ?? false,
-    }));
+    /*
+     * POLLED, NOT SLEPT. Opening now costs a network round trip for the
+     * bundle, so a fixed wait is a race that would pass on this machine and
+     * fail on a slower one. Bounded at 5s, which is far longer than a
+     * localhost fetch and far shorter than the gate's patience.
+     */
+    let paletteOpen = { open: false, focused: false };
+    for (let i = 0; i < 25; i += 1) {
+      await new Promise((r) => setTimeout(r, 200));
+      paletteOpen = await page.evaluate(() => ({
+        open: Boolean(document.querySelector("dialog.palette[open]")),
+        focused: document.activeElement?.classList.contains("palette-input") ?? false,
+      }));
+      if (paletteOpen.open && paletteOpen.focused) break;
+    }
     ok(
       'pressing "/" opens the palette with focus in its input',
       paletteOpen.open && paletteOpen.focused,
-      `open ${paletteOpen.open}, input focused ${paletteOpen.focused}`,
+      `open ${paletteOpen.open}, input focused ${paletteOpen.focused}. The gesture is ` +
+        `bound in theme.ts and the dialog is built by the bundle it appends, so this ` +
+        `fails if either half broke, including a CSP that refuses the injected script.`,
+    );
+
+    const afterGesture = await paletteFetches();
+    ok(
+      "the gesture fetches the palette bundle, exactly once",
+      afterGesture === 1,
+      `${afterGesture} request(s) after the gesture. Zero means the loader never ran ` +
+        `or the injected script was refused (check the console for a CSP violation); ` +
+        `more than one means the once-only guard in theme.ts stopped holding.`,
     );
     if (paletteOpen.open) {
       await page.type(".palette-input", "cloudflare");
@@ -3139,6 +3192,21 @@ try {
  * Both modes, same reason again: the case is in the public block. Skip mode is
  * 67, or 66 with that skip. Floors 102 to 108 and 55 to 61, about eight percent
  * under the low end of each range.
+ *
+ * ## RE-MEASURED 2026-08-27 WITH THE LAZY PALETTE: **120 to 119**
+ *
+ * Two assertions, both on the resource timeline rather than the DOM, either
+ * side of the "/" keystroke: the palette bundle is not fetched by a page nobody
+ * searched on, and the gesture fetches it exactly once. 118 + 2 is 120,
+ * measured, and 119 when the health differential skips.
+ *
+ * The palette-open assertion beside them changed from a fixed 250ms wait to a
+ * bounded poll in the same commit, because opening now costs a network round
+ * trip and a fixed wait is a race that passes on this machine and fails on a
+ * slower one. It is still one assertion, so the count moves by two.
+ *
+ * Both modes, same reason again. Skip mode is 69, or 68 with that skip. Floors
+ * 108 to 110 and 61 to 62, about eight percent under the low end of each range.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -3150,7 +3218,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 108 : 61;
+  const MINIMUM_CHECKS = adminCasesRan ? 110 : 62;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

@@ -2,8 +2,6 @@ import { Link } from "react-router";
 
 import paletteEnhanceUrl from "~/enhance/dist/palette.js?url";
 
-import { EnhancementScript } from "~/components/enhancement-script";
-
 /**
  * The site-wide search entry point.
  *
@@ -36,17 +34,34 @@ import { EnhancementScript } from "~/components/enhancement-script";
  * is site-wide and that one is blog-only, so merging them would make every
  * homepage visit pay for reading enhancements it will never use.
  *
- * Loaded by a nonced module script tag pointing at the prebuilt bundle of
- * app/enhance/palette.ts, rendered beside the anchor. It used to be a React
- * effect running a dynamic import, which required hydration; the public plane
- * stopped hydrating (2026-08-26). The bundle must be PREBUILT because `?url`
- * copies the file verbatim: pointed at the .ts source it serves the browser
- * raw TypeScript (measured on this repo 2026-07-28).
+ * ## NO SCRIPT TAG HERE SINCE 2026-08-27. THE ATTRIBUTE IS THE WHOLE CHANGE.
+ *
+ * This rendered a nonced `<script type="module">` for the palette bundle, so
+ * every document on the site downloaded and parsed a search dialog in order to
+ * offer a keyboard shortcut. The bundle is the largest thing on the public
+ * plane and almost nobody opens it.
+ *
+ * What ships now is `data-palette`, carrying the same hashed URL the script tag
+ * carried. `app/enhance/theme.ts` is on every page already, holds the "/" key,
+ * the Cmd-K chord and this element's click, and imports that URL the first time
+ * one of them fires. The bundle must still be PREBUILT for the same reason it
+ * always was: `?url` copies the file verbatim with no compilation, so pointed at
+ * the .ts source it serves the browser raw TypeScript (measured 2026-07-28).
+ *
+ * The attribute goes on the trigger rather than on the document, so the element
+ * that needs the palette is the element that names it, and a page without this
+ * component simply has no palette instead of a broken one.
  */
 export function SearchTrigger() {
   return (
     <>
-      <Link to="/search" className="search-trigger" data-search-trigger="" aria-label="Search">
+      <Link
+        to="/search"
+        className="search-trigger"
+        data-search-trigger=""
+        data-palette={paletteEnhanceUrl}
+        aria-label="Search"
+      >
         {/* Inline SVG per the repo's bundle-leanness rule. aria-hidden because
             the anchor already carries its accessible name. */}
         <svg
@@ -68,7 +83,6 @@ export function SearchTrigger() {
           /
         </kbd>
       </Link>
-      <EnhancementScript src={paletteEnhanceUrl} />
     </>
   );
 }

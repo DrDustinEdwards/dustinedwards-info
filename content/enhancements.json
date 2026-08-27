@@ -1,5 +1,5 @@
 {
-  "note": "The machine-readable half of the enhancement law (Capsid: progressive-enhancement.md). Hard rule 9: every enhancement on a public reading route declares a NAMED fallback, even when the fallback is nothing. Every module here is bundled by build:enhance and loaded by a nonced module script tag; the public plane does not hydrate React (since 2026-08-26), so these bundles are the whole public script payload. Gated by check:features, which asserts that every file in app/enhance/ appears here, that every entry names a fallback, and that every named selector or route actually exists. It does NOT assert the prose is true, and it cannot see the wire: whether a route is genuinely server-complete with script off is verify-live's job, not a gate's.",
+  "note": "The machine-readable half of the enhancement law (Capsid: progressive-enhancement.md). Hard rule 9: every enhancement on a public reading route declares a NAMED fallback, even when the fallback is nothing. Every module here is bundled by build:enhance; the public plane does not hydrate React (since 2026-08-26), so these bundles are the whole public script payload. Three of them are loaded by a nonced module script tag rendered beside the markup they upgrade. The fourth, the command palette, is loaded ON THE FIRST GESTURE by theme.ts, which appends a script element for it: it is the largest bundle on the public plane and it answers one gesture, so from 2026-08-27 the readers who never open it never download it. A script element inserted by an already-trusted script is allowed by script-src 'strict-dynamic' with no nonce of its own. Gated by check:features, which asserts that every file in app/enhance/ appears here, that every entry names a fallback, and that every named selector or route actually exists. It does NOT assert the prose is true, and it cannot see the wire: whether a route is genuinely server-complete with script off is verify-live's job, not a gate's.",
   "fallbackKinds": {
     "route": "The fallback is a server-rendered route. It must be declared in app/routes.ts.",
     "selector": "The fallback is server-rendered markup. Every identifier in the selector must appear in app/ OUTSIDE app/enhance/, because markup an enhancement creates for itself is not a fallback.",
@@ -72,7 +72,7 @@
     {
       "id": "theme-toggle",
       "module": "app/enhance/theme.ts",
-      "enhancement": "Applies the theme in place, without a round trip.",
+      "enhancement": "Applies the theme in place, without a round trip. Also holds the \"/\" key, the Cmd-K chord and the search trigger's click, and fetches the command palette bundle on the first of them.",
       "fallback": "The control is a POST form to /theme. The action sets the cookie and the server renders the choice into the first byte. Both paths end at the same cookie.",
       "fallbackKind": "route",
       "fallbackAt": "/theme",
@@ -82,7 +82,7 @@
       "id": "command-palette",
       "module": "app/enhance/palette.ts",
       "enhancement": "Upgrades the header's search link into a modal command palette with live results.",
-      "fallback": "The header ships an ordinary anchor to /search, which is a full server-rendered search page. If the bundle fails to load, fails to parse, or throws on its first line, the anchor is still an anchor.",
+      "fallback": "The header ships an ordinary anchor to /search, which is a full server-rendered search page. If the bundle fails to load, fails to parse, or throws on its first line, the anchor is still an anchor. Since the bundle is fetched on the gesture rather than with the page, a fetch that fails navigates to that same /search rather than leaving the gesture unanswered.",
       "fallbackKind": "route",
       "fallbackAt": "/search",
       "why": null
