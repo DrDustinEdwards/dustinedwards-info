@@ -5,6 +5,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts } from "~/db";
 import { splitFeatured } from "~/lib/blog-listing.mjs";
+import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { formatAge } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
@@ -342,7 +343,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             key={i}
             type="application/ld+json"
             // schema.org data for search and language models
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
           />
         ))}
       </main>

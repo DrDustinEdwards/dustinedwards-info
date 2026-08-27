@@ -11,6 +11,7 @@ import {
   publiclyVisibleSlugs,
 } from "~/db";
 import { blogPostView } from "~/lib/blog-view";
+import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
@@ -191,7 +192,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
+            __html: jsonLd([
               articleJsonLd(SITE_ORIGIN, {
                 slug: post.slug,
                 title: post.title,

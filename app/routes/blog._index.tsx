@@ -5,6 +5,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
+import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
@@ -252,7 +253,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(
+            __html: jsonLd(
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Blog", "/blog"],
