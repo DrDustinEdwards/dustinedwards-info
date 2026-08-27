@@ -19,6 +19,10 @@
  */
 
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
+// The one JavaScript owner of "is this post publicly visible". Composed rather
+// than restated, for the reason that module's header records: a hand-rolled
+// third copy of this rule is what leaked five drafts into Ask on 2026-07-29.
+import { isPubliclyVisible, statusForDraft } from "../search/visibility.mjs";
 import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
 import { toString as hastToString } from "hast-util-to-string";
@@ -490,13 +494,40 @@ const RELATED_LIMIT = 3;
  * Ordering is fully determined: shared tags descending, then newest, then slug.
  * No ties are left to array order, because array order is not stable input.
  *
+ * ## VISIBILITY, AND WHY `!draft` WAS NOT IT
+ *
+ * The filter was `!other.draft`, which is one of the TWO facts that make a post
+ * public. A SCHEDULED post is not a draft: its status is published and its
+ * `publish_at` is in the future, so it passed this filter and its title and
+ * slug could appear in the related list of a post that is already live. That is
+ * a title and a URL for something nobody is meant to see yet, rendered into a
+ * public page, which is the 2026-07-29 draft leak arriving down a third road.
+ *
+ * `isPubliclyVisible` is the one JavaScript owner of the rule and is what the
+ * Ask upload path composes for the same reason. `statusForDraft` is the mapping
+ * between the artifact's boolean and the row's string, so this asks the shared
+ * predicate rather than restating half of it.
+ *
+ * THE READER FILTERS AGAIN, and that is not belt and braces. This list is
+ * computed at WRITE time and stored; a post can be unpublished after a related
+ * list naming it has already been written. `blog.$slug.tsx` therefore checks
+ * the stored list against the live rows before rendering it.
+ *
  * @param {any[]} posts
  */
 export function withRelated(posts) {
+  const now = Date.now();
   return posts.map((post) => {
     const tags = new Set(post.tags);
     const scored = posts
-      .filter((other) => other.slug !== post.slug && !other.draft)
+      .filter(
+        (other) =>
+          other.slug !== post.slug &&
+          isPubliclyVisible(
+            { status: statusForDraft(other.draft), publishAt: other.publishAt },
+            now,
+          ),
+      )
       .map((other) => ({
         slug: other.slug,
         title: other.title,

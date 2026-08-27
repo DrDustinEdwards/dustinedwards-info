@@ -19,7 +19,8 @@ import {
   answerLeaksPrompt,
   askAvailable,
   askStream,
-  guardZeroChunkAnswer,
+  citedSlugs,
+  guardAnswerStream,
   replayCachedAnswer,
   teeForCache,
 } from "~/lib/search/ask.server";
@@ -52,13 +53,9 @@ const MAX_QUESTION_LENGTH = 500;
  * must not be replayed.
  */
 async function citationsStillPublic(env: Env, cached: CachedAnswer) {
-  const slugs = [
-    ...new Set(
-      (cached.chunks as Array<{ item?: { key?: string } }>)
-        .map((chunk) => slugForKey(chunk?.item?.key ?? ""))
-        .filter((slug): slug is string => slug !== null),
-    ),
-  ];
+  // `citedSlugs` is the one reading of the chunk shape, shared with the live
+  // guard. This path and that one had two readings and only this one existed.
+  const slugs = citedSlugs(cached.chunks);
   if (slugs.length === 0) return true;
   const visible = await publiclyVisibleSlugs(env, slugs);
   return slugs.every((slug) => visible.has(slug));
@@ -250,7 +247,9 @@ export async function action({ request, context }: Route.ActionArgs) {
      * is exactly the two-truths shape the replay path exists to avoid.
      */
     const upstream = await askStream(env, question);
-    const { toReader, captured } = teeForCache(guardZeroChunkAnswer(upstream));
+    const { toReader, captured } = teeForCache(
+      guardAnswerStream(upstream, (slugs) => publiclyVisibleSlugs(env, slugs)),
+    );
 
     // After the reader has their bytes. Caching is bookkeeping and a reader
     // never waits for bookkeeping.

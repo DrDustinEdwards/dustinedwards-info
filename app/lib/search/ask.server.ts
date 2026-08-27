@@ -40,11 +40,12 @@ import {
   QUESTION_FENCE_END,
   SYSTEM_PROMPT,
   answerLeaksPrompt,
-  guardZeroChunkAnswer,
+  citedSlugs,
+  guardAnswerStream,
   replayFrames,
 } from "./ask-prompt.mjs";
 
-export { NO_ANSWER_TEXT, QUESTION_FENCE, answerLeaksPrompt, guardZeroChunkAnswer };
+export { NO_ANSWER_TEXT, QUESTION_FENCE, answerLeaksPrompt, citedSlugs, guardAnswerStream };
 
 /** @see app/lib/search/records.mjs */
 type SearchRecord = ReturnType<typeof recordsForPosts>[number];

@@ -4,7 +4,12 @@ import { BlogEnhancements } from "~/components/blog-enhancements";
 import { BlogSpeculation } from "~/components/blog-speculation";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { getBlogPost, getBlogPostMarkdown, listSeriesParts } from "~/db";
+import {
+  getBlogPost,
+  getBlogPostMarkdown,
+  listSeriesParts,
+  publiclyVisibleSlugs,
+} from "~/db";
 import { blogPostView } from "~/lib/blog-view";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
@@ -66,9 +71,38 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   // The projection moved to `blogPostView` when /preview/:token landed, so the
   // two routes that render a post cannot drift in what they hand the component.
   // Output-neutral here by construction: this route's payload is unchanged.
-  return data(blogPostView(post, seriesParts), {
-    headers: { Link: linkToMarkdown(post.slug) },
-  });
+  const view = blogPostView(post, seriesParts);
+
+  /*
+   * THE RELATED LIST IS RE-CHECKED AGAINST THE LIVE ROWS.
+   *
+   * `withRelated` composes the shared visibility rule at WRITE time, which is
+   * where the scheduled-post leak was fixed. That is not enough on its own: the
+   * list is stored on the row, and a post can be unpublished, or have its
+   * publish date pushed out, after a list naming it has already been written.
+   * Nothing rewrites its neighbours' related lists when that happens, so
+   * without this the stale title and its URL keep rendering on a public page.
+   *
+   * One indexed query for the whole list, composing `publiclyVisible()` like
+   * every other public read, so there is no second opinion about what public
+   * means. It is the same instrument, and the same reasoning, as the Ask replay
+   * path's citation re-check.
+   */
+  const stillPublic = await publiclyVisibleSlugs(
+    getEnv(context),
+    view.post.related.map((item) => item.slug),
+  );
+
+  return data(
+    {
+      ...view,
+      post: {
+        ...view.post,
+        related: view.post.related.filter((item) => stillPublic.has(item.slug)),
+      },
+    },
+    { headers: { Link: linkToMarkdown(post.slug) } },
+  );
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {

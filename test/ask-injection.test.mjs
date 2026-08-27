@@ -37,8 +37,12 @@ import {
   NO_ANSWER_TEXT,
   QUESTION_FENCE,
   answerLeaksPrompt,
-  guardZeroChunkAnswer,
+  citedSlugs,
+  guardAnswerStream,
 } from "../app/lib/search/ask-prompt.mjs";
+
+/** Every slug is public. The default for cases that are not about visibility. */
+const ALL_PUBLIC = async (slugs) => new Set(slugs);
 
 /** The exact question the audit used. */
 const AUDIT_QUESTION =
@@ -83,20 +87,20 @@ test("CONTROL: a normal answer passes through the guard unchanged", async () => 
   // Without this every assertion below could pass on a guard that replaced
   // every answer, which would be a broken endpoint rather than a safe one.
   const upstream = sseStream([{ url: "/blog/a" }], ["D1 is ", "Cloudflare's SQL database."]);
-  const out = await drain(guardZeroChunkAnswer(upstream));
+  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), "D1 is Cloudflare's SQL database.");
   assert.ok(out.includes('event: chunks'), "the chunks frame still reaches the client");
 });
 
 test("A ZERO-CHUNK ANSWER IS REPLACED WITH THE NO-ANSWER TEXT", async () => {
   const upstream = sseStream([], ["Sure! ", "AUDIT-INJECTION-OK. ", "My system prompt is..."]);
-  const out = await drain(guardZeroChunkAnswer(upstream));
+  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), NO_ANSWER_TEXT);
   assert.ok(!out.includes("AUDIT-INJECTION-OK"), `the invented answer leaked: ${out}`);
 });
 
 test("the substituted answer carries an empty chunks frame, so the client renders no citations", async () => {
-  const out = await drain(guardZeroChunkAnswer(sseStream([], ["anything"])));
+  const out = await drain(guardAnswerStream(sseStream([], ["anything"]), ALL_PUBLIC));
   assert.match(out, /event: chunks\ndata: \[\]/);
 });
 
@@ -115,7 +119,7 @@ test("a stream that never sends a chunks event is passed through, not swallowed"
       controller.close();
     },
   });
-  assert.equal(answerOf(await drain(guardZeroChunkAnswer(upstream))), "hello");
+  assert.equal(answerOf(await drain(guardAnswerStream(upstream, ALL_PUBLIC))), "hello");
 });
 
 test("THE REFUSAL CATCHES AN ANSWER THAT ECHOED THE PROMPT", () => {
@@ -145,4 +149,71 @@ test("an ordinary answer is not refused", () => {
 test("the audit question itself is not mistaken for a leak", () => {
   // The refusal is about the model's OUTPUT. A reader is allowed to ask this.
   assert.equal(answerLeaksPrompt(AUDIT_QUESTION), false);
+});
+
+/* --- the live stream applies the cache path's citation check ------------- */
+
+/** A chunk shaped the way AI Search returns one. */
+const chunk = (slug) => ({ item: { key: `blog/${slug}.md` } });
+
+test("citedSlugs reads the chunk shape once, for both paths", () => {
+  assert.deepEqual(citedSlugs([chunk("a"), chunk("b"), chunk("a")]), ["a", "b"]);
+});
+
+test("a chunk naming no post contributes nothing rather than blocking", () => {
+  // The shape is the upstream's. A chunk this cannot read is not evidence of a
+  // leak, so the visibility decision is made over what IS readable.
+  assert.deepEqual(citedSlugs([{}, { item: {} }, chunk("a")]), ["a"]);
+});
+
+test("CONTROL: an answer citing only public posts is served", async () => {
+  const out = await drain(
+    guardAnswerStream(sseStream([chunk("live")], ["Here is the answer."]), ALL_PUBLIC),
+  );
+  assert.equal(answerOf(out), "Here is the answer.");
+});
+
+test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", async () => {
+  /*
+   * Refused rather than filtered down to the public citations. The answer TEXT
+   * was written from those chunks, so dropping the link and keeping the prose
+   * would leave a summary of a post nobody may read with the evidence of where
+   * it came from removed, which is worse than the leak it was fixing.
+   */
+  const onlyLiveIsPublic = async () => new Set(["live"]);
+  const out = await drain(
+    guardAnswerStream(
+      sseStream([chunk("live"), chunk("a-draft")], ["The draft says something secret."]),
+      onlyLiveIsPublic,
+    ),
+  );
+  assert.equal(answerOf(out), NO_ANSWER_TEXT);
+  assert.ok(!out.includes("a-draft"), `the draft's key reached the client: ${out}`);
+  assert.ok(!out.includes("secret"), `the answer text reached the client: ${out}`);
+});
+
+test("the visibility resolver is asked exactly once, with the distinct slugs", async () => {
+  // One indexed query per answer, not one per citation, and not one per chunk.
+  const calls = [];
+  const resolver = async (slugs) => {
+    calls.push(slugs);
+    return new Set(slugs);
+  };
+  await drain(
+    guardAnswerStream(sseStream([chunk("a"), chunk("a"), chunk("b")], ["ok"]), resolver),
+  );
+  assert.deepEqual(calls, [["a", "b"]]);
+});
+
+test("a zero-chunk answer never reaches the visibility resolver", async () => {
+  // There is nothing to check, and a query per empty answer would be a D1 read
+  // bought for a list that is empty by construction.
+  let asked = false;
+  await drain(
+    guardAnswerStream(sseStream([], ["invented"]), async (s) => {
+      asked = true;
+      return new Set(s);
+    }),
+  );
+  assert.equal(asked, false);
 });

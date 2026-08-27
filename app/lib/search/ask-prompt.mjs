@@ -17,6 +17,8 @@
  * `.server` boundary `check:secrets` enforces is unchanged.
  */
 
+import { slugForKey } from "./ask-keys.mjs";
+
 /**
  * The fence the reader's question travels inside.
  *
@@ -117,6 +119,35 @@ export function answerLeaksPrompt(answer) {
 }
 
 /**
+ * The distinct post slugs a chunks array cites.
+ *
+ * ONE OWNER FOR "what does this answer point at", used by both paths that have
+ * to decide whether an answer is still safe to serve: the cache replay in
+ * `search.ask.ts` and the live guard below. They had two readings of the chunk
+ * shape, and only the replay one existed, which is how the live path came to
+ * have no citation check at all.
+ *
+ * A chunk that names no post contributes nothing rather than blocking: the
+ * shape is the upstream's and a chunk this cannot read is not evidence of a
+ * leak. The visibility decision is made over what IS readable.
+ *
+ * @param {unknown[]} chunks
+ * @returns {string[]}
+ */
+export function citedSlugs(chunks) {
+  return [
+    ...new Set(
+      /** @type {Array<{ item?: { key?: string } }>} */ (chunks)
+        .map((chunk) => slugForKey(chunk?.item?.key ?? ""))
+        .filter(
+          /** @returns {slug is string} @param {string | null} slug */
+          (slug) => typeof slug === "string" && slug.length > 0,
+        ),
+    ),
+  ];
+}
+
+/**
  * Substitutes the no-answer text when the model retrieved NOTHING.
  *
  * ## THE DEFECT, measured 2026-08-27
@@ -152,9 +183,10 @@ export function answerLeaksPrompt(answer) {
  */
 /**
  * @param {ReadableStream} upstream
+ * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
  * @returns {ReadableStream}
  */
-export function guardZeroChunkAnswer(upstream) {
+export function guardAnswerStream(upstream, resolveVisible) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
@@ -193,17 +225,42 @@ export function guardZeroChunkAnswer(upstream) {
             .join("\n");
 
           let empty = false;
+          /** @type {unknown[]} */
+          let parsedChunks = [];
           try {
             /** @type {unknown} */
             const parsed = JSON.parse(data);
-            empty = Array.isArray(parsed) && parsed.length === 0;
+            if (Array.isArray(parsed)) {
+              parsedChunks = parsed;
+              empty = parsed.length === 0;
+            }
           } catch {
             // Unparseable: not evidence of zero chunks. Pass it through.
             empty = false;
           }
 
+          /*
+           * THE CITATION CHECK, and it is the SAME verdict the cache replay
+           * makes. `citationsStillPublic` refuses to serve a cached answer any
+           * of whose citations has stopped being public; the live path had no
+           * such check at all, so the identical answer was safe on replay and
+           * unguarded on the request that generated it.
+           *
+           * REFUSED WHOLE, not filtered down to the public citations. The
+           * answer TEXT was written from those chunks, so dropping the link and
+           * keeping the prose would leave a summary of a post nobody may read,
+           * with the evidence of where it came from removed. That is worse than
+           * the leak it was trying to fix.
+           */
+          const slugs = citedSlugs(parsedChunks);
+          let leaked = false;
+          if (!empty && slugs.length > 0) {
+            const visible = await resolveVisible(slugs);
+            leaked = slugs.some((slug) => !visible.has(slug));
+          }
+
           decided = true;
-          if (empty) {
+          if (empty || leaked) {
             for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) {
               controller.enqueue(encoder.encode(piece));
             }
