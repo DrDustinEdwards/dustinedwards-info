@@ -1120,6 +1120,46 @@ const ASK_PROBE_LIMIT = 3;
       themeOf(dark.body) === "dark",
       `sent theme=dark, rendered ${themeOf(dark.body)} (cf ${dark.cf})`,
     );
+
+    /*
+     * AND THE COOKIED READER IS NOW SERVED FROM THE EDGE, which is the half
+     * the four assertions above cannot see.
+     *
+     * All four remain exactly as true as they were: a cookie-bearing request
+     * still bypasses the PLATFORM cache and still receives `private, no-store`.
+     * That is what made them compatible with a fix and also what made them
+     * blind to it. `cf-cache-status` describes the layer in FRONT of the
+     * Worker, and the themed cache is inside it, so a reader answered from
+     * `caches.default` in a few milliseconds and a reader who paid a full
+     * render both read BYPASS.
+     *
+     * `x-theme-cache` is the only way to tell those apart from outside, which
+     * is why the Worker sets it. The second read must be a hit: the first one
+     * stored the entry.
+     */
+    const darkAgain = await warm(path, "theme=dark");
+    check(
+      `cache: ${path} serves a cookie-bearing reader from the themed cache`,
+      (darkAgain.res.headers.get("x-theme-cache") ?? "").startsWith("hit"),
+      `second cookied read marked ${JSON.stringify(darkAgain.res.headers.get("x-theme-cache"))}, ` +
+        `expected a hit. Before this layer existed every one of these was a full ` +
+        `origin render, which is what made the theme toggle cost a reader the ` +
+        `edge cache for every page on the site.`,
+    );
+    check(
+      `cache: ${path} still refuses to hand a cookied reader a public policy`,
+      (darkAgain.res.headers.get("cache-control") ?? "").includes("no-store"),
+      `a themed-cache hit sent ${darkAgain.res.headers.get("cache-control")}. The ` +
+        `stored copy is public so it can be stored at all; serving that header to ` +
+        `a cookie-bearing reader lets the platform keep it under a theme-blind ` +
+        `key, which is the bug the whole layer exists to prevent.`,
+    );
+    check(
+      `cache: ${path} themed-cache hit still renders the requested theme`,
+      themeOf(darkAgain.body) === "dark",
+      `a hit rendered ${themeOf(darkAgain.body)} for theme=dark. The key has ` +
+        `stopped separating the themes.`,
+    );
   }
 
   // CASE A, ASSERTED DIRECTLY. This exact ordering served a cached dark document

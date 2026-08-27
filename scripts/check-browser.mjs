@@ -1104,9 +1104,14 @@ try {
         const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
         return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
       })
-      // The feeds and llms-full are shared-cached and are not HTML, so they
-      // have no theme dimension and are out of this case's subject.
-      .filter((name) => !/^(blog\.(feed|rss)|llms-full)/.test(name));
+      /*
+       * SHARED-CACHED BUT NOT HTML, so they carry no theme dimension and are
+       * out of this case's subject. The markdown twin joined this list on
+       * 2026-08-26 when it stopped being `private, no-store`; it is one
+       * representation under its own URL and has no `<html>` element to carry
+       * a `data-theme` attribute at all.
+       */
+      .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name));
 
     const listed = new Set(THEME_CACHED.map((r) => r.module));
     const missing = declaring.filter((name) => !listed.has(name));
@@ -1120,11 +1125,28 @@ try {
         `carry session bytes into a shared cache entry.`,
     );
 
-    /** Everything documented to differ per request. @param {string} html */
+    /**
+     * Everything documented to differ between two renders of the same page.
+     *
+     * The nonce and the report endpoint are per REQUEST by design. The health
+     * tile's age is per RENDER: it is a count of seconds and it ticks whether
+     * or not anything about the reader changed, so two fetches a second apart
+     * differ by one. MEASURED here on the first run of this case, at byte 5870
+     * of `/`, reading 2 against 3.
+     *
+     * Masking it is correct rather than convenient. This case is about whether
+     * the document depends on the COOKIE, and the age depends on the clock. A
+     * value that differs between two identical requests cannot tell you
+     * anything about a cache key, and leaving it in would make `/` permanently
+     * unassertable while proving nothing.
+     *
+     * @param {string} html
+     */
     const mask = (html) =>
       html
         .replace(/nonce="[^"]*"/g, 'nonce="N"')
-        .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"');
+        .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
+        .replace(/data-health-age="\d+"/g, 'data-health-age="A"');
 
     /** @param {string} path @param {Record<string,string>} headers */
     const fetchDoc = async (path, headers) => {
@@ -1199,6 +1221,76 @@ try {
           `page depends on the cookie, so the enumerated diff is incomplete and ` +
           `the cache key would not describe the document.\n        ` +
           `cookieless: ...${residue?.a}...\n        dark: ...${residue?.b}...`,
+      );
+    }
+
+    /* ------ the themed edge cache actually separates the two documents ---- */
+
+    /*
+     * THE KEY IS PATH PLUS THEME, AND THIS IS WHAT PROVES THE THEME HALF.
+     *
+     * The assertions above deliberately cache-bust every fetch, so they say
+     * nothing about the cache at all: each one is a fresh key and a fresh
+     * render. This case does the opposite and reuses ONE key across four
+     * requests, because the property it is about is what happens on the second
+     * one.
+     *
+     * The failure it exists to catch is a key that drops the theme. That key
+     * is not obviously wrong, it makes every hit faster, and it serves the
+     * FIRST reader's document to everyone: dark to a light reader for ten
+     * minutes. Nothing else in this suite can see it, because the byte
+     * comparisons above never reach the cache and `verify-live` cannot force a
+     * miss on a shared key.
+     *
+     * `x-theme-cache` is the marker `workers/app.ts` sets for exactly this;
+     * `caches.default` contributes no `CF-Cache-Status`, so without it a hit
+     * and a fast render are indistinguishable from outside.
+     */
+    {
+      const key = `${BASE}/?themecache=${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      /** @param {string} theme */
+      const withTheme = async (theme) => {
+        const res = await fetch(key, { headers: { cookie: `theme=${theme}` }, redirect: "manual" });
+        const body = await res.text();
+        return {
+          marker: res.headers.get("x-theme-cache") ?? "",
+          cacheControl: res.headers.get("cache-control") ?? "",
+          attribute: (/<html[^>]*data-theme="([a-z]+)"/.exec(body) ?? [])[1] ?? "(none)",
+        };
+      };
+
+      const darkFirst = await withTheme("dark");
+      const darkAgain = await withTheme("dark");
+      const lightFirst = await withTheme("light");
+
+      ok(
+        "the themed cache stores a public document and serves it on the second read",
+        darkFirst.marker.startsWith("miss") && darkAgain.marker.startsWith("hit"),
+        `first read marked ${JSON.stringify(darkFirst.marker)} and second read ` +
+          `marked ${JSON.stringify(darkAgain.marker)}. Expected a miss then a hit. ` +
+          `Without a hit the layer is storing nothing and a cookied reader is ` +
+          `still paying a full render on every click.`,
+      );
+
+      ok(
+        "A COOKIED READER NEVER RECEIVES A PUBLIC CACHE-CONTROL, hit or miss",
+        darkFirst.cacheControl === "private, no-store" &&
+          darkAgain.cacheControl === "private, no-store",
+        `miss sent ${JSON.stringify(darkFirst.cacheControl)} and hit sent ` +
+          `${JSON.stringify(darkAgain.cacheControl)}. The stored copy is public so ` +
+          `that it can be stored HERE; handing that header to a cookie-bearing ` +
+          `reader lets the platform in front keep it under a theme-blind key, ` +
+          `which is the exact bug this layer exists to prevent. Measured on a ` +
+          `preview during the build: returning the hit verbatim did this.`,
+      );
+
+      ok(
+        "THE CACHE KEY CARRIES THE THEME: a light reader is not served the dark document",
+        lightFirst.attribute === "light",
+        `after two dark reads warmed the entry, a light reader got ` +
+          `data-theme="${lightFirst.attribute}" (marker ${JSON.stringify(lightFirst.marker)}). ` +
+          `The cache key has stopped separating the themes, so the first reader's ` +
+          `document is being served to everyone on this path.`,
       );
     }
   }
@@ -2926,6 +3018,18 @@ try {
  * Both modes again, and for the same reason: the case is in the public block.
  * Skip mode is 33 + 25 = 58, or 57 with the same skip. Floors 76 to 99 and 29
  * to 52, about eight percent under the low end of each range.
+ *
+ * ## RE-MEASURED 2026-08-26 WITH THE THEMED CACHE CASE: **112 to 111**
+ *
+ * Three assertions, on one key reused across four requests rather than the
+ * cache-busted fetches the byte comparisons use: the entry is stored and
+ * served on the second read, a cookied reader never receives a public
+ * cache-control on either a miss or a hit, and a light reader is not handed
+ * the dark document. 109 + 3 is 112, measured, and 111 when the health
+ * differential skips.
+ *
+ * Both modes, same reason again. Skip mode is 61, or 60 with that skip. Floors
+ * 99 to 102 and 52 to 55, about eight percent under the low end of each range.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -2937,7 +3041,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 99 : 52;
+  const MINIMUM_CHECKS = adminCasesRan ? 102 : 55;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
