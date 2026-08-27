@@ -31,6 +31,7 @@
 import { getEnv } from "~/lib/context";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { publicHealthBody } from "~/lib/health/verdicts.mjs";
+import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
 
 import type { Route } from "./+types/api.health";
 
@@ -85,8 +86,9 @@ function healthJson(body: unknown, status: number): Response {
  * this route is unauthenticated. The why lives in Workers Logs.
  */
 export async function loader({ context }: Route.LoaderArgs) {
+  const env = getEnv(context);
   try {
-    const run = await runHealthChecks(getEnv(context));
+    const run = await runHealthChecks(env);
     const body = publicHealthBody(run);
 
     if (!body.ok) {
@@ -103,6 +105,23 @@ export async function loader({ context }: Route.LoaderArgs) {
         }),
       );
     }
+
+    /*
+     * THE SNAPSHOT, WRITTEN ON THE WAY OUT. It is a byproduct of a run that
+     * happened anyway, never a reason to run.
+     *
+     * Written for BOTH verdicts, pass and fail. A snapshot that recorded only
+     * healthy runs would let the home tile keep showing the last good answer
+     * while the site was failing, which is the exact lie the tile's timestamp
+     * exists to prevent.
+     *
+     * `body` rather than `run`, so what is stored is what was answered with.
+     * The failure path below deliberately writes NOTHING: reaching it means
+     * the run could not be assembled, so there is no verdict to record, and
+     * the home tile ages into `stale` rather than being handed a fabricated
+     * one. Grounds in `app/lib/health/snapshot.mjs`.
+     */
+    await writeHealthSnapshot(env, body, new Date().toISOString());
 
     return healthJson(body, body.ok ? 200 : 503);
   } catch (error) {

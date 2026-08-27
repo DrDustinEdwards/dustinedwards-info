@@ -6,7 +6,8 @@ import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts } from "~/db";
 import { splitFeatured } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
-import { runHealthChecks } from "~/lib/health/checks.server";
+import { formatAge } from "~/lib/health/snapshot.mjs";
+import { readHealthTile } from "~/lib/health/snapshot.server";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
@@ -56,8 +57,8 @@ export function meta() {
  *              `build:stack` derives from package.json and `check:stack`
  *              reconciles in both directions. A digit here would be a second
  *              copy of a number a gate already owns. Rule 17.
- *   health     the verdict of `runHealthChecks`, the same function /api/health
- *              serves and the scheduled workflow polls.
+ *   health     the SNAPSHOT `/api/health` last wrote to KV, read here and never
+ *              recomputed. One KV read. See the correction below.
  *   writing    `total` from `listBlogPosts`, the same query and the same
  *              `publiclyVisible()` predicate the blog index counts with.
  *
@@ -80,33 +81,71 @@ export function meta() {
  * `/api/health` is linked beside it, uncached and answering in real time, for
  * anyone who wants the current answer rather than the rendered one.
  *
- * ## WHY THE MODULE AND NOT A SUBREQUEST TO /api/health
+ * ## THIS LOADER NO LONGER RUNS THE HEALTH SUITE. Corrected 2026-08-26.
  *
- * The ruling said "fetched server-side". Calling `runHealthChecks` directly IS
- * that, and it is the better shape here: a Worker fetching its own public URL
- * is a second network hop out to the edge and back, it would have to name an
- * origin that changes at DNS cutover, and it would put a cacheable-looking
- * request in front of an endpoint whose whole contract is `no-store`. One
- * module, two callers, no HTTP between them.
+ * What stood here argued for calling `runHealthChecks` directly, against the
+ * alternative of a subrequest to `/api/health`. The argument against the
+ * subrequest was right and is kept below. The argument FOR computing was
+ * wrong, and it was wrong about the cost rather than about the frequency:
  *
- * MEASURED, and the reason this is affordable: the health run is the slow half
- * of this loader at roughly 0.7 to 2.7 seconds, dominated by the AI Search
- * listing. It is paid on a cache MISS only, once per ten minutes per location,
- * and `stale-while-revalidate=86400` serves the previous body while the next
- * one is built. Readers on a HIT pay nothing for it.
+ *   "the health run is the slow half of this loader at roughly 0.7 to 2.7
+ *    seconds... It is paid on a cache MISS only... Readers on a HIT pay
+ *    nothing for it."
+ *
+ * Both sentences are true and the conclusion does not follow. MEASURED
+ * 2026-08-26 against a control, unthrottled, six samples each: this page
+ * rendered at origin in 1.07 to 3.48 s while `/blog` rendered in 0.32 to
+ * 0.90 s, and `/api/health` measured alone took 0.98 to 2.01 s. The gap IS
+ * the suite. On the throttled mobile profile two audits used, that arrived as
+ * an LCP of 3.8 to 5.2 s on this page against 1.4 s on every other one.
+ *
+ * "A cache miss only" is not rare. The entry is `s-maxage=600` and it is per
+ * LOCATION, so every colo pays it every ten minutes and the first reader in
+ * each window pays all of it. A reader who has ever set a theme cookie paid it
+ * on EVERY view, because a cookie-bearing request was downgraded past the
+ * shared cache entirely. The slowest page on the site was the front door.
+ *
+ * ## WHAT IT DOES INSTEAD: ONE KV READ
+ *
+ * `/api/health` writes its verdict to KV on the way out, and the fifteen
+ * minute scheduled poll goes through that same endpoint, so the snapshot stays
+ * fresh with no second timer in existence. This loader reads it and renders
+ * it. Nothing here can start a health run.
+ *
+ * The subrequest is still refused, for the reasons that were always good: a
+ * Worker fetching its own public URL is a hop out to the edge and back, it
+ * would have to name an origin that changes at DNS cutover, and it would put a
+ * cacheable-looking request in front of an endpoint whose contract is
+ * `no-store`. KV is neither a hop nor an origin.
+ *
+ * ## THE TILE GAINS A THIRD STATE, AND THAT IS THE PRICE
+ *
+ * The snapshot can be absent or old, so the tile must be able to say so
+ * instead of showing a verdict. `healthTile` in `snapshot.mjs` owns the
+ * classification and every uncertain input resolves to `missing`. The age is
+ * measured from the SNAPSHOT'S timestamp, not from this render, so it counts
+ * both hops of staleness: how long ago the suite ran, plus however long this
+ * cached body has been sitting in front of a reader.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
   /*
-   * CONCURRENT. The listing is D1 and the health run is AI Search, R2 and D1,
-   * and neither reads the other's result, so serialising them would add their
-   * latencies for nothing.
+   * CONCURRENT. The listing is D1 and the tile is one KV read, and neither
+   * reads the other's result, so serialising them would add their latencies
+   * for nothing. Both are now cheap; the shape is kept because it costs
+   * nothing and the reason it was right has not changed.
+   *
+   * `home_health` KEEPS ITS NAME, deliberately. It is now the KV read rather
+   * than the suite, which is the whole point of the change, and the mark is
+   * what will show that in production: the same name against a different
+   * number is a legible before and after, where a renamed mark would look
+   * like the instrument was removed.
    */
-  const [listing, health] = await Promise.all([
+  const [listing, tile] = await Promise.all([
     timed(timings, "home_posts", () => listBlogPosts(env, { perPage: 4, timings })),
-    timed(timings, "home_health", () => runHealthChecks(env)),
+    timed(timings, "home_health", () => readHealthTile(env)),
   ]);
 
   /*
@@ -122,33 +161,41 @@ export async function loader({ context }: Route.LoaderArgs) {
     posts: listing.total,
     featured,
     recent: posts.slice(0, 3),
-    health: {
-      ok: health.failed.length === 0,
-      total: health.checks.length,
-      failed: health.failed.length,
-      /*
-       * THE TIME THE VERDICT WAS TAKEN, rendered beside it. This is what keeps
-       * a ten-minute-old cached body honest; see the note above.
-       */
-      readAt: new Date().toISOString(),
-    },
+    /*
+     * HANDED STRAIGHT THROUGH. The classification, the age and the refusal to
+     * present an uncertain snapshot as a verdict all happened in `healthTile`,
+     * which is where `node:test` can reach them. This route decides nothing
+     * about health and computes no timestamp of its own: the age belongs to
+     * the snapshot, not to this render.
+     */
+    health: tile,
   };
 }
 
-/** A proof tile. The number is always passed in; this component owns none. */
+/**
+ * A proof tile. The number is always passed in; this component owns none.
+ *
+ * `age` is optional and is emitted as `data-health-age` in SECONDS. It exists
+ * for `check:browser`, which asserts that a freshly deployed home page carries
+ * a verdict inside one poll interval. The gate reads the attribute rather than
+ * the sentence beside it, because the sentence is prose that will be edited and
+ * the attribute is a number that cannot be satisfied by a rewording.
+ */
 function Proof({
   value,
   label,
   detail,
   href,
+  age,
 }: {
   value: string;
   label: string;
   detail: string;
   href: string;
+  age?: string;
 }) {
   return (
-    <li className="proof">
+    <li className="proof" data-health-age={age}>
       <Link className="proof-link" to={href}>
         <span className="proof-value">{value}</span>
         <span className="proof-label">{label}</span>
@@ -163,11 +210,32 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { gates, posts, featured, recent, health } = loaderData;
 
   /*
-   * UTC, and named as such. The page is cached and served worldwide, so a local
-   * time would be the reader's or the origin's depending on where it rendered,
-   * and neither is what the timestamp is for: it says how old this claim is.
+   * THE TILE'S THREE STATES, resolved to a value and a sentence here and
+   * nowhere else.
+   *
+   * `missing` and `stale` both refuse to show a ratio, and they refuse for the
+   * same reason: a number beside the words "health checks passing" is read as
+   * the CURRENT answer no matter what sentence sits under it. A dash is not
+   * mistakable for a verdict. This is the same stance the old timestamp took,
+   * carried one step further now that there is a state where the page has no
+   * verdict at all rather than an old one.
+   *
+   * UTC is named in the detail, and the page is cached and served worldwide,
+   * so a local time would be the reader's or the origin's depending on where
+   * it rendered. `data-health-age` carries the age in seconds for
+   * `check:browser`, which asserts a fresh deploy's tile is inside one poll
+   * interval; a gate reading the prose would be reading a sentence rather than
+   * a number.
    */
-  const readAt = `${health.readAt.slice(11, 16)} UTC on ${health.readAt.slice(0, 10)}`;
+  const healthValue =
+    health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
+  const healthDetail =
+    health.state === "fresh"
+      ? `Read ${formatAge(health.ageSeconds)}, at ${health.readAt.slice(11, 16)} UTC on ${health.readAt.slice(0, 10)}. This page is cached, so the answer above is at least that old; /api/health answers now.`
+      : health.state === "stale"
+        ? `The last verdict was read ${formatAge(health.ageSeconds)} and is too old to show. That means the scheduled check has stopped, not that the site has failed; /api/health answers now.`
+        : "No recent verdict has been recorded. /api/health runs the checks and answers now.";
+  const healthAge = health.state === "missing" ? undefined : String(health.ageSeconds);
 
   return (
     <>
@@ -197,10 +265,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               href="/colophon#gates"
             />
             <Proof
-              value={health.ok ? `${health.total}/${health.total}` : `${health.total - health.failed}/${health.total}`}
+              value={healthValue}
               label="health checks passing"
-              detail={`read at ${readAt}. This page is cached, so the answer above is that old; /api/health answers now.`}
+              detail={healthDetail}
               href="/api/health"
+              age={healthAge}
             />
             <Proof
               value={String(posts)}
