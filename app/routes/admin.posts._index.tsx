@@ -5,6 +5,7 @@ import { AdminAlert } from "~/components/admin/alert";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
+import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
@@ -233,6 +234,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const env = getEnv(context);
   const intent = form.get("intent");
+  /*
+   * WHO IS ASKING, read once for every branch below. The layout middleware put
+   * it here; `savePost` and `deletePost` require it rather than defaulting to
+   * the most privileged principal, so the bulk paths say it explicitly.
+   */
+  const actor = context.get(adminActorContext);
 
   if (intent === "regenerate") {
     try {
@@ -359,7 +366,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       }
       for (const slug of slugs) {
         try {
-          await deletePost(env, { slug });
+          await deletePost(env, { slug, actor });
           done += 1;
         } catch (error) {
           failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
@@ -401,6 +408,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           slug,
           raw: serializePost({ ...fields, tags }),
           isNew: false,
+          actor,
         });
         done += 1;
       } catch (error) {

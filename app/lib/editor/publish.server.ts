@@ -292,11 +292,31 @@ export async function savePost(
     raw: string;
     expectedHeadSha?: string | null;
     isNew: boolean;
-    /** Defaults to the human admin, so the browser editor is unchanged. */
-    actor?: Actor;
+    /**
+     * WHO IS WRITING. REQUIRED, with no default, since 2026-08-28.
+     *
+     * It was `actor?: Actor` defaulting to `{ kind: "admin" }`, which is the
+     * most privileged principal on the site: the capability table gives admin
+     * `write`, `firstPublish` and `destroy`, and operator and smoke each less.
+     * So a call site that forgot to say who was asking was granted everything,
+     * silently, and the four call sites that omitted it were all reached from
+     * request handlers.
+     *
+     * They were in fact all admin paths, so nothing was wrong on the wire. That
+     * is the point: the default was RIGHT four times out of four and would have
+     * been wrong the first time somebody added a fifth caller on a path that
+     * was not, with no diagnostic anywhere. A required field turns that into a
+     * typecheck failure naming the file.
+     *
+     * Fail-closed would have been `{ kind: "operator" }`, and that is worse
+     * rather than safer: it would quietly downgrade a real admin action and the
+     * failure would be a refusal nobody could explain. There is no safe default
+     * for an identity, which is why there is none.
+     */
+    actor: Actor;
   },
 ) {
-  const actor: Actor = options.actor ?? { kind: "admin" };
+  const { actor } = options;
 
   // The existing file is read BEFORE anything is rendered, because it carries
   // the only authoritative answer to "has this post ever been published", and
@@ -491,9 +511,12 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
 /** Deletes a post: one commit removing the file, then the rows. */
 export async function deletePost(
   env: PublishEnv,
-  options: { slug: string; expectedHeadSha?: string | null; actor?: Actor },
+  // `actor` is REQUIRED here for the reason `savePost` records at length: the
+  // default was the most privileged principal, and deletion is the capability
+  // the table is strictest about.
+  options: { slug: string; expectedHeadSha?: string | null; actor: Actor },
 ) {
-  const actor: Actor = options.actor ?? { kind: "admin" };
+  const { actor } = options;
 
   /*
    * **THE POLICY DECISION, BEFORE ANY READ OR WRITE.**

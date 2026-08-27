@@ -12,7 +12,15 @@
  * BOTH BODIES ARE LIFTED VERBATIM. Nothing here was rewritten or improved while
  * it moved. The equivalence was proven by differential against the pre-move
  * bodies over real inputs, with the comparison shown able to discriminate, per
- * hard rule 12; `test/bearer.test.mjs` keeps the discriminating half standing.
+ * hard rule 12.
+ *
+ * **THAT SENTENCE NAMED `test/bearer.test.mjs` AND THAT FILE DOES NOT EXIST**,
+ * found 2026-08-28 by looking rather than by anything failing. The differential
+ * was real and was run at the move; what was never true is that a committed
+ * test keeps it standing. A boundary note is a claim that ages, and this one
+ * aged into naming an instrument nobody wrote. What holds the comparison now is
+ * `check:policy`, which asserts the ordering below by position, and nothing
+ * holds the differential itself.
  *
  * This is a `.server` module because hard rule 3 is a PATH rule and these run
  * only inside the Worker. Neither function reads `env`, so `check:secrets` has

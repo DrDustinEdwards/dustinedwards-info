@@ -10,7 +10,7 @@ import {
   type PreviewLinkView,
 } from "~/components/admin/preview-links";
 import { listBlogTags } from "~/db";
-import { adminSessionContext } from "~/lib/auth.server";
+import { adminActorContext, adminSessionContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/preview-links.server";
 import { expiresAt, previewUrl } from "~/lib/preview-token.mjs";
@@ -236,6 +236,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       await deletePost(env, {
         slug: params.slug,
         expectedHeadSha: String(form.get("headSha") ?? "") || null,
+        actor: context.get(adminActorContext),
       });
       return redirect("/admin/posts");
     } catch (error) {
@@ -252,7 +253,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     }
   }
 
-  const result = await handleEditorAction(env, request);
+  const result = await handleEditorAction(env, request, context.get(adminActorContext));
   // Back to this page rather than the post list. A save used to land on the
   // list with nothing to say, which is how a first publication completed in
   // silence: the one act reserved to the human looked like nothing had

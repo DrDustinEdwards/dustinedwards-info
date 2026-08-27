@@ -1,5 +1,5 @@
 import { getEnv } from "~/lib/context";
-import { authenticateOperator } from "~/lib/operator/auth.server";
+import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
 import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
 
 import type { Route } from "./+types/api.operator";
@@ -48,6 +48,21 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
 
+  /*
+   * METERED HERE, because this is the call that does something. Authentication
+   * and metering split on 2026-08-28; grounds on `meterOperator`. Immediately
+   * after the identity is proven, so the limiter is keyed to a real operator
+   * and an unauthenticated flood cannot reach a Durable Object.
+   */
+  const metered = await meterOperator(env, auth.id);
+  if (!metered.ok) {
+    return json(
+      { ok: false, error: metered.error },
+      metered.status,
+      metered.retryAfter ? { "retry-after": String(metered.retryAfter) } : {},
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -86,6 +101,13 @@ export async function action({ request, context }: Route.ActionArgs) {
  * It is a convenience for a caller wiring itself up, and it is authenticated
  * like everything else: an unauthenticated caller learns nothing, including
  * whether the endpoint exists in a useful form.
+ *
+ * IT SPENDS NO RATE LIMIT, since 2026-08-28. Metering used to live inside
+ * `authenticateOperator`, so describing the surface cost the same unit as
+ * publishing to it: a client that read the description before each publish
+ * halved its own allowance, and one that polled the description could exhaust
+ * it without ever writing anything. This call takes no arguments and changes
+ * nothing, so it authenticates and stops there.
  *
  * DERIVED from `TOOL_DESCRIPTORS`, never written here. This loader used to
  * carry its own copy of the list and the copy drifted exactly as rule 17 says

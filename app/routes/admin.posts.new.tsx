@@ -10,6 +10,7 @@ import { handleEditorAction } from "~/lib/editor/action.server";
 import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
 import { currentHead } from "~/lib/editor/publish.server";
+import { adminActorContext } from "~/lib/auth.server";
 import type { Route } from "./+types/admin.posts.new";
 
 export function meta() {
@@ -51,7 +52,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const result = await handleEditorAction(getEnv(context), request);
+  const result = await handleEditorAction(getEnv(context), request, context.get(adminActorContext));
   if (result.kind === "saved") return redirect(savedRedirectPath(result));
   return result;
 }
