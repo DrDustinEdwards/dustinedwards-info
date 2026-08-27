@@ -36,16 +36,14 @@ import { recordsForPosts } from "./records.mjs";
  */
 import {
   NO_ANSWER_TEXT,
-  QUESTION_FENCE,
-  QUESTION_FENCE_END,
-  SYSTEM_PROMPT,
   answerLeaksPrompt,
+  askMessages,
   citedSlugs,
   guardAnswerStream,
   replayFrames,
 } from "./ask-prompt.mjs";
 
-export { NO_ANSWER_TEXT, QUESTION_FENCE, answerLeaksPrompt, citedSlugs, guardAnswerStream };
+export { NO_ANSWER_TEXT, answerLeaksPrompt, citedSlugs, guardAnswerStream };
 
 /** @see app/lib/search/records.mjs */
 type SearchRecord = ReturnType<typeof recordsForPosts>[number];
@@ -106,24 +104,12 @@ export interface AskCitation {
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   return env.AI_SEARCH.chatCompletions({
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        /*
-         * FENCED, and the fence characters are stripped from the question
-         * first. A question containing the end marker could otherwise close
-         * the block early and put the rest of itself back in the instruction
-         * register, which is the fence defeating itself. Grounds on
-         * QUESTION_FENCE.
-         */
-        content: [
-          QUESTION_FENCE,
-          question.split(QUESTION_FENCE).join(" ").split(QUESTION_FENCE_END).join(" "),
-          QUESTION_FENCE_END,
-        ].join("\n"),
-      },
-    ],
+    /*
+     * COMPOSED IN `askMessages`, not here, because the last message is the
+     * retrieval query and a test has to be able to see it. Decorating it costs
+     * the whole search: the grounds, and the measurement, are on that function.
+     */
+    messages: askMessages(question),
     model: ASK_MODEL,
     stream: true,
     ai_search_options: {
