@@ -824,7 +824,7 @@ refuses(
     true,
   );
 
-  const originAt = actionBody.indexOf("askOriginVerdict(");
+  const originAt = actionBody.indexOf("originVerdict(");
   const rateAt = actionBody.indexOf("checkAskRate(");
   eq("ask: the action takes an origin verdict", originAt !== -1, true);
   eq("ask: the action still rate limits", rateAt !== -1, true);
@@ -863,7 +863,7 @@ refuses(
    * an unstripped scan would compare the offsets of the explanation.
    *
    * ABSENT `Origin` IS ALLOWED and is NOT asserted here: it is the predicate's
-   * behaviour, not the route's ordering, and `test/ask-origin.test.mjs` owns it.
+   * behaviour, not the route's ordering, and `test/origin.test.mjs` owns it.
    */
   const cacheAt = actionBody.indexOf("readCachedAnswer(");
   const budgetAt = actionBody.indexOf("reserveAskBudget(");
@@ -896,9 +896,63 @@ refuses(
   );
   eq(
     "ask: the origin predicate is imported, not restated here",
-    /from\s+"~\/lib\/search\/ask-origin\.mjs"/.test(askCode),
+    /from\s+"~\/lib\/origin\.mjs"/.test(askCode),
     true,
   );
+
+  /*
+   * EVERY MUTATING SURFACE TAKES THE SAME PREDICATE, since 2026-08-28.
+   *
+   * `originVerdict` was `askOriginVerdict` and lived under `lib/search`,
+   * applied by the one endpoint that spends money. Two other mutating surfaces
+   * had no check of their own.
+   *
+   * WHAT REACT ROUTER ALREADY DOES, measured rather than assumed, because it
+   * decides what these assertions are for: `throwIfPotentialCSRFAttack` refuses
+   * a foreign `origin` on every mutating DOCUMENT request with 400, before
+   * middleware. It does NOT run for resource routes, which is what
+   * `admin.logout.tsx`, `admin.media.upload.ts`, `admin.preview.ts` and
+   * `/theme` are. Those four are the gap, and they are what these cover.
+   *
+   * Asserted on the SOURCE calling the predicate rather than on a status code,
+   * because a status code is `check:browser`'s and verify-live's to observe and
+   * this gate is offline. What it can see is that neither route restates the
+   * rule.
+   */
+  for (const [label, file] of [
+    ["theme", "app/routes/theme.ts"],
+    ["the admin plane", "app/routes/admin.tsx"],
+  ]) {
+    const code = stripComments(readFileSync(join(root, file), "utf8"));
+    eq(
+      `origin: ${label} imports the shared predicate`,
+      /from\s+"~\/lib\/origin\.mjs"/.test(code),
+      true,
+    );
+    eq(`origin: ${label} calls originVerdict`, /originVerdict\(/.test(code), true);
+    eq(
+      `origin: ${label} refuses with 403`,
+      /status:\s*403/.test(code),
+      true,
+    );
+  }
+
+  /*
+   * AND THE ABSENT-ORIGIN EXEMPTION SURVIVES, asserted on the predicate itself.
+   * A scriptless form post carries no `Origin`; refusing it would break the
+   * no-script door hard rule 9 requires, and it is the single easiest thing to
+   * "tighten" by accident while fixing a cross-origin hole.
+   */
+  {
+    const predicate = stripComments(readFileSync(join(root, "app/lib/origin.mjs"), "utf8"));
+    eq(
+      "origin: an absent Origin is allowed by the predicate",
+      /origin === null \|\| origin === undefined \|\| origin === ""[\s\S]{0,80}ok: true/.test(
+        predicate,
+      ),
+      true,
+    );
+  }
 
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(

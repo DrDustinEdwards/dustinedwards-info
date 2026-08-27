@@ -10,6 +10,7 @@ import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
+import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
@@ -58,6 +59,63 @@ export const handle = { hydrate: true };
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
+
+    /*
+     * ORIGIN, BEFORE THE SESSION LOOKUP, on every mutating method.
+     *
+     * This middleware is already the one place every `/admin/*` action must
+     * pass through, which is what makes it the right place for this: route
+     * actions do not consult a policy module, and an Origin check written into
+     * each of them would be a check the next action silently lacks.
+     *
+     * ## THE AUDIT'S CLAIM WAS HALF TRUE AT HEAD, and the half that is false
+     * ## is worth writing down because it decides what this line is FOR
+     *
+     * The claim was that no admin action has an Origin check. MEASURED against
+     * React Router 8 on 2026-08-28: `throwIfPotentialCSRFAttack` in
+     * `react-router/dist/.../lib/actions.js` compares the `origin` header's
+     * HOST against the request's host on every mutating DOCUMENT request and
+     * refuses with 400 before `staticHandler.query` runs, which is before this
+     * middleware. So `/admin/posts/new` with `Origin: https://evil.example`
+     * already answered 400, and still does.
+     *
+     * WHAT IT DOES NOT REACH IS RESOURCE ROUTES. A route with no default
+     * export is not a document request, so that check never runs for it, and
+     * three of this plane's mutating surfaces are exactly that:
+     * `admin.logout.tsx`, `admin.media.upload.ts` and `admin.preview.ts`. All
+     * three answered a foreign `Origin` before this line and answer 403 after
+     * it. `/theme` is the same shape outside this subtree and carries its own
+     * call to the same predicate.
+     *
+     * So this is not a duplicate of the framework's check. It covers the half
+     * the framework's check is not shaped to see, and it puts both halves under
+     * one predicate this repo owns rather than one the framework may change.
+     *
+     * BEFORE the session lookup because refusing costs nothing and the lookup
+     * is a KV read: a cross-origin caller should not be able to make this
+     * Worker do work. That ordering is the same cheapest-first discipline hard
+     * rule 19 states for the money paths.
+     *
+     * GET IS UNTOUCHED. A cross-origin GET of an admin page is answered by the
+     * session gate below, which redirects anyone without the single-admin
+     * session, and reading is not the thing an Origin check is for.
+     *
+     * AN ABSENT ORIGIN IS ALLOWED, per the predicate. The admin plane is React
+     * and every form here posts through it, so in practice an admin request
+     * always carries one; the exemption exists for the public no-script forms
+     * and is not narrowed here, because two spellings of the rule is exactly
+     * what this consolidation removed.
+     */
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      const verdict = originVerdict(request.headers.get("origin"), request.url);
+      if (!verdict.ok) {
+        return new Response(ORIGIN_REFUSAL, {
+          status: 403,
+          headers: { "cache-control": "no-store" },
+        });
+      }
+    }
+
     /*
      * INSTRUMENTATION, READ RATHER THAN CREATED, since 2026-08-27.
      *
