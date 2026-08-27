@@ -104,6 +104,14 @@ import { fileURLToPath } from "node:url";
 
 import puppeteer from "puppeteer";
 
+/*
+ * IMPORTED, NEVER RESTATED. The home tile's freshness assertion compares
+ * against the same constant the tile itself decides with, so a schedule change
+ * moves the gate and the page together. A digit here would be a third copy of
+ * a number that already has two owners bound by check:invariants section 25.
+ */
+import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
 
@@ -867,6 +875,170 @@ try {
       `2026-08-24. Below this the page is effectively unstyled and every layout ` +
       `assertion below is measuring browser defaults.`,
   );
+
+  /* ------------------------------------ 0. the home health tile is a READ */
+
+  /*
+   * THE FRONT DOOR REPORTS A STORED VERDICT, AND IT IS RECENT.
+   *
+   * `home.tsx` used to run the whole health suite in its loader. Measured
+   * 2026-08-26 against a control: this page rendered at origin in 1.07 to
+   * 3.48 s while `/blog` took 0.32 to 0.90 s, and `/api/health` alone took
+   * 0.98 to 2.01 s. The suite was the gap. It now reads a snapshot `/api/health`
+   * writes to KV.
+   *
+   * THE RISK THE REPLACEMENT INTRODUCES is the one this case is about: a
+   * snapshot that is never written, or written and never read, leaves a cached
+   * front page showing no verdict or an ancient one. `check:invariants`
+   * section 22 can see that the loader CALLS the reader; only a browser can
+   * see what the reader returned.
+   *
+   * ## THE ENDPOINT IS HIT FIRST, ON PURPOSE
+   *
+   * This is a fresh preview or a fresh deploy, so nothing has polled yet and
+   * KV is legitimately empty. Priming through `/api/health` is not the gate
+   * arranging its own pass: it is the gate exercising the ACTUAL WRITE PATH,
+   * and the assertion that follows fails unless that write reached KV and the
+   * loader read it back. A gate that skipped the prime would be asserting that
+   * the scheduled workflow had run, which is a claim about GitHub.
+   *
+   * ## AND THE READ IS CACHE-BUSTED
+   *
+   * The home page is `public, s-maxage=600`, so a plain fetch can be answered
+   * from an entry rendered before the prime and the assertion would measure a
+   * snapshot that predates the write. A unique query string is a distinct cache
+   * key, which forces the origin render this case is about.
+   */
+  {
+    /**
+     * Reads the tile off a cache-busted render of the home page.
+     * @param {string} tag
+     */
+    const readTile = async (tag) => {
+      await page.goto(`${BASE}/?browsercase=health-${tag}-${Date.now()}`, {
+        waitUntil: "networkidle0",
+      });
+      return page.evaluate(() => {
+        const el = document.querySelector("[data-health-age]");
+        const value = document.querySelector(".home-proof .proof[data-health-age] .proof-value");
+        return {
+          present: !!el,
+          age: el ? Number(el.getAttribute("data-health-age")) : null,
+          value: value ? value.textContent.trim() : null,
+        };
+      });
+    };
+
+    /*
+     * ## A BEFORE AND AN AFTER, BECAUSE THE OBVIOUS ASSERTION DOES NOT
+     * ## DISCRIMINATE. This is the plant's finding, not a precaution.
+     *
+     * The first version of this case primed `/api/health` and then asserted the
+     * tile's age was under one poll interval. PLANTED by deleting the snapshot
+     * write, PROVEN APPLIED in the artifact this gate builds (`writeHealthSnapshot`
+     * absent from build/server, `readHealthTile` still present as the control),
+     * and the gate went GREEN: 83 checks, 0 failures.
+     *
+     * The reason is that the preview's miniflare KV PERSISTS between runs. An
+     * earlier green run had left a snapshot behind, it was a few minutes old,
+     * and "a few minutes" is comfortably under fifteen. The assertion was
+     * measuring that a snapshot EXISTS, which a leftover satisfies, and not
+     * that this run's request wrote one.
+     *
+     * So the age is read twice with a deliberate WAIT between them. A snapshot
+     * that is not being rewritten can only get OLDER across that wait; one that
+     * is rewritten gets NEWER. The comparison is against `before + wait`, so a
+     * leftover of ANY age fails and no absolute threshold has to be guessed.
+     */
+    const before = await readTile("before");
+
+    const WAIT_SECONDS = 4;
+    await new Promise((resolve) => setTimeout(resolve, WAIT_SECONDS * 1000));
+
+    const primed = await fetch(`${BASE}/api/health`, { headers: { accept: "application/json" } });
+    const primedBody = await primed.text();
+    ok(
+      "the health endpoint answered, so a snapshot could be written",
+      primed.status === 200 || primed.status === 503,
+      `${BASE}/api/health answered ${primed.status}. Neither a verdict nor a ` +
+        `refusal, so nothing was stored and the tile assertions below would fail ` +
+        `for a reason that is not about the tile. Body: ${primedBody.slice(0, 200)}`,
+    );
+
+    const after = await readTile("after");
+
+    ok(
+      "the home page carries a health verdict rather than a placeholder",
+      after.present,
+      `no element on / carries data-health-age. The tile is in its "missing" ` +
+        `state, which means the snapshot was not written by the request above ` +
+        `or was not read by the loader. Check the APP_KV binding and ` +
+        `app/lib/health/snapshot.server.ts.`,
+    );
+
+    ok(
+      "the tile's age is a number this gate can compare",
+      Number.isInteger(after.age) && Number(after.age) >= 0,
+      `data-health-age is ${JSON.stringify(after.age)}. A non-numeric age makes ` +
+        `both comparisons below vacuous.`,
+    );
+
+    ok(
+      "the home page's health verdict is inside one poll interval",
+      Number.isInteger(after.age) && Number(after.age) < HEALTH_POLL_INTERVAL_SECONDS,
+      `the tile reports a verdict ${after.age} second(s) old, which is not under ` +
+        `the ${HEALTH_POLL_INTERVAL_SECONDS}s poll interval.`,
+    );
+
+    /*
+     * THE DISCRIMINATING ASSERTION. Skipped, loudly, when there was nothing to
+     * compare against: on a genuinely fresh deploy the first read is `missing`,
+     * and a comparison against an absent number would pass vacuously.
+     */
+    if (before.present && Number.isInteger(before.age)) {
+      ok(
+        "calling /api/health made the home page's verdict NEWER",
+        Number(after.age) < Number(before.age) + WAIT_SECONDS,
+        `the tile read ${before.age}s old, then ${WAIT_SECONDS}s passed, ` +
+          `/api/health was called, and it read ${after.age}s old. A snapshot that ` +
+          `is being rewritten gets newer across that call; this one only aged, ` +
+          `which means the page is reading a leftover and NOTHING WROTE ONE. ` +
+          `That is the exact defect a leftover in the preview's persistent KV ` +
+          `hides from an absolute-age check.`,
+      );
+    } else {
+      skip(
+        "calling /api/health made the home page's verdict NEWER",
+        `the first read found no verdict (a genuinely empty KV), so there is no ` +
+          `earlier age to compare against. The absolute assertions above still ` +
+          `prove a snapshot was written and read; only the differential is ` +
+          `unavailable, and it covers itself on the next run.`,
+      );
+    }
+
+    ok(
+      "the tile renders the verdict and not the stale placeholder",
+      typeof after.value === "string" && /^\d+\/\d+$/.test(after.value),
+      `the tile's value is ${JSON.stringify(after.value)}. A fresh snapshot must ` +
+        `render as a ratio; "--" is what the stale and missing states show, and ` +
+        `seeing it here means the age assertions above passed on the wrong element.`,
+    );
+
+    /*
+     * BACK TO /blog, AND THIS LINE IS LOAD-BEARING.
+     *
+     * Every assertion below reuses this one `page` and was written after a
+     * `goto` to /blog four screens up. Landing this case in front of them
+     * without restoring the page left them measuring the HOME document:
+     * `.blog-search` and `.page-head` came back null and the column comparison
+     * failed, while `.post-list` resolved because the home page has one too.
+     * That is a case passing on the wrong subject, which is the shape this
+     * repository keeps getting bitten by, and the gate caught it on the first
+     * run rather than reporting a clean column measurement of a page with no
+     * columns.
+     */
+    await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  }
 
   /* ------------------------------------- 1. the search field and the column */
 
@@ -2548,6 +2720,36 @@ try {
  * that is the second time in one day the same convention was missed here and in
  * check-tests.mjs. Both were caught by re-measuring rather than by anything
  * automatic. A floor is the one value in a gate that nothing else can check.
+ *
+ * ## RE-MEASURED 2026-08-26 WITH THE HOME HEALTH-TILE CASE: **84 to 83**
+ *
+ * Run through this gate's own pipeline, same two skips as the 78 measurement
+ * (no body image in the corpus, empty trash on the deployment). The case adds
+ * six assertions: the endpoint answered, the tile is present, its age parses,
+ * its age is inside one poll interval, the age got NEWER across the call, and
+ * the value is a ratio. 78 + 6 is 84, measured.
+ *
+ * **IT IS A RANGE, AND 83 IS THE FLOOR OF IT**, on exactly the reasoning the
+ * empty-trash entry above records. The differential is skipped when the first
+ * read finds no verdict at all, which is what a genuinely empty KV gives on a
+ * first-ever run, so that run scores 83. A floor set against the 84 would go
+ * red on the next fresh state and report a collapsed block where nothing had
+ * collapsed. Floored at 76, about eight percent under 83.
+ *
+ * **THE CROSS-CHECK, because the first run of this case was RED and the
+ * arithmetic is what explains both numbers.** That run reported 82 checks and
+ * 1 failure: the case navigated to `/` and did not navigate back, so the
+ * column comparisons below it measured the HOME document, found no
+ * `.blog-search` and no `.page-head`, and their guarded assertion never ran.
+ * 82 plus that one guarded assertion is 83. A count that moved by four when
+ * five assertions were added was the signal, not the failure line.
+ *
+ * **BOTH MODES MOVE THIS TIME**, which is the opposite of the topbar entry
+ * above and for the stated reason: this case is in the PUBLIC block, which
+ * skip mode reaches in full. Skip mode is 27 + 6 = 33, or 32 when the
+ * differential skips; floor 25 to 29. Derived rather than run, on the same
+ * basis the 15-to-27 step above was derived: the public block executes
+ * identically in both modes and nothing in this case touches a credential.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -2559,7 +2761,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 72 : 25;
+  const MINIMUM_CHECKS = adminCasesRan ? 76 : 29;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

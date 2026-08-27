@@ -4236,10 +4236,36 @@ console.log("\n  21. savePost commits before it touches D1");
     "the tile must derive its number from content/generated/stack.json, which " +
       "build:stack derives from package.json and check:stack reconciles.",
   );
+  /*
+   * THE NEEDLE MOVED WITH ITS SUBJECT, 2026-08-26. It read `runHealthChecks(`,
+   * which was correct while the loader ran the suite and is the exact call
+   * that was removed: the front door was rendering at origin in 1.07 to 3.48 s
+   * against 0.32 to 0.90 s for /blog, because it ran the whole health suite
+   * before its first byte.
+   *
+   * The invariant is UNCHANGED and is the same one it always was: this tile
+   * REPORTS a measurement and never states one. What changed is where the
+   * measurement comes from, so the needle names the reader rather than the
+   * runner. `readHealthTile` is the only way to reach the stored verdict, and
+   * it cannot compute one: `snapshot.server.ts` has one writer and it is
+   * `/api/health`.
+   *
+   * The negative is asserted too, and it is the half that keeps this honest. A
+   * loader that read the snapshot AND ran the suite would satisfy the positive
+   * completely while costing exactly what the change was made to stop paying.
+   */
   ok(
-    "the health verdict is read from the health module, not written",
-    /runHealthChecks\(/.test(home),
-    "the tile must report the same run /api/health serves.",
+    "the health verdict is read from the stored snapshot, not written",
+    /readHealthTile\(/.test(home),
+    "the tile must report the snapshot /api/health wrote, through the one " +
+      "reader in app/lib/health/snapshot.server.ts.",
+  );
+  ok(
+    "the home loader does not run the health suite",
+    !/runHealthChecks/.test(home),
+    "home.tsx calls runHealthChecks. The front door must not compute health: " +
+      "measured 2026-08-26, that call cost this page 1.07 to 3.48 s at origin " +
+      "against 0.32 to 0.90 s for /blog. Read the snapshot instead.",
   );
   ok(
     "the post count is read from the listing, not written",
@@ -4524,6 +4550,145 @@ console.log("\n  24. no client hooks in an unhydrated tree");
   );
 }
 
+console.log("\n  25. the health snapshot's poll interval is the workflow's cron");
+
+/*
+ * RULE 17, SATISFIED BY BINDING RATHER THAN BY DELETION.
+ *
+ * `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs is a SECOND
+ * statement of the schedule in .github/workflows/health.yml. It cannot be
+ * derived away: a Worker cannot read a workflow file, and the home tile needs
+ * the number at request time to decide whether a snapshot is worth showing.
+ *
+ * So the two are compared instead. The cron is PARSED rather than matched as a
+ * string, because a step form and an equivalent explicit list are the same schedule
+ * and a string compare would fail on a legal rewrite while passing on a cron
+ * that means something else entirely.
+ *
+ * WHAT GOES WRONG WITHOUT THIS. Slow the schedule to hourly and the constant
+ * still says fifteen minutes, so the tile calls a perfectly current snapshot
+ * stale forty five minutes into every hour and tells readers the check has
+ * stopped. Speed it up and the tile calls a genuinely dead poller fresh. The
+ * failure is silent in both directions and it is a lie on the front page.
+ */
+{
+  const workflowPath = join(root, ".github", "workflows", "health.yml");
+  const snapshotPath = join(root, "app", "lib", "health", "snapshot.mjs");
+  const workflow = readFileSync(workflowPath, "utf8");
+  const snapshot = stripComments(readFileSync(snapshotPath, "utf8"));
+
+  ok(
+    "the health workflow and the snapshot module were both read",
+    workflow.length > 500 && snapshot.length > 500,
+    `workflow ${workflow.length} chars, snapshot ${snapshot.length} chars after ` +
+      `stripping. An empty read passes every comparison below vacuously.`,
+  );
+
+  /*
+   * The minute field of the schedule's cron, from the `schedule:` block only.
+   * Anchored to a `- cron:` list item so a cron mentioned in a comment cannot
+   * satisfy it: this file's own prose discusses the schedule at length, and a
+   * comment has both satisfied an assertion and failed one in this repository.
+   */
+  const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
+    (m) => m[1].trim(),
+  );
+  ok(
+    "the workflow declares exactly one cron",
+    cronLines.length === 1,
+    `found ${cronLines.length}: ${cronLines.join(" | ") || "(none)"}. This ` +
+      `assertion compares one schedule against one constant and cannot ` +
+      `arbitrate between two.`,
+  );
+
+  const minuteField = (cronLines[0] ?? "").split(/\s+/)[0] ?? "";
+  /**
+   * The cron's period in seconds, or null when it is not a fixed period.
+   *
+   * Handles the two forms that mean "every N minutes": a step and an
+   * explicit evenly spaced list (`0,15,30,45`). Anything else returns null and
+   * fails loudly rather than being coerced into a number.
+   */
+  const periodSeconds = (() => {
+    const step = /^\*\/(\d+)$/.exec(minuteField);
+    if (step) return Number(step[1]) * 60;
+    if (minuteField === "*") return 60;
+    const list = minuteField.split(",").map(Number);
+    if (list.length > 1 && list.every((n) => Number.isInteger(n) && n >= 0 && n < 60)) {
+      const gaps = new Set(list.slice(1).map((n, i) => n - list[i]));
+      // Evenly spaced AND wrapping evenly, or the last gap of the hour differs.
+      if (gaps.size === 1 && 60 % (60 / list.length) === 0 && [...gaps][0] === 60 / list.length) {
+        return [...gaps][0] * 60;
+      }
+    }
+    return null;
+  })();
+
+  ok(
+    "the cron's minute field is a fixed period this gate can read",
+    periodSeconds !== null,
+    `minute field ${JSON.stringify(minuteField)} is not a step or an evenly ` +
+      `spaced list. Either restore one, or teach this parser the new form and ` +
+      `say why; it must not fall back to a default.`,
+  );
+
+  const declared = /HEALTH_POLL_INTERVAL_SECONDS\s*=\s*([0-9*\s]+);/.exec(snapshot)?.[1] ?? "";
+  // Evaluated rather than string-matched, so `15 * 60` and `900` are the same
+  // answer. The needle above admits only digits, spaces and `*`, so this is
+  // arithmetic on a bounded character set and never arbitrary source.
+  const declaredSeconds = declared.trim()
+    ? declared.split("*").reduce((product, part) => product * Number(part.trim()), 1)
+    : NaN;
+
+  ok(
+    "the snapshot module declares a poll interval",
+    Number.isFinite(declaredSeconds) && declaredSeconds > 0,
+    `could not read HEALTH_POLL_INTERVAL_SECONDS out of ${relative(root, snapshotPath)}; ` +
+      `got ${JSON.stringify(declared)}. Without it the comparison below is vacuous.`,
+  );
+
+  ok(
+    "the declared poll interval is the schedule the workflow actually runs",
+    declaredSeconds === periodSeconds,
+    `snapshot.mjs says ${declaredSeconds}s, health.yml's cron ` +
+      `${JSON.stringify(cronLines[0] ?? "")} means ${periodSeconds}s. The home ` +
+      `tile decides whether a verdict is too old to show from this number, so a ` +
+      `mismatch either calls a current snapshot stale or calls a dead poller ` +
+      `fresh, on the front page, silently. Rule 17.`,
+  );
+
+  /*
+   * The stale threshold is DERIVED from the interval in the module, not typed.
+   * Asserted here because the whole binding above is worth nothing if a later
+   * edit replaces the multiplication with a literal that happens to agree today.
+   */
+  ok(
+    "the stale threshold is derived from the interval, not restated",
+    /HEALTH_SNAPSHOT_STALE_AFTER_SECONDS\s*=\s*\d+\s*\*\s*HEALTH_POLL_INTERVAL_SECONDS/.test(
+      snapshot,
+    ),
+    "HEALTH_SNAPSHOT_STALE_AFTER_SECONDS must be a multiple of " +
+      "HEALTH_POLL_INTERVAL_SECONDS written as one, so moving the schedule moves " +
+      "both. A literal here is a second copy that agrees until the day it does not.",
+  );
+
+  /*
+   * ONE WRITER. The reason the home page is fast is that nothing on it can
+   * start a health run, and that property lives in the module boundary rather
+   * than in anybody remembering it.
+   */
+  const snapshotServer = stripComments(
+    readFileSync(join(root, "app", "lib", "health", "snapshot.server.ts"), "utf8"),
+  );
+  ok(
+    "the snapshot module does not import the health suite",
+    !/checks\.server/.test(snapshotServer) && !/runHealthChecks/.test(snapshotServer),
+    "snapshot.server.ts reaches runHealthChecks. The reader must not be able " +
+      "to compute a verdict, or the home page's cache miss becomes a health run " +
+      "again by a different route.",
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
@@ -4562,14 +4727,18 @@ console.log("\n  24. no client hooks in an unhydrated tree");
  * RE-MEASURED 2026-08-26 by RUNNING it after section 24 (no client hooks in
  * an unhydrated tree) landed with the unhydration arc: 264 executed. Floor
  * 246 to 250, margin 14 held.
+ *
+ * RE-MEASURED 2026-08-26 by RUNNING it after section 25 (the health snapshot's
+ * poll interval) landed and section 22's health needle followed its subject:
+ * 272 executed. Floor 250 to 258, margin 14 held.
  */
-const MINIMUM_CHECKS = 250;
+const MINIMUM_CHECKS = 258;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-25: 251 offline.`,
+      `rather than failing. Measured 2026-08-26: 272 offline.`,
   );
 }
 
