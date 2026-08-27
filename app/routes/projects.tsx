@@ -1,4 +1,5 @@
 import projectsData from "../../content/projects.json";
+import { jsonLd } from "~/lib/json-ld.mjs";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
@@ -134,7 +135,7 @@ export default function Projects() {
       <main className="page" id="main">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(itemListJsonLd()) }}
         />
         <div className="page-inner">
           <h1 className="page-title">{TITLE}</h1>

@@ -75,13 +75,13 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-/* 51 against 54 measured 2026-08-28 by RUNNING the gate, after
-   related-visibility.test.mjs landed with the scheduled-post fix. */
-const MINIMUM_FILES = 51;
-/* 496 against 528, re-measured 2026-08-28 in the same commit. The file floor
+/* 52 against 55 measured 2026-08-28 by RUNNING the gate, after
+   json-ld.test.mjs landed with the escaping serialiser. */
+const MINIMUM_FILES = 52;
+/* 502 against 534, re-measured 2026-08-28 in the same commit. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
    place, which no file count can see. */
-const MINIMUM_TESTS = 496;
+const MINIMUM_TESTS = 502;
 
 let checks = 0;
 let failures = 0;

@@ -1006,6 +1006,52 @@ refuses(
     eq("operator: GET describe still authenticates", /authenticateOperator\(/.test(loader), true);
   }
 
+  /*
+   * EVERY JSON-LD BLOCK GOES THROUGH THE ESCAPING SERIALISER.
+   *
+   * The contents of a `<script>` element are RAW TEXT: no entities are decoded
+   * inside it and the only thing that ends it is the literal `</script`. A
+   * title carrying that sequence closes the element early and the rest is
+   * parsed as markup. Every block was a bare `JSON.stringify` handed to
+   * `dangerouslySetInnerHTML` until 2026-08-28.
+   *
+   * FOUND BY SCANNING, not from a list. A hand-kept list of emitters is the
+   * mirror this repo keeps paying for: the fifth one would be added without it.
+   * Every `dangerouslySetInnerHTML` in a route whose element is a `script` with
+   * `ld+json` is required to use the helper, and the failure names the file.
+   *
+   * The speculation-rules blocks are deliberately out of scope: they are the
+   * other `<script>` type on the site and their payload is built from
+   * `HEADER_PATHS` and a pathname rather than from post content. They have
+   * their own gate in `test/header-speculation.test.mjs`.
+   */
+  {
+    const routeDir = join(root, "app/routes");
+    /** @type {string[]} */
+    const bare = [];
+    let scanned = 0;
+    for (const name of readdirSync(routeDir).filter((f) => f.endsWith(".tsx"))) {
+      const code = stripComments(readFileSync(join(routeDir, name), "utf8"));
+      if (!code.includes("ld+json")) continue;
+      scanned += 1;
+      // The window from the ld+json type to the end of that element's props.
+      let at = code.indexOf("ld+json");
+      while (at !== -1) {
+        const window = code.slice(at, at + 400);
+        if (/dangerouslySetInnerHTML/.test(window) && /JSON\.stringify\(/.test(window)) {
+          bare.push(name);
+        }
+        at = code.indexOf("ld+json", at + 1);
+      }
+    }
+    eq("json-ld: the scan found the emitters at all", scanned >= 4, true);
+    eq(
+      `json-ld: no emitter bypasses the helper (${bare.join(", ") || "none"})`,
+      bare.length === 0,
+      true,
+    );
+  }
+
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(
     "ask: robots.txt disallows /search/ask",
