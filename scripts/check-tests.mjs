@@ -75,13 +75,13 @@ const TEST_DIR = join(root, "test");
  * SHRINKING. Both floors are 94 percent of their own measurement, narrow
  * enough that losing the smallest test file still trips the file floor.
  */
-/* 49 against 52 measured 2026-08-27 by RUNNING the gate, after
-   page-payload.test.mjs landed with the whole-page gate. */
-const MINIMUM_FILES = 49;
-/* 478 against 509, re-measured 2026-08-27 in the same commit. The file floor
+/* 50 against 53 measured 2026-08-28 by RUNNING the gate, after
+   ask-injection.test.mjs landed with the prompt-injection work. */
+const MINIMUM_FILES = 50;
+/* 486 against 517, re-measured 2026-08-28 in the same commit. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
    place, which no file count can see. */
-const MINIMUM_TESTS = 478;
+const MINIMUM_TESTS = 486;
 
 let checks = 0;
 let failures = 0;

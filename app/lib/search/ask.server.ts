@@ -28,6 +28,23 @@ import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
+/*
+ * The pure half, in plain JavaScript so `check:tests` can reach it. Re-exported
+ * rather than re-implemented: `search.ask.ts` imports the guard and the refusal
+ * from this module, and a second import path would be a second thing to keep in
+ * step. Grounds in ask-guard.mjs.
+ */
+import {
+  NO_ANSWER_TEXT,
+  QUESTION_FENCE,
+  QUESTION_FENCE_END,
+  SYSTEM_PROMPT,
+  answerLeaksPrompt,
+  guardZeroChunkAnswer,
+  replayFrames,
+} from "./ask-prompt.mjs";
+
+export { NO_ANSWER_TEXT, QUESTION_FENCE, answerLeaksPrompt, guardZeroChunkAnswer };
 
 /** @see app/lib/search/records.mjs */
 type SearchRecord = ReturnType<typeof recordsForPosts>[number];
@@ -38,17 +55,26 @@ const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 /**
  * How many chunks the answer may draw on.
  *
- * The corpus is 7 records from one post, so a high number would retrieve the
- * entire site for every question and make every answer look equally confident.
+ * ## RE-DERIVED 2026-08-28, and the old basis was a corpus size
+ *
+ * It read "the corpus is 7 records from one post", which was true when it was
+ * written and had been false for a month: the index has grown by more than an
+ * order of magnitude since, and nothing moved this value or noticed. A ceiling
+ * justified by how much there is to retrieve has to be re-derived every time
+ * anybody publishes, which is why it went stale.
+ *
+ * THE BOUND IS THE ANSWER, NOT THE CORPUS, and that is why it does not move.
+ * The system prompt below asks for two or three sentences. An answer that
+ * length cannot honestly synthesise more sources than this; past it, retrieval
+ * widens the net without widening the answer, and the extra chunks only dilute
+ * the ranking that chose the good ones. So the corpus growing does not raise
+ * this, and shrinking would not lower it.
+ *
+ * No corpus figure appears here on purpose. This file owns this number and
+ * nothing else, per rule 17: the index size is `sync_ask`'s to report and the
+ * health check's to watch, and a copy here could only rot.
  */
 const MAX_CHUNKS = 6;
-
-const SYSTEM_PROMPT = [
-  "You answer questions about Dustin Edwards's personal site using only the",
-  "provided context. If the context does not contain the answer, say so plainly",
-  "and do not guess. Be brief: two or three sentences unless asked for more.",
-  "Do not use em dashes. Do not open with a restatement of the question.",
-].join(" ");
 
 /**
  * True when the AI Search binding is present.
@@ -81,7 +107,21 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
   return env.AI_SEARCH.chatCompletions({
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: question },
+      {
+        role: "user",
+        /*
+         * FENCED, and the fence characters are stripped from the question
+         * first. A question containing the end marker could otherwise close
+         * the block early and put the rest of itself back in the instruction
+         * register, which is the fence defeating itself. Grounds on
+         * QUESTION_FENCE.
+         */
+        content: [
+          QUESTION_FENCE,
+          question.split(QUESTION_FENCE).join(" ").split(QUESTION_FENCE_END).join(" "),
+          QUESTION_FENCE_END,
+        ].join("\n"),
+      },
     ],
     model: ASK_MODEL,
     stream: true,
@@ -179,14 +219,9 @@ export function replayCachedAnswer(cached: {
   chunks: unknown[];
 }): ReadableStream {
   const encoder = new TextEncoder();
-  const frames = [
-    `event: chunks\ndata: ${JSON.stringify(cached.chunks)}\n\n`,
-    `data: ${JSON.stringify({ choices: [{ delta: { content: cached.answer } }] })}\n\n`,
-    `data: [DONE]\n\n`,
-  ];
   return new ReadableStream({
     start(controller) {
-      for (const frame of frames) controller.enqueue(encoder.encode(frame));
+      for (const frame of replayFrames(cached)) controller.enqueue(encoder.encode(frame));
       controller.close();
     },
   });

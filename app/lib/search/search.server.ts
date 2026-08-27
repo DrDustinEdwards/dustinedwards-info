@@ -294,8 +294,13 @@ async function runIndex(
  *
  * DOCUMENT RECORDS ONLY. Section records exist so that a text query can land on
  * the heading that answers it; a filter has no such heading in mind, and
- * returning all seven records of one post as seven results for `2026` would
- * present the corpus as seven times its real size.
+ * returning every record of one post as a separate result for `2026` would
+ * present the corpus as a multiple of its real size.
+ *
+ * The count was written out as "seven" until 2026-08-28, which was one post's
+ * record count on the day the sentence was written and is not a fact about any
+ * post now: a post's records are its headings, so the number is per post and
+ * moves whenever anybody edits one. The argument never needed a figure.
  *
  * Ordered by date, because with no relevance signal recency is the only
  * defensible ordering, and a bare year or tag reads as browsing rather than

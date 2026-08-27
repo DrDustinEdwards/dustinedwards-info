@@ -15,7 +15,14 @@
  * generating, and only then reach the model. See ask-guard.server.ts.
  */
 
-import { askAvailable, askStream, replayCachedAnswer, teeForCache } from "~/lib/search/ask.server";
+import {
+  answerLeaksPrompt,
+  askAvailable,
+  askStream,
+  guardZeroChunkAnswer,
+  replayCachedAnswer,
+  teeForCache,
+} from "~/lib/search/ask.server";
 import {
   ASK_RATE_LIMIT_PERIOD_SECONDS,
   type CachedAnswer,
@@ -235,15 +242,44 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   try {
+    /*
+     * GUARD FIRST, THEN TEE, and the order is the whole point. The guard can
+     * replace a zero-chunk generation with the no-answer text, and the cache
+     * has to accumulate what the READER saw. Teeing first would store the
+     * model's original answer while showing the reader the substitution, which
+     * is exactly the two-truths shape the replay path exists to avoid.
+     */
     const upstream = await askStream(env, question);
-    const { toReader, captured } = teeForCache(upstream);
+    const { toReader, captured } = teeForCache(guardZeroChunkAnswer(upstream));
 
     // After the reader has their bytes. Caching is bookkeeping and a reader
     // never waits for bookkeeping.
     getExecutionContext(context).waitUntil(
       (async () => {
         const answer = await captured;
-        if (answer) await writeCachedAnswer(env, key, answer);
+        if (!answer) return;
+
+        /*
+         * TWO REFUSALS, and neither is the other's backstop.
+         *
+         * An answer with NO CHUNKS was not drawn from this site. The guard
+         * above has already replaced it for the reader; caching the
+         * substitution would make "I could not find anything" the permanent
+         * answer to that question for seven days, including after the post
+         * that answers it is published.
+         *
+         * An answer that ECHOES THE PROMPT is a successful injection. Not
+         * caching it is what keeps the blast radius at the one request that
+         * performed it: measured 2026-08-27, the audit's question returned the
+         * system prompt verbatim and the endpoint then served it from KV to
+         * anyone who asked the same thing.
+         */
+        if (answer.chunks.length === 0) return;
+        if (answerLeaksPrompt(answer.answer)) {
+          console.error("ask: refused to cache an answer that echoed the prompt");
+          return;
+        }
+        await writeCachedAnswer(env, key, answer);
       })(),
     );
 
