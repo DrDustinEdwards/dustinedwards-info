@@ -1,6 +1,6 @@
 import { EditorError, GitHubError, currentHead, savePost, validateAndRender } from "./publish.server";
 import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
-import type { SaveOutcome } from "./publish-policy.mjs";
+import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
 
 /**
@@ -24,6 +24,14 @@ export type EditorActionResult =
 export async function handleEditorAction(
   env: Env & { GITHUB_TOKEN?: string },
   request: Request,
+  /*
+   * WHO IS SAVING. Threaded through rather than defaulted, since `savePost`
+   * stopped defaulting it: the two callers are admin routes that already hold
+   * the actor on their request context, so passing it is one argument and
+   * inventing it here would be this module guessing at an identity it was
+   * handed.
+   */
+  actor: Actor,
 ): Promise<EditorActionResult> {
   const form = await request.formData();
   const fields = fieldsFromForm(form);
@@ -82,6 +90,7 @@ export async function handleEditorAction(
       raw,
       expectedHeadSha: submittedHead || null,
       isNew,
+      actor,
     });
     return {
       kind: "saved",

@@ -57,6 +57,31 @@ export async function authenticateOperator(
   const header = request.headers.get("authorization") ?? "";
   const presented = /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] ?? "";
 
+  /*
+   * REFUSED BEFORE THE HASH, on length alone, above twice the real token.
+   *
+   * `constantTimeEqual` hashes BOTH operands so that comparison time does not
+   * depend on where they diverge. That is the right shape and it has one cost:
+   * the input side is whatever the caller sent, so hashing it is work an
+   * unauthenticated caller can ask for in any quantity. A megabyte of bearer
+   * token is a megabyte of SHA-256 per request, before anything has checked
+   * who is asking.
+   *
+   * TWICE, NOT EQUAL, deliberately. An exact-length gate would turn this into
+   * an oracle for the token's length, one request at a time. At twice the
+   * length the only thing a caller learns is that the real token is shorter
+   * than half of what they sent, which no attack needs, and everything past
+   * that bound is refused for free.
+   *
+   * The constant-time property is UNCHANGED for every candidate that could
+   * possibly be right: anything inside the bound still goes through the same
+   * hash-and-compare, so a missing header and a wrong token of plausible
+   * length still take the same path and the same time.
+   */
+  if (presented.length > configured.length * 2) {
+    return { ok: false, status: 401, error: "Invalid or missing bearer token." };
+  }
+
   // Still compared when absent, so a missing header and a wrong token take the
   // same path and the same time.
   const valid = await constantTimeEqual(presented, configured);
@@ -66,6 +91,35 @@ export async function authenticateOperator(
 
   const id = tokenLabel(presented);
 
+  return { ok: true, id };
+}
+
+/**
+ * Spends one unit of the caller's rate limit.
+ *
+ * ## SPLIT OUT OF `authenticateOperator` on 2026-08-28
+ *
+ * Metering ran unconditionally inside authentication, so every request that
+ * proved who it was also spent budget, including `GET /api/operator`, which is
+ * the DESCRIBE call: it takes no arguments, changes nothing, and exists so a
+ * client can discover the surface. A client that reads the description before
+ * each publish therefore halved its own publish allowance, and a client that
+ * polled the description could exhaust it without ever writing anything.
+ *
+ * The two questions are separate and now the code says so: "who is this" is
+ * cheap and always asked, "may they spend one" is a Durable Object call and is
+ * asked only where something is spent.
+ *
+ * THE ORDER IS UNCHANGED where both run. Authenticate first, then meter, so
+ * the limiter is keyed to a proven identity and an unauthenticated flood
+ * cannot exhaust a real operator's budget or reach a Durable Object at all.
+ *
+ * @param env @param id the authenticated operator label
+ */
+export async function meterOperator(
+  env: OperatorEnv,
+  id: string,
+): Promise<AuthResult> {
   if (!env.ASK_BUDGET) {
     // The same stance the Ask guards take: a metered or privileged endpoint
     // without its limiter does not serve unprotected, it does not serve.

@@ -954,6 +954,58 @@ refuses(
     );
   }
 
+  /*
+   * THE OPERATOR TOKEN IS REFUSED ON LENGTH BEFORE IT IS HASHED.
+   *
+   * `constantTimeEqual` hashes BOTH operands so comparison time does not depend
+   * on where they diverge, which is right and has one cost: the input side is
+   * whatever the caller sent, so hashing it is work an unauthenticated caller
+   * can ask for in any quantity. A megabyte of bearer token is a megabyte of
+   * SHA-256 before anything has checked who is asking.
+   *
+   * ASSERTED BY POSITION IN THE FUNCTION'S OWN BODY, which is the same
+   * instrument hard rule 19's ordering uses and for the same reason: asserting
+   * that the length check merely EXISTS would pass on an arrangement that ran
+   * it after the hash, which is the arrangement that buys nothing.
+   *
+   * OBSERVATION BOUNDARY: this reads SOURCE POSITION, not a runtime measurement.
+   * It cannot see that the hash did not run; it can see that the refusal is
+   * written before the call. Measuring the hash itself would need the digest
+   * instrumented, which no gate here can do.
+   */
+  {
+    const auth = stripComments(
+      readFileSync(join(root, "app/lib/operator/auth.server.ts"), "utf8"),
+    );
+    const body = auth.slice(auth.indexOf("export async function authenticateOperator"));
+    const lengthGate = body.indexOf("presented.length > configured.length");
+    const hash = body.indexOf("constantTimeEqual(");
+    eq("operator: an over-long bearer is refused on length", lengthGate !== -1, true);
+    eq("operator: the token is still compared in constant time", hash !== -1, true);
+    eq(
+      "operator: the length refusal comes BEFORE the hash",
+      lengthGate !== -1 && hash !== -1 && lengthGate < hash,
+      true,
+    );
+
+    /*
+     * AND DESCRIBE DOES NOT SPEND A RATE-LIMIT UNIT. Metering used to sit
+     * inside authentication, so `GET /api/operator`, which takes no arguments
+     * and changes nothing, cost the same unit as a publish. Asserted as
+     * absence in the loader and presence in the action, because either half
+     * alone passes on a build that meters both or neither.
+     */
+    const route = stripComments(readFileSync(join(root, "app/routes/api.operator.ts"), "utf8"));
+    const loader = route.slice(route.indexOf("export async function loader"));
+    const action = route.slice(
+      route.indexOf("export async function action"),
+      route.indexOf("export async function loader"),
+    );
+    eq("operator: the POST path meters", /meterOperator\(/.test(action), true);
+    eq("operator: GET describe does NOT meter", /meterOperator\(/.test(loader), false);
+    eq("operator: GET describe still authenticates", /authenticateOperator\(/.test(loader), true);
+  }
+
   const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
   eq(
     "ask: robots.txt disallows /search/ask",
