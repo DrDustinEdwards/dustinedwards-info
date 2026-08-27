@@ -1040,13 +1040,55 @@ for (const a of worst) {
  * Both floors are 94 percent of their own measurement, which is the margin the
  * other gates use: 587 of 625, and 470 of 501.
  */
+/* ---- the theme-color meta tags are a SECOND COPY of two tokens ---------- */
+
+/*
+ * `<meta name="theme-color">` paints the browser chrome and the OS task
+ * switcher, and neither resolves a custom property, so root.tsx writes the two
+ * background hexes out literally. That is a second copy of a value the palette
+ * owns, which is exactly what rule 17 forbids leaving unwatched, and the copy
+ * is in a file no colour gate reads.
+ *
+ * So it is watched here. The tags are matched by their media query rather than
+ * by position, because two tags differing only in an attribute are the easiest
+ * pair in the file to transpose, and a light hex under the dark media query is
+ * a defect no page renders differently: it shows up on the phone's chrome and
+ * nowhere in any screenshot.
+ */
+{
+  const rootSource = readFileSync(join(root, "app", "root.tsx"), "utf8");
+  const declared = Object.fromEntries(
+    [
+      ...rootSource.matchAll(
+        /<meta\s+name="theme-color"\s+media="\(prefers-color-scheme:\s*(light|dark)\)"\s+content="(#[0-9a-fA-F]{3,8})"/g,
+      ),
+    ].map((m) => [m[1], m[2].toLowerCase()]),
+  );
+
+  assert(
+    "root.tsx declares a theme-color for BOTH schemes",
+    Boolean(declared.light) && Boolean(declared.dark),
+  );
+  assert(
+    `theme-color light ${declared.light} is the light --bg ${light["--bg"]}`,
+    declared.light === String(light["--bg"]).toLowerCase(),
+  );
+  assert(
+    `theme-color dark ${declared.dark} is the dark --bg ${darkAttr["--bg"]}`,
+    declared.dark === String(darkAttr["--bg"]).toLowerCase(),
+  );
+}
+
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 587 : 470;
+const MINIMUM_CHECKS = buildPresent ? 590 : 473;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
       `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. Measured 2026-08-16: 625 with the built stylesheet compared, 501 without.`,
+      `failing. Measured 2026-08-27: 639 with the built stylesheet compared. Both ` +
+      `floors moved by exactly the three theme-color assertions added that day, ` +
+      `which is why the absent-build floor moved without being re-run: the three ` +
+      `read source only and execute in both branches.`,
   );
 }
 

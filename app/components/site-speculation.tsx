@@ -1,4 +1,4 @@
-import { useRouteLoaderData } from "react-router";
+import { useLocation, useRouteLoaderData } from "react-router";
 
 import { HEADER_PATHS } from "~/lib/nav";
 
@@ -48,18 +48,46 @@ import type { loader as rootLoader } from "~/root";
  * path the root loader never ran, and an enforcing policy then drops this
  * enhancement on an error page and nothing else.
  */
-const RULES = JSON.stringify({
-  prerender: [{ urls: [...HEADER_PATHS], eagerness: "moderate" }],
-});
+/**
+ * THE CURRENT PAGE IS REMOVED FROM ITS OWN LIST, since 2026-08-27.
+ *
+ * The rules were a constant, so `/blog` told the browser to prerender `/blog`
+ * and `/projects` told it to prerender `/projects`. A speculation for the
+ * document the reader is already looking at cannot save a navigation that will
+ * never happen; what it can do is spend a request, and on this site that
+ * request is an ORIGIN hit for any reader carrying a cookie, per the note
+ * above. Chrome's two-prerender cap also means the useless one can EVICT a
+ * useful one, so this was not merely free waste.
+ *
+ * Computed per render rather than memoised per path: the list is five strings
+ * and a filter, and a cache keyed by path would be a second thing to get wrong
+ * for no measurable saving.
+ *
+ * @param pathname
+ */
+function rulesFor(pathname: string) {
+  const urls = HEADER_PATHS.filter((path) => path !== pathname);
+  return JSON.stringify({ prerender: [{ urls, eagerness: "moderate" }] });
+}
 
 export function SiteSpeculation() {
   const data = useRouteLoaderData<typeof rootLoader>("root");
+  const { pathname } = useLocation();
+  const rules = rulesFor(pathname);
+
+  /*
+   * A list that emptied would be `{"prerender":[{"urls":[]}]}`, which is a
+   * valid rule set that says nothing. It cannot happen while the header links
+   * to more than one place, and rendering nothing is the honest response if it
+   * ever does.
+   */
+  if (!rules.includes('"urls":["')) return null;
 
   return (
     <script
       type="speculationrules"
       nonce={data?.nonce}
-      dangerouslySetInnerHTML={{ __html: RULES }}
+      dangerouslySetInnerHTML={{ __html: rules }}
     />
   );
 }

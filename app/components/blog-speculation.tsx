@@ -1,4 +1,4 @@
-import { useRouteLoaderData } from "react-router";
+import { useLocation, useRouteLoaderData } from "react-router";
 
 import type { loader as rootLoader } from "~/root";
 
@@ -36,31 +36,50 @@ import type { loader as rootLoader } from "~/root";
  * channel `Layout` uses for the theme and the nonce it hands `<Scripts>`. One
  * source in `workers/app.ts`, several readers.
  */
-const RULES = JSON.stringify({
-  prerender: [
-    {
-      where: {
-        and: [
-          { href_matches: "/blog/*" },
-          { not: { href_matches: "/blog/*.md" } },
-        ],
+/**
+ * THE CURRENT POST IS EXCLUDED FROM ITS OWN RULE, since 2026-08-27.
+ *
+ * `href_matches: "/blog/*"` matches the post the reader is already on, and a
+ * post page links to itself: the heading permalinks, the copy-link action and
+ * the canonical all carry that href. Speculating it cannot save a navigation
+ * that will never happen, and on this site it costs an ORIGIN request for any
+ * reader carrying a cookie. Chrome's two-prerender cap makes it worse than
+ * free: the useless speculation can evict a useful one.
+ *
+ * A third `not` clause rather than a different rule shape, so the exclusion
+ * reads beside the `.md` one it sits next to and both are the same mechanism.
+ *
+ * @param pathname
+ */
+function rulesFor(pathname: string) {
+  return JSON.stringify({
+    prerender: [
+      {
+        where: {
+          and: [
+            { href_matches: "/blog/*" },
+            { not: { href_matches: "/blog/*.md" } },
+            { not: { href_matches: pathname } },
+          ],
+        },
+        eagerness: "moderate",
       },
-      eagerness: "moderate",
-    },
-  ],
-});
+    ],
+  });
+}
 
 export function BlogSpeculation() {
   // Optional data, for the reason Layout reads it optionally: on the error
   // boundary path the root loader never ran. No nonce then, which under an
   // enforcing policy costs this enhancement on an error page and nothing else.
   const data = useRouteLoaderData<typeof rootLoader>("root");
+  const { pathname } = useLocation();
 
   return (
     <script
       type="speculationrules"
       nonce={data?.nonce}
-      dangerouslySetInnerHTML={{ __html: RULES }}
+      dangerouslySetInnerHTML={{ __html: rulesFor(pathname) }}
     />
   );
 }

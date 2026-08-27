@@ -10,7 +10,7 @@ import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
-import { timed, timingsContext, wantsTiming, type Timings } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
@@ -59,17 +59,17 @@ export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
     /*
-     * INSTRUMENTATION, OFF BY DEFAULT, opted into with `?timing=1` exactly as
-     * `blog._index.tsx` does. Created HERE rather than in each loader because
-     * the auth gate is the one cost every admin request pays and no child
-     * loader can see it.
+     * INSTRUMENTATION, READ RATHER THAN CREATED, since 2026-08-27.
      *
-     * A request that did not ask carries `undefined` all the way down, every
-     * `timed` call degrades to a plain call, and no header is emitted. The
-     * uninstrumented path is the path that shipped.
+     * This middleware used to make its own collector. Root's middleware makes
+     * one for every route on the site now, and root runs first, so creating a
+     * second here would REPLACE the array root had already put in the context
+     * and discard anything recorded before this point. Reading it keeps one
+     * owner and keeps the auth gate's marks in the same list as everything
+     * else, which is the whole reason this was the one cost worth measuring:
+     * no child loader can see it.
      */
-    const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
-    context.set(timingsContext, { timings });
+    const timings = context.get(timingsContext).timings;
     const session = await getAdminSession(env, request, timings);
     if (session) {
       context.set(adminSessionContext, session);

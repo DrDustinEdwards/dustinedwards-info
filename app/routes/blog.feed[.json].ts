@@ -35,7 +35,25 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   return new Response(`${JSON.stringify(feed, null, 2)}\n`, {
     headers: {
-      "content-type": "application/feed+json; charset=utf-8",
+      /*
+       * `application/json`, NOT `application/feed+json`, and the reason is
+       * 160 KB.
+       *
+       * JSON Feed 1.1 says the content type SHOULD be `application/feed+json`.
+       * It is a SHOULD, and this is what obeying it cost, measured on
+       * production 2026-08-27 with `Accept-Encoding: br, gzip`:
+       *
+       *     /blog/rss.xml    application/rss+xml    Content-Encoding: br
+       *     /blog/feed.json  application/feed+json  none, 160,577 bytes
+       *
+       * Cloudflare compresses a fixed list of content types and `+json`
+       * suffixed types are not on it, so the largest response on the site was
+       * the only one shipping raw. Every reader identifies this document by the
+       * `version` member inside it, which is unchanged; the content type is how
+       * it travels. Trading a SHOULD for what a subscriber actually downloads
+       * is the right way round.
+       */
+      "content-type": "application/json; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,
     },
   });

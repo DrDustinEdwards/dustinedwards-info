@@ -110,6 +110,16 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: socialTitle },
     { name: "twitter:description", content: socialDescription },
+    /*
+     * `twitter:image`, ADDED 2026-08-27. Without it this page declared
+     * `summary_large_image` and gave the card nothing to put in it, which is
+     * the same defect `pageMeta` was built to stop the other six pages
+     * repeating: a card type and its image travel together or neither is worth
+     * setting. The value is `postSocial`'s, so the cover/card/mark precedence
+     * is stated once and this is not a second opinion about which image a post
+     * has.
+     */
+    { name: "twitter:image", content: image },
     // The markdown twin, advertised so an agent can fetch source rather than
     // scrape the rendered page.
     {
