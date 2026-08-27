@@ -45,12 +45,27 @@
  * `null` from `headers.get()` means the header was not present at all. Two
  * different things one character apart, and the tests hold them apart.
  *
- * @see test/ask-origin.test.mjs
+ * @see test/origin.test.mjs
  * @see app/routes/search.ask.ts
+ * @see app/routes/theme.ts
+ * @see app/routes/admin.tsx
  */
 
 /**
- * May this request spend Ask budget?
+ * May this request MUTATE anything?
+ *
+ * ## ONE OWNER, SINCE 2026-08-28, and it used to be Ask's alone
+ *
+ * This was `askOriginVerdict` in `app/lib/search/ask-origin.mjs`, applied by
+ * the one endpoint that spends money. Two other mutating surfaces had no Origin
+ * check at all: every `/admin` action, and `/theme`, where a POST carrying a
+ * foreign `Origin` set the theme cookie.
+ *
+ * That is defence in depth rather than an open hole, and the reason is worth
+ * stating so nobody upgrades or downgrades it by mistake: `workers.dev` is on
+ * the PUBLIC SUFFIX LIST, so the same-site siblings that could reach these are
+ * Dustin's own Workers and nothing else. The value here is that the rule is one
+ * function rather than a property of which route somebody remembered.
  *
  * Compared against the REQUEST'S OWN origin rather than the exported
  * `SITE_ORIGIN`. The site is pre-cutover and answers on workers.dev today and
@@ -62,7 +77,7 @@
  * @param {string} requestUrl the request's own URL
  * @returns {{ ok: boolean, reason: string }}
  */
-export function askOriginVerdict(origin, requestUrl) {
+export function originVerdict(origin, requestUrl) {
   if (origin === null || origin === undefined || origin === "") {
     return { ok: true, reason: "absent" };
   }
@@ -81,3 +96,12 @@ export function askOriginVerdict(origin, requestUrl) {
 
 /** What a refused caller is told. Nothing about the corpus, the budget or Ask. */
 export const ASK_ORIGIN_REFUSAL = "Ask does not take cross-origin requests.";
+
+/**
+ * What every other refused caller is told.
+ *
+ * Deliberately says nothing about what the route does or why it refused. A
+ * cross-origin caller learns that the request did not happen, which is all a
+ * cross-origin caller is entitled to learn.
+ */
+export const ORIGIN_REFUSAL = "Cross-origin requests are not accepted.";

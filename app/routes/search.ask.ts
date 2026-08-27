@@ -35,7 +35,7 @@ import {
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
 import { slugForKey } from "~/lib/search/ask-keys.mjs";
-import { ASK_ORIGIN_REFUSAL, askOriginVerdict } from "~/lib/search/ask-origin.mjs";
+import { ASK_ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { publiclyVisibleSlugs } from "~/db";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
@@ -130,7 +130,7 @@ export async function action({ request, context }: Route.ActionArgs) {
    * this route's body parsing was written to accept without buying anything
    * against the attack.
    */
-  const origin = askOriginVerdict(request.headers.get("origin"), request.url);
+  const origin = originVerdict(request.headers.get("origin"), request.url);
   if (!origin.ok) {
     return new Response(ASK_ORIGIN_REFUSAL, {
       status: 403,

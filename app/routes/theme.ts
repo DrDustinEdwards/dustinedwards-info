@@ -1,3 +1,4 @@
+import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { isTheme, serializeThemeCookie } from "~/lib/theme";
 
 import type { Route } from "./+types/theme";
@@ -12,6 +13,28 @@ import type { Route } from "./+types/theme";
  * otherwise turn this into an open redirect.
  */
 export async function action({ request }: Route.ActionArgs) {
+  /*
+   * ORIGIN FIRST, before the body is even read.
+   *
+   * A POST here sets a cookie, so it is a mutating route and takes the same
+   * predicate `/search/ask` and the admin plane take. Measured 2026-08-27: a
+   * POST carrying `Origin: https://evil.example` set the theme cookie.
+   *
+   * AN ABSENT ORIGIN IS STILL ALLOWED, and that is the whole reason this
+   * predicate exists rather than a same-origin comparison written inline: this
+   * form is the NO-SCRIPT half of the theme toggle, a scriptless form post
+   * carries no `Origin`, and refusing it would break the fallback hard rule 9
+   * requires. The literal string "null" is a different thing and is refused;
+   * grounds on the predicate.
+   */
+  const verdict = originVerdict(request.headers.get("origin"), request.url);
+  if (!verdict.ok) {
+    return new Response(ORIGIN_REFUSAL, {
+      status: 403,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
   const form = await request.formData();
   const choice = form.get("theme");
   const theme = isTheme(choice) ? choice : "system";
