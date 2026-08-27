@@ -530,8 +530,21 @@ export default {
     // is the fail-closed reading.
     //
     // Scoped by the response's own `Vary`, so it touches only routes that opted
-    // in. The feeds and the markdown twins stay publicly cached for every reader
-    // because they do not vary on Cookie and do not carry the header.
+    // in. The feeds stay publicly cached for every reader because they do not
+    // vary on Cookie and do not carry the header.
+    //
+    // THE MARKDOWN TWINS WERE NAMED HERE AND THE CLAIM WAS FALSE, corrected
+    // 2026-08-26. They were never reached by this downgrade, which is what the
+    // sentence said, and they were not publicly cached either: the twin route
+    // declared no `Cache-Control` at all, so hard rule 8's default below
+    // stamped `private, no-store` on it and every fetch was a BYPASS. Measured
+    // on the wire before the fix. Two true halves were joined into a false
+    // conclusion, which is the shape a boundary note goes stale in.
+    //
+    // The twin at its own URL now declares `SHARED_CACHE_CONTROL` itself, so
+    // the sentence is true of it by its own declaration rather than by a
+    // default nobody had checked. The NEGOTIATED markdown under `/blog/:slug`
+    // is still never stored, deliberately; grounds on `markdownResponse`.
     /*
      * ALL response-level policy, in ONE place with ONE immutable fallback.
      *

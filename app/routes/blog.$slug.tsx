@@ -11,6 +11,7 @@ import { longDateUTC } from "~/lib/long-date.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
+  NO_STORE_CACHE_CONTROL,
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -36,7 +37,14 @@ export const middleware: Route.MiddlewareFunction[] = [
     // Same visibility gate as the HTML route, so a draft is not readable here.
     const post = await getBlogPostMarkdown(getEnv(context), params.slug);
     if (!post) return next();
-    return markdownResponse(params.slug, post.body);
+    /*
+     * NEVER STORED, and the grounds are on `markdownResponse`. This is the
+     * representation that shares a cache key with the HTML document, so a
+     * stored copy here is the second variant that collapses the Cookie
+     * dimension for both. The twin at its own URL is a different situation and
+     * passes a different policy.
+     */
+    return markdownResponse(params.slug, post.body, NO_STORE_CACHE_CONTROL);
   },
 ];
 
