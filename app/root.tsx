@@ -31,14 +31,11 @@ import "./app.css";
  * 9,269-line app.css. Do not sort this list.
  */
 import "./styles/public-chrome.css";
-import "./styles/projects.css";
 import "./styles/page-shell.css";
-import "./styles/blog-index.css";
-import "./styles/post.css";
-import "./styles/blog-enhancements.css";
-import "./styles/search.css";
-import "./styles/palette.css";
-import "./styles/playground.css";
+import "./styles/chrome-nav.css";
+import "./styles/skip-link.css";
+import "./styles/motion-print.css";
+import "./styles/search-trigger.css";
 
 /*
  * THE HASHED URL OF THE NORMAL FACE, so the preload below names the same bytes

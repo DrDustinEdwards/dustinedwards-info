@@ -339,13 +339,23 @@ input:where([type="button"], [type="reset"], [type="submit"]),
  * THE ONE UTILITY THE SITE USED, written out.
  *
  * `.sr-only` was the single rule the served HTML took from Tailwind's 44-rule
- * utilities layer. Copied verbatim from that output rather than rewritten, so
- * the computed values do not move.
+ * utilities layer. Copied from that output rather than rewritten, so the
+ * computed values do not move, WITH ONE EDIT: `border-width: 0` is `border: 0`.
+ *
+ * The edit exists because Tailwind's `.sr-only` was never the rule that won.
+ * `post.css` declared its own copy, later in the cascade and on every page,
+ * spelled `border: 0`, and that is what every `.sr-only` on the site actually
+ * computed. `border-width: 0` alone leaves `border-style: solid` standing from
+ * the `*` rule at the top of this file, on a border with no width, which
+ * renders identically and reads differently. MEASURED: it was the only
+ * computed-style difference on the whole site after the split, on three
+ * elements per page. Matching what shipped is worth more here than matching
+ * what was generated.
  */
 .sr-only {
   clip-path: inset(50%);
   white-space: nowrap;
-  border-width: 0;
+  border: 0;
   width: 1px;
   height: 1px;
   margin: -1px;

@@ -14,7 +14,7 @@
  * be wrong in rather than two to disagree.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -122,11 +122,27 @@ export function stylesheetPaths() {
    * Matched as bare module imports, which is the only form a stylesheet import
    * takes.
    */
-  const rootSource = readFileSync(ROOT_MODULE_PATH, "utf8").replace(/\r\n/g, "\n");
-  const publicSheets = [...rootSource.matchAll(/^import\s+"(\.[^"]+\.css)";/gm)].map((m) =>
-    join(root, "app", m[1].replace(/^\.\//, "")),
-  );
-  if (publicSheets.length === 0) {
+  /**
+   * Every stylesheet a module names, in source order.
+   *
+   * BOTH IMPORT FORMS, and the second one is not decoration. A bare
+   * `import "./x.css"` puts the sheet in that module's bundle; an
+   * `import url from "./x.css?url"` hands back a hashed URL for something to
+   * fetch later, which is how the search palette's dialog CSS reaches a reader
+   * who actually opens it. A sheet reachable only through the second form is
+   * still the site's CSS and still has to be graded.
+   *
+   * @param {string} source @param {string} base
+   */
+  const cssImportsOf = (source, base) =>
+    [
+      ...source
+        .replace(/\r\n/g, "\n")
+        .matchAll(/(?:^import\s+"|from\s+")([^"]+\.css)(?:\?url)?";/gm),
+    ].map((m) => (m[1].startsWith("~/") ? join(root, "app", m[1].slice(2)) : join(base, m[1])));
+
+  const rootSheets = cssImportsOf(readFileSync(ROOT_MODULE_PATH, "utf8"), join(root, "app"));
+  if (rootSheets.length === 0) {
     throw new Error(
       `${ROOT_MODULE_PATH} declares no CSS imports. Either the public stylesheet ` +
         `set moved again or this pattern stopped matching it; either way every ` +
@@ -134,10 +150,58 @@ export function stylesheetPaths() {
         `which is the failure this function was written after.`,
     );
   }
-  for (const sheet of publicSheets) expand(sheet);
+  for (const sheet of rootSheets) expand(sheet);
 
-  // Then the admin entry, which /login and /admin load on top of the above.
+  /*
+   * THEN THE ROUTE-SCOPED SHEETS, since 2026-08-27.
+   *
+   * Public CSS stopped being one site-wide bundle that day: a route imports the
+   * sheets its own markup needs, so a reader of the home page no longer
+   * downloads the post typography or the search facets. That is the whole point
+   * of the split and it is also the third time this function could have been
+   * left reading a strict subset of the site's CSS. It would have missed nine
+   * sheets, silently, and `check:contrast` and `check:logo` both read it.
+   *
+   * ORDER BETWEEN ROUTES IS NOT MEANINGFUL and is not claimed to be: two routes
+   * never render at once, so there is no cascade between their sheets. Sorted
+   * by route filename purely so the list is stable run to run. Order WITHIN a
+   * route is its import order, which is a real cascade and is preserved. A
+   * sheet imported by several routes appears once.
+   */
+  /*
+   * EVERY MODULE UNDER app/, not just app/routes. A stylesheet can be named by
+   * a component as easily as by a route: `search-trigger.tsx` is the only
+   * reference to the palette's dialog CSS, through a `?url` import, because
+   * that sheet is fetched when a reader opens the palette rather than shipped
+   * with the page. Scanning routes alone would have dropped it, which is this
+   * function's recurring failure for the third time in one day.
+   */
+  const routeDir = join(root, "app");
+  /** @param {string} dir @returns {string[]} */
+  const modulesUnder = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return entry.name === "enhance" ? [] : modulesUnder(full);
+      return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
+    });
+  const routeFiles = modulesUnder(routeDir).sort();
+  /*
+   * The admin entry FIRST among the non-root sheets, so an admin page's own
+   * cascade is still root-then-admin, which is what it loads. The route loop
+   * below would otherwise reach it through admin.tsx in alphabetical order and
+   * interleave it with public route sheets. Named rather than left to that
+   * loop, so the set does not silently narrow if admin.tsx stops importing it.
+   */
   expand(ADMIN_CSS_PATH);
+
+  const seen = new Set(out);
+  for (const file of routeFiles) {
+    for (const sheet of cssImportsOf(readFileSync(file, "utf8"), dirname(file))) {
+      if (seen.has(sheet)) continue;
+      expand(sheet);
+      for (const p of out) seen.add(p);
+    }
+  }
 
   return out;
 }

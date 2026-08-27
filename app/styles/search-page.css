@@ -1,0 +1,139 @@
+.search-page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.search-heading {
+  margin: 0 0 1rem;
+}
+
+.search-form {
+  margin: 0 0 1.5rem;
+}
+
+.search-label {
+  display: block;
+  margin: 0 0 0.375rem;
+  font-weight: 600;
+}
+
+.search-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  min-height: 2.75rem;
+}
+
+.search-hint {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.search-hint code {
+  font-size: 0.8125rem;
+}
+
+.search-count {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.search-body {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 52rem) {
+  .search-body {
+    grid-template-columns: minmax(0, 1fr) 13rem;
+  }
+}
+
+.search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-result {
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.search-result:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.search-result-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search-result-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.35;
+}
+
+.search-type {
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.search-result-context {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.search-snippet {
+  margin: 0.5rem 0 0;
+  line-height: 1.6;
+}
+
+/* Prairie gold, the ratified highlight. Purple would read as brand rather than
+   as a match, and rule 6 keeps purple off any signalling job. */
+.search-snippet mark {
+  padding: 0 0.125rem;
+  border-radius: 0.125rem;
+  background: var(--mark-bg);
+  color: var(--text);
+}
+
+.search-why {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.search-why-field {
+  color: var(--text);
+}
+
+.search-why-sep {
+  opacity: 0.5;
+}
+
+/* Ask mode, search Layer 2 ------------------------------------------------ */

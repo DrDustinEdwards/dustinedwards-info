@@ -22,6 +22,9 @@ import { publicHtmlHeaders, SITE_ORIGIN,
 
 import type { Route } from "./+types/playground";
 
+import "~/styles/prose.css";
+import "~/styles/playground.css";
+
 /**
  * /playground, the interactive index of this site's own machinery.
  *

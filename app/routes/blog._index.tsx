@@ -19,6 +19,10 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
+import "~/styles/blog-search.css";
+import "~/styles/blog-index.css";
+import "~/styles/blog-index-extras.css";
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const env = getEnv(context);

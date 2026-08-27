@@ -1,0 +1,86 @@
+.search-facets h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.search-facets section + section {
+  margin-top: 1.25rem;
+}
+
+.search-facets ul,
+.search-chip-row,
+.search-active-filters {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.search-facets ul {
+  flex-direction: column;
+}
+
+.search-active-filters {
+  margin: 0 0 1.25rem;
+}
+
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  min-height: 1.75rem;
+}
+
+.search-chip:hover {
+  border-color: var(--brand);
+}
+
+.search-chip.is-active {
+  border-color: var(--brand);
+  background: var(--tint-brand);
+  color: var(--brand);
+}
+
+.search-chip-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.search-zero section {
+  margin-top: 1.5rem;
+}
+
+.search-zero h2 {
+  font-size: 0.9375rem;
+  margin: 0 0 0.5rem;
+}
+
+.search-recent {
+  margin: 0;
+  padding-left: 1.125rem;
+  line-height: 1.9;
+}
+
+.search-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}

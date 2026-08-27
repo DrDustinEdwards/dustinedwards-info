@@ -20,6 +20,8 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/home";
 
+import "~/styles/blog-index.css";
+
 /**
  * Publicly cacheable for COOKIELESS readers only.
  *

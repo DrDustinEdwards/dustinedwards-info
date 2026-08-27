@@ -1,0 +1,52 @@
+/*
+ * Progressive enhancements on the blog: skip link, reading progress, code language and copy.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Blog phase 3 -------------------------------------------------------------
+ *
+ * Everything below styles either server-rendered markup or elements the
+ * enhancement script adds. Nothing here is required for the page to be
+ * readable, and every animation is disabled under prefers-reduced-motion.
+ */
+
+/* Skip link. Visible only when focused, which is the point.
+ *
+ * v4 CONSEQUENCE, not part of the ruling but forced by it: this is absolutely
+ * positioned at top 0, so the only thing it is ever seen against is the chrome.
+ * A --brand fill was correct while the header sat on the page canvas and is a
+ * purple box on a purple band now, invisible in light mode at exactly the
+ * moment a keyboard reader needs it. It takes the chrome's inverted pair, the
+ * same one the pressed theme toggle takes, so no new pair enters.
+ *
+ * The reading-progress bar was checked for the same collision and does NOT have
+ * it: the header is not sticky, and the bar is scaleX(0) at scroll 0, so it has
+ * width only after the chrome has scrolled away. It keeps --brand.
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--on-chrome-muted);
+  color: var(--surface-chrome);
+  border-radius: 0 0 0.375rem 0;
+}
+
+/* And its inset ring, for the reason the pressed toggle needs one: the fill it
+   sits inside is pale now, and #f3e3b8 on it is ~1.1:1. (0,1,1) matches the
+   base inset rule's specificity and wins on order, which is why this must stay
+   below that block. */
+.skip-link:focus-visible {
+  outline-color: var(--surface-chrome);
+}
+
+.skip-link:focus {
+  left: 0;
+}

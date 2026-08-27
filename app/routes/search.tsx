@@ -22,6 +22,11 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
+import "~/styles/blog-search.css";
+import "~/styles/search-page.css";
+import "~/styles/ask.css";
+import "~/styles/search-facets.css";
+
 const PAGE_SIZE = 10;
 
 /**

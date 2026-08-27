@@ -108,12 +108,55 @@ function openPalette() {
 
   if (!requested) {
     requested = true;
+
+    /*
+     * THE DIALOG'S STYLESHEETS TRAVEL WITH ITS BUNDLE, and they are awaited.
+     *
+     * The palette's CSS is 861 bytes brotli and the Ask panel inside it another
+     * 402, on every document, for markup that does not exist until somebody
+     * searches. It comes down here instead, from `data-palette-css`, which the
+     * trigger carries as `?url` imports so the hashed names stay the build's
+     * business.
+     *
+     * AWAITED, because the alternative is a visible flash: the bundle builds
+     * the dialog and calls showModal the moment it runs, and a stylesheet still
+     * in flight at that point means an unstyled modal on screen. Waiting costs
+     * nothing a reader can see, since the two fetches are parallel with the
+     * script's own.
+     *
+     * A FAILED STYLESHEET RESOLVES rather than rejecting. An unstyled dialog is
+     * a bad dialog and no dialog at all is worse, so only the SCRIPT failing is
+     * treated as failure.
+     */
+    const pending = [];
+    for (const href of (trigger?.dataset.paletteCss ?? "").split(",").filter(Boolean)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      pending.push(
+        new Promise((resolve) => {
+          link.addEventListener("load", () => resolve(null));
+          link.addEventListener("error", () => resolve(null));
+        }),
+      );
+      document.head.appendChild(link);
+    }
+
     const script = document.createElement("script");
     script.type = "module";
     script.src = url;
-    script.addEventListener("load", () => document.dispatchEvent(new Event(PALETTE_OPEN)));
-    script.addEventListener("error", () => location.assign("/search"));
+    pending.push(
+      new Promise((resolve, reject) => {
+        script.addEventListener("load", () => resolve(null));
+        script.addEventListener("error", () => reject(new Error("palette bundle")));
+      }),
+    );
     document.head.appendChild(script);
+
+    void Promise.all(pending).then(
+      () => document.dispatchEvent(new Event(PALETTE_OPEN)),
+      () => location.assign("/search"),
+    );
     return;
   }
 
