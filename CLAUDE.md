@@ -4,7 +4,7 @@ Personal platform and Cloudflare showcase for Dustin Edwards. React Router 8 (SS
 
 **This file holds only what a session needs BEFORE it can read anything else.**
 
-**PRECEDENCE, corrected 2026-08-21, because the old sentence now contradicts this file's own hard-rules section.** It read: "Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect." That was true while Capsid held everything durable. It stopped being true when the fifteen hard rules and `VERIFICATION.md` moved into this repo, and they moved for a reason that decides the precedence question:
+**PRECEDENCE, corrected 2026-08-21, because the old sentence now contradicts this file's own hard-rules section.** It read: "Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect." That was true while Capsid held everything durable. It stopped being true when the hard rules and `VERIFICATION.md` moved into this repo, and they moved for a reason that decides the precedence question:
 
 **CAPSID CANNOT BE GATED, BECAUSE EVERY GATE VERIFIES DISK.** So:
 
@@ -19,7 +19,7 @@ Start: `brief("dustinedwards")`, or read `capsid/conventions.md` then `dustinedw
 
 Do this before touching code. It is not a formality: the recurring failure in this repo is a session acting on a stale claim it could have checked in one call.
 
-**Then read `FAILURES.md`. It is one screen and it is the shortest useful thing in this repo.** Sixteen recurring failure SHAPES, one line each, every one already written down at length before it happened again. It is HERE, in the ritual, rather than in the document list at the bottom, for the reason the page itself makes: a lesson nobody meets is not recorded. The ritual is the one section whose entire job is "before touching code", and these shapes govern how to read everything below them, including the rules.
+**Then read `FAILURES.md`. It is one screen and it is the shortest useful thing in this repo.** The recurring failure SHAPES, one line each, every one already written down at length before it happened again. It is HERE, in the ritual, rather than in the document list at the bottom, for the reason the page itself makes: a lesson nobody meets is not recorded. The ritual is the one section whose entire job is "before touching code", and these shapes govern how to read everything below them, including the rules.
 
 **There is no end-of-session write. Sessions READ Capsid and never write it**, per `dustinedwards/core.md`. This file asked for a `session-YYYY-MM-DD.md` episodic at the end and had done since the ritual was written, which contradicted that rule outright. Capsid wins and this file was the defect, exactly as the paragraph above the ritual says. Removed 2026-08-18, after a session stopped on the conflict rather than resolving it in its own favour. Do not re-add it here: if the standing rule changes, it changes in Capsid first and this file follows.
 
@@ -27,11 +27,9 @@ Do this before touching code. It is not a formality: the recurring failure in th
 
 **THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Source files across `app/`, `scripts/`, `workers/` and `test/` cite them, as do the root documents; `check:invariants` section 15 binds every cited number to a rule that exists here. **The count that used to sit in this sentence had gone badly stale, and the gate is the only place it belongs, so this is a pointer now rather than a digit. Rule 17.**
 
-**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document.
+**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document. Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22 and found COMPLETE: every clause that differs is a deliberate correction of something 1684 asserts that is no longer true, and two clauses gained material 1684 never had, the plant-revert law (12) and the ungateability note (5).
 
-**Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22, and the result was that the recovery is COMPLETE.** All fifteen rules THEN DEFINED carry their subject, rule 10 carries all thirteen disciplines, and rule 12 carries all four. Six clauses differ from 1684 and every one is a deliberate correction of something 1684 asserts that is no longer true: boundary-note presence is no longer gated (7), section 5 was deleted (11), the lint form is gone (13), `check:hooks` is gone (15), the seven-repos claim was falsified by measurement (15), and the numbering freeze was lifted. Two clauses gained material 1684 never had: the plant-revert law (12) and the ungateability note (5).
-
-**The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half both earlier recoveries skipped: rule 6 claimed one statement of `postPath` where there were three (the code moved, `f45316b`), and rule 8 carried an assertion count that had drifted (the count is gone). Check a rule against the CODE, not against 1684.
+**The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half both earlier recoveries skipped: rule 6 claimed one statement of `postPath` where there were three (the code moved, `f45316b`), and rule 8 carried an assertion count that had drifted. Check a rule against the CODE, not against 1684 and not against this paragraph.
 
 **EVERY RULE CARRIES A TAG: `GATED by <instrument>` or `UNGATED`.** It replaces the older ONE-LINER and PROSE labels, which encoded the same axis without naming the instrument, and keeping both would have been two owners for one fact.
 
@@ -39,7 +37,7 @@ The tag answers one question and only one: **can `npm run check` fail on this ru
 
 UNGATED does not mean optional. It means the only thing standing between the rule and a violation is somebody reading it, which is why the ungated ones carry the longest prose. What could be gated and is not: `dustinedwards/gate-backlog.md`.
 
-**Numbering is APPEND-ONLY but no longer frozen.** Nothing pins a number to a line any more; see the note after rule 15.
+**Numbering is APPEND-ONLY but no longer frozen.** Nothing pins a number to a line any more; see the note that closes this section.
 
 ### 1. GATED by check:invariants. Every public read goes through `publiclyVisible()`.
 
@@ -107,7 +105,7 @@ Two halves, and a route that knows only the first will still get it wrong.
 
 `content/enhancements.json` is reconciled in both directions by `check:features`. The admin plane is exempt. Law: `progressive-enhancement.md`.
 
-**HOW AN ENHANCEMENT LOADS, since 2026-08-26: a nonced module script tag, never a React effect.** The public plane does not hydrate (rule 4), so the four modules in `app/enhance/` are prebuilt into self-contained bundles by `build:enhance` and rendered as `<script type="module" nonce src>` beside the markup they upgrade. The standing ruling is unchanged and both halves are now instrumented: works without script (the fallback inventory here), fast with it (`check:browser`'s enhancement cases run the bundles in a real browser).
+**HOW AN ENHANCEMENT LOADS, since 2026-08-26: a nonced module script tag, never a React effect.** The public plane does not hydrate (rule 4), so the modules in `app/enhance/` are prebuilt into self-contained bundles by `build:enhance` and rendered as `<script type="module" nonce src>` beside the markup they upgrade. The standing ruling is unchanged and both halves are now instrumented: works without script (the fallback inventory here), fast with it (`check:browser`'s enhancement cases run the bundles in a real browser).
 
 **THE DOOR IS ON THE PUBLIC PLANE AND OBEYS THE LAW.** `/login` is unauthenticated, so it is a public reading route and its form works with scripting off, even though everything behind it is exempt. This sentence exists because the rule kept being compressed to its slogan and the exemption kept being read as covering the sign-in page: the seat's own translation flattened it, the README asserted the flattened version, and login shipped script-only until 2026-08-23.
 
@@ -218,7 +216,7 @@ No gate can see how a row got where it is, which is what makes this UNGATED. The
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
 
-**On numbering.** Append-only: a new rule takes 16, and a retired rule keeps its number and is marked REMOVED, so a citation never silently retargets. It is no longer FROZEN. It was frozen because one comment cited a rule by FILE AND LINE, so renumbering broke a line reference; that comment now cites the rule by number alone and section 15 binds the number to this file. Renumbering is still a bad idea and nothing needs it.
+**On numbering.** Append-only: a new rule takes the next unused number, and a retired rule keeps its number and is marked REMOVED, so a citation never silently retargets. It is no longer FROZEN. It was frozen because one comment cited a rule by FILE AND LINE, so renumbering broke a line reference; that comment now cites the rule by number alone and section 15 binds the number to this file. Renumbering is still a bad idea and nothing needs it.
 
 ## Workflow: mainline only, until launch
 
@@ -240,52 +238,17 @@ Unchanged: destructive operations stay with Dustin, and anything touching money 
 
 ## Commands
 
-Every script in `package.json`. Counts, timings and what each gate asserts live in `core.md` and `publish-pipeline.md`, deliberately not here.
+**`package.json` OWNS THE SCRIPT LIST, and this section is a POINTER to it.** It used to restate the list, and a second copy went stale in the one direction a restated list can: by omission. Measured 2026-08-28, the block named 38 of the 50 scripts and silently omitted twelve, among them `ship`, `test`, `check:types`, `check:browser` and `check:page-payload`, which is most of what a session actually runs. That is rule 17 in the file that states rule 17.
 
-    npm run dev
-    npm run build
-    npm run preview                      build, then vite preview
-    npm run typecheck                    wrangler types + typegen + tsc -b
-    npm run deploy                       build, then wrangler deploy
-    npm run verify-live                  post-deploy sweep. NOT a gate: needs a deploy, Ask probes are billed
-    npm run cf-typegen                   wrangler types alone
-    npm run bootstrap:config             copy wrangler.jsonc.example into place, never overwrites
-    npm run postinstall                  bootstrap:config + wrangler types
+Counts, timings and what each gate asserts live in `core.md` and `publish-pipeline.md`, deliberately not here. Run `npm run` for the list. Five facts the list itself does not carry:
 
-    npm run build:content                regenerate content/generated/posts.json (LOCAL build product, gitignored)
-    npm run build:og -- --remote         render and upload social cards
-    npm run build:diagrams [-- --force]  render :::diagram sources to public/diagrams/
-    npm run build:stack                  regenerate content/generated/stack.json for the colophon
-    npm run build:assets                 static asset derivation
-    npm run sync:content -- --local|--remote   drift report, then push the build product into D1, rebuild the FTS index
+- `npm run check` is the OFFLINE tier, which is what `ship` runs. `npm run check:all` adds the gates needing a deployed database or bucket. `npm run check:ci` is the tier a clean checkout can run.
+- `npm run verify-live` is NOT a gate. It needs a deploy, and its Ask probes are billed.
+- Mode flags change what a gate looks at: `check:backup`, `check:invariants`, `check:llms` and `sync:content` take `--local` or `--remote`. `check:media` is NETWORK ONLY, because `--local` reads an empty bucket and reports false drift.
+- `check:admin-ui -- --update` rewrites the baseline, deliberately loud.
+- `check-all.mjs` DERIVES the gate list from `package.json` and refuses to run below `MINIMUM_GATES` or on a gate nobody has tiered, so adding a gate means editing that file in the same commit.
 
-    npm run check                        every gate, offline tier
-    npm run check:all                    adds the gates needing a deployed database or bucket
-    npm run check:content
-    npm run check:config
-    npm run check:search
-    npm run check:policy
-    npm run check:contrast
-    npm run check:logo
-    npm run check:charts
-    npm run check:diagrams
-    npm run check:admin-ui               -- --update rewrites the baseline, deliberately loud
-    npm run check:urls
-    npm run check:stack
-    npm run check:features
-    npm run check:headers
-    npm run check:secrets                the secret-handling boundary, by path, both directions
-    npm run check:migrations             sha256 of drizzle/*.sql against the manifest, both ways
-    npm run check:tests                  node --test over test/. The one gate asserting BEHAVIOUR
-    npm run check:head                   extracts a ref to a worktree and runs the offline tier THERE
-    npm run check:invariants             -- --remote adds the live database
-    npm run check:llms                   -- --remote for the live row
-    npm run check:backup -- --local|--remote
-    npm run check:media -- --remote      NETWORK ONLY. --local reads an empty bucket and reports false drift
-
-    wrangler d1 migrations apply dustinedwards [--local|--remote]
-
-`check-all.mjs` DERIVES the gate list from `package.json` and refuses to run below `MINIMUM_GATES` or on a gate nobody has tiered, so adding a gate means editing that file in the same commit.
+Migrations are applied through wrangler directly, not through a script: `wrangler d1 migrations apply dustinedwards [--local|--remote]`.
 
 ## Bindings
 
@@ -310,7 +273,7 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 
 **In THIS REPO, because a gate can reach it and Capsid cannot:**
 
-    CLAUDE.md                  the fifteen hard rules, above
+    CLAUDE.md                  the hard rules, above
     FAILURES.md                the recurring failure SHAPES, one line each. Read in the
                                ritual above, not here. Gated for length: it fails if it grows
     VERIFICATION.md            how to prove a deploy, a claim, or a gate. The method

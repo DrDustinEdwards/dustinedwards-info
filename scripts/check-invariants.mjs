@@ -3758,7 +3758,7 @@ console.log("\n  18. the cutover checklist is complete and current");
  *
  * Every shape on it was already written down, at length, when it happened
  * again. The problem was never that the incidents went unrecorded; it was that
- * seventeen stories are not findable and a list is. A page that grows back into
+ * a pile of stories is not findable and a list is. A page that grows back into
  * stories has become the thing it was written to replace, and nothing else in
  * this repo would notice.
  *
