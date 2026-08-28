@@ -83,7 +83,7 @@ export const SIZES = ["s", "m", "l"];
 export const LENSES = ["unattached", "duplicates", "no-alt", "large"];
 
 /** Confirmations that have a URL of their own. See DEFAULTS.confirm. */
-export const CONFIRMS = ["empty-trash"];
+const CONFIRMS = ["empty-trash"];
 
 /**
  * The defaults, which are also what `Reset to defaults` links back to.

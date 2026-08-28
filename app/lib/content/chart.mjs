@@ -66,7 +66,7 @@ const DEFAULT_HEIGHT = 360;
  * @param {string} text
  * @returns {{ columns: string[], rows: string[][] }}
  */
-export function parseChartCsv(text) {
+function parseChartCsv(text) {
   const lines = text
     .split("\n")
     .map((line) => line.replace(/\r$/, ""))

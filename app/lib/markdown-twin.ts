@@ -16,7 +16,7 @@ export function linkToMarkdown(slug: string) {
 }
 
 /** `Link` header pointing from the markdown representation at the HTML one. */
-export function linkToHtml(slug: string) {
+function linkToHtml(slug: string) {
   return `<${SITE_ORIGIN}/blog/${slug}>; rel="alternate"; type="text/html"`;
 }
 

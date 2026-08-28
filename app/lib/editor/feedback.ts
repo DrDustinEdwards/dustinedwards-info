@@ -35,7 +35,7 @@ const OUTCOMES: readonly SaveOutcome[] = [
 ];
 
 /** Short form, because the message is read by a human, not resolved by one. */
-export function shortSha(sha: string) {
+function shortSha(sha: string) {
   return sha.slice(0, 7);
 }
 

@@ -13,10 +13,10 @@
  * costs nothing: it is not a fallback, it is the default branch.
  */
 
-export const THEME_COOKIE = "theme";
+const THEME_COOKIE = "theme";
 
 /** A year. The choice is a preference, not a session fact. */
-export const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export const THEMES = ["light", "dark", "system"] as const;
 

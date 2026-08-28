@@ -51,14 +51,6 @@ export function publiclyVisible() {
   );
 }
 
-export async function listPublicPosts(env: Env) {
-  return getDb(env)
-    .select()
-    .from(posts)
-    .where(publiclyVisible())
-    .orderBy(desc(posts.publishAt));
-}
-
 /**
  * Which of these slugs are still publicly visible, as a Set.
  *

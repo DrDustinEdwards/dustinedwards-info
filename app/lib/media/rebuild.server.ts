@@ -111,7 +111,7 @@ export type MediaSource = { key: string; size: number; uploaded: string };
  * `build:assets` walks public/ and commits the list; `check:media` compares that
  * list against the filesystem so a stale one is named as stale.
  */
-export async function enumerateMediaSources(
+async function enumerateMediaSources(
   env: Env,
 ): Promise<{ objects: MediaSource[]; files: string[] }> {
   const objects: MediaSource[] = [];

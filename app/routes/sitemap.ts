@@ -1,4 +1,4 @@
-import { listBlogPosts, listPublicPosts } from "~/db";
+import { listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
 import { SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/sitemap";
@@ -40,24 +40,28 @@ export async function loader({ context }: Route.LoaderArgs) {
   const origin = SITE_ORIGIN;
   const env = getEnv(context);
 
-  const [rows, blog] = await Promise.all([
-    listPublicPosts(env),
-    // perPage is deliberately high: a sitemap lists everything rather than one
-    // page of results. Both reads apply publiclyVisible().
-    listBlogPosts(env, { perPage: 1000 }),
-  ]);
+  /*
+   * ONE READ, since 2026-08-28. It was two.
+   *
+   * The second was `listPublicPosts`, filtered below to `kind = 'page'` rows.
+   * NO SUCH ROW CAN EXIST: both writers into `posts` hardcode the literal
+   * `'post'` for that column, the Worker's in `publish.server.ts` and the
+   * build's in `sync-content.mjs`, and rule 18 makes `renderAndWrite` the one
+   * door to a rendered row. Measured against the live database on 2026-08-28:
+   * twelve rows, all `post`, no `page`.
+   *
+   * So the filter was a branch nothing could reach, paid for with a D1 read on
+   * every crawl. `check:invariants` section 14 asserts the writers still write
+   * only 'post', because deleting a dead branch is only safe while the thing
+   * that made it dead is still true.
+   *
+   * The root-level pages are STATIC_PATHS above, which the same section holds
+   * against the route table.
+   */
+  const blog = await listBlogPosts(env, { perPage: 1000 });
 
   const urls = [
     ...STATIC_PATHS.map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
-    // Only `kind = 'page'` rows live at the root. Blog rows share this table and
-    // are listed under /blog below, so filtering here is what stops every post
-    // being emitted twice, once at a URL that does not exist.
-    ...rows
-      .filter((p) => p.kind === "page")
-      .map((p) => ({
-        loc: `${origin}/${p.slug}`,
-        lastmod: p.updatedAt,
-      })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/blog/${p.slug}`,
       lastmod: p.updatedAt,

@@ -55,7 +55,7 @@ export function Panel({
  * is not real. A `never` in the union here is the typecheck refusing to let one
  * back in without a decision.
  */
-export function SourceChip({ result }: { result: SourceResult<unknown> }) {
+function SourceChip({ result }: { result: SourceResult<unknown> }) {
   if (result.status === "live") {
     return <span className="chip chip-live">live</span>;
   }

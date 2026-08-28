@@ -1434,19 +1434,32 @@ try {
       `missed some, so the per-function assertions below do not cover the file.`,
   );
 
-  // Anti-vacuity floors, RE-MEASURED THROUGH THIS SCAN 2026-08-24 by running
-  // the gate: 14 sites, 8 composing. They were set against the 2026-08-10
-  // counts and had not moved since.
+  /*
+   * Anti-vacuity floors, RE-MEASURED THROUGH THIS SCAN 2026-08-28 by running
+   * the gate: 17 sites, 7 composing.
+   *
+   * The recorded figures said 14 and 8 and were taken on 2026-08-24, so the
+   * site count had drifted three ABOVE its record while the composing count
+   * had dropped one below it: `listPublicPosts` was deleted in the same commit
+   * as this re-measurement, having lost its only caller when the sitemap's
+   * dead `kind = 'page'` arm went. Both directions of drift in one pair, which
+   * is the argument for re-measuring rather than adjusting.
+   *
+   * These floors catch a BROKEN MATCHER reporting zero, not a single deletion,
+   * so they sit a little under the measurement rather than on it. A composing
+   * floor equal to the count would fail on the next legitimate removal and
+   * teach the next person to lower it without looking.
+   */
   ok(
     "the posts-reader scan found a plausible number of query sites",
-    totalSites >= 13,
-    `${totalSites} found, floor 13, measured 14. A broken matcher reports zero violations.`,
+    totalSites >= 15,
+    `${totalSites} found, floor 15, measured 17 on 2026-08-28. A broken matcher reports zero violations.`,
   );
 
   const composing = queriers.filter((f) => PREDICATE.test(f.body));
   ok(
     "at least some readers were seen composing the predicate",
-    composing.length >= 7,
+    composing.length >= 6,
     `${composing.length} of ${queriers.length} compose it. If this collapses, the ` +
       `PREDICATE matcher has broken and every reader would read as a violation or none would.`,
   );
@@ -2898,6 +2911,100 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
     Object.keys(SITEMAP_EXEMPT).every((p) => pages.includes(p)),
     `SITEMAP_EXEMPT names a path the route table no longer declares, so it exempts ` +
       `nothing and hides whatever replaced it`,
+  );
+
+  /*
+   * NO WRITER CAN PRODUCE A `kind = 'page'` ROW, which is what licenses the
+   * sitemap having no branch for one.
+   *
+   * The sitemap used to read `posts` a second time and filter for those rows.
+   * Measured against the live database on 2026-08-28: twelve rows, every one
+   * `post`. Both writers hardcode the literal, the Worker's in
+   * `publish.server.ts` and the build's in `sync-content.mjs`, and rule 18
+   * makes `renderAndWrite` the one door to a rendered row. The branch was
+   * unreachable and cost a D1 read on every crawl.
+   *
+   * DELETING A DEAD BRANCH IS ONLY SAFE WHILE THE THING THAT MADE IT DEAD IS
+   * STILL TRUE, so this asserts it rather than trusting the measurement to
+   * stay taken. A writer that starts inserting a page row fails HERE, naming
+   * the sitemap, instead of publishing a page nothing lists.
+   *
+   * The column keeps the option and the schema keeps its CHECK constraint;
+   * what is asserted is that nothing uses it today.
+   */
+  /*
+   * WRITTEN AS PRESENCE AND ABSENCE, not as a positional read of the VALUES
+   * list, and the first draft WAS the positional read.
+   *
+   * It failed on its own author: `sync-content.mjs` builds its statement by
+   * concatenating template pieces, so the column list and the value list are
+   * split across several strings and lining them up by index reported
+   * `kind <- undefined`. A parser that has to reassemble SQL out of template
+   * fragments is a second SQL parser, which is the thing this file exists to
+   * avoid owning.
+   *
+   * The property is available without one. The column carries a CHECK
+   * constraint, `kind in ('page', 'post')`, asserted against the schema by
+   * section 4, so a writer can only ever store one of two literals. Each writer
+   * containing `'post'` and containing no `'page'` at all is therefore
+   * equivalent to "this writer cannot produce a page row", and it survives the
+   * statement being reformatted.
+   *
+   * MEASURED 2026-08-28 THROUGH THIS LOOP: one `INSERT INTO posts` in each
+   * writer, two in total, and neither file holds a `'page'` literal.
+   *
+   * The first draft of this comment said three and two, from an ad-hoc count
+   * taken outside the gate with an UNANCHORED needle: `INSERT INTO posts` with
+   * no word boundary after it also matches `posts_fts`. The floor written from
+   * that number failed on the real scan. Hard rule 10 twice in one assertion,
+   * the unanchored needle and the floor arrived at by summing instead of by
+   * running, and it is recorded here rather than quietly corrected.
+   */
+  const WRITERS = [
+    "app/lib/editor/publish.server.ts",
+    "scripts/sync-content.mjs",
+  ];
+  /** @type {string[]} */
+  const badKind = [];
+  let insertsSeen = 0;
+  for (const rel of WRITERS) {
+    const code = stripComments(readFileSync(join(root, rel), "utf8"));
+    insertsSeen += (code.match(/INSERT\s+INTO\s+posts\b/gi) ?? []).length;
+    if (!/'post'/.test(code)) badKind.push(`${rel}: writes no 'post' literal at all`);
+    if (/'page'/.test(code)) badKind.push(`${rel}: writes a 'page' literal`);
+  }
+
+  /*
+   * SCOPE, ASSERTED. A needle that stopped matching would report no offending
+   * writer, which is what a clean sweep reports. MEASURED 2026-08-28 by running
+   * this loop: 5 statements across the two writers.
+   */
+  /*
+   * FLOOR EQUALS THE MEASUREMENT here, unusually, and it is the right shape for
+   * this one: there are exactly two writers and exactly one statement in each,
+   * so what is being floored is "the scan opened both files". Slack would mean
+   * one writer could vanish from the list unnoticed, which is the whole failure
+   * this assertion exists to make impossible.
+   */
+  ok(
+    "the posts INSERT scan found a statement in every writer",
+    insertsSeen >= WRITERS.length,
+    `found ${insertsSeen} INSERT INTO posts statement(s) across ${WRITERS.length} ` +
+      `writer(s), measured 2 on 2026-08-28. A zero-scope scan finds no bad kind ` +
+      `because it read none.`,
+  );
+  ok(
+    "no writer into posts can produce a kind = 'page' row",
+    badKind.length === 0,
+    `${badKind.join("; ")}. The sitemap has no branch for a page row because ` +
+      `none can exist; a writer that changes that has to add the branch back.`,
+  );
+
+  ok(
+    "the sitemap does not filter on kind, since nothing writes another one",
+    !/\bkind\b/.test(stripComments(sitemapSource)),
+    "sitemap.ts filters on posts.kind again. Either a page row can now exist, in " +
+      "which case this assertion is wrong, or the branch is dead again.",
   );
 }
 

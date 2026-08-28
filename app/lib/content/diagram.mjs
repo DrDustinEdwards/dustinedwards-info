@@ -44,7 +44,7 @@
  *
  * 1: the first cut, 2026-07-30.
  */
-export const DIAGRAM_TEMPLATE_VERSION = 1;
+const DIAGRAM_TEMPLATE_VERSION = 1;
 
 /** Where rendered assets live, relative to the site root. */
 export const DIAGRAM_ASSET_DIR = "diagrams";

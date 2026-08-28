@@ -57,8 +57,8 @@ import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
  * traffic shape a tight limit would refuse, so a tight limit here would buy
  * nothing and break the one caller.
  */
-export const SMOKE_RATE_LIMIT = 240;
-export const SMOKE_RATE_PERIOD_SECONDS = 60;
+const SMOKE_RATE_LIMIT = 240;
+const SMOKE_RATE_PERIOD_SECONDS = 60;
 
 /** Minimum token length, the operator's floor. A short secret is a misconfiguration. */
 const MIN_TOKEN_LENGTH = 32;

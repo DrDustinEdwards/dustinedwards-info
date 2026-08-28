@@ -135,7 +135,7 @@ export interface CachedAnswer {
  * different questions, and answering one with the other's answer would be a
  * quiet correctness bug rather than a saving.
  */
-export function normalizeQuestion(question: string): string {
+function normalizeQuestion(question: string): string {
   return question
     .toLowerCase()
     .replace(/\s+/g, " ")

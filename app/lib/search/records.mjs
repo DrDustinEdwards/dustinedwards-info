@@ -35,7 +35,7 @@ export const RECORD_TYPES = /** @type {const} */ (["post", "page"]);
  * @param {string} markdown
  * @returns {string}
  */
-export function plainText(markdown) {
+function plainText(markdown) {
   return (
     markdown
       // Fence markers, keeping the code between them.

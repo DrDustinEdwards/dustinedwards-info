@@ -23,7 +23,7 @@
  * than chosen here: changing it would silently restate the reading time of
  * every published post the next time the artifact is regenerated.
  */
-export const WORDS_PER_MINUTE = 200;
+const WORDS_PER_MINUTE = 200;
 
 /**
  * Words in a markdown source.

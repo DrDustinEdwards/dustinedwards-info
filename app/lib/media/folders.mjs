@@ -38,7 +38,7 @@
  *
  * @type {Array<[string, string, string]>}
  */
-export const FOLDERS = [
+const FOLDERS = [
   ["/phage-hunters/", "Cohort photographs", "Placed by the roster page template"],
   ["og/", "Social cards", "Generated at build time"],
   ["/diagrams/", "Diagrams", ""],
@@ -111,7 +111,7 @@ export function folderFor(key) {
  * @param {string} prefix
  * @returns {string}
  */
-export function titleFromPrefix(prefix) {
+function titleFromPrefix(prefix) {
   const last = prefix.replace(/^\/+|\/+$/g, "").split("/").pop() ?? "";
   if (!last) return ROOT[1];
   const words = last.replace(/[-_]+/g, " ").trim();
