@@ -14,7 +14,7 @@ Everything below is reproducible; the chart in this article is rendered by the p
 
 ## Why render charts in the Worker at all
 
-The obvious architecture for a static blog is to render charts at build time only, and if that fits your system, you should do it and skip the hard parts of this article. The requirement here was stricter because of two standing rules on this site. First, charts are content: the data lives in the post's markdown as a fenced block inside a chart directive, and the rendered SVG is embedded in a generated artifact that a build gate byte-compares against a fresh generation, the same regime [all content here lives under](/blog/content-is-code-building-the-blog). Second, that artifact has two writers, the Node build and the Worker's save path (the browser editor, and the [agent-operated publishing API](/blog/letting-an-agent-publish) this post arrived through), and the gate's whole value depends on both writers producing identical bytes. Together these rules mean the chart renderer must run in the Worker, produce output byte-identical to the Node build's, and do so deterministically forever. That combination, not any single requirement, is what eliminated most of the field.
+The obvious architecture for a static blog is to render charts at build time only, and if that fits your system, you should do it and skip the hard parts of this article. The requirement here was stricter because of two standing rules on this site. First, charts are content: the data lives in the post's markdown as a fenced block inside a chart directive, and the rendered SVG is part of the stored HTML rather than an asset beside it, the same regime [all content here lives under](/blog/content-is-code-building-the-blog). Second, that render has two writers, the Node build and the Worker's save path (the browser editor, and the [agent-operated publishing API](/blog/letting-an-agent-publish) this post arrived through), and the whole design depends on both writers producing identical bytes. Together these rules mean the chart renderer must run in the Worker, produce output byte-identical to the Node build's, and do so deterministically forever. That combination, not any single requirement, is what eliminated most of the field.
 
 ## The configuration that works: Plot plus linkedom
 
@@ -88,5 +88,32 @@ The same probe method was applied to text-to-diagram tools (Mermaid, and the sma
 ## Limitations
 
 The measurements are dated 2026-07-31 and version-pinned (Plot 0.6.17, linkedom 0.18.13, wrangler 4.116.0); the determinism and parity properties are re-verified by this site's build on every run precisely because they are properties of versions, not laws. The zero-generated-IDs result is scoped to the marks tested; configurations using explicit clipping may behave differently. The ECharts bundle figure is a worst-case without tree-shaking effort. The parity test bundles the chart module rather than the whole content pipeline, a scope choice stated in the gate itself. And the no-prior-art claim is a search result, not a proof; if someone has done this before and written it down where I could not find it, I would genuinely like to read it.
+
+## Update, 28 August 2026: the byte-parity requirement outlived the gate that checked it
+
+This post describes the requirement as serving a committed artifact that a build
+gate byte-compared against a fresh generation. That artifact left git on
+2026-08-26, for reasons set out in [the content pipeline
+article](/blog/content-is-code-building-the-blog): it made every editor save
+download the whole thing from GitHub, and the check it enabled had moved into
+continuous integration anyway.
+
+**Nothing in the engineering above changes, and that is the interesting part.**
+The requirement was never really about the file. It is about two independent
+writers rendering the same source, and the site still has exactly two: the Node
+build and the Worker. What moved is where the disagreement is caught. It used to
+be a byte comparison at commit time. It is now a drift table printed at deploy:
+every row in the database records the git blob hash of the markdown it came from
+and a hash of its own render, the deploy renders the corpus fresh, and a row
+whose source is unchanged while its render differs is named by slug and fails
+the run after the deploy stands.
+
+So the chart renderer must still run in the Worker, still produce output
+byte-identical to the Node build's, and still be deterministic forever. Both
+properties are still checked on every build, in-process and across processes and
+across the Node/workerd split, by the same gate this post describes. A
+non-deterministic renderer used to fail a byte comparison at random; it would
+now report render drift at random, which is the same finding wearing a different
+name and reaching a reader no later.
 
 This post extends [the series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare). It was drafted by the site's operator agent, staged through [the MCP tools the series describes](/blog/the-doorbell-gets-built), and its figure was rendered by the pipeline it documents. Publication, as always here, required the human.

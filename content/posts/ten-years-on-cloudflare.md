@@ -9,7 +9,7 @@ tags: [cloudflare, workers, d1, platform, architecture]
 first_published: 2026-07-30
 ---
 
-The short version, for anyone deciding whether Cloudflare's developer platform can carry a complete application in 2026: it can, and this site is the evidence. The application server, database, object storage, search engine, AI answer layer, and publishing pipeline here all run on Workers, D1, R2, Durable Objects, and AI Search, with no other provider anywhere in the stack. The measurements that summarize the experience: pages served by a 4.87 MB Worker (measured 2026-08-04; it was 3.78 MB when this published, and it grows as features land), full-text search answering in 6 milliseconds at the median inside D1, a complete reading interface in 1.59 kB of client JavaScript, an AI answer layer streaming its first token in 2.1 to 6.5 seconds warm, and a monthly bill that rounds to a few dollars. The platform's real constraints are equally concrete: no runtime WebAssembly compilation, a database export command that fails on FTS5 tables, and a built-in rate limiter that sheds load rather than counting. This post is the survey of all of it, from inside a working system, with the ones likely to rot carrying their dates; platform facts were checked against Cloudflare's documentation and announcements on July 30, 2026.
+The short version, for anyone deciding whether Cloudflare's developer platform can carry a complete application in 2026: it can, and this site is the evidence. The application server, database, object storage, search engine, AI answer layer, and publishing pipeline here all run on Workers, D1, R2, Durable Objects, and AI Search, with no other provider anywhere in the stack. The measurements that summarize the experience, each carrying the date it was taken, because every one of them moves: pages served by a Worker whose upload measured 8.22 MiB on 2026-08-28 (4.87 MB on 2026-08-04, 3.78 MB when this published), full-text search answering from D1 with a median of 64 ms warm on 2026-08-28 (6 ms on 2026-07-30, against a smaller corpus and a different instrument), a reading page whose whole script payload measured 3.0 kB gzipped on 2026-08-28 (1.59 kB on 2026-07-30), an AI answer layer streaming its first token in 2.1 to 6.5 seconds warm as measured on 2026-07-30, and a monthly bill that rounds to a few dollars. The three that were re-measured are re-measured in full at the end of this post, with the conditions each was taken under. The platform's real constraints are equally concrete: no runtime WebAssembly compilation, a database export command that fails on FTS5 tables, and a built-in rate limiter that sheds load rather than counting. This post is the survey of all of it, from inside a working system, with the ones likely to rot carrying their dates; platform facts were checked against Cloudflare's documentation and announcements on July 30, 2026.
 
 The personal context, briefly, because it explains the vantage point. Ten years ago I put my first domain behind Cloudflare the way everyone did then: a shared HostGator box ran the real site, and Cloudflare was the DNS, the cache, and the orange cloud in front of it. I did not think of it as a place where software ran, and in 2016 it mostly wasn't. This year I rebuilt so that there is no host behind the cloud at all. The old WordPress install still answers at my apex domain while a DNS cutover waits, a detail that returns later in this post for an unexpected reason.
 
@@ -25,15 +25,15 @@ The pitch is that these compose into complete applications with no infrastructur
 
 ## Measured performance and cost of an all-Cloudflare stack
 
-The Worker that serves every page is a 4.87 MB server asset, measured 2026-08-04; it was 3.78 MB when this published, and that number moves with every feature, which is why it carries a date. The largest single expense inside it is a complete markdown rendering pipeline, including syntax highlighting, run server-side because every public page of this site works with JavaScript disabled. Holding that constraint meant the client-side enhancement budget for the entire blog, progress bar, scroll-spy table of contents, copy buttons, footnote previews, lightbox, came to 1.59 kB gzipped; [the progressive enhancement article](/blog/bells-and-whistles-zero-js) covers how, including the measurement mistakes that nearly reported a different number.
+The Worker that serves every page uploaded at 8413 KiB on 2026-08-28, 2047 KiB of that gzipped, as reported by `wrangler deploy --dry-run`; it was 4.87 MB on 2026-08-04 and 3.78 MB when this published. That number moves with every feature, which is why it carries a date and why the date matters more than the figure. The largest single expense inside it is a complete markdown rendering pipeline, including syntax highlighting, run server-side because every public page of this site works with JavaScript disabled. Holding that constraint meant the client-side enhancement budget for the entire blog, progress bar, scroll-spy table of contents, copy buttons, footnote previews, lightbox, came to 1.59 kB gzipped on 2026-07-30 and 2.03 kB on 2026-08-28; [the progressive enhancement article](/blog/bells-and-whistles-zero-js) covers how, including the measurement mistakes that nearly reported a different number.
 
-Site search answers from D1 in 6 milliseconds at the median over 25 measured runs, 15 at the 95th percentile, on a hand-built engine described in [the FTS5 search article](/blog/site-search-fts5-rank-fusion). That figure is the DATABASE query and not the page: end to end over HTTPS the same search measured 114 to 121 ms on 2026-08-04, dominated by network round trip. The AI answer layer streams its first token in between 2.1 and 6.5 seconds warm, 7.4 cold. A publish is a single git commit that lands in the database and both search indexes within seconds of the commit returning; [the content pipeline article](/blog/content-is-code-building-the-blog) covers that machinery.
+Site search answers from D1 with a median of 64 ms and a 95th percentile of 80 ms, measured on 2026-08-28 over 25 runs against production, on a hand-built engine described in [the FTS5 search article](/blog/site-search-fts5-rank-fusion). The figure at publication, 2026-07-30, was 6 milliseconds at the median with a 95th percentile of 15, and that figure is kept rather than deleted because the two were not taken the same way; the end of this post says how they differ. Both are the DATABASE query and not the page: end to end over HTTPS the same search measured 114 to 121 ms on 2026-08-04, dominated by network round trip. The AI answer layer streams its first token in between 2.1 and 6.5 seconds warm, 7.4 cold. A publish is a single git commit that lands in the database and both search indexes within seconds of the commit returning; [the content pipeline article](/blog/content-is-code-building-the-blog) covers that machinery.
 
 The monthly cost of running all of this rounds to a few dollars. I want to be careful with that fact, because cost claims from personal-scale projects generalize badly, but the architectural version of the claim holds at any scale: nothing in this system required capacity planning, and there is no idle infrastructure anywhere in it.
 
 ## Cloudflare D1 in production: real SQLite, FTS5 search, and the export failure
 
-D1 spent its early life with a reputation for being a toy, and I think that reputation is now mostly stale. It is real SQLite, and real SQLite is a serious database with decades of documented behavior. For a content site, the practical consequence is that FTS5 full-text search comes with the database. I built this site's search directly on it: two FTS5 indexes over the same corpus, one unstemmed for names and identifiers, one Porter-stemmed for prose, merged with reciprocal rank fusion, because the tokenizer is a property of the table rather than the query and a corpus needing both behaviors needs two tables. The result embarrassed my assumption that search means a search service: six milliseconds, section-level results with deep links, zero external dependencies. The schema, the fusion method, and the production bug that taught me search has two entry modes are all in [the search article](/blog/site-search-fts5-rank-fusion).
+D1 spent its early life with a reputation for being a toy, and I think that reputation is now mostly stale. It is real SQLite, and real SQLite is a serious database with decades of documented behavior. For a content site, the practical consequence is that FTS5 full-text search comes with the database. I built this site's search directly on it: two FTS5 indexes over the same corpus, one unstemmed for names and identifiers, one Porter-stemmed for prose, merged with reciprocal rank fusion, because the tokenizer is a property of the table rather than the query and a corpus needing both behaviors needs two tables. The result embarrassed my assumption that search means a search service: single-digit milliseconds at publication and tens of milliseconds against production today, section-level results with deep links, zero external dependencies. The schema, the fusion method, and the production bug that taught me search has two entry modes are all in [the search article](/blog/site-search-fts5-rank-fusion).
 
 The edge every D1 user should know before trusting their backups: the platform's export command fails outright on any database containing FTS5 virtual tables, which is exactly the database a search feature produces. The working per-table procedure, plus two adjacent findings about verifying and repairing FTS5 indexes, are documented in full in [the same article](/blog/site-search-fts5-rank-fusion); if you run FTS5 on D1, test an export today rather than during a recovery.
 
@@ -67,7 +67,48 @@ Familiarity, mostly, compounding into leverage. The primitives are small enough 
 
 The honest summary of the rebuild is that a one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth and the database serves, an edge-resident search engine, a hybrid AI answer layer with cost controls, and a publishing path that an AI agent can operate under enforced policy. The platform is most of the reason that was feasible in evenings and weekends.
 
-The series, in reading order: [the color palette built and verified with code](/blog/a-color-palette-that-can-prove-itself), [the git-backed content pipeline](/blog/content-is-code-building-the-blog), [the reading experience in 1.6 kB of JavaScript](/blog/bells-and-whistles-zero-js), [FTS5 search at 6 milliseconds](/blog/site-search-fts5-rank-fusion), [the AI answer layer](/blog/ai-answer-layer-ask-mode), [API versus MCP](/blog/one-door-two-doorbells), [the agent trust model](/blog/letting-an-agent-publish), and [the MCP server build](/blog/the-doorbell-gets-built). Every quantitative claim in the series is reproducible from the site's repository. That policy cost me more time than any feature described above, and it is the part of the project I am least willing to give up.
+## Update, 28 August 2026: the three headline numbers, re-measured
+
+Every figure in this post was true when it was taken and three of them are the
+kind that rot, so they were re-taken. The old figures are kept beside the new
+ones rather than replaced, because a number without the conditions it was
+measured under is not a measurement, and the difference between two dated
+measurements is usually more informative than either one.
+
+**The Worker.** `wrangler deploy --dry-run` reports 8413 KiB total upload,
+2047 KiB gzipped, of which one server bundle is 5424 KiB. It was 4.87 MB on
+2026-08-04 and 3.78 MB at publication. Nothing was optimized away and nothing
+regressed; the site grew a media library, an admin plane, a chart renderer and a
+diagram pipeline in between, and all of that ships in one Worker by design.
+
+**Search.** The figure this post published, 6 ms at the median, was taken
+against a smaller corpus with the query timed in isolation. Re-measured on
+2026-08-28 against production, reading the server's own `tookMs` (which spans
+the two FTS5 reads and nothing else), 25 runs on one warm query key: median
+64 ms, 95th percentile 80 ms, minimum 57 ms. Repeating with 25 DISTINCT cache
+keys, which forces a cold path each time, moves it to a median of 145 ms and a
+95th percentile of 201 ms. The distribution is visibly bimodal, warm requests
+clustering in the sixties and cold ones in the one-fifties, which is the shape
+of connection reuse rather than of query cost.
+
+The honest summary is that the original figure measured the query and the new
+one measures the query in production, and I would not have caught the difference
+without re-running it. That is the argument for dating a number rather than
+publishing it.
+
+**Client JavaScript.** A post page now ships two prebuilt enhancement bundles:
+the blog enhancements at 2082 bytes gzipped, 1788 brotli, and the theme toggle
+at 968 gzipped, 795 brotli. Three kilobytes gzipped for a reading page, against
+1.59 kB at publication for the blog half alone. Most pages on the site ship only
+the theme bundle. Since 2026-08-26 the public plane also ships no framework
+script at all: public routes are server-rendered and not hydrated, so what a
+reader downloads is those bundles and the stylesheet, and nothing else.
+
+**Not re-measured:** the AI answer layer's time to first token, because probing
+it costs money per request and the figure in this post is dated. Treat it as a
+2026-07-30 observation.
+
+The series, in reading order: [the color palette built and verified with code](/blog/a-color-palette-that-can-prove-itself), [the git-backed content pipeline](/blog/content-is-code-building-the-blog), [the reading experience in a couple of kilobytes of JavaScript](/blog/bells-and-whistles-zero-js), [FTS5 search on D1](/blog/site-search-fts5-rank-fusion), [the AI answer layer](/blog/ai-answer-layer-ask-mode), [API versus MCP](/blog/one-door-two-doorbells), [the agent trust model](/blog/letting-an-agent-publish), and [the MCP server build](/blog/the-doorbell-gets-built). Every quantitative claim in the series is reproducible from the site's repository. That policy cost me more time than any feature described above, and it is the part of the project I am least willing to give up.
 
 ## Update, August 2026
 

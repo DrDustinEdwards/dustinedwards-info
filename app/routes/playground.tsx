@@ -45,20 +45,27 @@ import "~/styles/playground.css";
  *    forms submit natively and the server answers exactly the same way, which
  *    is what satisfies hard rule 9 here.
  *
- *    THIS LAW USED TO READ "ZERO JAVASCRIPT, BY CONSTRUCTION" AND THAT WAS
- *    NEVER TRUE OF THE DELIVERED PAGE. `root.tsx` renders `<Scripts />` on
- *    every route, so the router runtime has always shipped here; the claim was
- *    only ever true of this file's own code. Corrected 2026-08-16 along with
- *    the reader-facing copy in `playground-page.mjs`, which told visitors the
+ *    THIS LAW USED TO READ "ZERO JAVASCRIPT, BY CONSTRUCTION", WHICH WAS
+ *    FALSE, AND THE PARAGRAPH THAT CORRECTED IT IS NOW FALSE THE OTHER WAY.
+ *
+ *    Corrected 2026-08-16: `root.tsx` rendered `<Scripts />` on every route, so
+ *    the router runtime shipped here and the zero-JavaScript claim was only
+ *    ever true of this file's own code. The reader-facing copy in
+ *    `playground-page.mjs` was corrected with it, having told visitors the
  *    demos ran "with no JavaScript".
  *
- *    The forms are react-router `<Form method="get">`. That emits the same
- *    markup and the same URL as a plain form, so the no-script path is
- *    unchanged, and where script is present it skips the document teardown.
- *    MEASURED on production 2026-08-16: a full document load of this page
- *    spends 861ms after `responseEnd` reaching interactive and 2111ms reaching
- *    load, all of which a client transition skips. The wire cost is the same
- *    either way (145ms both), so bytes were never the reason.
+ *    Corrected again 2026-08-28, because the public plane stopped hydrating on
+ *    2026-08-26: hydration is opt-in by route and this route does not opt in,
+ *    so `<Scripts>` is not rendered here and NO router runtime ships. The forms
+ *    are react-router `<Form method="get">`, which emits the same markup and
+ *    the same URL as a plain form, and with nothing to intercept them they
+ *    submit natively for every reader. The client transition this paragraph
+ *    used to describe no longer happens on this page, so the document-load
+ *    figures it carried are history rather than a live comparison, and they are
+ *    left dated rather than deleted: MEASURED on production 2026-08-16, a full
+ *    document load of this page spent 861ms after `responseEnd` reaching
+ *    interactive and 2111ms reaching load, against a wire cost of 145ms either
+ *    way. Bytes were never the reason, and now there is no second path.
  *
  * NO USER INPUT IS PERSISTED ANYWHERE. Not logged, not stored, not counted. The
  * analytics point carries the bare path and never the query string, which is a

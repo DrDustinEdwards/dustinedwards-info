@@ -13,7 +13,7 @@
  * wrong, it must be testable, and in this repo testable means `.mjs` with no
  * binding in sight.
  *
- * @see workers/health.ts
+ * @see app/lib/health/checks.server.ts
  * @see test/health-verdicts.test.mjs
  */
 
