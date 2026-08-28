@@ -428,7 +428,7 @@
     {
       "component": "Machine surfaces",
       "name": "Feeds, a sitemap, and a map of the site for agents",
-      "what": "RSS and JSON feeds, a sitemap, robots, and a plain-text map of the site with a full-text companion carrying every published post in one document. The map is served from a database row rather than from the file in the repository, and the inlined fallback is imported from that same file so the two cannot drift.",
+      "what": "RSS and JSON feeds, a sitemap, robots, and a plain-text map of the site with a full-text companion carrying every published post in one document. ONE FEED POLICY: both feeds read the same query with the same visibility predicate and the same cap, and carry the whole post rather than a summary, differing only in representation because an RSS reader renders markup and a JSON consumer is usually a program. The map is served from a database row rather than from the file in the repository, and the inlined fallback is imported from that same file so the two cannot drift.",
       "anchors": [
         {
           "kind": "route",
@@ -454,6 +454,10 @@
           "kind": "assertion",
           "gate": "check:llms",
           "text": "content/llms.txt is LF-only"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:tests"
         }
       ]
     },
