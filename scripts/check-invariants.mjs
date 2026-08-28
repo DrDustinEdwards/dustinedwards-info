@@ -708,6 +708,151 @@ try {
     `     schema.ts ${fromSchema.size} table(s), migrations ${migrationTables.length}, ` +
       `${virtual.length} virtual excluded`,
   );
+
+  /* ---- the INDEXES, both directions, offline -------------------------- */
+
+  /*
+   * ADDED 2026-08-28. Cheap, because both sources were already open.
+   *
+   * ## WHY AN INDEX BELONGS IN THIS COMPARISON
+   *
+   * Hard rule 11 calls schema.ts the source of truth, and until this landed it
+   * was the source of truth for COLUMNS and silent about every index. Four
+   * posts indexes and three search_docs indexes existed only in
+   * `drizzle/*.sql`, so a reader of schema.ts would have concluded that the
+   * visibility predicate every public read composes runs as a table scan.
+   *
+   * The two sides are DERIVED, never listed here: drizzle's own
+   * `getTableConfig().indexes` on one side, `PRAGMA index_list` and
+   * `PRAGMA index_info` against the already-built in-memory database on the
+   * other. There is no index list in this file, which is the same property the
+   * column comparison above has.
+   *
+   * ## WHAT IS COMPARED, AND WHAT IS DELIBERATELY NOT
+   *
+   * Names, and the ordered column list under each name. ORDER MATTERS in a
+   * composite index and comparing an unordered set would pass on a reversed
+   * one, which is a different index wearing the same name.
+   *
+   * NOT compared: partial predicates, collations and directions. SQLite reports
+   * `WHERE` clauses and `DESC` through `sqlite_master` text rather than through
+   * the pragmas, and drizzle models neither: `media_trashed_idx` is partial in
+   * the SQL and unqualified in schema.ts, an asymmetry that file already states
+   * at the index itself. Comparing what both sides can express is a real check;
+   * comparing what only one side has would fail on every commit.
+   *
+   * IMPLICIT INDEXES ARE EXCLUDED BY ORIGIN, not by name pattern. SQLite builds
+   * one for every UNIQUE constraint and calls it `sqlite_autoindex_<table>_<n>`;
+   * `PRAGMA index_list` reports its `origin` as `u` or `pk` rather than `c`,
+   * and reading the origin is the derived form of the same exclusion.
+   */
+  {
+    /** @type {Map<string, string[]>} */
+    const schemaIndexes = new Map();
+    for (const mod of [schemaModule, authModule]) {
+      for (const value of Object.values(mod)) {
+        if (!drizzleOrm.is(value, drizzleCore.SQLiteTable)) continue;
+        const config = drizzleCore.getTableConfig(/** @type {any} */ (value));
+        for (const idx of config.indexes) {
+          const columns = idx.config.columns.map((/** @type {any} */ c) =>
+            String(c.name ?? c),
+          );
+          schemaIndexes.set(idx.config.name, columns);
+        }
+      }
+    }
+
+    /** @type {Map<string, string[]>} */
+    const migrationIndexes = new Map();
+    for (const table of migrationTables) {
+      const list = /** @type {any[]} */ (
+        fresh.prepare(`PRAGMA index_list(${table})`).all()
+      );
+      for (const row of list) {
+        // Origin 'c' is CREATE INDEX. 'u' and 'pk' are constraint-implied.
+        if (String(row.origin) !== "c") continue;
+        const info = /** @type {any[]} */ (
+          fresh.prepare(`PRAGMA index_info(${String(row.name)})`).all()
+        );
+        migrationIndexes.set(
+          String(row.name),
+          info
+            .slice()
+            .sort((a, b) => Number(a.seqno) - Number(b.seqno))
+            .map((c) => String(c.name)),
+        );
+      }
+    }
+
+    /*
+     * SCOPE, ASSERTED, on both sides. An empty map on either one makes every
+     * comparison below pass by iterating nothing, and the two failures read
+     * completely differently: an empty schema side means the drizzle walk
+     * stopped seeing indexes, an empty migration side means the pragma did.
+     */
+    ok(
+      "indexes were parsed out of schema.ts",
+      schemaIndexes.size > 0,
+      "getTableConfig reported no indexes, so both directions below are vacuous",
+    );
+    ok(
+      "indexes were read back out of the applied migrations",
+      migrationIndexes.size > 0,
+      "PRAGMA index_list reported no CREATE INDEX rows, so both directions are vacuous",
+    );
+
+    const missingInMigrations = [...schemaIndexes.keys()].filter(
+      (n) => !migrationIndexes.has(n),
+    );
+    const missingInSchema = [...migrationIndexes.keys()].filter(
+      (n) => !schemaIndexes.has(n),
+    );
+
+    ok(
+      "every index schema.ts declares is created by a migration",
+      missingInMigrations.length === 0,
+      `no migration creates ${missingInMigrations.join(", ")}. schema.ts is ` +
+        `describing an index the database will not have.`,
+    );
+    ok(
+      "every index a migration creates is declared in schema.ts",
+      missingInSchema.length === 0,
+      `schema.ts does not declare ${missingInSchema.join(", ")}. Hard rule 11: a ` +
+        `reader of the schema would conclude those queries run unindexed.`,
+    );
+
+    /** @type {string[]} */
+    const columnMismatches = [];
+    let indexesCompared = 0;
+    for (const [name, columns] of schemaIndexes) {
+      const other = migrationIndexes.get(name);
+      if (!other) continue;
+      indexesCompared += 1;
+      if (columns.join(",") !== other.join(",")) {
+        columnMismatches.push(
+          `${name}: schema.ts (${columns.join(", ")}) vs migrations (${other.join(", ")})`,
+        );
+      }
+    }
+
+    ok(
+      "every shared index was actually compared",
+      indexesCompared === schemaIndexes.size - missingInMigrations.length,
+      `${indexesCompared} of ${schemaIndexes.size - missingInMigrations.length}`,
+    );
+    ok(
+      "every index covers the same columns, in the same order, on both sides",
+      columnMismatches.length === 0,
+      `${columnMismatches.join("; ")}. A composite index with its columns ` +
+        `reversed is a different index wearing the same name.`,
+    );
+
+    console.log(
+      `     ${schemaIndexes.size} declared index(es), ${migrationIndexes.size} created, ` +
+        `${indexesCompared} compared by column`,
+    );
+  }
+
   if (unmodelled.length > 0) {
     /*
      * Not a failure, and NO LONGER COVERED. This used to read "covered by
@@ -822,6 +967,107 @@ try {
   }
 } catch (error) {
   fail("the column comparison could not run", String(error));
+}
+
+/* ------- 4a. search_docs is modelled for the schema, never queried through it */
+
+/*
+ * A HOLE THAT DECLARING A TABLE WOULD OTHERWISE OPEN, closed on the same day.
+ *
+ * `search_docs` joined `schema.ts` on 2026-08-28 so section 4 could compare its
+ * columns and its three indexes, which is worth having: this table's column
+ * names live inside hand-written SQL strings, the exact shape that produced the
+ * `media.r2_key` defect section 4 was built for.
+ *
+ * But hard rule 1 is enforced for this table by SECTION 8, which reads raw SQL
+ * looking for the composed visibility predicate. Section 6, the drizzle-shaped
+ * scan, knows only about `posts`. So a query-builder read of `search_docs`
+ * would be seen by NEITHER, and it would have become reachable the moment the
+ * binding existed.
+ *
+ * ## WHAT THIS ASSERTS, and why it is a ban rather than a predicate check
+ *
+ * No source file uses the `searchDocs` binding in a query position. Checking
+ * instead that such a read composes the predicate would mean building a second
+ * copy of section 6 for one table nothing reads that way, and the second copy
+ * is what this whole family of gates exists to avoid.
+ *
+ * The exit is written down rather than left to be rediscovered: if a drizzle
+ * read is ever wanted, teach section 6 about this table FIRST and delete this
+ * section in the same commit.
+ *
+ * ## THE IMPORT IS NOT THE VIOLATION
+ *
+ * `schema.ts` defines the binding and `check:invariants` itself bundles that
+ * file, so both legitimately contain the name. What is banned is a QUERY
+ * POSITION: `.from(searchDocs)`, `.into(searchDocs)`, `.update(searchDocs)`,
+ * `.delete(searchDocs)`. Comments and strings are stripped first, because this
+ * file's own prose names the binding repeatedly and a raw scan would flag the
+ * gate for describing the rule.
+ */
+
+console.log("\n  4a. search_docs is modelled for the schema, never read through it");
+
+{
+  const SELF = ["app/db/schema.ts"];
+  const QUERY_POSITION =
+    /\.(?:from|into|update|delete|insert)\s*\(\s*searchDocs\b/;
+
+  /** @type {string[]} */
+  const offenders = [];
+  let scanned = 0;
+
+  for (const file of [
+    ...sourceFiles(join(root, "app")),
+    ...sourceFiles(join(root, "workers")),
+  ]) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (SELF.includes(rel)) continue;
+    scanned += 1;
+    const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
+    if (QUERY_POSITION.test(code)) offenders.push(rel);
+  }
+
+  /*
+   * SCOPE, ASSERTED. A walk that opened nothing reports the same clean result
+   * as a repository that genuinely has no such read. FLOOR MEASURED 2026-08-28
+   * BY RUNNING THIS WALK: 165 files. The floor is 132, about twenty percent
+   * under, so a directory can go missing before this stops meaning anything.
+   *
+   * The first draft of this comment said 226 against a floor of 180, and both
+   * were INVENTED rather than measured. The gate failed on its own author, which
+   * is what a scope assertion is for.
+   */
+  ok(
+    "the walk opened files to scan",
+    scanned >= 132,
+    `scanned ${scanned} file(s), floor 132, measured 165 on 2026-08-28. A ` +
+      `zero-scope walk finds no query-builder read because it read nothing.`,
+  );
+
+  /*
+   * THE NEEDLE IS PROVEN ABLE TO FIRE, on synthetic source, every run. The
+   * collection it walks is legitimately allowed to be clean, so without this
+   * the assertion below has never been observed doing anything.
+   */
+  ok(
+    "the query-position needle can fire",
+    QUERY_POSITION.test("db.select().from(searchDocs).all()"),
+    "the needle no longer matches a drizzle read, so the ban cannot be enforced",
+  );
+  ok(
+    "the query-position needle does not fire on a bare mention",
+    !QUERY_POSITION.test("import { searchDocs } from '~/db/schema';"),
+    "an import is being read as a query, which would ban the declaration itself",
+  );
+
+  ok(
+    "nothing reads search_docs through the query builder",
+    offenders.length === 0,
+    `${offenders.join(", ")}. Section 6 scans \`posts\` and section 8 scans raw ` +
+      `SQL, so a drizzle read of this table is covered by neither. Teach ` +
+      `section 6 about it first, then delete this section.`,
+  );
 }
 
 /* ------------------- 5. REMOVED: the raw-SQL column scanner ------------- */

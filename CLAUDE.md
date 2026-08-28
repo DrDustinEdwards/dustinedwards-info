@@ -99,7 +99,7 @@ Two halves, and a route that knows only the first will still get it wrong.
 
 **THE ENUMERATION IS THE GATE'S, NOT THIS FILE'S, since 2026-08-28.** This sentence used to name the members, and it went stale the day the set grew: `<meta name="color-scheme">` joined `data-theme` and the toggle's `aria-pressed` when the white-frame fix landed, and a second copy of a gated list is rule 17's exact defect. `maskTheme` in `scripts/check-browser.mjs` is the one owner.
 
-**No count here on purpose: this line said "three ways" while `check:headers` asserted FOUR, measured 2026-08-22.** A number in prose beside a gate is a second copy of the gate, which is rule 17, and this file is where that habit has cost the most.
+**No count here on purpose:** this line once carried one and it disagreed with the gate beside it. Rule 17, and this file is where that habit has cost the most.
 
 ### 9. GATED by check:features for the inventory, UNGATED for the law and the door. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
@@ -138,7 +138,11 @@ Only the tenth class is gated. The rest are METHOD, which is what they always we
 
 ### 11. GATED by check:invariants. `app/db/schema.ts` IS the source of truth.
 
-`check:invariants` section 4 binds schema to migrations to the live database. Prefer the query builder over raw SQL. **Section 5 was DELETED on 2026-08-16**: its regex could desync on a regex literal and examine nothing while printing a clean result. Do not rebuild it as regex.
+`check:invariants` section 4 binds schema.ts to the migrations to the live database. **Corrected 2026-08-28 to what the gate does:** it compares COLUMNS with their types and INDEX NAMES with their column order. It does NOT compare a partial predicate, a collation or a direction: SQLite reports those as DDL text and drizzle models none of them, so `media_trashed_idx` is partial in the SQL and unqualified here, stated at the index rather than gated.
+
+Prefer the query builder over raw SQL. **`search_docs` is the asserted exception:** modelled for the schema comparison, read ONLY in raw SQL, because section 8 owns its visibility rule and section 6 knows only `posts`, so a query-builder read would be covered by neither. Section 4a bans it and names the exit.
+
+**Section 5 was DELETED on 2026-08-16**: its regex could desync on a regex literal and examine nothing while printing a clean result. Do not rebuild it as regex.
 
 ### 12. UNGATED. A new gate is tested by REPLAYING THE DEFECT it was written for.
 
@@ -150,7 +154,7 @@ EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied befor
 
 **When a file carries uncommitted work, revert a plant by TARGETED EDIT, never `git checkout`.** Skipping this once duplicated a lint rule whose stale copy then mis-guarded a plant.
 
-**A REFACTOR PROVES EQUIVALENCE BY DIFFERENTIAL, not by reading.** Lift the OLD body verbatim, compile it, and run it against the new one over REAL inputs, not invented ones. Then prove the comparison can discriminate, by running a knowingly different implementation through it and watching the comparison report a difference; a differential that cannot tell two things apart agrees with everything. This is how the nine `stripComments` sites were consolidated, and the discriminating control is the half that makes the 720 identical comparisons mean anything.
+**A REFACTOR PROVES EQUIVALENCE BY DIFFERENTIAL, not by reading.** Lift the OLD body verbatim, compile it, and run it against the new one over REAL inputs, not invented ones. Then prove the comparison can discriminate, by running a knowingly different implementation through it and watching the comparison report a difference; a differential that cannot tell two things apart agrees with everything. This is how the `stripComments` sites were consolidated, and the discriminating control is the half that makes hundreds of identical comparisons mean anything.
 
 ### 13. UNGATED, class only; all instances resolved.
 
@@ -166,11 +170,7 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 
 **UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
 
-**RESTORED, THEN FALSIFIED BY MEASUREMENT, both on 2026-08-21.** The clause recovered from Capsid version 1684 read "seven repos still carry the fail-open `scoped-git-add.sh`". It was true when written and a propagation landed on 2026-08-16, so the clause predated its own fix.
-
-**Measured at origin, by blob sha, across every repo Capsid maps: ONE is fail-open, not seven.** Six carry canonical `11d59813`; this repo adopted it in `6b59ee5` and was never fail-open, only carrying a stale header over an identical body; `foxhound` carries fail-open `2d4155fb` and is its own authority, with a PR open against it. The two legacy Vercel repos have no hooks directory at all.
-
-**The lesson is the clause, not the count**, and it is the reason this paragraph is kept rather than deleted: *a claim inherited from a document gets the same treatment as one from memory.* Restoring it verbatim from version history put a stale fact back into the one file every session reads first. See `FAILURES.md`.
+**RESTORED, THEN FALSIFIED BY MEASUREMENT, both on 2026-08-21.** A clause recovered verbatim from Capsid version 1684 said several repos still carried a fail-open `scoped-git-add.sh`. It was true when written, a propagation had landed since, and measuring at origin by blob sha found one, not several. **The lesson is the clause, not the count:** *a claim inherited from a document gets the same treatment as one from memory.* Restoring it from version history put a stale fact back into the one file every session reads first. See `FAILURES.md`.
 
 ### 16. GATED by ship. The ship contract: CI for this sha, token before build, Ask converged last.
 
