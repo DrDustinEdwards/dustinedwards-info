@@ -17,8 +17,8 @@
 
 import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
 
-export const OPERATOR_RATE_LIMIT = 30;
-export const OPERATOR_RATE_PERIOD_SECONDS = 60;
+const OPERATOR_RATE_LIMIT = 30;
+const OPERATOR_RATE_PERIOD_SECONDS = 60;
 
 /** Minimum token length. A short secret here is a misconfiguration, not a choice. */
 const MIN_TOKEN_LENGTH = 32;

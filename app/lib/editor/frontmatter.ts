@@ -125,7 +125,7 @@ export function normalizeBody(body: string) {
  * because a `- title:` with no `url` is a schema failure that would block the
  * save on data the author never typed.
  */
-export function parseFurtherReading(raw: string) {
+function parseFurtherReading(raw: string) {
   if (!raw.trim()) return [] as { title: string; url: string }[];
   let parsed: unknown;
   try {

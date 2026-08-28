@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
  */
 
 /** The event any component fires to say something. One channel, one listener. */
-export const TOAST_EVENT = "media-toast";
+const TOAST_EVENT = "media-toast";
 
 /**
  * Say something, from anywhere, without threading a callback through the tree.
