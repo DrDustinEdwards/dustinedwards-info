@@ -370,6 +370,191 @@ ok(
   "every anchor was a decision, so nothing was verified",
 );
 
+/* ------------------------------- hard rule 17, on the prose itself --------- */
+
+/*
+ * **THE RULE THIS GATE ENFORCES, AND THE MEASUREMENT THAT FORCED IT.**
+ *
+ * An external audit read this repository's own prose and found that ten of
+ * eighteen checkable claims were FALSE. Most carried no digits at all. They
+ * were TENSE-BOUND STATE CLAIMS: present-tense sentences about how the system
+ * is built, written true and left standing after the machinery moved. Five
+ * entries in this very file described a committed, byte-compared content
+ * artifact that had left git on 2026-08-26.
+ *
+ * Hard rule 17 was extended on 2026-08-28 to cover both halves: prose may carry
+ * REASONING, and may not carry a NUMBER or a TENSE-BOUND STATE CLAIM that a
+ * gate does not own. This is the one surface where a regex can enforce any of
+ * it, so it is enforced here.
+ *
+ * ## OBSERVATION BOUNDARY, and it is the important paragraph
+ *
+ * **THIS CANNOT READ TENSE.** It refuses digits and it refuses a named
+ * vocabulary. A sentence can still describe machinery deleted this morning, in
+ * the present tense, with no number in it, and pass. What this buys is that the
+ * two shapes which actually recurred here are now a build failure rather than a
+ * reading exercise: a restated measurement, and the specific words of the
+ * removed content pipeline.
+ *
+ * That is the same bargain the anchor checks above make. This gate has never
+ * been able to verify that a sentence is TRUE, and it still cannot.
+ *
+ * ## WHAT COUNTS AS A NUMBER, stated because the naive form is unusable
+ *
+ * A digit glued to letters inside one token is an IDENTIFIER, not a
+ * measurement: D1, R2, FTS5, workerd. Those are stripped before the scan, and
+ * stripping them is not a loophole, because a measurement is never spelled that
+ * way.
+ *
+ * What remains is a bare digit run, and exactly one class of those is allowed:
+ * PROTOCOL CONSTANTS, listed below with a reason each. A status code is owned
+ * by the protocol rather than by this repository, so it cannot drift underneath
+ * a sentence, which is the test rule 17 itself states. The list is CLOSED and
+ * short so that adding to it is a deliberate diff someone has to justify.
+ *
+ * ## DATES ARE NOT ALLOWED HERE, because there is nowhere to put one
+ *
+ * The rule's exception for dated records covers published posts and a dated
+ * update field. **This file has no dated field**, so granting a date allowance
+ * would be an allowance over nothing, which is the unfailable-condition class
+ * in hard rule 10. If an `updated` field is ever added, the allowance is wired
+ * HERE and scoped to that field alone, never to the prose.
+ *
+ * ## ANCHORS ARE EXEMPT, deliberately
+ *
+ * An anchor's `text` is a machine reference that must match a gate's own
+ * assertion label byte for byte, and those labels carry counts. Scanning them
+ * would force the gates to be reworded to satisfy a rule about prose.
+ */
+
+console.log("\n  hard rule 17: the prose carries no number a gate does not own");
+
+{
+  /**
+   * Bare digit runs a feature sentence may carry, each with its reason.
+   *
+   * CLOSED. A protocol constant is owned by the protocol and cannot go stale;
+   * anything else that looks like a number in prose is a measurement, and a
+   * measurement belongs in the gate that measures it or nowhere.
+   */
+  const PROTOCOL_CONSTANTS = new Map([
+    ["403", "HTTP status: the first-publish refusal names it"],
+    ["404", "HTTP status: the URL transform interface answers with it"],
+    ["429", "HTTP status: the Ask refusal names it"],
+    ["1042", "Cloudflare error code returned alongside that 404"],
+  ]);
+
+  /** The prose fields. `anchors` is machine reference and is exempt above. */
+  const PROSE_FIELDS = ["component", "name", "what"];
+
+  /**
+   * Identifier tokens removed before the digit scan.
+   *
+   * A token mixing letters and digits is a NAME (D1, R2, FTS5). The two forms
+   * are letters-then-digits and digits-then-letters, and both are stripped
+   * whole, so a name never leaves a digit behind for the scan to find.
+   *
+   * @param {string} text
+   */
+  const withoutIdentifiers = (text) =>
+    text
+      .replace(/\b[A-Za-z]+[0-9][A-Za-z0-9]*\b/g, " ")
+      .replace(/\b[0-9]+[A-Za-z][A-Za-z0-9]*\b/g, " ");
+
+  /**
+   * The vocabulary of the content machinery removed on 2026-08-26.
+   *
+   * Named rather than inferred: these are the exact phrases the five stale
+   * entries used, so a sentence reintroducing one is describing a pipeline that
+   * does not exist. Git holds markdown only, D1 holds the only rendered copy,
+   * and a save commits ONE file.
+   */
+  const REMOVED_VOCABULARY = [
+    "committed artifact",
+    "byte-comparison gate",
+    "byte-compared",
+    "regenerated artifact",
+    "single commit carrying both",
+  ];
+
+  /*
+   * SCOPE, ASSERTED. Every assertion below iterates the feature list, so an
+   * empty or unparsed list would report a clean sweep of nothing.
+   */
+  let sentencesScanned = 0;
+  /** @type {string[]} */
+  const numbered = [];
+  /** @type {string[]} */
+  const removedWords = [];
+
+  for (const feature of features) {
+    const label = `${feature.component} / ${feature.name}`;
+    for (const field of PROSE_FIELDS) {
+      const text = String(feature[field] ?? "");
+      if (!text) continue;
+      sentencesScanned += 1;
+
+      for (const run of withoutIdentifiers(text).match(/[0-9]+/g) ?? []) {
+        if (PROTOCOL_CONSTANTS.has(run)) continue;
+        numbered.push(`${label} (${field}): "${run}"`);
+      }
+
+      const lower = text.toLowerCase();
+      for (const phrase of REMOVED_VOCABULARY) {
+        if (lower.includes(phrase)) {
+          removedWords.push(`${label} (${field}): "${phrase}"`);
+        }
+      }
+    }
+  }
+
+  /*
+   * FLOOR MEASURED 2026-08-28 BY RUNNING THIS LOOP: 114 fields over the feature
+   * list, three prose fields each. The floor is 90, about twenty percent under,
+   * so a component's worth of entries can go missing and this still notices,
+   * while adding or removing one feature does not fail the gate.
+   */
+  ok(
+    "the prose scan had fields to read",
+    sentencesScanned >= 90,
+    `scanned ${sentencesScanned} field(s), floor 90, measured 114 on 2026-08-28. ` +
+      `A zero-scope scan reports a clean sweep of nothing.`,
+  );
+
+  /*
+   * THE SCAN IS PROVEN ABLE TO FIRE, on synthetic input, every run.
+   *
+   * The collection it walks is legitimately allowed to be clean, and a check
+   * that only ever sees clean data is a check nobody has watched work. Same
+   * repair as check:secrets' empty allowlist: exercise the predicate directly,
+   * on a path that does not depend on the data.
+   */
+  ok(
+    "the digit scan can fire: a bare measurement survives the stripper",
+    (withoutIdentifiers("rendered 200 times").match(/[0-9]+/g) ?? []).length === 1,
+    "the identifier stripper is eating bare numbers, so nothing can ever fail here",
+  );
+  ok(
+    "the digit scan does not fire on an identifier",
+    (withoutIdentifiers("D1 and R2 and FTS5").match(/[0-9]+/g) ?? []).length === 0,
+    "a product name is being read as a measurement, which makes the rule unusable",
+  );
+
+  ok(
+    "no feature sentence carries a number the gate does not own",
+    numbered.length === 0,
+    `${numbered.join("; ")}. Hard rule 17: a measured value lives in the gate that ` +
+      `measures it, or nowhere. Point at the gate instead of restating its value.`,
+  );
+
+  ok(
+    "no feature sentence uses the vocabulary of the removed content machinery",
+    removedWords.length === 0,
+    `${removedWords.join("; ")}. That machinery left git on 2026-08-26. Git holds ` +
+      `markdown only, D1 holds the only rendered copy, and a save commits one file.`,
+  );
+}
+
 /* ---------------------------------- the page's search records, ruling 3 ---- */
 
 /*

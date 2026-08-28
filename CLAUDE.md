@@ -186,13 +186,21 @@ Three steps, in `scripts/ship.mjs`, each failing closed and none of them optiona
 
 **Separate sentence, UNGATED, process class: a ship window owns the tree from its first step to its last.** Nobody edits the working tree or lands on `main` while one is open. A prior ship deployed and then refused mid-run because the session deleted a file underneath it, and the deploy was coherent only because the build had already finished. No gate can see this, and it is deliberately not folded into the three steps above, so that a session never learns to fail a deploy over it.
 
-### 17. UNGATED. ONE OWNER PER FACT. A measured value lives in the gate that measures it, or nowhere.
+### 17. UNGATED for the class, GATED by check:features for the colophon's feature prose. ONE OWNER PER FACT. A measured value lives in the gate that measures it, or nowhere.
 
 Prose may POINT AT the gate. It may not restate the value. A pointer carrying no digits is legal and is the preferred form.
 
 The rule is a class, so it has no single instrument even though many of its instances do; that is why the tag is UNGATED. Every second copy of a number found in August had already drifted, in both directions and often within the same day: gate counts in three places disagreeing with the one in `check-all.mjs`, floors declared under what their own gate ran, a cached-route count wrong in two directions across two sentences, and the count of citing files in this file's own preamble, which had more than quadrupled underneath it.
 
 The test before writing a number down: can something re-run and re-derive it. If yes, it belongs there and nowhere else. If no, it is a dated observation and says so, with its date, on the same rule as a commit message.
+
+**EXTENDED 2026-08-28, because the number was never the whole class.** An audit of this repo's own prose found ten of eighteen checkable claims FALSE, and most carried no digits. They were TENSE-BOUND STATE CLAIMS: present-tense sentences about how the system is built, written true and left standing after the machinery moved. "The artifact is byte-compared against a fresh generation on every build" owns no number and was as false as any count, because that artifact left git on 2026-08-26.
+
+So: **prose may carry REASONING; it may not carry a NUMBER or a TENSE-BOUND STATE CLAIM that a gate does not own.** A comment may say the ceiling lives in `check:page-payload`. It may not say what the bundle weighs, and it may not say the artifact is byte-compared. A why survives its mechanism changing; a state claim is a measurement in the present tense and rots on a count's schedule.
+
+**PUBLISHED POSTS ARE THE EXCEPTION, and a real one rather than a loophole.** An article is a DATED RECORD, so it may carry numbers with the date and the measurement conditions beside them. It may not state a figure as a standing property. When a figure moves, the old one is KEPT as the earlier dated measurement rather than deleted.
+
+**GATED on the one surface where the class is machine-checkable, `content/features.json`:** `check:features` refuses a digit in a feature sentence and refuses the vocabulary of the removed machinery. It cannot read tense, so it enforces the half a regex can see. The rest is read by people, which is what UNGATED means everywhere else here.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
