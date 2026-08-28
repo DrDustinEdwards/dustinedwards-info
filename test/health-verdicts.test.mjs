@@ -15,7 +15,7 @@
  * and one uploaded object ends the acceptance.
  *
  * @see app/lib/health/verdicts.mjs
- * @see workers/health.ts
+ * @see app/lib/health/checks.server.ts
  */
 
 import test from "node:test";

@@ -14,13 +14,21 @@
  * bodies over real inputs, with the comparison shown able to discriminate, per
  * hard rule 12.
  *
- * **THAT SENTENCE NAMED `test/bearer.test.mjs` AND THAT FILE DOES NOT EXIST**,
+ * **THAT SENTENCE NAMED `test/bearer.test.mjs` AND THAT FILE DID NOT EXIST**,
  * found 2026-08-28 by looking rather than by anything failing. The differential
  * was real and was run at the move; what was never true is that a committed
- * test keeps it standing. A boundary note is a claim that ages, and this one
- * aged into naming an instrument nobody wrote. What holds the comparison now is
- * `check:policy`, which asserts the ordering below by position, and nothing
- * holds the differential itself.
+ * test kept it standing. A boundary note is a claim that ages, and this one
+ * aged into naming an instrument nobody had written.
+ *
+ * **THE FILE EXISTS NOW**, written the same day, and it holds the property that
+ * matters here rather than the one that sounds most impressive. It does NOT
+ * assert constant time: timing a comparison in-process measures the garbage
+ * collector, and a flaky assertion in the suite that gates a deploy teaches
+ * people to re-run until green. It asserts that a PREFIX is refused, which is
+ * the length refusal and the observable consequence of hashing both operands at
+ * once, and it carries the naive prefix-bounded implementation as a control so
+ * the case is shown able to discriminate. `check:policy` still asserts the
+ * ordering below by position.
  *
  * This is a `.server` module because hard rule 3 is a PATH rule and these run
  * only inside the Worker. Neither function reads `env`, so `check:secrets` has
@@ -72,10 +80,18 @@ export async function constantTimeEqual(a: string, b: string): Promise<boolean> 
  *
  * It goes into commit messages and rate-limit keys, so it must identify the
  * caller without being the secret. Eight hex characters of a hash of the token:
- * stable across requests, changes if the token is rotated, and reveals nothing.
+ * stable across requests and different after a rotation.
  *
- * Synchronous FNV-1a rather than SHA-256, because this runs after the token has
- * already been verified and is a label rather than a boundary.
+ * **IT DOES NOT "REVEAL NOTHING", and that sentence was here until 2026-08-28.**
+ * This is FNV-1a, a 32-bit non-cryptographic hash chosen because it is
+ * synchronous and this runs after the token has already been verified. What a
+ * 32-bit digest supports is that the label is not the token and cannot be read
+ * back into one; what it does NOT support is a claim about an attacker with the
+ * label and a guess, who can confirm the guess by hashing it. That is fine for
+ * what this is used for and it is not the same sentence.
+ *
+ * The security boundary is `constantTimeEqual` above. This is a label, and the
+ * distinction is the reason a non-cryptographic hash is acceptable here at all.
  */
 export function tokenLabel(token: string): string {
   let hash = 0x811c9dc5;

@@ -72,16 +72,34 @@ const TEST_DIR = join(root, "test");
  * Tight rather than slack, deliberately, and that is this gate's own
  * convention rather than the suite's: these move UP when somebody adds a test,
  * a one-line edit in the same commit, and the whole point is to notice the set
- * SHRINKING. Both floors are 94 percent of their own measurement, narrow
- * enough that losing the smallest test file still trips the file floor.
+ * SHRINKING.
+ *
+ * **THE INVARIANT, corrected 2026-08-28, because the sentence here stated a
+ * consequence that had stopped following.** It read "narrow enough that losing
+ * the smallest test file still trips the file floor", which was true when the
+ * ratio was written against a much smaller set and is arithmetic that does not
+ * survive the set growing: at 94 percent of a measurement, ONE file out of
+ * fifty-odd is well inside the margin.
+ *
+ * What is actually true, and what the ratio is chosen for: **each floor sits at
+ * 94 percent of its own measurement, so the set has to shrink by about six
+ * percent before this notices.** That is a handful of files, not one. The
+ * tightness buys an early warning rather than an immediate one, and the reason
+ * to keep it tight is that the margin only ever widens on its own: every test
+ * added without moving these constants makes the floor slacker, silently, which
+ * is exactly the drift the paragraph above records happening five times.
+ *
+ * Stated as the invariant rather than as a number, because a number here is a
+ * third copy of the two constants below.
  */
-/* 53 against 56 measured 2026-08-28 by RUNNING the gate, after
-   return-to.test.mjs landed with the theme toggle keeping the hash. */
+/* 53 against 57 measured 2026-08-28 by RUNNING the gate, after
+   bearer.test.mjs landed with the primitives its own docblock had claimed a
+   test for. */
 const MINIMUM_FILES = 53;
-/* 509 against 542, re-measured 2026-08-28 in the same commit. The file floor
+/* 522 against 556, re-measured 2026-08-28 in the same commit. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
    place, which no file count can see. */
-const MINIMUM_TESTS = 509;
+const MINIMUM_TESTS = 522;
 
 let checks = 0;
 let failures = 0;

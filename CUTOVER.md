@@ -61,8 +61,19 @@ breaks until this lands, and it breaks for the only account that can sign in.
 **3.4 AI Search Authorized hosts**, on the Public URL. Ask stops answering
 otherwise.
 
-**3.5 `allowedHostnames` on the operator path.** The MCP wrapper and the
-operator API both ride it.
+**3.5 `allowedHostnames` on the MCP wrapper.** The wrapper is a separate
+deployment and that setting is its own; it names the hosts it will call.
+
+**CORRECTED 2026-08-28. This item used to say the operator API rode it too,
+and this repository has no such setting at all**: `allowedHostnames` appears
+nowhere in the tree except in this line. What the operator path actually
+enforces is `originVerdict()` in `app/lib/origin.mjs`, which compares a present
+`Origin` against THE REQUEST'S OWN origin rather than against a configured
+list, and that is deliberate: pinning it to a constant would refuse every real
+request from whichever host is not the constant, at the moment of the cutover,
+when everything else is also moving. So the operator API needs NO edit at this
+step, and the checklist saying it did was the kind of false work that turns a
+cutover into a search.
 
 **3.6 `content/llms.txt`.** Its contact URL is bound to `SITE_ORIGIN` in both
 directions by `check:llms`, so that gate goes RED between 3.1 and this step.
