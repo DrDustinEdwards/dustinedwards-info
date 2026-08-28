@@ -123,7 +123,7 @@
 
 .media-tile-flag {
   position: absolute;
-  z-index: 1;
+  z-index: var(--z-tile-raise);
   top: 0.5rem;
   right: 0.5rem;
   width: 7px;
@@ -374,7 +374,7 @@
  * elevation and the elevated step never takes --border. */
 .media-palette {
   position: absolute;
-  z-index: 30;
+  z-index: var(--z-popover);
   top: calc(100% + 0.25rem);
   left: 0;
   right: 0;
@@ -556,7 +556,7 @@
  * through two literals. */
 .media-toast {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-transient);
   bottom: 1.5rem;
   left: 50%;
   margin: 0;
@@ -687,7 +687,7 @@
  * with #2A2622 on #F3EEE3 through two literals. */
 .posts-bulk {
   position: fixed;
-  z-index: 44;
+  z-index: var(--z-pinned-bar);
   bottom: 1.5rem;
   left: 50%;
   display: flex;
@@ -707,7 +707,7 @@
   color: var(--on-scrim);
   border: 0;
   border-radius: 0.8125rem;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-popover);
   transform: translateX(-50%);
   flex-wrap: wrap;
 }
@@ -839,7 +839,7 @@
  * everything, not a panel you work beside. */
 .media-modal-layer {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-transient);
   inset: 0;
   display: grid;
   place-items: center;
@@ -865,7 +865,7 @@
    page behind it, and a confirmation is meant to stop you reading it. */
 .media-modal {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-tile-raise);
   width: 100%;
   max-width: 27rem;
   padding: 1.3125rem;

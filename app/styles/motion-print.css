@@ -19,6 +19,20 @@
 
 /* Print. The post, nothing else. */
 @media print {
+  /*
+   * THE PRINT RULE COLOUR, declared here and nowhere else.
+   *
+   * A mid grey that reads on paper under any ink budget. It is NOT one of the
+   * theme tokens and must not become one: the theme blocks are walked by
+   * check:contrast, which requires every declared token to participate in a
+   * measured pair, and there is no screen pair to measure for a colour that
+   * only ever exists on paper. Print-scoped, so it also cannot leak into a
+   * screen rule by being reachable from one.
+   */
+  :root {
+    --print-rule: #999;
+  }
+
   .site-header,
   .site-footer,
   .reading-progress,
@@ -57,7 +71,7 @@
     padding-top: 0.75rem;
     white-space: pre-wrap;
     word-break: break-word;
-    border: 1px solid #999;
+    border: 1px solid var(--print-rule);
   }
 
   /* A printed page cannot be clicked, so link targets are spelled out. */

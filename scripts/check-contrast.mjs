@@ -1100,6 +1100,19 @@ const OPACITY_EXEMPT = [
   },
   { test: /-scrim/, why: "a scrim, not text" },
   {
+    /*
+     * ANCHORED AT THE END, per hard rule 10: a bare `backdrop` would also match
+     * a future `.backdrop-blur` or `.admin-backdrop-note`, which is the
+     * unanchored-needle class this file has been bitten by before.
+     */
+    test: /(?:::backdrop|-backdrop)$/,
+    why:
+      "a modal veil, not text. Nothing is drawn on this layer: it exists to dim " +
+      "what is behind it, so there is no foreground to price a ratio against. " +
+      "Same class as -scrim above, reached by a different selector shape since " +
+      "the dialogs became native <dialog> and their scrims became ::backdrop",
+  },
+  {
     test: /^\.search-why-sep$/,
     why: 'incidental punctuation, the "/" between why-terms, recorded as LEFT in this header',
   },

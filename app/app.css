@@ -225,6 +225,64 @@
  * `font-family: "Times New Roman"`, which is what a browser does when the
  * declaration it was given resolves to an empty custom property.
  */
+/*
+ * THE STACKING SCALE. One owner per layer, and the layers are NAMED.
+ *
+ * MEASURED 2026-08-28 before this existed: 24 `z-index` declarations across
+ * eight stylesheets carrying 14 distinct values, three of which were 44, 45 and
+ * 46. Values one apart are not a scale; they are the record of somebody adding
+ * one to whatever was already there, and the next person has nowhere to put a
+ * layer between them.
+ *
+ * ## THE REMAP IS PROVABLY INVISIBLE, which is why it could be done at once
+ *
+ * `z-index` is compared ORDINALLY inside a stacking context. Only the order of
+ * two values decides which paints on top, never their difference. The mapping
+ * below is strictly increasing on both sides, so every pairwise comparison in
+ * the whole stylesheet gives the same answer it gave before, and no element
+ * moved. Every old value was positive, so nothing crossed the implicit zero an
+ * un-indexed positioned element sits at.
+ *
+ * The gaps are the point: there is room for a layer between any two of these
+ * without touching the ones around it.
+ *
+ *   old  token              new
+ *     1  --z-tile-raise      10   lifted inside a card, above its own siblings
+ *     2  --z-tile-body       20   the card's body, above those
+ *     3  --z-tile-action     30   an action that must clear the body
+ *    15  --z-sticky         100   sticky inside a scrolling pane
+ *    20  --z-dropdown       200   a menu or panel anchored to a control
+ *    30  --z-popover        300   an editor popover, over the dropdown layer
+ *    35  --z-drawer-scrim   400   the dim behind the mobile admin drawer
+ *    40  --z-drawer         500   the drawer itself
+ *    44  --z-pinned-bar     600   a pinned bulk-action bar
+ *    45  --z-overlay-scrim  700   the dim behind a detail overlay
+ *    46  --z-overlay        800   the overlay itself
+ *    50  --z-progress       900   the reading progress bar
+ *    60  --z-transient     1000   a toast, a modal layer, a footnote preview
+ *   100  --z-skip-link     2000   always last, and it must beat everything
+ *
+ * NOT IN THE COLOUR BLOCKS, deliberately. `check:contrast` walks those and
+ * requires a literal hex that participates in a measured pair; a stacking level
+ * is neither. It sits with the font tokens, which are here for the same reason.
+ */
+:root {
+  --z-tile-raise: 10;
+  --z-tile-body: 20;
+  --z-tile-action: 30;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-popover: 300;
+  --z-drawer-scrim: 400;
+  --z-drawer: 500;
+  --z-pinned-bar: 600;
+  --z-overlay-scrim: 700;
+  --z-overlay: 800;
+  --z-progress: 900;
+  --z-transient: 1000;
+  --z-skip-link: 2000;
+}
+
 :root {
   /* "Inter Fallback" sits between the real face and the generic families, so a
      reader waiting for the download gets Arial at Inter's metrics rather than
@@ -236,6 +294,13 @@
      code blocks. It is a token now because CodeMirror needs it a third time,
      and a theme that restated the stack would be a fourth copy to drift. */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* THE ELEVATION SHADOW, one owner. It was written out twice, on the pinned
+     bulk bar and on the footnote preview, in two files, and the two happened
+     to agree. Not in the colour blocks for the reason the stacking scale is
+     not: check:contrast requires a literal hex in a measured pair, and a box
+     shadow is neither. */
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
 /* The Hill Country token system ---------------------------------------------

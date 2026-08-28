@@ -13,7 +13,11 @@
 }
 
 .palette::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  /* The ratified scrim pattern. This site and the admin drawer backdrop wrote
+     the same value in two notations, `45%` and `0.45`, which is how one role
+     ends up with two owners that agree by luck. */
+  background: var(--scrim);
+  opacity: 0.45;
 }
 
 @media (prefers-reduced-motion: no-preference) {

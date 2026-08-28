@@ -56,6 +56,7 @@ import { fileURLToPath } from "node:url";
 
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
+import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { readinessLines, readinessVerdict } from "./lib/readiness.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import {
@@ -66,7 +67,19 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
+/*
+ * THE ORIGIN, IMPORTED rather than restated.
+ *
+ * It was a literal here and a literal in `app/lib/seo.ts`, and this is the
+ * script that polls the deploy it just made: the copy that goes stale is the
+ * one that then polls the wrong host and reports a healthy site nobody is
+ * looking at. `check:llms` and `check:invariants` both already read the value
+ * out of seo.ts to hold other documents to it; this one can simply import it,
+ * because Node strips the types and the module has no bindings to resolve.
+ *
+ * At the DNS cutover this follows seo.ts by construction. Rule 17.
+ */
+const ORIGIN = SITE_ORIGIN;
 const POLL_PATH = "/colophon";
 const POLL_COUNT = 5;
 const POLL_GAP_MS = 10_000;
