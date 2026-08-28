@@ -1389,6 +1389,23 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
 }
 
 /**
+ * The columns both feeds carry, minus the body.
+ *
+ * ONE OWNER, because the two feeds differ in exactly one column and a second
+ * hand-kept list is how they start differing in more. The id rides along for
+ * the tag join and is stripped before either feed sees a row.
+ */
+const FEED_COLUMNS = {
+  id: posts.id,
+  slug: posts.slug,
+  title: posts.title,
+  description: posts.description,
+  publishAt: posts.publishAt,
+  updatedAt: posts.updatedAt,
+  coverImage: posts.coverImage,
+};
+
+/**
  * Every visible post with its markdown body, newest first.
  *
  * Two readers: llms-full.txt takes the whole corpus, and the JSON feed takes
@@ -1399,6 +1416,7 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
  * The card columns (description, updatedAt, coverImage) ride along for the
  * feed. llms-full.txt ignores them, which costs three narrow columns on a read
  * that already carries every body.
+ *
  */
 export async function listBlogPostsFullText(
   env: Env,
@@ -1406,16 +1424,39 @@ export async function listBlogPostsFullText(
 ) {
   const db = getDb(env);
   const query = db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      body: posts.body,
-      description: posts.description,
-      publishAt: posts.publishAt,
-      updatedAt: posts.updatedAt,
-      coverImage: posts.coverImage,
-    })
+    .select({ ...FEED_COLUMNS, body: posts.body })
+    .from(posts)
+    .where(isBlogPost())
+    .orderBy(desc(posts.publishAt));
+  const rows = await (options.perPage ? query.limit(options.perPage) : query);
+
+  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+}
+
+/**
+ * The same posts with the RENDERED body instead of the markdown one, for RSS.
+ *
+ * A SIBLING RATHER THAN A FLAG, and the reason is the return type. A single
+ * function selecting `html` conditionally returns a union, so every caller has
+ * to narrow a column it explicitly asked for, and the compiler cannot tell the
+ * one that asked from the one that did not. Two functions over one shared
+ * column set and one shared predicate say the same thing without that.
+ *
+ * NOT one function selecting both, either. `llms-full.txt` reads the WHOLE
+ * corpus through `listBlogPostsFullText` and ignores `html`; carrying it would
+ * put a second full copy of every post on that read to serve nobody.
+ *
+ * Composes `isBlogPost()`, so the feed is visible on exactly the terms the
+ * index is.
+ */
+export async function listBlogPostsRendered(
+  env: Env,
+  options: { perPage?: number } = {},
+) {
+  const db = getDb(env);
+  const query = db
+    .select({ ...FEED_COLUMNS, html: posts.html })
     .from(posts)
     .where(isBlogPost())
     .orderBy(desc(posts.publishAt));
