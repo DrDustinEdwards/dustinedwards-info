@@ -51,6 +51,39 @@ export function themeAttribute(theme: Theme): "light" | "dark" | undefined {
   return theme === "system" ? undefined : theme;
 }
 
+/**
+ * The `<meta name="color-scheme">` content for a resolved choice.
+ *
+ * ## WHAT IT IS FOR, measured 2026-08-27
+ *
+ * `data-theme` tells the STYLESHEET which palette to use. It tells the BROWSER
+ * nothing, because the browser cannot know what that attribute means until it
+ * has parsed the CSS that gives it meaning. Until then the canvas it paints
+ * between and beneath documents is the default one, and the default is light.
+ *
+ * That is a white frame, and it was measured rather than reasoned about: real
+ * Chrome 151, screen capture at about 45 frames a second, a header click from
+ * `/` to `/blog` with `theme=dark` and `prefers-color-scheme: light`. The
+ * viewport read 253 of 255 for one composited frame between two pages that
+ * read 61. With this meta injected into the same bytes and nothing else
+ * changed, the same navigation never left the dark range.
+ *
+ * THE READER THIS AFFECTS is the one whose CHOICE disagrees with their MACHINE:
+ * dark site on a light-mode computer. With the two in agreement the browser
+ * guesses right by accident and there is no flash at all, which is why holding
+ * them equal hid this completely.
+ *
+ * ## "light dark" IS NOT A DEFAULT, IT IS THE HONEST ANSWER FOR "system"
+ *
+ * A reader on "system" has not chosen, so the document supports both and the
+ * browser should use the machine's preference. Writing a single value there
+ * would be asserting a choice nobody made, and would put the flash back for
+ * whichever half of those readers guessed wrong.
+ */
+export function colorSchemeMeta(theme: Theme): "light" | "dark" | "light dark" {
+  return theme === "system" ? "light dark" : theme;
+}
+
 export function serializeThemeCookie(theme: Theme): string {
   // Path=/ so one choice covers the public plane and the admin plane. Lax is
   // enough: this is a display preference, and it must survive a normal
