@@ -62,7 +62,7 @@ async function gh<T>(
       // GitHub rejects requests without one.
       "user-agent": "dustinedwards-info-editor",
       "x-github-api-version": "2022-11-28",
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
 

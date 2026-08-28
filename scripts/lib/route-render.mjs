@@ -156,7 +156,7 @@ export async function renderRoute(mod, options) {
            * would put a field in the server contract that no loader returns,
            * and policing that contract is what this gate is for.
            */
-          ...(options.props ?? {}),
+          ...options.props,
         }),
     },
   ]);

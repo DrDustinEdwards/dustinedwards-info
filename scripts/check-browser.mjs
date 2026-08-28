@@ -3557,7 +3557,7 @@ try {
       );
       ok(
         "the bulk bar reports the count it was given",
-        !!bulk && /^1 selected/.test(bulk.count),
+        !!bulk && bulk.count.startsWith("1 selected"),
         bulk ? `count reads ${JSON.stringify(bulk.count)} after exactly one click` : "not measured",
       );
       /*

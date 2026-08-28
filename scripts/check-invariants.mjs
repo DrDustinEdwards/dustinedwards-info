@@ -3028,7 +3028,7 @@ console.log("\n  15b. four rules are bound to the behaviour they describe");
   );
   ok(
     "rule 4 holds: exactly one module imports the client auth helper",
-    authImporters.length === 1 && /login\.tsx$/.test(authImporters[0] ?? ""),
+    authImporters.length === 1 && (authImporters[0] ?? "").endsWith("login.tsx"),
     `imported by ${authImporters.map((f) => relative(root, f)).join(", ") || "nothing"}. ` +
       `Rule 4 keeps the Worker lean by confining the client auth bundle to /login.`,
   );
@@ -3796,7 +3796,7 @@ console.log("\n  19. FAILURES.md stays short, cited, and reachable");
    * every per-shape assertion below would then pass by iterating nothing.
    */
   const shapes = failures.split("\n").reduce((acc, line) => {
-    if (/^- \*\*/.test(line)) acc.push(line);
+    if (line.startsWith("- **")) acc.push(line);
     else if (acc.length > 0 && /^ {2}\S/.test(line)) acc[acc.length - 1] += " " + line.trim();
     return acc;
   }, /** @type {string[]} */ ([]));

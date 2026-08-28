@@ -112,8 +112,7 @@ const MULTI_CSV = "run,allowed,refused\n1,5,7\n2,8,4\n3,3,9\n4,6,6";
  * the two take different code paths (multi-series adds direct labels, and bar
  * facets rather than labelling at a point).
  */
-export const FIXTURES = [
-  ...["bar", "line", "dot", "area"].flatMap((type) => [
+export const FIXTURES = ["bar", "line", "dot", "area"].flatMap((type) => [
     {
       name: `${type}/single`,
       attrs: { type, x: "label", y: "refused", title: "Refusals", alt: `A ${type} chart of refusals.` },
@@ -124,8 +123,7 @@ export const FIXTURES = [
       attrs: { type, x: "run", y: "allowed,refused", title: "Outcomes", alt: `A ${type} chart of outcomes.` },
       csv: MULTI_CSV,
     },
-  ]),
-];
+]);
 
 const serialize = (/** @type {any[]} */ children) =>
   unified().use(rehypeStringify).stringify({ type: "root", children });

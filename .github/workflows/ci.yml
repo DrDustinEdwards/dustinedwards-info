@@ -62,7 +62,8 @@ jobs:
 
       # The version is READ FROM .nvmrc rather than written here. A second
       # statement of the Node version is a mirror, and this repo has been bitten
-      # by mirrors twice this month; .nvmrc is the one place that says 24.14.1.
+      # by mirrors twice this month; .nvmrc is the one place that names it, and
+      # this comment used to name it too, which is the mirror it warns about.
       # The sha the actions/setup-node v7.0.0 tag named, verified against the
       # tag list 2026-08-25, pinned for the same reason.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -111,5 +112,20 @@ jobs:
       #
       # The typecheck is inside this tier as check:types since 2026-08-20, so a
       # build that does not compile fails CI without a separate step.
+      # LINT, and it is deliberately NOT a `check:` script.
+      #
+      # `check-all.mjs` derives the gate list from package.json and refuses to
+      # run a gate nobody has tiered, so naming this `check:lint` would enrol it
+      # in the offline tier and in ship. That is a bigger claim than it earns:
+      # oxlint reads style and dead code, it proves nothing about behaviour, and
+      # a deploy should not be blocked by a preference. CI is where a preference
+      # belongs, because CI is the review the author is not.
+      #
+      # `--deny-warnings`, so the clean state stays clean: everything it found
+      # on the day it landed was fixed rather than allowlisted, and a warning
+      # tolerated once is a warning nobody reads again.
+      - name: Lint
+        run: npm run lint
+
       - name: Gates
         run: npm run check:ci
