@@ -3,8 +3,8 @@
 Recurring failure SHAPES in this repo. One line each, with one citation.
 
 Every one of these was already written down somewhere, at length, when it
-happened again. That is the problem this page exists to solve: seventeen stories
-are not findable, a list is. **If this page grows past one screen it has failed
+happened again. That is the problem this page exists to solve: a pile of stories
+is not findable, a list is. **If this page grows past one screen it has failed
 at its own job.**
 
 Scope, so it does not become a second copy of something: hard rule 10 carries the
