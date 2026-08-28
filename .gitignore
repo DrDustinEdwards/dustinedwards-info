@@ -80,6 +80,15 @@ wrangler.jsonc
 # refuses on any dirty tree, untracked files included.
 .smoke-token
 
+# Session scratch space. A working directory an investigation leaves behind,
+# holding capture scripts and intermediate output that belong to nobody.
+#
+# IGNORED rather than merely untracked, for the reason /og-samples/ below is:
+# `npm run ship` refuses on any dirty tree, untracked files included, so an
+# unignored scratch directory blocks every ship window until somebody moves it
+# out of the repo by hand. Added 2026-08-28, when it did.
+/.scratch/
+
 # Social card review renders, written by `build:og -- --out og-samples`.
 # Untracked because the PNG bytes are not deterministic and are deliberately
 # kept out of the gated artifact, and IGNORED rather than merely untracked
