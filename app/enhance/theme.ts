@@ -54,10 +54,6 @@ function enhanceThemeToggle() {
 enhanceThemeToggle();
 enhanceSearchTrigger();
 
-// A module, so the bindings above stay out of the global namespace. Loaded by
-// a nonced script tag rendered beside the form; see theme-toggle.tsx.
-export {};
-
 /**
  * The event `app/enhance/palette.ts` listens for. One spelling, two files.
  *

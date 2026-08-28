@@ -285,7 +285,7 @@ export async function listBlogPosts(
   }
 
   return {
-    posts: [...byId.values()].map(({ id, ...rest }) => rest),
+    posts: [...byId.values()].map(({ id: _dropped, ...rest }) => rest),
     total,
     page,
     perPage,

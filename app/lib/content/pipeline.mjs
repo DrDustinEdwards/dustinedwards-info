@@ -629,12 +629,33 @@ async function buildHighlighter() {
 }
 
 /**
+ * A directive's attributes as plain strings.
+ *
+ * `mdast-util-directive` types an attribute value as `string | null | undefined`,
+ * because `:::figure{src}` with no value is legal markdown. Every consumer here
+ * wants strings, and an attribute written with no value is indistinguishable
+ * from one that was not written, so those keys are DROPPED rather than carried
+ * through as null and stringified into markup later.
+ *
+ * @param {{ attributes?: Record<string, string | null | undefined> | null | undefined }} node
+ * @returns {Record<string, string>}
+ */
+function attributesOf(node) {
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const [key, value] of Object.entries(node.attributes ?? {})) {
+    if (typeof value === "string") out[key] = value;
+  }
+  return out;
+}
+
+/**
  * Turns `:::figure{src= alt= credit=}` into real figure markup.
  * @param {string} file
  */
 function remarkFigure(file) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, (/** @type {any} */ node) => {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
       if (node.type !== "containerDirective" || node.name !== "figure") return;
 
       const attrs = node.attributes ?? {};
@@ -748,8 +769,8 @@ function mediaKeyOf(raw) {
  * @param {any[]} sink
  */
 function remarkCollectMedia(sink) {
-  return (/** @type {any} */ tree) => {
-    /** @param {string | undefined} url @param {string} form @param {any} node */
+  return (/** @type {import("mdast").Root} */ tree) => {
+    /** @param {string | null | undefined} url @param {string} form @param {any} node */
     const add = (url, form, node) => {
       const key = mediaKeyOf(url ?? "");
       if (!key) return;
@@ -760,7 +781,7 @@ function remarkCollectMedia(sink) {
       });
     };
 
-    visit(tree, (/** @type {any} */ node) => {
+    visit(tree, (node) => {
       switch (node.type) {
         case "image":
           add(node.url, "markdown-image", node);
@@ -819,8 +840,8 @@ function remarkCollectMedia(sink) {
  * @param {string} source the markdown these positions refer to
  */
 function remarkNumericTextDirectives(source) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, "textDirective", (/** @type {any} */ node, index, parent) => {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, "textDirective", (node, index, parent) => {
       if (!parent || index === undefined || index === null) return;
       if (!/^\d/.test(node.name ?? "")) return;
       const { start, end } = node.position ?? {};
@@ -860,10 +881,25 @@ export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure"];
  * @param {string} file
  */
 function remarkUnknownDirectives(file) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, (/** @type {any} */ node) => {
-      const type = String(node.type);
-      if (!type.endsWith("Directive")) return;
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
+      /*
+       * THE THREE DIRECTIVE TYPES ARE NAMED rather than matched on a suffix.
+       *
+       * `String(node.type).endsWith("Directive")` is true of exactly these
+       * three nodes, and no compiler can narrow a union through it, so
+       * `node.name` was being read off the whole union and needed an `any`.
+       * Naming them narrows, and the marker below already enumerated two of
+       * the three anyway.
+       */
+      if (
+        node.type !== "containerDirective" &&
+        node.type !== "leafDirective" &&
+        node.type !== "textDirective"
+      ) {
+        return;
+      }
+      const type = node.type;
       const name = node.name ?? "";
       if (KNOWN_DIRECTIVES.includes(name)) return;
 
@@ -893,13 +929,16 @@ function remarkUnknownDirectives(file) {
  * @param {any[]} sink models, indexed by the marker written onto the node
  */
 function remarkChart(file, sink) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, (/** @type {any} */ node) => {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
       if (node.type !== "containerDirective" || node.name !== "chart") return;
 
       const children = node.children ?? [];
-      const dataNodes = children.filter((/** @type {any} */ c) => c.type === "code");
-      if (dataNodes.length !== 1) {
+      // NARROWED BY THE FILTER, so `.value` below is a string rather than a
+      // property read off the whole block-content union.
+      const dataNodes = children.filter((c) => c.type === "code");
+      const data = dataNodes[0];
+      if (dataNodes.length !== 1 || !data) {
         throw new ContentError(
           file,
           `:::chart requires exactly one fenced code block of data, found ${dataNodes.length}`,
@@ -909,7 +948,7 @@ function remarkChart(file, sink) {
       /** @type {any} */
       let model;
       try {
-        model = buildChartModel(node.attributes ?? {}, dataNodes[0].value);
+        model = buildChartModel(attributesOf(node), data.value);
       } catch (error) {
         throw new ContentError(
           file,
@@ -935,8 +974,8 @@ function remarkChart(file, sink) {
  * @param {any[]} models
  */
 function rehypeChart(models) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node) => {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node) => {
       const marker = node.properties?.["data-chart"];
       if (marker === undefined) return;
       const model = models[Number(marker)];
@@ -958,13 +997,15 @@ function rehypeChart(models) {
  * @param {any[]} sink models, indexed by the marker written onto the node
  */
 function remarkDiagram(file, sink) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, (/** @type {any} */ node) => {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
       if (node.type !== "containerDirective" || node.name !== "diagram") return;
 
       const children = node.children ?? [];
-      const sourceNodes = children.filter((/** @type {any} */ c) => c.type === "code");
-      if (sourceNodes.length !== 1) {
+      // NARROWED BY THE FILTER, same reason as the chart directive above.
+      const sourceNodes = children.filter((c) => c.type === "code");
+      const source = sourceNodes[0];
+      if (sourceNodes.length !== 1 || !source) {
         throw new ContentError(
           file,
           `:::diagram requires exactly one fenced code block of mermaid source, found ${sourceNodes.length}`,
@@ -974,7 +1015,7 @@ function remarkDiagram(file, sink) {
       // ```js inside a diagram has made a mistake worth naming, and the fence is
       // also what makes the source render as mermaid in the .md twin, on GitHub
       // and anywhere else that reads the markdown instead of the page.
-      const lang = sourceNodes[0].lang ?? "";
+      const lang = source.lang ?? "";
       if (lang !== "mermaid") {
         throw new ContentError(
           file,
@@ -985,7 +1026,7 @@ function remarkDiagram(file, sink) {
       /** @type {any} */
       let model;
       try {
-        model = buildDiagramModel(node.attributes ?? {}, sourceNodes[0].value);
+        model = buildDiagramModel(attributesOf(node), source.value);
       } catch (error) {
         throw new ContentError(
           file,
@@ -1011,8 +1052,8 @@ function remarkDiagram(file, sink) {
  * @param {any[]} models
  */
 function rehypeDiagram(models) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node) => {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node) => {
       const marker = node.properties?.["data-diagram"];
       if (marker === undefined) return;
       const model = models[Number(marker)];
@@ -1168,8 +1209,8 @@ export function isAllowedUrl(value) {
  * @param {Array<{ file: string, tag: string, url: string }>} sink
  */
 function rehypeUrlProtocols(file, sink) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node, index, parent) => {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node, index, parent) => {
       const isLink = node.tagName === "a";
       const isImage = node.tagName === "img";
       if (!isLink && !isImage) return;
@@ -1194,10 +1235,14 @@ function rehypeUrlProtocols(file, sink) {
   };
 }
 
-/** The visible text inside a node, for reconstructing link markdown. */
-function textOf(/** @type {any} */ node) {
+/**
+ * The visible text inside a node, for reconstructing link markdown.
+ *
+ * @param {import("hast").Nodes} node
+ */
+function textOf(node) {
   let out = "";
-  visit(node, "text", (/** @type {any} */ child) => {
+  visit(node, "text", (child) => {
     out += child.value;
   });
   return out;
@@ -1242,8 +1287,8 @@ function textOf(/** @type {any} */ node) {
  */
 function rehypeImageSources(file, resolveImage, pending) {
   let seen = 0;
-  return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node, index, parent) => {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "img") return;
       // A diagram's asset is rendered by a LATER build step and legitimately may
       // not exist yet, so measuring it here would make the artifact depend on the
@@ -1345,8 +1390,8 @@ function rehypeImageSources(file, resolveImage, pending) {
  * @param {Array<{ depth: number, id: string, text: string }>} sink
  */
 function rehypeCollectToc(sink) {
-  return (/** @type {any} */ tree) => {
-    visit(tree, "element", (/** @type {any} */ node) => {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node) => {
       if (node.tagName !== "h2" && node.tagName !== "h3") return;
       const id = String(node.properties?.id ?? "");
       if (!id) return;

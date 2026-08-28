@@ -69,10 +69,9 @@ const MIGRATION_NAME = /\b(\d{4}_[a-z0-9_]+\.sql)\b/g;
  * @param {object} input
  * @param {number} input.code    the process exit code
  * @param {string} input.text    stdout and stderr, combined
- * @param {string[]} [input.onDisk] migration filenames in `drizzle/`
  * @returns {MigrationVerdict}
  */
-export function readMigrationList({ code, text, onDisk = [] }) {
+export function readMigrationList({ code, text }) {
   // A NON-ZERO EXIT IS NOT "NOTHING PENDING". Network down, auth expired, the
   // database renamed: every one of them exits non-zero and prints no names, and
   // treating that as clean is exactly how a guard becomes decoration.
