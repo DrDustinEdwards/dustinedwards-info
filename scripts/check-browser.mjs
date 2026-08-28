@@ -1771,6 +1771,239 @@ try {
     );
   }
 
+  /* ---- the speculation rules, as CHROME parses them -------------------- */
+
+  /*
+   * THE OTHER HALF OF THE NAVIGATION BLINK, and the assertion is the CANDIDATE
+   * LIST because the activation cannot be observed at all.
+   *
+   * ## WHAT THIS IS FOR
+   *
+   * Dustin still saw a blink after the view-transition fix above, on clicks to
+   * destinations nothing had speculated. Measured on production 2026-08-28: a
+   * footer click to `/colophon` reported `deliveryType` empty and produced no
+   * preloading attempt of any kind, while every header and post click reported
+   * `navigational-prefetch`. The rules covered the header's five paths and
+   * `/blog/*` and nothing else, so `/colophon`, `/privacy`, `/search` and a post
+   * linked from anywhere but a blog page were cold document loads.
+   *
+   * ## WHY A GATE CAN NEVER ASSERT THAT A PRERENDER ACTIVATED
+   *
+   * **CHROME REFUSES TO PRERENDER WHILE CDP IS ATTACHED.** Measured 2026-08-28
+   * against production: `Preload.prerenderStatusUpdated` reports every single
+   * attempt as `Failure [PrerenderingDisabledByDevTools]`, Chrome falls back to
+   * prefetch, and the destination reports `deliveryType: navigational-prefetch`
+   * with `activationStart: 0`. It is CDP itself and not the Preload domain,
+   * confirmed by running the same navigation with the domain never enabled and
+   * getting an identical result.
+   *
+   * So `activationStart > 0` is unfalsifiable here in the worst way: it is
+   * always 0, and a gate asserting it would fail forever while the site was
+   * correct. Do not add it. What IS observable is everything upstream of the
+   * activation: that the block is on the page, that Chrome ACCEPTED the rule
+   * set, and which URLs it resolved as candidates. A candidate list is the
+   * browser's own reading of the payload, which is strictly more than a source
+   * match can give, and it is where a malformed `href_matches` shows up: a
+   * rejected rule set renders identically and speculates nothing.
+   *
+   * ## THE EXCLUSIONS ARE ASSERTED AGAINST THE LINKS THAT ACTUALLY EXIST
+   *
+   * `/blog` renders a `?tag=` chip per tag, a `?page=` link, the `.md` twin's
+   * cousin `rss.xml`, and `/login` in the header. So the exclusion assertions
+   * below have a live subject rather than a hypothetical one, and the case
+   * proves that subject non-empty before reading anything into a zero.
+   */
+  {
+    const PAGES = ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon", "/privacy"];
+    /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], eagerness: string[], blocks: number}>} */
+    const seen = new Map();
+
+    for (const path of PAGES) {
+      const context = await browser.createBrowserContext();
+      const probe = await context.newPage();
+      await probe.setViewport({ width: 1280, height: 900 });
+      const client = await probe.createCDPSession();
+      await client.send("Preload.enable");
+
+      /** @type {string[]} */
+      const errors = [];
+      let ruleSets = 0;
+      /** @type {Set<string>} */
+      const candidates = new Set();
+      client.on("Preload.ruleSetUpdated", (event) => {
+        ruleSets += 1;
+        if (event.ruleSet?.errorType) {
+          errors.push(`${event.ruleSet.errorType}: ${event.ruleSet.errorMessage ?? ""}`);
+        }
+      });
+      client.on("Preload.preloadingAttemptSourcesUpdated", (event) => {
+        for (const source of event.preloadingAttemptSources ?? []) {
+          if (!source.key?.url) continue;
+          const url = new URL(source.key.url);
+          candidates.add(url.pathname + url.search);
+        }
+      });
+
+      await probe.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      /* The candidate list is computed after the rules are parsed, so it needs
+         a window; a zero read too early is not a zero. */
+      await new Promise((r) => setTimeout(r, 1200));
+
+      const page = await probe.evaluate(() => {
+        const blocks = [...document.querySelectorAll('script[type="speculationrules"]')];
+        /** @type {string[]} */
+        const eagerness = [];
+        for (const block of blocks) {
+          try {
+            for (const rule of JSON.parse(block.textContent ?? "{}").prerender ?? []) {
+              eagerness.push(rule.eagerness);
+            }
+          } catch {
+            eagerness.push("UNPARSEABLE");
+          }
+        }
+        return {
+          blocks: blocks.length,
+          eagerness,
+          hrefs: [
+            ...new Set(
+              [...document.querySelectorAll("a[href]")].map((a) => /** @type {HTMLAnchorElement} */ (a).href),
+            ),
+          ]
+            .filter((href) => href.startsWith(location.origin))
+            .map((href) => href.slice(location.origin.length)),
+        };
+      });
+      await context.close();
+
+      seen.set(path, {
+        accepted: ruleSets > 0 && errors.length === 0,
+        errors,
+        candidates: [...candidates],
+        ...page,
+      });
+    }
+
+    for (const path of PAGES) {
+      const s = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get(path));
+      ok(
+        `${path}: carries exactly one speculationrules block`,
+        s.blocks === 1,
+        `found ${s.blocks}. Two blocks on one page are two rule sets competing for ` +
+          `one budget, which is what having a site block and a blog block cost; ` +
+          `zero means the enhancement is absent and nothing else on the page changes.`,
+      );
+      ok(
+        `${path}: CHROME ACCEPTED the rule set`,
+        s.accepted,
+        s.errors.length
+          ? `Chrome reported ${JSON.stringify(s.errors)}. A rejected rule set renders ` +
+            `identically to a good one and speculates nothing.`
+          : `no Preload.ruleSetUpdated event at all, so the block never reached the ` +
+            `speculation machinery. Under the enforced CSP the usual cause is a ` +
+            `missing nonce on the element.`,
+      );
+      ok(
+        `${path}: ONE rule, at moderate eagerness`,
+        s.eagerness.length === 1 && s.eagerness[0] === "moderate",
+        `eagerness values are ${JSON.stringify(s.eagerness)}, expected exactly ` +
+          `["moderate"]. An "immediate" rule for the header's destinations was built ` +
+          `and measured on 2026-08-28 and reverted on Dustin's verdict: it cost 4 to 5 ` +
+          `extra credentialed document requests on EVERY public page load, taking origin ` +
+          `document requests per page view from one to five or six, because a ` +
+          `cookie-carrying reader bypasses the platform cache and each speculation ` +
+          `therefore reaches this Worker. Its reappearance is that decision being undone.`,
+      );
+      ok(
+        `${path}: is not a candidate for its own speculation`,
+        !s.candidates.includes(path),
+        `the page speculates itself. That spends an origin request on a navigation ` +
+          `that cannot happen, and can evict a useful candidate from the two-slot ` +
+          `moderate budget.`,
+      );
+    }
+
+    /*
+     * THE COVERAGE HALF. `/colophon` is the exact destination measured cold on
+     * production, and it is reached from the FOOTER, which is why a rule scoped
+     * to the header or to `/blog/*` never covered it.
+     */
+    const fromBlog = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get("/blog"));
+    ok(
+      "/blog: the candidate list is non-empty, so the assertions below are about something",
+      fromBlog.candidates.length > 0,
+      "Chrome resolved no candidates at all. Every exclusion assertion below would " +
+        "then pass on an empty set, which is the zero-scope class of hard rule 10.",
+    );
+    for (const destination of ["/colophon", "/privacy", "/search", "/blog/ten-years-on-cloudflare"]) {
+      ok(
+        `/blog: ${destination} is a speculation candidate`,
+        fromBlog.candidates.includes(destination),
+        `it is not, so a click to it is a cold document load. ${destination} is linked ` +
+          `from this page and is a public HTML route, which is exactly the set the ` +
+          `document rule exists to cover.`,
+      );
+    }
+
+    /*
+     * THE EXCLUSION HALF, each one asserted against links the page really
+     * renders. The counts are proven non-empty first, because "no excluded
+     * candidate" and "no such link on the page" are the same reading otherwise.
+     */
+    const EXCLUSIONS = [
+      {
+        label: "a query string",
+        matches: (/** @type {string} */ href) => href.includes("?"),
+        /*
+         * NOTE THE PHRASING, and it is not stylistic. This detail cannot spell
+         * the wrong glob out, because a slash-star inside a string literal in a
+         * gate file opens a BLOCK COMMENT as far as `stripComments` is
+         * concerned: it is not string-aware, and it then runs to the next
+         * close-comment anywhere in the file. Written literally here, this
+         * string hid 74 of this gate's own `ok()` calls from
+         * `check:invariants` section 17, which is what caught it: 97 calls
+         * examined before, 23 after. Measured 2026-08-28.
+         */
+        why:
+          "a filtered view is a database read per variant, and /blog renders one chip " +
+          "per tag; speculating them is a crawl of the tag index. The exclusion has to " +
+          "name the URLPattern `search` component. A pathname pattern that spells the " +
+          "query with a literal question mark reads it as part of the path, and planting " +
+          "that spelling resolved ZERO candidates on every page rather than merely " +
+          "leaking the queries.",
+      },
+      {
+        label: "a non-page extension",
+        matches: (/** @type {string} */ href) => /\.(md|xml|json|txt)(\?|$)/.test(href),
+        why:
+          "feeds, the sitemap, robots, the llms pair and the .md representation twins are " +
+          "not documents a reader navigates to. /blog/rss.xml WAS a candidate under the " +
+          "old blog-prefix rule, measured 2026-08-28. The rule is not spelled out here " +
+          "for the slash-star reason given above.",
+      },
+      {
+        label: "the login door",
+        matches: (/** @type {string} */ href) => href === "/login",
+        why: "prerendering a door warms nothing, and it is linked from the header on every page.",
+      },
+    ];
+    for (const exclusion of EXCLUSIONS) {
+      const links = fromBlog.hrefs.filter(exclusion.matches);
+      ok(
+        `/blog renders at least one link with ${exclusion.label}, so the exclusion has a subject`,
+        links.length > 0,
+        `none found among ${fromBlog.hrefs.length} same-origin links. The assertion below ` +
+          `would pass because the page changed, not because the rule works.`,
+      );
+      const leaked = fromBlog.candidates.filter(exclusion.matches);
+      ok(
+        `NO CANDIDATE ON /blog CARRIES ${exclusion.label.toUpperCase()}`,
+        leaked.length === 0,
+        `Chrome resolved ${JSON.stringify(leaked)} as speculation candidates. ${exclusion.why}`,
+      );
+    }
+  }
+
   /*
    * THE PAGE GOES BACK TO /blog BEFORE THE COLUMN CASE.
    *
