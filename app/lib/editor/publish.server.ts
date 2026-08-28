@@ -161,8 +161,10 @@ export async function validateAndRender(
   raw: string,
 ) {
   const dashes = findWideDashes(raw);
-  if (dashes.length > 0) {
-    const first = dashes[0];
+  // The first offender is guarded by VALUE rather than by the list length: same
+  // refusal, and it is what lets the message below read its fields.
+  const first = dashes[0];
+  if (first) {
     throw new EditorError(
       `Wide dash ${first.char} on line ${first.line}, column ${first.column}. ` +
         `House style uses commas, periods, parentheses or colons. Context: "${first.excerpt}"` +

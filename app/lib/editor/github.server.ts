@@ -341,7 +341,9 @@ export async function listCommitsForPath(
 
   return commits.map((entry) => ({
     sha: entry.sha,
-    message: entry.commit.message.split("\n")[0],
+    // `split` always yields a first element; the fallback is unreachable and
+    // an empty subject line is what an empty commit message deserves.
+    message: entry.commit.message.split("\n")[0] ?? "",
     author: entry.commit.author.name,
     date: entry.commit.author.date,
   }));

@@ -1,6 +1,6 @@
 import { Form, Link, data, redirect } from "react-router";
 
-import { serverTiming, timed, timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 
 import { PostEditor } from "~/components/admin/post-editor";
 import {
@@ -13,7 +13,7 @@ import { listBlogTags } from "~/db";
 import { adminActorContext, adminSessionContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/preview-links.server";
-import { expiresAt, previewUrl } from "~/lib/preview-token.mjs";
+import { previewUrl } from "~/lib/preview-token.mjs";
 import { loadLinkTargets } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
@@ -39,7 +39,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
    * rather than what a fix would produce.
    */
   const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
   const env = getEnv(context);
   const file = await timed(timings, "gh_read_file", () => readFile(env, postPath(params.slug)));
   if (!file) throw data("Not found", { status: 404 });

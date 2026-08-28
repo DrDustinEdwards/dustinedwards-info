@@ -1,6 +1,6 @@
 import { data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timingsContext } from "~/lib/timing";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";

@@ -160,7 +160,12 @@ export function forceFirstPublished(raw, value) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
   if (!match) return raw;
 
+  // The capture group cannot be absent when the match succeeded. Falling back
+  // to an empty block would write an empty frontmatter, so it refuses instead
+  // and returns the input unchanged, which is what the `if` above already does
+  // for a document with no frontmatter at all.
   const block = match[1];
+  if (block === undefined) return raw;
   const rest = raw.slice(match[0].length);
   const kept = block
     .split("\n")

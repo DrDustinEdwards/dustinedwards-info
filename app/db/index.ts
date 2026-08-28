@@ -263,7 +263,10 @@ export async function listBlogPosts(
     ]),
   );
 
-  const total = countRows[0].total;
+  // A COUNT(*) with no GROUP BY always returns exactly one row, so the zero
+  // is unreachable. It is also the honest answer if the row ever went missing:
+  // no rows counted.
+  const total = countRows[0]?.total ?? 0;
 
   // Fold the joined rows back into one entry per post, preserving both orders.
   // A Map keyed by id keeps first-seen post order, which the ORDER BY above

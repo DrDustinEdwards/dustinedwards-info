@@ -91,52 +91,66 @@ export function plainText(markdown) {
  */
 export function splitSections(markdown, toc) {
   const lines = markdown.split(/\r?\n/);
-  /** @type {number[]} */
-  const headingLines = [];
-  /** @type {number[]} */
-  const headingDepths = [];
+  /*
+   * ONE ARRAY OF PAIRS, not two arrays zipped by index.
+   *
+   * The line number and the depth were collected into parallel arrays and read
+   * back with `headingLines[s]` and `headingDepths[s]`, which is a shape that
+   * can only be right while nothing ever pushes to one and not the other.
+   * `noUncheckedIndexedAccess` is what surfaced it, but the array-pair is the
+   * real defect and a non-null assertion would have preserved it.
+   *
+   * @type {Array<{ line: number, depth: number }>}
+   */
+  const headings = [];
 
   let fence = "";
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
+  for (const [i, line] of lines.entries()) {
     const fenceMatch = line.match(/^\s{0,3}(```+|~~~+)/);
     if (fenceMatch) {
-      const marker = fenceMatch[1][0];
-      if (!fence) fence = marker;
-      else if (fence === marker) fence = "";
+      // The capture group cannot be absent when the match succeeded, so the
+      // guard is unreachable rather than a fallback: it substitutes nothing and
+      // the `continue` below still runs for every fence line either way.
+      const marker = fenceMatch[1]?.[0];
+      if (marker) {
+        if (!fence) fence = marker;
+        else if (fence === marker) fence = "";
+      }
       continue;
     }
     if (fence) continue;
     const heading = line.match(/^\s{0,3}(#{2,3})\s+\S/);
-    if (heading) {
-      headingLines.push(i);
-      headingDepths.push(heading[1].length);
-    }
+    if (heading?.[1]) headings.push({ line: i, depth: heading[1].length });
   }
 
   // Fail closed. If this slicer and the real renderer disagree about how many
   // headings the document has, every anchor after the disagreement is wrong and
   // the records would deep-link readers to fragments that do not exist. A build
   // failure naming the counts is the only safe outcome.
-  if (headingLines.length !== toc.length) {
+  if (headings.length !== toc.length) {
     throw new Error(
-      `heading count disagrees with the rendered outline: markdown has ${headingLines.length}, ` +
+      `heading count disagrees with the rendered outline: markdown has ${headings.length}, ` +
         `the pipeline collected ${toc.length}. Records would carry wrong anchors.`,
     );
   }
 
-  const introEnd = headingLines.length > 0 ? headingLines[0] : lines.length;
+  const introEnd = headings[0]?.line ?? lines.length;
   const intro = plainText(lines.slice(0, introEnd).join("\n"));
 
   /** @type {Array<{ anchor: string, title: string, depth: number, body: string }>} */
   const sections = [];
-  for (let s = 0; s < headingLines.length; s += 1) {
-    const start = headingLines[s] + 1;
-    const end = s + 1 < headingLines.length ? headingLines[s + 1] : lines.length;
+  for (const [s, heading] of headings.entries()) {
+    const entry = toc[s];
+    // Unreachable: the lengths were compared above and the loop walks the
+    // shorter-or-equal one. Thrown rather than defaulted, because an anchor
+    // invented here is the exact failure the count comparison exists to stop.
+    if (!entry) throw new Error(`no toc entry for heading ${s}`);
+    const start = heading.line + 1;
+    const end = headings[s + 1]?.line ?? lines.length;
     sections.push({
-      anchor: toc[s].id,
-      title: toc[s].text,
-      depth: headingDepths[s],
+      anchor: entry.id,
+      title: entry.text,
+      depth: heading.depth,
       body: plainText(lines.slice(start, end).join("\n")),
     });
   }

@@ -49,8 +49,21 @@ export async function constantTimeEqual(a: string, b: string): Promise<boolean> 
   const va = new Uint8Array(ha);
   const vb = new Uint8Array(hb);
 
-  let diff = 0;
-  for (let i = 0; i < va.length; i += 1) diff |= va[i] ^ vb[i];
+  /*
+   * THE LENGTH DIFFERENCE IS FOLDED IN FIRST, and that is what makes the read
+   * below safe without a non-null assertion.
+   *
+   * Both operands are SHA-256 digests, so both are the same fixed size and the
+   * lengths cannot differ. Seeding `diff` with the XOR of the two lengths says
+   * so in code rather than in a comment, costs nothing, and means the `?? 0`
+   * that follows can never flip the answer to "equal": if the lengths ever did
+   * differ, `diff` is already non-zero before the loop starts.
+   *
+   * Branch-free on purpose. An early return inside the loop would be a
+   * data-dependent exit from a function whose whole job is not to have one.
+   */
+  let diff = va.length ^ vb.length;
+  for (const [i, byte] of va.entries()) diff |= byte ^ (vb[i] ?? 0);
   return diff === 0;
 }
 

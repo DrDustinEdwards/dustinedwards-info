@@ -245,11 +245,18 @@ export function suggestedTags(key) {
   const out = [];
   // The leading directory, but only for a real path. A content-addressed key
   // has no directory, and its first segment is a hash, which is not a label.
-  if (key.startsWith("/") && parts.length > 1) out.push(parts[0].replace(/[-_]+/g, " "));
-  const year = key.match(/\b(20\d{2})\b/);
-  if (year) out.push(year[1]);
-  const term = key.match(/\b(spring|fall|summer|winter)\b/i);
-  if (term) out.push(term[1].toLowerCase());
+  // Each read is guarded by VALUE. A capture group cannot be absent when its
+  // match succeeded, and the leading segment cannot be absent when there is
+  // more than one; nothing here substitutes a label, it just declines to add
+  // one, which is what an absent segment means.
+  const leading = parts[0];
+  if (key.startsWith("/") && parts.length > 1 && leading) {
+    out.push(leading.replace(/[-_]+/g, " "));
+  }
+  const year = key.match(/\b(20\d{2})\b/)?.[1];
+  if (year) out.push(year);
+  const term = key.match(/\b(spring|fall|summer|winter)\b/i)?.[1];
+  if (term) out.push(term.toLowerCase());
   return [...new Set(out.map((t) => t.trim().toLowerCase()).filter(Boolean))];
 }
 

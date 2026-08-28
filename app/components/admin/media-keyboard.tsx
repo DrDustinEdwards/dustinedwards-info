@@ -121,12 +121,16 @@ export function MediaKeyboard({ initialActive = "" }: { initialActive?: string }
 
       const rows = bands();
       const flat = rows.flatMap((b) => b.items.map((i) => i.id));
-      if (flat.length === 0) return;
+      // The first id is guarded rather than the length: the same early return on
+      // an empty grid, and it is what makes the two `setActive(firstId)` calls
+      // below pass a string rather than a possibly-absent one.
+      const firstId = flat[0];
+      if (firstId === undefined) return;
 
       const move = (dir: "left" | "right" | "up" | "down") => {
         event.preventDefault();
         if (!active) {
-          setActive(flat[0]);
+          setActive(firstId);
           return;
         }
         let ri = -1;
@@ -140,24 +144,33 @@ export function MediaKeyboard({ initialActive = "" }: { initialActive?: string }
           }),
         );
         if (ri < 0) {
-          setActive(flat[0]);
+          setActive(firstId);
           return;
         }
+        // The row and the item the search above just found. Both are guarded
+        // rather than asserted: the indices came from walking `rows`, so these
+        // returns are unreachable, and an unreachable return substitutes
+        // nothing while a non-null assertion would hide a real regression here.
+        const row = rows[ri];
+        const current = row?.items[ci];
+        if (!row || !current) return;
         if (dir === "left" || dir === "right") {
-          const next = rows[ri].items[ci + (dir === "right" ? 1 : -1)];
+          const next = row.items[ci + (dir === "right" ? 1 : -1)];
           // Falling off the end of a row continues into the next one, which is
           // what reading order means and what a flat index gives for free.
           if (next) setActive(next.id);
           else {
             const k = flat.indexOf(active) + (dir === "right" ? 1 : -1);
-            if (flat[k]) setActive(flat[k]);
+            const wrapped = flat[k];
+            if (wrapped) setActive(wrapped);
           }
           return;
         }
         const band = rows[ri + (dir === "down" ? 1 : -1)];
         if (!band) return;
-        const mid = rows[ri].items[ci].mid;
+        const mid = current.mid;
         let best = band.items[0];
+        if (!best) return;
         let bestD = Infinity;
         for (const it of band.items) {
           const d = Math.abs(it.mid - mid);

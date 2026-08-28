@@ -42,7 +42,10 @@ export class AskBudget extends DurableObject {
     const rows = this.ctx.storage.sql
       .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, day)
       .toArray();
-    const current = rows.length > 0 ? rows[0].count : 0;
+    // The value is read once and guarded, not the row count: a single-row
+    // SELECT that returned nothing and a stored count of zero mean the same
+    // thing here, which is what the original ternary said too.
+    const current = rows[0]?.count ?? 0;
 
     if (current >= limit) {
       return { ok: false, spent: current };
@@ -85,7 +88,10 @@ export class AskBudget extends DurableObject {
     const rows = this.ctx.storage.sql
       .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, String(window))
       .toArray();
-    const current = rows.length > 0 ? rows[0].count : 0;
+    // The value is read once and guarded, not the row count: a single-row
+    // SELECT that returned nothing and a stored count of zero mean the same
+    // thing here, which is what the original ternary said too.
+    const current = rows[0]?.count ?? 0;
 
     if (current >= limit) {
       return { ok: false, used: current };
@@ -110,7 +116,7 @@ export class AskBudget extends DurableObject {
     const rows = this.ctx.storage.sql
       .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, day)
       .toArray();
-    return { day, count: rows.length > 0 ? rows[0].count : 0 };
+    return { day, count: rows[0]?.count ?? 0 };
   }
 
   /** Clears today's count. Admin-only recovery, never reachable from a page. */

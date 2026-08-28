@@ -117,7 +117,7 @@ export function mediaUnbackedVerdict(objects) {
   return {
     ok: false,
     detail:
-      `MEDIA bucket is NO LONGER EMPTY (first key: ${objects[0].key}). ` +
+      `MEDIA bucket is NO LONGER EMPTY (first key: ${objects[0]?.key ?? "unknown"}). ` +
       `Uploaded originals are not regenerable and there is no backup. ` +
       `RECOVERY.md section 3 must be re-decided.`,
   };

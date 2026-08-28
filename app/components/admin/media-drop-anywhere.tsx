@@ -60,7 +60,11 @@ export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInput
       // ONE file, because the form takes one and inventing a queue here would
       // be a second upload path with none of the server's contract.
       const one = new DataTransfer();
-      one.items.add(files[0]);
+      // The file is read by value. `files.length === 0` already returned above,
+      // so the guard is unreachable and it substitutes nothing.
+      const first = files[0];
+      if (!first) return;
+      one.items.add(first);
       input.files = one.files;
       input.focus();
     };

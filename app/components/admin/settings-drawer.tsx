@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useFetcher } from "react-router";
 
 import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";

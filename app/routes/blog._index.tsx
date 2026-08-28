@@ -9,7 +9,6 @@ import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
-  DEFAULT_OG_IMAGE,
   HTML_VARY,
   SHARED_CACHE_CONTROL,
   SITE,
