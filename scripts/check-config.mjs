@@ -37,7 +37,8 @@
  * conventions.md was written about.
  */
 
-import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -92,6 +93,24 @@ try {
   process.exit(1);
 }
 
+
+/**
+ * Vars whose VALUE is deliberately not committed, name to reason.
+ *
+ * Self-policing in both directions: an entry naming a var neither file declares
+ * fails below, and a var in here must be a placeholder in the example rather
+ * than merely different from the real value.
+ *
+ * @type {Map<string, string>}
+ */
+const REDACTED_VARS = new Map([
+  [
+    "CLOUDFLARE_ACCOUNT_ID",
+    "an account-scoped identifier. Not a credential, which is why it is a var " +
+      "rather than a wrangler secret, and still covered by the portfolio rule " +
+      "that account-scoped identifiers stay out of git",
+  ],
+]);
 
 const realSurface = surfaceOf(real);
 const exampleSurface = surfaceOf(example);
@@ -189,10 +208,25 @@ assertThat(
  *
  * VALUES are compared, not just names, and that is deliberate. A var is by
  * definition not a credential (a credential goes in `wrangler secret`), so the
- * example can carry the real value and there is nothing to redact. A var whose
- * value legitimately differs per clone would be a new decision, and it should
- * arrive as a change to this assertion with the reason attached rather than as
- * a silent divergence.
+ * example can usually carry the real value and there is nothing to redact.
+ *
+ * THAT PARAGRAPH ENDED "a var whose value legitimately differs per clone would
+ * be a new decision, and it should arrive as a change to this assertion with the
+ * reason attached rather than as a silent divergence." This is that change,
+ *2026-08-28, and the reason is below.
+ *
+ * NOT-A-CREDENTIAL AND NOT-COMMITTABLE ARE TWO DIFFERENT QUESTIONS, and the old
+ * paragraph collapsed them. `CLOUDFLARE_ACCOUNT_ID` is an identifier: it grants
+ * nothing on its own, which is why it is a var and not a secret. It is also
+ * ACCOUNT-SCOPED, and the portfolio rule keeps account-scoped identifiers out of
+ * git, which the `database_id` and the KV `id` in the same file already follow.
+ * One value in a file being real while its neighbours are placeholders is a
+ * convention somebody has to remember rather than a rule.
+ *
+ * So a var may be REDACTED, by name, with its reason, and the redaction is
+ * checked in both directions: the example must carry a placeholder AND must not
+ * carry the real value. The map polices itself, so an entry naming a var that no
+ * longer exists fails here rather than quietly exempting nothing.
  */
 {
   const realVars = /** @type {Record<string, unknown>} */ (real.vars ?? {});
@@ -203,13 +237,27 @@ assertThat(
       `example declares the var ${key}`,
       "It is in wrangler.jsonc and not in the example, so a fresh clone runs without it.",
     );
-    if (Object.hasOwn(exampleVars, key)) {
+    if (!Object.hasOwn(exampleVars, key)) continue;
+    const why = REDACTED_VARS.get(key);
+    if (why) {
       assertThat(
-        JSON.stringify(realVars[key]) === JSON.stringify(exampleVars[key]),
-        `var ${key} matches`,
-        `real: ${JSON.stringify(realVars[key])} | example: ${JSON.stringify(exampleVars[key])}`,
+        JSON.stringify(realVars[key]) !== JSON.stringify(exampleVars[key]),
+        `redacted var ${key} is NOT the real value in the example`,
+        `the example carries the real value. ${why}`,
       );
+      assertThat(
+        /^0+$/.test(String(exampleVars[key] ?? "")),
+        `redacted var ${key} is a placeholder in the example`,
+        `example carries ${JSON.stringify(exampleVars[key])}, which is neither the ` +
+          `real value nor a run of zeros. A third value is a third thing to keep true.`,
+      );
+      continue;
     }
+    assertThat(
+      JSON.stringify(realVars[key]) === JSON.stringify(exampleVars[key]),
+      `var ${key} matches`,
+      `real: ${JSON.stringify(realVars[key])} | example: ${JSON.stringify(exampleVars[key])}`,
+    );
   }
   for (const key of Object.keys(exampleVars)) {
     assertThat(
@@ -313,6 +361,82 @@ assertThat(
   "example's KV id is not the real one",
 );
 
+for (const [name, why] of REDACTED_VARS) {
+  assertThat(
+    Object.hasOwn(/** @type {Record<string, unknown>} */ (real.vars ?? {}), name),
+    `redaction entry ${name} names a var the real config still declares`,
+    `REDACTED_VARS exempts a var that no longer exists, so it exempts nothing (${why})`,
+  );
+}
+
+/*
+ * THE REAL ACCOUNT-SCOPED IDENTIFIERS APPEAR IN NO TRACKED FILE.
+ *
+ * The three placeholder assertions above each police ONE field in ONE file.
+ * They say nothing about the same digits being written into a script, which is
+ * where the account id actually was: `scripts/ae-probe.mjs` carried it as a
+ * const, and the example carried it as a var, and both were committed while the
+ * database id beside them was a row of zeros.
+ *
+ * The needles are READ OUT OF THE REAL CONFIG, never typed here. A gate that
+ * restated the digits it is hunting would be the fourth committed copy.
+ *
+ * Scoped to `git ls-files`, which is the definition of "committed" that
+ * matters: the real config is gitignored and is expected to contain them.
+ */
+{
+  /** @type {Array<[string, string]>} what it is, and the value to hunt for */
+  const secretsInConfig = /** @type {Array<[string, string]>} */ ([
+    ["account id", String(/** @type {any} */ (real.vars ?? {}).CLOUDFLARE_ACCOUNT_ID ?? "")],
+    ["D1 database_id", String(real.d1_databases?.[0]?.database_id ?? "")],
+    ["KV namespace id", String(real.kv_namespaces?.[0]?.id ?? "")],
+  ].filter(([, value]) => value.length >= 16));
+
+  /*
+   * SCOPE, ASSERTED, on both halves. An empty needle list finds nothing because
+   * it looked for nothing, and a short one would match noise; the length filter
+   * above is why the floor is on the COUNT rather than on the values.
+   */
+  assertThat(
+    secretsInConfig.length === 3,
+    `three account-scoped identifiers were read out of the real config`,
+    `found ${secretsInConfig.length}. The real config's shape changed, so this scan ` +
+      `is hunting for fewer things than it thinks.`,
+  );
+
+  const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean);
+
+  assertThat(
+    tracked.length >= 200,
+    `the tracked file list is populated (${tracked.length} file(s))`,
+    "git ls-files returned almost nothing, so the scan below reads no files and " +
+      "reports a clean result for a repository it never opened.",
+  );
+
+  /** @type {string[]} */
+  const leaks = [];
+  for (const rel of tracked) {
+    let text;
+    try {
+      text = readFileSync(join(root, rel), "utf8");
+    } catch {
+      continue; // A binary or deleted path. Neither can carry the digits as text.
+    }
+    for (const [what, value] of secretsInConfig) {
+      if (text.includes(value)) leaks.push(`${rel} (${what})`);
+    }
+  }
+
+  assertThat(
+    leaks.length === 0,
+    "no account-scoped identifier from the real config appears in a tracked file",
+    `${leaks.join(", ")}. The real value is in git. Replace it with a placeholder ` +
+      `and read it off the environment or the config at runtime.`,
+  );
+}
+
 console.log(
   `  ${realSurface.size} binding(s) compared: ${[...realSurface.keys()].join(", ")}`,
 );
@@ -324,12 +448,13 @@ console.log(
  * empty surface, every comparison below would iterate nothing and report the
  * two files in perfect agreement.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 55.
- * Never summed. Floored at 50, roughly 9 percent: the count steps by two or
- * three per binding and per var, so a single added binding moves it visibly
- * and a deleted one should be a deliberate diff.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-28 by RUNNING it:
+ * 61, after the redaction assertions and the tracked-tree scan landed. It was
+ * 55 on 2026-08-14. Never summed. Floored at 56, roughly 8 percent under: the
+ * count steps by two or three per binding and per var, so a single added
+ * binding moves it visibly and a deleted one should be a deliberate diff.
  */
-const MINIMUM_CHECKS = 50;
+const MINIMUM_CHECKS = 56;
 if (checks < MINIMUM_CHECKS) {
   assertThat(
     false,

@@ -116,10 +116,19 @@
 	// nothing on its own. Putting it in `wrangler secret` would make check:secrets
 	// police a value that is not sensitive, which costs that gate its signal.
 	//
-	// Stated ONCE, here. Anything needing the value reads it off the env rather
-	// than restating the digits, so there is no second copy to drift.
+	// A PLACEHOLDER HERE SINCE 2026-08-28, and the real value lives only in the
+	// gitignored `wrangler.jsonc`. The paragraph above is still true about what
+	// the value IS: an account id is an identifier and not a credential, and it
+	// is published in the Capsid core doc. What changed is the portfolio rule it
+	// was breaking, that account-scoped identifiers stay out of git, which the
+	// database id and the KV id in this file already followed. One file's ids
+	// being placeholders while another value in the same file is real is a rule
+	// somebody has to remember rather than a rule.
+	//
+	// `check:config` reads the REAL id out of the real config and refuses to find
+	// it anywhere tracked, so this cannot quietly come back.
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "f852925ce701e6c56f6feae83f0eb2d3"
+		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000"
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
