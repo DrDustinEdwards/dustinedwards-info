@@ -1,10 +1,10 @@
 {
-  "_comment": "The colophon's HAND-WRITTEN half. Nothing here is derivable from config, which is why every entry carries anchors and check:features verifies the anchored thing still EXISTS. It does not and cannot verify the prose. Rule, enforced by the gate: every feature needs at least one anchor of kind route, gate or assertion. A decision anchor is context and may never stand alone, because this gate runs offline and cannot reach Capsid. Every measurement below is transcribed from a spec that ruled it; if a claim cannot be sourced, the feature is left out.",
+  "_comment": "The colophon's HAND-WRITTEN half. Nothing here is derivable from config, which is why every entry carries anchors and check:features verifies the anchored thing still EXISTS. It does not and cannot verify the prose. Rule, enforced by the gate: every feature needs at least one anchor of kind route, gate or assertion. A decision anchor is context and may never stand alone, because this gate runs offline and cannot reach Capsid. HARD RULE 17, EXTENDED 2026-08-28 AND ENFORCED HERE: a sentence may carry reasoning and may not carry a number or a tense-bound state claim that a gate does not own. Anchors are exempt, because an anchor is a machine reference to a gate's own text and has to match it byte for byte. Five entries described machinery that had already been removed; the gate now refuses that vocabulary by name.",
   "features": [
     {
       "component": "Content pipeline",
       "name": "Markdown is the source of truth, D1 owns every read",
-      "what": "Posts are markdown files in the repository. A generator renders them into a committed artifact carrying both the source and the rendered HTML, and a sync writes both into D1, which every public read then queries. The artifact is byte-compared against a fresh generation on every build, so a hand-edited row or a stale artifact is a failed build rather than a surprise.",
+      "what": "Posts are markdown files in the repository, and git holds the markdown and nothing else. D1 holds the only rendered copy, and every public read queries D1. Each row records the git blob sha of the source it came from and a hash of its own render, so a ship compares both against a fresh build before writing and names by slug every row that has drifted. A row whose source is unchanged but whose render differs fails the run after the deploy stands, because that is a defect in the pipeline rather than staleness.",
       "anchors": [
         {
           "kind": "route",
@@ -19,7 +19,7 @@
     {
       "component": "Content pipeline",
       "name": "One renderer, two writers",
-      "what": "The build scripts and the Worker import the same markdown pipeline module. There is deliberately no second renderer, because the editor commits HTML that the next build has to reproduce exactly.",
+      "what": "The build scripts and the Worker import the same markdown pipeline module. There is deliberately no second renderer, because both writers render the same source independently, the Worker on every save and the build on every ship, and a difference between the two is invisible until something compares them.",
       "anchors": [
         {
           "kind": "route",
@@ -49,7 +49,7 @@
     {
       "component": "Charts",
       "name": "Charts are content, not a widget",
-      "what": "A chart is authored as a container directive over a fenced block of CSV and rendered to SVG at build time into the gated artifact, so a reader with JavaScript disabled sees the same chart as everyone else. Colours are CSS custom properties that resolve per theme, which is why one stored SVG serves light and dark with nothing to flash.",
+      "what": "A chart is authored as a container directive over a fenced block of CSV and rendered to SVG as the post is rendered, so it is part of the stored HTML and a reader with JavaScript disabled sees the same chart as everyone else. Colours are CSS custom properties that resolve per theme, which is why one stored SVG serves light and dark with nothing to flash.",
       "anchors": [
         {
           "kind": "gate",
@@ -65,7 +65,7 @@
     {
       "component": "Charts",
       "name": "Node and Worker must render byte-identical SVG",
-      "what": "The chart module is bundled for workerd and run under miniflare, and every fixture must hash identically to the Node render. Determinism is checked 200 times in-process and across separate processes, because a renderer that is not deterministic would make the byte-comparison gate fail at random. That is not hypothetical: it is what the syntax highlighter's JavaScript regex engine did.",
+      "what": "The chart module is bundled for workerd and run under miniflare, and every fixture must hash identically to the Node render. Determinism is checked in-process, and again across separate processes because module-level state and hash-order effects only show up across a process boundary. A renderer that is not deterministic would make the two writers disagree at random. That is not hypothetical: it is what the syntax highlighter's JavaScript regex engine did.",
       "anchors": [
         {
           "kind": "gate",
@@ -75,8 +75,8 @@
     },
     {
       "component": "Diagrams",
-      "name": "Diagrams render at build time, twice",
-      "what": "A diagram needs real font metrics, so it cannot render in a Worker. Two SVGs are produced per diagram, one per theme, and the stylesheet shows one. The asset stays out of the byte-comparison gate while the artifact carries the key and the source, and alt text is mandatory.",
+      "name": "Diagrams render ahead of time, one drawing per theme",
+      "what": "A diagram needs real font metrics, so it cannot render in a Worker. One SVG per theme is produced ahead of time and the stylesheet shows one of them. The rendered post carries the key and the source rather than the drawing, so a font-rendering difference between two machines can never turn into a failed build. Alt text is mandatory.",
       "anchors": [
         {
           "kind": "gate",
@@ -220,8 +220,8 @@
     },
     {
       "component": "Admin editor",
-      "name": "A save is one atomic commit, then D1",
-      "what": "A save changes the markdown and the regenerated artifact and lands both as a single commit through the Git Data API, because the simpler Contents API writes one file per call and two commits would leave the byte-comparison gate red in between. D1 is written only after the commit lands. If the repository host is unreachable the save fails whole; there is no database-only write and no reconcile-later queue.",
+      "name": "The markdown is committed before the database is touched",
+      "what": "A save commits exactly the markdown, through the Git Data API, and writes D1 only after that commit lands. Files are the source of truth, so nothing reaches the database that is not already in git, and the ordering is the whole guarantee: a database row can always be rebuilt from the repository, and a commit can never be rebuilt from a row. If the repository host is unreachable the save fails whole; there is no database-only write and no reconcile-later queue.",
       "anchors": [
         {
           "kind": "gate",
@@ -411,8 +411,8 @@
     },
     {
       "component": "Brand mark",
-      "name": "The mark is inline SVG, proved against four fixtures",
-      "what": "One component collapses four SVG files into a path list and a viewBox, because the files differ in exactly two ways. The purple paths carry no fill and take a brand custom property instead, which is the entire dark-mode story for the mark. The four files remain as gate fixtures: the expected path data comes from them and the actual from the component, so nothing in the gate restates a path.",
+      "name": "The mark is inline SVG, proved against its own files",
+      "what": "One component collapses the four SVG files into a path list and a viewBox, because the files differ in exactly two ways. The purple paths carry no fill and take a brand custom property instead, which is the entire dark-mode story for the mark. The files remain as gate fixtures: the expected path data comes from them and the actual from the component, so nothing in the gate restates a path.",
       "anchors": [
         {
           "kind": "gate",
