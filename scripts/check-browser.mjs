@@ -1606,6 +1606,171 @@ try {
     }
   }
 
+  /* ---- a public navigation does not run a view transition -------------- */
+
+  /*
+   * THE NAVIGATION BLINK, and why the assertion is the ViewTransition object.
+   *
+   * ## WHAT WAS MEASURED, production, `/` to `/blog`, three runs per cell
+   *
+   * Compositor frames, each scored against the settled origin page and the
+   * settled destination page, so a frame that is NEITHER shows up as a spike
+   * over a measured noise floor:
+   *
+   *   as-is    12 to 14 intermediate frames, 214-220 ms dark and 245-259 ms
+   *            light, peak 33 to 66 times the floor
+   *   reduce   two frames after the click, nothing in between
+   *   none     one frame after the click, nothing in between
+   *
+   * Chrome's default root crossfade animates both snapshots through partial
+   * opacity for a quarter of a second. On a plane that navigates by full
+   * document load, that ran on every header click, and TWO EARLIER SESSIONS
+   * HERE RECORDED THE ViewTransition OBJECT'S PRESENCE AS HEALTH. It was the
+   * disease. This case exists so that reading cannot be made again.
+   *
+   * ## WHY THE PROPERTY AND NOT THE PIXELS
+   *
+   * A pixel assertion would need the frames above, and a gate cannot have
+   * them: the crossfade is renderer paint so `Page.startScreencast` does carry
+   * it, but the measurement needs a settled reference on both sides plus a
+   * noise floor per run, and the cast emits only on change, so a clean
+   * navigation yields one or two frames and no floor at all. The object is the
+   * cause, it is one boolean, and it cannot be true while the fade is absent.
+   *
+   * `pagereveal` fires on EVERY document load, with a null `viewTransition`
+   * when no transition is running. So the assertion has two halves and needs
+   * both: the event fired at all, which proves the probe ran, and the object
+   * was null, which is the property. Asserting only the second would pass on a
+   * page where the listener never attached.
+   */
+  {
+    const context = await browser.createBrowserContext();
+    const probe = await context.newPage();
+
+    /*
+     * THE EVENT IS REPORTED TO NODE, not stashed in sessionStorage.
+     *
+     * The first version wrote a record in `pagereveal` and read it back after
+     * the navigation. It came back null on every run while a standalone script
+     * doing the same thing returned it fine, so the read was answering about
+     * something other than the document under test. An exposed binding is
+     * re-installed on every document by puppeteer and fires in Node at the
+     * moment the event does, which removes the round trip and the question of
+     * when it is safe to read.
+     */
+    /** @type {Array<{ path: string, hasTransition: boolean }>} */
+    const reveals = [];
+    await probe.exposeFunction(
+      "__checkBrowserReveal",
+      /** @param {string} path @param {boolean} hasTransition */
+      (path, hasTransition) => {
+        reveals.push({ path, hasTransition });
+      },
+    );
+    await probe.evaluateOnNewDocument(() => {
+      addEventListener("pagereveal", (event) => {
+        /** @type {any} */ (window).__checkBrowserReveal(
+          location.pathname,
+          Boolean(event.viewTransition),
+        );
+      });
+    });
+
+    /*
+     * PRERENDERING OFF, and this is the whole reason the first three attempts
+     * at this case failed while a standalone script doing the same thing
+     * worked.
+     *
+     * Header destinations carry `moderate` speculation rules, so hovering the
+     * link prerenders it and the click ACTIVATES that document. A prerendered
+     * document is a separate target: the script injected here never ran in it,
+     * so no listener existed to fire. Measured: the initial load on `/`
+     * recorded {"path":"/","hasTransition":false} and the click recorded
+     * nothing at all, while `location.pathname` read `/blog`. That reads
+     * exactly like "the event did not fire" and is really "the probe was not
+     * in that document".
+     *
+     * Turning it off makes the navigation an ordinary document load, which is
+     * the subject: whether the document opts into a view transition is a
+     * property of its CSS, not of how it was fetched.
+     */
+    const probeClient = await probe.createCDPSession();
+    await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
+
+    await probe.goto(`${BASE}/`, { waitUntil: "networkidle0" });
+    ok(
+      "the pagereveal probe is installed, so a later silence means something",
+      reveals.some((r) => r.path === "/"),
+      `the initial load produced ${JSON.stringify(reveals)}. pagereveal fires on ` +
+        `every document load, so nothing here means the listener never attached and ` +
+        `the navigation assertions below would pass or fail for the wrong reason.`,
+    );
+    reveals.length = 0;
+
+    /*
+     * A REAL CLICK ON THE HEADER LINK, hovered first. Header destinations
+     * carry speculation rules, and a click with no dwell activates a PENDING
+     * prerender, which puppeteer cannot follow: the page stays on `/` and the
+     * case would assert against a navigation that never happened. The arrival
+     * is checked below for the same reason.
+     */
+    const target = await probe.evaluate(() => {
+      const link = document.querySelector('.site-header-nav a[href="/blog"]');
+      if (!link) return null;
+      const box = link.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    });
+    ok(
+      "the header carries the /blog link the navigation case clicks",
+      target !== null,
+      "no `.site-header-nav a[href=\"/blog\"]` on the home page, so the assertion " +
+        "below would have nothing to navigate with and would pass vacuously.",
+    );
+
+    let arrived = "";
+    let reveal = null;
+    if (target) {
+      await probe.mouse.move(target.x, target.y);
+      await new Promise((r) => setTimeout(r, 350));
+      await probe.mouse.click(target.x, target.y);
+      for (let i = 0; i < 25; i += 1) {
+        arrived = await probe.evaluate(() => location.pathname).catch(() => "");
+        if (arrived === "/blog") break;
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      /* The event fires on the incoming document, so give it a moment to land. */
+      for (let i = 0; i < 6 && reveals.length === 0; i += 1) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      reveal = reveals.find((r) => r.path === "/blog") ?? reveals[reveals.length - 1] ?? null;
+    }
+    await context.close();
+
+    ok(
+      "the header click reaches /blog, so the navigation below was real",
+      arrived === "/blog",
+      `landed on ${JSON.stringify(arrived)}. Everything after this measures a ` +
+        `navigation, and a click that did not navigate makes it vacuous.`,
+    );
+    ok(
+      "pagereveal fires on the public navigation",
+      reveal !== null,
+      `no pagereveal record. The event fires on every document load, so its ` +
+        `absence means the probe never attached rather than that the site is fine, ` +
+        `and the assertion below would then be about nothing.`,
+    );
+    ok(
+      "THE PUBLIC NAVIGATION RUNS NO VIEW TRANSITION",
+      reveal !== null && reveal.hasTransition === false,
+      `pagereveal on ${JSON.stringify(reveal?.path)} carried ${reveal?.hasTransition ? "an object" : "no record"}, ` +
+        `expected null. An object means the document opted back into cross-document ` +
+        `view transitions, and Chrome's default root crossfade then stacks both ` +
+        `pages at partial opacity for about a quarter of a second on every click: ` +
+        `measured 12 to 14 intermediate frames, 214-220 ms dark and 245-259 ms ` +
+        `light. The one owner is @view-transition in app/styles/motion-print.css.`,
+    );
+  }
+
   /*
    * THE PAGE GOES BACK TO /blog BEFORE THE COLUMN CASE.
    *
@@ -3893,7 +4058,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 154 : 107;
+  const MINIMUM_CHECKS = adminCasesRan ? 159 : 112;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
