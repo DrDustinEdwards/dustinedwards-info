@@ -81,12 +81,28 @@ const JSONC = [
   "}",
 ].join("\n");
 
-test("THIS HELPER MUST NEVER BE FED JSONC, and here is what happens if it is", () => {
-  // The colon guard protects "https://". It cannot protect a PROTOCOL-RELATIVE
-  // url, whose slashes follow a quote rather than a colon.
-  assert.throws(
-    () => JSON.parse(stripComments(JSONC)),
-    "the strong form must break this config, which is why the JSONC readers keep the weak one",
+test("THE JSONC BOUNDARY MOVED, and it moved because the tokenizer landed", () => {
+  /*
+   * THIS TEST USED TO ASSERT THE OPPOSITE, and the assertion was correct when
+   * it was written. The helper removed comments with a regex, so a
+   * PROTOCOL-RELATIVE url inside a string, whose slashes follow a quote rather
+   * than a colon, was eaten along with the rest of its line, and the config no
+   * longer parsed.
+   *
+   * The one-pass tokenizer consumes a string literal whole, so the url is
+   * inside a literal before any slash is considered. MEASURED 2026-08-28: the
+   * fixture below now parses and keeps its url intact.
+   *
+   * A boundary note is a claim that ages, and this one aged the moment the
+   * mechanism under it changed. It is rewritten rather than deleted, because
+   * what a reader needs is that the hazard WAS real and what removed it.
+   */
+  const parsed = JSON.parse(stripComments(JSONC));
+  assert.equal(parsed.name, "dustinedwards");
+  assert.equal(
+    parsed.share,
+    "//cdn.example.com/logo.svg",
+    "the protocol-relative url must survive, which is the whole boundary that moved",
   );
 });
 
@@ -105,16 +121,111 @@ const SVG = [
   "</svg>",
 ].join("\n");
 
-test("NOR SVG: the audit named the wrong mechanism, and this is the real one", () => {
-  // The audit said the strong form eats xmlns:xlink="http://...". Measured, it
-  // does NOT: that is a colon. What it eats is the protocol-relative url, and
-  // it takes the rest of the line with it.
+test("AND THE SVG BOUNDARY WITH IT, for the same reason", () => {
+  /*
+   * Also an inversion, and the earlier note is worth keeping: the audit said
+   * the old form ate the xmlns:xlink attribute. It did NOT, because that is a
+   * colon. What it ate was the protocol-relative url and the rest of its line,
+   * and that is now inside a string literal the tokenizer consumes whole.
+   */
   const out = stripComments(SVG);
-  assert.equal(out.includes('xmlns="http://www.w3.org/2000/svg"'), true, "the colon case IS safe");
-  assert.equal(out.includes("cdn.example.com/mark.png"), false, "the href value is destroyed");
-  assert.equal(out.includes('width="48"/>'), false, "and so is the rest of its line");
+  assert.equal(out.includes('xmlns="http://www.w3.org/2000/svg"'), true);
+  assert.equal(out.includes("cdn.example.com/mark.png"), true, "the href value survives now");
+  assert.equal(out.includes('width="48"/>'), true, "and so does the rest of its line");
+});
 
-  assert.equal(WEAK(SVG).includes("cdn.example.com/mark.png"), true, "the weak form keeps it");
+test("THE WEAK FORMS STAY, and this says what is left of the reason", () => {
+  /*
+   * The three JSONC readers and check:logo's SVG path keep their own weak
+   * strippers. The measured hazard above is gone, so the argument is narrower
+   * now and worth stating rather than assuming: this helper is a JAVASCRIPT
+   * tokenizer. It reads an apostrophe in SVG TEXT CONTENT as opening a string,
+   * and a slash after an operator-looking character as opening a regex, neither
+   * of which means anything in those formats.
+   *
+   * MEASURED on the fixtures here: nothing is currently destroyed either way,
+   * so this is a reason to be deliberate rather than a live defect. Moving a
+   * weak reader onto this one is a decision with a measurement attached.
+   */
+  assert.equal(WEAK(SVG).includes("cdn.example.com/mark.png"), true, "the weak form keeps it too");
+  assert.equal(
+    JSON.parse(WEAK(JSONC)).share,
+    "//cdn.example.com/logo.svg",
+    "and both forms now agree on this fixture, which is what makes the choice a decision",
+  );
+});
+
+/* ---------------------------------------- THE DEFECT THIS REWRITE CLOSED */
+
+test("A COMMENT OPENER INSIDE A STRING is not a comment", () => {
+  /*
+   * REPLAYS THE DEFECT, per hard rule 12.
+   *
+   * Block comments were removed with a regex, which cannot know what a string
+   * is. A slash-star inside a string literal opened a comment that ran to the
+   * next star-slash ANYWHERE in the file, taking every line between them.
+   *
+   * MEASURED at HEAD before the fix: 347 string literals across 37 files carry
+   * one of those sequences. Most are harmless because a matching closer sits in
+   * the same literal, which is exactly what makes the class dangerous: it is
+   * silent until two of them line up.
+   */
+  const src = [
+    'const opener = "/*";',
+    "const survives = 1;",
+    'const closer = "*/";',
+    "const alsoSurvives = 2;",
+  ].join("\n");
+
+  const out = stripComments(src);
+  assert.equal(out.includes("survives"), true, "the code between two literals was swallowed");
+  assert.equal(out.includes("alsoSurvives"), true, "and so was the code after them");
+
+  // THE CONTROL. The old body is written out and shown to lose the line
+  // between, so the assertion above cannot be satisfied by any implementation.
+  const naive = src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  assert.equal(
+    naive.includes("survives"),
+    false,
+    "the regex form no longer swallows the line, so this case does not discriminate",
+  );
+});
+
+test("A QUOTE INSIDE A REGEX CHARACTER CLASS does not open a string", () => {
+  /*
+   * The second half, found BY THE DIFFERENTIAL rather than by reading. Once
+   * strings were tokenized, a quote inside a regex character class sat outside
+   * any literal and paired with the next quote in the file. Six assertion calls
+   * in check-llms.mjs went invisible to check:invariants section 17.
+   */
+  const src = [
+    "const pattern = /from[\"']x[\"']/;",
+    "const survives = 1;",
+    "const label = 'the page';",
+    "const alsoSurvives = 2;",
+  ].join("\n");
+
+  const out = stripCommentsAndStrings(src);
+  assert.equal(out.includes("survives"), true, "the code after the regex was swallowed");
+  assert.equal(out.includes("alsoSurvives"), true, "and so was the code after the next quote");
+});
+
+test("a regex containing a slash in a character class ends where it really ends", () => {
+  // A character class may contain the delimiter. A scanner stopping at the
+  // first unescaped slash would end the literal in the middle of one.
+  const src = 'const p = /[/]/; const after = "kept";';
+  const out = stripComments(src);
+  assert.equal(out.includes("const after"), true);
+  assert.equal(out.includes('"kept"'), true);
+});
+
+test("a DIVISION is not read as a regex", () => {
+  // The heuristic is on the previous significant character. A division's left
+  // operand ends in an identifier or a closing bracket, never in an operator.
+  const src = "const ratio = width / height; const after = 1;";
+  const out = stripComments(src);
+  assert.equal(out.includes("width / height"), true, "the division was eaten as a regex");
+  assert.equal(out.includes("const after"), true);
 });
 
 /*

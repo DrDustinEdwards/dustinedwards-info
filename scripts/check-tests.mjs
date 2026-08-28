@@ -95,10 +95,11 @@ const TEST_DIR = join(root, "test");
 /* 55 against 59 measured 2026-08-28 by RUNNING the gate, after
    rss-feed.test.mjs landed with the feed carrying the whole post. */
 const MINIMUM_FILES = 55;
-/* 542 against 577, re-measured 2026-08-28 in the same commit. The file floor
-   above catches a file LEAVING; this one catches a file being hollowed out in
-   place, which no file count can see. */
-const MINIMUM_TESTS = 542;
+/* 547 against 582, re-measured 2026-08-28 in the same commit, after the
+   stripComments rewrite added five cases to test/strip-comments.test.mjs. The
+   file floor above catches a file LEAVING; this one catches a file being
+   hollowed out in place, which no file count can see. */
+const MINIMUM_TESTS = 547;
 
 let checks = 0;
 let failures = 0;

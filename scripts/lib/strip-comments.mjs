@@ -13,41 +13,33 @@
  * that is weaker than its siblings does not fail, it passes for a reason nobody
  * checks.
  *
- * ## THE GUARD ON LINE COMMENTS IS LOAD-BEARING
+ * ## IT IS A TOKENIZER, SINCE 2026-08-28, AND THE OLD BOUNDARY MOVED WITH IT
  *
- * A line comment is only stripped when the two slashes are NOT preceded by a
- * colon, so `https://developers.cloudflare.com` inside a string survives. That
- * guard is why this helper can be pointed at TypeScript full of URLs.
+ * This removed comments with a regex and carried a colon guard on line
+ * comments, so `https://` inside a string was not read as one. That guard was
+ * load-bearing and it was also the shape of the boundary: it could not protect
+ * a PROTOCOL-RELATIVE url, `"//cdn.example.com/x"`, whose slashes follow a
+ * quote. Feeding this JSONC or SVG destroyed the value and the rest of its
+ * line, measured on 2026-08-23 and asserted in the tests.
  *
- * It is also exactly why this helper HAS A BOUNDARY, below.
+ * **THAT IS NO LONGER TRUE, AND THE TESTS NOW ASSERT THE OPPOSITE.** A string
+ * literal is consumed whole before any slash inside it is considered, so the
+ * colon guard is gone because nothing needs it: a `//` reaching the comment
+ * branch is in code. MEASURED 2026-08-28: the JSONC fixture parses and keeps
+ * its url, and the SVG fixture keeps its href and the rest of the line.
  *
- * ## NEVER FEED THIS JSONC OR SVG
+ * A boundary note is a claim that ages, per hard rule 7, and this one aged in
+ * the commit that changed the mechanism under it.
  *
- * The colon guard protects `https://` and `xlink:href`. It cannot protect a
- * PROTOCOL-RELATIVE url, `"//cdn.example.com/x"`, whose slashes follow a quote.
- * In a .ts file that string is rare and a comment is common. In JSONC and SVG
- * the reverse is true, and eating one destroys the value and everything after
- * it on the line.
+ * ## THE WEAK FORMS STAY ANYWAY, on a narrower argument
  *
- * MEASURED, 2026-08-23, on a fixture carrying one protocol-relative url:
- *
- *   - JSONC through this helper no longer parses. `JSON.parse` threw
- *     "Bad control character in string literal". Through the weak form it
- *     parsed and kept the url intact.
- *   - SVG through this helper lost the whole `xlink:href` VALUE and the rest
- *     of its line.
- *
- * The audit that prompted this consolidation said the hazard was the strong
- * form eating `xmlns:xlink="http://..."`. That is FALSE, and measurement is how
- * it was corrected: the colon guard protects exactly that case. The real hazard
- * is the protocol-relative url, which the audit's example would never have
- * shown. `test/strip-comments.test.mjs` asserts the boundary rather than
- * describing it, because a comment saying "do not do this" is not an
- * instrument.
- *
- * Weak strippers stay where they are, each with its reason written at its site:
- * three JSONC readers (`JSON.parse` throws on a surviving comment, so weak is
- * sufficient) and check:logo's SVG path.
+ * Three JSONC readers and check:logo's SVG path keep their own weak strippers.
+ * The measured hazard is gone, so what is left is that THIS IS A JAVASCRIPT
+ * TOKENIZER: it reads an apostrophe in SVG text content as opening a string,
+ * and a slash after an operator-looking character as opening a regex, neither
+ * of which means anything in those formats. On today's fixtures neither costs
+ * anything, so moving a weak reader onto this one is a decision that needs a
+ * measurement rather than a tidy-up.
  *
  * ## JOBS THAT ARE NOT THIS JOB
  *
@@ -59,6 +51,169 @@
  *
  * @see test/strip-comments.test.mjs
  */
+
+/**
+ * ONE LEFT-TO-RIGHT PASS, and both exported functions are it.
+ *
+ * ## WHY ONE PASS, TWICE OVER
+ *
+ * "Is this a comment opener" is a question about everything to its left, and no
+ * number of independent regex passes can answer it. This module learned that
+ * twice before it learned it properly:
+ *
+ *   2026-08-26  `stripCommentsAndStrings` blanked strings in three regex passes,
+ *               so two apostrophes inside DOUBLE-quoted labels paired up and the
+ *               single-quote pass swallowed the lines between them. Fixed with a
+ *               one-pass tokenizer, in that function alone.
+ *   2026-08-28  `stripComments` still removed comments with a regex, so a `/`
+ *               followed by a star INSIDE a string opened a comment running to
+ *               the next star-slash anywhere in the file. Measured at HEAD: 347
+ *               string literals across 37 files carry one of those sequences.
+ *
+ * The second fix could not live in `stripComments` alone, and the differential
+ * is what said so. `stripCommentsAndStrings` calls it and then ran its OWN
+ * string tokenizer, which does not understand REGEX LITERALS: once comments
+ * stopped mangling them, quotes inside character classes survived into the
+ * second pass and mispaired there. So there is one tokenizer now, and blanking
+ * strings is a flag on it.
+ *
+ * ## WHAT IT UNDERSTANDS
+ *
+ * String literals in all three quotes, escapes honoured. Block and line
+ * comments. Regex literals, including a slash inside a character class, which
+ * `/[/]/` legally contains.
+ *
+ * A `/` opens a regex when the previous significant character cannot END an
+ * expression. That is the standard heuristic rather than a parser, and it is
+ * wrong only for a division whose left operand ends in an operator, which is
+ * not a thing valid code does. **It was adopted on a MEASUREMENT rather than on
+ * the argument:** without it, `check-llms.mjs` line 97, `/...["']...["']/`, hid
+ * six assertion calls from `check:invariants` section 17, in the gate that
+ * exists to catch invisible assertions.
+ *
+ * An UNTERMINATED literal of any kind is emitted verbatim to the end of the
+ * file rather than swallowing it. A source that does not parse is a different
+ * problem, and eating the remainder is the failure this module exists to
+ * remove.
+ *
+ * @param {string} source
+ * @param {{ preserveLines?: boolean, blankStrings?: boolean }} options
+ * @returns {string}
+ */
+function scan(source, options) {
+  const preserveLines = options.preserveLines === true;
+  const blankStrings = options.blankStrings === true;
+  let out = "";
+  let i = 0;
+
+  /** The last non-whitespace character EMITTED, which is what decides a slash. */
+  const lastSignificant = () => {
+    for (let k = out.length - 1; k >= 0; k -= 1) {
+      if (!/\s/.test(out[k])) return out[k];
+    }
+    return "";
+  };
+
+  const opensRegex = () => {
+    const prev = lastSignificant();
+    if (prev === "") return true;
+    return "(,=:[!&|?{};+-*%~^<>".includes(prev);
+  };
+
+  while (i < source.length) {
+    const c = source[i];
+
+    /* A STRING LITERAL. Nothing inside it can open a comment or a regex. */
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      let j = i + 1;
+      let newlines = "";
+      let closed = false;
+      while (j < source.length) {
+        if (source[j] === "\\") {
+          j += 2;
+          continue;
+        }
+        if (source[j] === "\n") newlines += "\n";
+        if (source[j] === quote) {
+          j += 1;
+          closed = true;
+          break;
+        }
+        j += 1;
+      }
+      if (!closed) {
+        out += source.slice(i);
+        break;
+      }
+      /*
+       * BLANKED TO `""` PLUS THE NEWLINES IT SPANNED. Section 17 reports a file
+       * and a LINE computed from this text, and a multi-line template
+       * collapsing to two characters moved every line after it.
+       */
+      out += blankStrings ? `""${newlines}` : source.slice(i, j);
+      i = j;
+      continue;
+    }
+
+    /* A REGEX LITERAL, copied whole, character classes honoured. */
+    if (c === "/" && source[i + 1] !== "/" && source[i + 1] !== "*" && opensRegex()) {
+      let j = i + 1;
+      let inClass = false;
+      let closed = false;
+      while (j < source.length) {
+        const d = source[j];
+        if (d === "\\") {
+          j += 2;
+          continue;
+        }
+        // A newline cannot appear in a regex literal, so the heuristic was
+        // wrong and this was a division. Fall through.
+        if (d === "\n") break;
+        if (d === "[") inClass = true;
+        else if (d === "]") inClass = false;
+        else if (d === "/" && !inClass) {
+          j += 1;
+          closed = true;
+          break;
+        }
+        j += 1;
+      }
+      if (closed) {
+        out += source.slice(i, j);
+        i = j;
+        continue;
+      }
+    }
+
+    /* A block comment. A space, or the newlines it spanned. */
+    if (c === "/" && source[i + 1] === "*") {
+      const end = source.indexOf("*/", i + 2);
+      const stop = end === -1 ? source.length : end + 2;
+      const span = source.slice(i, stop);
+      out += preserveLines ? "\n".repeat((span.match(/\n/g) ?? []).length) : " ";
+      i = stop;
+      continue;
+    }
+
+    /*
+     * A line comment. The colon guard is GONE and is not needed: it existed so
+     * a `https://` inside a string was not read as a comment, and a string is
+     * consumed whole by the branch above. A `//` reaching here is in code.
+     */
+    if (c === "/" && source[i + 1] === "/") {
+      const end = source.indexOf("\n", i);
+      out += " ";
+      i = end === -1 ? source.length : end;
+      continue;
+    }
+
+    out += c;
+    i += 1;
+  }
+
+  return out;
+}
 
 /**
  * Comments out, strings kept.
@@ -74,13 +229,7 @@
  * @returns {string}
  */
 export function stripComments(source, options = {}) {
-  const collapsed = options.preserveLines
-    ? source
-        .replace(/\/\*[\s\S]*?\*\//g, (m) => "\n".repeat((m.match(/\n/g) ?? []).length))
-    : source
-        .replace(/\/\*[\s\S]*?\*\//g, " ");
-  return collapsed
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  return scan(source, { preserveLines: options.preserveLines === true });
 }
 
 /**
@@ -91,102 +240,14 @@ export function stripComments(source, options = {}) {
  * very patterns it hunts, so it would flag itself; check:secrets reads files
  * that name their own configuration flags in user-facing copy.
  *
- * ORDER MATTERS AND IS NOT A TIDINESS PREFERENCE. Comments must go first: an
- * apostrophe in prose ("doesn't", or a possessive in a docblock) opens a
- * single-quoted string as far as a regex is concerned and runs to the next
- * apostrophe anywhere in the file, swallowing the code between. check:invariants
- * section 5 reported `process.argv`, `window.innerHeight` and `Math.floor` as
- * unknown database columns for exactly this reason, before comments were
- * stripped first.
- *
- * ## THAT REASONING WAS RIGHT AND ITS FIX WAS HALF THE PROBLEM. 2026-08-26.
- *
- * Stripping comments first closes the apostrophe-in-PROSE case completely. The
- * identical failure through an apostrophe in a double-quoted STRING was left
- * open, because three independent passes cannot know that a quote is already
- * inside a literal opened by a different quote character.
- *
- * MEASURED on a two-call fixture whose labels were "the page's verdict" and
- * "the tile's age". The single-quote pass paired those two apostrophes and
- * blanked everything between them, so:
- *
- *     ok("the page's verdict", someNumber < LIMIT, "detail one");
- *     ok("the tile's age", otherNumber >= 0, "detail two");
- *
- * came out as ONE call reading `ok("""", otherNumber >= 0, "")`. Both
- * directions are wrong and the second is worse:
- *
- *   - FALSE POSITIVE: `""""` sits in the condition slot, so section 17 reports
- *     a string literal where the source has a boolean expression. That is how
- *     this was found.
- *   - FALSE NEGATIVE: the first call VANISHED from the scan entirely. An
- *     assertion inside a swallowed span is never examined, and `callsExamined`
- *     silently drops. A tokenizer that hides assertions from the gate whose
- *     whole subject is assertions that cannot fail is the vacuity class, in the
- *     instrument that enforces it.
- *
- * ONE LEFT-TO-RIGHT PASS, so whichever quote opens first owns the span until
- * its own match closes it. That is the only shape that can be right, because
- * "is this quote a delimiter" is a question about everything to its left.
- *
- * NEWLINES INSIDE A BLANKED STRING ARE KEPT, which the regex form did not do.
- * Section 17 reports a file and a LINE, and it computes that line from the
- * blanked text; a multi-line template collapsing to two characters moved every
- * line after it, which is why the failure that found this pointed at a line
- * holding something else entirely.
- *
- * REGEX LITERALS ARE STILL NOT UNDERSTOOD, exactly as before. A quote inside a
- * character class is read as a delimiter. That is unchanged, deliberately: the
- * distinction between division and a regex literal needs real parsing, no gate
- * has been bitten by it, and widening this beyond the measured defect is how a
- * helper that nine gates depend on acquires a new failure mode.
+ * The same tokenizer, with the strings blanked instead of copied. It used to be
+ * a separate implementation that ran AFTER `stripComments`, which is how the
+ * two disagreed about regex literals; the header on `scan` records what that
+ * cost and how it was measured.
  *
  * @param {string} source
  * @returns {string}
  */
 export function stripCommentsAndStrings(source) {
-  const code = stripComments(source);
-  let out = "";
-  let i = 0;
-  while (i < code.length) {
-    const c = code[i];
-    if (c !== '"' && c !== "'" && c !== "`") {
-      out += c;
-      i += 1;
-      continue;
-    }
-    // A literal opens here. Walk to its own closing quote, honouring escapes,
-    // and emit a pair of double quotes plus whatever newlines it spanned.
-    const quote = c;
-    let j = i + 1;
-    let newlines = "";
-    let closed = false;
-    while (j < code.length) {
-      const d = code[j];
-      if (d === "\\") {
-        j += 2;
-        continue;
-      }
-      if (d === "\n") newlines += "\n";
-      if (d === quote) {
-        closed = true;
-        j += 1;
-        break;
-      }
-      j += 1;
-    }
-    /*
-     * An UNTERMINATED literal is emitted verbatim rather than blanked to the
-     * end of the file. A source that does not parse is a different problem, and
-     * swallowing the remainder of the file is the failure this rewrite exists
-     * to remove; leaving the text in place keeps the damage local and visible.
-     */
-    if (!closed) {
-      out += code.slice(i);
-      break;
-    }
-    out += `""${newlines}`;
-    i = j;
-  }
-  return out;
+  return scan(source, { blankStrings: true });
 }
