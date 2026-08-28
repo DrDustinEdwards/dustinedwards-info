@@ -45,8 +45,24 @@
 
 import { setTimeout as sleep } from "node:timers/promises";
 
-const ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
-const ACCOUNT = "f852925ce701e6c56f6feae83f0eb2d3";
+import { SITE_ORIGIN } from "../app/lib/seo.ts";
+
+/*
+ * NEITHER OF THESE IS WRITTEN OUT HERE ANY MORE. 2026-08-28.
+ *
+ * The origin is imported from `app/lib/seo.ts`, which is the one owner: a
+ * second copy is the one that goes stale at the DNS cutover and then probes a
+ * host nobody is serving.
+ *
+ * The account id is read off the environment and refused if absent, on the
+ * portfolio rule that account-scoped identifiers stay out of git. It is an
+ * identifier rather than a credential, which is why it is a `var` in the
+ * Worker's config and not a `wrangler secret`; that makes it fine to hold in an
+ * environment variable and still not fine to commit. `check:config` refuses to
+ * find the real value anywhere tracked.
+ */
+const ORIGIN = SITE_ORIGIN;
+const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const DATASET = "dustinedwards_traffic";
 const PATH = "/playground";
 const UA = "dustinedwards-ae-probe";
@@ -56,6 +72,16 @@ const POLL_SECONDS = 10;
 const CAP_SECONDS = 240;
 /** Consecutive equal readings that count as settled. */
 const STABLE_READS = 2;
+
+if (!ACCOUNT) {
+  console.error(
+    "CLOUDFLARE_ACCOUNT_ID is not set in this environment, so there is no account " +
+      "to query. It is a var in the Worker's config rather than a secret, and it " +
+      "is deliberately not committed; read it out of wrangler.jsonc or the " +
+      "Cloudflare dashboard and export it.",
+  );
+  process.exit(1);
+}
 
 const TOKEN = process.env.ANALYTICS_READ_TOKEN;
 if (!TOKEN) {

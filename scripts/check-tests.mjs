@@ -92,14 +92,13 @@ const TEST_DIR = join(root, "test");
  * Stated as the invariant rather than as a number, because a number here is a
  * third copy of the two constants below.
  */
-/* 53 against 57 measured 2026-08-28 by RUNNING the gate, after
-   bearer.test.mjs landed with the primitives its own docblock had claimed a
-   test for. */
-const MINIMUM_FILES = 53;
-/* 522 against 556, re-measured 2026-08-28 in the same commit. The file floor
+/* 54 against 58 measured 2026-08-28 by RUNNING the gate, after
+   force-first-published.test.mjs landed with the frontmatter stamp round trip. */
+const MINIMUM_FILES = 54;
+/* 530 against 564, re-measured 2026-08-28 in the same commit. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
    place, which no file count can see. */
-const MINIMUM_TESTS = 522;
+const MINIMUM_TESTS = 530;
 
 let checks = 0;
 let failures = 0;

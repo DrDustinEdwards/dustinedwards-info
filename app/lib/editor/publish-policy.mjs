@@ -139,6 +139,28 @@ export function readState(raw) {
 }
 
 /**
+ * Frontmatter values as comparable plain data.
+ *
+ * gray-matter runs the YAML parser, which turns an unquoted `2026-07-30` into a
+ * `Date`. The stamp below writes a STRING. Comparing the two shapes directly
+ * would report a difference on every post that carries a date, so both sides
+ * are reduced to the same normal form first: a date becomes its ISO day, which
+ * is the same reduction `readState` above already makes.
+ *
+ * @param {Record<string, unknown>} data
+ * @returns {string}
+ */
+function comparableFrontmatter(data) {
+  /** @type {Record<string, unknown>} */
+  const flat = {};
+  for (const key of Object.keys(data).sort()) {
+    const value = data[key];
+    flat[key] = value instanceof Date ? value.toISOString().slice(0, 10) : value;
+  }
+  return JSON.stringify(flat);
+}
+
+/**
  * Forces `first_published` in raw markdown to the value the SERVER decided.
  *
  * This overwrites, and that is the security-critical part. The policy asks
@@ -147,11 +169,40 @@ export function readState(raw) {
  * publish any draft by submitting `first_published` in its own payload and
  * asserting the very fact the gate was checking.
  *
- * Written as a line edit on the frontmatter block rather than a gray-matter
- * re-serialisation, because re-serialising would reformat every other key and
- * turn a one-field stamp into a whole-file diff.
- */
-/**
+ * ## THE LINE EDIT STAYS, AND THE PARSER NOW CHECKS IT. 2026-08-28.
+ *
+ * The cheap path is still a line edit on the frontmatter block, for the reason
+ * it always was: re-serialising through gray-matter reformats every other key
+ * and turns a one-field stamp into a whole-frontmatter diff, on every publish,
+ * forever.
+ *
+ * What was wrong with it was not the diff, it was that NOTHING CHECKED THE
+ * RESULT. Two documents were FOUND that it gets wrong, and neither is exotic:
+ *
+ *   - a QUOTED key, `"first_published": ...`. The `^first_published` anchor
+ *     misses it, so the old value survives and a second key is appended. YAML
+ *     refuses a duplicate mapping key outright, so the post stops parsing and
+ *     the next build fails on a file this function broke.
+ *   - a LIST value, `first_published:` followed by indented items. The key
+ *     line is removed and the items are orphaned onto whatever key sits above,
+ *     so a post titled `A post` silently becomes `A post - 2020-01-01`. This
+ *     one does not throw, which makes it the dangerous half: a stamp that
+ *     renames a published post is the failure a security-critical overwrite
+ *     must not have.
+ *
+ * Several likelier candidates did NOT discriminate, and that is worth writing
+ * down so nobody re-derives the wrong hole: a folded scalar's continuation
+ * lines are indented, so the anchor already misses them, and an appended key at
+ * column zero correctly ends the scalar above it. YAML's indentation rules make
+ * the line edit safer than it looks, and safer than it looks is not checked.
+ *
+ * So the parser decides. The edit is made, the result is parsed back, and it is
+ * accepted only if the body is byte-identical and the frontmatter is exactly
+ * the input's with this one key set or removed. Anything else falls back to a
+ * full re-serialisation, which is correct by construction and noisy, and that
+ * is the right trade for a case that should never happen: correct always, tidy
+ * almost always, and never quietly wrong.
+ *
  * @param {string} raw
  * @param {string | null} value
  * @returns {string}
@@ -173,7 +224,40 @@ export function forceFirstPublished(raw, value) {
 
   if (value) kept.push(`first_published: ${value}`);
 
-  return `---\n${kept.join("\n")}\n---\n${rest}`;
+  const edited = `---\n${kept.join("\n")}\n---\n${rest}`;
+
+  /*
+   * THE PARSER'S VERDICT ON THE EDIT ABOVE.
+   *
+   * `before` is the input as YAML understands it and `want` is what this
+   * function was asked to produce. If the cheap edit produced exactly that, and
+   * left the body alone, it is returned as written.
+   */
+  const before = matter(raw);
+  const want = { .../** @type {Record<string, unknown>} */ (before.data) };
+  if (value) want.first_published = value;
+  else delete want.first_published;
+
+  try {
+    const after = matter(edited);
+    if (
+      after.content === before.content &&
+      comparableFrontmatter(/** @type {Record<string, unknown>} */ (after.data)) ===
+        comparableFrontmatter(want)
+    ) {
+      return edited;
+    }
+  } catch {
+    // The edit produced something YAML cannot read, which is the multi-line
+    // scalar case doing exactly what it does. Fall through.
+  }
+
+  /*
+   * THE FALLBACK. Correct by construction, and it reformats the frontmatter,
+   * which is why it is not the primary path. `before.content` is the body
+   * gray-matter already separated, so the body still cannot be touched here.
+   */
+  return matter.stringify(before.content, want);
 }
 
 /**
