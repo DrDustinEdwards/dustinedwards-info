@@ -115,16 +115,40 @@
       "range": "^1.2.3"
     },
     {
+      "name": "@observablehq/plot",
+      "range": "0.6.17"
+    },
+    {
+      "name": "@shikijs/rehype",
+      "range": "^4.3.1"
+    },
+    {
+      "name": "@shikijs/transformers",
+      "range": "^4.3.1"
+    },
+    {
       "name": "better-auth",
-      "range": "^1.6.23"
+      "range": "1.6.23"
     },
     {
       "name": "drizzle-orm",
       "range": "^0.45.2"
     },
     {
-      "name": "isbot",
-      "range": "^5.1.36"
+      "name": "gray-matter",
+      "range": "^4.0.3"
+    },
+    {
+      "name": "hast-util-to-string",
+      "range": "^3.0.1"
+    },
+    {
+      "name": "image-size",
+      "range": "^2.0.2"
+    },
+    {
+      "name": "linkedom",
+      "range": "0.18.13"
     },
     {
       "name": "react",
@@ -137,6 +161,50 @@
     {
       "name": "react-router",
       "range": "8.3.0"
+    },
+    {
+      "name": "rehype-autolink-headings",
+      "range": "^7.1.0"
+    },
+    {
+      "name": "rehype-slug",
+      "range": "^6.0.0"
+    },
+    {
+      "name": "rehype-stringify",
+      "range": "^10.0.1"
+    },
+    {
+      "name": "remark-directive",
+      "range": "^4.0.0"
+    },
+    {
+      "name": "remark-gfm",
+      "range": "^4.0.1"
+    },
+    {
+      "name": "remark-parse",
+      "range": "^11.0.0"
+    },
+    {
+      "name": "remark-rehype",
+      "range": "^11.1.2"
+    },
+    {
+      "name": "shiki",
+      "range": "^4.3.1"
+    },
+    {
+      "name": "unified",
+      "range": "^11.0.5"
+    },
+    {
+      "name": "unist-util-visit",
+      "range": "^5.1.0"
+    },
+    {
+      "name": "zod",
+      "range": "^4.4.3"
     }
   ],
   "migrations": [
