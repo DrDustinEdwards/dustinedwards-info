@@ -110,6 +110,27 @@ jobs:
       - name: Install
         run: npm ci
 
+      # THE LOCAL BUILD PRODUCTS THE GATE READS, built rather than checked out.
+      #
+      # THIS JOB HAD BEEN RED SINCE 2026-08-26 and nothing said so, because it
+      # runs on a schedule and on dispatch rather than on push. The artifact arc
+      # made `content/generated/posts.json` a gitignored build product that day
+      # (git holds markdown, D1 holds the rendered copy), so a checkout has
+      # markdown and no corpus, and `check:browser` opened a file that was not
+      # there: "ENOENT ... content/generated/posts.json".
+      #
+      # `ci.yml` already builds it for the same reason and says so at its own
+      # step. This job needs the CORPUS only: it drives the DEPLOYED site, so it
+      # wants the expectations the build product carries, not a local database,
+      # which is why there are no migrations and no sync here.
+      #
+      # `build:enhance` rides along on the same footing: `app/enhance/dist/` is
+      # gitignored too, and the enhancement cases assert against those bundles.
+      - name: Content and enhancement bundles
+        run: |
+          npm run build:content
+          npm run build:enhance
+
       # CHROMIUM KEEPS ITS SANDBOX; THE RUNNER GIVES UP A RESTRICTION.
       #
       # MEASURED on the first dispatch of this workflow: Chromium aborted at
