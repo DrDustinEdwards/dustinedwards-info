@@ -13,7 +13,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
-import { themeAttribute, themeFromRequest } from "~/lib/theme";
+import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
@@ -240,6 +240,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" data-theme={theme}>
       <head>
         <meta charSet="utf-8" />
+        {/*
+          COLOUR SCHEME, BEFORE ANY STYLESHEET, and the position is the point
+          rather than tidiness.
+
+          Written here directly after charset; it ARRIVES third, after viewport,
+          because React 19 hoists document metadata and owns the order among the
+          metas. That is stated rather than implied because the obvious reading
+          of this JSX is wrong, and because the property that matters is not the
+          exact index: it is that the browser reads this before it has requested
+          a stylesheet. `check:browser` asserts that relation and deliberately
+          does not assert an index, which would be pinning React's internals.
+
+          This is the only thing in the document that tells the BROWSER, as
+          opposed to the stylesheet, which palette the page is. `data-theme` on
+          <html> means nothing until the CSS that reads it has been fetched and
+          parsed, and until then the canvas the browser paints between and
+          beneath documents is its default, which is light. Measured on
+          production in real Chrome at about 45 frames a second: one composited
+          frame at 253 of 255 between two pages that read 61, on a header click
+          with a dark theme and a light machine. It sits before <Links> so it
+          is read before a stylesheet is even requested.
+
+          Rendered here rather than through a `meta` export for the same
+          mechanical reason as theme-color below: `meta` exports are not merged
+          across matched routes, so any route exporting one would drop this.
+
+          It follows the SERVER-RESOLVED choice, so the toggle keeps it in
+          step: the no-script path re-renders the document, and the scripted
+          path re-renders it too. Grounds on colorSchemeMeta.
+        */}
+        <meta name="color-scheme" content={colorSchemeMeta(data?.theme ?? "system")} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/*
           THEME-COLOUR, BOTH THEMES, and it is here rather than in a `meta`

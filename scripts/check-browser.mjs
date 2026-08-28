@@ -1198,6 +1198,15 @@ try {
     const maskTheme = (/** @type {string} */ html) =>
       html
         .replace(/<html[^>]*>/, "<html>")
+        /*
+         * THE COLOUR-SCHEME META JOINED THIS SET on 2026-08-28, and it is the
+         * third thing the theme is allowed to change. It has to be here: it
+         * carries the resolved theme by design, so leaving it out would make
+         * the enumeration below fail on every route for a difference that is
+         * the point of the meta rather than a leak. Its own case asserts the
+         * value, which is what stops this mask from hiding a defect.
+         */
+        .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"')
         .replace(/aria-pressed="(true|false)"/g, 'aria-pressed="P"');
 
     for (const { path } of THEME_CACHED) {
@@ -1280,9 +1289,9 @@ try {
 
       const residue = firstDiff(maskTheme(stranger), maskTheme(dark));
       ok(
-        `${path}: the theme changes ONLY the data-theme attribute and aria-pressed`,
+        `${path}: the theme changes ONLY data-theme, the colour-scheme meta and aria-pressed`,
         residue === null,
-        `with <html> and aria-pressed masked, the dark document still differs ` +
+        `with <html>, the colour-scheme meta and aria-pressed masked, the dark document still differs ` +
           `from the cookieless one at byte ${residue?.at}. Something else on this ` +
           `page depends on the cookie, so the enumerated diff is incomplete and ` +
           `the cache key would not describe the document.\n        ` +
@@ -1449,6 +1458,151 @@ try {
           `served FROM this cache is the same defect in the other direction: the ` +
           `next HTML reader on this key would be handed ${wanted}.`,
       );
+    }
+
+    /* ---- the BROWSER is told the colour scheme, before it fetches CSS ---- */
+
+    /*
+     * THE WHITE FRAME BETWEEN TWO PAGES, and why this is the assertion.
+     *
+     * ## WHAT WAS MEASURED
+     *
+     * Real Chrome 151, headed, sampling the SCREEN at about 45 frames a
+     * second, against production. A header click from `/` to `/blog` with
+     * `theme=dark` and `prefers-color-scheme: light`: one composited frame at
+     * 253 of 255 between two pages that settle at 61. Same click with
+     * `<meta name="color-scheme" content="dark">` injected into the same bytes
+     * and nothing else changed: never leaves the dark range. Peak 253 against
+     * peak 61 is the whole finding.
+     *
+     * `data-theme` tells the STYLESHEET which palette to use. Nothing in the
+     * document told the BROWSER, so the canvas it paints between and beneath
+     * documents was its default, which is light.
+     *
+     * THE READER IT HAPPENS TO is the one whose choice disagrees with their
+     * machine. With `theme=dark` AND a dark OS there is no flash on any
+     * navigation, which is why every earlier attempt to reproduce it failed:
+     * the instrument had been setting both from one variable.
+     *
+     * ## WHY THIS IS NOT A PIXEL ASSERTION, stated because the pixel form was
+     * ## asked for and was BUILT before being rejected on measurement
+     *
+     * Nothing available to a headless gate can see this flash:
+     *
+     *   - `Page.startScreencast` carries frames the RENDERER composites. The
+     *     white is painted by the BROWSER compositor. Measured headless AND
+     *     headed on the reproducing click: brightest cast frame 34 of 255
+     *     while the screen was 253. With a stylesheet delayed 2,500 ms the
+     *     cast emits NOTHING between 34 ms and 2,792 ms, so it does not merely
+     *     miss the flash, it reports nothing at all about that interval.
+     *   - `Page.captureScreenshot({ fromSurface: true })` does see it, once,
+     *     by luck. It BLOCKS while the renderer has no frame, which is exactly
+     *     the interval in question, so it samples the moments the flash is not
+     *     there. Two runs of the same condition: one caught a 255, the next
+     *     caught nothing.
+     *
+     * A "zero flash frames" case built on either would have passed with the
+     * fix removed. That is the unfailable-threshold class, and it is worse
+     * than no gate because it reads as coverage.
+     *
+     * What DID see it is a PowerShell screen-capture loop over a headed
+     * window, and that is not a gate: it is Windows-only, it needs an unlocked
+     * desktop at fixed coordinates, it took ten minutes for sixty runs, and it
+     * rejected about a third of its own runs as not looking at the browser. A
+     * gate that can silently degrade into a pass is the failure mode this repo
+     * has paid for most.
+     *
+     * So the assertion is the document property the experiment proved causal,
+     * on every public route and every reader state. It cannot silently pass:
+     * remove the meta and every route fails by name.
+     */
+    {
+      const SCHEME = /<meta name="color-scheme" content="([^"]*)"/;
+      const FIRST_SHEET = /<link[^>]+rel="stylesheet"/;
+
+      /**
+       * The four reader states, and the value each one must produce.
+       *
+       * "system" and no-cookie both resolve to `light dark` because the reader
+       * has not chosen: the document supports both and the machine decides.
+       * Asserting a single value there would put the flash back for whichever
+       * half of those readers the guess went against.
+       */
+      const READER_STATES = [
+        { label: "theme=dark", cookie: "theme=dark", expect: "dark" },
+        { label: "theme=light", cookie: "theme=light", expect: "light" },
+        { label: "theme=system", cookie: "theme=system", expect: "light dark" },
+        { label: "no cookie", cookie: null, expect: "light dark" },
+      ];
+
+      for (const { path } of THEME_CACHED) {
+        /** @type {string[]} */
+        const wrong = [];
+        /** @type {Array<{ state: string, html: string }>} */
+        const docs = [];
+        for (const state of READER_STATES) {
+          const html = await fetchDoc(path, state.cookie ? { cookie: state.cookie } : {});
+          docs.push({ state: state.label, html });
+          const found = html.match(SCHEME);
+          if (!found) wrong.push(`${state.label}: NO meta at all`);
+          else if (found[1] !== state.expect) {
+            wrong.push(`${state.label}: "${found[1]}", expected "${state.expect}"`);
+          }
+        }
+        ok(
+          `${path}: every reader state declares its colour scheme to the browser`,
+          wrong.length === 0,
+          `${wrong.join("; ")}. Without this the browser paints its DEFAULT canvas ` +
+            `between documents, which is light: measured at 253 of 255 for one ` +
+            `composited frame on a dark page whose reader is on a light machine.`,
+        );
+
+        /*
+         * POSITION, because a signal that arrives after the stylesheet has
+         * already been requested is a signal that arrived too late to matter.
+         * Asserted against the FIRST stylesheet link rather than against
+         * charset: React 19 hoists document metadata and owns the order among
+         * the metas, so pinning an exact index would be asserting React's
+         * internals rather than the property that makes this work.
+         */
+        const dark = docs.find((d) => d.state === "theme=dark")?.html ?? "";
+        const atMeta = dark.search(SCHEME);
+        const atSheet = dark.search(FIRST_SHEET);
+        ok(
+          `${path}: the colour scheme is declared before the first stylesheet`,
+          atMeta !== -1 && (atSheet === -1 || atMeta < atSheet),
+          `the meta is at byte ${atMeta} and the first stylesheet link at ${atSheet}. ` +
+            `The point of this meta is that it is read BEFORE any CSS is fetched; ` +
+            `after the stylesheet it tells the browser nothing it is not about to ` +
+            `learn anyway.`,
+        );
+      }
+
+      /*
+       * AND THE MARKUP AGREES WITH THE CASCADE. The meta and the stylesheet
+       * are two statements of one fact, which rule 17 tolerates only while
+       * something checks they still say the same thing: a palette moved in CSS
+       * with the meta left behind would restore the flash while every byte
+       * assertion above still passed.
+       */
+      for (const theme of ["dark", "light"]) {
+        const context = await browser.createBrowserContext();
+        const probe = await context.newPage();
+        await probe.setCookie({ url: BASE, name: "theme", value: theme, path: "/" });
+        await probe.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+        const seen = await probe.evaluate(() => ({
+          meta: document.querySelector('meta[name="color-scheme"]')?.getAttribute("content") ?? null,
+          computed: getComputedStyle(document.documentElement).colorScheme,
+        }));
+        await context.close();
+        ok(
+          `theme=${theme}: the declared colour scheme is the one the cascade resolves`,
+          seen.meta === theme && seen.computed === theme,
+          `the meta says ${JSON.stringify(seen.meta)} and the cascade resolves ` +
+            `${JSON.stringify(seen.computed)}, expected both to be "${theme}". These are ` +
+            `two statements of one fact and they have drifted.`,
+        );
+      }
     }
   }
 
@@ -3739,7 +3893,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 134 : 87;
+  const MINIMUM_CHECKS = adminCasesRan ? 154 : 107;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
