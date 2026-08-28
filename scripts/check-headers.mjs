@@ -635,40 +635,29 @@ ok(
 );
 
 /*
+ * THE SPECULATION BLOCK, and since 2026-08-28 there is exactly ONE.
+ *
  * `speculationrules` IS gated by script-src while `application/ld+json` is NOT.
  * Both are non-executable data blocks, so this is counter-intuitive and was
  * settled by the browser, not by argument. Asserted so nobody "consistently"
  * removes it.
- */
-const speculation = stripComments(
-  readFileSync(join(root, "app", "components", "blog-speculation.tsx"), "utf8"),
-);
-ok(
-  "BlogSpeculation stamps a nonce on its speculationrules script",
-  /nonce=\{/.test(speculation),
-  "script-src gates type=\"speculationrules\" (measured), unlike application/ld+json, " +
-    "so this element needs one and the JSON-LD does not",
-);
-ok(
-  "BlogSpeculation takes the nonce from the root loader, not its own source",
-  /useRouteLoaderData/.test(speculation),
-  "one source in workers/app.ts, several readers; a second generator would drift",
-);
-
-/*
- * THE SECOND SPECULATION BLOCK, and it is the one on every public page.
  *
- * `SiteSpeculation` rides in `SiteHeader`, so it renders on seven public routes
- * against `BlogSpeculation`'s two. Under an ENFORCED policy an un-nonced
- * `type="speculationrules"` element is refused by `script-src` on every one of
- * them, silently: the page renders identically, nothing is logged where anyone
- * looks, and the enhancement is simply absent. That is the same failure the
- * block above is written for, at three and a half times the blast radius.
+ * `SiteSpeculation` rides in `SiteHeader`, so it renders on every public page.
+ * Under an ENFORCED policy an un-nonced `type="speculationrules"` element is
+ * refused by `script-src` on every one of them, SILENTLY: the page renders
+ * identically, nothing is logged where anyone looks, and the enhancement is
+ * simply absent.
  *
- * WHAT THIS DOES NOT ASSERT: that the rules name the right paths. That is
- * `test/header-speculation.test.mjs`, which holds the derivation from
- * `~/lib/nav` in both directions and is the reason this gate does not carry a
- * second copy of the path list.
+ * `BlogSpeculation` was the second block, on the two blog routes, and its
+ * assertions lived here beside these. It was deleted when the rules became
+ * document rules; its subject is inside the document rule now. Its file no
+ * longer exists, so a `readFileSync` of it would throw rather than pass, which
+ * is the loud direction.
+ *
+ * WHAT THIS DOES NOT ASSERT: that the rules name the right paths or exclude the
+ * right ones. That is `test/header-speculation.test.mjs` for the derivation and
+ * `check:browser` for the payload a browser actually parses, which is why this
+ * gate carries no second copy of either list.
  */
 const siteSpeculation = stripComments(
   readFileSync(join(root, "app", "components", "site-speculation.tsx"), "utf8"),

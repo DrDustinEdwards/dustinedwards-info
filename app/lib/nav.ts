@@ -1,17 +1,22 @@
 /**
- * THE HEADER'S PATHS, IN ONE PLACE, because two consumers now read them.
+ * THE HEADER'S LINKS, in one place.
  *
- * `site-header.tsx` renders a NavLink per entry and `site-speculation.tsx`
- * builds a Speculation Rules payload from the same array. Written as two lists
- * they would drift, and the drift is INVISIBLE: a nav link added without a
- * speculation entry still navigates, just slower, and a speculation entry left
- * behind after a link is removed speculates a URL nothing points at. Neither
- * shows up in a render.
+ * `site-header.tsx` renders a NavLink per entry. It is the ONLY consumer, and
+ * that is a change: from 2026-08-27 until 2026-08-28 `site-speculation.tsx`
+ * also read this list, through an exported `HEADER_PATHS`, to build a
+ * Speculation Rules `urls` payload.
  *
- * That is the mirror anti-pattern hard rule 5 refuses a gate for elsewhere. It
- * is avoidable here because both consumers are code, so the list is DERIVED
- * rather than hand-maintained, and `test/header-speculation.test.mjs` asserts
- * the derivation in both directions.
+ * **THAT SECOND CONSUMER IS GONE, AND SO IS THE MIRROR IT CREATED.** The rules
+ * are document rules now (`~/lib/speculation.mjs`): they match the links in the
+ * rendered document rather than a list of paths, so a header link is covered
+ * because it is an `<a href>`, not because someone kept two arrays in step. The
+ * drift this module was written to prevent, a nav link with no speculation
+ * entry or an entry whose link had been removed, is not merely gated now, it is
+ * unrepresentable.
+ *
+ * `HEADER_PATHS` was deleted with it. A derived export whose only reader has
+ * gone is dead configuration that reads as load-bearing, which is worse than
+ * either keeping it honest or removing it.
  *
  * Roster's LABEL and its PATH deliberately disagree; see site-header.tsx.
  */
@@ -21,12 +26,3 @@ export const NAV = [
   { to: "/playground", label: "Playground", end: false },
   { to: "/phage-discovery", label: "Roster", end: false },
 ] as const;
-
-/**
- * Every path the header can navigate to: the brand's `/` plus the nav.
- *
- * DERIVED from NAV, deliberately, rather than written out. The brand link is
- * the one entry that is not a NavLink, so it is the one that has to be named
- * here, and it is named ONCE.
- */
-export const HEADER_PATHS: readonly string[] = ["/", ...NAV.map((item) => item.to)];
