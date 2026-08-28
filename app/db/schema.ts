@@ -7,6 +7,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 /**
@@ -63,6 +64,28 @@ export const posts = sqliteTable(
   (t) => [
     check("posts_kind_check", sql`${t.kind} in ('page', 'post')`),
     check("posts_status_check", sql`${t.status} in ('draft', 'published')`),
+    /*
+     * THE INDEXES, declared here since 2026-08-28 because they were declared
+     * NOWHERE a reader of this file could see.
+     *
+     * Hard rule 11 calls this file the source of truth, and it modelled every
+     * posts column and not one of its four indexes. A query planner decision
+     * is part of what the table IS: the visibility predicate every public read
+     * composes is covered by the first of these, and somebody reading only
+     * this file would have concluded it was a table scan.
+     *
+     * `check:invariants` section 4 now compares index NAMES AND COLUMNS
+     * against the migrations in both directions, so these are checked rather
+     * than merely written down.
+     */
+    /** Covers `publiclyVisible()`, which every public read composes. */
+    index("posts_status_publish_idx").on(t.status, t.publishAt),
+    /** One row per markdown file. UNIQUE in `0002_blog_content.sql`. */
+    uniqueIndex("posts_source_path_idx").on(t.sourcePath),
+    /** Covers the home page's featured selection. */
+    index("posts_featured_idx").on(t.featured, t.publishAt),
+    /** Covers a series' parts, in order. */
+    index("posts_series_idx").on(t.series, t.part),
   ],
 );
 
@@ -222,8 +245,81 @@ export const mediaRefs = sqliteTable(
   ],
 );
 
+/**
+ * The site-wide search index. DERIVED, and the only table drizzle did not model.
+ *
+ * ## WHY IT IS DECLARED HERE, given that nothing reads it through drizzle
+ *
+ * Hard rule 11 says this file is the source of truth for the column schema, and
+ * `check:invariants` section 4 compares it against the migrations and the live
+ * database in both directions. A table absent from this file is absent from that
+ * comparison: until 2026-08-28 the gate printed `search_docs` on a line reading
+ * "not modelled in drizzle and UNCOVERED", which is an exposure honestly stated
+ * and still an exposure. Declaring it closes it. That is the whole benefit and
+ * it is a real one: this table's column names live inside hand-written SQL
+ * strings, which is exactly the shape that produced the `media.r2_key` defect
+ * section 4 was built for.
+ *
+ * ## AND WHY EVERY READ STAYS IN RAW SQL
+ *
+ * Hard rule 1 is enforced for this table by section 8, which scans the raw SQL
+ * for the composed visibility predicate. Section 6, the drizzle-shaped scan,
+ * knows only about `posts`. So a query-builder read of this table would be seen
+ * by NEITHER, which is a hole that declaring the table would otherwise open.
+ *
+ * Section 4a asserts there is no such read, so the property is checked rather
+ * than requested. If a drizzle read is ever wanted here, teach section 6 about
+ * this table FIRST and delete that assertion in the same commit.
+ *
+ * The two FTS5 mirrors over this table stay out of drizzle entirely: they are
+ * `CREATE VIRTUAL TABLE`, which the query builder cannot express, and section 4
+ * excludes them by reading their DDL rather than by matching their names.
+ */
+export const searchDocs = sqliteTable(
+  "search_docs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** The ratified record id. Unique across documents and sections. */
+    uid: text("uid").notNull().unique(),
+    url: text("url").notNull(),
+    type: text("type", { enum: ["post", "page"] }).notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    /** Feeds the identity index. Carried by the DOCUMENT record only. */
+    tags: text("tags").notNull().default(""),
+    /** Feeds filtering and facets. Carried by EVERY record, pipe-delimited. */
+    docTags: text("doc_tags").notNull().default(""),
+    /** Grouping. For a document record this equals `uid` and `anchor` is null. */
+    docUid: text("doc_uid").notNull(),
+    docTitle: text("doc_title").notNull(),
+    docUrl: text("doc_url").notNull(),
+    anchor: text("anchor"),
+    ordinal: integer("ordinal").notNull().default(0),
+    /**
+     * Visibility, carried on the record rather than joined from `posts`.
+     *
+     * A future `publish_at` has to be re-evaluated per request, so an index
+     * storing only what was visible at sync time would leak a scheduled post
+     * the moment its date passed, or hide it forever.
+     */
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    publishAt: integer("publish_at"),
+  },
+  (t) => [
+    check("search_docs_type_check", sql`${t.type} in ('post', 'page')`),
+    check("search_docs_status_check", sql`${t.status} in ('draft', 'published')`),
+    /** Covers the visibility predicate every public search read composes. */
+    index("search_docs_visible_idx").on(t.status, t.publishAt),
+    /** Covers the type facet and its count. */
+    index("search_docs_type_idx").on(t.type),
+    /** Covers collapsing section hits back onto their owning document. */
+    index("search_docs_doc_idx").on(t.docUid, t.ordinal),
+  ],
+);
+
 export type Post = typeof posts.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Media = typeof media.$inferSelect;
 export type MediaRef = typeof mediaRefs.$inferSelect;
+export type SearchDoc = typeof searchDocs.$inferSelect;
