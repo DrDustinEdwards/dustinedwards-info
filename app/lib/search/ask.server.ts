@@ -17,13 +17,12 @@
 import { createContext } from "react-router";
 
 import {
-  DRIFT_CACHE_TTL_SECONDS,
   dropCachedDrift,
   invalidateAnswerCache,
   readCachedDrift,
   writeCachedDrift,
 } from "./ask-guard.server";
-import { KEY_SEPARATOR, keyForUrl, labelForUrl, urlForKey } from "./ask-keys.mjs";
+import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { timed, type Timings } from "~/lib/timing";
@@ -44,9 +43,6 @@ import {
 } from "./ask-prompt.mjs";
 
 export { NO_ANSWER_TEXT, answerLeaksPrompt, citedSlugs, guardAnswerStream };
-
-/** @see app/lib/search/records.mjs */
-type SearchRecord = ReturnType<typeof recordsForPosts>[number];
 
 /** Text-generation model for the answer. Named here so it is one edit to move. */
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";

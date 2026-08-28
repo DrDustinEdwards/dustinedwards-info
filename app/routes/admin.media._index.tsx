@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   Form,
@@ -10,20 +10,15 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
-import { byteSize } from "~/lib/media/byte-size.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
-import { CopyButton } from "~/components/admin/media-copy-button";
 import { MediaConfirm } from "~/components/admin/media-confirm";
 import { MediaDisplayGroup } from "~/components/admin/media-display-group";
-import { DocumentCard } from "~/components/admin/media-document-card";
-import { MediaDrawer } from "~/components/admin/media-drawer";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";
 import { MediaGrid } from "~/components/admin/media-grid";
 import { MediaInspector } from "~/components/admin/media-inspector";
 import { DropAnywhere } from "~/components/admin/media-drop-anywhere";
-import { MediaListHeader } from "~/components/admin/media-list-header";
-import { MediaKeyboard, MediaToast, toast } from "~/components/admin/media-keyboard";
+import { MediaKeyboard, MediaToast } from "~/components/admin/media-keyboard";
 import { MediaPalette } from "~/components/admin/media-palette";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
@@ -47,28 +42,18 @@ import { getEnv } from "~/lib/context";
 import templateRefs from "../../content/generated/template-refs.json";
 import { digestFromKey, storageOf } from "~/lib/media/classify.mjs";
 import {
-  copySnippetsFor,
-  flagsFor,
   lensNoteFor,
   suggestedAlt,
   suggestedTags,
-  tileFlagFor,
-  usageDescriptor,
   usageStateOf,
 } from "~/lib/media/usage.mjs";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { normaliseTags, parseTags } from "~/lib/media/tags.mjs";
 import {
-  displayName,
   displaySummary,
-  docTitle,
   folderPrefix,
-  formatAdded,
-  formatDims,
-  groupRows,
   hrefWith,
   isModified,
-  middleTruncate,
   onlyDisplayChanged,
   readDisplayAxes,
   readView,
@@ -1176,7 +1161,10 @@ function describeCitations(citations: MediaCitation[]) {
   }
   const parts = [...byItem.entries()].map(([id, list]) => {
     const forms = [...new Set(list.map((c) => c.form))].join(", ");
-    return `${list[0].title} (${id}: ${forms}, ${list.map((c) => c.detail).join("; ")})`;
+    // A map entry exists because a citation was pushed into it, so the first
+    // is always there. The empty title is unreachable and reads as an untitled
+    // post rather than as `undefined` in an admin warning.
+    return `${list[0]?.title ?? ""} (${id}: ${forms}, ${list.map((c) => c.detail).join("; ")})`;
   });
   return `Still cited by ${parts.length} post${parts.length === 1 ? "" : "s"}: ${parts.join(" and ")}.`;
 }

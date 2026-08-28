@@ -563,7 +563,10 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
  */
 function isFeed(contentType: string | null): boolean {
   if (!contentType) return false;
-  const type = contentType.split(";")[0].trim().toLowerCase();
+  // `split` always yields at least one element, so the fallback is
+  // unreachable; an empty type falls through to the two comparisons below and
+  // answers false, which is what an empty content-type should answer.
+  const type = (contentType.split(";")[0] ?? "").trim().toLowerCase();
   return type === "application/rss+xml" || type === "application/json";
 }
 

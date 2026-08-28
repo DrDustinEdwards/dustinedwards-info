@@ -120,7 +120,9 @@ export function isSourceFile(file) {
    * source directory that happens to be called dist is still scanned.
    */
   if (file.startsWith("app/enhance/dist/")) return false;
-  const root = file.split("/")[0];
+  // `split` always yields a first element, so the fallback is unreachable and
+  // an empty root is not in SOURCE_ROOTS, which is the refusal either way.
+  const root = file.split("/")[0] ?? "";
   if (!SOURCE_ROOTS.includes(root)) return false;
   return SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext));
 }
@@ -249,6 +251,7 @@ export function foldRefs(scanned) {
   }
   /** @type {Record<string, string[]>} */
   const sorted = {};
-  for (const asset of Object.keys(refs).sort()) sorted[asset] = refs[asset].slice().sort();
+  // The keys come from `refs` itself, so the empty array is unreachable.
+  for (const asset of Object.keys(refs).sort()) sorted[asset] = (refs[asset] ?? []).slice().sort();
   return { generated: Object.keys(sorted).length, refs: sorted };
 }

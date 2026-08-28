@@ -296,7 +296,10 @@ export function groupRows(rows, group) {
     // THE NOTE TRAVELS WITH THE SECTION. It is the whole reason the grouping
     // exists, so it is part of the group rather than something the component
     // has to look up and might forget to render.
-    const folder = folderFor(bucketRows[0].key);
+    // A bucket exists because a row went into it, so the first row is always
+    // there; `folderFor("")` is the root section, which is also where a row
+    // with no key would honestly belong.
+    const folder = folderFor(bucketRows[0]?.key ?? "");
     return { label: folder.title, note: folder.note, rows: bucketRows };
   });
 
@@ -310,7 +313,8 @@ export function groupRows(rows, group) {
   if (group !== "folder") return out;
   return out.sort(
     (a, b) =>
-      folderRank(folderFor(a.rows[0].key).prefix) - folderRank(folderFor(b.rows[0].key).prefix),
+      folderRank(folderFor(a.rows[0]?.key ?? "").prefix) -
+      folderRank(folderFor(b.rows[0]?.key ?? "").prefix),
   );
 }
 

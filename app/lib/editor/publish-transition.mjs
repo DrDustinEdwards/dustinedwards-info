@@ -87,9 +87,16 @@ const UNPUBLISH = {
  * draft the interesting transition is publication and burying it under a
  * generic Save is how a post sits unpublished for a week.
  *
+ * NON-EMPTY BY CONSTRUCTION, and the return type says so. Both arms below
+ * return two transitions, and the caller reads `transitions[0]` as the primary
+ * button. Typed as `Transition[]` that read is possibly-undefined and the
+ * button label would have been asserted non-null at four call sites; typed as a
+ * non-empty tuple it is the function that carries the guarantee, which is where
+ * the guarantee actually lives.
+ *
  * @param {PostState} state
  * @param {boolean} everPublished
- * @returns {Transition[]}
+ * @returns {[Transition, ...Transition[]]}
  */
 export function transitionsFor(state, everPublished) {
   if (state === "draft") {

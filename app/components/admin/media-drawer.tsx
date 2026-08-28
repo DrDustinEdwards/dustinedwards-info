@@ -100,9 +100,11 @@ export function MediaDrawer({
       }
       if (event.key !== "Tab") return;
       const list = stops();
-      if (list.length === 0) return;
       const first = list[0];
       const last = list[list.length - 1];
+      // The values are guarded rather than the length. Same early return on an
+      // empty list, and it is what tells the compiler these two are elements.
+      if (!first || !last) return;
       const active = document.activeElement;
       // Wrapping in both directions, plus the case where focus has escaped the
       // drawer entirely, which is what happens after a form control unmounts.

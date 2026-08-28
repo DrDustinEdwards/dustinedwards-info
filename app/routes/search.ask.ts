@@ -34,7 +34,6 @@ import {
   reserveAskBudget,
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
-import { slugForKey } from "~/lib/search/ask-keys.mjs";
 import { ASK_ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { publiclyVisibleSlugs } from "~/db";
 import { clientIp } from "~/lib/client-ip";

@@ -54,7 +54,7 @@ export const FOLDERS = [
  * Where a key with no folder goes.
  *
  * ROOT-LEVEL STATIC ASSETS, which is `/logo.svg`, the favicons, the touch icon
- * and the manifest: 12 of the 70. The mockup has no entry for them because its
+ * and the manifest. The mockup has no entry for them because its
  * fixture put them under `/brand/`, and its `/brand/` note is exactly true of
  * ours, so it is carried over rather than reworded.
  *
@@ -62,6 +62,7 @@ export const FOLDERS = [
  * land here. That is correct for today, when there are none, and is the first
  * thing to revisit when uploads start arriving.
  */
+/** @type {[string, string, string]} */
 const ROOT = ["", "Brand and site files", "Referenced by the layout, never by a post"];
 
 /**
@@ -78,6 +79,7 @@ export function folderFor(key) {
   if (typeof key !== "string") {
     return { prefix: ROOT[0], title: ROOT[1], note: ROOT[2] };
   }
+  /** @type {[string, string, string] | null} */
   let best = null;
   for (const [prefix, title, note] of FOLDERS) {
     if (!key.startsWith(prefix)) continue;

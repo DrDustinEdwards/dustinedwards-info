@@ -497,15 +497,23 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
               const at = (list: number) => sources.indexOf(list);
               const i = at(0);
               const p = at(1);
+              // `ranks` and `contributions` are built alongside `sources` by the
+              // fuser, so an index found in one is present in the others. The
+              // `?? null` folds that unreachable case into the same "this layer
+              // did not contribute" the -1 branch already means, which keeps
+              // this an explain payload rather than one carrying `undefined`.
+              const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
+              const contribution = (n: number) =>
+                n === -1 ? null : (contributions[n] ?? null);
               return {
                 uid: item.uid,
                 title: item.title,
                 docTitle: item.doc_title,
                 url: item.url,
-                identityRank: i === -1 ? null : ranks[i],
-                proseRank: p === -1 ? null : ranks[p],
-                identityContribution: i === -1 ? null : contributions[i],
-                proseContribution: p === -1 ? null : contributions[p],
+                identityRank: rank(i),
+                proseRank: rank(p),
+                identityContribution: contribution(i),
+                proseContribution: contribution(p),
                 score,
               };
             }),

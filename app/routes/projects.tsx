@@ -9,7 +9,8 @@ import {
   PROJECTS_URL,
   projectAnchor,
 } from "~/lib/projects-page.mjs";
-import { publicHtmlHeaders, SITE_ORIGIN,
+import {
+  publicHtmlHeaders,
   pageMeta,
 } from "~/lib/seo";
 

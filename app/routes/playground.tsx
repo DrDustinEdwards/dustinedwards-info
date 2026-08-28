@@ -16,7 +16,8 @@ import {
   demoAnchor,
 } from "~/lib/playground-page.mjs";
 import { search } from "~/lib/search/search.server";
-import { publicHtmlHeaders, SITE_ORIGIN,
+import {
+  publicHtmlHeaders,
   pageMeta,
 } from "~/lib/seo";
 
@@ -241,6 +242,16 @@ function Problem({ children }: { children: React.ReactNode }) {
 
 function DemoHeader({ index }: { index: number }) {
   const demo = DEMOS[index];
+  /*
+   * FAIL CLOSED ON A MISSING DEMO, rather than rendering an empty header.
+   *
+   * `check:features` reconciles this page's demos against `playground.json` in
+   * both directions, so an index with no entry is already a build failure. What
+   * this adds is that if one ever slips through, the page renders nothing for
+   * that demo instead of a heading with no title, which is the shape that reads
+   * as a styling bug and sends the next reader to the stylesheet.
+   */
+  if (!demo) return null;
   return (
     <>
       <h2 className="playground-demo-title">{demo.title}</h2>

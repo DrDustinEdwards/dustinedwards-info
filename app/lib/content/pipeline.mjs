@@ -706,9 +706,13 @@ function mediaKeyOf(raw) {
 
   let path = raw;
   const origin = path.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]+(\/.*)$/i);
-  if (origin) path = origin[1];
+  // The capture group cannot be absent when the match succeeded; falling back
+  // to the unchanged path is what the `if` already meant.
+  if (origin) path = origin[1] ?? path;
   // Query and fragment are not part of the key: `?w=320` is a transform request.
-  path = path.split(/[?#]/)[0];
+  // `split` always yields a first element, so the fallback is unreachable, and
+  // an empty path fails the `startsWith` on the next line either way.
+  path = path.split(/[?#]/)[0] ?? "";
   if (!path.startsWith("/")) return null;
 
   if (path.startsWith("/media/")) {

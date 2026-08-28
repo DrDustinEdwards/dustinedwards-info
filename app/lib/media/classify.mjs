@@ -422,7 +422,9 @@ const CONTENT_KEY_SHAPE =
  */
 function bareKey(keyOrPath) {
   if (typeof keyOrPath !== "string") return null;
-  const path = keyOrPath.split(/[?#]/)[0];
+  // `split` always yields a first element, so the fallback is unreachable and
+  // an empty key is the truthful answer for an empty input.
+  const path = keyOrPath.split(/[?#]/)[0] ?? "";
   return path.startsWith("/media/") ? path.slice("/media/".length) : path;
 }
 
@@ -505,5 +507,7 @@ export function digestFromKey(keyOrPath) {
   const key = bareKey(keyOrPath);
   if (key === null) return null;
   const match = CONTENT_KEY_SHAPE.exec(key);
-  return match ? match[1] : null;
+  // `?? null` rather than an assertion: the capture group cannot be absent when
+  // the match succeeded, and null is already this function's "no digest here".
+  return match?.[1] ?? null;
 }

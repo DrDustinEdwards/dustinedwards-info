@@ -128,7 +128,10 @@ function insertBlock(view: EditorView, text: string, cursorOffset?: number) {
 function cycleHeading(view: EditorView) {
   const line = view.state.doc.lineAt(view.state.selection.main.head);
   const match = /^(#{2,4})\s+/.exec(line.text);
-  const next = !match ? "## " : match[1].length >= 4 ? "" : `${"#".repeat(match[1].length + 1)} `;
+  // The run of hashes, read once. `match[1]` cannot be absent when the match
+  // succeeded, and naming it is what says so without four repeated index reads.
+  const hashes = match?.[1] ?? "";
+  const next = !hashes ? "## " : hashes.length >= 4 ? "" : `${"#".repeat(hashes.length + 1)} `;
   const strippedFrom = match ? match[0].length : 0;
   view.dispatch({
     changes: { from: line.from, to: line.from + strippedFrom, insert: next },

@@ -57,7 +57,7 @@ async function placeholderFor(env: Env, body: ReadableStream): Promise<string | 
     const buffer = await result.response().arrayBuffer();
     let binary = "";
     const view = new Uint8Array(buffer);
-    for (let i = 0; i < view.length; i += 1) binary += String.fromCharCode(view[i]);
+    for (const byte of view) binary += String.fromCharCode(byte);
     return `data:image/webp;base64,${btoa(binary)}`;
   } catch {
     return null;

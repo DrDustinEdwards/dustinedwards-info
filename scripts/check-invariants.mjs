@@ -2601,7 +2601,6 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
       "the bare path offers a crawler an empty page and listing queries is unbounded.",
   };
 
-  const routesSource = stripComments(readFileSync(join(root, "app", "routes.ts"), "utf8"));
   const sitemapSource = readFileSync(join(root, "app", "routes", "sitemap.ts"), "utf8");
 
   /*

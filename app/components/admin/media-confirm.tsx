@@ -102,9 +102,11 @@ export function MediaConfirm({
           'a[href],button:not([disabled]),input:not([disabled])',
         ),
       ];
-      if (stops.length === 0) return;
       const firstStop = stops[0];
       const last = stops[stops.length - 1];
+      // The values are guarded rather than the length. Same early return on an
+      // empty list, and it is what tells the compiler these two are elements.
+      if (!firstStop || !last) return;
       if (!el.contains(document.activeElement)) {
         event.preventDefault();
         firstStop.focus();

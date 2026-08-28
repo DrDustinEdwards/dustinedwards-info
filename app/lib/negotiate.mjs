@@ -33,7 +33,9 @@ export function acceptQValues(request) {
 
   for (const part of accept.split(",")) {
     const [range, ...params] = part.trim().split(";");
-    const type = range.trim().toLowerCase();
+    // `split` always yields a first element, so the fallback is unreachable and
+    // an empty type is skipped by the guard on the next line either way.
+    const type = (range ?? "").trim().toLowerCase();
     if (!type) continue;
 
     let q = 1;

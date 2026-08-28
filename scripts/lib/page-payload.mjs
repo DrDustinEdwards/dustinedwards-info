@@ -34,7 +34,6 @@
  * reported separately by the gate.
  */
 
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /**

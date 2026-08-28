@@ -72,7 +72,10 @@ export function parseChartCsv(text) {
     .map((line) => line.replace(/\r$/, ""))
     .filter((line) => line.trim() !== "");
 
-  if (lines.length === 0) throw new Error("chart data is empty");
+  const header = lines[0];
+  // The header is guarded by VALUE, not by the line count. Same refusal on
+  // empty input, and it is what makes the parse below take a string.
+  if (header === undefined) throw new Error("chart data is empty");
 
   const parseLine = (/** @type {string} */ line) => {
     /** @type {string[]} */
@@ -105,7 +108,7 @@ export function parseChartCsv(text) {
     return out;
   };
 
-  const columns = parseLine(lines[0]);
+  const columns = parseLine(header);
   const rows = lines.slice(1).map(parseLine);
 
   if (rows.length === 0) throw new Error("chart data has a header but no rows");
@@ -207,22 +210,44 @@ export function buildChartModel(attrs, csv) {
   // LINEAR scale rather than an ordinal point scale. Left as strings, Plot warns
   // ("strings that appear to be numbers") and spaces the points evenly, which
   // silently misplots any x that is not evenly sampled.
-  const xValues = rows.map((row) => row[xIndex]);
+  /*
+   * THE X CELL IS READ ONCE PER ROW AND REFUSED IF ABSENT.
+   *
+   * It used to be read twice, here and again inside the points loop, and both
+   * reads were indexes into a row that a short CSV line makes shorter than the
+   * header. A missing x cell is a data error worth naming by row, not a silent
+   * `undefined` that Plot would place somewhere.
+   */
+  const prepared = rows.map((row, i) => {
+    const xValue = row[xIndex];
+    if (xValue === undefined) {
+      throw new Error(`:::chart row ${i + 1} has no "${x}" cell`);
+    }
+    return { row, xValue };
+  });
+  const xValues = prepared.map((p) => p.xValue);
   const xIsNumeric = xValues.every((v) => v !== "" && Number.isFinite(Number(v)));
   const asX = (/** @type {string} */ v) => (xIsNumeric ? Number(v) : v);
 
   /** @type {Array<{ x: string | number, series: string, value: number }>} */
   const points = [];
-  rows.forEach((row, rowIndex) => {
+  prepared.forEach(({ row, xValue }, rowIndex) => {
     yColumns.forEach((column, seriesIndex) => {
       const raw = row[columns.indexOf(column)];
       const value = Number(raw);
-      if (raw === "" || !Number.isFinite(value)) {
+      if (raw === undefined || raw === "" || !Number.isFinite(value)) {
         throw new Error(
           `:::chart row ${rowIndex + 1} column "${column}" is "${raw}", which is not a number`,
         );
       }
-      points.push({ x: asX(row[xIndex]), series: labels[seriesIndex], value });
+      const series = labels[seriesIndex];
+      // Unreachable: `labels` is derived from `yColumns`, which is what this
+      // loop walks. Thrown rather than defaulted, because a point with an
+      // invented series name would render as a real series.
+      if (series === undefined) {
+        throw new Error(`:::chart has no label for series ${seriesIndex + 1}`);
+      }
+      points.push({ x: asX(xValue), series, value });
     });
   });
 

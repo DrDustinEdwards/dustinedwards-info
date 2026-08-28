@@ -29,7 +29,16 @@
 /**
  * sRGB channels, 0 to 1. Accepts `#rgb`, `#rrggbb`, with or without the hash.
  *
+ * A TUPLE rather than an array, and that is a type change with a reason. Every
+ * caller destructures three names out of this, and under
+ * `noUncheckedIndexedAccess` an array read is `number | undefined`, so each of
+ * those names arrived possibly-undefined and the arithmetic below it stopped
+ * compiling. The honest repair is to say what this returns, which is exactly
+ * three channels or a thrown error, rather than to assert non-null at seven
+ * call sites.
+ *
  * @param {string} hex
+ * @returns {[number, number, number]}
  */
 export function channels(hex) {
   const h = hex.trim().replace("#", "");
@@ -41,15 +50,22 @@ export function channels(hex) {
           .join("")
       : h;
   if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`not a hex colour: ${hex}`);
-  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  return [
+    parseInt(full.slice(0, 2), 16) / 255,
+    parseInt(full.slice(2, 4), 16) / 255,
+    parseInt(full.slice(4, 6), 16) / 255,
+  ];
 }
 
 /** WCAG 2.x relative luminance. @param {string} hex */
 export function luminance(hex) {
-  const [r, g, b] = channels(hex).map((c) =>
-    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
-  );
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  // Destructured BEFORE the transform, not after. `Array.prototype.map` over a
+  // tuple returns a plain array, which throws the length away and puts every
+  // channel back to `number | undefined`. Same formula, same order.
+  const [r, g, b] = channels(hex);
+  /** @param {number} c */
+  const linear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 }
 
 /** WCAG 2.x contrast ratio, 1 to 21. @param {string} a @param {string} b */

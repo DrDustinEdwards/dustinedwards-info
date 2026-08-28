@@ -1,5 +1,4 @@
 import { SITE_ORIGIN } from "~/lib/seo";
-import type { Route } from "./+types/robots";
 
 // AI crawlers we explicitly welcome for training and search.
 const AI_AGENTS = [

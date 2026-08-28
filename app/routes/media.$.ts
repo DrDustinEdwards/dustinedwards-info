@@ -1,5 +1,5 @@
 import { getEnv } from "~/lib/context";
-import { bucketFor, cropSafe, storageOf } from "~/lib/media/classify.mjs";
+import { bucketFor, cropSafe } from "~/lib/media/classify.mjs";
 import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import type { Route } from "./+types/media.$";
 

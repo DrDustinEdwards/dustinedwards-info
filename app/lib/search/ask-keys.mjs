@@ -49,7 +49,9 @@ export function urlForKey(key) {
   const parts = withoutExtension.split(KEY_SEPARATOR);
   if (parts.length > 2) return null;
   const [path, anchor] = parts;
-  if (!path.startsWith("blog/")) return null;
+  // A split always yields a first element, so this refuses a genuinely empty
+  // path rather than substituting one.
+  if (!path || !path.startsWith("blog/")) return null;
   return anchor ? `/${path}#${anchor}` : `/${path}`;
 }
 
@@ -67,7 +69,7 @@ export function urlForKey(key) {
 export function slugForKey(key) {
   const url = urlForKey(key);
   if (!url) return null;
-  const slug = url.split("#")[0].replace(/^\/blog\//, "");
+  const slug = (url.split("#")[0] ?? "").replace(/^\/blog\//, "");
   return slug.length > 0 ? slug : null;
 }
 
@@ -82,7 +84,7 @@ export function slugForKey(key) {
  */
 export function labelForUrl(url) {
   const [path, anchor] = url.split("#");
-  const target = anchor ?? path.replace(/^\/blog\//, "");
+  const target = anchor ?? (path ?? "").replace(/^\/blog\//, "");
   const words = target
     .replace(/^\d+-/, "")
     .split("-")
