@@ -7,6 +7,11 @@
   "include": [
     "vite.config.ts",
     "scripts/**/*",
+    // The site origin. `ship.mjs` polls the deploy it just made, so the copy
+    // that goes stale is the one that polls the wrong host and reports a
+    // healthy site nobody is looking at. It imports the constant rather than
+    // restating it, so this project has to reach the module.
+    "app/lib/seo.ts",
     "app/lib/content/pipeline.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so

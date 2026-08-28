@@ -6,7 +6,7 @@
   background: var(--brand);
   transform: scaleX(0);
   transform-origin: 0 50%;
-  z-index: 50;
+  z-index: var(--z-progress);
   transition: transform 0.1s linear;
 }
 
@@ -125,13 +125,13 @@
 /* Footnote preview bubble, script-added. */
 .footnote-preview {
   position: absolute;
-  z-index: 60;
+  z-index: var(--z-transient);
   max-width: 22rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: var(--bg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-popover);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -170,7 +170,11 @@
 }
 
 .lightbox::backdrop {
-  background: rgb(0 0 0 / 82%);
+  /* The ratified scrim pattern at the LIGHTBOX weight, which is a heavier veil
+     than the 45 percent the three dialog backdrops take: an image viewer hides
+     the page rather than dimming it. */
+  background: var(--scrim);
+  opacity: 0.82;
   cursor: zoom-out;
 }
 

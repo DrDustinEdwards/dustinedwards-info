@@ -518,7 +518,7 @@
      It costs nothing in the case that was already correct. */
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-dropdown);
   /* Content scrolls beneath this edge, so it separates two live surfaces
      rather than dividing two static blocks. --border-strong, per the
      elevated-surface law.
@@ -833,7 +833,7 @@
     top: 0;
     bottom: 0;
     left: 0;
-    z-index: 40;
+    z-index: var(--z-drawer);
     width: 15rem;
     border-right: 1px solid var(--border-strong);
     transform: translateX(-100%);
@@ -866,8 +866,15 @@
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 35;
-    background: rgb(0 0 0 / 45%);
+    z-index: var(--z-drawer-scrim);
+    /* THE RATIFIED SCRIM PATTERN, not a fourth literal. See
+       .media-detail-scrim in admin-media.css for the measured grounds: an
+       rgba token is unparseable to check:contrast, Lightning CSS rewrites it,
+       and a translucent veil cannot honestly participate in a contrast pair.
+       --scrim is the ratified dark neutral and nothing is drawn on this
+       layer, so dimming the whole element is exactly what is wanted. */
+    background: var(--scrim);
+    opacity: 0.45;
   }
 
   .admin[data-drawer="open"] .admin-drawer-backdrop {

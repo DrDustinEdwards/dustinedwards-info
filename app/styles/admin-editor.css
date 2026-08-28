@@ -63,7 +63,7 @@
      instead, is the one case that needs the real offset, and it sets it. */
   position: sticky;
   top: 0;
-  z-index: 15;
+  z-index: var(--z-sticky);
   border-bottom: 1px solid var(--border-strong);
   background: var(--surface);
 }
@@ -616,7 +616,7 @@
 /* The slash menu sits at the popover elevation, so --border-strong. */
 .md-slash {
   position: absolute;
-  z-index: 30;
+  z-index: var(--z-popover);
   min-width: 15rem;
   margin: 0;
   padding: 0.25rem;
@@ -631,7 +631,7 @@
    --surface-popover in dark and would not clear 3:1. */
 .md-link-palette {
   position: absolute;
-  z-index: 30;
+  z-index: var(--z-popover);
   width: min(26rem, 90%);
   padding: 0.375rem;
   border: 1px solid var(--border-strong);

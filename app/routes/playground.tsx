@@ -247,6 +247,37 @@ function Problem({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * A demo input's declared default, read out of the manifest.
+ *
+ * BOTH DEFAULTS WERE WRITTEN TWICE until 2026-08-28: `#2B2320` and `#FAF7F2`
+ * were in `content/playground.json` as each input's `default`, AND again as a
+ * literal in the two `defaultValue` expressions below. They agreed, which is
+ * the only reason nobody noticed; a second copy that agrees is a second copy.
+ *
+ * They are the `--text` and `--bg` tokens, and the manifest is as close to
+ * those as JavaScript gets: a Worker cannot read the stylesheet, and
+ * `scripts/lib/tokens.mjs`, which does read it, is a build-time module. So the
+ * manifest is the JS-side owner and this reads it rather than restating it.
+ *
+ * Throws rather than defaulting. An input rendered with no value is a form that
+ * silently stops demonstrating anything, and `check:features` reconciles this
+ * page against the manifest in both directions, so a missing entry is already
+ * a build failure rather than something to paper over here.
+ *
+ * @param {string} demoSlug the demo's slug in the manifest
+ * @param {string} inputName
+ */
+function inputDefault(demoSlug: string, inputName: string): string {
+  const demo = DEMOS.find((d) => d.slug === demoSlug);
+  const input = demo?.inputs?.find((i) => i.name === inputName);
+  const value = input && "default" in input ? input.default : undefined;
+  if (typeof value !== "string") {
+    throw new Error(`playground.json has no default for ${demoSlug}.${inputName}`);
+  }
+  return value;
+}
+
 function DemoHeader({ index }: { index: number }) {
   const demo = DEMOS[index];
   /*
@@ -312,7 +343,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                 <input
                   id="pg-fg" name="fg" type="text" inputMode="text"
                   maxLength={7} size={9} spellCheck={false}
-                  defaultValue={fgRaw || "#2B2320"}
+                  defaultValue={fgRaw || inputDefault("contrast", "fg")}
                   aria-describedby="pg-hex-cap"
                 />
               </div>
@@ -321,7 +352,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                 <input
                   id="pg-bg" name="bg" type="text" inputMode="text"
                   maxLength={7} size={9} spellCheck={false}
-                  defaultValue={bgRaw || "#FAF7F2"}
+                  defaultValue={bgRaw || inputDefault("contrast", "bg")}
                   aria-describedby="pg-hex-cap"
                 />
               </div>
