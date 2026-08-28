@@ -1436,7 +1436,12 @@ try {
 
   /*
    * Anti-vacuity floors, RE-MEASURED THROUGH THIS SCAN 2026-08-28 by running
-   * the gate: 17 sites, 7 composing.
+   * the gate: 18 sites, 8 composing.
+   *
+   * Taken TWICE the same day and it moved between them, which is the argument
+   * for taking it rather than carrying it: the first reading was 17 and 7, and
+   * `listBlogPostsRendered` landed between them when RSS started carrying the
+   * whole post. A measurement is only true of the commit it was taken in.
    *
    * The recorded figures said 14 and 8 and were taken on 2026-08-24, so the
    * site count had drifted three ABOVE its record while the composing count
@@ -1453,7 +1458,7 @@ try {
   ok(
     "the posts-reader scan found a plausible number of query sites",
     totalSites >= 15,
-    `${totalSites} found, floor 15, measured 17 on 2026-08-28. A broken matcher reports zero violations.`,
+    `${totalSites} found, floor 15, measured 18 on 2026-08-28. A broken matcher reports zero violations.`,
   );
 
   const composing = queriers.filter((f) => PREDICATE.test(f.body));
@@ -3952,14 +3957,46 @@ console.log("\n  17. assertion helpers agree, and no condition is a string");
    * false positive that found it: a boolean condition reported as a string
    * literal because the survivor's argument list had been corrupted.
    *
-   * Floored at 675, about 13 percent under 776, the same proportion the
+   * ## AND AGAIN 2026-08-28, IN THE OTHER HALF OF THE SAME MODULE
+   *
+   * That fix landed in `stripCommentsAndStrings` alone. It CALLS
+   * `stripComments`, which still removed comments with a regex, so a `/`
+   * followed by a star inside a string literal opened a comment running to the
+   * next star-slash anywhere in the file. Measured at HEAD: 347 string literals
+   * across 37 files carry one of those sequences.
+   *
+   * Re-measured through this gate, over the same 44 files:
+   *
+   *     regex comment stripper   763 calls examined
+   *     one shared tokenizer    1284 calls examined
+   *
+   * **521 more, forty percent of the current total, were invisible.** Every one
+   * of the sixteen files whose count changed GAINED; none lost. The largest was
+   * `check-features.mjs`, which showed ONE call and shows all of its own.
+   *
+   * The second half was found by the DIFFERENTIAL rather than by reading:
+   * fixing `stripComments` alone made things worse in one file, because the two
+   * functions disagreed about regex literals. They are one tokenizer now.
+   *
+   * Floored at 1117, about 13 percent under 1284, the same proportion the
    * 2026-08-21 entry chose.
    */
   ok(
     "the condition-slot scan examined assertion calls",
-    callsExamined >= 675,
+    callsExamined >= 1117,
     `${callsExamined} call(s) examined across ${gateFiles.length} file(s). A ` +
       `zero-scope scan finds no string conditions because it read nothing.`,
+  );
+
+  /*
+   * PRINTED, since 2026-08-28, because this number is the one the floor above
+   * is set from and it was only ever reachable by editing the gate to log it.
+   * A floor whose measurement cannot be taken without a temporary edit is a
+   * floor that gets re-derived by arithmetic, which is how the prose above went
+   * stale against its own constant.
+   */
+  console.log(
+    `     ${callsExamined} assertion call(s) examined across ${gateFiles.length} gate file(s)`,
   );
 
   ok(
