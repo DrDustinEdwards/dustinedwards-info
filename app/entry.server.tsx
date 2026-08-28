@@ -1,6 +1,5 @@
 import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
-import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
 import { getNonce } from "~/lib/context";
@@ -18,7 +17,6 @@ export default async function handleRequest(
   loadContext: RouterContextProvider,
 ) {
   let shellRendered = false;
-  const userAgent = request.headers.get("user-agent");
 
   /*
    * THE NONCE PROP, AND WHY ITS ABSENCE WAS A REAL BUG.
@@ -87,11 +85,41 @@ export default async function handleRequest(
   );
   shellRendered = true;
 
-  // Ensure requests from bots and SPA Mode renders wait for all content to load before responding
-  // https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
-  if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
-    await body.allReady;
-  }
+  /*
+   * NO `await body.allReady`, AND NO USER-AGENT SNIFF. REMOVED 2026-08-28.
+   *
+   * The template this file started from waits for the whole tree before
+   * responding when the caller looks like a crawler, so a bot never receives a
+   * document with an unresolved Suspense placeholder in it. That is worth doing
+   * on a site that streams one. **This one does not.**
+   *
+   * MEASURED 2026-08-28, in production, against the live public routes: `/`,
+   * `/blog`, `/colophon`, `/search` and `/projects` each carry ZERO of react's
+   * three late-boundary signatures, the `$RC` completion call, the `<!--$?-->`
+   * placeholder, and the `<template id="B:` slot.
+   *
+   * **WITH A CONTROL, because a zero from a search proves nothing until the
+   * instrument is shown able to report a non-zero.** The same three needles run
+   * over a deliberately late boundary, read progressively, report two, one and
+   * one. The zeros above are real negatives rather than a broken needle.
+   *
+   * The structural reason behind the measurement: the repository declares
+   * exactly ONE Suspense boundary, the lazily imported editor in
+   * `app/components/admin/post-editor.tsx`, and it is on the ADMIN plane behind
+   * a session, where no crawler arrives. There is no `<Await>` anywhere and no
+   * loader returns a promise. `isSpaMode` is permanently false, because
+   * `react-router.config.ts` sets `ssr: true`.
+   *
+   * So the branch could never fire for a reader and the sniff could only ever
+   * cost one header read per request. `isbot` went with it: it was this file's
+   * only caller, and a dependency the deployed Worker carries for a branch that
+   * cannot be taken is a dependency that is lying about what serves the site.
+   *
+   * **IF A PUBLIC ROUTE EVER STREAMS A BOUNDARY, THIS DECISION IS REVERSED**,
+   * and the thing to restore is the wait, not the sniff: `await body.allReady`
+   * unconditionally is simpler than guessing who is a crawler, and the nonce
+   * option above is what makes the streamed form safe under the CSP either way.
+   */
 
   responseHeaders.set("Content-Type", "text/html");
   return new Response(body, {
