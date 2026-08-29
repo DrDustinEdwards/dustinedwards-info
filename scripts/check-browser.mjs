@@ -1681,8 +1681,8 @@ try {
      * at this case failed while a standalone script doing the same thing
      * worked.
      *
-     * Header destinations carry `moderate` speculation rules, so hovering the
-     * link prerenders it and the click ACTIVATES that document. A prerendered
+     * The rules were `prerender` when this was written, so hovering the link
+     * prerendered it and the click ACTIVATED that document. A prerendered
      * document is a separate target: the script injected here never ran in it,
      * so no listener existed to fire. Measured: the initial load on `/`
      * recorded {"path":"/","hasTransition":false} and the click recorded
@@ -1690,9 +1690,12 @@ try {
      * exactly like "the event did not fire" and is really "the probe was not
      * in that document".
      *
-     * Turning it off makes the navigation an ordinary document load, which is
-     * the subject: whether the document opts into a view transition is a
-     * property of its CSS, not of how it was fetched.
+     * **The site now speculates `prefetch`, so it can no longer produce a
+     * document this probe is absent from.** The guard is KEPT anyway, and
+     * deliberately: it costs one CDP call, it is what makes this case a
+     * statement about an ordinary document load whatever the rules say, and the
+     * failure it prevents presents as a silent absence rather than an error.
+     * The action itself is asserted in the speculation case below.
      */
     const probeClient = await probe.createCDPSession();
     await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
@@ -1708,11 +1711,13 @@ try {
     reveals.length = 0;
 
     /*
-     * A REAL CLICK ON THE HEADER LINK, hovered first. Header destinations
-     * carry speculation rules, and a click with no dwell activates a PENDING
-     * prerender, which puppeteer cannot follow: the page stays on `/` and the
-     * case would assert against a navigation that never happened. The arrival
-     * is checked below for the same reason.
+     * A REAL CLICK ON THE HEADER LINK, hovered first. This was written when a
+     * click with no dwell could activate a PENDING prerender, which puppeteer
+     * cannot follow: the page stayed on `/` and the case asserted against a
+     * navigation that never happened. The action is `prefetch` now and the
+     * guard above forbids prerendering regardless, so the hover is no longer
+     * load-bearing; it is kept because a hovered click is the more realistic
+     * gesture and costs nothing. The arrival is still checked below.
      */
     const target = await probe.evaluate(() => {
       const link = document.querySelector('.site-header-nav a[href="/blog"]');
@@ -1815,7 +1820,7 @@ try {
    */
   {
     const PAGES = ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon", "/privacy"];
-    /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], eagerness: string[], blocks: number}>} */
+    /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], actions: string[], eagerness: string[], blocks: number}>} */
     const seen = new Map();
 
     for (const path of PAGES) {
@@ -1853,17 +1858,26 @@ try {
         const blocks = [...document.querySelectorAll('script[type="speculationrules"]')];
         /** @type {string[]} */
         const eagerness = [];
+        /* The payload's own top-level keys ARE the actions. Harvested rather
+           than looked up under one name, so a change of action shows up as a
+           changed action rather than as an empty rule list. */
+        /** @type {string[]} */
+        const actions = [];
         for (const block of blocks) {
           try {
-            for (const rule of JSON.parse(block.textContent ?? "{}").prerender ?? []) {
-              eagerness.push(rule.eagerness);
+            const payload = JSON.parse(block.textContent ?? "{}");
+            for (const [action, rules] of Object.entries(payload)) {
+              actions.push(action);
+              for (const rule of rules ?? []) eagerness.push(rule.eagerness);
             }
           } catch {
+            actions.push("UNPARSEABLE");
             eagerness.push("UNPARSEABLE");
           }
         }
         return {
           blocks: blocks.length,
+          actions,
           eagerness,
           hrefs: [
             ...new Set(
@@ -1902,6 +1916,20 @@ try {
           : `no Preload.ruleSetUpdated event at all, so the block never reached the ` +
             `speculation machinery. Under the enforced CSP the usual cause is a ` +
             `missing nonce on the element.`,
+      );
+      ok(
+        `${path}: THE ACTION IS PREFETCH`,
+        s.actions.length === 1 && s.actions[0] === "prefetch",
+        `the payload's actions are ${JSON.stringify(s.actions)}, expected exactly ` +
+          `["prefetch"]. It was "prerender" until 2026-08-28, and that is the navigation ` +
+          `blink: a prerender that has not painted is still activatable, moderate ` +
+          `eagerness starts on pointerdown, and a click with no hover dwell swaps in an ` +
+          `empty frame host, so paint holding never runs and the reader gets the themed ` +
+          `canvas. Measured on production by screen capture with no CDP, fourteen runs ` +
+          `over both themes: every run with prerendering on showed blank frames at 100% ` +
+          `of the --bg token with a luma standard deviation of zero, and no run with it ` +
+          `off did. Prefetch warms the same credentialed response without creating a ` +
+          `frame host to activate.`,
       );
       ok(
         `${path}: ONE rule, at moderate eagerness`,

@@ -649,7 +649,7 @@ function main() {
  * ## WHAT IT DELIBERATELY DOES NOT OWN
  *
  * The speculation self-reference. `test/header-speculation.test.mjs` asserts
- * that a page is excluded from its own prerender list, and asserting it here as
+ * that a page is excluded from its own speculation rule, and asserting it here as
  * well would be two owners for one fact, which is rule 17 in the direction that
  * costs most: two copies that can disagree. Named here so a reader looking for
  * it does not conclude it is ungated.
