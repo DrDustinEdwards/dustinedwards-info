@@ -237,7 +237,18 @@ async function main() {
   let totalBytes = 0;
   /** @type {string[]} */
   const empty = [];
-  for (const name of sorted(real)) {
+
+  /**
+   * Exports one table and reads back what it wrote.
+   *
+   * LIFTED OUT OF THE LOOP UNCHANGED so the loop could become a pool. Every
+   * assertion this function makes, the non-zero status, the retry, the byte
+   * count and the INSERT count, is the assertion the serial loop made, on the
+   * same command against the same target writing the same file.
+   *
+   * @param {string} name
+   */
+  async function exportTable(name) {
     const out = path.join(dir, `${name}.sql`);
     /*
      * RETRIED ONCE, since 2026-08-11. This file's header used to say the export
@@ -269,12 +280,84 @@ async function main() {
     }
     const body = await readFile(out, "utf8");
     const bytes = (await stat(out)).size;
-    totalBytes += bytes;
     // An export that wrote a file but no INSERTs is a pass that backed up
     // nothing. Count the statements, do not just check the file exists.
     const inserts = (body.match(/^INSERT INTO/gim) ?? []).length;
-    console.log(`  ${name}: ${bytes} bytes, ${inserts} INSERT statement(s)`);
-    if (inserts === 0) empty.push(name);
+    return { name, bytes, inserts };
+  }
+
+  /**
+   * THE EXPORTS RUN CONCURRENTLY, and NOTHING ELSE ABOUT THEM CHANGED.
+   *
+   * ## The identity argument, which is what licenses this
+   *
+   * The serial loop and this pool issue the SAME 11 commands, against the same
+   * target, each writing its own `<table>.sql` under the same directory. Each
+   * is a READ: `d1 export` pulls rows and writes a LOCAL file, which is the
+   * property `retryRead`'s wrapper already depends on. So no two of them touch
+   * the same byte, none of them writes to D1 or R2, and the order they run in
+   * cannot change what any of them produces. The reporting below is re-sorted,
+   * so even the OUTPUT is byte-identical to the serial version's.
+   *
+   * ## Why the cost was scheduling rather than work
+   *
+   * MEASURED 2026-08-29 on this machine: the whole gate ran 229.7s for twelve
+   * `npx wrangler` invocations over 640 KB of SQL. The bytes are not the cost;
+   * process startup is, twelve times over. The three earlier readings in
+   * `VERIFICATION.md` (272s, 54s, 58s, 66s, 53s) span the same range for the
+   * same reason and are why this gate has never had a usable norm.
+   *
+   * ## FOUR, and the number is argued rather than tuned
+   *
+   * The bound exists because the cost being removed is process startup, and
+   * enough concurrent node processes to saturate the machine puts it straight
+   * back as scheduler contention: the 2881-second `check:head` reading in
+   * `VERIFICATION.md` was exactly that, a measurement taken through a saturated
+   * machine. Four is under the core count of any machine this runs on, leaves
+   * room for the runner itself, and takes eleven exports in three waves.
+   */
+  const EXPORT_CONCURRENCY = 4;
+  const names = sorted(real);
+  /** @type {Array<{ name: string, bytes: number, inserts: number }>} */
+  const results = [];
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(EXPORT_CONCURRENCY, names.length) }, async () => {
+      for (;;) {
+        const index = next;
+        next += 1;
+        const name = names[index];
+        if (name === undefined) return;
+        results.push(await exportTable(name));
+      }
+    }),
+  );
+
+  /*
+   * RE-SORTED BEFORE REPORTING. A pool completes out of order, and a gate whose
+   * output line order depends on which export happened to finish first is a
+   * gate whose diffs are noise. The serial loop's output is reproduced exactly.
+   */
+  results.sort((a, b) => a.name.localeCompare(b.name));
+  for (const result of results) {
+    totalBytes += result.bytes;
+    console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)`);
+    if (result.inserts === 0) empty.push(result.name);
+  }
+
+  /*
+   * SCOPE, ASSERTED, and it is new with the pool. A worker that returned early
+   * would leave exports unrun, and every count below would then be computed
+   * over a smaller set: `empty.length === real.size` would be false, the
+   * with-rows floor would be met by the four that did run, and the gate would
+   * report ok. The serial loop could not fail this way; the pool can, so it is
+   * checked.
+   */
+  if (results.length !== names.length) {
+    throw new Error(
+      `${results.length} of ${names.length} table(s) were exported. The export pool ` +
+        `did not run every table, so every count below would be taken over a subset.`,
+    );
   }
 
   // Empty tables are legitimate (nothing has been written yet), so this reports
