@@ -26,6 +26,35 @@
  * eagerness the old list used. The header's behaviour is therefore UNCHANGED by
  * this file; everything else on the page gained.
  *
+ * ## THE ACTION IS `prefetch`, AND IT WAS `prerender` UNTIL 2026-08-28
+ *
+ * A prerendered document that has NOT PAINTED YET is still activatable, and
+ * `moderate` eagerness starts the speculation on pointerdown, so a click with
+ * no hover dwell activates an empty frame. Activation is a SWAP of the primary
+ * frame host, not a navigation that keeps the old surface, so the browser's
+ * paint holding never gets to run and the reader sees the themed canvas with
+ * nothing on it until the destination's first contentful paint.
+ *
+ * Measured on production by screen capture, no CDP, on this Windows machine.
+ * Fourteen runs, both themes, no-dwell clicks plus rapid alternation: with
+ * prerendering on, all seven runs showed blank frames, every one of them 100%
+ * of the `--bg` token at a luma standard deviation of ZERO, in light and in
+ * dark. With prerendering off at the browser, none of the seven did. Chrome
+ * 151.0.7922.172.
+ *
+ * **Prefetch warms the same response without creating a frame host to
+ * activate**, so the click is an ordinary same-origin navigation, paint holding
+ * keeps the previous page on screen, and the warmed response is what arrives.
+ * The request stays credentialed: measured on the wire, a `prefetch` rule sends
+ * `Sec-Purpose: prefetch` and carries the reader's cookie, so it still warms
+ * the themed-cache entry a cookie-carrying reader will be served from.
+ *
+ * The cost is stated rather than hidden: a COMPLETED prerender is instant and a
+ * prefetch is not. What replaces it is a snap whose length is the destination's
+ * first contentful paint. That trade was taken deliberately, because the
+ * instant case was the rare one and the empty-activation case was the one
+ * Dustin kept seeing.
+ *
  * ## EAGERNESS: `moderate`, ruled by Dustin 2026-08-28
  *
  * An `immediate` rule for the header's destinations was built and measured
@@ -38,17 +67,19 @@
  * coverage gain came from the document rule, not from the eagerness.
  *
  * `moderate` is 200 ms of pointer hold OR pointerdown, whichever comes first.
- * Chrome caps moderate prerenders at TWO, FIFO, so a reader sweeping a page
- * costs at most two speculations in flight rather than one per link.
+ * Chrome caps moderate speculations, so a reader sweeping a page costs a
+ * bounded number in flight rather than one per link. The cap was the reason
+ * `moderate` was chosen over `immediate` and it survives the action change; the
+ * exact figure is Chrome's and is deliberately not restated here.
  *
  * ## WHAT IT EXCLUDES, AND WHY EACH ONE
  *
  * `/admin` and its subtree      a plane with its own shell, gated by auth
  * `/api` and its subtree        endpoints, and `/api/operator` takes a bearer
  * `/media` and its subtree      bytes, not documents
- * `/login`                      a door; prerendering it warms nothing
+ * `/login`                      a door; speculating it warms nothing
  * `/theme`                      a POST target, and a GET of it is not a page
- * `/search/ask`                 a BILLED endpoint. Prerendering it would spend
+ * `/search/ask`                 a BILLED endpoint. Speculating it would spend
  *                               model tokens on a click nobody made.
  * `.md` `.xml` `.json` `.txt`   the representation twins, both feeds, the
  *                               sitemap, robots and the two llms files. None is
@@ -63,7 +94,7 @@
  *                               different one for every tag chip on `/blog`.
  * the current path              a page cannot navigate to itself, and the
  *                               speculation costs an origin request that can
- *                               evict a useful one from the two-slot budget.
+ *                               evict a useful one from the moderate budget.
  *                               Carried over from the 2026-08-27 self-exclusion.
  */
 
@@ -78,6 +109,13 @@ export const EXCLUDED_SUFFIXES = [".md", ".xml", ".json", ".txt"];
 
 /** Named rather than inlined, so a gate reads the value instead of a spelling. */
 export const DOCUMENT_EAGERNESS = "moderate";
+
+/**
+ * The speculation ACTION, named for the same reason as the eagerness: the gates
+ * assert the value rather than a spelling, and it is the one thing that moved
+ * on 2026-08-28. See the action section at the top of this file.
+ */
+export const DOCUMENT_ACTION = "prefetch";
 
 /**
  * Build the payload for one page.
@@ -126,6 +164,6 @@ export function buildSpeculationRules({ pathname }) {
   ];
 
   return JSON.stringify({
-    prerender: [{ where: { and: conditions }, eagerness: DOCUMENT_EAGERNESS }],
+    [DOCUMENT_ACTION]: [{ where: { and: conditions }, eagerness: DOCUMENT_EAGERNESS }],
   });
 }

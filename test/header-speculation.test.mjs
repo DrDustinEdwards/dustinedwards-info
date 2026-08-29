@@ -51,6 +51,7 @@ import { dirname, join } from "node:path";
 
 import { stripComments } from "../scripts/lib/strip-comments.mjs";
 import {
+  DOCUMENT_ACTION,
   DOCUMENT_EAGERNESS,
   EXCLUDED_PATHS,
   EXCLUDED_PREFIXES,
@@ -73,8 +74,12 @@ const componentSource = read("app", "components", "site-speculation.tsx");
 /** Every `to: "/path"` in the NAV array. */
 const navPaths = [...navSource.matchAll(/\bto:\s*"([^"]+)"/g)].map((m) => m[1]);
 
+/** The whole payload for one page, so the ACTION KEY itself is assertable. */
 /** @param {string} pathname */
-const rulesOn = (pathname) => JSON.parse(buildSpeculationRules({ pathname })).prerender;
+const payloadOn = (pathname) => JSON.parse(buildSpeculationRules({ pathname }));
+
+/** @param {string} pathname */
+const rulesOn = (pathname) => payloadOn(pathname)[DOCUMENT_ACTION];
 
 /**
  * Every `href_matches` pattern under a `not`, as a comparable string.
@@ -130,6 +135,29 @@ test("the component asks the module for the payload rather than composing one", 
   );
 });
 
+test("THE ACTION IS PREFETCH, NOT PRERENDER", () => {
+  /*
+   * The action is the whole of the 2026-08-28 navigation-blink fix and it is the
+   * one thing here a well-meaning change would put back.
+   *
+   * A prerender that has not painted is still ACTIVATABLE, and `moderate` starts
+   * the speculation on pointerdown, so a click with no hover dwell swaps in an
+   * empty frame host and the reader gets the themed canvas instead of the paint
+   * hold. Measured on production by screen capture with no CDP: fourteen runs,
+   * both themes, seven with prerendering on and seven with it off at the
+   * browser. All seven prerendering runs showed blank frames at 100% of the
+   * `--bg` token with a luma standard deviation of zero. None of the other seven
+   * did.
+   *
+   * The action is asserted as the payload's own KEY, not as a property of a rule
+   * object, because that key is what selects the browser's behaviour.
+   */
+  const payload = payloadOn("/blog");
+  assert.equal(DOCUMENT_ACTION, "prefetch");
+  assert.deepEqual(Object.keys(payload), ["prefetch"], `payload keys are ${JSON.stringify(Object.keys(payload))}`);
+  assert.equal(payload.prerender, undefined, "the payload still carries a prerender rule");
+});
+
 test("THERE IS EXACTLY ONE RULE, and it is a document rule at moderate eagerness", () => {
   /*
    * ONE, deliberately. An `immediate` list rule for the header's destinations
@@ -161,8 +189,8 @@ test("THE CURRENT PAGE IS EXCLUDED FROM ITS OWN RULE", () => {
   /*
    * A page that speculates itself spends a request on a navigation that cannot
    * happen, and on this site that request reaches the ORIGIN for any reader
-   * carrying a cookie. Chrome caps moderate prerenders at two, so the useless
-   * one can evict a useful one.
+   * carrying a cookie. Chrome caps moderate speculations, so the useless one
+   * can evict a useful one.
    */
   for (const pathname of ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon"]) {
     assert.ok(

@@ -40,28 +40,35 @@ import type { loader as rootLoader } from "~/root";
  * path the root loader never ran, and an enforcing policy then drops this
  * enhancement on an error page and nothing else.
  *
- * ## WHAT A PRERENDER COSTS A COOKIE-CARRYING READER, stated rather than assumed
+ * ## WHAT A SPECULATION COSTS A COOKIE-CARRYING READER, stated rather than assumed
  *
- * A prerender issues a real, CREDENTIALED navigation request. Measured on
- * production 2026-08-28 through CDP: the speculation request carries
- * `Sec-Purpose: prefetch;prerender` AND the reader's `Cookie`, so it resolves
- * the same theme as the click will and reads or warms the same
- * `caches.default` entry keyed by URL plus resolved theme. That is what makes
- * this a warm-up rather than a duplicate render. Because the reader carries a
- * cookie, the response is `private, no-store` and the PLATFORM cache stores
- * nothing for them (rule 8), so the request reaches this Worker either way;
- * `x-theme-cache` on the wire says whether it rendered.
+ * A speculation issues a real, CREDENTIALED request. Measured on the wire: a
+ * `prefetch` rule sends `Sec-Purpose: prefetch` and carries the reader's
+ * `Cookie`, so it resolves the same theme as the click will and reads or warms
+ * the same `caches.default` entry keyed by URL plus resolved theme. That is
+ * what makes this a warm-up rather than a duplicate render. Because the reader
+ * carries a cookie, the response is `private, no-store` and the PLATFORM cache
+ * stores nothing for them (rule 8), so the request reaches this Worker either
+ * way; `x-theme-cache` on the wire says whether it rendered.
+ *
+ * The action was `prerender` until 2026-08-28 and the cost was the same shape,
+ * with `Sec-Purpose: prefetch;prerender`. Why it changed is the action section
+ * in `~/lib/speculation.mjs`, which is the one owner of that reasoning.
  *
  * ## WHAT NO AUTOMATED GATE CAN SEE HERE, measured 2026-08-28
  *
  * **Chrome refuses to prerender while CDP is attached.** Driving this site
- * under Puppeteer, `Preload.prerenderStatusUpdated` reports every attempt as
- * `Failure [PrerenderingDisabledByDevTools]` and Chrome falls back to prefetch:
- * `deliveryType` reads `navigational-prefetch` and `activationStart` is 0 on
+ * under Puppeteer, `Preload.prerenderStatusUpdated` reported every attempt as
+ * `Failure [PrerenderingDisabledByDevTools]` and Chrome fell back to prefetch:
+ * `deliveryType` read `navigational-prefetch` and `activationStart` was 0 on
  * every run. It is CDP itself and not the Preload domain, confirmed by running
- * the same navigation with the domain disabled and getting the same result. So
- * `check:browser` can assert that the rules are PRESENT, well-formed and
- * accepted, and cannot assert that a prerender ACTIVATED. Do not write that
+ * the same navigation with the domain disabled and getting the same result.
+ *
+ * **That is why the blink investigation had to leave CDP entirely**, and why
+ * the measurement behind the prefetch ruling is a screen capture rather than a
+ * trace. It also still bounds this gate: `check:browser` can assert that the
+ * rules are PRESENT, well-formed, accepted and which ACTION they name, and it
+ * cannot assert what the browser did on activation. Do not write that
  * assertion; it will pass vacuously or fail forever.
  */
 export function SiteSpeculation() {
