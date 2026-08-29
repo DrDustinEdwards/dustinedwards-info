@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 26;
+const MINIMUM_GATES = 27;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -241,6 +241,21 @@ const TIERS = {
   // the repo's shape: it imports shipped modules and checks what they do with a
   // given input. See test/README.md for the three-instrument split.
   "check:tests": "offline",
+  /*
+   * The SECOND behavioural gate, and it observes a different subject.
+   * `check:tests` imports pure modules into node; this runs the Worker's own
+   * modules inside workerd against miniflare-local D1, KV, R2, a Durable
+   * Object and the Cache API, so it sees a loader, an action and the entry
+   * itself. It cannot see the deployed build or the platform's cache, which
+   * are verify-live's and check:browser's.
+   *
+   * OFFLINE, and asserted rather than asserted-by-hope: `test/worker/setup.ts`
+   * installs a `fetch` that THROWS on any outbound call, and
+   * `foundation.test.ts` proves it is installed. The layer found its own
+   * violation of this on its first run, when /api/health's content-drift check
+   * reached api.github.com for real.
+   */
+  "check:worker": "offline",
   // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
   // `--remote` adds the live database as a third schema source, and check:all
   // passes it. Same shape as check:llms and check:backup.

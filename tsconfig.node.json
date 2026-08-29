@@ -6,6 +6,10 @@
   // is Worker-only and whose .wasm import does not resolve in this project.
   "include": [
     "vite.config.ts",
+    // The Worker test layer's config. It runs in node like vite.config.ts does,
+    // and it carries the alias and binding decisions the layer depends on, so a
+    // typo in it should fail here rather than at the next test run.
+    "vitest.config.ts",
     "scripts/**/*",
     // The site origin. `ship.mjs` polls the deploy it just made, so the copy
     // that goes stale is the one that polls the wrong host and reports a

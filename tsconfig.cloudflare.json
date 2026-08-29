@@ -6,6 +6,11 @@
     "app/**/.server/**/*",
     "app/**/.client/**/*",
     "workers/**/*",
+    // The Worker test layer. It imports the SAME modules the Worker imports,
+    // through the same `~/*` paths, so it belongs to this project and not to
+    // the node one: a case that drifts from a loader's signature has to be a
+    // typecheck failure, not a runtime surprise inside workerd.
+    "test/worker/**/*",
     "worker-configuration.d.ts",
     // The static asset manifest, imported by the media rebuild. A Worker cannot
     // list its own static assets (the assets binding has only `fetch()`), so the
@@ -40,7 +45,9 @@
      */
     "noUncheckedIndexedAccess": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["vite/client"],
+    // `cloudflare:test` is the pool's virtual module: `env`, `createExecutionContext`
+    // and `applyD1Migrations`, which test/worker/ imports and nothing else does.
+    "types": ["vite/client", "@cloudflare/vitest-pool-workers/types"],
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
