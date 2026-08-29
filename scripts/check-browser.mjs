@@ -2828,7 +2828,19 @@ try {
         label: shown[0]?.getAttribute("aria-label") ?? null,
         value: shown[0]?.getAttribute("value") ?? null,
         pressed: shown[0]?.hasAttribute("aria-pressed") ?? false,
-        box: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect() : null,
+        /*
+         * PLAIN NUMBERS, NOT THE DOMRect. Returning the rect itself reads 0x0
+         * on this side: puppeteer serializes the evaluate's result and a
+         * DOMRect comes back as an empty object, so `box.width` is undefined
+         * and `?? 0` turns a 28px button into a failing 0.
+         *
+         * MEASURED, on this gate's own first run: "0x0px, floor 24x24" against
+         * a control that is 28px square in the page. The instrument was wrong,
+         * not the button, which is this repo's simulated-element class wearing
+         * a serialization boundary instead of an injected probe.
+         */
+        width: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect().width : 0,
+        height: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect().height : 0,
       };
     });
     ok(
@@ -2852,9 +2864,8 @@ try {
     );
     ok(
       "the theme button clears the WCAG 2.2 target floor",
-      (control.box?.width ?? 0) >= 24 && (control.box?.height ?? 0) >= 24,
-      `${Math.round(control.box?.width ?? 0)}x${Math.round(control.box?.height ?? 0)}px, ` +
-        `floor 24x24.`,
+      control.width >= 24 && control.height >= 24,
+      `${Math.round(control.width)}x${Math.round(control.height)}px, floor 24x24.`,
     );
 
     await page.evaluate(() => {
