@@ -4,7 +4,7 @@
  *   node scripts/health-repair.mjs --origin <origin> --body body.json
  *
  * Called by `.github/workflows/health.yml` when `/api/health` reports
- * unhealthy. Decides through `scripts/lib/health-repair.mjs`, performs the
+ * unhealthy. Decides through `app/lib/health/repair.mjs`, performs the
  * repairs that decision allows, re-polls ONCE, and exits.
  *
  * ## EXIT CODES ARE THE ALERT
@@ -45,7 +45,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { failingCheckNames, repairPlan } from "./lib/health-repair.mjs";
+import { failingCheckNames, repairPlan } from "../app/lib/health/repair.mjs";
 
 const args = process.argv.slice(2);
 const flag = (/** @type {string} */ name) => {
