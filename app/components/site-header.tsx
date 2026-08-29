@@ -1,4 +1,4 @@
-import { Link, NavLink, useRouteLoaderData } from "react-router";
+import { Link, NavLink } from "react-router";
 
 import { SearchTrigger } from "~/components/search-trigger";
 import { SiteLogoHeader } from "~/components/site-logo";
@@ -7,7 +7,6 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { NAV } from "~/lib/nav";
 import { SITE } from "~/lib/seo";
 
-import type { loader as rootLoader } from "~/root";
 
 /**
  * Public site header. Brand plus the nav links the site currently earns.
@@ -68,8 +67,14 @@ import type { loader as rootLoader } from "~/root";
  * delivered, by the mechanism that survives.
  */
 export function SiteHeader() {
-  const data = useRouteLoaderData<typeof rootLoader>("root");
-
+  /*
+   * NO LOADER READ SINCE 2026-08-29. This component called
+   * `useRouteLoaderData` for exactly one value, the resolved theme, which it
+   * handed to `ThemeToggle`. The single-button control reads the theme off
+   * `<html data-theme>` through the cascade instead, so the header now renders
+   * from its props and the route table alone and cannot disagree with the
+   * document it sits in.
+   */
   return (
     <header className="site-header">
       <Link to="/" className="site-header-brand">
@@ -93,25 +98,19 @@ export function SiteHeader() {
         ))}
         <SearchTrigger />
         {/*
-          JUSTIFIED SUBSTITUTION (hard rule 13). Ruled 2026-08-10,
-          dustinedwards/decisions.md.
+          THE HARD RULE 13 SUBSTITUTION THAT SAT HERE IS GONE, and so is the
+          reason for it. This passed the resolved theme down with a fallback,
+          ruled on 2026-08-10, which kept the header rendering on the
+          error-boundary path where the root loader legitimately never ran.
 
-          `"system"` is NOT a fabricated stand-in for a value that went missing.
-          It is the DOCUMENTED cookieless default: the absence of a `data-theme`
-          attribute IS system mode, so this renders exactly what a first-time
-          reader with no cookie gets. Contrast `STATUS_LABEL[s] ?? s`, which
-          invented a label that had never been a real one.
-
-          Throwing instead would blank the header on the ERROR-BOUNDARY path,
-          where the root loader legitimately never ran and `data` is absent by
-          design. That trades a recoverable error page for one carrying no
-          navigation.
-
-          The failure this could mask is already visible by other means: a
-          loader that failed renders the error boundary, which is louder than a
-          theme toggle showing its default.
+          Since 2026-08-29 the control takes no theme at all: both of its
+          buttons are always rendered and the cascade chooses between them from
+          `<html data-theme>` and `prefers-color-scheme`. There is no value to
+          pass and nothing to substitute when `data` is absent, so the
+          error-boundary path renders the same markup as every other path by
+          construction.
         */}
-        <ThemeToggle theme={data?.theme ?? "system"} />
+        <ThemeToggle />
       </nav>
       {/* Hover speculation for the paths this header links to. It rides HERE
           rather than in root's Layout so its scope is exactly the header's:

@@ -62,13 +62,13 @@ const UNCACHED = "private, no-store";
  * every HTML page, permanently:
  *
  *     no cookie        HIT
- *     theme=system     BYPASS   private, no-store
+ *     theme=dark       BYPASS   private, no-store
  *     _ga=1            BYPASS   private, no-store
  *
- * So a reader who touched the theme toggle, which is the site's own feature and
- * sets a cookie for all three choices, or who is signed in, paid a full origin
- * render on every click. On the throttled profile the audits used, that is the
- * difference between 1.2 s and 2.0 s to first paint on the home page.
+ * So a reader who touched the theme toggle, which is the site's own feature, or
+ * who is signed in, paid a full origin render on every click. On the throttled
+ * profile the audits used, that is the difference between 1.2 s and 2.0 s to
+ * first paint on the home page.
  *
  * ## What is stored, and why the key is path plus theme
  *

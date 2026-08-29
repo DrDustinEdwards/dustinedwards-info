@@ -28,9 +28,9 @@ import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
  * Theme, entirely from tokens.
  *
  * Not one hex in here. Every colour is a `var(--token)` that resolves through
- * the same three theme selectors as the rest of the site, so light, dark and
- * system all land correctly with nothing to flash and no second theme to keep
- * in step. That is also why there is no `dark` variant of this object: there is
+ * the same theme selectors as the rest of the site, so both themes and the
+ * default land correctly with nothing to flash and no second theme to keep in
+ * step. That is also why there is no `dark` variant of this object: there is
  * only one theme, and the tokens under it change.
  * ---------------------------------------------------------------------- */
 

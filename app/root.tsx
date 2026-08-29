@@ -361,11 +361,12 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
    * broken link had no navigation off it, no identity, and a skip link pointing
    * at nothing, because root emits `href="#main"` on every route.
    *
-   * SiteHeader is SAFE HERE and that is not an assumption: it reads the root
-   * loader through `useRouteLoaderData` and already handles the loader never
-   * having run, with `data?.theme ?? "system"` carrying a written justification
-   * naming the error-boundary path specifically. The comment predicted this use
-   * before it existed.
+   * SiteHeader is SAFE HERE and that is not an assumption: since 2026-08-29 it
+   * reads the root loader NOT AT ALL. It used to take the resolved theme with a
+   * justified fallback naming this path; the one-button theme control resolves
+   * itself from `<html data-theme>` through the cascade, so the header renders
+   * from its props and the route table alone. There is no loader value left for
+   * the error-boundary path to be missing.
    *
    * The stack block keeps its own class rather than borrowing `.prose pre`,
    * because it is DEV-ONLY output and styling it as prose would put a reader's

@@ -12,31 +12,29 @@
    Enhancement only. Every rule here styles markup created by
    app/enhance/palette.ts, so a reader without script never sees any of it. */
 
-/* Search entry point: ONE control carrying the icon and the shortcut hint.
+/* Search entry point: ONE control, an icon and nothing else.
  *
- * The hint used to be a sibling of the anchor, floating beside it with its own
- * border. At header size that reads as a stray character sitting next to the
- * icon rather than as a hint belonging to it, so it is now INSIDE the anchor:
- * one border, one hover state, one focus ring, one hit area. It stays
- * aria-hidden and unfocusable, and it stays `hidden` until the palette is
- * listening, so a reader without script sees a plain icon control and is never
- * told about a shortcut that does not exist.
+ * THE VISIBLE "/" IS GONE, ordered by Dustin on aesthetics 2026-08-29. It had
+ * already moved twice chasing a shape that did not read as a stray character
+ * parked beside an icon; the ruling is that it should not be painted at all.
+ * The shortcut still works and is now told through the control's `title` and
+ * an `aria-describedby` region, neither of which occupies a pixel. Both are
+ * written by the enhancement, so the promise is still made only once the
+ * listener exists.
  *
- * That is also what settles rule 2. The anchor previously opted out of the
- * underline on the ground that it rendered no text at all; it renders a "/"
- * now, so it opts out on the ordinary exemption instead: it carries a border,
- * a non-colour affordance, exactly like .search-chip and .btn.
+ * Rule 2 is satisfied on the ORIGINAL ground again: the anchor renders no text,
+ * and it carries a border besides, so it would take the .search-chip exemption
+ * either way.
  *
  * Height comes from --control-h on .site-header-nav, so this control, the
- * theme pill and the Blog link are one height and one centreline. With the
- * hint hidden the padding leaves it a 36px square, above the 24px WCAG 2.2
- * target floor; with the hint shown it grows into a pill.
+ * theme button and the Blog link are one height and one centreline. The
+ * padding leaves it a square comfortably above the 24px WCAG 2.2 target floor,
+ * and it no longer changes shape when script arrives.
  */
 .search-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
   height: var(--control-h);
   padding: 0 0.5rem;
   border: 1px solid var(--border);
@@ -48,16 +46,4 @@
 .search-trigger:hover {
   color: var(--text);
   background: var(--tint-brand);
-}
-
-/* No border, no background and no colour of its own: the control around it
-   owns all three, which is the point. It inherits the anchor's colour so it
-   follows the one hover state. Not a target: it never takes focus and a click
-   on it is a click on the control. */
-.search-trigger-kbd {
-  font-family: inherit;
-  font-size: 0.75rem;
-  line-height: 1;
-  pointer-events: none;
-  user-select: none;
 }

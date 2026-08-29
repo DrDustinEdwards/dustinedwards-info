@@ -154,7 +154,7 @@ EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied befor
 
 ### 13. UNGATED, class only; all instances resolved.
 
-A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `?? "system"` on the theme, `REMOTE_ARGS ?? []`, and `?? "unknown"` on the rate-limit client IP, stated once in `app/lib/client-ip.ts` since 2026-08-25, where it had been unmarked spellings across five routes; that substitution pools every off-edge caller into one shared bucket, which is the closed direction. Each is marked `JUSTIFIED SUBSTITUTION` at its call site.
+A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justified: `REMOTE_ARGS ?? []`, and `?? "unknown"` on the rate-limit client IP, stated once in `app/lib/client-ip.ts` since 2026-08-25, where it had been unmarked spellings across five routes; that substitution pools every off-edge caller into one shared bucket, which is the closed direction. Each is marked `JUSTIFIED SUBSTITUTION` at its call site. **The theme's `?? "system"` was the third and is GONE since 2026-08-29**, with the header that needed it: the one-button control reads the theme off `<html data-theme>` through the cascade, so nothing passes a resolved theme down and there is no absent value to stand in for.
 
 **The lint form is GONE since 2026-08-21**: `check:assertions` rule (e) enforced it and the gate was deleted in audit tier 4.1. In `app/` this class is stronger than a lint anyway, because a map keyed by its own union is a typecheck failure. In `scripts/` it is unenforced now, the accepted cost.
 

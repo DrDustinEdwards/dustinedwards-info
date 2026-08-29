@@ -26,7 +26,7 @@
  * adding a second site-wide bundle costs every document.
  */
 
-import { serializeThemeCookie, isTheme } from "~/lib/theme";
+import { serializeThemeCookie, isWritableTheme, type WritableTheme } from "~/lib/theme";
 
 function enhanceThemeToggle() {
   // Loaded by a script tag whose module executes once per document, so there
@@ -44,7 +44,13 @@ function enhanceThemeToggle() {
     if (!(submitter instanceof HTMLButtonElement)) return;
 
     const choice = submitter.value;
-    if (!isTheme(choice)) return;
+    /*
+     * THE WRITABLE SET, which is exactly what `/theme` accepts. One predicate
+     * for both, so the enhancement cannot apply a value its own fallback would
+     * reject: the two halves of the control agree about what a legal
+     * submission is because they ask the same function.
+     */
+    if (!isWritableTheme(choice)) return;
 
     event.preventDefault();
     apply(choice, form);
@@ -171,13 +177,21 @@ function isTyping(target: EventTarget | null) {
 }
 
 /**
- * Binds the two ways into search and unhides the shortcut hint.
+ * Binds the two ways into search and makes the shortcut discoverable.
  *
- * THE HINT IS UNHIDDEN HERE, and that is the same promise it always made:
- * `hidden` until the shortcut actually works. It used to wait for the palette
- * bundle, because the palette bundle held the listener. The listener is now
- * attached by the line below, so the hint becomes true earlier rather than
- * later, and it is still never shown to a reader whose script did not run.
+ * THE HINT IS TOLD HERE AND NOWHERE ELSE, and that is the same promise it has
+ * always made: nothing advertises the shortcut until the shortcut works. It
+ * used to wait for the palette bundle, because that bundle held the listener;
+ * the listener is attached by the line below, so the hint becomes true earlier
+ * rather than later, and a reader whose script did not run is still never told
+ * about a key that would do nothing for them.
+ *
+ * WHAT CHANGED 2026-08-29 IS THE SURFACE, NOT THE CONTRACT. It was a visible
+ * `<kbd>/</kbd>` inside the control, removed on Dustin's aesthetic ruling. The
+ * two surfaces that replace it cost no pixels: `title`, which a pointer user
+ * gets on hover, and the `aria-describedby` region, which a screen reader
+ * announces after the control's name. Both are set from here, so both inherit
+ * the honesty contract for free.
  */
 function enhanceSearchTrigger() {
   for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
@@ -185,6 +199,12 @@ function enhanceSearchTrigger() {
   }
 
   for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
+    /*
+     * THE TOOLTIP IS SET HERE RATHER THAN SERVER-RENDERED, for the reason the
+     * description is hidden until now: a `title` the server wrote would promise
+     * a shortcut to a reader who has no script to answer it.
+     */
+    trigger.title = "Search. Press / to open";
     trigger.dataset.shortcutHint = "shown";
     trigger.addEventListener("click", (event) => {
       // Let a modified click do what the browser would do with a link.
@@ -210,21 +230,49 @@ function enhanceSearchTrigger() {
   });
 }
 
-function apply(choice: "light" | "dark" | "system", form: HTMLFormElement) {
+function apply(choice: WritableTheme, form: HTMLFormElement) {
   const root = document.documentElement;
 
-  // "system" is the absence of the attribute, which hands the decision back to
-  // the prefers-color-scheme block. Setting data-theme="system" would match
-  // neither theme selector and leave the page on the light defaults.
-  if (choice === "system") {
-    root.removeAttribute("data-theme");
-  } else {
-    root.setAttribute("data-theme", choice);
-  }
+  /*
+   * A FLIP, so the attribute is always written. This carried a branch that
+   * removed it instead, for a submission the control no longer makes; it was
+   * unreachable code on the one path it existed for and still cost every reader
+   * its bytes.
+   *
+   * Returning to the default is not a submission and needs no line here: a
+   * reader clears the cookie in their browser and the next render omits the
+   * attribute server-side, which is where the default has always been applied.
+   */
+  root.setAttribute("data-theme", choice);
 
   document.cookie = serializeThemeCookie(choice);
 
-  for (const button of form.querySelectorAll("button[value]")) {
-    button.setAttribute("aria-pressed", String(button.getAttribute("value") === choice));
+  /*
+   * ## THE CONTROL REDRAWS ITSELF FROM THE ATTRIBUTE, so there is nothing here
+   *
+   * This used to rewrite `aria-pressed` across three buttons. The single
+   * control has no pressed state and no label to rewrite: both buttons are in
+   * the DOM, `chrome-nav.css` displays whichever matches `data-theme`, and the
+   * line above is the only thing that has to change for the right one to
+   * appear. Swapping an icon or a label from here would be a second owner of a
+   * decision the cascade already makes.
+   *
+   * ## FOCUS HAS TO MOVE, THOUGH, and that is not cosmetic
+   *
+   * The button that was just activated is the one the cascade hides, and
+   * `display: none` on the focused element drops focus to `<body>`. A keyboard
+   * reader would flip the theme and lose their place in the header, which is a
+   * worse outcome than the round trip this enhancement exists to avoid.
+   *
+   * So focus moves to the button that replaced it, but ONLY when the hidden one
+   * actually held focus. A pointer click leaves focus wherever the browser put
+   * it, and stealing it in that case would be its own defect.
+   */
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && form.contains(active) && active.offsetParent === null) {
+    const shown = [...form.querySelectorAll<HTMLElement>("button[value]")].find(
+      (button) => button.offsetParent !== null,
+    );
+    shown?.focus();
   }
 }
