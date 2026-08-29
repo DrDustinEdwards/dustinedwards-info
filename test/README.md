@@ -3,6 +3,20 @@
 `node:test`, no dependencies. Run with `npm test`, or as `check:tests` inside
 `npm run check`.
 
+**`test/worker/` IS A DIFFERENT INSTRUMENT and does not belong to the split
+below.** It is vitest inside workerd, run by `npm run test:worker` and gated by
+`check:worker`, and it exists because there was NOTHING between the pure
+functions here and the real browser: no test ran a loader, an action, D1, KV,
+R2, the Cache API or the Worker entry, so every route-level fact had to be
+established by probing production. Its own boundary, and why the React Router
+route table is a stub there, are stated in `vitest.config.ts`. Nothing in it
+imports from this directory and nothing here imports from it.
+
+The rule for which one a new case goes in: **if it needs a BINDING, it is a
+worker test; if input in, output out is the whole claim, it is a test here.**
+The cheaper instrument wins ties, because `check:tests` runs in seconds and
+`check:worker` boots a runtime.
+
 ## Three instruments, three jobs
 
 This repo already had two ways of knowing something is true, and they were
@@ -53,6 +67,14 @@ the bug.
 
 ## What does NOT belong here
 
+Anything needing a BINDING. D1, KV, R2, a Durable Object and the Cache API all
+have a real local implementation now, and `test/worker/` is where a claim about
+one of them goes.
+
 Anything needing the network, a deployed database, a bucket, or a browser.
 Those are `check:all --remote` and `verify-live`, and they are separate because
 they cannot run on a plane and because `verify-live` bills money per Ask probe.
+`test/worker/` is offline too, and structurally so: its setup installs a `fetch`
+that THROWS on any outbound call, and one of its own cases proves that stub is
+installed. It found its first violation of that rule on its first run, when
+`/api/health`'s content-drift check reached `api.github.com` for real.

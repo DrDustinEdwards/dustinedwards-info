@@ -248,7 +248,8 @@
     "check:stack",
     "check:tests",
     "check:types",
-    "check:urls"
+    "check:urls",
+    "check:worker"
   ],
   "notAdopted": [
     {
