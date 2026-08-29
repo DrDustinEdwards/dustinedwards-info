@@ -692,13 +692,42 @@ server?.on("exit", (code, signal) => {
  * the wait before an undiagnosed message. What actually fixes it is below: the
  * wait now ENDS EARLY when the process dies, and whatever the server said is
  * printed either way.
+ *
+ * ## 180s SINCE 2026-08-29, BECAUSE THE 3.5x HEADROOM HAD BECOME 1.1x
+ *
+ * The gate failed twice on a quiet machine with "the preview server process was
+ * still alive and never answered", which is the message for a bound that
+ * expired rather than for anything being wrong. RE-MEASURED THE SAME DAY, three
+ * ways: a hand-started `vite preview` first answered at **53s**, and the gate
+ * itself, with the bound temporarily raised, printed **46,119ms** and then went
+ * on to pass 207 checks with 0 failures.
+ *
+ * So the startup has got roughly three times slower than the samples above,
+ * and 60s against 46 to 53s is not a bound, it is a coin flip. What dominates
+ * now is visible in the server's own first line, `Establishing remote
+ * connection...`: the `AI_SEARCH` binding reaches a real instance even in local
+ * dev, which is also why this gate is tiered NETWORK. That latency is not ours
+ * and will not be steady.
+ *
+ * **RAISING IT COSTS NOTHING, and that is the paragraph above's own argument
+ * used forwards.** A long bound is only ever paid when the server is alive and
+ * slow. A server that DIES is reported immediately by the `serverExit` early
+ * exit, which is the case the short bound was protecting, and that protection
+ * is structural rather than a function of the number. So the number can be
+ * generous without making any failure slower to diagnose.
+ *
+ * NOT a fix for the slowness, and deliberately not disguised as one. The
+ * measurement is recorded so the next reader can see the trend rather than
+ * rediscover it; `remote: true` on the binding, which the server's own warning
+ * suggests, is the thing that would actually address it and is a ruling about
+ * billing rather than a gate change.
  */
 /** What a deployed origin said, when it said something. Read by the diagnosis. */
 let originStatus = /** @type {number | null} */ (null);
 /** What a deployed origin threw, when it could not be reached at all. */
 let originError = "";
 
-async function waitForServer(timeoutMs = 60_000) {
+async function waitForServer(timeoutMs = 180_000) {
   const started = Date.now();
 
   /*
