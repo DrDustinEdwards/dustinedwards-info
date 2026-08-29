@@ -1,0 +1,88 @@
+/**
+ * Wrangler configuration template for the WATCHDOG Worker.
+ *
+ * Copy to wrangler.watchdog.jsonc and fill in the real alert address. The real
+ * file is gitignored; secrets are set with `wrangler secret put`, never here.
+ * `scripts/bootstrap-config.mjs` copies this into place on install, and
+ * `npm run check:config` compares the two in both directions.
+ *
+ *   npx wrangler deploy -c wrangler.watchdog.jsonc
+ *   npx wrangler secret put OPERATOR_TOKEN -c wrangler.watchdog.jsonc
+ *
+ * A SECOND WORKER RATHER THAN A SECOND CRON ON THE SITE. A watcher that runs
+ * inside the thing it watches dies with it, which is the argument
+ * .github/workflows/health.yml used to reject every in-Worker design. A
+ * separate Worker keeps that property against everything except a
+ * Cloudflare-wide outage, in which case the site is down anyway. The whole
+ * ruling, and the measurement that forced the transport, are in
+ * workers/watchdog.ts.
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dustinedwards-watchdog",
+	"compatibility_date": "2026-07-08",
+	"main": "./workers/watchdog.ts",
+	// NO PUBLIC SURFACE. This Worker exports `scheduled` and nothing else, so a
+	// workers.dev route would answer errors to anyone who found it and would be
+	// a second way in to a Worker holding the operator token. A watchdog has no
+	// business being reachable.
+	"workers_dev": false,
+	// Same posture as the site config, and for the same privacy reason: an
+	// invocation log is enriched with the request context. This Worker has no
+	// requests, so the setting costs nothing here and states the account-wide
+	// stance rather than leaving one Worker as the exception nobody notices.
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"invocation_logs": false
+		}
+	},
+	// EVERY FIFTEEN MINUTES, and this cron is now the ONE owner of the poll
+	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs
+	// decides when the home page calls its health verdict stale, and
+	// `check:invariants` section 25 parses this line and fails if the two stop
+	// meaning the same number of seconds. It used to parse health.yml's cron;
+	// that workflow is now the hourly second opinion and no longer sets the pace.
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	},
+	// THE ONLY WAY THIS WORKER CAN REACH THE SITE. Measured 2026-08-29: a global
+	// fetch() to the site's own URL answers 404 with Cloudflare error 1042, the
+	// Worker-to-Worker-on-one-zone restriction, while a control fetch to
+	// example.com returns 200. Custom Domains are the documented alternative and
+	// this site has none until the DNS cutover. Carries no account-scoped id, so
+	// this line is complete as written.
+	"services": [
+		{
+			"binding": "SITE",
+			"service": "dustinedwards"
+		}
+	],
+	// Cloudflare Email Sending. `dustinedwards.info` is onboarded (measured
+	// 2026-08-29 with `wrangler email sending list`) and the alert address is an
+	// already-verified Email Routing destination, which the docs say is free on
+	// any plan and counts against no quota. Unrestricted rather than pinned with
+	// `destination_address`, because the generated `SendEmail` type requires
+	// `to`, so a pinned binding would mean the address written twice. The var
+	// below is the one owner. Carries no account-scoped id.
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
+	// WHERE THE ALERT LANDS, and the one statement of it.
+	//
+	// A VAR RATHER THAN A SECRET, on the CLOUDFLARE_ACCOUNT_ID precedent in the
+	// site config: an inbox address is not a credential, and guarding it with
+	// check:secrets would spend that gate's signal on a value that grants
+	// nothing. It is still kept OUT OF GIT, because this repo is meant to be
+	// copied as a template for further sites and a personal address in a tracked
+	// config is exactly what leaks on the day it is copied.
+	//
+	// The placeholder is on example.com, which RFC 2606 reserves and which can
+	// therefore never be a real inbox. `check:config` asserts the example
+	// carries that reserved domain and does NOT carry the real value.
+	"vars": {
+		"ALERT_EMAIL": "alerts@example.com"
+	}
+}
