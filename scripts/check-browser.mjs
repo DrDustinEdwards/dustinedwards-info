@@ -940,7 +940,7 @@ try {
       await page.goto(`${BASE}/?browsercase=health-${tag}-${Date.now()}`, {
         waitUntil: "networkidle0",
       });
-      return page.evaluate(() => {
+      const read = await page.evaluate(() => {
         const el = document.querySelector("[data-health-age]");
         const value = document.querySelector(".home-proof .proof[data-health-age] .proof-value");
         return {
@@ -949,7 +949,24 @@ try {
           value: value ? value.textContent.trim() : null,
         };
       });
+      /* The wall clock at the moment of the read, so an AGE can be turned into
+         a fixed point. Two ages measured at different moments are not
+         comparable; the write times they imply are. */
+      return { ...read, readAtMs: Date.now() };
     };
+
+    /**
+     * WHEN THE SNAPSHOT THIS TILE IS SHOWING WAS WRITTEN, on the local clock.
+     *
+     * The tile carries an AGE, which grows on its own, so comparing two ages
+     * needs the elapsed time between them subtracted back out, and that is what
+     * the old `before + WAIT_SECONDS` arithmetic was doing. Deriving the write
+     * time instead makes the comparison independent of how long anything took,
+     * which is what lets the poll below run for as many seconds as it needs.
+     *
+     * @param {{age: number|null, readAtMs: number}} t
+     */
+    const writtenAtMs = (t) => t.readAtMs - Number(t.age) * 1000;
 
     /*
      * ## A BEFORE AND AN AFTER, BECAUSE THE OBVIOUS ASSERTION DOES NOT
@@ -967,15 +984,35 @@ try {
      * measuring that a snapshot EXISTS, which a leftover satisfies, and not
      * that this run's request wrote one.
      *
-     * So the age is read twice with a deliberate WAIT between them. A snapshot
-     * that is not being rewritten can only get OLDER across that wait; one that
-     * is rewritten gets NEWER. The comparison is against `before + wait`, so a
-     * leftover of ANY age fails and no absolute threshold has to be guessed.
+     * So the tile is read before and after, and the comparison is between the
+     * two WRITE TIMES the ages imply. A snapshot that is not being rewritten
+     * keeps its write time; one that is rewritten moves it forward. A leftover
+     * of ANY age fails and no absolute threshold has to be guessed.
+     *
+     * ## AND THE SECOND READ IS A POLL, BECAUSE A KV READ IS NOT A KV WRITE
+     *
+     * The read used to be a single fetch four seconds after the call, and
+     * against production that FAILED while the write was working perfectly.
+     * Measured 2026-08-28: `/api/health` answered 200 with five passing checks,
+     * `wrangler kv key get health:snapshot --remote` showed the new timestamp
+     * already stored, and the home page kept rendering the previous one.
+     * Polling the page every two seconds after the call, the age read 118, 121,
+     * 123, 126, then 10, 13, then 133, 135, then 19, 22.
+     *
+     * It ALTERNATES, which is the signature and rules out a simple delay:
+     * Workers KV serves `get` from an edge cache, entries expire independently,
+     * and for about a minute after a write some reads are answered from a
+     * cached copy of the old value and some are not. A one-shot read four
+     * seconds later is a coin toss, and the gate lost it on the 2026-08-28
+     * scheduled run and reported a write failure that had not happened.
+     *
+     * THE ASSERTION IS UNCHANGED IN WHAT IT REFUSES. A snapshot nobody wrote
+     * never moves its write time, so the poll spends its whole budget and
+     * fails, which is the defect this case was built for. What the poll removes
+     * is a failure caused by the READER's cache, which is not a fact about this
+     * site. The budget is longer than that cache's lifetime for that reason.
      */
     const before = await readTile("before");
-
-    const WAIT_SECONDS = 4;
-    await new Promise((resolve) => setTimeout(resolve, WAIT_SECONDS * 1000));
 
     const primed = await fetch(`${BASE}/api/health`, { headers: { accept: "application/json" } });
     const primedBody = await primed.text();
@@ -987,7 +1024,31 @@ try {
         `for a reason that is not about the tile. Body: ${primedBody.slice(0, 200)}`,
     );
 
-    const after = await readTile("after");
+    /*
+     * Longer than the KV read cache, and the poll stops the moment it sees a
+     * newer write time, so the budget is a ceiling rather than a cost. The
+     * tolerance absorbs the age's one-second quantisation plus network jitter;
+     * a rewrite moves the write time by far more than that.
+     */
+    const POLL_BUDGET_MS = 90_000;
+    const POLL_EVERY_MS = 5_000;
+    const STAMP_TOLERANCE_MS = 2_000;
+
+    /** @param {{present: boolean, age: number|null, readAtMs: number}} t */
+    const isNewer = (t) =>
+      t.present && Number.isInteger(t.age) &&
+      writtenAtMs(t) > writtenAtMs(before) + STAMP_TOLERANCE_MS;
+
+    let after = await readTile("after");
+    let polls = 1;
+    if (before.present && Number.isInteger(before.age)) {
+      const deadline = Date.now() + POLL_BUDGET_MS;
+      while (Date.now() < deadline && !isNewer(after)) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_EVERY_MS));
+        after = await readTile(`after-${polls}`);
+        polls += 1;
+      }
+    }
 
     ok(
       "the home page carries a health verdict rather than a placeholder",
@@ -1020,13 +1081,18 @@ try {
     if (before.present && Number.isInteger(before.age)) {
       ok(
         "calling /api/health made the home page's verdict NEWER",
-        Number(after.age) < Number(before.age) + WAIT_SECONDS,
-        `the tile read ${before.age}s old, then ${WAIT_SECONDS}s passed, ` +
-          `/api/health was called, and it read ${after.age}s old. A snapshot that ` +
-          `is being rewritten gets newer across that call; this one only aged, ` +
-          `which means the page is reading a leftover and NOTHING WROTE ONE. ` +
-          `That is the exact defect a leftover in the preview's persistent KV ` +
-          `hides from an absolute-age check.`,
+        isNewer(after),
+        `the tile reported a snapshot written at ` +
+          `${new Date(writtenAtMs(before)).toISOString()} before the call and ` +
+          `${after.present ? new Date(writtenAtMs(after)).toISOString() : "nothing"} after ` +
+          `it, over ${polls} read(s) across up to ${POLL_BUDGET_MS / 1000}s. A snapshot ` +
+          `that is being rewritten moves that timestamp forward; this one did not, ` +
+          `which means the page is reading a leftover and NOTHING WROTE ONE. That is ` +
+          `the exact defect a leftover in the preview's persistent KV hides from an ` +
+          `absolute-age check. The budget is longer than the KV read cache, so a stale ` +
+          `READ cannot be the explanation: check that /api/health reached ` +
+          `writeHealthSnapshot, and that it did not answer 429 or take the catch path, ` +
+          `both of which return before the write.`,
       );
     } else {
       skip(
@@ -1169,7 +1235,43 @@ try {
       html
         .replace(/nonce="[^"]*"/g, 'nonce="N"')
         .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
-        .replace(/data-health-age="\d+"/g, 'data-health-age="A"');
+        .replace(/data-health-age="\d+"/g, 'data-health-age="A"')
+        /*
+         * THE SENTENCE BESIDE THE AGE, added 2026-08-28. The attribute above
+         * was masked from this case's first run and the prose spelling of the
+         * same fact was not, so the comparison still failed on it.
+         *
+         * MEASURED on production 2026-08-28, in the theme comparison below: the
+         * cookieless copy read "Read under a minute ago, at 18:48 UTC" and the
+         * dark copy, fetched seconds later, read "Read 7 minutes ago, at 18:41
+         * UTC". The case failed at byte 7365 and neither render was wrong.
+         *
+         * SEVEN MINUTES APART IS NOT A SLOW CLOCK, and the mechanism is worth
+         * stating because it is the reason a wait would not have fixed it:
+         * Workers KV serves `get` from an edge cache, so two renders taken
+         * seconds apart can legitimately read snapshots up to a minute apart,
+         * and the age is recomputed against the wall clock at each render on
+         * top of that. Diagnosed by reading the stored value directly with
+         * `wrangler kv key get` while the page still showed the older one.
+         *
+         * IT IS HERE AND NOT IN `maskTheme` because the difference is not one
+         * the theme is allowed to make. Two requests carrying the SAME cookie
+         * can differ by it, so the credentialed-reader comparison has the same
+         * exposure, and `maskTheme` is not applied to that one.
+         *
+         * WHAT STOPS THIS FROM HIDING A DEFECT: the health-tile case at the top
+         * of this gate asserts, against the same deployment, that the attribute
+         * is present, numeric and inside one poll interval, and that the
+         * verdict gets NEWER across a call to `/api/health`.
+         *
+         * The tile's VALUE is deliberately NOT masked. A `5/5` against a `--`
+         * is a verdict disagreeing with a verdict, and two renders seconds
+         * apart that disagree about whether the site is healthy is a finding.
+         */
+        .replace(
+          /(data-health-age="A"[\s\S]*?<span class="proof-detail[^"]*">)[^<]*/,
+          "$1AGE-SENTENCE",
+        );
 
     /** @param {string} path @param {Record<string,string>} headers */
     const fetchDoc = async (path, headers) => {
@@ -1208,6 +1310,19 @@ try {
          */
         .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"')
         .replace(/aria-pressed="(true|false)"/g, 'aria-pressed="P"');
+    /*
+     * THE HOME TILE'S AGE SENTENCE IS NOT IN THIS SET, and the omission is the
+     * ruling rather than an oversight.
+     *
+     * It was going to be added here under hard rule 8, which names `maskTheme`
+     * the one owner of the enumeration. The rule 8 tag is about what the THEME
+     * may change, and the sentence is not that: it varies with the clock, it
+     * varies between two requests that carry the same cookie, and it therefore
+     * has exactly the same exposure in the credentialed-reader comparison
+     * above, which `maskTheme` is not applied to. It lives in `mask`, with the
+     * nonce and the age attribute it is a second spelling of. See the comment
+     * there for the measurement.
+     */
 
     for (const { path } of THEME_CACHED) {
       /*
