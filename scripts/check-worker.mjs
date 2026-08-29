@@ -6,7 +6,8 @@
  * ## OBSERVATION BOUNDARY
  *
  * **IT RUNS VITEST IN WORKERD AND READS ITS SUMMARY.** It knows how many test
- * files were discovered and how many cases reported pass or fail. It does not
+ * files were discovered and how many cases the runner's own report counted. It
+ * does not
  * know whether those cases ASSERT anything: an empty `it()` body counts as a
  * passing case here exactly as it does for vitest. That class belongs to
  * review.
@@ -34,7 +35,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -103,49 +105,85 @@ ok(
 );
 
 /*
- * IT DELEGATES rather than restating the vitest invocation, on the anti-mirror
- * rule `check:types` follows: package.json is the one place that defines what
- * this layer's run IS, and a second spelling here drifts. `npm run test:worker`
- * is also the command a person types, so the gate and the human run the same
- * thing by construction.
- */
-const run = spawnSync("npm run test:worker --silent", {
-  cwd: root,
-  encoding: "utf8",
-  shell: true,
-  maxBuffer: 64 * 1024 * 1024,
-});
-const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
-
-/*
- * Vitest's default reporter prints `Tests  60 passed (60)` and, when something
- * failed, `Tests  2 failed | 58 passed (60)`. The TOTAL in parentheses is the
- * number this gate floors, because it is the one that survives a failure and
- * the one an emptied glob drives to zero.
+ * ## THE COUNTS COME FROM VITEST'S JSON REPORTER, NOT FROM ITS HUMAN OUTPUT
  *
- * ANCHORED AND BOUNDED. `Tests` also appears in `Test Files`, so the needle
- * requires the word at a line's start after the reporter's indent, and the
- * total is read from the parenthesised group rather than from the first
- * integer on the line, which is the failing count when there is one.
+ * **CAUGHT BY CI ON THIS GATE'S FIRST CLEAN-CHECKOUT RUN, 2026-08-29.** The
+ * first version read `Tests  61 passed (61)` off the default reporter with an
+ * anchored regex.
+ *
+ * WHAT WAS OBSERVED, and it is deliberately separated from what caused it. The
+ * tests RAN in CI and passed: the run exited 0 and the whole log carries the
+ * `console.error` lines `routes.test.ts` produces on STDERR. What the log
+ * carries nowhere is any of vitest's STDOUT: no `RUN  v` banner, no
+ * `Test Files`, no `Tests`, no `Duration`. So the gate read `cases null` and
+ * failed closed.
+ *
+ * **THE CAUSE WAS NOT ESTABLISHED, and this comment does not invent one.** The
+ * obvious candidate was checked and REFUTED: re-running the old needle locally
+ * with `GITHUB_ACTIONS=true` and `CI=true` still matched, at 61, so vitest
+ * swapping reporters under that variable is not it. Whatever ate that stream
+ * lives somewhere between the Linux runner, npm and the pool, and it is not
+ * reproducible on this machine.
+ *
+ * That is exactly why the repair is not a better regex. The mistake underneath
+ * is hard rule 10's own: the needle was pointed at a HUMAN-FACING RENDERING,
+ * which is free to differ per environment and did, in a way nobody has yet
+ * explained. The JSON reporter is a CONTRACT instead. `numTotalTests` and
+ * `numFailedTests` come off a file this gate names and reads itself, so the
+ * class is gone rather than patched, whatever the stream does.
+ *
+ * BOTH REPORTERS RUN. The default one still reaches the console, because a
+ * person reading a failure wants the case name and the diff, and the JSON file
+ * costs nothing beside it.
+ *
+ * IT STILL DELEGATES, on the anti-mirror rule `check:types` follows:
+ * package.json defines what this layer's run IS and the flags below only add an
+ * output format to it, so `npm run test:worker` stays the command a person
+ * types.
  */
-const totals = output.match(/^\s*Tests\s+(.+?)\((\d+)\)\s*$/m);
-const total = totals ? Number(totals[2]) : null;
-const failedMatch = output.match(/^\s*Tests\s+(\d+)\s+failed/m);
-const failed = failedMatch ? Number(failedMatch[1]) : 0;
+const reportDir = mkdtempSync(join(tmpdir(), "check-worker-"));
+const reportPath = join(reportDir, "vitest.json");
 
-console.log(`  vitest reported: cases ${total}, failed ${failed}, exit ${run.status}`);
+/** @type {ReturnType<typeof spawnSync> | null} */
+let run = null;
+/** @type {{ numTotalTests?: number, numFailedTests?: number } | null} */
+let report = null;
+let reportProblem = "";
+try {
+  run = spawnSync(
+    `npm run test:worker --silent -- --reporter=default --reporter=json --outputFile="${reportPath}"`,
+    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 64 * 1024 * 1024 },
+  );
+  if (!existsSync(reportPath)) {
+    reportProblem = `vitest wrote no report at ${reportPath}`;
+  } else {
+    try {
+      report = JSON.parse(readFileSync(reportPath, "utf8"));
+    } catch (error) {
+      reportProblem = `the report did not parse: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+} finally {
+  rmSync(reportDir, { recursive: true, force: true });
+}
+
+const output = `${run?.stdout ?? ""}${run?.stderr ?? ""}`;
+const total = typeof report?.numTotalTests === "number" ? report.numTotalTests : null;
+const failed = typeof report?.numFailedTests === "number" ? report.numFailedTests : 0;
+
+console.log(`  vitest reported: cases ${total}, failed ${failed}, exit ${run?.status}`);
 
 ok(
-  "the runner's summary was parseable",
+  "the runner wrote a machine-readable report",
   total !== null,
-  "could not read the `Tests ... (N)` summary line, so the count below would be " +
-    "asserted against nothing. The reporter format changed.\n        " +
+  `${reportProblem || "the report carried no numTotalTests"}, so the count below ` +
+    `would be asserted against nothing.\n        ` +
     output.split("\n").slice(-15).join("\n        "),
 );
 ok(
   "no worker test failed",
-  failed === 0 && run.status === 0,
-  `${failed} failing, runner exit ${run.status}.\n${output
+  failed === 0 && run?.status === 0,
+  `${failed} failing, runner exit ${run?.status}.\n${output
     .split("\n")
     .filter((l) => /^\s*(FAIL|×)/.test(l))
     .slice(0, 12)
