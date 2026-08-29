@@ -109,7 +109,14 @@
     // number that already has two owners. Named exactly, not globbed:
     // app/lib/health also holds checks.server.ts and snapshot.server.ts, which
     // are Worker-only and take an Env this project cannot resolve.
-    "app/lib/health/snapshot.mjs"
+    "app/lib/health/snapshot.mjs",
+    // Whether a failing health run may repair itself, and what a watchdog
+    // firing DOES about it. THREE callers reach this one module and that is why
+    // it is here: the watchdog Worker (tsconfig.cloudflare.json),
+    // scripts/health-repair.mjs for the GitHub half, and test/. A second copy
+    // of REPAIRABLE would be two answers to "may this fire an unattended write
+    // against production", which is the one table where rule 17 is expensive.
+    "app/lib/health/repair.mjs"
   ],
   "compilerOptions": {
     "composite": true,

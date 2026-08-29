@@ -11,14 +11,20 @@
  *   - a non-drift failure must NOT trigger repair
  *   - a drift failure with no secret must STILL fail the run
  *
- * @see scripts/lib/health-repair.mjs
+ * @see app/lib/health/repair.mjs
  * @see .github/workflows/health.yml
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { REPAIRABLE, failingCheckNames, repairPlan } from "../scripts/lib/health-repair.mjs";
+import {
+  REPAIRABLE,
+  failingCheckNames,
+  repairPlan,
+  watchdogActions,
+  watchdogOutcome,
+} from "../app/lib/health/repair.mjs";
 
 const WITH = { hasToken: true };
 const WITHOUT = { hasToken: false };
@@ -178,4 +184,213 @@ test("content drift repairs BEFORE the ask index when both fail", () => {
   const plan = repairPlan(["ask-index-drift", "content-drift"], WITH);
   assert.deepEqual(plan.repair, ["sync_posts", "sync_ask"]);
   assert.equal(plan.alertOnly, false);
+});
+
+/*
+ * ===========================================================================
+ * THE WATCHDOG'S ACTION LIST
+ * ===========================================================================
+ *
+ * `workers/watchdog.ts` is a Cron Trigger. It runs unattended, every fifteen
+ * minutes, and the only firings whose behaviour matters are the ones where the
+ * site is already broken, which is precisely when nobody is watching the run.
+ * Everything it DECIDES is here so that something can fail when it changes.
+ *
+ * TWO PLANTS ARE NAMED BELOW, in the shape hard rule 12 requires: each says in
+ * advance which assertion must fire, so a non-zero exit is not mistaken for
+ * proof.
+ */
+
+/** The healthy body the endpoint actually returns, trimmed to what is read. */
+const HEALTHY = {
+  ok: true,
+  checks: [
+    { name: "ask-index-drift", ok: true },
+    { name: "media-index-drift", ok: true },
+    { name: "media-unbacked", ok: true },
+    { name: "content-drift", ok: true },
+    { name: "fts-equality", ok: true },
+  ],
+};
+
+/** @param {string[]} failing */
+const bodyFailing = (failing) => ({
+  ok: false,
+  checks: [
+    { name: "fts-equality", ok: true },
+    ...failing.map((name) => ({ name, ok: false })),
+  ],
+});
+
+/** @param {unknown} action */
+const reasonOf = (action) => /** @type {{ reason: string }} */ (action).reason;
+
+test("ok in means NO action at all", () => {
+  assert.deepEqual(watchdogActions({ status: 200, body: HEALTHY }, WITH), []);
+});
+
+test("a 200 carrying ok:false is NOT healthy", () => {
+  // The status line and the body can disagree, and the body is the verdict.
+  const actions = watchdogActions({ status: 200, body: bodyFailing(["ask-index-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_ask" }, { type: "recheck" }]);
+});
+
+test("PLANT: A REPAIRABLE FAILURE IS REPAIR THEN RECHECK, in that order", () => {
+  /*
+   * PLANT: delete the `{ type: "recheck" }` entry from the array
+   * `watchdogActions` returns. THIS assertion is the one that must fire, and it
+   * must name the missing recheck rather than merely exiting 1.
+   *
+   * The recheck is what turns "the repair call returned 200" into "the endpoint
+   * agrees", and it is the step a later simplification would drop first,
+   * because the repair already derives its own converged verdict and looks
+   * sufficient. It is not: it proves ONE index, not the run.
+   */
+  const actions = watchdogActions(
+    { status: 503, body: bodyFailing(["content-drift", "ask-index-drift"]) },
+    WITH,
+  );
+  assert.deepEqual(actions, [
+    { type: "repair", tool: "sync_posts" },
+    { type: "repair", tool: "sync_ask" },
+    { type: "recheck" },
+  ]);
+  assert.equal(actions.at(-1)?.type, "recheck", "the recheck must be LAST, after every repair");
+  assert.equal(
+    actions.filter((a) => a.type === "recheck").length,
+    1,
+    "exactly one recheck: a loop here would be a monitor arguing with itself",
+  );
+});
+
+test("PLANT: AN UNKNOWN CLASS PRODUCES A NOTIFY ACTION NAMING THE CLASS", () => {
+  /*
+   * PLANT: drop the joined `unknown` list from the unknown-class reason in
+   * `repairPlan`. THIS assertion is the one that must fire, on the
+   * `telemetry-sink-empty` match rather than on the type check above it.
+   *
+   * A notification that says "something unclassified failed" and does not say
+   * WHAT is an alert that costs a person the whole triage. The class name is
+   * the entire actionable content of the mail.
+   */
+  const actions = watchdogActions(
+    { status: 503, body: bodyFailing(["telemetry-sink-empty"]) },
+    WITH,
+  );
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0]?.type, "notify");
+  assert.match(
+    reasonOf(actions[0]),
+    /telemetry-sink-empty/,
+    "the notify reason must NAME the unclassified check",
+  );
+  assert.match(reasonOf(actions[0]), /not a known drift class/);
+});
+
+test("an unknown class alongside a repairable one still repairs NOTHING", () => {
+  const actions = watchdogActions(
+    { status: 503, body: bodyFailing(["ask-index-drift", "telemetry-sink-empty"]) },
+    WITH,
+  );
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0]?.type, "notify");
+  assert.equal(actions.filter((a) => a.type === "repair").length, 0);
+});
+
+test("no token means notify, never a silent pass", () => {
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["ask-index-drift"]) }, WITHOUT);
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /OPERATOR_TOKEN is not set/);
+});
+
+test("a throttled watchdog notifies rather than reporting the site unhealthy", () => {
+  /*
+   * `/api/health` answers 429 with a body naming `rate-limited`, which is
+   * deliberately NOT a repairable class, so it falls to the unknown arm and
+   * wakes somebody NAMING the throttle. Measured on the wire 2026-08-29: a
+   * burst through the service binding is refused in exactly that shape.
+   */
+  const actions = watchdogActions(
+    { status: 429, body: { ok: false, checks: [{ name: "rate-limited", ok: false }] } },
+    WITH,
+  );
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /rate-limited/);
+});
+
+test("an unreadable body notifies rather than writing", () => {
+  for (const body of [null, "not json", {}, { ok: false }, { ok: false, checks: "nope" }]) {
+    const actions = watchdogActions({ status: 503, body }, WITH);
+    assert.deepEqual(actions.map((a) => a.type), ["notify"], `body ${JSON.stringify(body)}`);
+  }
+});
+
+test("a total outage (no body at all) notifies", () => {
+  const actions = watchdogActions({ status: 0, body: null }, WITH);
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /nothing to repair/);
+});
+
+test("a clean outcome is NO action", () => {
+  assert.deepEqual(watchdogOutcome({ misses: [], recheck: { status: 200, body: HEALTHY } }), []);
+});
+
+test("a failed repair notifies and names the miss", () => {
+  const actions = watchdogOutcome({
+    misses: ["sync_ask answered 500"],
+    recheck: { status: 200, body: HEALTHY },
+  });
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /sync_ask answered 500/);
+});
+
+test("a repair that converged but left the endpoint unhealthy still notifies", () => {
+  const actions = watchdogOutcome({
+    misses: [],
+    recheck: { status: 503, body: bodyFailing(["ask-index-drift"]) },
+  });
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /STILL unhealthy/);
+  assert.match(reasonOf(actions[0]), /ask-index-drift/);
+});
+
+test("BOTH faults are reported, never just the first", () => {
+  /*
+   * The N-1-of-N shape FAILURES.md opens with. A mail naming only the failed
+   * repair sends somebody to re-run it and never mentions that the endpoint is
+   * still unhealthy for a different reason.
+   */
+  const actions = watchdogOutcome({
+    misses: ["sync_media answered 500"],
+    recheck: { status: 503, body: bodyFailing(["content-drift"]) },
+  });
+  const reason = reasonOf(actions[0]);
+  assert.match(reason, /sync_media answered 500/);
+  assert.match(reason, /STILL unhealthy/);
+  assert.match(reason, /content-drift/);
+});
+
+test("a recheck that never completed notifies rather than passing", () => {
+  const actions = watchdogOutcome({ misses: [], recheck: null });
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /proved nothing/);
+});
+
+test("the decision module does no I/O", async () => {
+  /*
+   * ASSERTED, not left to prose. This module is imported into a Worker bundle,
+   * into a Node script and into this file, and the property that makes it
+   * testable at all is that it does no I/O. A `fetch` added here would still
+   * pass every assertion above.
+   *
+   * The source is read and its length asserted first: an empty read passes
+   * every doesNotMatch below it vacuously.
+   */
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../app/lib/health/repair.mjs", import.meta.url), "utf8");
+  assert.ok(source.length > 2000, `read ${source.length} chars; an empty read passes vacuously`);
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(code.length > 1000, `stripped to ${code.length} chars; the stripper ate the module`);
+  assert.doesNotMatch(code, /\bfetch\s*\(/, "the module must never fetch");
+  assert.doesNotMatch(code, /^\s*import\s/m, "the module must import nothing");
 });
