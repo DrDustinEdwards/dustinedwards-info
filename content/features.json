@@ -543,7 +543,7 @@
     {
       "component": "Safety rails",
       "name": "The tracked config and the real one must declare the same bindings",
-      "what": "The real Worker config is not in the repository, because it carries account identifiers, and a tracked example with placeholder ids stands in its place. The two are compared binding by binding in both directions. That check exists because an image binding was once added to the real file and not mirrored, so a fresh clone would have built a site whose thumbnails silently fell back to full-resolution originals.",
+      "what": "The real Worker configs are not in the repository, because they carry account identifiers and a personal address, and tracked examples with placeholder values stand in their place. Each pair is compared binding by binding in both directions, and the site Worker and the watchdog Worker are both covered. That check exists because an image binding was once added to a real file and not mirrored, so a fresh clone would have built a site whose thumbnails silently fell back to full-resolution originals.",
       "anchors": [
         {
           "kind": "gate",
@@ -552,7 +552,7 @@
         {
           "kind": "assertion",
           "gate": "check:config",
-          "text": "the real config declares at least one binding"
+          "text": "declares at least one binding"
         }
       ]
     },
