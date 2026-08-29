@@ -145,17 +145,23 @@ jobs:
       # gates. A missing CLOUDFLARE_API_TOKEN discovered at the deploy step
       # would waste ten minutes and surface as a wrangler authentication stack
       # trace, which names the symptom rather than the cause.
-      - name: Refuse without the four secrets
+      # ALERT_EMAIL JOINED THE LIST 2026-08-29, and it is the one whose absence
+      # would NOT have been loud. A placeholder database_id fails at the deploy;
+      # a placeholder ALERT_EMAIL deploys perfectly and mails every watchdog
+      # alert to the reserved example.com, so the monitor looks healthy while
+      # being unable to reach anybody. Refused here for that reason.
+      - name: Refuse without the six secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
           OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
           set -euo pipefail
           missing=""
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_DATABASE_ID KV_NAMESPACE_ID OPERATOR_TOKEN; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_DATABASE_ID KV_NAMESPACE_ID OPERATOR_TOKEN ALERT_EMAIL; do
             # Indirect expansion, so the loop reads the value without ever
             # echoing it.
             if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
@@ -164,7 +170,7 @@ jobs:
             echo "::error::This deploy workflow is DORMANT until its secrets exist. Missing:${missing}. Set each with: gh secret set <NAME>. The Cloudflare token must be a SCOPED token (Create Token -> Edit Cloudflare Workers -> Account Resources: this account only), never the global API key, which cannot be scoped or revoked on its own. Nothing was built and nothing was deployed."
             exit 1
           fi
-          echo "All five secrets are present."
+          echo "All six secrets are present."
 
       # postinstall bootstraps wrangler.jsonc by COPYING the tracked example,
       # which carries placeholder ids.
@@ -175,10 +181,11 @@ jobs:
       # config and long before wrangler is asked to deploy against it. The
       # script refuses five ways rather than patching partially; its header says
       # why each one is a named refusal.
-      - name: Put the account-scoped ids into wrangler.jsonc
+      - name: Put the redacted values into the wrangler configs
         env:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: node scripts/apply-config-ids.mjs
 
       # THE TOKEN MUST REACH EVERY SURFACE THIS DEPLOY TOUCHES, and it is asked
