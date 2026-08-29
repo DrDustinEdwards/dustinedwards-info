@@ -142,6 +142,30 @@ describe("/theme", () => {
   });
 });
 
+/**
+ * A budget for a case that drives the health loader.
+ *
+ * ## VITEST'S 5s DEFAULT IS NOT A STATEMENT ABOUT THIS ENDPOINT
+ *
+ * MEASURED THE HARD WAY, 2026-08-29: three of these cases failed inside `ship`
+ * at 5065ms, 5777ms and 5218ms, which is the default timeout and not a defect
+ * in anything they assert. Every one of them was green minutes earlier on an
+ * idle machine. `ship` runs the whole offline tier, so the machine underneath
+ * these is the busiest it ever gets, and that is exactly when they must not
+ * lie.
+ *
+ * One call to this loader runs five checks against D1, R2 and AI Search;
+ * production measured 0.98 to 2.01 seconds for the same work. A 5s budget is
+ * therefore 2.5x headroom on an idle machine and none at all on a loaded one,
+ * which is the same collapsed-margin shape `check:browser`'s readiness bound
+ * had on the same day.
+ *
+ * 30s, and it costs nothing: a budget is only ever paid by a case that HANGS,
+ * and a case that hangs is a failure either way. What it buys is that a slow
+ * machine reports what the code did rather than how long the machine took.
+ */
+const HEALTH_CASE_TIMEOUT = 30_000;
+
 describe("/api/health", () => {
   const healthRequest = (ip = "203.0.113.1") =>
     new Request("https://example.com/api/health", {
@@ -173,7 +197,7 @@ describe("/api/health", () => {
      * `curl --fail` as health and the alert is never sent. */
     const body = (await response.json()) as { ok: boolean };
     expect(response.status).toBe(body.ok ? 200 : 503);
-  });
+  }, HEALTH_CASE_TIMEOUT);
 
   it("WRITES A SNAPSHOT for both verdicts, and it is what was answered with", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
@@ -201,7 +225,7 @@ describe("/api/health", () => {
       total: body.checks.length,
       failed: body.checks.filter((c) => !c.ok).length,
     });
-  });
+  }, HEALTH_CASE_TIMEOUT);
 
   it("REFUSES past the per-IP rate, with the same body shape and a Retry-After", async () => {
     /*
@@ -211,33 +235,55 @@ describe("/api/health", () => {
      * which made it the most expensive thing an anonymous caller could ask this
      * site to do.
      *
-     * The limit is 20 per 60 seconds and the limiter is keyed per IP, so this
-     * case gets an address of its own and no other case is affected.
+     * ## THE BUDGET IS SPENT DIRECTLY, AND THAT IS THE POINT OF THE CASE
+     *
+     * This case used to call the loader in a loop until one answer came back
+     * 429. It worked and it was WRONG in a way that only showed under load:
+     * the limiter is gate 0, so the first twenty calls each ran the full
+     * five-check suite before being allowed through, and only the
+     * twenty-first refused. Twenty health runs to observe one refusal, at
+     * roughly a second each. It timed out inside `ship` and took the deploy
+     * with it.
+     *
+     * Spending the budget through the same Durable Object the route uses
+     * leaves exactly ONE loader call to assert on, and that call is the
+     * subject. It is also stronger: the loop only ever proved that SOME call
+     * refused eventually, while this proves the refusal happens on the call
+     * after the allowance is gone.
+     *
+     * The limiter is keyed per IP, so this case gets an address of its own and
+     * no other case is affected.
      */
     const ip = "203.0.113.99";
-    let refusal: Response | null = null;
-    for (let i = 0; i < 30 && refusal === null; i += 1) {
-      const ctx = createExecutionContext();
-      const response = await healthLoader({
-        request: healthRequest(ip),
-        context: routeContext(ctx),
-        params: {},
-      } as never);
-      await waitOnExecutionContext(ctx);
-      if (response.status === 429) refusal = response;
-    }
+    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));
+    /* The route's own numbers, which it deliberately does not export: 20 per
+     * 60 seconds. Spent to the edge, so the next call is the first refusal. */
+    let lastOk = true;
+    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit(20, 60)).ok;
+    /* THE ALLOWANCE WAS REAL. If `hit` had refused early the assertion below
+     * would pass for the wrong reason, against a limiter that was already
+     * exhausted rather than one this case exhausted. */
+    expect(lastOk).toBe(true);
 
-    expect(refusal).not.toBeNull();
-    expect(refusal?.headers.get("retry-after")).toBe("60");
-    expect(refusal?.headers.get("cache-control")).toBe("no-store");
+    const ctx = createExecutionContext();
+    const refusal = await healthLoader({
+      request: healthRequest(ip),
+      context: routeContext(ctx),
+      params: {},
+    } as never);
+    await waitOnExecutionContext(ctx);
+
+    expect(refusal.status).toBe(429);
+    expect(refusal.headers.get("retry-after")).toBe("60");
+    expect(refusal.headers.get("cache-control")).toBe("no-store");
     /* THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the watching workflow's
      * parse succeeds and reports a named cause rather than "body did not
      * parse". */
-    expect(await refusal?.json()).toMatchObject({
+    expect(await refusal.json()).toMatchObject({
       ok: false,
       checks: [{ name: "rate-limited", ok: false }],
     });
-  });
+  }, HEALTH_CASE_TIMEOUT);
 
   it("does NOT serve at all when the limiter is missing", async () => {
     /*
@@ -259,7 +305,7 @@ describe("/api/health", () => {
       ok: false,
       checks: [{ name: "rate-limiter-unavailable", ok: false }],
     });
-  });
+  }, HEALTH_CASE_TIMEOUT);
 
   it("carries NO detail string, and a failing check carries only its two counts", async () => {
     /*
@@ -301,5 +347,5 @@ describe("/api/health", () => {
         }
       }
     }
-  });
+  }, HEALTH_CASE_TIMEOUT);
 });
