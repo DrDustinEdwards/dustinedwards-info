@@ -67,6 +67,11 @@ import {
 // mirror to go stale, asserting what this harness remembers rather than what
 // the index carries.
 import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
+// The watchdog's poll interval, IMPORTED for the reason COLOPHON_SECTIONS is.
+// Section 17 bounds the live health verdict against it, and the number has one
+// owner: the watchdog's cron, bound to this constant by check:invariants
+// section 25. A literal here would be the third copy.
+import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 // The fact needles, and the `statusLabel` call that used to be made here.
 import { colophonFacts } from "./lib/colophon-facts.mjs";
 // The walk and the stem rule come from the offline gate, never restated: the
@@ -1936,6 +1941,98 @@ const ASK_PROBE_LIMIT = 3;
       `answered ${status} ${JSON.stringify(type)}`,
     );
   }
+}
+
+/* --- 17. The watchdog is firing, read off the home page's health tile --- */
+
+/*
+ * THE WATCHDOG HAS NO WIRE SURFACE OF ITS OWN, so this reads its SIDE EFFECT.
+ *
+ * `workers/watchdog.ts` exports `scheduled` and nothing else, and its config
+ * sets `workers_dev: false`, so there is no URL to probe and no response to
+ * assert on. What it does have is a footprint: every firing calls
+ * `/api/health`, and that endpoint rewrites the KV snapshot on the way out, for
+ * both verdicts. The home page renders that snapshot's AGE into
+ * `data-health-age`. So the tile's freshness IS the watchdog's liveness, which
+ * is stated in both docblocks and is the reason this assertion can exist at all.
+ *
+ * ## WHAT THIS PROVES, AND THE WINDOW IN WHICH IT PROVES LESS
+ *
+ * Under two poll intervals is the bound. A watchdog that has stopped drifts
+ * past it within half an hour and the front page says so before this does.
+ *
+ * **BUT `/api/health` HAS OTHER CALLERS, AND ONE OF THEM IS `ship`.** Ship's
+ * readiness step reads that endpoint between the deploy and the sync, which
+ * writes the snapshot. So for THIRTY MINUTES after a ship this assertion is
+ * satisfied by ship's own call and proves nothing about the watchdog. The same
+ * is true after any manual poll and after an hourly `health.yml` run.
+ *
+ * That window is stated rather than engineered away, because the honest fix is
+ * expensive and the honest statement is not: proving the watchdog specifically
+ * means watching the timestamp ADVANCE while nothing calls the endpoint, which
+ * costs a wait of up to one full interval and does not belong inside a gate
+ * anybody runs. It is done once, by hand, when the watchdog's schedule changes,
+ * and the reading goes in the commit message. Outside that window, on every
+ * routine run, this assertion is a real one: nothing else polls often enough to
+ * keep the snapshot under thirty minutes old.
+ *
+ * ## THE PAGE MUST BE RENDERED FRESH
+ *
+ * `/` is `public, s-maxage=600` and the Worker keeps its own themed entry, so a
+ * cached copy carries the age it had when it was rendered, which is a frozen
+ * number that ages backwards relative to reality. A unique query string forces
+ * a MISS, the same instrument ship's poll uses and for the same reason.
+ */
+{
+  const bust = `vl-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const { text, status } = await get(`/?watchdog=${bust}`);
+  check("watchdog: the home page rendered for the freshness read", status === 200);
+
+  /*
+   * SCOPE FIRST. A page that carries no tile at all makes every comparison
+   * below vacuous, and it is a real failure state rather than a harness
+   * problem: `missing` is what the tile renders when the snapshot was never
+   * written or KV could not be read.
+   */
+  const attr = /data-health-age="(\d+)"/.exec(strip(text))?.[1];
+  check(
+    "watchdog: the home page carries a health verdict rather than a placeholder",
+    attr !== undefined,
+    "no element on / carries data-health-age. The tile is in its `missing` state, " +
+      "which means NOTHING has written the snapshot: not the watchdog, not ship, " +
+      "not the hourly workflow. Check the watchdog's cron and the APP_KV binding.",
+  );
+
+  const age = attr === undefined ? Number.NaN : Number(attr);
+  check(
+    "watchdog: the tile's age is a number this gate can compare",
+    Number.isInteger(age) && age >= 0,
+    `data-health-age is ${JSON.stringify(attr ?? null)}. A non-numeric age makes the ` +
+      `comparison below vacuous.`,
+  );
+
+  /*
+   * TWO INTERVALS, not one. One would flap on a single late firing, which a
+   * Cron Trigger is still permitted to be; three is the tile's own staleness
+   * threshold and would only fail once the front page had already started
+   * telling readers the check had stopped. Two fails BEFORE the page lies,
+   * which is the point of asserting it here rather than reading the tile.
+   */
+  const bound = 2 * HEALTH_POLL_INTERVAL_SECONDS;
+  check(
+    "watchdog: the live health verdict is under two poll intervals old",
+    Number.isInteger(age) && age < bound,
+    `the tile reports a verdict ${age} second(s) old against a bound of ${bound}s ` +
+      `(two ${HEALTH_POLL_INTERVAL_SECONDS}s intervals). Nothing has polled /api/health ` +
+      `recently, so the watchdog Worker is not firing. Check its Cron Trigger with ` +
+      `\`npx wrangler deployments list -c wrangler.watchdog.jsonc\` and its logs; the ` +
+      `hourly health.yml run is the only remaining watcher until it is fixed.`,
+  );
+
+  console.log(
+    `  watchdog: health verdict ${age}s old, bound ${bound}s ` +
+      `(written ~${new Date(Date.now() - age * 1000).toISOString()})`,
+  );
 }
 
 /* --- Report ------------------------------------------------------------ */

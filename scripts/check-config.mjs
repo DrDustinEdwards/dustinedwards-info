@@ -415,12 +415,29 @@ assertThat(
   "example's KV id is still a placeholder",
   `Found ${exampleKvId ? "a non-placeholder value" : "nothing"}.`,
 );
+/*
+ * THE SENTINEL IS A WORD, NOT A NUL, and that is not a style preference.
+ *
+ * These two comparisons need a fallback that can never equal a real id, so a
+ * real config missing the field cannot make the assertion pass by accident.
+ * The value here used to be a literal NUL, and `check:head`'s preflight refuses
+ * one anywhere under `scripts/`, `app/` or `workers/` for a good reason: a NUL
+ * makes git render the file as BINARY and makes ripgrep skip it in a directory
+ * search, so every later change to this gate would ride in unreviewed and
+ * invisible to a repo-wide grep.
+ *
+ * It arrived here as a byte rather than as an escape, which is the same class
+ * VERIFICATION.md records for a backspace that reached a script as 0x08 and
+ * displayed correctly while matching nothing. Caught by `check:head` on the run
+ * before this one. A readable word is a better sentinel anyway: it survives
+ * being printed into a failure message.
+ */
 assertThat(
-  exampleDbId !== (site.real.d1_databases?.[0]?.database_id ?? " "),
+  exampleDbId !== (site.real.d1_databases?.[0]?.database_id ?? "(absent)"),
   "example's database_id is not the real one",
 );
 assertThat(
-  exampleKvId !== (site.real.kv_namespaces?.[0]?.id ?? " "),
+  exampleKvId !== (site.real.kv_namespaces?.[0]?.id ?? "(absent)"),
   "example's KV id is not the real one",
 );
 

@@ -4,7 +4,7 @@ Personal platform and Cloudflare showcase for Dustin Edwards. React Router 8 (SS
 
 **This file holds only what a session needs BEFORE it can read anything else.**
 
-**PRECEDENCE, corrected 2026-08-21, because the old sentence now contradicts this file's own hard-rules section.** It read: "Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect." That was true while Capsid held everything durable. It stopped being true when the hard rules and `VERIFICATION.md` moved into this repo, and they moved for a reason that decides the precedence question:
+**PRECEDENCE, corrected 2026-08-21.** It read: "Everything durable lives in Capsid. If a fact is in both places, Capsid wins and this file is the defect." That was true while Capsid held everything durable, and stopped being true when the hard rules and `VERIFICATION.md` moved into this repo. They moved for the reason that decides the question:
 
 **CAPSID CANNOT BE GATED, BECAUSE EVERY GATE VERIFIES DISK.** So:
 
@@ -19,17 +19,15 @@ Start: `brief("dustinedwards")`, or read `capsid/conventions.md` then `dustinedw
 
 Do this before touching code. It is not a formality: the recurring failure in this repo is a session acting on a stale claim it could have checked in one call.
 
-**Then read `FAILURES.md`. It is one screen and it is the shortest useful thing in this repo.** The recurring failure SHAPES, one line each, every one already written down at length before it happened again. It is HERE, in the ritual, rather than in the document list at the bottom, for the reason the page itself makes: a lesson nobody meets is not recorded. The ritual is the one section whose entire job is "before touching code", and these shapes govern how to read everything below them, including the rules.
+**Then read `FAILURES.md`. It is one screen and it is the shortest useful thing in this repo.** The recurring failure SHAPES, one line each, every one already written down at length before it happened again. It is HERE rather than in the document list at the bottom for the reason the page itself makes: a lesson nobody meets is not recorded. These shapes govern how to read everything below them, including the rules.
 
-**There is no end-of-session write. Sessions READ Capsid and never write it**, per `dustinedwards/core.md`. This file asked for a `session-YYYY-MM-DD.md` episodic at the end and had done since the ritual was written, which contradicted that rule outright. Capsid wins and this file was the defect, exactly as the paragraph above the ritual says. Removed 2026-08-18, after a session stopped on the conflict rather than resolving it in its own favour. Do not re-add it here: if the standing rule changes, it changes in Capsid first and this file follows.
+**There is no end-of-session write. Sessions READ Capsid and never write it**, per `dustinedwards/core.md`. This file asked for a dated episodic at the end, which contradicted that rule outright; Capsid won and this file was the defect, exactly as the precedence paragraph above says. Removed 2026-08-18. Do not re-add it here: if the standing rule changes, it changes in Capsid first and this file follows.
 
 ## Hard rules
 
 **THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules that the code cites by number sat in the one place no assertion could reach. Source files across `app/`, `scripts/`, `workers/` and `test/` cite them, as do the root documents; `check:invariants` section 15 binds every cited number to a rule that exists here. **The count that used to sit in this sentence had gone badly stale, and the gate is the only place it belongs, so this is a pointer now rather than a digit. Rule 17.**
 
-**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** The 2026-08-21 `core.md` rewrite dropped the list while telling readers it lived here, so for a period it existed in no current document. Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22 and found COMPLETE: every clause that differs is a deliberate correction of something 1684 asserts that is no longer true, and two clauses gained material 1684 never had, the plant-revert law (12) and the ungateability note (5).
-
-**The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half both earlier recoveries skipped: rule 6 claimed one statement of `postPath` where there were three (the code moved, `f45316b`), and rule 8 carried an assertion count that had drifted. Check a rule against the CODE, not against 1684 and not against this paragraph.
+**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22 and found COMPLETE. **The remaining defects were never transcription. They were rules that no longer matched the code**, which is the half every earlier recovery skipped. Check a rule against the CODE, not against 1684 and not against this paragraph.
 
 **EVERY RULE CARRIES A TAG: `GATED by <instrument>` or `UNGATED`.** It replaces the older ONE-LINER and PROSE labels, which encoded the same axis without naming the instrument, and keeping both would have been two owners for one fact.
 
@@ -93,13 +91,11 @@ Two halves, and a route that knows only the first will still get it wrong.
 
 **Why the theme is in the KEY and not in a `Vary`:** the platform's cache key is the entrypoint, the path and query string, and the Worker version, and nothing this Worker can set puts a header into it. `caches.default` is keyed by the Request handed to it and carries no headers at all. `media.$.ts` records the measured consequence of getting that wrong. So the dimension is a synthetic `__theme` query parameter on a key URL that is never served and never linked.
 
-**THE SAME BLINDNESS COST A REPRESENTATION, and the fix is a bypass rather than a fourth dimension.** A key that cannot carry a header cannot carry `Accept` either, so the HTML copy of a route that negotiates answered the request that asked for markdown: measured in production on the deploy after the themed cache landed, `Accept: text/markdown` on a post returned `text/html` marked `x-theme-cache: hit`. A request that prefers anything over HTML now skips the lookup AND the store, one expression governing both, and the predicate carries the grounds: `negotiatesAwayFromHtml` in `app/lib/negotiate.mjs`. Gated on the wire by `check:browser`, which warms the HTML entry first and asserts that it did, because the case is vacuous otherwise.
+**THE SAME BLINDNESS COST A REPRESENTATION, and the fix is a bypass rather than a fourth dimension.** A key that cannot carry a header cannot carry `Accept` either, so the HTML copy of a negotiating route answered the request that asked for markdown, measured in production. A request that prefers anything over HTML now skips the lookup AND the store, one expression governing both: `negotiatesAwayFromHtml` in `app/lib/negotiate.mjs`, which carries the grounds. Gated on the wire by `check:browser`, which warms the HTML entry first and asserts that it did, because the case is vacuous otherwise.
 
 **What licenses reading the cookie for the theme alone is a MEASUREMENT, not an argument.** `check:browser` asserts on every route that declares the shared headers that a credentialed reader receives byte-identical HTML and that the theme changes only the enumerated set the gate itself carries. The themed cache is sound only while that holds, so the gate is the precondition rather than a regression test, and it landed first.
 
-**THE ENUMERATION IS THE GATE'S, NOT THIS FILE'S, since 2026-08-28.** This sentence used to name the members, and it went stale the day the set grew: `<meta name="color-scheme">` joined `data-theme` and the toggle's `aria-pressed` when the white-frame fix landed, and a second copy of a gated list is rule 17's exact defect. `maskTheme` in `scripts/check-browser.mjs` is the one owner.
-
-**No count here on purpose:** this line once carried one and it disagreed with the gate beside it. Rule 17, and this file is where that habit has cost the most.
+**THE ENUMERATION IS THE GATE'S, NOT THIS FILE'S, since 2026-08-28.** `maskTheme` in `scripts/check-browser.mjs` is the one owner. This sentence used to name the members and went stale the day the set grew, and it once carried a COUNT that disagreed with the gate beside it. Rule 17, and this file is where that habit has cost the most.
 
 ### 9. GATED by check:features for the inventory, UNGATED for the law and the door. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
@@ -148,13 +144,13 @@ Prefer the query builder over raw SQL. **`search_docs` is the asserted exception
 
 EXIT 1 IS NOT EVIDENCE, and it runs BOTH WAYS: **a plant is proven applied before any result is read.** A green run after a failed plant proves nothing; a mangled path once made a plant a silent no-op and the gate went green. `check:migrations` is the recorded plants-only exception.
 
-**A DICHOTOMY INHERITS ITS AUTHOR'S FRAME.** Before resolving an either-or by measurement, check the question's own scope assumption against the artifact: a plant proves something about what it plants against, and the framing chose the target before any evidence was taken. Restored here 2026-08-21 as a NAMED discipline; the case that produced it is in `VERIFICATION.md`, which is the right split, because the rules are the index and the method file carries the evidence.
+**A DICHOTOMY INHERITS ITS AUTHOR'S FRAME.** Before resolving an either-or by measurement, check the question's own scope assumption against the artifact: a plant proves something about what it plants against, and the framing chose the target before any evidence was taken. A NAMED discipline; the case that produced it is in `VERIFICATION.md`, on the split that the rules are the index and the method file carries the evidence.
 
-**A SURFACE RECOLOR RULING MUST ENUMERATE THE POSITION: `position: absolute` overlays that only render against that surface.** Restored 2026-08-21, and it existed in NO current document. This is how the skip-link-on-purple-chrome defect was classified: a recolor ruling that lists the components it repaints will miss anything whose only appearance is over the recolored surface, because such an element is invisible in the ordinary render and in every screenshot of it.
+**A SURFACE RECOLOR RULING MUST ENUMERATE THE POSITION: `position: absolute` overlays that only render against that surface.** How the skip-link-on-purple-chrome defect was classified: a recolor ruling that lists the components it repaints misses anything whose only appearance is over the recolored surface, because such an element is invisible in the ordinary render and in every screenshot of it.
 
 **When a file carries uncommitted work, revert a plant by TARGETED EDIT, never `git checkout`.** Skipping this once duplicated a lint rule whose stale copy then mis-guarded a plant.
 
-**A REFACTOR PROVES EQUIVALENCE BY DIFFERENTIAL, not by reading.** Lift the OLD body verbatim, compile it, and run it against the new one over REAL inputs, not invented ones. Then prove the comparison can discriminate, by running a knowingly different implementation through it and watching the comparison report a difference; a differential that cannot tell two things apart agrees with everything. This is how the `stripComments` sites were consolidated, and the discriminating control is the half that makes hundreds of identical comparisons mean anything.
+**A REFACTOR PROVES EQUIVALENCE BY DIFFERENTIAL, not by reading.** Lift the OLD body verbatim, compile it, and run it against the new one over REAL inputs, not invented ones. Then prove the comparison can DISCRIMINATE, by running a knowingly different implementation through it and watching it report a difference; a differential that cannot tell two things apart agrees with everything. That control is the half that makes hundreds of identical comparisons mean anything.
 
 ### 13. UNGATED, class only; all instances resolved.
 
@@ -168,13 +164,13 @@ A fallback that SUBSTITUTES A DIFFERENT VALUE is not failing closed. Known-justi
 
 ### 15. UNGATED. Do not modify `.claude/settings.json` without explicit instruction.
 
-**UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being entirely off. A rule whose whole content is "do not edit this without being told" is enforced by being read, not by a gate that reads the same file back.
+**UNGATED since 2026-08-21**, and that is the rule's natural state. `check:hooks` read the file and never wrote it, and was deleted in tier 4.1: it could not see whether a hook RAN, only what the file declared, so a green run was compatible with enforcement being off entirely. A rule whose whole content is "do not edit this without being told" is enforced by being read.
 
-**RESTORED, THEN FALSIFIED BY MEASUREMENT, both on 2026-08-21.** A clause recovered verbatim from Capsid version 1684 said several repos still carried a fail-open `scoped-git-add.sh`. It was true when written, a propagation had landed since, and measuring at origin by blob sha found one, not several. **The lesson is the clause, not the count:** *a claim inherited from a document gets the same treatment as one from memory.* Restoring it from version history put a stale fact back into the one file every session reads first. See `FAILURES.md`.
+**RESTORED, THEN FALSIFIED BY MEASUREMENT, both on 2026-08-21.** A clause recovered verbatim from Capsid said several repos still carried a fail-open `scoped-git-add.sh`; it was true when written, and measuring at origin by blob sha found one. **The lesson is the clause, not the count:** *a claim inherited from a document gets the same treatment as one from memory.* See `FAILURES.md`.
 
 ### 16. GATED by ship. The ship contract: CI for this sha, token before build, Ask converged last.
 
-Three steps, in `scripts/ship.mjs`, each failing closed and none of them optional.
+In `scripts/ship.mjs`, each failing closed and none of them optional.
 
 **CI concluded success for the EXACT HEAD sha.** No run, still running, any other conclusion, or an unreachable API all refuse. There is no override flag, because a flag would be used on exactly the day the check was right. The repo is private, so `gh auth` is required.
 
@@ -182,7 +178,9 @@ Three steps, in `scripts/ship.mjs`, each failing closed and none of them optiona
 
 **The Ask index is brought into step as the LAST step, after the deploy and after the D1 sync, and a failure there is LOUD while the deploy STANDS.** Index freshness is worth less than write reliability, and health catches a failed sync within its poll interval. Ship reads the operation's converged verdict rather than its status code.
 
-**The D1 sync carries the DRIFT REPORT, since the artifact arc.** Before writing, `sync-content` compares every row's `source_blob_sha` and `render_hash` against the fresh build and prints the classes by slug; the write runs regardless, because converging D1 to the build is the repair. RENDER DRIFT, the same source rendered differently by the Worker and the Node build, exits the run nonzero AFTER the deploy stands, the same shape as an index miss: it is the class the committed artifact's byte gate used to catch at commit time, and it names a pipeline defect rather than staleness.
+**The D1 sync carries the DRIFT REPORT, since the artifact arc.** Before writing, `sync-content` compares every row's `source_blob_sha` and `render_hash` against the fresh build and prints the classes by slug; the write runs regardless, because converging D1 to the build is the repair. RENDER DRIFT, the same source rendered differently by the Worker and the Node build, exits nonzero AFTER the deploy stands, the same shape as an index miss, and names a pipeline defect rather than staleness.
+
+**THE WATCHDOG WORKER DEPLOYS HERE TOO, since 2026-08-29, and it is the fourth step of this shape.** After the site deploy and after readiness, because it binds to the site and must not be pointed at a build this run has not proven; a failure is a MISS rather than a refusal, so the deploy stands, the sync still runs, and ship exits nonzero at the end naming it. The previous watchdog keeps firing meanwhile, so the failure degrades the WATCHER and never the site.
 
 **Separate sentence, UNGATED, process class: a ship window owns the tree from its first step to its last.** Nobody edits the working tree or lands on `main` while one is open. A prior ship deployed and then refused mid-run because the session deleted a file underneath it, and the deploy was coherent only because the build had already finished. No gate can see this, and it is deliberately not folded into the three steps above, so that a session never learns to fail a deploy over it.
 
@@ -246,7 +244,7 @@ Unchanged: destructive operations stay with Dustin, and anything touching money 
 
 ## Commands
 
-**`package.json` OWNS THE SCRIPT LIST, and this section is a POINTER to it.** It used to restate the list, and a second copy went stale in the one direction a restated list can: by omission. Measured 2026-08-28, the block named 38 of the 50 scripts and silently omitted twelve, among them `ship`, `test`, `check:types`, `check:browser` and `check:page-payload`, which is most of what a session actually runs. That is rule 17 in the file that states rule 17.
+**`package.json` OWNS THE SCRIPT LIST, and this section is a POINTER to it.** It used to restate the list, and a second copy went stale in the one direction a restated list can: by omission. Measured 2026-08-28, the block silently omitted a quarter of the scripts, among them `ship`, `test`, `check:types` and `check:browser`, which is most of what a session actually runs. That is rule 17 in the file that states rule 17.
 
 Counts, timings and what each gate asserts live in `core.md` and `publish-pipeline.md`, deliberately not here. Run `npm run` for the list. Five facts the list itself does not carry:
 
@@ -276,6 +274,10 @@ Plus a queue consumer for `dustinedwards-media-events` with its DLQ, and top-lev
 **`wrangler.jsonc` is gitignored and `wrangler.jsonc.example` is tracked.** That is a PORTFOLIO rule (`capsid/conventions.md`, Public-repo hygiene), not this repo's choice; three other repos commit the real file and are tracked there as violations. Do not "fix" this one by committing it.
 
 **Adding a binding means editing BOTH files in the same commit.** `npm run check:config` compares them and fails in both directions. It is the only thing binding the example to what actually runs, the real file exists on one machine, and **CI CANNOT RUN IT**: a checkout has no real config, `postinstall` bootstraps one by COPYING the example, so real equals example by construction and the gate cannot pass. It is in `CI_EXCLUDED` for that reason. So it stays load-bearing on exactly one machine and easy to skip, which is what it always was; the reason is now measured rather than "there is no CI".
+
+**A SECOND WORKER SINCE 2026-08-29.** `workers/watchdog.ts`, with `wrangler.watchdog.jsonc` on the identical split and reconciled by the same `check:config`; its redacted var is `ALERT_EMAIL`, an inbox rather than an id, so its placeholder is the reserved `example.com`. It binds `SITE` (a service binding), `EMAIL` and `ALERT_EMAIL`, carries the fifteen-minute health cron, and is deployed by a `ship` step and never by `npm run deploy`. **A Worker cannot `fetch()` this site** (measured, with a control: Cloudflare error 1042), which is why `SITE` is a binding and why the watchdog proves the health suite RUNS while only the hourly `health.yml` proves the site is REACHABLE. Grounds in that Worker's docblock.
+
+**`OPERATOR_TOKEN` NOW HAS THREE HOLDERS**: the site Worker, the watchdog (`wrangler secret put OPERATOR_TOKEN -c wrangler.watchdog.jsonc`), and the `gh` repository secret. **No gate can see a secret's VALUE**, so a stale copy fails in the worst available direction: a watcher that still polls and still alerts but can no longer repair, which looks exactly like one that never needed to. Rotate all three or none.
 
 ## Where everything else lives
 

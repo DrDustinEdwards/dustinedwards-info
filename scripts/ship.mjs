@@ -592,6 +592,98 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
   console.log(`  ${verdict.checks.length} check(s), all ok.`);
 }
 
+/* ------------------------------------------- 5c. the watchdog Worker */
+
+/*
+ * THE SECOND DEPLOY, AND IT IS DELIBERATELY NOT A REFUSAL.
+ *
+ * `workers/watchdog.ts` is a separate Worker with its own config and its own
+ * Cron Trigger. It has to be deployed by something, and ship is the only thing
+ * that deploys anything here, so a watchdog left to a remembered manual command
+ * is a watchdog that silently runs an old build until somebody notices it did
+ * not repair something.
+ *
+ * ## WHY AFTER THE SITE, AND AFTER THE READINESS CHECK
+ *
+ * Deploy-first ordering, and there are two reasons rather than one.
+ *
+ * The watchdog binds to the site through a SERVICE BINDING, so the site has to
+ * exist for its config to resolve. That alone would only argue for "after the
+ * site deploy". It runs after READINESS as well because a watchdog pointed at a
+ * Worker this run has not yet proven healthy is a watchdog whose first firing
+ * reports a fault it was deployed into, which is noise from a monitor on the
+ * day it lands and is exactly the shape that gets monitors muted.
+ *
+ * ## AND WHY A MISS RATHER THAN A REFUSAL
+ *
+ * This runs after the deploy has LANDED. Refusing here would abandon the sync
+ * with production half converged, and it would do so over the watcher rather
+ * than over the thing being watched. The site is serving; a stale watchdog is a
+ * degraded monitor, not a degraded site.
+ *
+ * So it takes the same shape as the Ask and media steps: the deploy STANDS, the
+ * record prints, and ship exits nonzero at the very end with the miss named
+ * beside any others. LOUD AND LAST, which is the property the ruling asked for.
+ *
+ * The failure is not silent in the other direction either: the previous
+ * watchdog build keeps firing, so the site stays watched by the code that was
+ * already there.
+ */
+
+announce("Deploy the watchdog Worker");
+
+/** Set when the watchdog deploy did not land. Read at the very end. */
+let watchdogMiss = "";
+
+{
+  const deployed = run(
+    "npx",
+    ["wrangler", "deploy", "-c", "wrangler.watchdog.jsonc"],
+    { capture: true },
+  );
+
+  if (deployed.code !== 0) {
+    watchdogMiss =
+      "the watchdog Worker did not deploy, so the fifteen-minute self-repair poll is " +
+      "still running whatever was deployed before this run";
+  } else {
+    /*
+     * THE VERSION ID IS READ, on the same rule the site deploy applies: a ship
+     * that cannot name what it shipped did not ship. A zero exit from wrangler
+     * with no version in the output is the shape that would let a no-op deploy
+     * report success.
+     */
+    const watchdogVersion =
+      (deployed.text.match(/Current Version ID:\s*([0-9a-f-]{8,})/i) ?? [])[1] ?? "";
+    if (!watchdogVersion) {
+      watchdogMiss =
+        "the watchdog deploy reported no Version ID, so nothing proves which build is " +
+        "now on the cron";
+    } else {
+      console.log(`  watchdog version ${watchdogVersion}`);
+      /*
+       * THE TRIGGER IS READ BACK OUT OF WRANGLER'S OWN OUTPUT, because the
+       * config asking for a cron and the platform having registered one are two
+       * different facts, and only the second one fires. `check:config` owns the
+       * first and cannot see the second: it reads a file. This reads what
+       * wrangler says it did.
+       *
+       * A MISS RATHER THAN A REFUSAL, on this step's own rule. A Worker
+       * deployed without its schedule is a Worker that never runs, which is
+       * precisely the silent failure the whole arc exists to end, so it must be
+       * reported; it is still not worth abandoning a converged sync over.
+       */
+      if (!/schedule|cron|trigger/i.test(deployed.text)) {
+        watchdogMiss =
+          "the watchdog deployed but wrangler's output named no cron trigger, so the " +
+          "schedule may not be registered and the Worker would never fire";
+      }
+    }
+  }
+
+  if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
+}
+
 /* ------------------------------------------------------- 6. gate, then sync */
 
 /*
@@ -983,20 +1075,23 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
  * report's D1 side was already converged by the sync; the render-drift remedy
  * is finding the pipeline divergence, not a re-run.
  */
-if (askMiss || mediaMiss || renderDriftMiss) {
+if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",
     mediaMiss ? "THE MEDIA INDEX" : "",
     renderDriftMiss ? "THE RENDER" : "",
+    watchdogMiss ? "THE WATCHDOG" : "",
   ]
     .filter(Boolean)
     .join(" AND ");
-  const several = [askMiss, mediaMiss, renderDriftMiss].filter(Boolean).length > 1;
+  const several =
+    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss].filter(Boolean).length > 1;
   console.error(`\n${"!".repeat(64)}`);
   console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
-  if (askMiss) console.error(`  ask:    ${askMiss}`);
-  if (mediaMiss) console.error(`  media:  ${mediaMiss}`);
-  if (renderDriftMiss) console.error(`  render: ${renderDriftMiss}`);
+  if (askMiss) console.error(`  ask:      ${askMiss}`);
+  if (mediaMiss) console.error(`  media:    ${mediaMiss}`);
+  if (renderDriftMiss) console.error(`  render:   ${renderDriftMiss}`);
+  if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
@@ -1005,8 +1100,13 @@ if (askMiss || mediaMiss || renderDriftMiss) {
       `  Render drift means the Worker and the Node build disagree about the\n` +
       `  same bytes; D1 was converged to the build, and the repair is finding\n` +
       `  the divergence in the pipeline, not a re-run.\n\n` +
-      `  The scheduled health check reads the same index drift and will report\n` +
-      `  it too, and attempts the same repair itself before it alerts.`,
+      `  A WATCHDOG miss is the one line above that is about the WATCHER rather\n` +
+      `  than the site: the previously deployed watchdog keeps firing, so the\n` +
+      `  site is still watched, by older code. Re-run \`npm run ship\`, or deploy\n` +
+      `  it alone with \`npx wrangler deploy -c wrangler.watchdog.jsonc\`.\n\n` +
+      `  The watchdog reads the same index drift every fifteen minutes and\n` +
+      `  attempts the same repair itself before it alerts; the hourly health.yml\n` +
+      `  run is the off-platform second opinion.`,
   );
   console.error(`${"!".repeat(64)}\n`);
   process.exit(1);
