@@ -1165,7 +1165,7 @@ try {
    * Today every public HTML route sends `Vary: Cookie` and `workers/app.ts`
    * downgrades any cookie-bearing request to `private, no-store`, so the only
    * variant that can ever be stored is the cookieless one. Measured: no cookie
-   * HITs, `theme=system` BYPASSes, and an unrelated `_ga=1` BYPASSes too. The
+   * HITs, `theme=dark` BYPASSes, and an unrelated `_ga=1` BYPASSes too. The
    * cost is that a reader who has ever touched the theme toggle, or who is
    * signed in, gets an origin render on every page for ever.
    *
@@ -1337,8 +1337,21 @@ try {
          * the point of the meta rather than a leak. Its own case asserts the
          * value, which is what stops this mask from hiding a defect.
          */
-        .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"')
-        .replace(/aria-pressed="(true|false)"/g, 'aria-pressed="P"');
+        .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
+    /*
+     * THE SET SHRANK ON 2026-08-29, and shrinking is the strict direction.
+     *
+     * A third entry masked `aria-pressed`, because the theme control was three
+     * buttons and the pressed one moved with the theme. The control is one
+     * button now and carries no pressed state: BOTH of its buttons ship in
+     * every document and the cascade displays whichever matches `data-theme`,
+     * so the markup of the control is byte-identical between light and dark and
+     * there is nothing about it to mask.
+     *
+     * That makes the comparison below STRONGER rather than weaker. Two things
+     * are now allowed to differ where three were, so a control that started
+     * varying its own markup by theme would fail here instead of being masked.
+     */
     /*
      * THE HOME TILE'S AGE SENTENCE IS NOT IN THIS SET, and the omission is the
      * ruling rather than an oversight.
@@ -1433,9 +1446,9 @@ try {
 
       const residue = firstDiff(maskTheme(stranger), maskTheme(dark));
       ok(
-        `${path}: the theme changes ONLY data-theme, the colour-scheme meta and aria-pressed`,
+        `${path}: the theme changes ONLY data-theme and the colour-scheme meta`,
         residue === null,
-        `with <html>, the colour-scheme meta and aria-pressed masked, the dark document still differs ` +
+        `with <html> and the colour-scheme meta masked, the dark document still differs ` +
           `from the cookieless one at byte ${residue?.at}. Something else on this ` +
           `page depends on the cookie, so the enumerated diff is incomplete and ` +
           `the cache key would not describe the document.\n        ` +
@@ -1675,7 +1688,11 @@ try {
       const READER_STATES = [
         { label: "theme=dark", cookie: "theme=dark", expect: "dark" },
         { label: "theme=light", cookie: "theme=light", expect: "light" },
-        { label: "theme=system", cookie: "theme=system", expect: "light dark" },
+        /* THE LEGACY COOKIE. No control writes `system` since 2026-08-29, and
+         * `/theme` refuses it, but cookies carrying it are in readers' browsers
+         * for a year. It still means "follow the machine", so it must resolve
+         * exactly as no cookie does. */
+        { label: "theme=system (legacy)", cookie: "theme=system", expect: "light dark" },
         { label: "no cookie", cookie: null, expect: "light dark" },
       ];
 
@@ -2781,36 +2798,111 @@ try {
      * evaluate is caught, and a destroyed context IS the finding: the submit
      * was not intercepted.
      */
+    /*
+     * ONE BUTTON IN THE ACCESSIBILITY TREE, and this is asserted BEFORE the
+     * click because it is a property of the control at rest.
+     *
+     * The single toggle ships TWO buttons and the cascade displays whichever
+     * matches the theme in effect. The hidden one must be `display: none`
+     * rather than visually hidden: `.sr-only` would keep it in the
+     * accessibility tree, so a screen reader would find two buttons offering
+     * opposite actions and no way to tell which one does anything.
+     *
+     * MEASURED THROUGH `offsetParent`, which is null exactly when an ancestor
+     * or the element itself is `display: none`, and NOT through a class name:
+     * the assertion is about what the browser did with the element, not about
+     * which selector was written.
+     */
+    const control = await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll(".theme-toggle button")];
+      const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);
+      const hidden = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent === null);
+      return {
+        total: buttons.length,
+        shown: shown.length,
+        /* An sr-only twin would be laid out, so it would report a box. A
+         * display:none one reports none. This is what tells the two apart. */
+        hiddenAreDisplayNone: hidden.every(
+          (b) => getComputedStyle(/** @type {Element} */ (b)).display === "none",
+        ),
+        label: shown[0]?.getAttribute("aria-label") ?? null,
+        value: shown[0]?.getAttribute("value") ?? null,
+        pressed: shown[0]?.hasAttribute("aria-pressed") ?? false,
+        box: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect() : null,
+      };
+    });
+    ok(
+      "the theme control offers exactly ONE button, and the twin is display:none",
+      control.total === 2 &&
+        control.shown === 1 &&
+        control.hiddenAreDisplayNone &&
+        !control.pressed,
+      `${control.total} button(s) in the control, ${control.shown} displayed, the hidden ` +
+        `one(s) are display:none ${control.hiddenAreDisplayNone}, the visible one carries ` +
+        `aria-pressed ${control.pressed}. A third button is back, or the twin is only ` +
+        `visually hidden and a screen reader is being offered both actions.`,
+    );
+    ok(
+      "the visible theme button names the action it performs",
+      /^Switch to (light|dark) theme$/.test(control.label ?? "") &&
+        (control.value === "light" || control.value === "dark"),
+      `aria-label ${JSON.stringify(control.label)}, value ${JSON.stringify(control.value)}. ` +
+        `The single control carries no pressed state, so the NAME is the only thing telling ` +
+        `a screen reader what activating it will do.`,
+    );
+    ok(
+      "the theme button clears the WCAG 2.2 target floor",
+      (control.box?.width ?? 0) >= 24 && (control.box?.height ?? 0) >= 24,
+      `${Math.round(control.box?.width ?? 0)}x${Math.round(control.box?.height ?? 0)}px, ` +
+        `floor 24x24.`,
+    );
+
     await page.evaluate(() => {
       /** @type {any} */ (window).__probe = "same-document";
     });
+    /*
+     * CLICKED BY WHAT IS VISIBLE, not by value. The dark-setting button is the
+     * one displayed while the page is light, which is the state this gate
+     * arrives in; selecting by value would click whichever the cascade happens
+     * to be hiding and puppeteer would refuse it.
+     */
     await page.click('.theme-toggle button[value="dark"]');
     await new Promise((r) => setTimeout(r, 250));
-    /** @type {{ attr: string | null, sameDocument: boolean, pressed: string | null | undefined } | null} */
+    /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number } | null} */
     let flipped = null;
     try {
-      flipped = await page.evaluate(() => ({
-        attr: document.documentElement.getAttribute("data-theme"),
-        sameDocument: /** @type {any} */ (window).__probe === "same-document",
-        pressed: document
-          .querySelector('.theme-toggle button[value="dark"]')
-          ?.getAttribute("aria-pressed"),
-      }));
+      flipped = await page.evaluate(() => {
+        const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+          (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
+        );
+        return {
+          attr: document.documentElement.getAttribute("data-theme"),
+          sameDocument: /** @type {any} */ (window).__probe === "same-document",
+          shownValue: shown[0]?.getAttribute("value") ?? null,
+          shownCount: shown.length,
+        };
+      });
     } catch {
       flipped = null;
     }
     ok(
-      "the theme flips in place, without a navigation",
+      "the theme flips in place, without a navigation, and the control turns around",
       flipped !== null &&
         flipped.attr === "dark" &&
         flipped.sameDocument &&
-        flipped.pressed === "true",
+        /* THE CONTROL FOLLOWED THE ATTRIBUTE. The button that was showing set
+         * dark; the one showing now must offer the way back, which is what
+         * proves the cascade re-resolved rather than the script leaving a
+         * control that would set dark a second time. */
+        flipped.shownValue === "light" &&
+        flipped.shownCount === 1,
       flipped === null
         ? "the click caused a real navigation: the theme bundle did not intercept the " +
             "submit (the form fallback is what carried the click)"
         : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
-            `aria-pressed=${JSON.stringify(flipped.pressed)}. The theme bundle did not run ` +
-            `or the submit interception broke; the form itself still posts either way.`,
+            `the visible button now posts ${JSON.stringify(flipped.shownValue)} and there ` +
+            `are ${flipped.shownCount} of them. The theme bundle did not run, the submit ` +
+            `interception broke, or the cascade did not turn the control around.`,
     );
 
     /*
@@ -2820,15 +2912,40 @@ try {
      */
     // The element must EXIST and be unhidden: a missing hint would make a
     // bare `!hidden` read true and pass on markup that lost the hint.
+    //
+    // SINCE 2026-08-29 THE HINT IS NOT PAINTED, so this asserts the two
+    // surfaces that replaced the badge rather than a visible box: the
+    // description is unhidden AND the anchor's `aria-describedby` resolves to
+    // it, and the control carries the tooltip. Unhiding alone would pass on a
+    // description nothing points at, which is a hint no screen reader reads.
     const hintShown = await page.evaluate(() => {
       const hint = document.querySelector("[data-search-hint]");
-      return hint instanceof HTMLElement && !hint.hidden;
+      const trigger = document.querySelector("[data-search-trigger]");
+      if (!(hint instanceof HTMLElement) || !(trigger instanceof HTMLElement)) return null;
+      const described = trigger.getAttribute("aria-describedby");
+      return {
+        unhidden: !hint.hidden,
+        associated: Boolean(described) && described === hint.id && hint.id !== "",
+        titled: (trigger.getAttribute("title") ?? "").includes("/"),
+        text: (hint.textContent ?? "").trim(),
+        painted: Boolean(trigger.querySelector("kbd")),
+      };
     });
     ok(
-      "the palette hint is unhidden once the palette is listening",
-      hintShown,
-      "the [data-search-hint] element is missing or still hidden, so the theme " +
-        "bundle did not run or the header lost the hint",
+      "the shortcut hint is unhidden, associated and unpainted once the palette is listening",
+      hintShown !== null &&
+        hintShown.unhidden &&
+        hintShown.associated &&
+        hintShown.titled &&
+        hintShown.text.length > 0 &&
+        !hintShown.painted,
+      hintShown === null
+        ? "the [data-search-hint] or [data-search-trigger] element is missing, so the " +
+            "header lost the hint or the control"
+        : `unhidden ${hintShown.unhidden}, aria-describedby resolves ${hintShown.associated}, ` +
+            `title names the key ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
+            `a <kbd> is painted inside the control ${hintShown.painted}. The theme bundle did ` +
+            `not run, or the badge came back.`,
     );
 
     /*

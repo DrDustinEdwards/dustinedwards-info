@@ -3517,10 +3517,12 @@ console.log("\n  15b. four rules are bound to the behaviour they describe");
   );
   ok(
     "rule 13 holds: every justified substitution is marked at its call site",
-    marked.length === 3,
+    marked.length === 2,
     `${marked.length} marked: ${marked.map((f) => relative(root, f)).join(", ")}. ` +
-      `Rule 13 names exactly three, so a fourth is an unrecorded exception and fewer ` +
-      `means a marker was dropped.`,
+      `Rule 13 names exactly two, so a third is an unrecorded exception and fewer ` +
+      `means a marker was dropped. It was THREE until 2026-08-29, when the theme ` +
+      `control became one button: the header stopped passing a resolved theme down, ` +
+      `so the theme fallback that substitution covered no longer exists.`,
   );
 
   /* -- rule 14 ------------------------------------------------------------- */

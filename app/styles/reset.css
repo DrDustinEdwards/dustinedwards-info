@@ -327,9 +327,11 @@ input:where([type="button"], [type="reset"], [type="submit"]),
 *
 * LOAD-BEARING ON THIS SITE, not a formality. The search shortcut hint ships
 * with the `hidden` attribute and is unhidden only when the listener exists,
-* and `.search-trigger-kbd` sets its own `display`. The browser's own
-* `[hidden] { display: none }` is an ordinary declaration that a class rule
-* beats; this one does not lose.
+* and it carries `.sr-only`, which sets its own `position`, `width` and
+* `clip-path`. The browser's own `[hidden] { display: none }` is an ordinary
+* declaration that a class rule beats; this one does not lose, so a hint that
+* is still hidden is hidden from the accessibility tree too rather than merely
+* being off screen.
 */
 [hidden]:where(:not([hidden="until-found"])) {
   display: none !important;

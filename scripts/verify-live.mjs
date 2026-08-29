@@ -169,10 +169,11 @@ const htmlTag = (s) => (s.match(/<html[^>]*>/) ?? [""])[0];
 
 for (const [label, cookie, expected] of [
   ["no cookie renders no attribute (system)", "", null],
-  ["theme=system renders no attribute", "theme=system", null],
+  // THE LEGACY COOKIE, still honoured on read and resolving to the default.
+  ["theme=system (legacy) renders no attribute", "theme=system", null],
   ["theme=dark renders the attribute", "theme=dark", "dark"],
   ["theme=light renders the attribute", "theme=light", "light"],
-  ["a junk cookie degrades to system", "theme=../../etc", null],
+  ["a junk cookie degrades to the default", "theme=../../etc", null],
 ]) {
   const { text, status } = await get("/", cookie ? { cookie } : {});
   const tag = htmlTag(text);
@@ -370,24 +371,60 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
   const anchor = start === -1 ? "" : text.slice(start, end);
   check("header: the search anchor is present", start !== -1);
   check("header: the search anchor has an accessible name", anchor.includes('aria-label="Search"'));
-  // The keyboard hint lives INSIDE the anchor, shipped hidden and aria-hidden
-  // and revealed by the palette script. That is the ratified progressive
-  // enhancement: the hint is present in the markup and its visibility is the
-  // capability signal.
+  // THE HINT IS NO LONGER PAINTED, ordered 2026-08-29. It was a visible <kbd>
+  // inside the anchor; it is now an sr-only description the enhancement
+  // unhides, plus a title the enhancement sets. The CONTRACT is unchanged and
+  // is what these two assert: nothing on the wire advertises the shortcut,
+  // because the wire is the no-JS state and the shortcut does not exist there.
   //
-  // A blanket "the anchor contains no <kbd>" assertion used to sit here. It
-  // predated the hint, asserted the old state, and directly contradicted the
-  // assertion below it, so it failed on a header that was correct. Ruled
-  // 2026-07-30: the specific assertion wins, the blanket one goes.
+  // A blanket "the anchor contains no <kbd>" assertion used to sit here, was
+  // deleted on 2026-07-30 when the badge arrived, and is now TRUE again. It is
+  // not restored as a blanket: the specific pair below says the same thing
+  // about the element that actually exists, and a blanket needle over the whole
+  // document would pass or fail on markup this section does not own.
   check(
-    "header: the hint is hidden and aria-hidden in the no-JS state",
-    /<kbd[^>]*data-search-hint[^>]*aria-hidden="true"[^>]*hidden/.test(text),
+    "header: the shortcut description ships hidden in the no-JS state",
+    /<span[^>]*data-search-hint[^>]*hidden/.test(text) ||
+      /<span[^>]*hidden[^>]*data-search-hint/.test(text),
   );
-  check("header: the hint sits inside the search anchor", anchor.includes("data-search-hint"));
-  check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
   check(
-    "header: exactly one theme option is pressed",
-    (text.match(/aria-pressed="true"/g) ?? []).length === 1,
+    "header: nothing paints the shortcut key on the wire",
+    !anchor.includes("<kbd"),
+  );
+  // The description is OUTSIDE the anchor and reached by aria-describedby, so
+  // the association is what has to hold rather than containment.
+  check(
+    "header: the search anchor names its description",
+    /aria-describedby="([^"]+)"/.test(anchor) &&
+      text.includes(`id="${/aria-describedby="([^"]+)"/.exec(anchor)?.[1]}"`),
+  );
+  check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
+  /*
+   * THE CONTROL IS ONE BUTTON WEARING TWO, since 2026-08-29. It ships a
+   * dark-setting and a light-setting submit and the cascade displays whichever
+   * matches the theme in effect, which is what lets the no-script post carry
+   * the right value without the server knowing a preference it cannot see.
+   *
+   * ASSERTED ON THE WIRE, where only the markup exists: both buttons present,
+   * both writable, and NO pressed state, because a single action button that
+   * announced itself as pressed would be describing a control this is not.
+   * Whether exactly one is PAINTED is a cascade question and belongs to
+   * check:browser, which has a layout engine; this is the half a fetch can see.
+   */
+  const themeButtons = text.match(/<button[^>]*name="theme"[^>]*>/g) ?? [];
+  check("header: the theme control ships both writable buttons", themeButtons.length === 2);
+  check(
+    "header: the theme buttons post only light and dark",
+    themeButtons.every((b) => /value="(light|dark)"/.test(b)) &&
+      new Set(themeButtons.map((b) => /value="([a-z]+)"/.exec(b)?.[1])).size === 2,
+  );
+  check(
+    "header: the theme control carries no pressed state",
+    !text.includes('aria-pressed="true"'),
+  );
+  check(
+    "header: each theme button names the action it performs",
+    themeButtons.every((b) => /aria-label="Switch to (light|dark) theme"/.test(b)),
   );
 }
 

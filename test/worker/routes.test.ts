@@ -6,6 +6,7 @@ import { cloudflareContext } from "~/lib/context";
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
+import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { loader as healthLoader } from "~/routes/api.health";
 
 /**
@@ -111,14 +112,21 @@ describe("/theme", () => {
     expect(refused.status).toBe(403);
   });
 
-  it("falls back to `system` for anything unrecognised, and to `/` for a foreign referer", async () => {
+  it("sends a reader with a foreign referer to `/` rather than off the site", async () => {
+    /*
+     * This case used to assert that an unrecognised theme fell back to a
+     * default cookie. It does not any more: an unrecognised value is refused,
+     * which the case below owns. What survives is the OTHER half it was
+     * testing, the referer, and it needs a legal theme to reach that code at
+     * all.
+     */
     const response = await themeAction({
-      request: themePost("theme=chartreuse", {
+      request: themePost("theme=dark", {
         origin: "https://example.com",
         referer: "https://elsewhere.example/somewhere",
       }),
     } as never);
-    expect(response.headers.get("set-cookie")).toContain("theme=system");
+    expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/");
   });
 
@@ -139,6 +147,85 @@ describe("/theme", () => {
     const response = themeLoader();
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/");
+  });
+
+  it("REFUSES a value no button posts, rather than substituting a default", async () => {
+    /*
+     * The route substituted the default for anything it did not recognise,
+     * which turned a malformed request into a silent theme change. Both of the
+     * control's buttons carry a writable theme, so nothing legitimate arrives
+     * here with anything else.
+     *
+     * `system` is the case worth naming: it used to be accepted, and a client
+     * written against the old surface would still send it.
+     */
+    for (const value of ["system", "", "chartreuse"]) {
+      const response = await themeAction({
+        request: themePost(`theme=${value}`, {
+          origin: "https://example.com",
+          referer: "https://example.com/",
+        }),
+      } as never);
+      expect(response.status).toBe(400);
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    }
+  });
+});
+
+describe("the default theme, and the legacy cookie that means the same thing", () => {
+  /*
+   * ## THE COLLAPSE, ASSERTED RATHER THAN ASSUMED
+   *
+   * A `theme=system` cookie is still in readers' browsers, because the control
+   * could write it for a year's max-age. It means "follow the machine", which
+   * is what having no cookie means, so the resolver answers the same for both.
+   *
+   * The addendum asked for this to be checked before collapsing them: does a
+   * legacy reader receive a different `data-theme` than a first-time one? These
+   * cases are the answer, and they are permanent so it stays the answer.
+   */
+  it("resolves a legacy system cookie to exactly the no-cookie state", () => {
+    const cookieless = themeFromRequest(new Request("https://example.com/"));
+    const legacy = themeFromRequest(
+      new Request("https://example.com/", { headers: { cookie: "theme=system" } }),
+    );
+    expect(legacy).toBe(cookieless);
+
+    /* THE ATTRIBUTE IS ABSENT FOR BOTH, which is what makes the two documents
+     * byte-identical and lets them share one cache entry. */
+    expect(themeAttribute(legacy)).toBeUndefined();
+    expect(themeAttribute(cookieless)).toBeUndefined();
+
+    /* And the meta still says the document supports both, which is the honest
+     * answer for a reader who has chosen nothing. */
+    expect(colorSchemeMeta(legacy)).toBe("light dark");
+  });
+
+  it("keeps THREE resolved states, because the cache key still carries them", () => {
+    /*
+     * The control lost a button; the model did not lose a state. `light`,
+     * `dark` and the default are three distinct answers, and `workers/app.ts`
+     * keys its cache on this value, so a collapse to two here would merge two
+     * documents that genuinely differ.
+     */
+    const dark = themeFromRequest(
+      new Request("https://example.com/", { headers: { cookie: "theme=dark" } }),
+    );
+    const light = themeFromRequest(
+      new Request("https://example.com/", { headers: { cookie: "theme=light" } }),
+    );
+    const none = themeFromRequest(new Request("https://example.com/"));
+    expect(new Set([dark, light, none]).size).toBe(3);
+    expect(themeAttribute(dark)).toBe("dark");
+    expect(themeAttribute(light)).toBe("light");
+  });
+
+  it("treats junk in the cookie as the default, never as the page failing", () => {
+    const junk = themeFromRequest(
+      new Request("https://example.com/", { headers: { cookie: "theme=%%%bogus" } }),
+    );
+    expect(themeAttribute(junk)).toBeUndefined();
   });
 });
 

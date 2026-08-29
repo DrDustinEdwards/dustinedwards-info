@@ -73,7 +73,7 @@
       "id": "theme-toggle",
       "module": "app/enhance/theme.ts",
       "enhancement": "Applies the theme in place, without a round trip. Also holds the \"/\" key, the Cmd-K chord and the search trigger's click, and fetches the command palette bundle on the first of them.",
-      "fallback": "The control is a POST form to /theme. The action sets the cookie and the server renders the choice into the first byte. Both paths end at the same cookie.",
+      "fallback": "The control is a POST form to /theme. The action sets the cookie and the server renders the choice into the first byte. Both paths end at the same cookie. The control ships both of its buttons and CSS displays the one matching the theme in effect, so the visible button posts the right value with no script at all.",
       "fallbackKind": "route",
       "fallbackAt": "/theme",
       "why": null

@@ -1,6 +1,6 @@
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { safeReturnTo } from "~/lib/return-to.mjs";
-import { isTheme, serializeThemeCookie } from "~/lib/theme";
+import { isWritableTheme, serializeThemeCookie } from "~/lib/theme";
 
 import type { Route } from "./+types/theme";
 
@@ -38,12 +38,34 @@ export async function action({ request }: Route.ActionArgs) {
 
   const form = await request.formData();
   const choice = form.get("theme");
-  const theme = isTheme(choice) ? choice : "system";
+
+  /*
+   * ONLY THE WRITABLE THEMES ARE ACCEPTED, since 2026-08-29.
+   *
+   * This substituted a default for anything it did not recognise, which is the
+   * fail-open direction hard rule 13 is about: a malformed request became a
+   * silent theme change rather than an error.
+   *
+   * A REFUSAL RATHER THAN A DEFAULT. Nothing legitimate reaches this branch,
+   * because the control posts the value of the button that was visible and both
+   * of its buttons carry a writable theme. A request arriving with anything else
+   * is hand-made, and 400 tells its author the truth instead of quietly writing
+   * a cookie they did not ask for.
+   *
+   * `no-store` for the same reason the origin refusal above carries it: a
+   * refusal that could be cached is a refusal served to somebody else.
+   */
+  if (!isWritableTheme(choice)) {
+    return new Response("Theme must be light or dark.\n", {
+      status: 400,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
 
   return new Response(null, {
     status: 303,
     headers: {
-      "Set-Cookie": serializeThemeCookie(theme),
+      "Set-Cookie": serializeThemeCookie(choice),
       Location: safeReturnTo(request),
     },
   });

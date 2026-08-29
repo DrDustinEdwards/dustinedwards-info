@@ -128,10 +128,11 @@ export default function Privacy() {
             <h2 id="cookies">Cookies</h2>
             <p>
               There is one cookie for ordinary readers. It is called{" "}
-              <code>theme</code>, it holds one of three words, <code>light</code>,{" "}
-              <code>dark</code> or <code>system</code>, and it lasts a year. It exists so the
-              site renders in the colours you chose on the first byte rather than flickering into
-              them. Nothing else is stored on your device.
+              <code>theme</code>, it holds either <code>light</code> or <code>dark</code>, and it
+              lasts a year. You only have it if you have used the theme button; until then the
+              site simply follows your device and stores nothing. It exists so the site renders in
+              the colours you chose on the first byte rather than flickering into them. Nothing
+              else is stored on your device.
             </p>
             <p>
               There is a second cookie, a sign-in session, and it exists only for the one

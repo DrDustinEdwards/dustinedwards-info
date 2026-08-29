@@ -80,9 +80,12 @@
    dark purple. On chrome they borrow the chrome's own three values instead, so
    no unmeasured pair enters.
 
-   Hover is a COLOUR step, not a fill, so that the theme toggle's pressed state
-   stays the only filled thing in the header. Rest, hover and pressed are then
-   three visibly distinct looks built from ratified values alone. */
+   Hover is a COLOUR step rather than a fill. It was chosen so the theme
+   toggle's pressed state could stay the only filled thing in the header; there
+   is no pressed state any more (2026-08-29, one button, no aria-pressed) and
+   the colour step is KEPT, because nothing in this header is filled now and a
+   single filled control would become the loudest thing on the row. Rest and
+   hover are two distinct looks built from ratified values alone. */
 .site-header .theme-toggle,
 .site-header-nav .search-trigger {
   border-color: var(--on-chrome-muted);
@@ -99,27 +102,45 @@
   background: transparent;
 }
 
-/* v4: the pressed state INVERTS. A brand fill on brand chrome is no state at
-   all, so the fill becomes the light value and the icon becomes the chrome.
-   8.7:1 light and 6.9:1 dark, the same ratified pairs read the other way. */
-.site-header-nav .theme-option[aria-pressed="true"] {
-  background: var(--on-chrome-muted);
-  color: var(--surface-chrome);
-}
-
-/* The inset ring the filled control takes. --focus-ring-on-brand was measured
-   against a brand FILL; this fill is now pale, where #f3e3b8 is ~1.1:1 and
-   simply absent. The chrome purple is the measured counterpart of the fill it
-   sits inside. (0,3,1) beats the base inset rule's (0,2,1). */
-.site-header-nav .theme-option[aria-pressed="true"]:focus-visible {
-  outline-color: var(--surface-chrome);
-}
+/* THE TWO PRESSED-STATE RULES THAT SAT HERE ARE GONE with the pressed state
+   itself. They inverted a brand fill to --on-chrome-muted on chrome, and gave
+   that filled control an inset ring in --surface-chrome because the pale fill
+   made --focus-ring-on-brand vanish against it.
+   Both described a filled control, and no control in this header is filled any
+   more. The ratified pairs they used are untouched and still measured by
+   check:contrast wherever else they appear; only these two selectors, which
+   could no longer match anything, are removed. */
 
 /* Theme toggle ------------------------------------------------------------
  *
- * A real form with three submit buttons, so it works with scripting off. The
- * pressed one takes a brand fill: rule 5 says an interactive state is a fill,
- * and the fill plus aria-pressed means the selection is not carried by hue.
+ * ONE BUTTON since 2026-08-29, ordered by Dustin on aesthetics. It was a form
+ * with three submit buttons and a brand fill on the pressed one.
+ *
+ * ## THE CASCADE IS THE CONTROL, and the two layers below are the mechanism
+ *
+ * TWO buttons ship and exactly one is ever displayed. The hidden one is
+ * `display: none`, so it leaves the accessibility tree as well as the screen: a
+ * screen reader finds one button, not two, and the one it finds names the
+ * action it will perform.
+ *
+ * Which one shows is decided in two layers, and the order matters:
+ *
+ *   no explicit choice   `prefers-color-scheme` picks, so a reader with no
+ *                        cookie sees the icon for the theme their machine is
+ *                        actually in, with NO SCRIPT involved. That is what
+ *                        makes the no-script form post the right value: the
+ *                        button that is visible is the button that submits,
+ *                        and the server never has to guess a preference it
+ *                        cannot see.
+ *   explicit choice      `html[data-theme]` picks, and it MUST outrank the
+ *                        media query, because a reader on a light machine who
+ *                        chose dark has to see the dark control. It does, on
+ *                        specificity, (0,3,1) against (0,2,0), so the media
+ *                        query needs no `:not()` and reads as the default it is.
+ *
+ * The scripted path sets or removes that attribute and nothing else; the
+ * control follows by cascade. No icon is swapped in JavaScript and no label is
+ * rewritten, which is why the enhancement bundle carries no copy of this SVG.
  *
  * No transition. A theme flip repaints every surface at once, and animating
  * only the few properties named here would tear the page into a fast half and
@@ -129,7 +150,6 @@
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.125rem;
   /* Shared with the search control and the Blog link. Falls back to auto
      wherever --control-h is not in scope, which is its natural height. */
   height: var(--control-h);
@@ -157,7 +177,31 @@
   background: var(--tint-brand);
 }
 
-.theme-option[aria-pressed="true"] {
-  background: var(--brand);
-  color: var(--on-brand);
+/* THE DEFAULT LAYER: no cookie, so the machine decides. Light is what a browser
+   reporting no preference at all falls to, which matches the palette's own
+   light-first default. */
+.theme-option[data-when="dark"] {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-option[data-when="light"] {
+    display: none;
+  }
+
+  .theme-option[data-when="dark"] {
+    display: grid;
+  }
+}
+
+/* THE EXPLICIT LAYER, outranking the media query so a chosen theme beats a
+   machine preference that disagrees with it. */
+html[data-theme="light"] .theme-option[data-when="light"],
+html[data-theme="dark"] .theme-option[data-when="dark"] {
+  display: grid;
+}
+
+html[data-theme="light"] .theme-option[data-when="dark"],
+html[data-theme="dark"] .theme-option[data-when="light"] {
+  display: none;
 }
