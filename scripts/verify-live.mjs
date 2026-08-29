@@ -2102,8 +2102,19 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
  * RATE-LIMITED run, where Ask probes are skipped rather than failed, which
  * remains the only downward variance ever hypothesised here and still has never
  * been observed.
+ *
+ * **RE-MEASURED 2026-08-29, BY RUNNING IT, at version 7465d07b: 257 passed, 0
+ * failed**, unthrottled, with 1 of 1 draft Ask probes taken. Section 17, the
+ * watchdog's freshness read, contributed four of those; the rest of the growth
+ * from 214 is other work since 2026-08-15.
+ *
+ * Floor 201 to 241, which is 94 percent of 257, holding the same proportion the
+ * two readings above set. **Leaving it at 201 was the tempting option and it is
+ * the wrong one**: a floor 56 under the real count lets more than a fifth of the
+ * assertions stop executing while the floor reports itself satisfied, which is
+ * this comment's own opening complaint about the 90-against-206 draft.
  */
-const MINIMUM_CHECKS = 201;
+const MINIMUM_CHECKS = 241;
 const executed = passed + failures.length;
 const short = executed < MINIMUM_CHECKS;
 
