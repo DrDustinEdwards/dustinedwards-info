@@ -2917,6 +2917,96 @@ try {
     );
 
     /*
+     * ## THE SAME CONTROL WITH SCRIPT OFF, which is the half rule 9 is about
+     *
+     * Everything above proves the ENHANCEMENT works. None of it proves the
+     * fallback does, and the fallback is the part the law requires: the
+     * enhancement removes a round trip and is allowed to fail.
+     *
+     * Until now the only no-script assertion about this control was a string
+     * match on `action="/theme"` in verify-live, which proves the markup and
+     * not the behaviour. A form can carry that attribute and still do nothing:
+     * `type="button"` on the submit, a `preventDefault` in the markup, or a
+     * server that refuses the value would all pass it.
+     *
+     * So this drives the real thing with JavaScript DISABLED: click what is
+     * visible, let the browser post, and read the document that comes back.
+     *
+     * THE HASH IS PART OF THE CASE. `safeReturnTo` keeps the fragment so a
+     * scriptless reader lands where they were reading rather than at the top of
+     * a long post, and that is exactly the reader this path exists for.
+     */
+    {
+      const scriptless = await browser.newPage();
+      try {
+        await scriptless.setJavaScriptEnabled(false);
+        /*
+         * A CLEAN JAR. The scripted case above leaves a theme cookie in this
+         * browser, and a case about the DEFAULT state that inherits somebody
+         * else's choice is a case about something else. Cleared so this page
+         * loads the way a first-time reader's does.
+         */
+        await scriptless.deleteCookie({ name: "theme", url: BASE });
+        const hash = "#a-fragment-to-return-to";
+        await scriptless.goto(`${BASE}${postForShape}${hash}`, { waitUntil: "networkidle0" });
+
+        const before = await scriptless.evaluate(() => {
+          const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+            (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
+          );
+          return {
+            count: shown.length,
+            value: shown[0]?.getAttribute("value") ?? null,
+            attr: document.documentElement.getAttribute("data-theme"),
+          };
+        });
+        ok(
+          "with script OFF the theme control still offers exactly one button",
+          before.count === 1 && (before.value === "light" || before.value === "dark"),
+          `${before.count} visible button(s), value ${JSON.stringify(before.value)}. The ` +
+            `cascade decides which one shows, so this must hold with no script at all; ` +
+            `if it does not, the control depends on the enhancement to be usable.`,
+        );
+
+        /*
+         * CLICKED BY THE VALUE JUST READ AS VISIBLE, never by position.
+         *
+         * This was `.theme-toggle button`, the first in the DOM, and it CRASHED
+         * the gate with "Node is either not clickable or not an Element": the
+         * scripted case above writes a theme cookie through `document.cookie`,
+         * this page shares the browser's cookie jar, so the cascade had hidden
+         * the first button and puppeteer refused to click a `display: none`
+         * element. A crash is not a failure; it took the whole gate down
+         * instead of reporting anything, which is how a plant proves nothing.
+         *
+         * Selecting by the value that was just measured as visible makes the
+         * click independent of which theme this page happens to load in, which
+         * is the property the case needs anyway.
+         */
+        await Promise.all([
+          scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
+          scriptless.click(`.theme-toggle button[value="${before.value}"]`),
+        ]);
+
+        const after = await scriptless.evaluate(() => ({
+          attr: document.documentElement.getAttribute("data-theme"),
+          hash: location.hash,
+          path: location.pathname,
+        }));
+        ok(
+          "with script OFF the form post changes the theme, and keeps the fragment",
+          after.attr === before.value && after.hash === hash && after.path === postForShape,
+          `asked for ${JSON.stringify(before.value)}, came back with ` +
+            `data-theme=${JSON.stringify(after.attr)} at ` +
+            `${after.path}${after.hash}. The no-script path is the one hard rule 9 ` +
+            `requires to work: the enhancement is allowed to fail, this is not.`,
+        );
+      } finally {
+        await scriptless.close();
+      }
+    }
+
+    /*
      * THE PALETTE. "/" must open it, which also proves the hint's honesty
      * contract: the hint is server-rendered `hidden` and unhidden only once
      * the listener exists.
