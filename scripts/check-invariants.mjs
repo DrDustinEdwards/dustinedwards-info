@@ -66,6 +66,30 @@ import { joinConcatenatedLiterals } from "./lib/sql-literals.mjs";
 import { classifySqliteTables, ftsOwnedTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import { stripComments, stripCommentsAndStrings } from "./lib/strip-comments.mjs";
+import { parseJsonc } from "./lib/wrangler-surface.mjs";
+
+/**
+ * Whole-line `#` comments out of a YAML file, replaced with a space.
+ *
+ * HOISTED TO MODULE SCOPE 2026-08-29, when section 25 became the second reader.
+ * It was declared inside the workflow section, so the new reader got a
+ * ReferenceError rather than a second copy. That is the good failure: the fix is
+ * one definition, not two.
+ *
+ * Why it exists at all: the first draft of the workflow assertions matched the
+ * RAW yaml. Replacing `npm ci` with `npm install` in a run step PASSED, because
+ * that step's own comment says "`npm ci` and not `npm install`" and the needle
+ * found it there. The assertion was reading prose as though it were
+ * configuration.
+ *
+ * LIMIT, stated: whole-line `#` comments only. A trailing `#` is not attempted,
+ * because a naive pass would cut a string containing one, and this is not a yaml
+ * parser. A fragment hidden after code on the same line still fires.
+ *
+ * @param {string} src
+ * @returns {string}
+ */
+const stripHashComments = (src) => src.replace(/^[ \t]*#.*$/gm, " ");
 
 /*
  * WHY THE STRING-BLANKING FORM, here specifically: THIS FILE QUOTES THE VERY
@@ -3566,8 +3590,7 @@ console.log("\n  16. the CI workflow runs the derived tier");
    * is not a yaml parser. A fragment hidden after code on the same line still
    * fires.
    */
-  const stripHashComments = (/** @type {string} */ src) =>
-    src.replace(/^[ \t]*#.*$/gm, " ");
+  // Defined at module scope since 2026-08-29; the limit it states is noted there.
 
   const CI_PATH = join(root, ".github", "workflows", "ci.yml");
   const present = existsSync(CI_PATH);
@@ -4965,51 +4988,86 @@ console.log("\n  24. no client hooks in an unhydrated tree");
   );
 }
 
-console.log("\n  25. the health snapshot's poll interval is the workflow's cron");
+console.log("\n  25. the health snapshot's poll interval is the watchdog's cron");
 
 /*
  * RULE 17, SATISFIED BY BINDING RATHER THAN BY DELETION.
  *
  * `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs is a SECOND
- * statement of the schedule in .github/workflows/health.yml. It cannot be
- * derived away: a Worker cannot read a workflow file, and the home tile needs
- * the number at request time to decide whether a snapshot is worth showing.
+ * statement of the watchdog's schedule. It cannot be derived away: a Worker
+ * cannot read another Worker's config, and the home tile needs the number at
+ * request time to decide whether a snapshot is worth showing.
  *
  * So the two are compared instead. The cron is PARSED rather than matched as a
- * string, because a step form and an equivalent explicit list are the same schedule
- * and a string compare would fail on a legal rewrite while passing on a cron
- * that means something else entirely.
+ * string, because a step form and an equivalent explicit list are the same
+ * schedule and a string compare would fail on a legal rewrite while passing on
+ * a cron that means something else entirely.
  *
- * WHAT GOES WRONG WITHOUT THIS. Slow the schedule to hourly and the constant
+ * ## THE SUBJECT MOVED 2026-08-29, AND THAT IS THE WHOLE EDIT
+ *
+ * This used to parse `.github/workflows/health.yml`, which was correct while
+ * that workflow was the only thing polling. It is not any more. The GitHub
+ * schedule was MEASURED firing 2 times in a day against 96 expected, so
+ * `workers/watchdog.ts` took over the fifteen-minute poll and health.yml
+ * dropped to hourly as the off-platform second opinion. Leaving this pointed at
+ * health.yml would have bound the tile's staleness rule to the SLOWER of the
+ * two watchers and called every current snapshot stale for most of each hour.
+ *
+ * ## WHY THE EXAMPLE AND NOT THE REAL CONFIG
+ *
+ * `wrangler.watchdog.jsonc` is gitignored, so a clean checkout has one only
+ * because `postinstall` copied it. The tracked example is always present and
+ * always readable, which keeps this gate honest in CI. The other half of the
+ * chain, that the real config agrees with its example, is `check:config`'s and
+ * is asserted there in both directions. One link per gate, no link unowned.
+ *
+ * WHAT GOES WRONG WITHOUT THIS. Slow the watchdog to hourly and the constant
  * still says fifteen minutes, so the tile calls a perfectly current snapshot
  * stale forty five minutes into every hour and tells readers the check has
- * stopped. Speed it up and the tile calls a genuinely dead poller fresh. The
+ * stopped. Speed it up and the tile calls a genuinely dead watchdog fresh. The
  * failure is silent in both directions and it is a lie on the front page.
  */
 {
-  const workflowPath = join(root, ".github", "workflows", "health.yml");
+  const watchdogPath = join(root, "wrangler.watchdog.jsonc.example");
   const snapshotPath = join(root, "app", "lib", "health", "snapshot.mjs");
-  const workflow = readFileSync(workflowPath, "utf8");
+  const watchdogRaw = existsSync(watchdogPath) ? readFileSync(watchdogPath, "utf8") : "";
   const snapshot = stripComments(readFileSync(snapshotPath, "utf8"));
 
   ok(
-    "the health workflow and the snapshot module were both read",
-    workflow.length > 500 && snapshot.length > 500,
-    `workflow ${workflow.length} chars, snapshot ${snapshot.length} chars after ` +
+    "the watchdog config and the snapshot module were both read",
+    watchdogRaw.length > 500 && snapshot.length > 500,
+    `watchdog config ${watchdogRaw.length} chars, snapshot ${snapshot.length} chars after ` +
       `stripping. An empty read passes every comparison below vacuously.`,
   );
 
   /*
-   * The minute field of the schedule's cron, from the `schedule:` block only.
-   * Anchored to a `- cron:` list item so a cron mentioned in a comment cannot
-   * satisfy it: this file's own prose discusses the schedule at length, and a
+   * PARSED AS JSONC, not matched with a regex. This file is mostly prose and
+   * its comments discuss the schedule at length; a needle for a cron string
+   * would happily match the sentence explaining what the cron must not be. A
    * comment has both satisfied an assertion and failed one in this repository.
    */
-  const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
-    (m) => m[1].trim(),
-  );
+  /** @type {string[]} */
+  let cronLines = [];
+  let parsed = true;
+  try {
+    const config = parseJsonc(watchdogPath);
+    const crons = config.triggers?.crons;
+    cronLines = Array.isArray(crons)
+      ? crons.map((/** @type {unknown} */ c) => String(c).trim())
+      : [];
+  } catch {
+    parsed = false;
+  }
+
   ok(
-    "the workflow declares exactly one cron",
+    "the watchdog config parses",
+    parsed,
+    `${relative(root, watchdogPath)} is not valid JSONC, so the schedule below was ` +
+      `read from nothing.`,
+  );
+
+  ok(
+    "the watchdog declares exactly one cron",
     cronLines.length === 1,
     `found ${cronLines.length}: ${cronLines.join(" | ") || "(none)"}. This ` +
       `assertion compares one schedule against one constant and cannot ` +
@@ -5029,8 +5087,13 @@ console.log("\n  25. the health snapshot's poll interval is the workflow's cron"
     if (step) return Number(step[1]) * 60;
     if (minuteField === "*") return 60;
     const list = minuteField.split(",").map(Number);
-    if (list.length > 1 && list.every((n) => Number.isInteger(n) && n >= 0 && n < 60)) {
-      const gaps = new Set(list.slice(1).map((n, i) => n - list[i]));
+    if (
+      list.length > 1 &&
+      list.every((/** @type {number} */ n) => Number.isInteger(n) && n >= 0 && n < 60)
+    ) {
+      const gaps = new Set(
+        list.slice(1).map((/** @type {number} */ n, /** @type {number} */ i) => n - (list[i] ?? 0)),
+      );
       // Evenly spaced AND wrapping evenly, or the last gap of the hour differs.
       if (gaps.size === 1 && 60 % (60 / list.length) === 0 && [...gaps][0] === 60 / list.length) {
         return [...gaps][0] * 60;
@@ -5063,13 +5126,64 @@ console.log("\n  25. the health snapshot's poll interval is the workflow's cron"
   );
 
   ok(
-    "the declared poll interval is the schedule the workflow actually runs",
+    "the declared poll interval is the schedule the watchdog actually runs",
     declaredSeconds === periodSeconds,
-    `snapshot.mjs says ${declaredSeconds}s, health.yml's cron ` +
+    `snapshot.mjs says ${declaredSeconds}s, the watchdog's cron ` +
       `${JSON.stringify(cronLines[0] ?? "")} means ${periodSeconds}s. The home ` +
       `tile decides whether a verdict is too old to show from this number, so a ` +
-      `mismatch either calls a current snapshot stale or calls a dead poller ` +
+      `mismatch either calls a current snapshot stale or calls a dead watchdog ` +
       `fresh, on the front page, silently. Rule 17.`,
+  );
+
+  /*
+   * THE SNAPSHOT MODULE MUST NAME THE WATCHDOG, NOT THE WORKFLOW.
+   *
+   * The constant's own docblock says where its second statement lives, and that
+   * sentence is what a reader follows when the two disagree, and it named
+   * health.yml until this commit. That pointer is rule 17's tense-bound state
+   * claim waiting to happen: prose about a mechanism, written true, left
+   * standing after the mechanism moves. It is updated in the same commit as the
+   * schedule and gated here so the next move cannot leave it behind.
+   */
+  ok(
+    "the snapshot module's prose points at the watchdog, not at the old workflow",
+    /wrangler\.watchdog\.jsonc/.test(readFileSync(snapshotPath, "utf8")) &&
+      !/health\.yml/.test(readFileSync(snapshotPath, "utf8")),
+    `app/lib/health/snapshot.mjs must name wrangler.watchdog.jsonc as the owner of ` +
+      `its poll interval and must NOT name health.yml, which is now the hourly ` +
+      `second opinion and no longer sets the pace.`,
+  );
+
+  /*
+   * AND HEALTH.YML MUST NOT BE ON THE SAME SCHEDULE.
+   *
+   * Not a style rule. If somebody restores the workflow to a fifteen-minute step the two
+   * watchers poll together, which doubles the load on a rate-limited endpoint
+   * for no extra coverage, and it re-creates the ambiguity this section just
+   * resolved about which cron the tile is measured against. Hourly or slower is
+   * the ruling; this asserts the direction rather than the exact value, because
+   * the exact value is health.yml's business and the constraint is that it is
+   * NOT the watchdog's.
+   */
+  const healthWfRaw = existsSync(join(root, ".github", "workflows", "health.yml"))
+    ? stripHashComments(readFileSync(join(root, ".github", "workflows", "health.yml"), "utf8"))
+    : "";
+  const wfCrons = [...healthWfRaw.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map((m) =>
+    m[1].trim(),
+  );
+  ok(
+    "the health workflow still declares exactly one cron",
+    wfCrons.length === 1,
+    `found ${wfCrons.length}: ${wfCrons.join(" | ") || "(none)"}.`,
+  );
+  ok(
+    "the health workflow is SLOWER than the watchdog, not a duplicate of it",
+    wfCrons.length === 1 && wfCrons[0] !== cronLines[0] && !/^\*\/\d+ /.test(wfCrons[0] ?? ""),
+    `health.yml's cron is ${JSON.stringify(wfCrons[0] ?? "(none)")} and the watchdog's is ` +
+      `${JSON.stringify(cronLines[0] ?? "(none)")}. The workflow is the off-platform second ` +
+      `opinion, deliberately slower: matching schedules doubles the load on a rate-limited ` +
+      `endpoint for no extra coverage, and makes it ambiguous which cron the home tile's ` +
+      `staleness rule is measured against.`,
   );
 
   /*
@@ -5146,14 +5260,26 @@ console.log("\n  25. the health snapshot's poll interval is the workflow's cron"
  * RE-MEASURED 2026-08-26 by RUNNING it after section 25 (the health snapshot's
  * poll interval) landed and section 22's health needle followed its subject:
  * 272 executed. Floor 250 to 258, margin 14 held.
+ *
+ * RE-MEASURED 2026-08-29 by RUNNING it after section 25's subject moved from
+ * the GitHub workflow's cron to the watchdog Worker's, gaining four assertions
+ * (the config parses, the snapshot module's prose points at the new owner, the
+ * workflow still declares one cron, and that cron is SLOWER than the
+ * watchdog's): 292 executed. Floor 258 to 278, margin 14 held.
+ *
+ * The step from 272 to 292 is larger than those four, and that is worth a line
+ * rather than a shrug: the 2026-08-28 prose sweep grew other sections after the
+ * 272 reading was taken, so 272 was already a stale observation before this
+ * change touched anything. Which is the whole reason this number is re-measured
+ * through the gate's own pipeline and never adjusted by arithmetic.
  */
-const MINIMUM_CHECKS = 258;
+const MINIMUM_CHECKS = 278;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-26: 272 offline.`,
+      `rather than failing. Measured 2026-08-29: 292 offline.`,
   );
 }
 
