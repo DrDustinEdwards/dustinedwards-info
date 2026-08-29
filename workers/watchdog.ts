@@ -1,0 +1,349 @@
+/*
+ * RELATIVE IMPORTS, DELIBERATELY, where the rest of workers/ uses `~/`.
+ *
+ * `workers/app.ts` and `workers/media-events.ts` are built by Vite through the
+ * React Router build, which resolves the `~/*` tsconfig path. This Worker is
+ * built by `wrangler deploy -c wrangler.watchdog.jsonc`, which bundles with
+ * esbuild directly and does not read that mapping. A `~/` specifier here would
+ * typecheck and fail at deploy.
+ */
+import { watchdogActions, watchdogOutcome } from "../app/lib/health/repair.mjs";
+import { SITE_ORIGIN } from "../app/lib/seo";
+
+/**
+ * THE WATCHDOG. A separate Worker whose only job is to notice that this site
+ * has stopped being healthy, repair what it can, and wake somebody otherwise.
+ *
+ * Ruled 2026-08-29. `.github/workflows/health.yml` has done this since
+ * 2026-08-23 and its own docblock explains why an in-Worker watcher was
+ * rejected: a watcher that runs inside the thing it watches dies with it. That
+ * argument is still correct and this Worker does not contradict it. **A
+ * SEPARATE Worker on the same account has the property the rejection wanted**
+ * against everything except a Cloudflare-wide outage, in which case the site is
+ * down anyway and there is nothing to report.
+ *
+ * ## WHY IT EXISTS AT ALL: THE GITHUB SCHEDULE IS NOT RUNNING
+ *
+ * MEASURED 2026-08-28 over the run history. Against 96 expected firings a day,
+ * the every-fifteen-minutes schedule fired **38 times on 08-23 and 2 times on
+ * 08-28**. Every run that fires succeeds; the daily browser cron decays the
+ * same way. `health.yml`'s own note (2) predicted this in prose ("a 15-minute
+ * cadence is a request, not a promise") and note (1) named the failure mode
+ * that makes it invisible. Self-repair was effectively not running, and the
+ * inbox looked exactly as it does when everything is fine.
+ *
+ * A Cron Trigger is not best-effort in the same way. It is the platform's own
+ * scheduler on the account that runs the site.
+ *
+ * ## THE MEASUREMENT THAT DECIDED THE TRANSPORT, AND IT IS NOT WHAT WAS SPECCED
+ *
+ * This was specified as "GET the site's /api/health". **A Worker cannot do
+ * that to this site.** Measured 2026-08-29 from a throwaway Worker on the edge,
+ * with a control:
+ *
+ *     fetch("https://example.com/")                    200   <- control
+ *     fetch("<site>/")                                 404, Cloudflare 1042
+ *     fetch("<site>/api/health")                       404, Cloudflare 1042
+ *     env.SITE.fetch("<site>/api/health")              200, the real body
+ *
+ * Error 1042 is the Worker-to-Worker-on-one-zone restriction, and the docs say
+ * the replacement outright: "Using global fetch() to call another Worker on the
+ * same zone without service bindings fails. Workers accept requests sent to a
+ * Custom Domain." This site is on `*.workers.dev` and has no custom domain
+ * until the DNS cutover, so a service binding is the ONLY mechanism available.
+ * The control matters: it proves the probe's `fetch` worked, so the two 1042s
+ * are a fact about this host rather than about the instrument.
+ *
+ * **WHAT THAT COSTS, STATED RATHER THAN BURIED.** A service binding invokes the
+ * site Worker directly. It therefore proves the health suite RUNS and that
+ * every invariant holds; it does NOT prove the site is reachable from the
+ * internet. A broken route or a DNS fault with a healthy Worker is invisible
+ * here. That coverage is why `health.yml` survives at all: it now runs hourly,
+ * off-platform, as the second and slower opinion, and it is the only instrument
+ * that speaks from outside Cloudflare. The cutover retires the gap.
+ *
+ * ## THE HEALTH CALL IS THE LIVENESS SIGNAL, AND IT IS ALREADY ON THE PAGE
+ *
+ * `/api/health` writes the KV snapshot on the way out, for both verdicts. The
+ * home page's health tile renders that snapshot's AGE and nothing else. So
+ * **the tile's freshness IS this Worker's liveness**: if the watchdog stops
+ * firing, the snapshot ages and the front page says so, with no second timer
+ * and nothing new to monitor. That is also what the production freshness
+ * assertion in `check:browser` reads, which is why it can prove this Worker
+ * fired since a deploy without ever talking to it.
+ *
+ * The corollary is the part worth remembering: nothing here writes the snapshot
+ * itself, and nothing may. The snapshot is a byproduct of a run that happened
+ * anyway (`app/lib/health/snapshot.mjs`), and a watchdog that stamped it
+ * directly would be manufacturing its own alibi.
+ *
+ * ## THROTTLING, MEASURED RATHER THAN ASSUMED
+ *
+ * `/api/health` is rate limited at 20 per 60 seconds per caller identity, and
+ * there is NO bypass and no authenticated shape: the endpoint is
+ * unauthenticated and takes no credential at all. So this Worker grows neither.
+ *
+ * Measured 2026-08-29 by bursting the service binding: calls share ONE bucket
+ * and the eighteenth was refused. This fires once per 900 seconds against an
+ * allowance of 20 per 60, which is roughly three orders of magnitude of
+ * headroom, and the bucket is not shared with public traffic because every
+ * request off the edge carries its own `cf-connecting-ip`.
+ *
+ * And the failure is LOUD rather than silent. A refusal answers 429 with a body
+ * naming `rate-limited`, which is deliberately not a repairable class, so it
+ * reaches the unknown arm and sends mail naming the throttle. A throttled
+ * watchdog wakes somebody; it does not quietly report health.
+ *
+ * ## WHAT IS DECIDED HERE: NOTHING
+ *
+ * Every decision is in `app/lib/health/repair.mjs`, which is pure, imports
+ * nothing and never fetches. This file is the I/O half, on the same split as
+ * `scripts/health-repair.mjs`, and for the reason that split exists: a Cron
+ * Trigger fires unattended and the only firings whose behaviour matters are the
+ * ones nobody is watching. What can be tested is, and this walks an action list
+ * rather than branching on a verdict, so a step removed from the list is a step
+ * this Worker stops taking.
+ *
+ * ## THE SECRET
+ *
+ * `OPERATOR_TOKEN`, a wrangler secret on THIS Worker, set separately from the
+ * one on the site. It is the same value and there are now THREE holders of it
+ * (the site Worker, this Worker, and the GitHub repository secret), so rotation
+ * touches all three; CLAUDE.md's bindings section carries that note.
+ *
+ * Its absence is a NAMED configuration state, never silence: `repairPlan`
+ * returns alert-only and the run still mails. A monitor that quietly lost the
+ * ability to act looks exactly like one that never needed to.
+ */
+
+/**
+ * Where the alert goes, and where the repair door is.
+ *
+ * `ALERT_EMAIL` is a VAR rather than a secret, on the `CLOUDFLARE_ACCOUNT_ID`
+ * precedent: an inbox address is not a credential, so making it a secret would
+ * spend `check:secrets`' signal on a value that grants nothing. It is still
+ * kept out of git, because this repo is meant to be copied as a template and a
+ * personal address in a tracked config is the thing that leaks on the day it is
+ * copied. Real value in the gitignored `wrangler.watchdog.jsonc`, placeholder
+ * in the tracked example, reconciled in both directions by `check:config`.
+ */
+interface WatchdogEnv {
+  /** The site Worker. See the 1042 measurement above for why this is a binding. */
+  SITE: Fetcher;
+  EMAIL: SendEmail;
+  ALERT_EMAIL: string;
+  OPERATOR_TOKEN?: string;
+}
+
+/**
+ * The sender. On `dustinedwards.info`, which is onboarded to Email Sending
+ * (measured 2026-08-29: `wrangler email sending list` reports it enabled).
+ *
+ * NOT derived from `SITE_ORIGIN`, and that is deliberate rather than an
+ * oversight. `SITE_ORIGIN` is `*.workers.dev` until the cutover, and a
+ * `workers.dev` sender would be refused: the from-domain must be one onboarded
+ * for sending. The mail domain and the serving origin are separate facts that
+ * happen to converge later.
+ */
+const ALERT_FROM = { email: "watchdog@dustinedwards.info", name: "dustinedwards.info watchdog" };
+
+/** One reading of the health endpoint. */
+type Reading = { status: number; body: unknown };
+
+/**
+ * Reads `/api/health` through the service binding.
+ *
+ * NEVER THROWS. A transport failure is returned as status 0 with a null body,
+ * which `watchdogActions` turns into a notify: an endpoint that could not be
+ * reached is a reason to wake somebody, and it must not be a reason for this
+ * handler to die before it can send the mail saying so.
+ *
+ * `cache-control: no-cache` is belt only. The route declares `no-store` and a
+ * service binding does not go through the edge cache at all, but a reading that
+ * could be served from anywhere is not a health check, and stating it costs a
+ * header.
+ */
+async function readHealth(env: WatchdogEnv): Promise<Reading> {
+  try {
+    const response = await env.SITE.fetch(`${SITE_ORIGIN}/api/health`, {
+      headers: { "user-agent": "watchdog", "cache-control": "no-cache" },
+    });
+    return { status: response.status, body: await response.json().catch(() => null) };
+  } catch {
+    return { status: 0, body: null };
+  }
+}
+
+/**
+ * One repair call through the operator API. Returns a miss string, empty when
+ * it converged.
+ *
+ * THE VERDICT IS READ, NEVER INFERRED FROM A 200. Same rule ship applies, and
+ * the same four refusals in the same order, because this is an unattended write
+ * and "the call returned" is not "the index agrees".
+ *
+ * The token goes in a header on a request this Worker builds. It is never
+ * logged and never echoed into the mail body.
+ */
+async function repair(env: WatchdogEnv, token: string, tool: string): Promise<string> {
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await env.SITE.fetch(`${SITE_ORIGIN}/api/operator`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+        "user-agent": "watchdog",
+      },
+      body: JSON.stringify({ tool, args: {} }),
+    });
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    return `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  if (!response.ok) return `${tool} answered ${response.status}`;
+
+  const report = payload && typeof payload === "object" ? ((payload as any).data ?? payload) : null;
+  if (!report || typeof report.converged !== "boolean") {
+    return `${tool} answered without a converged verdict, so nothing was proven`;
+  }
+  if (report.converged !== true) {
+    return `${tool} ran and did not converge (${report.expected} expected, ${report.present} present)`;
+  }
+  return "";
+}
+
+/**
+ * Sends the alert.
+ *
+ * THE BODY CARRIES THE HEALTH JSON AND WHAT WAS ATTEMPTED, because a
+ * notification that says only "unhealthy" costs the reader the entire triage,
+ * which is the defect the 2026-08-23 flap was diagnosed as: "which check
+ * failed" was all anyone had, and one record apart during a rebuild and a
+ * hundred apart are the same alert while only one of them is an incident.
+ *
+ * `text` only, no `html`. There is one reader, the content is a JSON blob and a
+ * list, and an HTML part would be a second copy of the same words to keep in
+ * step for no gain.
+ *
+ * Returns whether it sent, so a failure to notify is at least a log line rather
+ * than nothing at all. There is no further escalation to reach for: if the mail
+ * cannot go, the remaining signal is the home page's ageing health tile and the
+ * hourly GitHub run.
+ */
+async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
+  try {
+    await env.EMAIL.send({
+      to: env.ALERT_EMAIL,
+      from: ALERT_FROM,
+      subject,
+      text: lines.join("\n"),
+    });
+    return true;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        alert: "watchdog-notify-failed",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return false;
+  }
+}
+
+/** The health body, pretty-printed for the mail, or a statement that there was none. */
+const renderBody = (reading: Reading | null): string =>
+  reading === null
+    ? "(no reading was taken)"
+    : `HTTP ${reading.status}\n${JSON.stringify(reading.body, null, 2)}`;
+
+export default {
+  /**
+   * One firing.
+   *
+   * WRAPPED, AND THE THROW IS RE-RAISED. Everything inside is written not to
+   * throw, so reaching the catch means an assumption broke rather than a
+   * dependency failed. It tries to mail, then rethrows: a Cron Trigger that
+   * throws is recorded by the platform as a failed invocation, and swallowing
+   * that would trade the last remaining signal for a tidy log.
+   */
+  async scheduled(_controller: ScheduledController, env: WatchdogEnv): Promise<void> {
+    try {
+      const token = env.OPERATOR_TOKEN ?? "";
+      const reading = await readHealth(env);
+      const actions = watchdogActions(reading, { hasToken: token.length > 0 });
+
+      if (actions.length === 0) {
+        console.log(JSON.stringify({ watchdog: "healthy", status: reading.status }));
+        return;
+      }
+
+      const notify = actions.filter((a) => a.type === "notify");
+      if (notify.length > 0) {
+        const reasons = notify.map((a) => (a as { reason: string }).reason);
+        console.error(JSON.stringify({ watchdog: "alerting", reasons }));
+        await alert(env, "dustinedwards.info is unhealthy", [
+          ...reasons,
+          "",
+          "Nothing was repaired.",
+          "",
+          renderBody(reading),
+        ]);
+        return;
+      }
+
+      /*
+       * THE ACTION LIST IS WALKED, NEVER SECOND-GUESSED. The repairs run in the
+       * order the module gave them (content before Ask, because the Ask corpus
+       * is read out of what the content repair rewrites), and the recheck runs
+       * only because the list asked for one. Deleting it there stops it
+       * happening here, which is the coupling that makes the plant meaningful.
+       */
+      const attempted: string[] = [];
+      const misses: string[] = [];
+      for (const action of actions) {
+        if (action.type !== "repair") continue;
+        attempted.push(action.tool);
+        const miss = await repair(env, token, action.tool);
+        if (miss) misses.push(miss);
+      }
+
+      const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
+      const outcome = watchdogOutcome({ misses, recheck });
+
+      console.log(
+        JSON.stringify({
+          watchdog: "repaired",
+          attempted,
+          misses,
+          recheckStatus: recheck?.status ?? null,
+          alerting: outcome.length > 0,
+        }),
+      );
+
+      if (outcome.length === 0) return;
+
+      await alert(env, "dustinedwards.info: self-repair did not settle it", [
+        ...outcome.map((a) => (a as { reason: string }).reason),
+        "",
+        `Attempted: ${attempted.join(", ") || "(nothing)"}`,
+        "",
+        "Health BEFORE the repair:",
+        renderBody(reading),
+        "",
+        "Health AFTER the repair:",
+        renderBody(recheck),
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(JSON.stringify({ watchdog: "threw", error: message }));
+      await alert(env, "dustinedwards.info watchdog THREW", [
+        "The watchdog itself failed, so this firing proved nothing about the site.",
+        "",
+        message,
+      ]);
+      throw error;
+    }
+  },
+} satisfies ExportedHandler<WatchdogEnv>;
