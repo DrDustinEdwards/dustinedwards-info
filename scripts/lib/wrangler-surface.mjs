@@ -97,6 +97,43 @@ const READERS = {
   assets: (config, out) => {
     if (config.assets?.binding) out.set(`assets:${config.assets.binding}`, "");
   },
+  // The watchdog Worker's only route to the site. The SERVICE NAME is compared
+  // rather than omitted as account-scoped: it names which Worker is called, and
+  // two files disagreeing about it would point the watchdog at nothing.
+  services: (config, out) => {
+    for (const service of config.services ?? []) {
+      out.set(
+        `service:${service.binding}`,
+        `service=${service.service}${service.environment ? ` environment=${service.environment}` : ""}`,
+      );
+    }
+  },
+  /*
+   * Email Sending. KEYED BY `name`, NOT `binding`, which is the whole reason
+   * this entry has a comment: every other binding kind wrangler ships uses
+   * `binding`, and `send_email` uses `name`. That difference put it straight
+   * through `unhandledBindingKinds`' array arm, which only looked for
+   * `binding`, so it was a binding readable by NEITHER function: invisible to
+   * the comparison AND invisible to the detector meant to catch exactly that.
+   * The detector is widened below in the same commit.
+   *
+   * The RESTRICTIONS are part of the settings, not just the name. A binding
+   * pinned to one destination in the real config and unrestricted in the
+   * example describes a different blast radius, which is the kind of drift this
+   * gate exists to catch.
+   */
+  send_email: (config, out) => {
+    for (const mail of config.send_email ?? []) {
+      const restriction = mail.destination_address
+        ? `destination_address=${mail.destination_address}`
+        : mail.allowed_destination_addresses
+          ? `allowed_destination_addresses=${[...mail.allowed_destination_addresses].sort().join("|")}`
+          : mail.allowed_sender_addresses
+            ? `allowed_sender_addresses=${[...mail.allowed_sender_addresses].sort().join("|")}`
+            : "unrestricted";
+      out.set(`send_email:${mail.name}`, restriction);
+    }
+  },
   queues: (config, out) => {
     for (const q of config.queues?.consumers ?? []) {
       out.set(
@@ -139,8 +176,21 @@ export function surfaceOf(config) {
  * declaration is one of exactly three shapes:
  *
  *   an object with a `binding`                     assets, images, browser
- *   an array of objects carrying `binding`         d1, kv, r2, vectorize, ai
+ *   an array of objects carrying `binding` or      d1, kv, r2, vectorize, ai,
+ *     `name`                                         services, send_email
  *   an object with a `bindings` array              durable_objects, workflows
+ *
+ * **THE ARRAY ARM LOOKED FOR `binding` ALONE UNTIL 2026-08-29, AND THAT WAS A
+ * LIVE HOLE OF EXACTLY THE SHAPE THIS FUNCTION EXISTS TO CLOSE.** `send_email`
+ * keys its entries by `name` rather than `binding`, so it was readable by
+ * neither `surfaceOf` nor this: absent from both sides of every comparison, and
+ * absent from the report that is supposed to name what the comparison cannot
+ * see. Found while adding the watchdog's mail binding, not by a plant. The
+ * `bindings`-array arm below already accepted `name`, so the two arms simply
+ * disagreed with each other.
+ *
+ * Widening it is safe against this repo's configs and was checked rather than
+ * assumed: no other array-valued top-level key carries a `name`.
  *
  * `queues` matches none of these, which is correct: a consumer is a
  * subscription rather than a handle and has no `binding` at all. It is handled
@@ -153,7 +203,9 @@ export function unhandledBindingKinds(config) {
   const declaresBinding = (/** @type {any} */ value) => {
     if (!value || typeof value !== "object") return false;
     if (Array.isArray(value)) {
-      return value.some((v) => v && typeof v === "object" && "binding" in v);
+      return value.some(
+        (v) => v && typeof v === "object" && ("binding" in v || "name" in v),
+      );
     }
     if ("binding" in value) return true;
     return (

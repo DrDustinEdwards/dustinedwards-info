@@ -1,32 +1,79 @@
-# THE DEAD MAN'S SWITCH, AND SINCE 2026-08-24 THE REPAIR CREW.
+# THE SECOND, SLOWER OPINION. OFF-PLATFORM, AND SINCE 2026-08-29 NO LONGER THE
+# PRIMARY WATCHER.
+#
+# ## WHAT THIS FILE NOW IS
+#
+# `workers/watchdog.ts` is a Worker on this Cloudflare account with a Cron
+# Trigger every fifteen minutes. It polls the same endpoint, drives the same
+# repairs through the same operator door, and mails on the same conditions.
+# This workflow runs HOURLY and is kept for exactly one property the watchdog
+# cannot have: it speaks from OUTSIDE Cloudflare.
+#
+# That property got SHARPER rather than weaker when the watchdog landed.
+# MEASURED 2026-08-29: a Worker cannot make an ordinary HTTPS request to this
+# site at all. A global `fetch()` to the site's own URL answers 404 with
+# Cloudflare error 1042, the Worker-to-Worker-on-one-zone restriction, while a
+# control fetch to example.com returns 200. So the watchdog reaches the site
+# through a SERVICE BINDING, which invokes the Worker directly.
+#
+# **The watchdog therefore proves the health suite RUNS. It does not prove the
+# site is REACHABLE.** A broken Worker route, a bad DNS answer, or an edge fault
+# with a perfectly healthy Worker behind it is invisible to the watchdog and
+# visible only here. This job is the whole of that coverage, and its cadence is
+# the bound on how long such a fault can hide: about an hour. The DNS cutover
+# retires the gap, because a Custom Domain is the documented way one Worker may
+# fetch another, and the watchdog can then make a real request.
+#
+# ## WHY IT IS NO LONGER EVERY FIFTEEN MINUTES
+#
+# Because it was not running. MEASURED 2026-08-28 over the run history: against
+# 96 expected firings a day the schedule fired 38 times on 08-23 and 2 times on
+# 08-28. Every run that fires succeeds; the daily browser cron decays the same
+# way. Note (2) below predicted this in prose and note (1) explains why it is
+# invisible. Self-repair was effectively not running, and the inbox looked
+# exactly as it does when everything is fine.
+#
+# Hourly is an honest request rather than a fiction. It also stops the two
+# watchers polling together, which would double the load on a rate-limited
+# endpoint for no extra coverage; `check:invariants` section 25 asserts this
+# workflow is SLOWER than the watchdog rather than a duplicate of it.
+#
+# ## THE EMAIL IS UNCHANGED AND IS STILL THE DELIVERY MECHANISM
 #
 # A failing run here IS the alert. GitHub emails the repository owner when a
 # SCHEDULED workflow run fails, by default, and that is the entire delivery
 # mechanism: no notification service and no webhook. It was chosen because it is
 # free, already configured, and lives OUTSIDE Cloudflare, so it still speaks
-# when the Worker it watches is broken. A watcher that runs inside the thing it
-# watches dies with it, which is the property that made every in-Worker design
-# fail.
+# when the Worker it watches is broken. The watchdog mails through Cloudflare
+# Email Sending instead, which is the right tool for a Worker and is also inside
+# the failure domain this job exists outside of.
 #
 # What it catches: the site not answering at all, and any health check failing.
 # That covers the 31 July incident, where the Ask index lost nine records and
 # nobody knew for three weeks because the only surface saying so was a badge on
 # a page somebody had to open.
 #
-# ## IT NOW REPAIRS THE TWO CLASSES IT CAN, BEFORE IT WAKES ANYBODY
+# ## IT STILL REPAIRS THE CLASSES IT CAN, BEFORE IT WAKES ANYBODY
 #
-# Two of the checks describe a derived store that has drifted from its source,
-# and both have a repair that goes through the front door. Under the AUTOMATE
-# directive an alert whose only remedy is a human running the command the
-# machine could have run is a chore, and chores are defects. So an unhealthy run
-# consults a repair plan, performs what it allows, re-polls once, and fails only
-# if that did not work or the failing class is one nobody has classified.
+# Unchanged, and it shares its decision module with the watchdog:
+# `app/lib/health/repair.mjs`, which moved out of `scripts/lib/` when the
+# watchdog became its second caller. Two copies of the table that decides
+# whether an unattended write fires would be rule 17 in the most expensive place
+# available.
 #
-# **THIS WORKFLOW NOW TAKES ONE SECRET, `OPERATOR_TOKEN`.** Without it the run
-# still polls, still alerts, and SAYS in the log that self-repair is disabled;
-# it does not silently become a plain monitor again. Set it once with:
+# An unhealthy run consults a repair plan, performs what it allows, re-polls
+# once, and fails only if that did not work or the failing class is one nobody
+# has classified.
+#
+# **THIS WORKFLOW TAKES ONE SECRET, `OPERATOR_TOKEN`.** Without it the run still
+# polls, still alerts, and SAYS in the log that self-repair is disabled; it does
+# not silently become a plain monitor again. Set it once with:
 #
 #     gh secret set OPERATOR_TOKEN < <path to the operator token file>
+#
+# THERE ARE NOW THREE HOLDERS OF THAT VALUE: this repository secret, the site
+# Worker, and the watchdog Worker. Rotation touches all three, and CLAUDE.md's
+# bindings section carries the note.
 #
 # The decision about whether to repair is deliberately NOT in this file. See the
 # comment at the call site.
@@ -42,11 +89,14 @@
 #    commit is a repository whose monitor has switched itself off and left the
 #    inbox looking exactly as it does when everything is fine. There is no fix
 #    inside this file; the mitigation is that this repo is active, and the
-#    residual risk is accepted rather than solved.
+#    residual risk is accepted rather than solved. **The watchdog now carries
+#    most of the cost of this**, which is a large part of why it exists.
 #
 # 2. **Scheduled runs are best effort and are often late.** GitHub queues them
-#    and drops them under load. A 15-minute cadence is a request, not a promise,
-#    and a missed run is invisible for the same reason as (1).
+#    and drops them under load. An hourly cadence is a request, not a promise,
+#    and a missed run is invisible for the same reason as (1). This note used to
+#    say fifteen minutes and it was correct; the measurement above is what
+#    believing it anyway cost.
 #
 # 3. **The email depends on the owner's notification settings.** If Actions
 #    notifications are off, the run still fails and nobody is told.
@@ -63,6 +113,13 @@
 #    monitors muted. If a repair ever becomes routine, that is the signal to
 #    find why the source and its projection keep parting company.
 #
+# 6. **THE WATCHDOG AND THIS JOB CAN BOTH REPAIR, AND THEY DO NOT COORDINATE.**
+#    Accepted rather than solved, because every operation behind the repair door
+#    is idempotent and derives its own converged verdict, so two callers running
+#    the same derivation converge on the same state. The cadences differ by four
+#    times, so an overlap is rare, and the cost of one is a duplicate write that
+#    changes nothing.
+#
 # ============================================================================
 #
 # Actions are pinned BY COMMIT SHA, not by tag. A tag is a moving pointer the
@@ -74,8 +131,12 @@ name: Health
 
 on:
   schedule:
-    # Every 15 minutes. See note (2) above: this is a request, not a promise.
-    - cron: "*/15 * * * *"
+    # HOURLY, since 2026-08-29. The watchdog Worker owns the fifteen-minute
+    # poll; this is the off-platform second opinion and is deliberately
+    # slower. Minute 17 rather than 0 so it does not queue behind the crowd of
+    # on-the-hour jobs GitHub schedules for every repository at once, which is
+    # the documented worst case for the lateness note (2) describes.
+    - cron: "17 * * * *"
   # So the switch can be tested without waiting for, or editing, the schedule.
   workflow_dispatch:
 
@@ -191,7 +252,7 @@ jobs:
           # the command the machine could have run is a chore.
           #
           # WHAT IS NOT AUTOMATED: deciding what to do about a class nobody has
-          # classified. `scripts/lib/health-repair.mjs` refuses to repair
+          # classified. `app/lib/health/repair.mjs` refuses to repair
           # anything when an unknown check is failing, including the known ones
           # failing beside it, and the run fails so a person reads it.
           #

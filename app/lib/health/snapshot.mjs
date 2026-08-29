@@ -28,11 +28,17 @@
  * ## THE SNAPSHOT IS A BYPRODUCT, NEVER ITS OWN JOB
  *
  * Nothing runs the suite in order to fill this. `/api/health` runs it because
- * that is what it is for, and writes the verdict on the way out; the scheduled
- * poll every fifteen minutes goes through that same endpoint, so the schedule
- * is what keeps the snapshot fresh without a second timer existing. If the
- * endpoint stops being polled the snapshot ages and the tile says so, which is
- * the honest failure and is strictly better than a page that recomputes.
+ * that is what it is for, and writes the verdict on the way out; the watchdog
+ * Worker's poll every fifteen minutes goes through that same endpoint, so the
+ * schedule is what keeps the snapshot fresh without a second timer existing. If
+ * the endpoint stops being polled the snapshot ages and the tile says so, which
+ * is the honest failure and is strictly better than a page that recomputes.
+ *
+ * THE CONSEQUENCE IS LOAD BEARING AND IS USED AS AN INSTRUMENT: because this is
+ * written by the health call and by nothing else, the tile's AGE is the
+ * watchdog's liveness. That is what the production freshness assertion checks
+ * after a deploy, and it is why nothing may ever stamp this key directly. A
+ * watchdog that wrote its own snapshot would be manufacturing its own alibi.
  *
  * ## WHY AGE IS SHOWN RATHER THAN HIDDEN
  *
@@ -53,22 +59,32 @@ export const HEALTH_SNAPSHOT_KEY = "health:snapshot";
 /**
  * How often the snapshot is expected to be refreshed, in seconds.
  *
- * The SECOND statement of the schedule in `.github/workflows/health.yml`, and
- * it cannot be derived at runtime because a Worker cannot read the workflow
- * file. Rule 17 is satisfied by binding rather than by deletion:
- * `check:invariants` section 25 parses the cron out of that workflow and
- * fails if it no longer means this many seconds.
+ * The SECOND statement of the WATCHDOG's cron, declared in
+ * `wrangler.watchdog.jsonc`, and it cannot be derived at runtime because a
+ * Worker cannot read another Worker's config. Rule 17 is satisfied by binding
+ * rather than by deletion: `check:invariants` section 25 parses the cron out of
+ * that config and fails if it no longer means this many seconds.
+ *
+ * THE OWNER MOVED 2026-08-29. It was the GitHub workflow's cron, which was
+ * correct while that workflow was the only thing polling. Measured 2026-08-28,
+ * that schedule fired 2 times in a day against 96 expected, so the watchdog
+ * Worker took the fifteen-minute poll and the workflow dropped to hourly as the
+ * off-platform second opinion. The tile's staleness rule follows whichever
+ * watcher is actually setting the pace, which is now the one on this account.
  */
 export const HEALTH_POLL_INTERVAL_SECONDS = 15 * 60;
 
 /**
  * How old a snapshot may be before the tile stops presenting it as a verdict.
  *
- * THREE intervals, not one. A single missed poll is normal: GitHub's scheduled
- * runs are documented as best-effort and are routinely late under load, which
- * `health.yml` already says in its own note (2). Alarming on one late poll
- * would make the tile flap for a reason that has nothing to do with the site's
- * health, which is the noise that gets monitors muted.
+ * THREE intervals, not one. A single missed poll is normal, and the tolerance
+ * is KEPT at three even though the watchdog's Cron Trigger should be far more
+ * reliable than the GitHub schedule it replaced. Two reasons, and neither is
+ * inertia: a Cron Trigger is still best effort and may be delayed under load,
+ * and the tolerance is what stops the tile flapping for a reason that has
+ * nothing to do with the site's health, which is the noise that gets monitors
+ * muted. Tightening it is a decision to make after the new cadence has been
+ * observed, not on the day it lands.
  */
 export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECONDS;
 
