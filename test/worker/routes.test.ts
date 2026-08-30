@@ -61,12 +61,23 @@ describe("/theme", () => {
     expect(response.headers.get("location")).toBe("/blog/a-post");
   });
 
-  it("KEEPS THE HASH, so a scriptless reader lands where they were reading", async () => {
+  it("ECHOES A FRAGMENT when the referer carries one, which a browser never does", async () => {
     /*
-     * It was dropped, so the no-script toggle returned a reader to the TOP of
-     * whatever they were reading. On a long post that is the worst possible
-     * place to land, and the cost fell entirely on the readers the fallback
-     * exists for: the scripted path never navigates.
+     * THE FUNCTION'S CONTRACT, NOT THE WIRE'S BEHAVIOUR, and the difference is
+     * the point of this comment.
+     *
+     * `safeReturnTo` echoes `url.hash`, and this case proves it does so through
+     * the same origin and protocol-relative checks as everything else. What it
+     * CANNOT prove is that a reader benefits, because the header below is
+     * synthetic: `Referer` never carries a fragment, RFC 9110 requires it
+     * stripped, and check:browser measured the real thing on 2026-08-29 and saw
+     * the fragment gone.
+     *
+     * Kept, because the echo is real behaviour worth pinning and this is the
+     * only place that pins it. Renamed, because the old name claimed a reader
+     * outcome that a constructed input cannot demonstrate. That gap between a
+     * test's input and the world's is exactly what let the claim stand for a
+     * day.
      */
     const response = await themeAction({
       request: themePost("theme=light", {

@@ -46,21 +46,31 @@ export function safeReturnTo(request) {
      */
     if (url.pathname.startsWith("//")) return "/";
     /*
-     * THE HASH IS KEPT, since 2026-08-28, and it is validated by the same three
-     * lines above that validate everything else.
+     * THE HASH IS ECHOED, and MEASUREMENT SAYS IT IS NEVER THERE.
      *
-     * It was dropped, so the no-script toggle returned a reader to the TOP of
-     * whatever they were reading. On a long post that is the worst possible
-     * place to land: the reader was somewhere specific, asked for a colour, and
-     * was sent back to the beginning. The scripted path never had this problem,
-     * because it never navigates, so the cost fell entirely on the readers the
-     * fallback exists for.
+     * Added 2026-08-28 to stop the no-script toggle returning a reader to the
+     * TOP of whatever they were reading. That reasoning was right about the
+     * cost and wrong about the cure, and the correction is measured rather than
+     * argued: check:browser drove a real form post in real Chrome with script
+     * disabled on 2026-08-29, and the fragment was gone.
      *
-     * NOTHING NEW HAS TO BE VALIDATED. The fragment is a component of the URL
-     * this function has already proven is same-origin and not protocol-relative;
-     * a fragment cannot change the destination host or path, which is what the
-     * checks above are about. It is echoed rather than parsed, exactly as
-     * `search` is.
+     * **`Referer` NEVER CARRIES A FRAGMENT.** RFC 9110 requires it stripped, so
+     * `url.hash` here is the empty string on every request a browser makes. The
+     * branch is unreachable on the path it was written for.
+     *
+     * NO SERVER-SIDE FIX EXISTS, which is why this is documented rather than
+     * repaired. A fragment is never transmitted to an origin by anything: not
+     * in the Referer, not in the request line, not in a form post. `/theme`
+     * cannot learn it and therefore cannot redirect to it.
+     *
+     * The promise is still kept for readers who can be kept it: the SCRIPTED
+     * path holds position by never navigating at all.
+     *
+     * The echo STAYS. It costs nothing, it is validated by the same three lines
+     * above that validate everything else, and a caller that one day passes a
+     * URL from somewhere other than a `Referer` gets correct behaviour rather
+     * than a silently truncated one. What is removed is the CLAIM that it does
+     * something for the no-script reader today.
      */
     return url.pathname + url.search + url.hash;
   } catch {
