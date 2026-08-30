@@ -33,6 +33,14 @@ import {
   demoAnchor,
 } from "~/lib/playground-page.mjs";
 import { search } from "~/lib/search/search.server";
+/*
+ * The theme resolver, IMPORTED. `themeFromRequest` is the function
+ * `workers/app.ts` calls on every request to build its cache key and that
+ * `root.tsx` calls to write `data-theme` into the first byte of HTML, so a
+ * demo that reimplemented it would keep agreeing with itself while the site
+ * disagreed with both.
+ */
+import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import {
   publicHtmlHeaders,
   pageMeta,
@@ -113,6 +121,7 @@ const DEMOS = playgroundData.demos;
 const SWATCHES = playgroundData.swatches;
 const DATASETS = playgroundData.datasets;
 const KEY_PRESETS = playgroundData.keyPresets;
+const COOKIE_PRESETS = playgroundData.cookiePresets;
 
 type DatasetKey = keyof typeof DATASETS;
 
@@ -140,6 +149,24 @@ const QUERY_CAP = 100;
  * and still small enough that no input can cost anything.
  */
 const KEY_CAP = 120;
+
+/**
+ * The theme demo's input bounds. TWO, and the second is not a length.
+ *
+ * LENGTH: cut at this many characters, said in the form and reported by the
+ * loader, the same shape the other two caps take.
+ *
+ * SHAPE: printable ASCII only, and this one is a REFUSAL rather than a cut.
+ * The demo runs the real `themeFromRequest`, which takes a Request, so the
+ * input has to become a real header value. A control character in a header
+ * value makes `new Request` throw a TypeError, and a demo whose input can
+ * crash its own loader is a demo that answers some readers with a stack trace.
+ * Refusing the shape up front means the request is only ever constructed from
+ * something a browser could actually have sent, which is also the only input
+ * the answer would mean anything for.
+ */
+const COOKIE_CAP = 200;
+const PRINTABLE_ASCII = /^[\x20-\x7E]*$/;
 
 export function meta() {
   /* Was canonical plus OG text with NO image and NO twitter card, so a shared
@@ -261,6 +288,54 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     };
   }
 
+  /* -------------------------------------------------------------- theme --- */
+
+  /*
+   * PRESENCE, NOT TRUTHINESS, decides whether this demo ran.
+   *
+   * The empty cookie header is a REAL AND INTERESTING CASE here: it is the
+   * reader who has chosen nothing, which is the default branch the whole
+   * anti-flash design rests on. Keying on `params.has` rather than on the
+   * string being non-empty is what lets that case have a URL at all. The other
+   * demos key on a non-empty value because for them the empty input means
+   * "not asked".
+   */
+  const cookieAsked = params.has("cookie");
+  const cookieRaw = params.get("cookie") ?? "";
+  const cookie = cookieRaw.slice(0, COOKIE_CAP);
+  let themeResult = null;
+  let themeError: string | null = null;
+
+  if (cookieAsked) {
+    if (cookieRaw.length > COOKIE_CAP) {
+      themeError = `That header is ${cookieRaw.length} characters. The cap is ${COOKIE_CAP}, so it was cut.`;
+    }
+    if (!PRINTABLE_ASCII.test(cookie)) {
+      themeError =
+        "A Cookie header carries printable characters only. That string holds a " +
+        "control character, which no browser can send and which would make the " +
+        "request itself refuse to be built, so nothing was resolved.";
+    } else {
+      /*
+       * A REAL REQUEST, because the real function takes one. Constructed with
+       * no cookie header at all when the input is empty, which is a different
+       * thing from an empty one and is the state a first-time reader arrives
+       * in: the resolver's first line is a test for the header's absence.
+       */
+      const request = new Request(
+        "https://example.invalid/",
+        cookie ? { headers: { cookie } } : undefined,
+      );
+      const theme = themeFromRequest(request);
+      themeResult = {
+        cookie,
+        theme,
+        attribute: themeAttribute(theme) ?? null,
+        colorScheme: colorSchemeMeta(theme),
+      };
+    }
+  }
+
   /* -------------------------------------------------------------- chart --- */
   const markParam = params.get("mark");
   const dataParam = params.get("data");
@@ -310,6 +385,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     keyResult,
     keyError,
     keyRaw: key,
+    themeResult,
+    themeError,
+    cookieAsked,
+    cookieRaw: cookie,
     chartHtml,
     chartRenderError,
     chartError: chartError.trim(),
@@ -402,16 +481,23 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
     lab, labError, fgRaw, bgRaw,
     anatomy, anatomyError, qRaw,
     keyResult, keyError, keyRaw,
+    themeResult, themeError, cookieAsked, cookieRaw,
     chartHtml, chartRenderError, chartError, mark, dataset, datasetNote, datasetLabel,
   } = loaderData;
 
   // Hidden fields keep the other demos' results alive across a submit.
-  const carry = (except: "lab" | "search" | "key" | "chart") => (
+  const carry = (except: "lab" | "search" | "key" | "theme" | "chart") => (
     <>
       {except !== "lab" && fgRaw && <input type="hidden" name="fg" value={fgRaw} />}
       {except !== "lab" && bgRaw && <input type="hidden" name="bg" value={bgRaw} />}
       {except !== "search" && qRaw && <input type="hidden" name="q" value={qRaw} />}
       {except !== "key" && keyRaw && <input type="hidden" name="key" value={keyRaw} />}
+      {/* Carried on PRESENCE, matching the loader: an empty cookie is a real
+          result here, so dropping it would lose that demo's state on any other
+          demo's submit. */}
+      {except !== "theme" && cookieAsked && (
+        <input type="hidden" name="cookie" value={cookieRaw} />
+      )}
       {except !== "chart" && (
         <>
           <input type="hidden" name="mark" value={mark} />
@@ -826,6 +912,100 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                   strict readers were simultaneously refusing to give a digest
                   for. A grammar with two spellings fails exactly when the writer
                   moves, which is the one moment it is needed.
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* --------------------------------------------------- theme --- */}
+          <section id={demoAnchor("theme-resolution")} className="playground-demo">
+            <DemoHeader slug="theme-resolution" />
+
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+              {carry("theme")}
+              <div className="playground-field playground-field-wide">
+                <label htmlFor="pg-cookie">Cookie header</label>
+                <input
+                  id="pg-cookie" name="cookie" type="text" inputMode="text"
+                  maxLength={COOKIE_CAP} spellCheck={false}
+                  defaultValue={cookieRaw}
+                  aria-describedby="pg-cookie-cap"
+                />
+              </div>
+              <button type="submit">Resolve</button>
+              <p id="pg-cookie-cap" className="playground-cap">
+                Up to {COOKIE_CAP} printable characters. Your own cookie is not
+                read and nothing you type is stored: the resolver is handed a
+                request built from this box and from nothing else.
+              </p>
+            </Form>
+
+            <ul className="playground-swatches">
+              {COOKIE_PRESETS.map((preset) => (
+                <li key={preset.label}>
+                  <Link
+                    to={`${PLAYGROUND_URL}?cookie=${encodeURIComponent(preset.cookie)}#${demoAnchor("theme-resolution")}`}
+                  >
+                    {preset.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {themeError && <Problem>{themeError}</Problem>}
+
+            {themeResult && (
+              <div className="playground-result">
+                <dl className="playground-metrics">
+                  <div>
+                    <dt>Cookie header</dt>
+                    <dd>{themeResult.cookie === "" ? "none sent" : themeResult.cookie}</dd>
+                  </div>
+                  <div>
+                    <dt>Resolved theme</dt>
+                    <dd>{themeResult.theme}</dd>
+                  </div>
+                  <div>
+                    <dt>data-theme</dt>
+                    {/*
+                      THE ABSENCE IS THE ANSWER for a reader on system, so it is
+                      spelled out rather than rendered as an empty cell. An empty
+                      cell reads as a bug; "omitted" reads as the mechanism it is.
+                    */}
+                    <dd>{themeResult.attribute ?? "omitted"}</dd>
+                  </div>
+                  <div>
+                    <dt>meta color-scheme</dt>
+                    <dd>{themeResult.colorScheme}</dd>
+                  </div>
+                </dl>
+
+                <p className="playground-note">
+                  The choice is a cookie rather than local storage, and that is
+                  the whole anti-flash design. Local storage is unreadable on the
+                  server, so a site that keeps the theme there has to paint once
+                  and then correct itself, which is the flash. A cookie arrives
+                  with the request, so the server writes the right{" "}
+                  <code>data-theme</code> into the very first byte of HTML and
+                  nothing is ever corrected.
+                </p>
+                <p className="playground-note">
+                  Omitting the attribute is not a missing value, it is the
+                  mechanism: with no <code>data-theme</code> the stylesheet falls
+                  through to <code>prefers-color-scheme</code> and the machine
+                  decides. That is why a legacy <code>theme=system</code> cookie
+                  and no cookie at all resolve to the same thing here rather than
+                  to two states that merely look alike.
+                </p>
+                <p className="playground-note">
+                  The meta element is separate from the attribute and does a
+                  different job. <code>data-theme</code> tells the STYLESHEET
+                  which palette to use and tells the browser nothing, because the
+                  browser cannot know what that attribute means until it has
+                  parsed the CSS that gives it meaning. Until then the canvas it
+                  paints between documents is the default one, and the default is
+                  light: a white frame, for exactly one composited frame, for the
+                  reader whose choice disagrees with their machine.
                 </p>
               </div>
             )}

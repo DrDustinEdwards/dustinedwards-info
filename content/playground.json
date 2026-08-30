@@ -111,6 +111,76 @@
         "role",
         "kind and media type, or the classifier's refusal"
       ]
+    },
+    {
+      "slug": "theme-resolution",
+      "title": "Theme resolution",
+      "lede": "A Cookie header in, the theme this site would serve out. This is the function the Worker calls on every single request, before it renders anything, and it is why nothing on this site flashes the wrong colours.",
+      "realPath": "app/lib/theme.ts, called by workers/app.ts on every request and by root.tsx to write the first byte of HTML",
+      "homeArticle": {
+        "slug": "a-color-palette-that-can-prove-itself",
+        "title": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
+      },
+      "inputs": [
+        {
+          "name": "cookie",
+          "kind": "text",
+          "label": "Cookie header",
+          "cap": "up to 200 characters, printable only",
+          "maxLength": 200,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        "the resolved theme",
+        "the data-theme attribute, or its absence",
+        "the color-scheme meta content"
+      ]
+    }
+  ],
+  "$cookiePresetComment": "The theme demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER IS HAND-WRITTEN from the rules in app/lib/theme.ts, never captured from a run: hard rule 10's fixture independence, the same bargain the swatches and the key presets make. `attribute` is the data-theme value or null for the absence that hands the decision to prefers-color-scheme. The set covers every BRANCH rather than being long: both writable values, the legacy value that is honoured as the no-cookie path, no cookie at all, a theme cookie sitting among unrelated ones, the malformed percent-escape that used to throw a URIError on every page for that reader, and a value nothing writes.",
+  "cookiePresets": [
+    {
+      "label": "A reader who chose dark",
+      "cookie": "theme=dark",
+      "note": "One of the two values the endpoint accepts, because the control posts the theme it is switching TO and that is only ever light or dark.",
+      "expect": { "theme": "dark", "attribute": "dark", "colorScheme": "dark" }
+    },
+    {
+      "label": "A reader who chose light",
+      "cookie": "theme=light",
+      "note": "The other writable value. The attribute is written into the first byte of HTML, so the server never has to correct itself.",
+      "expect": { "theme": "light", "attribute": "light", "colorScheme": "light" }
+    },
+    {
+      "label": "Nobody has chosen",
+      "cookie": "",
+      "note": "The default branch, not a fallback. The attribute is ABSENT, which is what hands the decision to prefers-color-scheme, and the meta says the document supports both because asserting one would be claiming a choice nobody made.",
+      "expect": { "theme": "system", "attribute": null, "colorScheme": "light dark" }
+    },
+    {
+      "label": "A legacy cookie from the three-button control",
+      "cookie": "theme=system",
+      "note": "The control could write this and those cookies live in readers' browsers for a year, which is the max-age. It resolves exactly as no cookie does, so the two readers converge on one cache entry and one document rather than on two that happen to look alike.",
+      "expect": { "theme": "system", "attribute": null, "colorScheme": "light dark" }
+    },
+    {
+      "label": "Among other cookies",
+      "cookie": "_ga=1; theme=dark; sid=abc",
+      "note": "The header is split and walked, so position does not matter. Worth seeing because the presence of ANY cookie, not this one, is what downgrades a response to private on the wire.",
+      "expect": { "theme": "dark", "attribute": "dark", "colorScheme": "dark" }
+    },
+    {
+      "label": "A malformed percent escape",
+      "cookie": "theme=%%%bogus",
+      "note": "Decoding this raises a URIError. Nothing this site writes can produce it, but a cookie is client state: hand-edited, truncated by a proxy, corrupted in storage. It was unguarded until a test found it, and the throw landed on the cache-key path, which made it a server error on every page for that reader until they found and cleared a cookie nothing told them about.",
+      "expect": { "theme": "system", "attribute": null, "colorScheme": "light dark" }
+    },
+    {
+      "label": "A value nothing writes",
+      "cookie": "theme=purple",
+      "note": "Junk and the legacy value take the same road: anything outside the writable set falls to the default rather than throwing, because a bad cookie should cost a reader the default theme and never the page.",
+      "expect": { "theme": "system", "attribute": null, "colorScheme": "light dark" }
     }
   ],
   "$keyPresetComment": "The key demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER HERE IS HAND-WRITTEN from the grammar in app/lib/media/classify.mjs, never captured from a run of it: hard rule 10's fixture independence, the same rule that keeps scripts/fixtures/icon-suite.json out of the generator's hands. check:features runs the real parsers over each key and compares. `dimensions` is a `<w>x<h>` string or null, `digest` is the sixteen hex digits or null, and `kind` is the classifier's kind or the literal \"refused\" for a key whose extension it throws on. The set is chosen to cover every BRANCH rather than to be long: both content-key forms, the leading-zero dimension the collapsing differential caught, a /media/ path carrying a transform query, an og/ derived key, a brand asset, and an extension the classifier refuses.",

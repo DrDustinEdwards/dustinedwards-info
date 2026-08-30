@@ -100,6 +100,10 @@ import {
   roleOf,
   storageOf,
 } from "../app/lib/media/classify.mjs";
+// The theme resolver, for the same reason: the demo's claim is that it runs the
+// function the Worker runs, and a gate restating the rules would agree with
+// itself while the site disagreed with both.
+import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/theme.ts";
 // The three real code paths the playground demos run. Imported rather than
 // reimplemented, which is the whole claim the playground section verifies.
 import { apca, contrast } from "../app/lib/contrast.mjs";
@@ -1790,6 +1794,7 @@ const deferredDemos = playgroundDoc.deferred ?? [];
 const swatches = playgroundDoc.swatches ?? [];
 const datasets = playgroundDoc.datasets ?? {};
 const keyPresets = playgroundDoc.keyPresets ?? [];
+const cookiePresets = playgroundDoc.cookiePresets ?? [];
 const playgroundChecksBefore = checks;
 
 /** Serialised exactly as check:charts does, so both see the artifact's HTML. */
@@ -1827,6 +1832,11 @@ ok(
   "key presets are declared",
   keyPresets.length > 0,
   "an empty list makes every behavioural key assertion below iterate nothing",
+);
+ok(
+  "cookie presets are declared",
+  cookiePresets.length > 0,
+  "an empty list makes every behavioural theme assertion below iterate nothing",
 );
 ok(
   "deferred demos are stated rather than omitted",
@@ -2236,6 +2246,187 @@ ok(
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
 
+/* -- behavioural: the theme resolver -------------------------------------- */
+
+/*
+ * RUN THE REAL RESOLVER OVER A REAL REQUEST, exactly as the demo does and
+ * exactly as the Worker does on every request.
+ *
+ * Expected answers are hand-written in the manifest, never captured. That
+ * matters most for the two rows that look identical and are not arrived at the
+ * same way: no cookie takes the resolver's first branch, the header-absent
+ * test, while a legacy `theme=system` walks the header, decodes, fails the
+ * writable-set test and falls through. A captured fixture would record that
+ * they agree; a written one asserts that they MUST, which is the property the
+ * shared cache entry depends on.
+ */
+for (const preset of cookiePresets) {
+  const label = preset.label ?? JSON.stringify(preset.cookie);
+  const expect = preset.expect ?? {};
+
+  ok(
+    `theme: ${label} declares a cookie header`,
+    typeof preset.cookie === "string",
+    "the empty string is a legal and important value here; undefined is not",
+  );
+  ok(
+    `theme: ${label} declares a note`,
+    typeof preset.note === "string" && preset.note.trim().length > 0,
+  );
+
+  /*
+   * NO HEADER AT ALL versus an EMPTY ONE, and the distinction is deliberate.
+   * The resolver's first line returns early when the header is absent, so
+   * building a request that always carries a `cookie:` header would route the
+   * no-cookie preset down the walking path and quietly stop testing that line.
+   */
+  const request = new Request(
+    "https://example.invalid/",
+    preset.cookie ? { headers: { cookie: preset.cookie } } : undefined,
+  );
+
+  /*
+   * A THROW IS A NAMED FAILURE HERE, NOT A CRASH, and this shape was chosen by
+   * a plant rather than by foresight.
+   *
+   * Removing the resolver's URIError guard made this loop die on the malformed
+   * escape preset: the gate exited non-zero with a stack trace and recorded NO
+   * assertion, which is "EXIT 1 IS NOT EVIDENCE" in its purest form. The gate
+   * was right that something was wrong and useless about what.
+   *
+   * It also matters beyond the plant. The one thing this preset exists to prove
+   * is that a malformed cookie costs a reader the default theme and never the
+   * page, and a gate that dies on it proves that by dying, which nothing
+   * downstream can read. So the throw is caught and reported AS the failure of
+   * this preset, with the message, and the loop carries on to the rest.
+   */
+  let theme;
+  try {
+    theme = themeFromRequest(request);
+  } catch (error) {
+    ok(
+      `theme: ${label} resolves without throwing`,
+      false,
+      `the resolver threw ${error instanceof Error ? error.message : String(error)}. ` +
+        `A bad cookie must cost a reader the default theme, never the page, and ` +
+        `this function runs on the cache-key path before anything renders.`,
+    );
+    continue;
+  }
+  ok(
+    `theme: ${label} resolves to ${expect.theme}`,
+    theme === expect.theme,
+    `the module says ${theme}`,
+  );
+
+  const attribute = themeAttribute(theme) ?? null;
+  ok(
+    `theme: ${label} data-theme is ${JSON.stringify(expect.attribute)}`,
+    attribute === expect.attribute,
+    `the module says ${JSON.stringify(attribute)}; the ABSENCE is what hands the ` +
+      `decision to prefers-color-scheme, so null and a value are different answers`,
+  );
+
+  ok(
+    `theme: ${label} color-scheme meta is ${JSON.stringify(expect.colorScheme)}`,
+    colorSchemeMeta(theme) === expect.colorScheme,
+    `the module says ${JSON.stringify(colorSchemeMeta(theme))}`,
+  );
+}
+
+/*
+ * BRANCH COVERAGE, asserted rather than left to the curator, same as the key
+ * presets. Each of these is a line in the resolver that nothing else on this
+ * page would enter.
+ */
+const cookieValues = cookiePresets.map((/** @type {any} */ p) => String(p.cookie ?? ""));
+ok(
+  "theme: a preset sends no cookie at all",
+  cookieValues.includes(""),
+  "the header-absent branch is the default every first-time reader takes, and it " +
+    "is the one an always-send-a-header fixture stops testing",
+);
+ok(
+  "theme: a preset carries the legacy system value",
+  cookieValues.some((/** @type {string} */ v) => /(^|;\s*)theme=system(\s*;|$)/.test(v)),
+  "those cookies exist in readers' browsers for a year and must keep resolving " +
+    "to the no-cookie document, or the two split into separate cache entries",
+);
+ok(
+  "theme: a preset carries a malformed percent escape",
+  cookieValues.some((/** @type {string} */ v) => v.includes("%%%")),
+  "decoding it raises a URIError on the cache-key path, which was a server error " +
+    "on every page for that reader until it was guarded",
+);
+ok(
+  "theme: a preset carries the theme among other cookies",
+  cookieValues.some((/** @type {string} */ v) => v.includes(";") && v.includes("theme=")),
+  "the header is walked rather than matched whole, and only a multi-cookie " +
+    "fixture exercises that",
+);
+ok(
+  "theme: presets cover both writable values",
+  ["light", "dark"].every((value) =>
+    cookiePresets.some((/** @type {any} */ p) => p.expect?.theme === value),
+  ),
+  "the endpoint accepts exactly these two and both must resolve",
+);
+
+/* -- the theme demo is WIRED to the module and to the Worker's own caller -- */
+
+/*
+ * BOTH NEEDLES ARE WORD-ANCHORED, and that was found by a plant rather than by
+ * care. The Worker assertion below was written unanchored; the plant renamed
+ * `themeFromRequest` to `themeFromRequestLegacy` throughout workers/app.ts and
+ * the gate stayed GREEN, because the longer name CONTAINS the shorter one.
+ *
+ * That is hard rule 10's unanchored-needle class, and it is structural in this
+ * repository rather than a one-off: `check:head`/`check:headers` and
+ * `check:content`/`check:contrast` are the recorded prefix pairs, and an
+ * identifier plus a suffix is the same trap wearing a different hat. Anchor
+ * every needle that verifies a NAME.
+ */
+ok(
+  "theme: the page imports the resolver",
+  /from\s+["']~\/lib\/theme["']/.test(playgroundSource) &&
+    /\bthemeFromRequest\b/.test(playgroundSource),
+  "the demo must call the real resolver, not restate its rules",
+);
+/*
+ * THE DEMO'S CENTRAL CLAIM, ANCHORED. Its lede says this is the function the
+ * Worker calls on every request. That is a sentence about another file, so it
+ * is checked against that file rather than left as prose: if the Worker ever
+ * stops resolving the theme this way, the claim goes red here instead of
+ * quietly becoming a boundary note that aged (hard rule 7).
+ */
+ok(
+  "theme: the Worker still resolves the theme through this function",
+  /\bthemeFromRequest\b/.test(stripped(readFileSync(join(root, "workers", "app.ts"), "utf8"))),
+  "the demo's lede claims workers/app.ts calls it on every request, and it no longer does",
+);
+ok(
+  "theme: the page keys the demo on parameter PRESENCE, not on a non-empty value",
+  /params\.has\(["']cookie["']\)/.test(playgroundSource),
+  "the empty cookie header is this demo's most important case, and a truthiness " +
+    "test would make it unreachable by URL",
+);
+ok(
+  "theme: the page refuses a header shape a browser could not send",
+  /PRINTABLE_ASCII/.test(playgroundSource),
+  "an unguarded control character makes new Request throw, and a demo whose input " +
+    "can crash its own loader answers some readers with a stack trace",
+);
+ok(
+  "theme: the page states the input cap it enforces",
+  /Up to \{COOKIE_CAP\} printable characters/.test(playgroundSource),
+  "a cap enforced in the loader and unstated in the UI is a silent truncation",
+);
+ok(
+  "theme: the page renders the absent attribute as a word rather than a blank",
+  /"omitted"/.test(playgroundSource),
+  "an empty cell reads as a bug; the absence IS the answer for a reader on system",
+);
+
 /* -- behavioural: the chart renderer -------------------------------------- */
 
 for (const [key, dataset] of Object.entries(datasets)) {
@@ -2409,20 +2600,21 @@ for (const anchor of playgroundRecordAnchors) {
  * less the ~8% margin the rest of the family uses.
  */
 const playgroundChecks = checks - playgroundChecksBefore;
-const MINIMUM_PLAYGROUND_CHECKS = 208;
+const MINIMUM_PLAYGROUND_CHECKS = 256;
 if (playgroundChecks < MINIMUM_PLAYGROUND_CHECKS) {
   ok(
     "the playground section executed its assertions",
     false,
     `only ${playgroundChecks} ran, expected at least ${MINIMUM_PLAYGROUND_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 226 on 2026-08-30, ` +
-      `against 142 before the key demo.`,
+      `A block was SKIPPED rather than failing. Measured: 278 on 2026-08-30, ` +
+      `against 226 before the theme demo and 142 before the key demo.`,
   );
 }
 
 console.log(
   `  ${demos.length} demo(s), ${Object.keys(datasets).length} dataset(s), ` +
     `${swatches.length} swatch(es), ${keyPresets.length} key preset(s), ` +
+    `${cookiePresets.length} cookie preset(s), ` +
     `${deferredDemos.length} deferred, ` +
     `${playgroundRecords.length} artifact record(s), ${playgroundChecks} assertion(s)`,
 );
@@ -2441,19 +2633,20 @@ console.log(
  * projects section in this very file.
  *
  * **RE-MEASURED 2026-08-30, twice in one day: 715 after the roster build-out and
- * 801 after the key demo, against 583 on 2026-08-14.**
+ * 801 after the key demo and 854 after the theme demo, against 583 on
+ * 2026-08-14.**
  *
  * Floored at 660, roughly 7 percent. More slack than the small gates get,
  * because this count moves with the CORPUS: posts, tags, projects and demos all
  * feed it, so ordinary content work shifts it by tens.
  */
-const MINIMUM_CHECKS = 740;
+const MINIMUM_CHECKS = 790;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured: 801 on 2026-08-30.`,
+      `rather than failing. Measured: 854 on 2026-08-30.`,
   );
 }
 
