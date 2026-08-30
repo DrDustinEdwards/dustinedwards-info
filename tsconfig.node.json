@@ -71,6 +71,13 @@
     // app/routes/projects.tsx renders the card anchors from the same
     // `projectAnchor`, so a record cannot cite a fragment the page omits.
     "app/lib/projects-page.mjs",
+    // The theme resolver. THREE readers now: workers/app.ts builds its cache
+    // key with it, root.tsx writes data-theme from it, and check:features runs
+    // it over the playground's cookie presets. The playground demo's whole
+    // claim is that it calls the function the Worker calls, so the gate has to
+    // reach the same module rather than restate its rules. No DOM: it takes a
+    // Request, which the Node lib provides.
+    "app/lib/theme.ts",
     // The roster data, for the SAME reason app/lib/seo.ts is listed: a script
     // imports it by its real filename rather than restating what it contains.
     // check:features derives the roster card's metric from PHAGE_YEARS through
