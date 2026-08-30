@@ -22,6 +22,7 @@ import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
 // The one JavaScript owner of "is this post publicly visible". Composed rather
 // than restated, for the reason that module's header records: a hand-rolled
 // third copy of this rule is what leaked five drafts into Ask on 2026-07-29.
+import { longDateUTC } from "../long-date.mjs";
 import { isPubliclyVisible, statusForDraft } from "../search/visibility.mjs";
 import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
@@ -40,6 +41,7 @@ import { visit } from "unist-util-visit";
 import { z } from "zod";
 
 import { classify } from "../media/classify.mjs";
+import { cardDescription, cardTitle } from "./og-card-text.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
 import { buildChartModel, renderChartHast } from "./chart.mjs";
@@ -423,8 +425,22 @@ export function setWasmLoader(loader) {
  * and the tags were rendered and not hashed. Both are fixed below. The version
  * is NOT bumped again for it, because changing the inputs already moves every
  * key, and nothing has ever been served at 3.
+ *
+ * 4: the full-bleed plum card, 2026-08-30. The band and the canvas are gone and
+ * the whole card is `--surface-chrome`; the mark sits alone in the top corner,
+ * and the title, a two-line description, an accent rule and a byline of the
+ * site name and the publication date hang off the foot. The title is FITTED to
+ * its length rather than pinned at one size (`og-card-text.mjs`). Tags are no
+ * longer drawn.
+ *
+ * THE HASH SET MOVES WITH IT, by the same law the v3 note states rather than by
+ * a new one: hash what is drawn. Tags leave the input because they left the
+ * card. The description and the publication date join it because they are on
+ * the card now, and they join it AS DRAWN, through the same clamp the template
+ * paints with, so an edit past the cut does not mint a key for a picture that
+ * did not change.
  */
-const OG_TEMPLATE_VERSION = 3;
+const OG_TEMPLATE_VERSION = 4;
 
 /**
  * The R2 key for a post's generated social image.
@@ -443,15 +459,31 @@ const OG_TEMPLATE_VERSION = 3;
  *   immutable object nobody would re-request stayed correct forever and wrong
  *   forever. A stale card in the other direction, which is the worse half.
  *
- * So the input is the template version, the slug, the title, and THE TAGS THE
- * CARD ACTUALLY DRAWS. `slice(0, 3)` mirrors the template rather than hashing
- * every tag: a fourth tag changes nothing on the picture, so it must not move
- * the key. The separator is a comma because tags are slugs, `[a-z0-9-]+`, so no
- * tag can contain one and no two tag lists can collide.
+ * AT v4 THE SAME LAW MOVED THE SET AGAIN, in the direction it always points.
+ * Tags left the card, so they leave the hash. The description and the
+ * publication date arrived on the card, so they join it.
+ *
+ * EVERY TEXT INPUT IS HASHED AS DRAWN, through the very functions the template
+ * paints with, which is `slice(0, 3)`'s principle generalised. `cardTitle` and
+ * `cardDescription` cut on a word boundary; `longDateUTC` is the one owner of a
+ * timestamp as a date a person reads, and it is the STRING it returns that is
+ * hashed rather than the timestamp, because two instants in the same UTC day
+ * draw the same card and must not mint two keys. Hashing the raw fields instead
+ * would put back exactly the defect the v3 note above records: an edit past the
+ * cut minting a new key for a byte-identical picture.
+ *
+ * The title's fitted SIZE is not hashed and does not need to be: it is a pure
+ * function of the drawn title, which is hashed, so it cannot move on its own.
  *
  * The slug stays in the input even though it is not drawn. It costs nothing,
  * the key template puts it in the object name anyway, and dropping it would be
  * a second change riding along with a ruling that did not ask for one.
+ *
+ * The separator is a newline, and every field is now free text, so it is worth
+ * saying why that is still safe: the fields are joined in a FIXED ORDER and the
+ * count is fixed, so a newline inside a description shifts nothing into another
+ * field's position. A collision would need two posts whose whole joined input
+ * matched, which is the same string.
  *
  * FNV-1a rather than a crypto hash: pure JS, identical in Node and in a Worker,
  * no imports, and this is a cache-busting key rather than a security boundary.
@@ -463,12 +495,28 @@ const OG_TEMPLATE_VERSION = 3;
  *
  * The TEMPLATE is an input too, via OG_TEMPLATE_VERSION above.
  *
- * @param {{ slug: string, title: string, tags?: string[] }} post
+ * @param {{
+ *   slug: string,
+ *   title: string,
+ *   description?: string | null,
+ *   publishAt?: string | null,
+ * }} post
  */
 
 export function ogImageKey(post) {
-  const tags = (post.tags ?? []).slice(0, 3).join(",");
-  const input = `${OG_TEMPLATE_VERSION}\n${post.slug}\n${post.title}\n${tags}`;
+  /*
+   * An absent or unreadable date contributes NOTHING to the input, because it
+   * contributes nothing to the card: the template assembles its byline from a
+   * filtered list and simply omits the date. This is not hard rule 13's
+   * substitution class, which is a fallback standing IN for a value that failed
+   * to arrive. There is nothing standing in here; drawn-nothing hashes as
+   * nothing, and the two stay in step by saying so out loud rather than by a
+   * bare `??` a reader has to interpret.
+   */
+  const drawnDate = longDateUTC(post.publishAt);
+  const input =
+    `${OG_TEMPLATE_VERSION}\n${post.slug}\n${cardTitle(post.title)}\n` +
+    `${cardDescription(post.description)}\n${drawnDate === null ? "" : drawnDate}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);

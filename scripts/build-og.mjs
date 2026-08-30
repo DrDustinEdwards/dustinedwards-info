@@ -46,7 +46,13 @@ import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
+import {
+  cardDescription,
+  cardTitle,
+  titleFontSize,
+} from "../app/lib/content/og-card-text.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { longDateUTC } from "../app/lib/long-date.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
@@ -73,7 +79,7 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 /**
- * Hill Country LIGHT tokens, RESOLVED FROM app.css rather than restated.
+ * Hill Country tokens, RESOLVED FROM app.css rather than restated.
  *
  * These were four hex literals, defended by a comment saying the card is an
  * image and so cannot read a stylesheet. That conflates two different moments.
@@ -86,8 +92,27 @@ const HEIGHT = 630;
  * moved to purple chrome at v4 and these four sat unchanged, which is the
  * silent disagreement the shared reader was written to end.
  *
- * Light values, always. A card is rendered once and served into a feed that has
- * no idea which theme the reader prefers, so there is no variant to pick.
+ * ## THE DARK BLOCK, since the v4 card, and it is a choice rather than a mode
+ *
+ * A card is rendered once and served into a feed that has no idea which theme
+ * the reader prefers, so there is no variant to PICK and there never was: what
+ * this line chooses is which ratified surface the card is PAINTED ON. The
+ * previous card was the page canvas with a purple band across the top, so it
+ * took light values. This one is the deep plum surface edge to edge, and that
+ * surface is the DARK block's `--surface-chrome`.
+ *
+ * Taking the whole set from one block is the property that matters, not which
+ * block it is. `--on-chrome`, `--on-chrome-muted` and `--mark-on-chrome` are
+ * ratified AGAINST `--surface-chrome` within a theme, and `check:contrast`
+ * carries all three as matrix rows evaluated in every block. Mixing a light
+ * foreground onto a dark ground would leave the card outside every pair the
+ * palette has measured, which is the one thing this file must not do.
+ *
+ * `--mark-on-chrome` is the same hex in both blocks by ruling, so the mark
+ * `scripts/lib/mark.mjs` resolves from the light block and the accent resolved
+ * here cannot disagree. That is a coincidence worth naming rather than relying
+ * on silently: if the ruling is ever reversed, this file resolves its own copy
+ * and `check:logo` renders the other one.
  *
  * Changing WHICH TOKENS the card uses, or the layout, MUST still bump
  * OG_TEMPLATE_VERSION in pipeline.mjs. Resolving a value no longer requires an
@@ -96,22 +121,20 @@ const HEIGHT = 630;
  * behaviour and the reason the version bump is a judgement rather than a
  * mechanical consequence of editing this line.
  */
-const LIGHT = tokenBlock("build:og", THEME_SELECTORS.light);
+const CHROME_BLOCK = tokenBlock("build:og", THEME_SELECTORS.dark);
 const {
-  chrome: CHROME,
-  onChrome: ON_CHROME,
-  onChromeMuted: ON_CHROME_MUTED,
-  fg: FG,
-  bg: BG,
+  ground: GROUND,
+  onGround: ON_GROUND,
+  onGroundMuted: ON_GROUND_MUTED,
+  accent: ACCENT,
 } = resolveTokens(
   {
-    chrome: "--surface-chrome",
-    onChrome: "--on-chrome",
-    onChromeMuted: "--on-chrome-muted",
-    fg: "--text",
-    bg: "--bg",
+    ground: "--surface-chrome",
+    onGround: "--on-chrome",
+    onGroundMuted: "--on-chrome-muted",
+    accent: "--mark-on-chrome",
   },
-  LIGHT,
+  CHROME_BLOCK,
   "build:og",
 );
 
@@ -172,9 +195,51 @@ const SITE_NAME = siteName();
  * The card layout, as satori's element objects rather than JSX so this file
  * needs no build step of its own.
  *
- * @param {{ title: string, tags: string[] }} post
+ * ## THE v4 CARD, and what it is derived from
+ *
+ * Every value here comes from something already ratified: the ground and the
+ * three foreground colours are the chrome family from `app.css`, the mark is
+ * `scripts/lib/mark.mjs` at the geometry `check:logo` pins, the wordmark is
+ * `SITE.name`, the date is `longDateUTC`, the meta line's tracking and case are
+ * `.eyebrow`'s, and the fitted type is `app/lib/content/og-card-text.mjs`.
+ * Nothing on this card is invented here except WHERE things sit.
+ *
+ * ## THE GROUND IS THE WHOLE CARD, which is the change
+ *
+ * The previous card was the page canvas with a purple band across the top and a
+ * purple rule across the foot. That was the right picture of a site whose
+ * chrome is a band; it is the wrong picture of one whose identity IS the plum
+ * surface. Full bleed also survives the crop: platforms trim a 1.91:1 card
+ * differently, and a design whose meaning lives in two 12px-to-132px strips at
+ * the edges is a design that loses its meaning to a crop it cannot see.
+ *
+ * ## BINDING RULE 7, NAMED RATHER THAN QUIETLY LEFT BEHIND
+ *
+ * design-tokens.md rule 7 says body prose sits on the page canvas, never on
+ * cards. The previous template cited it to justify putting the title on the
+ * canvas. It does not reach this: rule 7 governs READING SURFACES, the places a
+ * person reads paragraphs, and its "cards" are the site's index cards. A social
+ * card carries a headline, one sentence and a byline at a size chosen to be
+ * seen rather than read, and it is one immutable image with no reading mode to
+ * degrade. What rule 7 protects, prose legibility over a long read, is not the
+ * property under test here; the contrast pairs are, and every pair the card
+ * paints is a `check:contrast` matrix row.
+ *
+ * ## THE MARK IS IN A CORNER AND THE TEXT HANGS OFF THE FOOT
+ *
+ * Two anchors, one at each end, and nothing floating in the middle. The title
+ * block grows UPWARD into the empty space as the title gets longer, so a long
+ * title eats air rather than walking into the meta line. That is what makes the
+ * fitted ladder a safety net rather than the only thing holding the layout
+ * together.
+ *
+ * @param {{
+ *   title: string,
+ *   description?: string | null,
+ *   publishAt?: string | null,
+ * }} post
  */
-function card(post) {
+export function card(post) {
   /**
    * @param {string} type
    * @param {any} props
@@ -186,58 +251,40 @@ function card(post) {
     props: { ...props, children: children.length === 1 ? children[0] : children },
   });
 
-  /**
-   * THE LINE CLAMP DOES NOT WORK, AND HAS NEVER WORKED.
+  /*
+   * THE TEXT AS DRAWN, from the module `ogImageKey` hashes through.
    *
-   * The title and the description both carried `display: -webkit-box` with
-   * `WebkitLineClamp`, and a comment saying satori has no ellipsis so long
-   * titles are clamped by line count. Measured on satori 0.29.0 while building
-   * this card: rendering the same overlong string with and without the clamp
-   * produces 269194 and 269341 bytes of SVG, one glyph path each. The property
-   * is inert.
-   *
-   * It went unnoticed because the v2 layout was `space-between` on a full-height
-   * canvas, which gave unclamped text room to sprawl without visibly colliding
-   * with anything. The chrome band and foot rule take 144px of that room.
-   *
-   * So the clamp is done HERE, in JavaScript, where it actually happens. Cutting
-   * on a word boundary rather than mid-word, and only when the text exceeds the
-   * cap, so nothing short is touched. The description is gone, so the title is
-   * the only caller left, and it is exactly the one that needed a real clamp:
-   * it is the block that would otherwise run into the foot rule.
-   *
-   * @param {string} value
-   * @param {number} max
+   * Both cuts happen HERE rather than in the layout, and both happen in
+   * JavaScript rather than in CSS, because satori's line clamp does not work
+   * and has never worked: rendering the same overlong string with and without
+   * `WebkitLineClamp` produced one glyph path of difference, measured on satori
+   * 0.29.0 while the previous template was built. The property is inert. A
+   * clamp that reads like a guarantee and is not one is worse than no clamp,
+   * and it survived two templates.
    */
-  const clamp = (value, max) => {
-    const text = (value ?? "").trim();
-    if (text.length <= max) return text;
-    const cut = text.slice(0, max);
-    const lastSpace = cut.lastIndexOf(" ");
-    return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[,;:.]$/, "")}…`;
-  };
+  const title = cardTitle(post.title);
+  const description = cardDescription(post.description);
 
   /*
-   * CHROME v4. The site's header and footer are BRAND SURFACE, so the card that
-   * represents the site in a feed carries the same identity: a purple band at
-   * the top holding the wordmark, and the reading area on the page canvas.
+   * The date, through the ONE owner of "a timestamp as a date a person reads".
    *
-   * This is the same relationship the page itself has, which is the point. The
-   * previous card was canvas everywhere with a 16px purple rule, chosen when
-   * purple was an accent rather than the chrome. Under v4 that reads as an old
-   * version of the site.
-   *
-   * Binding rule 7 is respected: the TITLE sits on the canvas, not on the brand
-   * surface. Only the mark, the wordmark and the tags ride the chrome, and all
-   * three take ratified on-chrome pairs.
-   *
-   * THE BANDS ARE 132 AND 12 ON PURPOSE, and everything that has to be read
-   * stays inside them. Platforms crop a 1.91:1 card differently and several of
-   * them crop the edges, so a band is the right place for the identity (it
-   * survives being trimmed, and nothing is lost if it is) and the wrong place
-   * for the title.
+   * `longDateUTC` returns null rather than the string "Invalid Date", which is
+   * the defect it was extracted to end, and null is why the meta line below is
+   * assembled from a filtered list instead of a template string. A card reading
+   * "Dustin Edwards . Invalid Date" would be a permanent, immutable object.
    */
-  const BAND = 132;
+  const date = longDateUTC(post.publishAt);
+
+  /*
+   * THE MEASURE, and why the paddings are what they are.
+   *
+   * 72px of side padding leaves a 1056px measure, which is what the ladder in
+   * og-card-text.mjs was measured against; changing it invalidates those
+   * breakpoints and is not a cosmetic edit. 64px top and bottom is the smallest
+   * margin at which the mark still reads as placed rather than as cropped.
+   */
+  const PAD_Y = 64;
+  const PAD_X = 72;
 
   return el(
     "div",
@@ -247,130 +294,147 @@ function card(post) {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        background: BG,
+        padding: `${PAD_Y}px ${PAD_X}px`,
+        background: GROUND,
         fontFamily: "Inter",
       },
     },
-    // The chrome band. Wordmark left, tags right, exactly as the site header
-    // carries the wordmark and its nav.
+    /*
+     * The mark, top left, from `scripts/lib/mark.mjs`, which reads the ratified
+     * fixtures and owns how the mark is drawn. This file owns only where it
+     * sits.
+     *
+     * That module is a SEAM, not a convenience: `check:logo` renders this same
+     * node and compares the result against a rasterisation of the committed
+     * fixture, so the shape this card embeds is asserted rather than assumed.
+     *
+     * ALONE IN ITS CORNER, and the wordmark is NOT beside it any more. It moved
+     * to the meta line at the foot, where it sits next to the date as a byline,
+     * which is what it is. A wordmark beside the mark at the top was the header
+     * quoted onto a card; a wordmark under the headline is attribution, and the
+     * card now has a top and a bottom rather than a band and a body.
+     */
+    el("div", { style: { display: "flex" } }, markElement()),
+    // The gap. Everything below hangs off the foot, so a long title grows up
+    // into this and never down into the meta line.
+    el("div", { style: { display: "flex", flex: 1 } }),
     el(
       "div",
       {
         style: {
-          height: BAND,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: CHROME,
-          padding: "0 72px",
+          fontSize: titleFontSize(title),
+          fontWeight: 700,
+          color: ON_GROUND,
+          lineHeight: 1.1,
+          letterSpacing: "-0.02em",
+          /*
+           * SATORI DOES HONOUR A WORD BREAK, contrary to the comment that stood
+           * on this template through two versions.
+           *
+           * "satori has no word-break" was written beside the character cap and
+           * inherited from there, and it is FALSE on satori 0.29.0. MEASURED
+           * 2026-08-30 with a control, because a "no overflow" reading is
+           * worthless without one: a 41-character unbroken word at 72px reaches
+           * x=1199 of 1200 with no property set, and x=1111 with this one, so
+           * the reading discriminates and the property took. `overflowWrap`, in
+           * both its spellings, is the one satori ignores; that is probably
+           * where the claim came from.
+           *
+           * It costs nothing on real titles, and that is measured too rather
+           * than assumed: the whole corpus renders BYTE-IDENTICALLY with and
+           * without it, so this only ever fires on the pathological case.
+           *
+           * It does not replace the character cap in `og-card-text.mjs`. The
+           * cap governs how much text there is; this governs what happens to
+           * one word that cannot fit the measure at any count.
+           */
+          wordBreak: "break-word",
         },
       },
-      el(
-        "div",
-        { style: { display: "flex", alignItems: "center" } },
-        // The mark itself, from `scripts/lib/mark.mjs`, which reads the
-        // ratified fixtures and owns how the mark is drawn. This file owns only
-        // where it sits, which is the 24px of air before the wordmark.
-        //
-        // That module is a SEAM, not a convenience: `check:logo` renders this
-        // same node and compares the result against a rasterisation of the
-        // committed fixture, so the shape this card embeds is asserted rather
-        // than assumed.
-        markElement({ marginRight: 24 }),
-        // The wordmark is the NAME, from `siteName()` above rather than a
-        // string spelled again here.
-        //
-        // The card briefly said `dustinedwards.info`, on the reasoning that a
-        // feed is doing attribution and the address is the actionable thing.
-        // Researched and reversed: every platform that renders one of these
-        // previews already prints the domain beneath it, from the URL, so the
-        // card was spending its only line of chrome type on the one string the
-        // reader was getting anyway, while the name appeared nowhere in the
-        // preview at all. And this band is the header: same mark, so the same
-        // wordmark beside it. A card that says something different from the
-        // page it opens is two identities, not one.
-        el(
-          "div",
-          { style: { color: ON_CHROME, fontWeight: 700, fontSize: 32 } },
-          SITE_NAME,
-        ),
-      ),
-      el(
-        "div",
-        { style: { color: ON_CHROME_MUTED, fontSize: 24 } },
-        post.tags.slice(0, 3).join("   ") || "",
-      ),
+      title,
     ),
     /*
-     * The reading area, on canvas. THE TITLE, AND NOTHING ELSE.
+     * The description, two lines of muted type.
      *
-     * The description was here at 28px and has been REMOVED, not shortened:
+     * IT WAS REMOVED AT v3 AND IS BACK, so the argument that removed it is
+     * answered rather than ignored. That argument was: at the 300 to 600px a
+     * card is delivered at, 28px type scales to 7 to 14px, below the size at
+     * which prose is read rather than seen; and the platform already prints
+     * `og:description` beside the card as selectable text, so the card was
+     * printing the same sentence once readable and once cut off.
      *
-     *   1. A card is delivered at roughly 300 to 600px wide in a timeline. At
-     *      the 1200px it is rendered, 28px type scales to between 7 and 14px on
-     *      the reader's screen, which is below the size at which a second block
-     *      of prose is read rather than seen.
-     *   2. It was the same sentence twice. The same route that emits this
-     *      image emits `og:description` beside it, and that is the post's own
-     *      description unless a per-post `ogDescription` override replaces it
-     *      (`postSocial`, app/lib/seo.ts). The platform renders that next to
-     *      the card as selectable text at a legible size. Putting it on the
-     *      card too printed it once readable and once cut off.
+     * Both halves still hold for a card that is trying to be READ. This one is
+     * not. Two lines of muted type under a headline is a TEXTURE that says
+     * "this is an article, and here is roughly what about", and it is what
+     * keeps a full-bleed card from being a poster with one line on it. It is
+     * cut hard at two lines for exactly the reason the v3 note gives: a third
+     * line would be prose asking to be read at a size it cannot be.
      *
-     * The 128-character clamp went with it, along with the `--text-muted`
-     * resolution, which had no other reader. Both blocks were vertically
-     * centred as a pair; the title is now centred alone, which is why the type
-     * moved from 60px to 72px rather than staying put with more air.
+     * Rendered only when there is one. An empty block would still occupy its
+     * margin, and the layout closes up instead.
+     */
+    description
+      ? el(
+          "div",
+          {
+            style: {
+              display: "flex",
+              marginTop: 22,
+              fontSize: 26,
+              color: ON_GROUND_MUTED,
+              lineHeight: 1.4,
+              // Same reason as the title's, and the same measurement. A URL in
+              // a description is the realistic form of an unbreakable word.
+              wordBreak: "break-word",
+            },
+          },
+          description,
+        )
+      : null,
+    /*
+     * THE ONE ACCENT: a short rule in the logo's own purple.
+     *
+     * `--mark-on-chrome` is the lavender the mark's brand paths take on this
+     * surface, so the rule is the mark's colour rather than a new one, and it
+     * is a `check:contrast` matrix row against `--surface-chrome` at the 1.4.11
+     * graphical-object floor. It is not text and carries no text obligation,
+     * but it is measured anyway, because the palette measures every pair it
+     * paints and an unmeasured one on a permanent image is not worth the
+     * saving.
+     *
+     * GOLD WAS THE OTHER CANDIDATE and was not taken. The mark's own warm
+     * accents are gold, so gold is already on this card exactly once, inside
+     * the mark, which is what "sparingly" buys. The only gold in the chrome
+     * family with a ratified pair against this surface is
+     * `--focus-ring-on-chrome`, and painting a decorative rule with the focus
+     * ring token is the kind of borrowing that reads as a defect a year later.
+     */
+    el("div", { style: { display: "flex", width: 84, height: 5, marginTop: 40, background: ACCENT } }),
+    /*
+     * The byline: the site name, then the date, in `.eyebrow`'s case and
+     * tracking so the card's smallest type is the site's smallest type.
+     *
+     * ASSEMBLED FROM A FILTERED LIST rather than interpolated, so an absent
+     * date takes its separator with it. The separator is a middot with hair
+     * space either side; satori has no `gap` on inline text, and three spans
+     * with margins would be three layout boxes for one line of type.
      */
     el(
       "div",
       {
         style: {
-          flex: 1,
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "0 72px",
+          marginTop: 22,
+          fontSize: 22,
+          fontWeight: 700,
+          color: ON_GROUND_MUTED,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
         },
       },
-      el(
-        "div",
-        {
-          style: {
-            fontSize: 72,
-            fontWeight: 700,
-            color: FG,
-            lineHeight: 1.15,
-            letterSpacing: "-0.02em",
-          },
-        },
-        /*
-         * 110 characters, and every number here is a measurement off a rendered
-         * card rather than an estimate. Ink is the bounding box of pixels that
-         * are not the background, in the canvas region, at 1200x630.
-         *
-         *   67 chars, the longest real title:  3 lines, ink y 263..499,
-         *                                      119px clear of the foot rule
-         *   36 chars, the shortest:            2 lines, ink y 304..443
-         *   110 chars of ordinary prose:       5 lines, ink y 180..568,
-         *                                      50px clear
-         *   109 chars SHOUTED IN CAPITALS:     5 lines, ink y 183..581,
-         *                                      37px clear
-         *
-         * So the cap is set where the widest realistic title still clears the
-         * rule, and the corpus is nowhere near it. Two honest limits: the cap
-         * counts CHARACTERS and the constraint is WIDTH, so a synthetic string
-         * of nothing but capital Ws in short words fills the canvas to within
-         * 4px; and an unbroken word wider than the 1056px measure runs off the
-         * right edge, because satori has no word-break. The longest token in
-         * any real title is 12 characters against roughly 28 that would fit.
-         */
-        clamp(post.title, 110),
-      ),
+      [SITE_NAME, date].filter(Boolean).join("  ·  "),
     ),
-    // A quiet foot rule in the chrome colour, so the card is bracketed rather
-    // than top-heavy. Not text, so it carries no contrast obligation.
-    el("div", { style: { display: "flex", height: 12, background: CHROME } }),
   );
 }
 

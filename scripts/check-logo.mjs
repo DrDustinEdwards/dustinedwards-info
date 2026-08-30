@@ -519,7 +519,7 @@ if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
  * WHAT IT DOES NOT SEE. It renders the mark on its own chrome ground, not a
  * whole card: the card's own layout, its type and its bands are check:head's
  * and the sample renders' business. satori lays this box out at the origin,
- * where the card puts it at x=72 y=34; both are integers, which is the only
+ * where the card puts it at x=72 y=64; both are integers, which is the only
  * property the comparison depends on.
  */
 
