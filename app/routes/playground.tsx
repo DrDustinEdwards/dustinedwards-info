@@ -8,6 +8,23 @@ import { SiteHeader } from "~/components/site-header";
 import { CHART_TYPES, buildChartModel, renderChartHast } from "~/lib/content/chart.mjs";
 import { apca, contrast, normalizeHex } from "~/lib/contrast.mjs";
 import { getEnv } from "~/lib/context";
+/*
+ * The key grammar's four readers, plus the classifier and the two per-asset
+ * predicates. IMPORTED, never restated: this module is the only statement of
+ * the grammar in the repository, and the last time there were more they had
+ * already drifted into two answers for one key.
+ */
+import {
+  classify,
+  cropSafe,
+  digestFromKey,
+  dimensionsFromKey,
+  excludedFromAssets,
+  isContentKey,
+  isRaster,
+  roleOf,
+  storageOf,
+} from "~/lib/media/classify.mjs";
 import {
   PLAYGROUND_DESCRIPTION,
   PLAYGROUND_INTRO,
@@ -95,6 +112,7 @@ const DEMOS = playgroundData.demos;
  */
 const SWATCHES = playgroundData.swatches;
 const DATASETS = playgroundData.datasets;
+const KEY_PRESETS = playgroundData.keyPresets;
 
 type DatasetKey = keyof typeof DATASETS;
 
@@ -107,6 +125,21 @@ const MARKS = CHART_TYPES;
 type MarkKey = string;
 
 const QUERY_CAP = 100;
+
+/**
+ * The key demo's input bound.
+ *
+ * WHAT REFUSES BEYOND IT: the loader cuts at this length and SAYS SO, the same
+ * shape the search demo's cap takes, because a cap enforced in the loader and
+ * unstated in the UI is a silent truncation. There is no other bound to state
+ * and that is a property of the subject rather than an omission: every function
+ * this demo calls is pure string work over one argument, with no database, no
+ * network, no clock and no allocation that grows with the input. The longest
+ * real key this site holds is a content digest plus a dimension segment plus an
+ * extension, so a hundred and twenty characters is generous by a wide margin
+ * and still small enough that no input can cost anything.
+ */
+const KEY_CAP = 120;
 
 export function meta() {
   /* Was canonical plus OG text with NO image and NO twitter card, so a shared
@@ -182,6 +215,52 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     };
   }
 
+  /* ---------------------------------------------------------------- key --- */
+
+  const keyRaw = params.get("key") ?? "";
+  const keyTrimmed = keyRaw.trim();
+  const key = keyTrimmed.slice(0, KEY_CAP);
+  let keyResult = null;
+  let keyError: string | null = null;
+
+  if (key) {
+    if (keyTrimmed.length > KEY_CAP) {
+      keyError = `That key is ${keyTrimmed.length} characters. The cap is ${KEY_CAP}, so it was cut.`;
+    }
+    /*
+     * THE CLASSIFIER'S REFUSAL IS A RESULT, not an error page.
+     *
+     * `classify()` throws on an unknown extension, deliberately, so a new file
+     * type under public/ stops a build rather than acquiring a plausible kind
+     * nobody chose. That refusal is one of the most interesting things this
+     * module does and it is invisible everywhere else on the site, so it is
+     * caught here and RENDERED as the answer it is. Catching it does not soften
+     * it: every other caller still gets the throw.
+     */
+    let classification: { kind: string; mime: string; extension: string } | null = null;
+    let classifyRefusal: string | null = null;
+    try {
+      classification = classify(key);
+    } catch (error) {
+      classifyRefusal = error instanceof Error ? error.message : String(error);
+    }
+
+    const dimensions = dimensionsFromKey(key);
+    keyResult = {
+      key,
+      contentKey: isContentKey(key),
+      digest: digestFromKey(key),
+      dimensions: dimensions ? `${dimensions.width} by ${dimensions.height}` : null,
+      storage: storageOf(key),
+      role: roleOf(key),
+      classification,
+      classifyRefusal,
+      raster: isRaster(key),
+      cropSafe: cropSafe(key),
+      excluded: excludedFromAssets(key),
+    };
+  }
+
   /* -------------------------------------------------------------- chart --- */
   const markParam = params.get("mark");
   const dataParam = params.get("data");
@@ -228,6 +307,9 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     anatomy,
     anatomyError,
     qRaw: qRaw.slice(0, QUERY_CAP),
+    keyResult,
+    keyError,
+    keyRaw: key,
     chartHtml,
     chartRenderError,
     chartError: chartError.trim(),
@@ -278,13 +360,26 @@ function inputDefault(demoSlug: string, inputName: string): string {
   return value;
 }
 
-function DemoHeader({ index }: { index: number }) {
-  const demo = DEMOS[index];
+/**
+ * KEYED BY SLUG SINCE 2026-08-30, and it used to be a positional index.
+ *
+ * An index couples the page's ORDER to the manifest's, silently: insert a demo
+ * anywhere but the end and every section below it renders another demo's title,
+ * lede and article link over its own form. Nothing would fail. `check:features`
+ * reconciles which demos exist in both directions and says nothing about which
+ * header sits above which form, because both lists are still complete.
+ *
+ * The slug is already the thing this section is identified by, since the
+ * section id comes from `demoAnchor(slug)` beside it, so keying on it removes
+ * the coupling rather than moving it.
+ */
+function DemoHeader({ slug }: { slug: string }) {
+  const demo = DEMOS.find((d) => d.slug === slug);
   /*
    * FAIL CLOSED ON A MISSING DEMO, rather than rendering an empty header.
    *
    * `check:features` reconciles this page's demos against `playground.json` in
-   * both directions, so an index with no entry is already a build failure. What
+   * both directions, so a slug with no entry is already a build failure. What
    * this adds is that if one ever slips through, the page renders nothing for
    * that demo instead of a heading with no title, which is the shape that reads
    * as a styling bug and sends the next reader to the stylesheet.
@@ -306,15 +401,17 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
   const {
     lab, labError, fgRaw, bgRaw,
     anatomy, anatomyError, qRaw,
+    keyResult, keyError, keyRaw,
     chartHtml, chartRenderError, chartError, mark, dataset, datasetNote, datasetLabel,
   } = loaderData;
 
   // Hidden fields keep the other demos' results alive across a submit.
-  const carry = (except: "lab" | "search" | "chart") => (
+  const carry = (except: "lab" | "search" | "key" | "chart") => (
     <>
       {except !== "lab" && fgRaw && <input type="hidden" name="fg" value={fgRaw} />}
       {except !== "lab" && bgRaw && <input type="hidden" name="bg" value={bgRaw} />}
       {except !== "search" && qRaw && <input type="hidden" name="q" value={qRaw} />}
+      {except !== "key" && keyRaw && <input type="hidden" name="key" value={keyRaw} />}
       {except !== "chart" && (
         <>
           <input type="hidden" name="mark" value={mark} />
@@ -334,7 +431,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
           {/* ------------------------------------------------ contrast --- */}
           <section id={demoAnchor("contrast")} className="playground-demo">
-            <DemoHeader index={0} />
+            <DemoHeader slug="contrast" />
 
             <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("lab")}
@@ -427,7 +524,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
           {/* -------------------------------------------------- search --- */}
           <section id={demoAnchor("search-anatomy")} className="playground-demo">
-            <DemoHeader index={1} />
+            <DemoHeader slug="search-anatomy" />
 
             <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("search")}
@@ -539,7 +636,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
           {/* --------------------------------------------------- chart --- */}
           <section id={demoAnchor("chart-options")} className="playground-demo">
-            <DemoHeader index={2} />
+            <DemoHeader slug="chart-options" />
 
             <Form method="get" action={PLAYGROUND_URL} className="playground-form">
               {carry("chart")}
@@ -594,6 +691,141 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                   header and watch this chart recolour without a new request:
                   that is the proof, and it is why there is no theme control
                   here to press.
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* ----------------------------------------------- media key --- */}
+          <section id={demoAnchor("media-key")} className="playground-demo">
+            <DemoHeader slug="media-key" />
+
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+              {carry("key")}
+              <div className="playground-field playground-field-wide">
+                <label htmlFor="pg-key">Key or path</label>
+                <input
+                  id="pg-key" name="key" type="text" inputMode="text"
+                  maxLength={KEY_CAP} spellCheck={false}
+                  defaultValue={keyRaw}
+                  aria-describedby="pg-key-cap"
+                />
+              </div>
+              <button type="submit">Parse</button>
+              <p id="pg-key-cap" className="playground-cap">
+                Up to {KEY_CAP} characters. Nothing you type is stored, and
+                nothing here reads a bucket: every answer below is a function of
+                the string and nothing else.
+              </p>
+            </Form>
+
+            {/* Real URLs, exactly as the contrast lab's swatches are, so each
+                preset is a shareable result rather than a control to press. */}
+            <ul className="playground-swatches">
+              {KEY_PRESETS.map((preset) => (
+                <li key={preset.key}>
+                  <Link
+                    to={`${PLAYGROUND_URL}?key=${encodeURIComponent(preset.key)}#${demoAnchor("media-key")}`}
+                  >
+                    {preset.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {keyError && <Problem>{keyError}</Problem>}
+
+            {keyResult && (
+              <div className="playground-result">
+                <dl className="playground-metrics">
+                  <div>
+                    <dt>Content key</dt>
+                    <dd>{keyResult.contentKey ? "Yes" : "No"}</dd>
+                  </div>
+                  <div>
+                    <dt>Content digest</dt>
+                    <dd>{keyResult.digest ?? "none"}</dd>
+                  </div>
+                  <div>
+                    <dt>Intrinsic dimensions</dt>
+                    <dd>{keyResult.dimensions ?? "none"}</dd>
+                  </div>
+                  <div>
+                    <dt>Storage tier</dt>
+                    <dd>{keyResult.storage}</dd>
+                  </div>
+                  <div>
+                    <dt>Role</dt>
+                    <dd>{keyResult.role}</dd>
+                  </div>
+                  <div>
+                    <dt>Kind</dt>
+                    <dd>{keyResult.classification?.kind ?? "refused"}</dd>
+                  </div>
+                  <div>
+                    <dt>Media type</dt>
+                    <dd>{keyResult.classification?.mime ?? "refused"}</dd>
+                  </div>
+                  <div>
+                    <dt>Transformable raster</dt>
+                    <dd>{keyResult.raster ? "Yes" : "No"}</dd>
+                  </div>
+                  <div>
+                    <dt>Safe to crop</dt>
+                    <dd>{keyResult.cropSafe ? "Yes" : "No"}</dd>
+                  </div>
+                </dl>
+
+                {/*
+                  THE REFUSAL, verbatim, and it is a result rather than a fault.
+                  Shown in the ordinary error block because that is what a
+                  refusal looks like everywhere else on this page, and the note
+                  underneath says why this one is the module working.
+                */}
+                {keyResult.classifyRefusal && (
+                  <>
+                    <Problem>{keyResult.classifyRefusal}</Problem>
+                    <p className="playground-note">
+                      That is the classifier doing its job. It throws on an
+                      unrecognised extension rather than returning a default,
+                      which is the whole reason it is a function and not a
+                      lookup at the call site: a new file type appearing under{" "}
+                      <code>public/</code> has to stop a build, not acquire a
+                      plausible kind nobody chose. Adding a type means adding it
+                      to the table in the same commit as the file.
+                    </p>
+                  </>
+                )}
+
+                {keyResult.excluded && (
+                  <p className="playground-note">
+                    Excluded from the asset index: {keyResult.excluded}
+                  </p>
+                )}
+
+                <p className="playground-note">
+                  The three shapes above are one grammar, stated once. A key is
+                  sixteen hex digits of the content digest, optionally the
+                  intrinsic dimensions, then the extension; nothing else is a
+                  content key. Four functions read that one statement, and they
+                  do not all take the same argument: the digest and dimension
+                  readers accept a bare key OR a <code>/media/</code> path and
+                  strip any transform query, because a width is a request for a
+                  different rendering rather than a different object, while the
+                  boolean documents a bare key and the classifier reads
+                  everything after the last dot. Every one of those contracts is
+                  visible in the presets above, which is the reason they are the
+                  presets.
+                </p>
+                <p className="playground-note">
+                  Why one statement rather than four: there used to be more, and
+                  they had already drifted. Collapsing them was done as a
+                  differential over generated and negative cases, and the two
+                  spellings disagreed on a key with a leading zero in its
+                  dimension, where the loose reader returned a size for a key the
+                  strict readers were simultaneously refusing to give a digest
+                  for. A grammar with two spellings fails exactly when the writer
+                  moves, which is the one moment it is needed.
                 </p>
               </div>
             )}
