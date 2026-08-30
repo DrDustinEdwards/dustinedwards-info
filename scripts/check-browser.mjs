@@ -567,6 +567,20 @@ function skip(label, why) {
   console.log(`  SKIP  ${label}\n        ${why}`);
 }
 
+/**
+ * A measured fact worth printing that is NOT a pass or a failure.
+ *
+ * Distinct from `skip`, which says a case could not run. This says a case ran,
+ * observed something true, and that the thing observed is not the gate's to
+ * enforce. Counted in neither total, so it can never make a red run look green
+ * or a green one look red.
+ *
+ * @param {string} what
+ */
+function report(what) {
+  console.log(`  REPORT  ${what}`);
+}
+
 /* ------------------------------------------------------------- the server */
 
 console.log("\ncheck:browser\n");
@@ -2932,9 +2946,26 @@ try {
      * So this drives the real thing with JavaScript DISABLED: click what is
      * visible, let the browser post, and read the document that comes back.
      *
-     * THE HASH IS PART OF THE CASE. `safeReturnTo` keeps the fragment so a
-     * scriptless reader lands where they were reading rather than at the top of
-     * a long post, and that is exactly the reader this path exists for.
+     * ## THE FRAGMENT CANNOT SURVIVE, AND THIS CASE IS HOW THAT WAS FOUND
+     *
+     * It first asserted that the fragment came back too, because
+     * `safeReturnTo` echoes `url.hash` from the `Referer` and its comment said
+     * that was what returned a scriptless reader to where they were reading.
+     *
+     * MEASURED HERE 2026-08-29, in real Chrome, on a real form post: the theme
+     * changed correctly and the fragment was GONE. The mechanism is not a bug
+     * in the echo, it is that `Referer` never carries a fragment; RFC 9110
+     * requires it to be stripped. So the hash branch cannot fire on this path,
+     * and no server-side fix exists: the fragment is never sent to an origin at
+     * all, so /theme cannot know it and cannot redirect to it.
+     *
+     * The scripted path keeps the reader's position by never navigating, which
+     * is where that promise is actually delivered.
+     *
+     * So this asserts the PATH, which is achievable and required, and the
+     * fragment is documented rather than demanded. An assertion nothing can
+     * satisfy is worth less than no assertion, because it is a permanent red
+     * that teaches a reader to ignore this gate.
      */
     {
       const scriptless = await browser.newPage();
@@ -2994,13 +3025,28 @@ try {
           path: location.pathname,
         }));
         ok(
-          "with script OFF the form post changes the theme, and keeps the fragment",
-          after.attr === before.value && after.hash === hash && after.path === postForShape,
+          "with script OFF the form post changes the theme and returns the reader to the same page",
+          after.attr === before.value && after.path === postForShape,
           `asked for ${JSON.stringify(before.value)}, came back with ` +
             `data-theme=${JSON.stringify(after.attr)} at ` +
             `${after.path}${after.hash}. The no-script path is the one hard rule 9 ` +
             `requires to work: the enhancement is allowed to fail, this is not.`,
         );
+        /*
+         * REPORTED, NOT ASSERTED. The fragment is unreachable by construction,
+         * so a failing assertion here would be permanent and would say nothing
+         * about the code. It is printed when it goes missing so the fact stays
+         * visible to whoever reads this gate next, rather than being a comment
+         * nobody meets.
+         */
+        if (after.hash !== hash) {
+          report(
+            `the scriptless theme post drops the fragment (${JSON.stringify(hash)} -> ` +
+              `${JSON.stringify(after.hash)}). Not a defect and not fixable server-side: ` +
+              `Referer never carries a fragment (RFC 9110), so /theme cannot learn it. ` +
+              `The scripted path holds the reader's position by not navigating at all.`,
+          );
+        }
       } finally {
         await scriptless.close();
       }
