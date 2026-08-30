@@ -102,17 +102,20 @@ const HEIGHT = 630;
  * surface is the DARK block's `--surface-chrome`.
  *
  * Taking the whole set from one block is the property that matters, not which
- * block it is. `--on-chrome`, `--on-chrome-muted` and `--mark-on-chrome` are
- * ratified AGAINST `--surface-chrome` within a theme, and `check:contrast`
- * carries all three as matrix rows evaluated in every block. Mixing a light
+ * block it is. `--on-chrome`, `--on-chrome-muted` and `--focus-ring-on-chrome`
+ * are ratified AGAINST `--surface-chrome` within a theme, and `check:contrast`
+ * carries all of them as matrix rows evaluated in every block. Mixing a light
  * foreground onto a dark ground would leave the card outside every pair the
  * palette has measured, which is the one thing this file must not do.
  *
- * `--mark-on-chrome` is the same hex in both blocks by ruling, so the mark
- * `scripts/lib/mark.mjs` resolves from the light block and the accent resolved
- * here cannot disagree. That is a coincidence worth naming rather than relying
- * on silently: if the ruling is ever reversed, this file resolves its own copy
- * and `check:logo` renders the other one.
+ * THE MARK IS THE ONE THING NOT RESOLVED HERE, and it is safe for a reason
+ * worth naming rather than relying on silently. `scripts/lib/mark.mjs` paints
+ * the brand paths from `--mark-on-chrome` in the LIGHT block, while this card's
+ * ground comes from the dark one. That is only sound because
+ * `--mark-on-chrome` is the same hex in both blocks BY RULING, so the mark
+ * cannot disagree with the surface it is standing on. If that ruling is ever
+ * reversed, this file and `check:logo` would be resolving two different marks,
+ * and the repair is to give `mark.mjs` the block rather than to change the hex.
  *
  * Changing WHICH TOKENS the card uses, or the layout, MUST still bump
  * OG_TEMPLATE_VERSION in pipeline.mjs. Resolving a value no longer requires an
@@ -132,7 +135,7 @@ const {
     ground: "--surface-chrome",
     onGround: "--on-chrome",
     onGroundMuted: "--on-chrome-muted",
-    accent: "--mark-on-chrome",
+    accent: "--focus-ring-on-chrome",
   },
   CHROME_BLOCK,
   "build:og",
@@ -393,22 +396,36 @@ export function card(post) {
         )
       : null,
     /*
-     * THE ONE ACCENT: a short rule in the logo's own purple.
+     * THE ONE ACCENT: a short rule in prairie gold, picking up the warm accents
+     * inside the mark above it.
      *
-     * `--mark-on-chrome` is the lavender the mark's brand paths take on this
-     * surface, so the rule is the mark's colour rather than a new one, and it
-     * is a `check:contrast` matrix row against `--surface-chrome` at the 1.4.11
-     * graphical-object floor. It is not text and carries no text obligation,
-     * but it is measured anyway, because the palette measures every pair it
-     * paints and an unmeasured one on a permanent image is not worth the
-     * saving.
+     * DUSTIN'S RULING, 2026-08-30, taken against rendered cards rather than
+     * against a description: four candidates were rendered on the same post,
+     * deep plum and bluebonnet grounds crossed with a lavender and a gold rule,
+     * and this is the one he chose. He holds the aesthetics veto, so this
+     * paragraph records the decision rather than arguing with it.
      *
-     * GOLD WAS THE OTHER CANDIDATE and was not taken. The mark's own warm
-     * accents are gold, so gold is already on this card exactly once, inside
-     * the mark, which is what "sparingly" buys. The only gold in the chrome
-     * family with a ratified pair against this surface is
-     * `--focus-ring-on-chrome`, and painting a decorative rule with the focus
-     * ring token is the kind of borrowing that reads as a defect a year later.
+     * IT IS A MEASURED PAIR. `--focus-ring-on-chrome` against
+     * `--surface-chrome` is a `check:contrast` matrix row at the 1.4.11
+     * graphical-object floor, evaluated in every theme block. The rule is not
+     * text and carries no text obligation; it is measured anyway, because the
+     * palette measures every pair it paints and an unmeasured one on a
+     * permanent, immutable image is not worth the saving.
+     *
+     * ## THE TOKEN'S NAME IS THE ONE WART, AND IT IS DELIBERATE
+     *
+     * This card draws no focus ring. `--focus-ring-on-chrome` is used here
+     * because it is the ONLY pale gold in the chrome family with a ratified
+     * pair against this surface, and the alternatives are worse in ways that
+     * matter more than a name: `--mark-bg` and `--focus-ring-on-brand` are both
+     * this hex in the LIGHT block and a dark bronze in the dark one, so either
+     * would resolve to the wrong colour here, and a literal hex would be the
+     * stated-once violation this whole file was rewritten to end.
+     *
+     * The right repair, if a decorative gold is ever wanted as its own thing,
+     * is a NEW named token in `app.css` with its own matrix row, ruled in
+     * design-tokens.md. That is a palette change and belongs in a palette
+     * session, not smuggled in beside a card restyle.
      */
     el("div", { style: { display: "flex", width: 84, height: 5, marginTop: 40, background: ACCENT } }),
     /*
