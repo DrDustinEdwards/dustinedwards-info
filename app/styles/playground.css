@@ -253,6 +253,50 @@
   min-width: 14rem;
 }
 
+/* In and Out, inside a demo's result. An h3 under the demo's h2, so the
+   document outline stays ordered; sized as a label rather than a heading
+   because it separates two panes rather than introducing a new topic. */
+.playground-subhead {
+  margin: 1.75rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The snippet verbatim, deliberately NOT highlighted: this is the input, and
+   highlighting it would render the demo's subject with the demo's subject.
+   Scrolls in its own box so the page body never scrolls sideways. */
+.playground-source {
+  margin: 0.5rem 0 0;
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* The rendered body. `.prose` already carries the ratified treatment for every
+   element the pipeline can emit, so this adds separation and nothing else:
+   a rule under a heading here would be a second answer to a question
+   prose.css already owns. */
+.playground-rendered {
+  margin: 0.5rem 0 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+/* `.prose` sets a top margin on its first block for body flow; inside a boxed
+   pane that reads as a stray gap. */
+.playground-rendered > :first-child {
+  margin-top: 0;
+}
+
 .playground-deferred {
   margin: 3.5rem 0 0;
 }

@@ -1795,6 +1795,7 @@ const swatches = playgroundDoc.swatches ?? [];
 const datasets = playgroundDoc.datasets ?? {};
 const keyPresets = playgroundDoc.keyPresets ?? [];
 const cookiePresets = playgroundDoc.cookiePresets ?? [];
+const snippets = playgroundDoc.markdownSnippets ?? [];
 const playgroundChecksBefore = checks;
 
 /** Serialised exactly as check:charts does, so both see the artifact's HTML. */
@@ -1837,6 +1838,11 @@ ok(
   "cookie presets are declared",
   cookiePresets.length > 0,
   "an empty list makes every behavioural theme assertion below iterate nothing",
+);
+ok(
+  "markdown snippets are declared",
+  snippets.length > 0,
+  "an empty list makes every behavioural render assertion below iterate nothing",
 );
 ok(
   "deferred demos are stated rather than omitted",
@@ -2427,6 +2433,219 @@ ok(
   "an empty cell reads as a bug; the absence IS the answer for a reader on system",
 );
 
+/* -- behavioural: the markdown pipeline ----------------------------------- */
+
+/*
+ * RENDER EACH SNIPPET THROUGH `renderBody`, the one call the deploy build makes
+ * for every post, the editor preview makes on every keystroke and the operator
+ * API makes on every save.
+ *
+ * ASYNC, so this block is a labelled scope rather than a bare loop: the rest of
+ * this gate is synchronous and top-level await is what keeps the executed-count
+ * arithmetic below honest about having run.
+ *
+ * THE EXPECTED VALUES ARE HAND-WRITTEN. Fixture independence again, and the
+ * `throws` row is the one that needs it most: a captured fixture would record
+ * whatever the pipeline did, including nothing, and the whole point of the
+ * third snippet is that the pipeline MUST refuse it.
+ *
+ * The image resolver REFUSES, exactly as the route's does. A snippet that grows
+ * a media citation has to fail here rather than reach a bucket.
+ */
+{
+  const refuseImages = async (/** @type {string} */ src) => {
+    throw new Error(`the markdown snippets cite no media, and one cites ${src}`);
+  };
+
+  for (const snippet of snippets) {
+    const label = snippet.label ?? snippet.slug;
+    const expect = snippet.expect ?? {};
+
+    ok(
+      `markdown: ${label} declares a slug, a source and a note`,
+      typeof snippet.slug === "string" &&
+        typeof snippet.source === "string" &&
+        snippet.source.length > 0 &&
+        typeof snippet.note === "string" &&
+        snippet.note.trim().length > 0,
+    );
+
+    /*
+     * A SNIPPET MAY NOT CITE MEDIA, asserted on the SOURCE rather than only by
+     * the resolver throwing. The resolver's throw arrives as a render failure,
+     * which names the wrong cause: it would read as the pipeline refusing the
+     * snippet when what happened is that the snippet asked for something this
+     * demo will not do.
+     */
+    ok(
+      `markdown: ${label} cites no media`,
+      !/!\[[^\]]*\]\(/.test(snippet.source) && !/\/media\//.test(snippet.source),
+      "the demo hands the renderer a resolver that refuses, so a media citation " +
+        "would surface as a render failure naming the wrong cause",
+    );
+
+    let rendered = null;
+    let refusal = null;
+    try {
+      rendered = await renderBody({
+        file: `playground/${snippet.slug}.md`,
+        body: snippet.source,
+        resolveImage: refuseImages,
+      });
+    } catch (error) {
+      refusal = error instanceof Error ? error.message : String(error);
+    }
+
+    ok(
+      `markdown: ${label} ${expect.throws ? "is refused" : "renders"}`,
+      (refusal !== null) === expect.throws,
+      expect.throws
+        ? `the pipeline accepted a snippet the demo says it must refuse`
+        : `the pipeline refused it: ${refusal}`,
+    );
+
+    if (expect.throws) {
+      /*
+       * THE REFUSAL NAMES THE CAUSE. A throw alone is not the property: the
+       * ruling is that an unimplemented directive is a NAMED build error rather
+       * than a silent empty div, and a message that did not name the directive
+       * would satisfy a bare throws check while failing the actual promise.
+       */
+      ok(
+        `markdown: ${label} refusal names the unknown directive`,
+        typeof refusal === "string" && /unknown directive/i.test(refusal),
+        `the message was ${JSON.stringify(refusal)}`,
+      );
+      continue;
+    }
+    if (!rendered) continue;
+
+    const anchors = rendered.toc.map((/** @type {any} */ h) => h.id);
+    ok(
+      `markdown: ${label} collects ${JSON.stringify(expect.toc)}`,
+      JSON.stringify(anchors) === JSON.stringify(expect.toc),
+      `the pipeline collected ${JSON.stringify(anchors)}`,
+    );
+    ok(
+      `markdown: ${label} demotes ${expect.blockedCount} URL(s)`,
+      rendered.blockedUrls.length === expect.blockedCount,
+      `the pipeline demoted ${JSON.stringify(
+        rendered.blockedUrls.map((/** @type {any} */ b) => b.url),
+      )}`,
+    );
+
+    /*
+     * A DEMOTED URL MUST NOT SURVIVE AS AN HREF, which is the whole claim and
+     * is NOT implied by the count. The demotion renders the markdown that
+     * produced it as escaped TEXT, so the URL appears in the document; what
+     * must not appear is an attribute carrying it.
+     */
+    for (const blocked of rendered.blockedUrls) {
+      ok(
+        `markdown: ${label} demotes ${blocked.url} out of every attribute`,
+        !new RegExp(`(?:href|src)="[^"]*${blocked.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(
+          rendered.html,
+        ),
+        "the allowlist counted it and the document still carries it as a live URL",
+      );
+    }
+  }
+
+  /*
+   * BRANCH COVERAGE. Each of these is a pipeline behaviour a PUBLISHED ARTICLE
+   * cannot demonstrate, which is the demo's entire reason for existing: a
+   * published article is by definition one that tripped none of the refusals.
+   */
+  ok(
+    "markdown: a snippet is refused outright",
+    snippets.some((/** @type {any} */ s) => s.expect?.throws === true),
+    "without one, the fail-closed directive branch is never entered",
+  );
+  ok(
+    "markdown: a snippet has a URL demoted",
+    snippets.some((/** @type {any} */ s) => (s.expect?.blockedCount ?? 0) > 0),
+    "without one, hard rule 6's allowlist is never exercised here",
+  );
+  ok(
+    "markdown: a snippet renders headings into the table of contents",
+    snippets.some((/** @type {any} */ s) => (s.expect?.toc ?? []).length > 0),
+    "without one, the ordinary path is untested and only the refusals are shown",
+  );
+}
+
+/* -- the markdown demo is WIRED to the pipeline, and bounded -------------- */
+
+/*
+ * A TWO-FILE CHAIN, so both links are asserted. The route calls a server
+ * wrapper and the wrapper calls the shared renderer; checking only the route
+ * would prove it calls SOMETHING, and checking only the wrapper would prove
+ * nothing about what the page does.
+ */
+const snippetRendererSource = stripped(
+  readFileSync(join(root, "app", "lib", "content", "render-snippet.server.ts"), "utf8"),
+);
+ok(
+  "markdown: the page renders through the server wrapper",
+  /\brenderSnippet\b/.test(playgroundSource) &&
+    /from\s+["']~\/lib\/content\/render-snippet\.server["']/.test(playgroundSource),
+  "the demo must go through the wrapper that installs the WASM instantiator",
+);
+ok(
+  "markdown: the wrapper calls the renderer every post goes through",
+  /\brenderBody\b/.test(snippetRendererSource) &&
+    /from\s+["']\.\/pipeline\.mjs["']/.test(snippetRendererSource),
+  "a second renderer here would demonstrate nothing: it would keep working " +
+    "while the thing it claims to show was broken",
+);
+ok(
+  "markdown: the wrapper loads the Worker's WASM instantiator",
+  /\.\/wasm\.server/.test(snippetRendererSource),
+  "without it the highlighter cannot start in a Worker, and the demo answers " +
+    "every reader with a render failure",
+);
+ok(
+  "markdown: the wrapper's image resolver refuses",
+  /resolveImage:\s*async/.test(snippetRendererSource) && /throw new Error/.test(snippetRendererSource),
+  "a resolver that reached a bucket on behalf of fixture text is a door this " +
+    "demo has no reason to open",
+);
+/*
+ * THE BOUND IS THE ENUM, asserted on CODE. This is the assertion that keeps the
+ * deferred entry honest: the free-text form is still deferred, and the way that
+ * stays true is that the loader selects from the manifest's slugs rather than
+ * reading a body out of the query string.
+ */
+ok(
+  "markdown: the snippet is chosen from the manifest, never taken from the URL",
+  /SNIPPET_SLUGS\.includes\(/.test(playgroundSource),
+  "an unbounded body reaching renderBody is the surface the deferred entry " +
+    "says needs a threat model first",
+);
+ok(
+  "markdown: the loader passes no request text to the renderer",
+  !/body:\s*(?:md|mdParam|params\.get)/.test(playgroundSource),
+  "the renderer's body must come from a committed snippet and nothing else",
+);
+ok(
+  "markdown: the page reports an unknown snippet rather than silently correcting",
+  /Unknown snippet/.test(playgroundSource),
+  "a hand-edited URL must say what happened, the same rule the chart demo follows",
+);
+/*
+ * THE DEFERRED ENTRY STILL REFUSES THE TEXT BOX. Narrowing an entry is a
+ * legitimate move; deleting it because a NEIGHBOURING form shipped is how a
+ * stated absence quietly becomes a claim of completeness.
+ */
+ok(
+  "markdown: the free-text form is still stated as deferred",
+  deferredDemos.some(
+    (/** @type {any} */ d) =>
+      /markdown/i.test(d.slug ?? "") && /threat model/i.test(d.reason ?? ""),
+  ),
+  "the fixed-snippet demo shipping does not settle arbitrary text into the " +
+    "highlighter, and the page must keep saying so",
+);
+
 /* -- behavioural: the chart renderer -------------------------------------- */
 
 for (const [key, dataset] of Object.entries(datasets)) {
@@ -2600,21 +2819,22 @@ for (const anchor of playgroundRecordAnchors) {
  * less the ~8% margin the rest of the family uses.
  */
 const playgroundChecks = checks - playgroundChecksBefore;
-const MINIMUM_PLAYGROUND_CHECKS = 256;
+const MINIMUM_PLAYGROUND_CHECKS = 285;
 if (playgroundChecks < MINIMUM_PLAYGROUND_CHECKS) {
   ok(
     "the playground section executed its assertions",
     false,
     `only ${playgroundChecks} ran, expected at least ${MINIMUM_PLAYGROUND_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 278 on 2026-08-30, ` +
-      `against 226 before the theme demo and 142 before the key demo.`,
+      `A block was SKIPPED rather than failing. Measured: 310 on 2026-08-30, ` +
+      `against 278 before the markdown demo, 226 before the theme demo and 142 ` +
+      `before the key demo.`,
   );
 }
 
 console.log(
   `  ${demos.length} demo(s), ${Object.keys(datasets).length} dataset(s), ` +
     `${swatches.length} swatch(es), ${keyPresets.length} key preset(s), ` +
-    `${cookiePresets.length} cookie preset(s), ` +
+    `${cookiePresets.length} cookie preset(s), ${snippets.length} snippet(s), ` +
     `${deferredDemos.length} deferred, ` +
     `${playgroundRecords.length} artifact record(s), ${playgroundChecks} assertion(s)`,
 );
@@ -2633,20 +2853,20 @@ console.log(
  * projects section in this very file.
  *
  * **RE-MEASURED 2026-08-30, twice in one day: 715 after the roster build-out and
- * 801 after the key demo and 854 after the theme demo, against 583 on
- * 2026-08-14.**
+ * 801 after the key demo, 854 after the theme demo and 887 after the markdown
+ * demo, against 583 on 2026-08-14.**
  *
  * Floored at 660, roughly 7 percent. More slack than the small gates get,
  * because this count moves with the CORPUS: posts, tags, projects and demos all
  * feed it, so ordinary content work shifts it by tens.
  */
-const MINIMUM_CHECKS = 790;
+const MINIMUM_CHECKS = 820;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured: 854 on 2026-08-30.`,
+      `rather than failing. Measured: 887 on 2026-08-30.`,
   );
 }
 

@@ -6,6 +6,20 @@ import playgroundData from "../../content/playground.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { CHART_TYPES, buildChartModel, renderChartHast } from "~/lib/content/chart.mjs";
+/*
+ * THE MARKDOWN DEMO'S ONE CALL, behind a NAMED server export.
+ *
+ * `renderSnippet` wraps `renderBody`, the renderer every post goes through,
+ * and installs the Worker's WASM instantiator on the way. The wrapper is not
+ * decoration: a bare `import "~/lib/content/wasm.server"` here failed the
+ * build, because a side-effect import binds no name and React Router's
+ * server-code removal traces NAMES. That module's docblock carries the
+ * measurement.
+ *
+ * NO NEW BYTES IN THE WORKER. It is the same pipeline and the same WASM module
+ * the editor and operator paths already pull in, and the Worker is one bundle.
+ */
+import { renderSnippet } from "~/lib/content/render-snippet.server";
 import { apca, contrast, normalizeHex } from "~/lib/contrast.mjs";
 import { getEnv } from "~/lib/context";
 /*
@@ -122,6 +136,25 @@ const SWATCHES = playgroundData.swatches;
 const DATASETS = playgroundData.datasets;
 const KEY_PRESETS = playgroundData.keyPresets;
 const COOKIE_PRESETS = playgroundData.cookiePresets;
+const SNIPPETS = playgroundData.markdownSnippets;
+
+/**
+ * The markdown demo's input bound, and it is the strictest on the page.
+ *
+ * AN ENUM, NOT A TEXT BOX. WHAT REFUSES BEYOND IT: an unknown value is
+ * REPORTED and the default is rendered, the same shape the chart demo takes,
+ * so a hand-edited URL says what happened rather than quietly showing
+ * something else. There is no way to put a character of your own into this
+ * renderer.
+ *
+ * That is not caution for its own sake. The pipeline runs a syntax highlighter
+ * over a WebAssembly regex engine and a directive layer that resolves assets,
+ * so arbitrary text into it is a compute and sanitization surface that needs a
+ * threat model of its own before it can be opened to the public plane. The
+ * deferred entry at the foot of the page says so and stays.
+ */
+const SNIPPET_SLUGS = SNIPPETS.map((s) => s.slug);
+
 
 type DatasetKey = keyof typeof DATASETS;
 
@@ -336,6 +369,49 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     }
   }
 
+  /* ----------------------------------------------------------- markdown --- */
+
+  const mdParam = params.get("md");
+  const snippetSlug =
+    mdParam && SNIPPET_SLUGS.includes(mdParam) ? mdParam : SNIPPET_SLUGS[0];
+  // Reported rather than silently corrected, the same rule the chart demo
+  // follows: a hand-edited URL says what happened instead of quietly rendering
+  // something else.
+  const snippetError =
+    mdParam && mdParam !== snippetSlug
+      ? `Unknown snippet "${mdParam}", showing ${snippetSlug}.`
+      : "";
+
+  const snippet = SNIPPETS.find((s) => s.slug === snippetSlug);
+  let markdown = null;
+  let markdownRefusal: string | null = null;
+  if (snippet) {
+    try {
+      /*
+       * THE REAL RENDERER, through the server wrapper. The same `renderBody`
+       * call the deploy build makes for every post and the same one the editor
+       * preview and every operator save make; the wrapper adds the WASM
+       * instantiator and an image resolver that REFUSES, and nothing else.
+       */
+      const rendered = await renderSnippet(snippet.slug, snippet.source);
+      markdown = {
+        slug: snippet.slug,
+        source: snippet.source,
+        html: rendered.html,
+        toc: rendered.toc,
+        blockedUrls: rendered.blockedUrls,
+      };
+    } catch (error) {
+      /*
+       * A REFUSAL IS A RESULT, exactly as the classifier's is in the key demo.
+       * One of the three snippets exists to earn this, and it is the branch a
+       * published article can never show: an article carrying an unknown
+       * directive would never have been published.
+       */
+      markdownRefusal = error instanceof Error ? error.message : String(error);
+    }
+  }
+
   /* -------------------------------------------------------------- chart --- */
   const markParam = params.get("mark");
   const dataParam = params.get("data");
@@ -389,6 +465,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     themeError,
     cookieAsked,
     cookieRaw: cookie,
+    markdown,
+    markdownRefusal,
+    snippetError,
+    snippetSlug,
+    snippetNote: snippet?.note ?? "",
     chartHtml,
     chartRenderError,
     chartError: chartError.trim(),
@@ -482,11 +563,12 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
     anatomy, anatomyError, qRaw,
     keyResult, keyError, keyRaw,
     themeResult, themeError, cookieAsked, cookieRaw,
+    markdown, markdownRefusal, snippetError, snippetSlug, snippetNote,
     chartHtml, chartRenderError, chartError, mark, dataset, datasetNote, datasetLabel,
   } = loaderData;
 
   // Hidden fields keep the other demos' results alive across a submit.
-  const carry = (except: "lab" | "search" | "key" | "theme" | "chart") => (
+  const carry = (except: "lab" | "search" | "key" | "theme" | "markdown" | "chart") => (
     <>
       {except !== "lab" && fgRaw && <input type="hidden" name="fg" value={fgRaw} />}
       {except !== "lab" && bgRaw && <input type="hidden" name="bg" value={bgRaw} />}
@@ -498,6 +580,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
       {except !== "theme" && cookieAsked && (
         <input type="hidden" name="cookie" value={cookieRaw} />
       )}
+      {except !== "markdown" && <input type="hidden" name="md" value={snippetSlug} />}
       {except !== "chart" && (
         <>
           <input type="hidden" name="mark" value={mark} />
@@ -1009,6 +1092,130 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                 </p>
               </div>
             )}
+          </section>
+
+          {/* ------------------------------------------------ markdown --- */}
+          <section id={demoAnchor("markdown-render")} className="playground-demo">
+            <DemoHeader slug="markdown-render" />
+
+            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+              {carry("markdown")}
+              <fieldset className="playground-fieldset">
+                <legend>Snippet</legend>
+                {SNIPPETS.map((s) => (
+                  <label key={s.slug} className="playground-radio">
+                    <input
+                      type="radio" name="md" value={s.slug}
+                      defaultChecked={s.slug === snippetSlug}
+                    />
+                    {s.label}
+                  </label>
+                ))}
+              </fieldset>
+              <button type="submit">Render</button>
+              <p className="playground-cap">
+                Enum inputs only. There is no text box here: the pipeline runs a
+                syntax highlighter over a WebAssembly regex engine and a
+                directive layer that resolves assets, so arbitrary text into it
+                is a compute and sanitization surface that needs its own threat
+                model before it reaches the public plane.
+              </p>
+            </Form>
+
+            {snippetError && <Problem>{snippetError}</Problem>}
+
+            <div className="playground-result">
+              <h3 className="playground-subhead">In</h3>
+              {/*
+                The snippet verbatim, in a plain <pre>. NOT run through the
+                highlighter: this is the INPUT, and highlighting it would render
+                the demo's subject with the demo's subject, which is the mirror
+                this page exists not to be.
+              */}
+              <pre className="playground-source">
+                <code>{markdown?.source ?? SNIPPETS.find((s) => s.slug === snippetSlug)?.source}</code>
+              </pre>
+              <p className="playground-note">{snippetNote}</p>
+
+              <h3 className="playground-subhead">Out</h3>
+
+              {markdownRefusal && (
+                <>
+                  <Problem>{markdownRefusal}</Problem>
+                  <p className="playground-note">
+                    That is the pipeline failing closed, before any directive
+                    handler runs. A directive nobody implemented is a named build
+                    error rather than a silent empty div in a published article,
+                    which is why this branch cannot be shown any other way: an
+                    article carrying it would never have been published.
+                  </p>
+                </>
+              )}
+
+              {markdown && (
+                <>
+                  {/*
+                    Rendered into `.prose`, the same treatment an article body
+                    gets, because it IS an article body: it came out of the same
+                    call. Injected the way the chart is and for the same reason,
+                    which is that it was produced by this pipeline from data
+                    committed in this repository and contains no third-party
+                    input at all.
+                  */}
+                  <div
+                    className="prose playground-rendered"
+                    dangerouslySetInnerHTML={{ __html: markdown.html }}
+                  />
+
+                  <h3 className="playground-subhead">Collected on the way through</h3>
+                  <dl className="playground-metrics">
+                    <div>
+                      <dt>Heading anchors</dt>
+                      <dd>
+                        {markdown.toc.length > 0
+                          ? markdown.toc.map((h) => h.id).join(", ")
+                          : "none"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>URLs the allowlist demoted</dt>
+                      <dd>
+                        {markdown.blockedUrls.length > 0
+                          ? markdown.blockedUrls.map((b) => b.url).join(", ")
+                          : "none"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {markdown.blockedUrls.length > 0 && (
+                    <p className="playground-note">
+                      A refused link is demoted to the markdown that produced it
+                      rather than stripped or emptied, because both of those look
+                      to an author exactly like a link that worked. Un-rendered
+                      markdown is the one signal every markdown author already
+                      reads as "this did not become what I meant", and the
+                      offending URL stays in the text so the reason is legible
+                      without opening a console. It is emitted as a text node, so
+                      it cannot re-enter the document as markup. The guard runs
+                      LAST in the chain on purpose, after every href and src the
+                      pipeline can emit: markdown links and images, the figure
+                      directive, diagram assets, heading autolinks and footnote
+                      references.
+                    </p>
+                  )}
+
+                  <p className="playground-note">
+                    The heading anchors are collected during the same pass that
+                    renders, not by a second walk afterwards, which is what makes
+                    a post's table of contents and its heading permalinks
+                    incapable of disagreeing. This is one call, and it is the one
+                    the deploy build makes for every article, the editor preview
+                    makes on every keystroke and the operator API makes on every
+                    save.
+                  </p>
+                </>
+              )}
+            </div>
           </section>
 
           {/* ------------------------------------------------ deferred --- */}
