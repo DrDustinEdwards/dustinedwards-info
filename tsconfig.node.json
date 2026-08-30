@@ -22,6 +22,15 @@
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
+    // How the social card's text is fitted and cut. `build:og` paints with it
+    // and `ogImageKey` hashes through it, which is the whole reason it is a
+    // module: the key must hash the string the template draws, not the field
+    // it was drawn from. Both readers are in this project.
+    "app/lib/content/og-card-text.mjs",
+    // The one owner of "a timestamp as a date a person reads". The card draws
+    // the publication date with it and the key hashes the STRING it returns, so
+    // this project reaches it through pipeline.mjs and through build-og.mjs.
+    "app/lib/long-date.mjs",
     // The two provenance hashes. The pipeline computes them into every record
     // and sync-content.mjs compares D1 against them at ship, so both projects
     // reach the module; one statement, per the module's own header.
