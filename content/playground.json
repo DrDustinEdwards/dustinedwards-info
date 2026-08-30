@@ -83,6 +83,142 @@
         }
       ],
       "outputs": ["server-rendered SVG", "the generated data table"]
+    },
+    {
+      "slug": "media-key",
+      "title": "Media key grammar",
+      "lede": "One key in, and the answer every reader of the key grammar gives. There is exactly one statement of that grammar in this repository and four functions read it, which is the whole reason this demo is interesting: the last time there were more, they had already drifted.",
+      "realPath": "app/lib/media/classify.mjs, imported by the Worker, by the build scripts and by check:media",
+      "homeArticle": {
+        "slug": "ten-years-on-cloudflare",
+        "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild"
+      },
+      "inputs": [
+        {
+          "name": "key",
+          "kind": "text",
+          "label": "Key or path",
+          "cap": "up to 120 characters",
+          "maxLength": 120,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        "whether it is a content key",
+        "the content digest it carries",
+        "the intrinsic dimensions it carries",
+        "storage tier",
+        "role",
+        "kind and media type, or the classifier's refusal"
+      ]
+    }
+  ],
+  "$keyPresetComment": "The key demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER HERE IS HAND-WRITTEN from the grammar in app/lib/media/classify.mjs, never captured from a run of it: hard rule 10's fixture independence, the same rule that keeps scripts/fixtures/icon-suite.json out of the generator's hands. check:features runs the real parsers over each key and compares. `dimensions` is a `<w>x<h>` string or null, `digest` is the sixteen hex digits or null, and `kind` is the classifier's kind or the literal \"refused\" for a key whose extension it throws on. The set is chosen to cover every BRANCH rather than to be long: both content-key forms, the leading-zero dimension the collapsing differential caught, a /media/ path carrying a transform query, an og/ derived key, a brand asset, and an extension the classifier refuses.",
+  "keyPresets": [
+    {
+      "label": "An uploaded raster",
+      "key": "4f2d7f1a9c3b5e07-1600x900.webp",
+      "note": "The ordinary shape: sixteen hex digits of the content digest, the intrinsic dimensions, the extension.",
+      "expect": {
+        "contentKey": true,
+        "digest": "4f2d7f1a9c3b5e07",
+        "dimensions": "1600x900",
+        "storage": "r2",
+        "role": "content",
+        "kind": "image",
+        "raster": true,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "A vector, which has no pixel size",
+      "key": "a1b2c3d4e5f60718.svg",
+      "note": "No dimension segment, because an SVG has no intrinsic pixel size and a zero would be a measurement rather than the absence of one.",
+      "expect": {
+        "contentKey": true,
+        "digest": "a1b2c3d4e5f60718",
+        "dimensions": null,
+        "storage": "r2",
+        "role": "content",
+        "kind": "image",
+        "raster": false,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "A leading zero in the dimension",
+      "key": "4f2d7f1a9c3b5e07-0800x600.webp",
+      "note": "Refused outright. A deleted reader spelled this axis loosely and answered 800 by 600 for this key while the other two readers were calling it not a content key at all. One key, three readers, two answers.",
+      "expect": {
+        "contentKey": false,
+        "digest": null,
+        "dimensions": null,
+        "storage": "r2",
+        "role": "content",
+        "kind": "image",
+        "raster": true,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "A served path with a transform on it",
+      "key": "/media/4f2d7f1a9c3b5e07-1600x900.webp?w=320",
+      "note": "Three different contracts, visible at once. The two extracting readers accept a path and strip the query, because a width is a transform request rather than a different object. The boolean documents a BARE key and refuses a leading slash. And the classifier takes a path or a key, never a URL: it reads everything after the last dot, so the extension here is webp-question-mark-w-equals-320, which is in no table and refuses. Every caller in the codebase hands it an object key or a static path, so the boundary is a contract rather than a defect, and this is the only place you can see it.",
+      "expect": {
+        "contentKey": false,
+        "digest": "4f2d7f1a9c3b5e07",
+        "dimensions": "1600x900",
+        "storage": "static",
+        "role": "content",
+        "kind": "refused",
+        "raster": false,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "A generated social card",
+      "key": "og/ten-years-on-cloudflare-3.png",
+      "note": "The regenerable tier, told apart by prefix because that is what the writer controls. Losing one is an inconvenience rather than a loss.",
+      "expect": {
+        "contentKey": false,
+        "digest": null,
+        "dimensions": null,
+        "storage": "r2-derived",
+        "role": "generated",
+        "kind": "image",
+        "raster": true,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "The site mark",
+      "key": "/logo.svg",
+      "note": "Brand rather than icon, and the test is who fetches it: an icon is declared to the platform and fetched without this code being involved, a brand asset is named by a module.",
+      "expect": {
+        "contentKey": false,
+        "digest": null,
+        "dimensions": null,
+        "storage": "static",
+        "role": "brand",
+        "kind": "image",
+        "raster": false,
+        "cropSafe": true
+      }
+    },
+    {
+      "label": "An extension nobody has classified",
+      "key": "4f2d7f1a9c3b5e07.zip",
+      "note": "The classifier throws rather than returning a default, which is the whole reason it is a function and not a lookup: a new file type has to stop a build instead of acquiring a plausible kind nobody chose.",
+      "expect": {
+        "contentKey": true,
+        "digest": "4f2d7f1a9c3b5e07",
+        "dimensions": null,
+        "storage": "r2",
+        "role": "content",
+        "kind": "refused",
+        "raster": false,
+        "cropSafe": true
+      }
     }
   ],
   "$swatchComment": "Ratified palette pairs the contrast lab opens on, and the gate's behavioural fixtures. They live here rather than in the route so check:features can compute the expected ratio through app/lib/contrast.mjs and compare it against the pair the page actually offers. A pair here that the page does not render, or a preset on the page that is not here, fails reconciliation.",
