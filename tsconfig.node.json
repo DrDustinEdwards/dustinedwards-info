@@ -71,6 +71,13 @@
     // app/routes/projects.tsx renders the card anchors from the same
     // `projectAnchor`, so a record cannot cite a fragment the page omits.
     "app/lib/projects-page.mjs",
+    // The roster data, for the SAME reason app/lib/seo.ts is listed: a script
+    // imports it by its real filename rather than restating what it contains.
+    // check:features derives the roster card's metric from PHAGE_YEARS through
+    // the shared `metricValue`, which is what stops the gate counting
+    // researchers its own way and agreeing with the page only by luck. No DOM
+    // and no Worker types: it is data and one type alias.
+    "app/data/phage-hunters.ts",
     // The playground's page descriptor, on the same footing as the two above:
     // build-content.mjs emits /playground's search records from it and
     // app/routes/playground.tsx renders the demo anchors from the same

@@ -74,7 +74,17 @@ import { unified } from "unified";
 
 import { COLOPHON_ANCHORS, STATUS_LABEL } from "../app/lib/colophon-sections.mjs";
 import { PLAYGROUND_URL, demoAnchor } from "../app/lib/playground-page.mjs";
-import { PROJECTS_URL, projectAnchor } from "../app/lib/projects-page.mjs";
+import {
+  METRIC_DERIVATIONS,
+  PROJECTS_URL,
+  metricValue,
+  projectAnchor,
+} from "../app/lib/projects-page.mjs";
+// The roster's derived metrics are computed from these, by the SAME function
+// the route calls. A gate deriving the expected value its own way would be two
+// implementations that agree until they do not, with nothing able to say which
+// is right (hard rule 10, and rule 12's differential discipline).
+import { PHAGE_YEARS } from "../app/data/phage-hunters.ts";
 import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 // The three real code paths the playground demos run. Imported rather than
 // reimplemented, which is the whole claim the playground section verifies.
@@ -135,6 +145,29 @@ const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n")
  */
 const stripped = (/** @type {string} */ source) =>
   stripComments(source, { preserveLines: true });
+
+/**
+ * Identifier tokens removed before a hard-rule-17 digit scan.
+ *
+ * A token mixing letters and digits is a NAME (D1, R2, FTS5, workerd), not a
+ * measurement. The two forms are letters-then-digits and digits-then-letters,
+ * and both are stripped whole, so a name never leaves a digit behind for the
+ * scan to find. Stripping them is not a loophole: a measurement is never
+ * spelled that way.
+ *
+ * **MODULE SCOPE SINCE 2026-08-30, and the move is the point.** It lived inside
+ * the features block and the projects roster below needed the identical rule.
+ * Copying it would have been this file's own recorded failure repeated a third
+ * time: `stripped()` was written once, applied to one of two readers, and the
+ * header went on saying "BOTH readers" while there were three. One
+ * implementation, two callers, counted.
+ *
+ * @param {string} text
+ */
+const withoutIdentifiers = (text) =>
+  text
+    .replace(/\b[A-Za-z]+[0-9][A-Za-z0-9]*\b/g, " ")
+    .replace(/\b[0-9]+[A-Za-z][A-Za-z0-9]*\b/g, " ");
 
 /**
  * @param {string} label
@@ -447,19 +480,8 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
   /** The prose fields. `anchors` is machine reference and is exempt above. */
   const PROSE_FIELDS = ["component", "name", "what"];
 
-  /**
-   * Identifier tokens removed before the digit scan.
-   *
-   * A token mixing letters and digits is a NAME (D1, R2, FTS5). The two forms
-   * are letters-then-digits and digits-then-letters, and both are stripped
-   * whole, so a name never leaves a digit behind for the scan to find.
-   *
-   * @param {string} text
-   */
-  const withoutIdentifiers = (text) =>
-    text
-      .replace(/\b[A-Za-z]+[0-9][A-Za-z0-9]*\b/g, " ")
-      .replace(/\b[0-9]+[A-Za-z][A-Za-z0-9]*\b/g, " ");
+  /* `withoutIdentifiers` is at module scope now; the projects roster below is
+     its second caller. See its docblock for why it moved. */
 
   /**
    * The vocabulary of the content machinery removed on 2026-08-26.
@@ -1186,6 +1208,28 @@ const projects = projectsDoc.projects ?? [];
 const vocabulary = projectsDoc.stackVocabulary ?? [];
 const projectsChecksBefore = checks;
 
+/*
+ * WHAT THE DERIVED METRICS ARE COMPUTED FROM, assembled the way the route
+ * assembles them: from artifacts that already have owners.
+ *
+ * `content/generated/stack.json` is generated from package.json by
+ * `build:stack` and byte-gated by `check:stack`, so the gate count reaches the
+ * card through the pipe that already owns it rather than through a second
+ * count taken here. `PHAGE_YEARS` is the data the roster page renders.
+ *
+ * NOT fixture-independent, and it does not need to be: hard rule 10's fixture
+ * rule forbids a gate whose EXPECTED value is produced by the code under test,
+ * and there is no expected value here. The assertion is that the derivation
+ * runs and yields something real, which is a property of the pipeline rather
+ * than a comparison against a number this file would otherwise have to restate.
+ */
+const METRIC_INPUTS = {
+  stack: JSON.parse(
+    readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
+  ),
+  phageYears: PHAGE_YEARS,
+};
+
 // FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
 // Measured through this gate 2026-08-24: 6 projects. Floor one under, because
 // a roster of this size cannot absorb more slack than that.
@@ -1210,9 +1254,49 @@ ok(
   `parsed routes: ${[...routes].join(", ")}`,
 );
 
-const REQUIRED = ["slug", "name", "oneLiner", "description", "role", "status", "stack", "metric"];
+const REQUIRED = [
+  "slug",
+  "name",
+  "oneLiner",
+  "description",
+  "schemaType",
+  "role",
+  "status",
+  "stack",
+  "metric",
+];
 const STATUSES = ["live", "building", "internal"];
+/*
+ * CLOSED, and closed in BOTH directions below. The route emits
+ * `applicationCategory` for one of these and not the other, so a third value
+ * would render structured data nothing decided the shape of.
+ */
+const SCHEMA_TYPES = ["SoftwareApplication", "WebPage"];
+/*
+ * The evidence kinds this gate knows how to VERIFY, which is the only list
+ * worth having: a kind nobody checks is a citation nobody checks. Each is
+ * verified differently below, and the route refuses to render an unknown one.
+ */
+const EVIDENCE_KINDS = ["post", "page", "repo"];
 const seenSlugs = new Set();
+
+/*
+ * THE BUILT CORPUS, read once for the roster and again for the playground.
+ *
+ * Hoisted here on 2026-08-30 because the evidence checks need it and the
+ * playground's citation check already did. It is `content/generated/posts.json`,
+ * the gitignored local build product, which is why a roster edited without a
+ * rebuild fails here rather than shipping a link to a post that is not there.
+ */
+const artifactPostRows =
+  JSON.parse(readFileSync(join(root, "content", "generated", "posts.json"), "utf8")).posts ??
+  [];
+/** slug to title, PUBLISHED only. A draft citation would link the live site to a 404. */
+const publishedTitles = new Map(
+  artifactPostRows
+    .filter((/** @type {any} */ p) => p.draft !== true)
+    .map((/** @type {any} */ p) => [p.slug, p.title]),
+);
 
 for (const project of projects) {
   const id = project.slug ?? "(no slug)";
@@ -1258,17 +1342,180 @@ for (const project of projects) {
     );
   }
 
-  // THE METRIC IS THE PAGE'S WHOLE ARGUMENT, so it is checked hardest. A value
-  // without a date is the failure this asserts against: an undated number rots
-  // silently and keeps looking authoritative.
+  ok(
+    `${id} schemaType is one of ${SCHEMA_TYPES.join(", ")}`,
+    SCHEMA_TYPES.includes(project.schemaType),
+    `got ${JSON.stringify(project.schemaType)}; the route emits this as the item's ` +
+      `@type and branches on it, so an unknown value is structured data nobody designed`,
+  );
+
+  /*
+   * THE METRIC IS THE PAGE'S WHOLE ARGUMENT, so it is checked hardest.
+   *
+   * TWO FORMS, MUTUALLY EXCLUSIVE, and the exclusivity is asserted rather than
+   * left to convention. A metric carrying both a stored value and a derivation
+   * would have TWO owners of its freshness, which is the state hard rule 17
+   * names: the stored copy can drift while the derived one stays true, and the
+   * page would render whichever the route happened to prefer.
+   */
   const metric = project.metric ?? {};
   ok(`${id} metric has a label`, typeof metric.label === "string" && metric.label.length > 0);
-  ok(`${id} metric has a value`, typeof metric.value === "string" && metric.value.length > 0);
+
+  const isDerived = metric.derived !== undefined;
   ok(
-    `${id} metric carries an ISO asOf date`,
-    typeof metric.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metric.asOf),
-    `got ${JSON.stringify(metric.asOf)}; a number without a date is the thing this page refuses`,
+    `${id} metric declares a value or a derivation, never both`,
+    isDerived !== (metric.value !== undefined),
+    isDerived && metric.value !== undefined
+      ? `it declares both, so two things own how fresh this number is`
+      : `it declares neither, so the card has no number to lead with`,
   );
+
+  if (isDerived) {
+    ok(
+      `${id} metric names a derivation that exists`,
+      Object.hasOwn(METRIC_DERIVATIONS, metric.derived),
+      `got ${JSON.stringify(metric.derived)}; METRIC_DERIVATIONS implements ` +
+        `${Object.keys(METRIC_DERIVATIONS).join(", ")}`,
+    );
+    ok(
+      `${id} metric carries no asOf date, because a derived value cannot rot`,
+      metric.asOf === undefined,
+      `a date beside a value this build recomputed records when a human last ` +
+        `looked, which is the tense-bound claim rule 17 was extended to cover`,
+    );
+    /*
+     * RUN THE DERIVATION, through the function the ROUTE calls. This is the
+     * assertion that makes a derived metric worth more than a dated one: it
+     * proves the value the card renders is producible, non-empty and not a
+     * placeholder, on every run, without this gate knowing how it is computed.
+     */
+    if (Object.hasOwn(METRIC_DERIVATIONS, metric.derived)) {
+      const derivedValue = metricValue(metric, METRIC_INPUTS);
+      ok(
+        `${id} metric derives a non-empty value: ${metric.derived}`,
+        typeof derivedValue === "string" && derivedValue.length > 0 && derivedValue !== "0",
+        `derived ${JSON.stringify(derivedValue)}; zero or empty means the input ` +
+          `collection is gone, and the card would render a number that is really an absence`,
+      );
+    }
+  } else {
+    ok(
+      `${id} metric has a value`,
+      typeof metric.value === "string" && metric.value.length > 0,
+    );
+    ok(
+      `${id} metric carries an ISO asOf date`,
+      typeof metric.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metric.asOf),
+      `got ${JSON.stringify(metric.asOf)}; a number without a date is the thing this page refuses`,
+    );
+  }
+
+  /*
+   * NOTABLE: optional, and shaped when present.
+   *
+   * The bound is two or three, and it is a bound rather than a minimum because
+   * both failures are real. One sentence is a claim with no support; six is the
+   * description field again under another name, and this list sits inside a
+   * card in a grid where a long one pushes every sibling's foot down.
+   */
+  if (project.notable !== undefined) {
+    const notable = Array.isArray(project.notable) ? project.notable : [];
+    ok(
+      `${id} notable carries two or three sentences`,
+      notable.length >= 2 && notable.length <= 3,
+      `${notable.length} present; the field is optional, so an entry with nothing ` +
+        `derivable omits it rather than padding it`,
+    );
+    for (const [index, point] of notable.entries()) {
+      ok(
+        `${id} notable[${index}] is a non-empty string`,
+        typeof point === "string" && point.trim().length > 0,
+      );
+    }
+  }
+
+  /*
+   * EVIDENCE: optional, and every entry VERIFIED rather than merely shaped.
+   *
+   * A citation nobody checks is the silent failure this whole family of gates
+   * exists for: it returns a hit, looks correct in a card, and goes nowhere.
+   * Each kind is checked against the thing that owns it, and the post label is
+   * argued against the corpus rather than trusted, which is the same
+   * two-sources-must-agree bargain the chart enums make.
+   */
+  if (project.evidence !== undefined) {
+    const evidence = Array.isArray(project.evidence) ? project.evidence : [];
+    ok(
+      `${id} evidence is non-empty when declared`,
+      evidence.length > 0,
+      `an empty list renders nothing and means nothing; omit the field instead`,
+    );
+    const seenRefs = new Set();
+    for (const item of evidence) {
+      const ref = String(item?.ref ?? "(no ref)");
+      ok(
+        `${id} evidence ${ref} declares a known kind`,
+        EVIDENCE_KINDS.includes(item?.kind),
+        `got ${JSON.stringify(item?.kind)}; the route throws on anything but ` +
+          `${EVIDENCE_KINDS.join(", ")}`,
+      );
+      ok(
+        `${id} evidence ${ref} carries a label`,
+        typeof item?.label === "string" && item.label.trim().length > 0,
+        `a citation with no label renders as a link with no text`,
+      );
+      ok(
+        `${id} evidence ${ref} is cited once`,
+        !seenRefs.has(`${item?.kind}:${ref}`),
+        `duplicated within this card, which the route would render as two ` +
+          `identical links and React would key identically`,
+      );
+      seenRefs.add(`${item?.kind}:${ref}`);
+
+      if (item?.kind === "post") {
+        ok(
+          `${id} evidence cites a published post: ${ref}`,
+          publishedTitles.has(ref),
+          `no published post has that slug. A draft or a typo here is a link to ` +
+            `a page the live site does not serve.`,
+        );
+        /*
+         * THE LABEL IS THE POST'S TITLE, byte for byte.
+         *
+         * The route cannot read the corpus, so the title has to be restated in
+         * the manifest for the card to render it. Restating it is fine; NOT
+         * arguing it against the corpus is what would rot, and it would rot
+         * invisibly, because a card showing a stale title still links to the
+         * right article and nothing about the page looks wrong.
+         */
+        if (publishedTitles.has(ref)) {
+          ok(
+            `${id} evidence label matches the post's title: ${ref}`,
+            item.label === publishedTitles.get(ref),
+            `card says ${JSON.stringify(item.label)}, the corpus says ` +
+              `${JSON.stringify(publishedTitles.get(ref))}`,
+          );
+        }
+      }
+
+      if (item?.kind === "page") {
+        ok(
+          `${id} evidence cites a declared route: ${ref}`,
+          routes.has(ref),
+          `routes.ts declares no such path, so this citation is a link to nothing. ` +
+            `parsed: ${[...routes].join(", ")}`,
+        );
+      }
+
+      if (item?.kind === "repo") {
+        ok(
+          `${id} evidence repo passes the URL protocol allowlist: ${ref}`,
+          isAllowedUrl(ref),
+          `not an allowed protocol (rule 6)`,
+        );
+      }
+    }
+  }
 }
 
 // The vocabulary is closed in BOTH directions. An entry nothing uses is a term
@@ -1291,6 +1538,72 @@ for (const term of vocabulary) {
  * structural: the route must read the roster and derive its anchors from the
  * shared helper. If it ever stops doing either, parity becomes a coincidence.
  */
+/*
+ * HARD RULE 17 ON THE ROSTER'S PROSE, the same scan the feature sentences get.
+ *
+ * THIS PAGE NEEDS IT MORE THAN THE COLOPHON DOES, because its entire premise is
+ * that the number is in the metric channel, where it carries either a date or a
+ * derivation. A digit loose in a description is a measurement with nowhere to
+ * say how old it is, sitting on the one page whose argument is that a number
+ * without provenance keeps looking authoritative after it stops being true.
+ *
+ * THE EVIDENCE LABELS ARE EXEMPT FROM THIS SCAN and are exempt for the reason the
+ * feature anchors are: a post label is a MACHINE REFERENCE that must equal the
+ * post's title byte for byte, and titles carry measurements ("6 ms with Rank
+ * Fusion"). Scanning them would force articles to be retitled to satisfy a rule
+ * about portfolio prose. The label has a stronger guarantee than the scan
+ * anyway: it is argued against the corpus above.
+ *
+ * METRIC LABELS ARE ALSO OUT. The metric is the number channel; its label says
+ * what is counted and sits beside a value that carries its own provenance.
+ */
+{
+  const PROJECT_PROSE_FIELDS = ["oneLiner", "description"];
+  let projectFieldsScanned = 0;
+  /** @type {string[]} */
+  const projectNumbers = [];
+
+  for (const project of projects) {
+    const id = project.slug ?? "(no slug)";
+    const texts = [
+      ...PROJECT_PROSE_FIELDS.map((field) => [field, String(project[field] ?? "")]),
+      ...(project.notable ?? []).map((/** @type {string} */ point, /** @type {number} */ i) => [
+        `notable[${i}]`,
+        String(point),
+      ]),
+    ];
+    for (const [field, text] of texts) {
+      if (!text) continue;
+      projectFieldsScanned += 1;
+      for (const run of withoutIdentifiers(text).match(/[0-9]+/g) ?? []) {
+        projectNumbers.push(`${id} (${field}): "${run}"`);
+      }
+    }
+  }
+
+  /*
+   * SCOPE, ASSERTED, and floored one under the measured count rather than at
+   * the roster length: this scan reads two fields per project PLUS every
+   * notable sentence, so the count moves with the notable lists and a floor
+   * tied to `projects.length` would go stale on the next card that gains one.
+   * MEASURED THROUGH THIS LOOP 2026-08-30: 23 fields over seven projects with
+   * three notable lists.
+   */
+  ok(
+    "the roster prose scan had fields to read",
+    projectFieldsScanned >= 14,
+    `scanned ${projectFieldsScanned} field(s), floor 14, measured 23 on 2026-08-30. ` +
+      `Two per project is the floor even with every notable list removed; below ` +
+      `that the roster itself did not parse and this reports a clean sweep of nothing.`,
+  );
+  ok(
+    "no roster sentence carries a number outside the metric channel",
+    projectNumbers.length === 0,
+    `${projectNumbers.join("; ")}. Hard rule 17: this page has exactly one place ` +
+      `for a number, the metric, and it carries a date or a derivation beside it.`,
+  );
+}
+
 const projectsSource = stripped(readFileSync(PROJECTS_ROUTE_PATH, "utf8"));
 ok(
   "the page imports the roster rather than restating it",
@@ -1302,6 +1615,59 @@ ok(
   /projectAnchor\(/.test(projectsSource) &&
     /from\s+["']~\/lib\/projects-page\.mjs["']/.test(projectsSource),
   "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
+);
+
+/*
+ * THE ROUTE IS WIRED TO THE NEW FIELDS, asserted structurally.
+ *
+ * The manifest checks above prove the DATA is well formed. They say nothing
+ * about whether any of it reaches a reader, and a field nothing renders is
+ * worse than an absent one: it passes every shape check, it reads as shipped,
+ * and the page is unchanged. Each assertion below is a thing only CODE can do,
+ * on the lesson this file already carries in its search-anatomy block, where a
+ * ban on a string fired against the caption that was supposed to say it.
+ */
+ok(
+  "the page computes derived metrics through metricValue",
+  /metricValue\(/.test(projectsSource),
+  "app/routes/projects.tsx must call the shared derivation, or a derived metric " +
+    "renders as undefined and the gate above is checking a value nobody sees",
+);
+ok(
+  "the page does not implement a derivation itself",
+  !/METRIC_DERIVATIONS/.test(projectsSource),
+  "the route names METRIC_DERIVATIONS, so it holds a second way to compute a value " +
+    "the shared function already owns",
+);
+ok(
+  "the page renders the notable list",
+  /project\.notable/.test(projectsSource),
+  "the manifest carries notable sentences the page never reads",
+);
+ok(
+  "the page renders the evidence list",
+  /project\.evidence/.test(projectsSource),
+  "the manifest carries citations the page never reads",
+);
+ok(
+  "the page emits the declared schema type rather than a literal",
+  /"@type":\s*project\.schemaType/.test(projectsSource) &&
+    !/"@type":\s*"SoftwareApplication"/.test(projectsSource),
+  "the item's @type must come from the entry, or the roster page is emitted as an " +
+    "application again and the field is decoration",
+);
+/*
+ * THE PROVENANCE LINE BRANCHES. Without this, a route that dropped the derived
+ * branch would render an empty <time> for every derived metric: no date, no
+ * sentence, and a card that silently stops saying where its number came from,
+ * which is the one thing this page exists to say.
+ */
+ok(
+  "the page renders a provenance line for both metric forms",
+  /metric\.derived\s*!==\s*undefined/.test(projectsSource) &&
+    /dateTime=\{metric\.asOf\}/.test(projectsSource),
+  "both branches must be present: a derived metric says it was derived, a dated " +
+    "one renders its <time>",
 );
 
 /*
@@ -1344,24 +1710,33 @@ for (const anchor of recordAnchors) {
 }
 
 /*
- * Executed-count floor, MEASURED THROUGH THIS GATE'S OWN PIPELINE on
- * 2026-08-14 by RUNNING it: this section executes 154 assertions over a
- * six-project roster with a fifteen-term vocabulary. The first number written
- * here was 91, guessed by adding up the loops, and it was wrong by two thirds.
- * Floored at 140, the ~8% margin the other gates use.
+ * Executed-count floor, MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING
+ * it, never by summing the loops. The first number ever written here was 91,
+ * guessed by adding up the loops against 154 measured, and it was wrong by two
+ * thirds.
+ *
+ * RE-MEASURED 2026-08-30, after the roster gained evidence, notable sentences,
+ * derived metrics and a schema type: **275** over a seven-project roster with a
+ * fifteen-term vocabulary. It was 154 over six projects, and nearly all of the
+ * growth is per-citation: every evidence entry costs four assertions and a post
+ * citation costs six.
+ *
+ * Floored at 250, the ~8% margin the other gates use. That is deliberately not
+ * generous: this count now moves with the EVIDENCE, so removing one card's
+ * citations should not silently drop under a slack floor.
  *
  * Not scope-floored. The roster length gates most of the loops above, so a
  * truncated file trips `the roster is non-empty` first; this catches the case
  * where a whole BLOCK stops running, which a length assertion cannot see.
  */
 const projectsChecks = checks - projectsChecksBefore;
-const MINIMUM_PROJECT_CHECKS = 140;
+const MINIMUM_PROJECT_CHECKS = 250;
 if (projectsChecks < MINIMUM_PROJECT_CHECKS) {
   ok(
     "the projects section executed its assertions",
     false,
     `only ${projectsChecks} ran, expected at least ${MINIMUM_PROJECT_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 154.`,
+      `A block was SKIPPED rather than failing. Measured: 275 on 2026-08-30.`,
   );
 }
 
@@ -1531,25 +1906,26 @@ if (chartDemo) {
   }
 }
 
-// Every demo cites a PUBLISHED article. Citing a draft would link a reader on
-// the live site to a page that is not there.
-const artifactPosts =
-  JSON.parse(readFileSync(join(root, "content", "generated", "posts.json"), "utf8"))
-    .posts ?? [];
-const publishedSlugs = new Set(
-  artifactPosts
-    .filter((/** @type {any} */ p) => p.draft !== true)
-    .map((/** @type {any} */ p) => p.slug),
-);
+/*
+ * Every demo cites a PUBLISHED article. Citing a draft would link a reader on
+ * the live site to a page that is not there.
+ *
+ * READS `publishedTitles`, hoisted to the projects section on 2026-08-30 when
+ * the roster's evidence checks needed the same corpus. This block used to parse
+ * `posts.json` a second time, which was a second reader of one artifact rather
+ * than a second copy of a fact, but it is the shape that becomes one: the two
+ * would have needed the same draft predicate, and only one of them applied it
+ * to titles.
+ */
 ok(
   "the artifact carries published posts",
-  publishedSlugs.size > 0,
+  publishedTitles.size > 0,
   "otherwise the citation checks below pass vacuously",
 );
 for (const demo of demos) {
   ok(
     `${demo.slug} cites a published article`,
-    publishedSlugs.has(demo.homeArticle?.slug),
+    publishedTitles.has(demo.homeArticle?.slug),
     `homeArticle ${JSON.stringify(demo.homeArticle?.slug)} is not a published post`,
   );
 }
@@ -1876,21 +2252,24 @@ console.log(
  * roster, the anchors, the enhancement inventory, the colophon page records).
  * Each section floor is a local witness; this is the global one.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 583.
- * Never summed, and the habit of summing is why: 91 was guessed against 154
- * measured for the projects section in this very file.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it. Never summed, and
+ * the habit of summing is why: 91 was guessed against 154 measured for the
+ * projects section in this very file.
  *
- * Floored at 540, roughly 7 percent. More slack than the small gates get,
+ * **RE-MEASURED 2026-08-30 with the roster build-out: 715**, against 583 on
+ * 2026-08-14. The whole delta is the projects section.
+ *
+ * Floored at 660, roughly 7 percent. More slack than the small gates get,
  * because this count moves with the CORPUS: posts, tags, projects and demos all
  * feed it, so ordinary content work shifts it by tens.
  */
-const MINIMUM_CHECKS = 540;
+const MINIMUM_CHECKS = 660;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured: 583.`,
+      `rather than failing. Measured: 715 on 2026-08-30.`,
   );
 }
 
