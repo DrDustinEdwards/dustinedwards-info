@@ -767,7 +767,6 @@
   .blog-search button,
   .skip-link,
   .ask-badge,
-  .theme-option[aria-pressed="true"],
   .tag-chip[aria-current="true"],
   .search-chip.is-active,
   .palette-option[aria-selected="true"] {
@@ -1116,8 +1115,7 @@ a:hover {
 .skip-link:focus-visible,
 .search-submit:focus-visible,
 .blog-search button:focus-visible,
-.tag-chip[aria-current="true"]:focus-visible,
-.theme-option[aria-pressed="true"]:focus-visible {
+.tag-chip[aria-current="true"]:focus-visible {
   outline: 2px solid var(--focus-ring-on-brand);
   outline-offset: -4px;
 }
