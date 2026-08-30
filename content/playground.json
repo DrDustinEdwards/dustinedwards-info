@@ -136,6 +136,56 @@
         "the data-theme attribute, or its absence",
         "the color-scheme meta content"
       ]
+    },
+    {
+      "slug": "markdown-render",
+      "title": "Markdown through the pipeline",
+      "lede": "A fixed snippet rendered by the same pipeline every article on this site is rendered by, showing what it collects on the way through and what it refuses. The refusals are the interesting half, and they are invisible everywhere else, because a published article is by definition one that did not trip them.",
+      "realPath": "app/lib/content/pipeline.mjs, the one renderer the deploy build, the editor preview and every operator save go through",
+      "homeArticle": {
+        "slug": "content-is-code-building-the-blog",
+        "title": "Building a Git-Backed Blog on Cloudflare Workers and D1"
+      },
+      "inputs": [
+        {
+          "name": "md",
+          "kind": "enum",
+          "label": "Snippet",
+          "cap": "one of three",
+          "values": ["headings", "links", "directive"],
+          "default": "headings"
+        }
+      ],
+      "outputs": [
+        "the rendered HTML",
+        "the collected table of contents",
+        "every URL the allowlist demoted",
+        "the named refusal, where the snippet earns one"
+      ]
+    }
+  ],
+  "$snippetComment": "The markdown demo's fixtures. AN ENUM, NOT A TEXT BOX, and the deferred entry below explains what stays deferred and why. Each snippet is chosen for a BRANCH of the pipeline a published article cannot show you: a published article is by definition one that tripped none of the refusals. Expected values are hand-written from the pipeline's rules and never captured from a run, hard rule 10's fixture independence: `toc` is the heading slugs in order, `blockedCount` is how many URLs the protocol allowlist demotes, and `throws` says whether renderBody refuses the snippet outright. A snippet must cite no media, and the demo hands the renderer an image resolver that throws, so a snippet that grows an image citation fails loudly rather than reaching for a bucket from a public page.",
+  "markdownSnippets": [
+    {
+      "slug": "headings",
+      "label": "Headings and code",
+      "note": "The ordinary path. Every heading is slugged and collected into the table of contents in document order, which is the same list a post's sidebar is built from, and the code block is highlighted on the server by the same grammar the articles use.",
+      "source": "## Rate limiting\n\nTwo mechanisms, one of which counts.\n\n```js\nconst allowed = await limiter.check(address);\n```\n\n### The synchronous path\n\nA Durable Object using the synchronous storage API allowed exactly what it was given.\n",
+      "expect": { "toc": ["rate-limiting", "the-synchronous-path"], "blockedCount": 0, "throws": false }
+    },
+    {
+      "slug": "links",
+      "label": "Links the allowlist refuses",
+      "note": "Hard rule 6, visible. A link whose protocol is not on the allowlist is DEMOTED TO THE MARKDOWN THAT PRODUCED IT rather than stripped or emptied, because both of those look to an author exactly like a link that worked, and un-rendered markdown is the one signal every markdown author already reads as this did not become what I meant. The offending URL stays in the text so the reason is legible without opening a console, and it is emitted as a text node, so it cannot re-enter the document as markup.",
+      "source": "An [ordinary link](https://developers.cloudflare.com/workers/), a [mail link](mailto:someone@example.com), and [one the allowlist refuses](javascript:alert(1)).\n",
+      "expect": { "toc": [], "blockedCount": 1, "throws": false }
+    },
+    {
+      "slug": "directive",
+      "label": "A directive nobody implemented",
+      "note": "The pipeline fails CLOSED on a directive it does not implement, before any handler runs, so a typo is a named build error rather than a silent empty div in a published article. This is the branch that cannot be shown any other way: an article carrying it would never have been published.",
+      "source": ":::sidebar\nA directive the pipeline does not implement.\n:::\n",
+      "expect": { "toc": [], "blockedCount": 0, "throws": true }
     }
   ],
   "$cookiePresetComment": "The theme demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER IS HAND-WRITTEN from the rules in app/lib/theme.ts, never captured from a run: hard rule 10's fixture independence, the same bargain the swatches and the key presets make. `attribute` is the data-theme value or null for the absence that hands the decision to prefers-color-scheme. The set covers every BRANCH rather than being long: both writable values, the legacy value that is honoured as the no-cookie path, no cookie at all, a theme cookie sitting among unrelated ones, the malformed percent-escape that used to throw a URIError on every page for that reader, and a value nothing writes.",
@@ -330,9 +380,9 @@
       "reason": "No shared implementation exists yet. Simulating protanopia and deuteranopia here before the build gate does it would be a second answer to a question the gate is supposed to own. Queued as its own session, with Vienot and libDaltonLens reference fixtures already decided."
     },
     {
-      "slug": "markdown-pipeline",
-      "title": "Markdown through the pipeline",
-      "reason": "Arbitrary text into the highlighter and the diagram renderer is a compute and sanitization surface that needs its own threat model first."
+      "slug": "markdown-free-text",
+      "title": "Your own markdown through the pipeline",
+      "reason": "Narrowed rather than closed on 2026-08-30. The FIXED-SNIPPET form shipped as a demo above, which was never what this entry was refusing: the reason has always been arbitrary text into a syntax highlighter running on a WebAssembly regex engine and into a directive layer that resolves assets, which is a compute and sanitization surface needing its own threat model. An enum of committed snippets opens none of that and shows the branches a published article cannot, because a published article is by definition one that tripped none of the refusals. A text box still needs the threat model."
     },
     {
       "slug": "ask",
