@@ -2422,8 +2422,23 @@ try {
    * "something overflows" sends the next reader hunting through 8,700 lines of
    * CSS.
    */
+  /*
+   * `/playground` JOINED THIS LIST on 2026-08-30, and it is the page with most
+   * to lose from being absent. It carries the widest content on the public
+   * plane: the fusion table's six columns, the rendered markdown pane and now
+   * the key demo's nine-cell grid. Each of those scrolls inside its own box by
+   * design, and this case is the only instrument that can tell a box that
+   * scrolls from a page that does.
+   */
   await page.setViewport({ width: 320, height: 800 });
-  for (const path of ["/", "/blog", "/search?q=workers", "/colophon", "/projects"]) {
+  for (const path of [
+    "/",
+    "/blog",
+    "/search?q=workers",
+    "/colophon",
+    "/projects",
+    "/playground?key=4f2d7f1a9c3b5e07-1600x900.webp&cookie=theme%3Ddark&md=links&q=fusion",
+  ]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const o = await page.evaluate(() => {
       const doc = document.documentElement;
@@ -2444,6 +2459,208 @@ try {
       o.scrollW <= o.clientW,
       `scrollWidth ${o.scrollW} exceeds clientWidth ${o.clientW}. Widest: ${o.over.join(", ")}`,
     );
+  }
+
+  /* ------------------- 4b. THE PLAYGROUND'S DEMOS ANSWER ON THE WIRE ------- */
+
+  /*
+   * WHY THIS EXISTS ALONGSIDE check:features, which already runs every one of
+   * these modules over the same fixtures.
+   *
+   * That gate imports the modules and compares their return values. It is the
+   * right instrument for "does the grammar say this", and it is BLIND to the
+   * only thing that can go wrong afterwards: whether a reader who pastes the
+   * URL gets the answer. A loader that threw, a section that stopped
+   * rendering, a WASM module that will not instantiate in workerd, a
+   * `<Form action>` pointing at the wrong path, all of those leave every
+   * source-reading assertion green. Hard rule 7: a gate that feeds a module
+   * its own stored output cannot see the transport.
+   *
+   * THE MARKDOWN CASE IS THE ONE THAT EARNS THIS. Its renderer needs the
+   * Worker's WASM instantiator, and the Node build has a different one, so
+   * check:features CANNOT observe the failure mode that matters here: it
+   * would pass on a page that answers every reader with a render failure.
+   *
+   * EXPECTATIONS ARE THE MANIFEST'S, read from the same file the page renders
+   * from, so this case cannot drift from the presets. It asserts the ANSWER
+   * appears, not where: these are visible-text checks over the whole document,
+   * because asserting a cell position would fail on a restyle rather than on a
+   * defect.
+   */
+  await page.setViewport({ width: 1280, height: 900 });
+  {
+    const manifest = JSON.parse(
+      readFileSync(join(root, "content", "playground.json"), "utf8"),
+    );
+
+    /** The document's visible text, collapsed, for substring assertions. */
+    const visibleText = async () =>
+      (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, " ");
+
+    /*
+     * SCOPE FIRST. Every assertion below is "this string is present", and a
+     * page that failed to render at all would fail them for the wrong reason
+     * while a page that rendered an EMPTY demo would pass nothing. Proving the
+     * page is the playground, and that the sections exist, is what makes the
+     * per-demo results below mean what they say.
+     */
+    await page.goto(`${BASE}/playground`, { waitUntil: "networkidle0" });
+    const sections = await page.evaluate(() =>
+      [...document.querySelectorAll("section.playground-demo")].map((s) => s.id),
+    );
+    const declared = manifest.demos.map((/** @type {any} */ d) => `demo-${d.slug}`);
+    ok(
+      "/playground renders a section for every demo in the manifest",
+      declared.every((/** @type {string} */ id) => sections.includes(id)),
+      `manifest: ${declared.join(", ")}; rendered: ${sections.join(", ") || "none"}`,
+    );
+
+    /* -- the key grammar, on the wire -------------------------------------- */
+
+    const keyPreset = manifest.keyPresets.find(
+      (/** @type {any} */ p) => p.expect?.dimensions !== null && p.expect?.contentKey === true,
+    );
+    ok(
+      "the key demo has a dimension-bearing preset to drive",
+      Boolean(keyPreset),
+      "without one this case would assert nothing and still pass",
+    );
+    if (keyPreset) {
+      await page.goto(`${BASE}/playground?key=${encodeURIComponent(keyPreset.key)}`, {
+        waitUntil: "networkidle0",
+      });
+      const text = await visibleText();
+      ok(
+        "the key demo answers with the digest the grammar carries",
+        text.includes(keyPreset.expect.digest),
+        `expected ${keyPreset.expect.digest} in the rendered page`,
+      );
+      const [w, h] = String(keyPreset.expect.dimensions).split("x");
+      ok(
+        "the key demo answers with the intrinsic dimensions",
+        text.includes(`${w} by ${h}`),
+        `expected "${w} by ${h}" in the rendered page`,
+      );
+      ok(
+        "the key demo answers with the storage tier",
+        text.includes(keyPreset.expect.storage),
+        `expected ${keyPreset.expect.storage} in the rendered page`,
+      );
+    }
+
+    /*
+     * THE CLASSIFIER'S REFUSAL, on the wire. A caught throw that renders
+     * nothing is the failure this demo would have, and it looks identical to a
+     * working page in every source-reading gate.
+     */
+    const refusedPreset = manifest.keyPresets.find(
+      (/** @type {any} */ p) => p.expect?.kind === "refused",
+    );
+    ok("the key demo has a refusal preset to drive", Boolean(refusedPreset));
+    if (refusedPreset) {
+      await page.goto(`${BASE}/playground?key=${encodeURIComponent(refusedPreset.key)}`, {
+        waitUntil: "networkidle0",
+      });
+      const text = await visibleText();
+      ok(
+        "the key demo renders the classifier's refusal rather than a blank",
+        text.includes("unclassified asset"),
+        "the throw was caught and nothing was shown, which is the one failure " +
+          "mode a source-reading gate cannot see",
+      );
+    }
+
+    /* -- the theme resolver, on the wire ----------------------------------- */
+
+    for (const preset of manifest.cookiePresets) {
+      await page.goto(`${BASE}/playground?cookie=${encodeURIComponent(preset.cookie)}`, {
+        waitUntil: "networkidle0",
+      });
+      const text = await visibleText();
+      /*
+       * THE ATTRIBUTE ROW IS THE ASSERTION, not the resolved theme, because
+       * "system" appears in the page's prose and would match anywhere. The
+       * rendered word for an absent attribute is "omitted", which appears
+       * nowhere else, so a preset resolving to the default is checked by a
+       * string only this row can produce.
+       */
+      const expected = preset.expect.attribute ?? "omitted";
+      ok(
+        `the theme demo answers ${JSON.stringify(preset.cookie)} with ${expected}`,
+        text.includes(`data-theme ${expected}`),
+        `expected the data-theme row to read ${expected}`,
+      );
+    }
+
+    /* -- the markdown pipeline, on the wire -------------------------------- */
+
+    /*
+     * THE WASM CASE. `renderBody` starts a syntax highlighter on an oniguruma
+     * WebAssembly module, and workerd refuses `WebAssembly.instantiate()` on
+     * raw bytes, which is what the Node default ends up doing. The Worker
+     * installs a different instantiator. check:features runs the NODE path and
+     * therefore cannot observe this failing; only a real Worker can.
+     */
+    for (const snippet of manifest.markdownSnippets) {
+      await page.goto(`${BASE}/playground?md=${encodeURIComponent(snippet.slug)}`, {
+        waitUntil: "networkidle0",
+      });
+      const text = await visibleText();
+
+      if (snippet.expect.throws) {
+        ok(
+          `the markdown demo refuses "${snippet.slug}" by name`,
+          text.includes("unknown directive"),
+          "the pipeline's named refusal is the branch a published article can " +
+            "never show, so this is the only place it is observable",
+        );
+        continue;
+      }
+
+      for (const anchor of snippet.expect.toc) {
+        ok(
+          `the markdown demo reports the "${anchor}" anchor it collected`,
+          text.includes(anchor),
+          `expected ${anchor} among the collected heading anchors`,
+        );
+      }
+
+      /*
+       * THE HIGHLIGHTER RAN, asserted on the DOM rather than on text: shiki
+       * emits per-token spans, and their absence is exactly what a Worker that
+       * could not instantiate the WASM module would produce. A snippet with no
+       * code fence has none, so this is conditional on the snippet carrying one.
+       */
+      if (snippet.source.includes("```")) {
+        const highlighted = await page.evaluate(
+          () => document.querySelectorAll(".playground-rendered pre.shiki span[style]").length,
+        );
+        ok(
+          `the markdown demo highlights "${snippet.slug}" in the Worker`,
+          highlighted > 0,
+          "no shiki token spans in the rendered pane. The Worker could not " +
+            "instantiate the oniguruma module, which the Node-side gate cannot see.",
+        );
+      }
+
+      if (snippet.expect.blockedCount > 0) {
+        /*
+         * THE DEMOTED URL IS NOT LIVE. The count is check:features' claim; this
+         * is the one that matters on a page a reader loads, and it is asserted
+         * against the DOM's own links rather than against the source bytes.
+         */
+        const liveHrefs = await page.evaluate(() =>
+          [...document.querySelectorAll(".playground-rendered a")].map((a) =>
+            a.getAttribute("href"),
+          ),
+        );
+        ok(
+          `the markdown demo emits no refused protocol as a live link`,
+          liveHrefs.every((/** @type {string | null} */ href) => !/^javascript:/i.test(href ?? "")),
+          `rendered hrefs: ${liveHrefs.join(", ")}`,
+        );
+      }
+    }
   }
 
   /* ------------------------------------------------- 5. the login skip link */
@@ -4716,6 +4933,40 @@ try {
  *
  * Public block, so both modes. Skip mode is 72, low end 70. Floors 110 to 111
  * and 63 to 64, about eight percent under the low end of each range.
+ *
+ * ## RE-MEASURED 2026-08-30 WITH THE PLAYGROUND WIRE CASES: **232 and 181**
+ *
+ * **THE NARRATION ABOVE HAD GONE STALE AND THE CONSTANT HAD NOT.** This chain
+ * ends at 123 and the floors in code were 159 and 112, so somebody raised the
+ * numbers and stopped writing down why. That is the mirror of the failure this
+ * comment block keeps recording: usually the count moves and the floor does
+ * not, and here the floor moved and the record did not. Both leave a number
+ * nobody can check, which is the whole reason a floor gets a paragraph.
+ *
+ * **BOTH ENDS MEASURED BY RUNNING, INCLUDING THE BASELINE.** The pre-change
+ * count was taken by putting HEAD's copy of this file on disk and running it:
+ * 212, against 232 with the new block. Twenty assertions, and the delta is
+ * measured rather than counted off the source, because the previous figure in
+ * this file was wrong by one for years and nothing noticed.
+ *
+ * The run-mode floor moves from 159 to 214. It is raised rather than left,
+ * because 159 against 232 is thirty percent of slack and a gap that wide stops
+ * meaning anything, which is the condition the 2026-08-24 entry above names.
+ *
+ * **THE SKIP-MODE FIGURE IS 181 AND THE PROBE CONTRIBUTED ONE OF IT.** Skip
+ * mode was reached by pointing `SMOKE_TOKEN_FILE` at a path that does not
+ * exist, and the gate correctly reads a named-but-absent token file as a
+ * CONFIGURATION problem rather than as no credential offered, so that run
+ * scored 182 with one failing assertion the probe itself created. True skip
+ * mode, where no credential is offered at all, emits a skip instead and does
+ * not increment. Establish what the instrument contributes before ruling on
+ * what it found: the honest figure is 181, floored at 166.
+ *
+ * **TWO OF THE NEW TWENTY ARE CONTENT-CONDITIONAL**, on the same footing as the
+ * blog-bundle case above: the highlighter assertion runs only for a snippet
+ * carrying a code fence, and the live-href assertion only for one with a
+ * demoted URL. Both conditions are held by `check:features`, which reconciles
+ * the snippet set in both directions, so they cannot quietly go absent.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -4727,7 +4978,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 159 : 112;
+  const MINIMUM_CHECKS = adminCasesRan ? 214 : 166;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
