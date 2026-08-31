@@ -176,7 +176,7 @@
     {
       "slug": "links",
       "label": "Links the allowlist refuses",
-      "note": "Hard rule 6, visible. A link whose protocol is not on the allowlist is DEMOTED TO THE MARKDOWN THAT PRODUCED IT rather than stripped or emptied, because both of those look to an author exactly like a link that worked, and un-rendered markdown is the one signal every markdown author already reads as this did not become what I meant. The offending URL stays in the text so the reason is legible without opening a console, and it is emitted as a text node, so it cannot re-enter the document as markup.",
+      "note": "Hard rule 6, visible. Two of these three links have protocols the allowlist permits and one does not. Watch what happens to the third: the mechanism is explained under the result, where you can see it.",
       "source": "An [ordinary link](https://developers.cloudflare.com/workers/), a [mail link](mailto:someone@example.com), and [one the allowlist refuses](javascript:alert(1)).\n",
       "expect": { "toc": [], "blockedCount": 1, "throws": false }
     },

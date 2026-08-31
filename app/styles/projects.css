@@ -17,6 +17,21 @@
  * `auto-fit` with a minimum rather than a fixed column count, so the grid is
  * responsive with no breakpoint of its own and no JavaScript. At narrow widths
  * it collapses to one column by construction.
+ *
+ * **A CARD ENDS WHERE ITS CONTENT ENDS, since 2026-08-30.** The grid's default
+ * stretch made every card as tall as the tallest in its row, which was the
+ * intent while the cards were of similar length: the foot links then lined up
+ * across a row. The evidence and notable fields broke that premise. The
+ * flagship card carries three notable sentences and seven citations and its
+ * neighbour carries neither, so the stretch produced roughly four hundred
+ * pixels of empty card under the short one, with its Source link parked at the
+ * bottom of a box that had stopped saying anything.
+ *
+ * `start` moves that whitespace BELOW the card, where it reads as spacing
+ * rather than as an unfinished card. The auto margins on the foot blocks are
+ * kept and are not dead: they still order the links row above the evidence
+ * block, and they come back into effect for any row whose cards are close
+ * enough in length to leave slack. Measured from screenshots, Dustin's call.
  */
 .project-grid {
   display: grid;
@@ -25,6 +40,7 @@
   margin: 2.5rem 0 0;
   padding: 0;
   list-style: none;
+  align-items: start;
 }
 
 .project-card {
@@ -155,10 +171,13 @@
   color: var(--text-muted);
 }
 
-/* Pushed to the card's foot so links line up across a row of uneven cards.
-   `auto` on the top margin does that, and it only works while this is the LAST
-   flex child; the evidence block below therefore takes the auto margin instead
-   whenever it is present, and this one keeps it for the cards that have none. */
+/* Pushed to the card's foot. `auto` on the top margin only works while this is
+   the LAST flex child, so the evidence block below takes it whenever one is
+   present and this keeps it for the cards that have none. With the grid on
+   `align-items: start` there is usually no slack for it to consume, which is
+   the point of that change rather than a reason to drop this: it still orders
+   the two foot blocks, and it still does its original job on a row whose cards
+   happen to be close in length. */
 .project-links {
   display: flex;
   flex-wrap: wrap;
