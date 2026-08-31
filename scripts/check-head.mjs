@@ -105,10 +105,21 @@ const EXCLUDED = {
    * `wrangler.jsonc` BY COPYING `wrangler.jsonc.example`, because the real one
    * is gitignored and absent from any extraction. That makes real == example by
    * construction, and check:config's whole job is asserting they DIFFER in the
-   * two account-scoped ids. Verbatim from the probe:
+   * redacted values. RE-MEASURED 2026-08-31 by running the gate in an
+   * extraction, verbatim and in full:
    *
+   *   FAIL  wrangler.jsonc redacted var CLOUDFLARE_ACCOUNT_ID is NOT the real value in the example
    *   FAIL  example's database_id is not the real one
    *   FAIL  example's KV id is not the real one
+   *   FAIL  wrangler.watchdog.jsonc redacted var ALERT_EMAIL is NOT the real value in the example
+   *   FAIL  no redacted value from a real config appears in a tracked file
+   *
+   * This paragraph said "the two account-scoped ids" and quoted the middle two
+   * lines. It went stale twice underneath itself and in the same direction, by
+   * omission: `CLOUDFLARE_ACCOUNT_ID` joined the redacted set on 2026-08-28
+   * (`apply-config-ids.mjs`), and the whole watchdog pair joined on 2026-08-29.
+   * Hard rule 17. The count is deliberately not restated in prose above; the
+   * list is the copy, and re-taking it means running the gate.
    *
    * It can never pass in an extraction. That is the gate being correct, not a
    * limitation to work around, and it is why check:config is load-bearing on
@@ -134,6 +145,69 @@ const EXCLUDED = {
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */
 const MINIMUM_EXECUTED = 18;
+
+/*
+ * HOW MUCH OF AN INNER GATE'S OUTPUT REACHES THIS ONE'S.
+ *
+ * ## What was lost, measured 2026-08-31
+ *
+ * This matched the inner gate's output against a multiline regex anchored on
+ * FAIL and kept the FIRST line it matched, throwing the rest away. Every gate
+ * here prints a failure as a LABEL line followed by an INDENTED DETAIL, so the
+ * one line that survived was always the label and the detail never was.
+ *
+ * The cost was paid on 2026-08-31. `check:worker` failed in `ship` inside this
+ * gate and the log carried exactly `FAIL  no worker test failed`, which is
+ * `check-worker.mjs`'s assertion label. Its detail composes `N failing, runner
+ * exit X` plus up to twelve failing case lines, and that is the half naming the
+ * test. Diagnosing it cost a session and three clean re-runs, and the failure
+ * was never reproduced, so the case names are gone for good.
+ *
+ * ## The cap, and why there is one at all
+ *
+ * A gate that fails in an extraction can print a great deal, and this gate
+ * reports up to twenty-one of them above a summary somebody has to read. So the
+ * forward is bounded at FORWARDED_LINES lines and FORWARDED_CHARS characters,
+ * whichever binds first, and it SAYS SO IN THE OUTPUT when it truncates rather
+ * than trailing off. A silent truncation reads as "that was all of it", which
+ * is the failure this whole block exists to stop repeating.
+ *
+ * The numbers are sized off the widest producer rather than guessed: the twelve
+ * case lines `check-worker.mjs` forwards, plus its label, header and the
+ * runner's own tail, fit inside forty lines comfortably.
+ */
+const FORWARDED_LINES = 40;
+const FORWARDED_CHARS = 4000;
+
+/**
+ * The inner gate's failure detail, from its first FAIL line onward.
+ *
+ * Falls back to the last non-empty line when nothing matched, which is the case
+ * for a gate that died without printing a verdict at all.
+ *
+ * @param {string} out
+ * @returns {string}
+ */
+function failureDetail(out) {
+  const lines = out.split("\n");
+  const first = lines.findIndex((line) => /^\s*FAIL/.test(line));
+  if (first < 0) {
+    return (lines.filter((line) => line.trim()).slice(-1)[0] ?? "").trim();
+  }
+
+  const kept = lines.slice(first, first + FORWARDED_LINES);
+  const droppedLines = Math.max(0, lines.length - first - FORWARDED_LINES);
+  let text = kept.join("\n");
+  const droppedChars = Math.max(0, text.length - FORWARDED_CHARS);
+  if (droppedChars > 0) text = text.slice(0, FORWARDED_CHARS);
+
+  if (droppedLines > 0 || droppedChars > 0) {
+    text +=
+      `\n[forwarded output truncated at ${FORWARDED_LINES} lines / ${FORWARDED_CHARS} chars; ` +
+      `${droppedLines} more line(s) not shown. Run the gate directly for the rest.]`;
+  }
+  return text;
+}
 
 const args = process.argv.slice(2);
 const refFlag = args.indexOf("--ref");
@@ -168,7 +242,21 @@ console.log(`\ncheck:head  (ref: ${REF})\n`);
  * NUL escape would work, but the whole class is about files whose byte content
  * defeats text tooling, so the check that guards it must not be a text check.
  */
-const NUL_ROOTS = ["scripts", "app", "workers"];
+/*
+ * `test` JOINED 2026-08-31, after the class it guards was found living there.
+ *
+ * `test/worker/publish.test.ts` carried two literal NUL bytes for two days, in
+ * a comment that meant to write the escape `\0` and wrote the byte. Everything
+ * this preflight exists to prevent followed: `git ls-files --eol` reported the
+ * file `-text` while every sibling reported `lf`, so it was the one file in
+ * that directory exempt from `.gitattributes`, and a directory-scoped ripgrep
+ * over `test/` skipped it entirely.
+ *
+ * It was invisible here because this list named the three roots the two earlier
+ * instances happened to live in. A scan scoped to where the last defect was
+ * found is a scan that can only ever catch the last defect.
+ */
+const NUL_ROOTS = ["scripts", "app", "workers", "test"];
 const SKIP_DIRS = new Set(["node_modules", ".git", "build", ".wrangler", ".react-router"]);
 
 /**
@@ -222,20 +310,26 @@ ok(
 );
 
 /*
- * FLOOR: RE-MEASURED 2026-08-24 through this walk by running the gate: 239.
- * Now >= 220, about eight percent under. It was 138 against 158, and 50 before
- * that.
+ * FLOOR: RE-MEASURED 2026-08-31 through this walk by running the gate: 350,
+ * with `test` newly in NUL_ROOTS. Now >= 320, about eight percent under. It was
+ * 220 against a claimed 239, and 138 against 158, and 50 before that.
  *
  * 50 left a 68 percent blind zone: `scripts/` and `workers/` could both drop
  * out and `app/` alone would clear it. 138 had drifted back to a 42 percent
  * one as the tree grew. The class this preflight guards is a file whose bytes
  * defeat text tooling, so a scan that quietly stops covering a third of the
  * tree is precisely the failure it must not have.
+ *
+ * The 239 above is recorded as CLAIMED rather than measured: this gate printed
+ * 277 for the same three roots on 2026-08-31, so the figure in the comment had
+ * drifted 14 percent under the walk it described while the floor beneath it
+ * went on passing. A floor that is never re-taken stops being eight percent of
+ * anything.
  */
 ok(
   "the NUL scan examined files",
-  scanned.length >= 220,
-  `${scanned.length} found under ${NUL_ROOTS.join(", ")}, floor 220, measured 239. A root ` +
+  scanned.length >= 320,
+  `${scanned.length} found under ${NUL_ROOTS.join(", ")}, floor 320, measured 350. A root ` +
     `has stopped being walked, or the walk stopped descending.`,
 );
 console.log(`  NUL preflight: ${scanned.length} file(s) under ${NUL_ROOTS.join(", ")}`);
@@ -371,7 +465,7 @@ try {
   if (be.status !== 0) throw new Error("the worktree bundle build failed; the tier has no subject");
 
   started = Date.now();
-  /** @type {Array<{name: string, ok: boolean, ms: number, tail: string}>} */
+  /** @type {Array<{name: string, ok: boolean, ms: number, detail: string}>} */
   const results = [];
   for (const name of runnable) {
     const t0 = Date.now();
@@ -386,7 +480,7 @@ try {
       name,
       ok: r.status === 0,
       ms: Date.now() - t0,
-      tail: (out.match(/^\s*FAIL[^\n]*/m) ?? out.split("\n").filter(Boolean).slice(-1))[0] ?? "",
+      detail: failureDetail(out),
     });
     console.log(
       `  ${r.status === 0 ? "PASS" : "FAIL"}  ${name.padEnd(18)} ${((Date.now() - t0) / 1000).toFixed(1)}s`,
@@ -405,8 +499,10 @@ try {
     ok(
       `${r.name} passes against a fresh checkout of ${REF}`,
       r.ok,
-      `${r.tail.trim()}\n        This gate is GREEN on disk and RED at ${REF}. Either work is ` +
-        `uncommitted, or the checkout differs from disk (line endings are the usual cause).`,
+      `${r.detail.trim().split("\n").join("\n        ")}\n        This gate is RED at ${REF}. ` +
+        `Run it on disk before concluding anything about the difference: work may be ` +
+        `uncommitted, the checkout may differ from disk, or the gate may be red in both ` +
+        `places. This gate never measured the disk half.`,
     );
   }
 } catch (error) {

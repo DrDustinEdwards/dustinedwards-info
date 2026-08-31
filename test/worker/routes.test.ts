@@ -241,29 +241,29 @@ describe("the default theme, and the legacy cookie that means the same thing", (
 });
 
 /**
- * A budget for a case that drives the health loader.
+ * These cases drive the health loader, which is the slowest thing this file
+ * touches: one call runs five checks against D1, R2 and AI Search, and
+ * production measured 0.98 to 2.01 seconds for the same work.
  *
- * ## VITEST'S 5s DEFAULT IS NOT A STATEMENT ABOUT THIS ENDPOINT
+ * ## THE BUDGET THAT COVERS THEM IS THE SUITE DEFAULT, IN `vitest.config.ts`
  *
- * MEASURED THE HARD WAY, 2026-08-29: three of these cases failed inside `ship`
- * at 5065ms, 5777ms and 5218ms, which is the default timeout and not a defect
- * in anything they assert. Every one of them was green minutes earlier on an
- * idle machine. `ship` runs the whole offline tier, so the machine underneath
- * these is the busiest it ever gets, and that is exactly when they must not
- * lie.
+ * THE MEASUREMENT WAS TAKEN HERE, 2026-08-29: three of these cases failed
+ * inside `ship` at 5065ms, 5777ms and 5218ms, which is vitest's default timeout
+ * and not a defect in anything they assert. The repair then was a
+ * `HEALTH_CASE_TIMEOUT` constant applied to five `it()` calls in this file.
  *
- * One call to this loader runs five checks against D1, R2 and AI Search;
- * production measured 0.98 to 2.01 seconds for the same work. A 5s budget is
- * therefore 2.5x headroom on an idle machine and none at all on a loaded one,
- * which is the same collapsed-margin shape `check:browser`'s readiness bound
- * had on the same day.
+ * MOVED 2026-08-31, and the reason is what the per-case version could not see.
+ * A budget attached to five cases grades the five cases somebody already
+ * watched fail, and leaves every other case in the layer on the default,
+ * including the shiki and WASM render paths in `publish.test.ts` and the R2
+ * paths in `media.test.ts`, which do comparable work under the same load. The
+ * constant was also a mirror: five sites carrying a value that could drift from
+ * the default it sat beside, which is hard rule 17.
  *
- * 30s, and it costs nothing: a budget is only ever paid by a case that HANGS,
- * and a case that hangs is a failure either way. What it buys is that a slow
- * machine reports what the code did rather than how long the machine took.
+ * So the budget is stated once, where vitest reads it, and the grounds are
+ * there. This comment records that the measurement happened at this endpoint
+ * and deliberately carries no number, because it does not own one.
  */
-const HEALTH_CASE_TIMEOUT = 30_000;
-
 describe("/api/health", () => {
   const healthRequest = (ip = "203.0.113.1") =>
     new Request("https://example.com/api/health", {
@@ -295,7 +295,7 @@ describe("/api/health", () => {
      * `curl --fail` as health and the alert is never sent. */
     const body = (await response.json()) as { ok: boolean };
     expect(response.status).toBe(body.ok ? 200 : 503);
-  }, HEALTH_CASE_TIMEOUT);
+  });
 
   it("WRITES A SNAPSHOT for both verdicts, and it is what was answered with", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
@@ -323,7 +323,7 @@ describe("/api/health", () => {
       total: body.checks.length,
       failed: body.checks.filter((c) => !c.ok).length,
     });
-  }, HEALTH_CASE_TIMEOUT);
+  });
 
   it("REFUSES past the per-IP rate, with the same body shape and a Retry-After", async () => {
     /*
@@ -381,7 +381,7 @@ describe("/api/health", () => {
       ok: false,
       checks: [{ name: "rate-limited", ok: false }],
     });
-  }, HEALTH_CASE_TIMEOUT);
+  });
 
   it("does NOT serve at all when the limiter is missing", async () => {
     /*
@@ -403,7 +403,7 @@ describe("/api/health", () => {
       ok: false,
       checks: [{ name: "rate-limiter-unavailable", ok: false }],
     });
-  }, HEALTH_CASE_TIMEOUT);
+  });
 
   it("carries NO detail string, and a failing check carries only its two counts", async () => {
     /*
@@ -445,5 +445,5 @@ describe("/api/health", () => {
         }
       }
     }
-  }, HEALTH_CASE_TIMEOUT);
+  });
 });

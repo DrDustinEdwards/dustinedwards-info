@@ -167,5 +167,36 @@ export default defineConfig({
   test: {
     include: ["test/worker/**/*.test.ts"],
     setupFiles: ["./test/worker/setup.ts"],
+    /**
+     * THE CASE BUDGET, FOR THE WHOLE LAYER RATHER THAN FIVE CASES.
+     *
+     * ## Why it is not vitest's 5s default
+     *
+     * MEASURED THE HARD WAY, 2026-08-29: three `/api/health` cases failed
+     * inside `ship` at 5065ms, 5777ms and 5218ms, which is the default timeout
+     * and not a defect in anything they assert. Every one of them was green
+     * minutes earlier on an idle machine. `ship` runs the whole offline tier,
+     * so the machine underneath this layer is the busiest it ever gets, and
+     * that is exactly when it must not lie.
+     *
+     * A budget is only ever paid by a case that HANGS, and a case that hangs is
+     * a failure either way. What it buys is that a slow machine reports what
+     * the code did rather than how long the machine took.
+     *
+     * ## Why it is HERE and not on the cases
+     *
+     * The 2026-08-29 repair was a `HEALTH_CASE_TIMEOUT` constant applied to
+     * five `it()` calls in `routes.test.ts`. That fixed the cases it was
+     * written for and left every other case in the layer on the 5s default,
+     * including the shiki and WASM render paths in `publish.test.ts` and the R2
+     * paths in `media.test.ts`, which do comparable work. A per-case budget
+     * grades the cases somebody already watched fail.
+     *
+     * The generalisation also makes the constant a MIRROR: five call sites
+     * carrying a value equal to the default they sit beside, free to drift from
+     * it. Hard rule 17, one owner per fact. This is the owner; the constant and
+     * its call sites were deleted in the same commit.
+     */
+    testTimeout: 30_000,
   },
 });
