@@ -349,9 +349,57 @@ function runGate(name, args) {
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
   });
+  /*
+   * A GATE THAT COULD NOT RUN IS NOT A GATE THAT FAILED, and the table must not
+   * say it was.
+   *
+   * ## MEASURED 2026-08-31, and it cost a diagnosis
+   *
+   * A `ship` run recorded `check:types FAILED (2.5s)`, `check:urls FAILED
+   * (0.0s)` and `check:worker FAILED (0.0s)`, each with an EMPTY output
+   * section, immediately after a 258.6s `check:head`. They were spawn failures
+   * on a loaded machine, not verdicts: nothing ran, so nothing was asserted
+   * about the subject either way. The same shape is recorded in
+   * `check-head.mjs` from 2026-08-20, where fourteen consecutive gates
+   * "failed" in 0.0 to 0.2s and every one was green when re-run alone.
+   *
+   * Reported as FAILED, that is a lie in the direction that wastes the most
+   * time: somebody goes looking for a defect in a gate's subject when the
+   * finding is that the machine ran out of room. It is also the direction that
+   * can hide a real regression, because three noisy reds train the reader to
+   * re-run rather than read.
+   *
+   * ## The signals, and why all four
+   *
+   * `spawnSync` reports a process it could not start or could not reach through
+   * `error`; a process killed by a signal has a null `status` and a non-null
+   * `signal`; and a shell that relays a SIGTERM surfaces it as exit 143, which
+   * is 128 plus 15, at which point `status` is a number and the two fields
+   * above say nothing. Any one of them means the run produced no verdict.
+   *
+   * NOT FOLDED INTO `ok`. An errored gate is not a pass, so `ok` stays false and
+   * every caller that gates on it, including the two builds above, still
+   * refuses.
+   */
+  const errored =
+    result.error !== undefined ||
+    result.status === null ||
+    result.signal !== null ||
+    result.status === 143;
+
+  const reason = result.error
+    ? `could not spawn: ${result.error.message}`
+    : result.signal
+      ? `killed by ${result.signal}`
+      : result.status === 143
+        ? "exit 143, which is a relayed SIGTERM"
+        : "exited without a status";
+
   return {
     name,
-    ok: result.status === 0,
+    ok: !errored && result.status === 0,
+    errored,
+    reason: errored ? reason : "",
     ms: Date.now() - started,
     output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
   };
@@ -458,10 +506,20 @@ function main() {
     // every gate behind it, which is how one failure masks a second.
     const result = runGate(name, args);
     results.push(result);
-    console.log(result.ok ? `ok (${(result.ms / 1000).toFixed(1)}s)` : `FAILED (${(result.ms / 1000).toFixed(1)}s)`);
+    const seconds = (result.ms / 1000).toFixed(1);
+    console.log(
+      result.errored
+        ? `ERRORED (${seconds}s) ${result.reason}`
+        : result.ok
+          ? `ok (${seconds}s)`
+          : `FAILED (${seconds}s)`,
+    );
   }
 
-  const failed = results.filter((r) => !r.ok);
+  // Three outcomes, counted apart. See runGate: an errored gate produced no
+  // verdict, so calling it a failure invents one and calling it a pass hides one.
+  const errored = results.filter((r) => r.errored);
+  const failed = results.filter((r) => !r.ok && !r.errored);
 
   // The failing output, in full, AFTER the run rather than interleaved. A
   // failure buried in the middle of thirteen gates' output is a failure nobody
@@ -471,11 +529,20 @@ function main() {
     console.log(result.output.trimEnd());
   }
 
+  // Errored gates get their own block, and the empty output IS the evidence: a
+  // gate that never started has nothing to say, and printing that emptiness
+  // under its own heading is what distinguishes it from a silent failure.
+  for (const result of errored) {
+    console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
+    console.log(`  ${result.reason}`);
+    const said = result.output.trimEnd();
+    console.log(said.length > 0 ? said : "  the gate produced no output, which is consistent with never having started");
+  }
+
   console.log(`\n${"-".repeat(52)}`);
   for (const result of results) {
-    console.log(
-      `  ${result.ok ? "PASS" : "FAIL"}  ${result.name.padEnd(18)} ${(result.ms / 1000).toFixed(1)}s`,
-    );
+    const label = result.errored ? "ERR " : result.ok ? "PASS" : "FAIL";
+    console.log(`  ${label}  ${result.name.padEnd(18)} ${(result.ms / 1000).toFixed(1)}s`);
   }
   for (const name of skipped) {
     // Named, not omitted. A gate that silently did not run is the thing this
@@ -485,9 +552,19 @@ function main() {
   console.log(`${"-".repeat(52)}`);
 
   console.log(
-    `\n${results.length - failed.length} passed, ${failed.length} failed` +
+    `\n${results.length - failed.length - errored.length} passed, ${failed.length} failed` +
+      `${errored.length > 0 ? `, ${errored.length} errored` : ""}` +
       `${skipped.length > 0 ? `, ${skipped.length} skipped` : ""}\n`,
   );
+  if (errored.length > 0) {
+    console.log(
+      `  ${errored.length} gate(s) ERRORED: ${errored.map((r) => r.name).join(", ")}.\n` +
+        "  An errored gate asserted NOTHING about its subject, in either direction. It is\n" +
+        "  not a red gate and it is not a green one, so this run does not cover what it\n" +
+        "  would have covered. Re-run those gates alone before reading anything into them:\n" +
+        "  the usual cause is a saturated machine, not a defect.\n",
+    );
+  }
 
   if (!all) {
     console.log(
@@ -497,7 +574,10 @@ function main() {
     );
   }
 
-  process.exit(failed.length > 0 ? 1 : 0);
+  // An errored run exits nonzero too. It did not prove the tier green, and the
+  // one thing that must never happen is a ship reading "0 failed" off a tier
+  // where three gates never started.
+  process.exit(failed.length > 0 || errored.length > 0 ? 1 : 0);
 }
 
 try {
