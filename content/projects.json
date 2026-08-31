@@ -17,8 +17,7 @@
     "SQLite FTS5",
     "Better Auth",
     "Stripe",
-    "MCP",
-    "Astro"
+    "MCP"
   ],
   "projects": [
     {
@@ -153,7 +152,7 @@
       "url": "https://foxhoundapp.com",
       "repo": null,
       "stack": ["Cloudflare Workers", "D1", "Stripe", "TypeScript"],
-      "metric": { "label": "pricing: share of recovered revenue", "value": "20%", "asOf": "2026-08-14" }
+      "metric": { "label": "pricing: share of recovered revenue", "value": "20%", "asOf": "2026-08-30" }
     },
     {
       "slug": "foxing",
@@ -166,20 +165,20 @@
       "url": "https://foxing.app",
       "repo": null,
       "stack": ["Cloudflare Workers", "D1", "R2", "TypeScript"],
-      "metric": { "label": "public-domain titles offered, per its own catalogue", "value": "1,400+", "asOf": "2026-08-14" }
+      "metric": { "label": "public-domain titles offered, per its own catalogue", "value": "1,432", "asOf": "2026-08-30" }
     },
     {
       "slug": "germomics",
       "name": "Germomics",
-      "oneLiner": "A microbiology and history publication with an accompanying podcast.",
-      "description": "A publication pairing written pieces on microbiology and its history with a podcast distributed through the usual directories. It demonstrates the editorial half of this portfolio rather than the infrastructural one: a subject-matter publication that has to earn attention on the writing, with the platform staying out of the way.",
+      "oneLiner": "A narrative podcast on microbiology and history, on a publishing platform built for it.",
+      "description": "A narrative podcast on microbiology and its history, distributed through the usual directories, with its own publishing platform behind it. It demonstrates the editorial half of this portfolio rather than the infrastructural one: a subject-matter show that has to earn attention on the storytelling, with the platform staying out of the way.",
       "schemaType": "SoftwareApplication",
       "role": "Author and host",
       "status": "live",
       "url": "https://germomics.com",
       "repo": null,
-      "stack": ["Astro", "Cloudflare Workers"],
-      "metric": { "label": "pages in its published sitemap", "value": "24", "asOf": "2026-08-14" }
+      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Drizzle", "Better Auth"],
+      "metric": { "label": "pages in its published sitemap", "value": "24", "asOf": "2026-08-30" }
     }
   ]
 }
