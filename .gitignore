@@ -105,6 +105,28 @@ wrangler.watchdog.jsonc
 # out of the repo by hand. Added 2026-08-28, when it did.
 /.scratch/
 
+# Ship's own transcript, one timestamped file per run, written unconditionally
+# by scripts/ship.mjs.
+#
+# IGNORED FOR TWO INDEPENDENT REASONS, and either alone would be enough.
+#
+#   1. The same one /.scratch/ above has: ship refuses on any dirty tree,
+#      untracked files included. A log ship wrote itself, left untracked, would
+#      make the next ship refuse because of the previous one. That is a gate
+#      failing itself, which is worse than no log.
+#   2. IT CARRIES ACCOUNT-SCOPED IDS. `wrangler deploy` prints its binding
+#      table, which names the KV namespace id and CLOUDFLARE_ACCOUNT_ID by
+#      value, and the watchdog's table prints ALERT_EMAIL. Those are exactly the
+#      values wrangler.jsonc and wrangler.watchdog.jsonc are gitignored to keep
+#      out of this repository, so a tracked ship log would put them back.
+#
+# It carries no token. Checked before this was added rather than assumed:
+# `wrangler secret` bindings do not appear in the deploy table at all, and the
+# only OPERATOR_TOKEN value in ship.mjs goes into an Authorization header that
+# is never echoed. What ship prints about the token is the FILE PATH, on one
+# refusal branch, which is a path and not a credential.
+/.ship-logs/
+
 # Social card review renders, written by `build:og -- --out og-samples`.
 # Untracked because the PNG bytes are not deterministic and are deliberately
 # kept out of the gated artifact, and IGNORED rather than merely untracked
