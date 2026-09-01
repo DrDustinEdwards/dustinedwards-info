@@ -1,7 +1,7 @@
 ---
 title: "Test Post: The Image Rendering Path"
 slug: image-path-test
-description: "A temporary test post that cites one image three ways, so the media reference collector and the prose image renderer run against a real asset on a real route instead of a fixture. Scheduled for deletion."
+description: "A temporary test post that cites one photograph four ways across two storage paths, so the media reference collector and the prose image renderer run against a real asset on a real route instead of a fixture. Scheduled for deletion."
 date: 2026-09-01
 tags: [meta, testing]
 draft: true
