@@ -127,6 +127,16 @@ wrangler.watchdog.jsonc
 # refusal branch, which is a path and not a credential.
 /.ship-logs/
 
+# check:browser's record of the long-running children it started, one JSON
+# object per line, read and cleared by the NEXT run's preflight.
+#
+# IGNORED FOR THE `/.ship-logs/` REASON, which is the one that actually bites:
+# ship refuses on any dirty tree, untracked files included, so a file the gate
+# writes about itself would make the next ship refuse because of the last
+# check:browser. It carries nothing else: process ids and the needles used to
+# re-identify them, no paths outside this repo and no credential.
+/.gate-pids/
+
 # Social card review renders, written by `build:og -- --out og-samples`.
 # Untracked because the PNG bytes are not deterministic and are deliberately
 # kept out of the gated artifact, and IGNORED rather than merely untracked

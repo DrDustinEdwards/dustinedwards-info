@@ -117,9 +117,26 @@ const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
  * a number that already has two owners bound by check:invariants section 25.
  */
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
+import { ChildRegistry, descendantPids, killTree, readProcessTable } from "./lib/child-processes.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
+
+/**
+ * WHAT THIS GATE STARTED, so the next run can clear what a kill left behind.
+ *
+ * Gitignored, for the reason `/.ship-logs/` is: `npm run ship` refuses on any
+ * dirty tree, untracked files included, so a file the gate writes about itself
+ * would make the next ship refuse because of the last check:browser.
+ *
+ * The registry exists because THE ORDERLY CLEANUP BELOW CANNOT COVER A HARD
+ * KILL. On Windows a `taskkill /F` is not deliverable as a signal: no handler
+ * runs, no `finally` runs, and `browser.close()` never happens. Measured
+ * 2026-08-31, that leaves the vite side holding port 4173 with no owner and no
+ * way for anything in THIS process to have prevented it. So the repair belongs
+ * to the next run, which is what this file is for.
+ */
+const registry = new ChildRegistry(join(root, ".gate-pids", "check-browser.jsonl"));
 
 /**
  * WHERE THE PUBLIC CASES LOOK, and it changes what a green run MEANS.
@@ -586,6 +603,42 @@ function report(what) {
 console.log("\ncheck:browser\n");
 
 /*
+ * PREFLIGHT: clear what the LAST run left behind, before this one needs the
+ * port it is probably still holding.
+ *
+ * REPORTED EVERY RUN, INCLUDING ZERO. A silent cleanup is indistinguishable
+ * from one that is not running, which is the same argument the executed-count
+ * floors make further down this file: a check that can pass by doing nothing
+ * has to say how much it did.
+ *
+ * `reused` is the line worth reading. A pid is not an identity, Windows hands
+ * them out again, and the registry entry is a claim about the past. Anything
+ * still alive whose command line no longer matches what this gate launches is
+ * DROPPED rather than killed. Dustin runs his own Chrome, and that branch is
+ * the only thing standing between a stale pid and his tabs.
+ */
+{
+  const swept = registry.preflight();
+  const parts = [`${swept.cleared} cleared`, `${swept.stale} stale`, `${swept.reused} reused`];
+  if (swept.failed > 0) parts.push(`${swept.failed} FAILED TO KILL`);
+  if (swept.unverifiable > 0) parts.push(`${swept.unverifiable} unverifiable`);
+  console.log(`  preflight: last run's children, ${parts.join(", ")}`);
+  for (const note of swept.notes) console.log(`    ${note}`);
+}
+
+/*
+ * This process is registered FIRST, and it is not the obvious entry.
+ *
+ * The measured shape on 2026-08-31: killing the npm and cmd wrappers ABOVE this
+ * process leaves THIS process orphaned and still running, holding a browser and
+ * a preview server. It finishes and cleans up if it is left alone, and becomes
+ * a permanent leak the moment somebody kills it too, which is what a supervisor
+ * retrying a kill does. Nothing inside a stranded process can fix that, so the
+ * next run inherits it, exactly like the children below.
+ */
+registry.record(process.pid, "the check:browser gate", ["check-browser.mjs"]);
+
+/*
  * IT BUILDS, rather than trusting whatever is in build/.
  *
  * A stale build is the disk-versus-HEAD class wearing a different hat: the gate
@@ -606,6 +659,10 @@ if (DRIVES_PREVIEW) {
   if (bundled.status !== 0) {
     console.error("check:browser failed. build:enhance did not succeed, so the build below cannot.");
     console.error((bundled.stderr || bundled.stdout || "").slice(-1200));
+    // Nothing has been started yet, so the only entry is this process's own.
+    // Cleared directly rather than through cleanupChildren, which reads a
+    // `const` that is still in its temporal dead zone this early.
+    registry.clear();
     process.exit(1);
   }
   const built = spawnSync("npm", ["run", "build"], {
@@ -617,6 +674,7 @@ if (DRIVES_PREVIEW) {
   if (built.status !== 0) {
     console.error("check:browser failed. the build did not succeed, so there is nothing to lay out.");
     console.error((built.stderr || built.stdout || "").slice(-1200));
+    registry.clear();
     process.exit(1);
   }
 } else {
@@ -663,6 +721,23 @@ const server = DRIVES_PREVIEW
 server?.stdout?.on("data", recordServerOutput);
 server?.stderr?.on("data", recordServerOutput);
 server?.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}`));
+
+/*
+ * The pid `spawn()` hands back is the SHELL, and on the kill path it is the one
+ * process guaranteed to be gone.
+ *
+ * `shell: true` plus npx puts a chain between this gate and the vite process
+ * that actually binds the port. Measured 2026-08-31, when the gate node is
+ * killed, that shell dies with it because its stdio pipe breaks, and its
+ * descendants survive: the npx node, an inner cmd, and vite itself, holding
+ * 4173 with nobody left who knows they exist.
+ *
+ * So the shell is recorded here for the orderly case, and the SURVIVORS are
+ * recorded separately once the server answers. Recording only this pid would
+ * produce a registry that always looks correct and never clears anything.
+ */
+const VITE_NEEDLES = ["vite", "preview", String(PORT)];
+if (server?.pid) registry.record(server.pid, "the vite preview server", VITE_NEEDLES);
 
 /*
  * WHETHER THE SERVER PROCESS IS STILL ALIVE, which is the half the poll could
@@ -774,6 +849,7 @@ async function waitForServer(timeoutMs = 180_000) {
       const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
         console.log(`  preview server answered in ${Date.now() - started}ms`);
+        recordServerSurvivors();
         return true;
       }
     } catch {
@@ -823,27 +899,113 @@ function serverDiagnosis() {
   return `${how}\n  ${tail}`;
 }
 
+/**
+ * Record the preview processes that OUTLIVE this gate when it is killed.
+ *
+ * Called once, at the moment the server answers, because that is the first
+ * moment the chain exists and is stable. It is one process listing in a gate
+ * that takes minutes, and it buys the only registry entries that are still
+ * alive on the path this whole mechanism exists for.
+ *
+ * Each survivor has to satisfy the same needles a later run will re-check it
+ * against, so anything in the subtree that does not name itself as this
+ * preview server is not recorded at all. workerd and esbuild are the deliberate
+ * omissions: they say nothing about vite on their own command lines, and
+ * `taskkill /T` from the vite process reaches them anyway.
+ */
+function recordServerSurvivors() {
+  if (!server?.pid) return;
+  const table = readProcessTable();
+  if (table.size === 0) return;
+  for (const pid of descendantPids(server.pid, table)) {
+    const live = table.get(pid);
+    if (!live) continue;
+    if (!VITE_NEEDLES.every((needle) => live.command.includes(needle.toLowerCase()))) continue;
+    registry.record(pid, "the vite preview server", VITE_NEEDLES);
+  }
+}
+
+/**
+ * Stop the preview server, and everything npx put underneath it.
+ *
+ * `/T` rather than a bare kill, for the reason recorded at the registration
+ * site: the pid `spawn()` returned is a shell, and the process holding the port
+ * is two levels below it.
+ */
 function stopServer() {
   if (!server) return;
   if (process.argv.includes("--keep")) return;
-  try {
-    if (process.platform === "win32") {
-      if (server.pid) spawnSync("taskkill", ["/F", "/T", "/PID", String(server.pid)], { stdio: "ignore" });
-    } else {
-      if (server.pid) process.kill(-server.pid, "SIGTERM");
-    }
-  } catch {
-    /* already gone */
+  if (server.pid) killTree(server.pid);
+}
+
+/**
+ * Every long-running child, on every ORDERLY exit path.
+ *
+ * `browser.close()` stays and runs first: it is the graceful stop, it lets
+ * Puppeteer flush what it is holding, and it is what should normally do the
+ * job. The tree kill after it is the BACKSTOP for when it does not run or does
+ * not finish, which is a case this gate has actually been in.
+ *
+ * What this function CANNOT cover is the case that produced the leftovers:
+ * `taskkill /F` on Windows delivers no signal, so nothing here executes. That
+ * is not a gap in the handlers, it is the reason the registry exists.
+ *
+ * @param {import("puppeteer").Browser | undefined} openBrowser
+ */
+async function cleanupChildren(openBrowser) {
+  if (openBrowser) {
+    await openBrowser.close().catch(() => {});
+    const chrome = openBrowser.process();
+    if (chrome?.pid && !process.argv.includes("--keep")) killTree(chrome.pid);
   }
+  stopServer();
+  // With `--keep` the operator wants the server left standing, so the entries
+  // stay too: the next run's preflight is then the thing that frees the port,
+  // which is what it is for.
+  if (!process.argv.includes("--keep")) registry.clear();
+}
+
+/**
+ * Declared HERE rather than beside its first use, because the signal handlers
+ * below close over it and a handler is reachable from the moment it is
+ * registered. Left further down, an interrupt during the build would hit the
+ * temporal dead zone and replace the gate's diagnosis with a ReferenceError.
+ *
+ * @type {import("puppeteer").Browser | undefined}
+ */
+let browser;
+
+/*
+ * THE SIGNALS THAT ARE DELIVERABLE, which is a smaller set than it looks.
+ *
+ * Ctrl+C and a console close arrive as signals and are worth handling: they are
+ * how a person stops this gate. A `taskkill /F`, which is how a supervisor
+ * stops it, arrives as nothing at all. So these handlers narrow the window and
+ * do not close it, and saying which is the point: the registry above is what
+ * covers the rest.
+ *
+ * `process.exit` here rather than a set exit code, because a signal handler that
+ * returns hands control back to a gate whose children are now gone.
+ */
+for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"])) {
+  process.on(signal, () => {
+    console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
+    if (browser) {
+      const chrome = browser.process();
+      if (chrome?.pid) killTree(chrome.pid);
+    }
+    if (server?.pid) killTree(server.pid);
+    registry.clear();
+    process.exit(1);
+  });
 }
 
 /** False when the subject never answered, so nothing below was measured. */
 let subjectReachable = true;
-let browser;
 try {
   if (!(await waitForServer())) {
     console.error(`check:browser failed. ${serverDiagnosis()}`);
-    stopServer();
+    await cleanupChildren(browser);
     /*
      * `process.exitCode`, NOT `process.exit()`, and this is the recorded
      * Windows class at a new site.
@@ -862,6 +1024,15 @@ try {
   }
 
   browser = await puppeteer.launch({ headless: true });
+  /*
+   * The needle is the PUPPETEER CACHE PATH, not "chrome".
+   *
+   * Dustin runs his own Chrome, and a needle that matched on the browser name
+   * would let a reused pid point this gate's cleanup at his tabs. Puppeteer's
+   * binary lives under its own download cache and nothing else on the machine
+   * runs from there, so the path is the part that says whose browser it is.
+   */
+  registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   const page = await browser.newPage();
 
   /*
@@ -4715,8 +4886,7 @@ try {
    */
   if (!(error instanceof Error) || error.message !== "SUBJECT_UNREACHABLE") throw error;
 } finally {
-  if (browser) await browser.close().catch(() => {});
-  stopServer();
+  await cleanupChildren(browser);
 }
 
 /*
