@@ -4,10 +4,11 @@ slug: image-path-test
 description: "A temporary test post that cites one photograph four ways across two storage paths, so the media reference collector and the prose image renderer run against a real asset on a real route instead of a fixture. Scheduled for deletion."
 date: 2026-09-01
 tags: [meta, testing]
-draft: true
+draft: false
 cover:
   src: /phage-hunters/2017.webp
   alt: "Group photo of the 2017 Phage Discovery Program cohort"
+first_published: 2026-09-01
 ---
 
 This post exists to exercise the image path. It is not an article, and it will be deleted once the path has been proven.
