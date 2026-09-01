@@ -89,6 +89,20 @@ export const REPAIRABLE = /** @type {const} */ ({
   "content-drift": "sync_posts",
   "ask-index-drift": "sync_ask",
   "media-index-drift": "sync_media",
+  /*
+   * LAST, and order-independent unlike the three above. `sync_media` rebuilds a
+   * D1 projection from R2 and never touches an object; this copies bytes and
+   * never touches a row. Neither can feed the other, so the position carries no
+   * argument and is simply the order they were added in.
+   *
+   * ADDED 2026-09-01 with the mirror (decisions-vol-13.md). It is the only
+   * repair in this table that CANNOT LOSE ANYTHING: `backup_media` copies
+   * MEDIA to MEDIA_BACKUP and has no delete branch, in either bucket. That is
+   * the whole argument for letting it fire unattended, and it is why the
+   * check it repairs may self-repair where `media-unbacked` could not: that one
+   * announced a policy that had expired, and no write could have answered it.
+   */
+  "media-backup-drift": "backup_media",
 });
 
 /**

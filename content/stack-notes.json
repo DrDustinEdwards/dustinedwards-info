@@ -17,6 +17,10 @@
       "what": "Social cards, one per post, rebuilt by command.",
       "whyLoadBearing": "A second bucket exists because the two split on LIFECYCLE rather than on what the UI calls them. MEDIA is irreplaceable; OG is regenerable, so it is safe to empty and is deliberately outside the backup path."
     },
+    "r2:MEDIA_BACKUP": {
+      "what": "A mirror of MEDIA. Every uploaded original has a byte-identical twin here, written by copy and never by the site itself.",
+      "whyLoadBearing": "The realistic way these bytes are lost is this site deleting them: the OG prune, the media delete action and the R2-wins reconciliation can each remove an object with no undo. So no code path deletes from this bucket, check:destructive sweeps for one, and health compares every object against its twin. It replaced an acceptance that held only while MEDIA was empty, which expired on the first upload."
+    },
     "ai_search:AI_SEARCH": {
       "what": "Retrieval and answer generation for Ask, on built-in storage with uploaded markdown rather than the crawler.",
       "whyLoadBearing": "It sits above classic search rather than replacing it, because the two fail on OPPOSITE inputs. Measured on the same corpus: classic found 2 things AI retrieval missed, all exact tokens, and AI retrieval found 3 that classic missed, all natural-language questions. Neither layer subsumes the other."

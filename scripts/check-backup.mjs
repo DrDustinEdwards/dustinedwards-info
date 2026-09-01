@@ -26,17 +26,31 @@
  * Every export is then checked for real rows rather than mere existence. An
  * empty file is a passing export of nothing, which is the failure mode that
  * looks most like success.
+ *
+ * **SINCE 2026-09-01 IT ALSO PULLS THE MEDIA OBJECTS** to the same backup root
+ * (decisions-vol-13.md). The mirror bucket covers this site's own code deleting
+ * an object; both copies are in one account, so neither covers account loss.
+ * This pull is the only copy outside it, and it lives here so that one command
+ * produces a complete restore set. `--remote` only: `--local` reads miniflare,
+ * which holds no objects, and it says so rather than counting zero as a pass.
  */
 
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
+import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
 const DB_NAME = "dustinedwards";
 const MIGRATIONS_DIR = "drizzle";
+/**
+ * The irreplaceable bucket. The OG bucket is deliberately NOT pulled: every
+ * card is regenerable by `build:og` from the corpus, and backing up output that
+ * has a rebuild door is how a backup set grows without getting safer.
+ */
+const MEDIA_BUCKET = "dustinedwards-media";
 
 /**
  * Tables D1 and wrangler create for their own bookkeeping. They are not ours,
@@ -389,6 +403,67 @@ async function main() {
   if (empty.length > 0) {
     console.log(`  note: ${empty.length} table(s) exported with no rows: ${empty.join(", ")}`);
   }
+
+  /*
+   * THE MEDIA OBJECTS, to the SAME backup root. Ruled 2026-09-01,
+   * decisions-vol-13.md.
+   *
+   * ## WHY THIS IS HERE AND NOT IN A SECOND SCRIPT
+   *
+   * The mirror bucket answers the realistic threat, which is this site's own
+   * code deleting an object. It answers NOTHING about account loss or
+   * compromise, because both copies live in the same account. This pull is the
+   * only copy outside it, and putting it beside the D1 export means one command
+   * produces a complete restore set rather than two commands somebody has to
+   * remember to run in pairs.
+   *
+   * ## REMOTE ONLY, AND SAID RATHER THAN SKIPPED SILENTLY
+   *
+   * `--local` reads miniflare state, which holds no objects, so the pull would
+   * download nothing and report a clean sweep. That is the vacuity this file
+   * already floors everywhere else, so the local run announces that it examined
+   * nothing instead of counting it as a pass.
+   *
+   * ## THE FLOOR IS THE LIST, NOT A CONSTANT
+   *
+   * `downloaded` is compared against what R2 itself listed in the same call, so
+   * an empty bucket and a broken download are distinguishable, and no byte
+   * count is written down here to go stale. Per-object size verification lives
+   * in `downloadAllObjects`, because a short read produces a file that exists
+   * and restores to a corrupt image.
+   */
+  let mediaNote = "media objects NOT pulled (--local reads miniflare, which holds none)";
+  if (target === "--remote") {
+    const mediaDir = path.join(dir, "media");
+    await mkdir(mediaDir, { recursive: true });
+    const listed = await retryRead(
+      () => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }),
+      { label: "check:backup MEDIA list" },
+    );
+    const pulled = await downloadAllObjects({
+      bucket: MEDIA_BUCKET,
+      destDir: mediaDir,
+      remote: true,
+    });
+
+    if (pulled.mismatched.length > 0) {
+      for (const bad of pulled.mismatched) console.error(`  FAIL media object ${bad}`);
+      throw new Error(
+        `${pulled.mismatched.length} media object(s) did not land on disk at the size R2 ` +
+          `reported. A short read is a backup that restores to a corrupt file.`,
+      );
+    }
+    if (pulled.downloaded !== listed.length) {
+      throw new Error(
+        `pulled ${pulled.downloaded} media object(s) but R2 listed ${listed.length}. A backup ` +
+          `that silently omits an object it just listed is the failure this gate is for.`,
+      );
+    }
+    mediaNote =
+      `${pulled.downloaded} media object(s), ${pulled.bytes} bytes, under ${mediaDir}` +
+      (listed.length === 0 ? " (the bucket is empty, so this verified nothing)" : "");
+  }
+  console.log(`  ${mediaNote}`);
 
   console.log(
     `check:backup ok. ${real.size} table(s), ${totalBytes} bytes total, written under ${dir}`,

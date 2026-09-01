@@ -8,11 +8,14 @@
  * missing, and an assertion that it is reported as a breach and that the number
  * nine survives into the sentence a person reads.
  *
- * The second check is the R2 acceptance trip-wire. Its replay is the future
- * event rather than a past one, because the whole point of it is that the
- * condition it watches for has not happened yet: `MEDIA` measured empty on
- * 2026-08-22, RECOVERY.md section 3 accepted having no backup on that basis,
- * and one uploaded object ends the acceptance.
+ * The second check WAS the R2 acceptance trip-wire, and its replay was the
+ * future event rather than a past one. **That future arrived on 2026-09-01**:
+ * the first object went into `MEDIA`, `media-unbacked` fired exactly as it was
+ * built to, and the acceptance it guarded was re-decided rather than deferred
+ * (decisions-vol-13.md). The bucket now has a mirror, and `media-backup-drift`
+ * replaces it. So the replay here is no longer hypothetical: the cases below
+ * are a missing twin and a mismatched one, and the one that matters most is
+ * that zero missing over zero objects must not read as a verified mirror.
  *
  * @see app/lib/health/verdicts.mjs
  * @see app/lib/health/checks.server.ts
@@ -27,7 +30,7 @@ import {
   contentDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
-  mediaUnbackedVerdict,
+  mediaBackupDriftVerdict,
   publicHealthBody,
 } from "../app/lib/health/verdicts.mjs";
 
@@ -70,18 +73,52 @@ test("both directions are summed, not maxed", () => {
   assert.match(verdict.detail, /drift 2\b/, "one missing plus one stale is two problems");
 });
 
-test("an empty MEDIA bucket keeps the no-backup acceptance alive", () => {
-  const verdict = mediaUnbackedVerdict([]);
+/* ---- the mirror, which replaced the empty-bucket acceptance -------------- */
+
+const mirror = (over = {}) => ({ objects: 0, twins: 0, missing: [], mismatched: [], ...over });
+
+test("a fully mirrored bucket passes and reports all three counts", () => {
+  const verdict = mediaBackupDriftVerdict(mirror({ objects: 3, twins: 3 }));
   assert.equal(verdict.ok, true);
-  assert.match(verdict.detail, /RECOVERY\.md section 3/, "the verdict must cite what it rests on");
+  assert.match(verdict.detail, /3 objects/);
+  assert.match(verdict.detail, /3 twins/);
+  assert.match(verdict.detail, /0 missing/);
 });
 
-test("one uploaded original ends the acceptance and names the key", () => {
-  const verdict = mediaUnbackedVerdict([{ key: "posts/first-upload.png" }]);
+test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
+  // The whole reason the counts travel. An empty bucket and a perfectly
+  // mirrored one both have no missing keys and are not the same state, and
+  // "0 missing" alone is exactly how a vacuous pass reads as a real one.
+  const verdict = mediaBackupDriftVerdict(mirror());
+  assert.equal(verdict.ok, true, "an empty bucket is not a failure");
+  assert.match(verdict.detail, /examined nothing rather than verified anything/);
+});
+
+test("a missing twin fails, names the key, and names the repair", () => {
+  const verdict = mediaBackupDriftVerdict(
+    mirror({ objects: 2, twins: 1, missing: ["abc123-800x600.webp"] }),
+  );
   assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /posts\/first-upload\.png/, "name the object, not just the count");
-  assert.match(verdict.detail, /not regenerable/);
-  assert.match(verdict.detail, /re-decided/);
+  assert.match(verdict.detail, /1 missing/);
+  assert.match(verdict.detail, /abc123-800x600\.webp/, "name the object, not just the count");
+  assert.match(verdict.detail, /backup_media/, "a failing check must name its repair");
+});
+
+test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
+  // A twin that exists but differs is a copy that is WRONG, not one that never
+  // ran. Folding it into `missing` would lose the distinction that says
+  // something rewrote the mirror.
+  const verdict = mediaBackupDriftVerdict(
+    mirror({ objects: 2, twins: 1, mismatched: ["abc123.webp (etag differs: a against b)"] }),
+  );
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /0 missing/);
+  assert.match(verdict.detail, /1 mismatched/);
+});
+
+test("the failing verdict carries the two counts it compared", () => {
+  const verdict = mediaBackupDriftVerdict(mirror({ objects: 5, twins: 4, missing: ["k"] }));
+  assert.deepEqual(verdict.counts, { expected: 5, present: 4 });
 });
 
 test("agreeing FTS counts are healthy", () => {
@@ -143,7 +180,7 @@ test("the wire body carries names and booleans only", async () => {
   const run = {
     checks: [
       { name: "ask-index-drift", ok: false, detail: "Ask index drift 9: 9 missing, 46 expected" },
-      { name: "media-unbacked", ok: false, detail: "first key: posts/private-upload.png" },
+      { name: "media-backup-drift", ok: false, detail: "first missing: posts/private-upload.png" },
       { name: "fts-equality", ok: true, detail: "search_docs=46=identity=prose" },
     ],
   };
@@ -159,7 +196,7 @@ test("the wire body carries names and booleans only", async () => {
   assert.equal(body.ok, false);
   assert.deepEqual(
     body.checks.map((c) => c.name),
-    ["ask-index-drift", "media-unbacked", "fts-equality"],
+    ["ask-index-drift", "media-backup-drift", "fts-equality"],
     "order is part of the shape the workflow parses",
   );
   assert.deepEqual(
@@ -257,12 +294,12 @@ test("A PASSING check stays exactly as narrow as it was", () => {
 });
 
 test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
-  // detail carries an R2 OBJECT KEY on media-unbacked and the shadow table
+  // detail carries an R2 OBJECT KEY on media-backup-drift and the shadow table
   // names on fts-equality. That is what the names-and-booleans rule is for.
   const serialised = JSON.stringify(
     publicHealthBody({
       checks: [
-        { name: "media-unbacked", ok: false, detail: "og/secret-key.png is unbacked" },
+        { name: "media-backup-drift", ok: false, detail: "og/secret-key.png has no twin" },
         { name: "fts-equality", ok: true, detail: "search_identity_docsize=113" },
       ],
     }),
@@ -273,10 +310,10 @@ test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
 });
 
 test("a failing check with NO counts is still just name and ok", () => {
-  // media-unbacked has no two-sided comparison to report, so it opts out by
+  // fts-equality has no two-sided comparison to report, so it opts out by
   // simply not carrying counts rather than by being special-cased.
   const body = publicHealthBody({
-    checks: [{ name: "media-unbacked", ok: false, detail: "a key" }],
+    checks: [{ name: "fts-equality", ok: false, detail: "a shadow table name" }],
   });
   assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
 });

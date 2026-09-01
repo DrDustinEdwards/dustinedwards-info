@@ -46,6 +46,7 @@ import {
 } from "~/lib/search/ask.server";
 import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
+import { copyMissingTwins } from "~/lib/media/backup.server";
 import { listDirectory, readFile } from "~/lib/editor/github.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
@@ -90,6 +91,7 @@ const TOOLS = [
   "sync_ask",
   "sync_media",
   "sync_posts",
+  "backup_media",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -179,6 +181,15 @@ export const TOOL_DESCRIPTORS: Readonly<
       "uses. Idempotent. A read-back reconciliation: expected, present, and " +
       "a converged verdict.",
   },
+  backup_media: {
+    args: {},
+    returns:
+      "Copies every MEDIA object that has no byte-identical twin into " +
+      "MEDIA_BACKUP. COPIES ONLY: it has no delete branch in either bucket, " +
+      "and nothing is ever copied backup to media. Idempotent. A read-back " +
+      "reconciliation: objects, twins, missing and mismatched, counted after " +
+      "the writes rather than from the loop's own counters.",
+  },
 };
 
 /**
@@ -217,6 +228,9 @@ export async function runTool(
 
       case "sync_posts":
         return await syncPosts(env);
+
+      case "backup_media":
+        return await backupMedia(env);
     }
   } catch (error) {
     return translate(error);
@@ -523,6 +537,47 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
  * reports drift, so a window would only slow a real failure down. Measured
  * rather than assumed: see the ship report for this batch.
  */
+/**
+ * THE MIRROR REPAIR, as an operator operation. The fourth repairable class.
+ *
+ * `media-backup-drift` compares MEDIA against MEDIA_BACKUP; this is its repair,
+ * and both derive their work from the SAME `backupStatus`, so what the check
+ * calls drift is exactly what this copies. That is the same one-owner shape the
+ * other three repairs follow.
+ *
+ * ## WHY THIS ONE IS SAFE TO FIRE UNATTENDED
+ *
+ * It has no delete branch, in either bucket, and it never writes to MEDIA. The
+ * worst a spurious run can do is rewrite a twin with the bytes it already had.
+ * Every other repair in the table can remove something; this one cannot, which
+ * is the argument recorded in `REPAIRABLE` for allowing self-repair here.
+ *
+ * ## IDEMPOTENT, AND THE VERDICT IS READ BACK
+ *
+ * Running it against a converged mirror copies nothing and reports converged.
+ * The counts come from a SECOND comparison taken after the writes, on the same
+ * rule the three syncs follow: a report assembled from the loop's own counters
+ * describes what the loop believed rather than what the store holds.
+ */
+async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
+  const { copied, gone, status } = await copyMissingTwins(env);
+
+  return {
+    ok: true,
+    data: {
+      copied,
+      // An object that vanished between the comparison and the copy. Not an
+      // error: its twin, if it had one, is exactly what the mirror is for.
+      gone,
+      objects: status.objects,
+      twins: status.twins,
+      missing: status.missing.length,
+      mismatched: status.mismatched.length,
+      converged: status.missing.length === 0 && status.mismatched.length === 0,
+    },
+  };
+}
+
 async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
   const rebuilt = await rebuildMediaIndex(env);
   const status = await mediaIndexStatus(env);

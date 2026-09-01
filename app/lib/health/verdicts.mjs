@@ -64,9 +64,11 @@ export function askDriftVerdict(status) {
  * `mediaIndexStatus` compares KEY SETS, so this adds their sizes rather than
  * subtracting totals.
  *
- * NOT the same question as `media-unbacked` below, which asks whether the MEDIA
- * bucket is still empty. That one guards a recovery acceptance; this one guards
- * a projection. They fail independently.
+ * NOT the same question as `media-backup-drift` below, which asks whether every
+ * object has a twin in the mirror. That one guards a recovery acceptance; this
+ * one guards a projection. They fail independently, and the difference is which
+ * store is the truth: here R2 is, and D1 is the projection being checked; there
+ * MEDIA is, and the backup is the copy being checked.
  *
  * @param {{ expected: number, present: number, missing: string[], extra: string[] }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -92,34 +94,66 @@ export function mediaDriftVerdict(status) {
 }
 
 /**
- * Does RECOVERY.md section 3's no-backup acceptance still hold?
+ * Does every object in MEDIA have a byte-identical twin in MEDIA_BACKUP?
  *
- * It rests entirely on the `MEDIA` bucket being empty, measured 2026-08-22: an
- * empty bucket means the unrecoverable set is zero bytes, and an acceptance
- * over zero bytes costs nothing. One uploaded original makes that false, and
- * nothing else on this site announces it, because `check:media` reconciles what
- * IS there and is perfectly happy for there to be more of it.
+ * **REPLACED `media-unbacked` on 2026-09-01**, ruled in `decisions-vol-13.md`.
+ * That check asked whether the MEDIA bucket was still EMPTY, because
+ * `RECOVERY.md` section 3 grounded a no-backup acceptance on it holding
+ * nothing. It fired correctly on the first object ever put there. The
+ * acceptance was re-decided rather than deferred, because a real image-bearing
+ * post would have expired it within weeks anyway: the bucket gets a mirror, and
+ * this is the question that mirror makes askable.
  *
- * Takes the objects rather than a count so the message can name a key. The
- * caller lists with `limit: 1`; the question is "any", not "how many".
+ * ## THE COUNTS ARE THE POINT
  *
- * @param {Array<{ key: string }>} objects
- * @returns {{ ok: boolean, detail: string }}
+ * `objects`, `twins` and `missing` all travel, so ZERO MISSING CANNOT MEAN ZERO
+ * EXAMINED. An empty MEDIA bucket and a perfectly mirrored one both report no
+ * missing keys, and they are not the same state: the first is vacuous and this
+ * says so rather than reporting health.
+ *
+ * ## MISMATCHED IS ITS OWN WORD
+ *
+ * A twin that EXISTS but differs is not a backup of anything, and calling it
+ * missing would understate it: a missing key is a copy that never ran, a
+ * mismatched one is a copy that is wrong. Both are repaired the same way and
+ * both are counted here, separately, because the second is the one that would
+ * mean something had rewritten the mirror.
+ *
+ * @param {{ objects: number, twins: number, missing: string[], mismatched: string[] }} status
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
-export function mediaUnbackedVerdict(objects) {
-  if (objects.length === 0) {
+export function mediaBackupDriftVerdict(status) {
+  const missing = status.missing.length;
+  const mismatched = status.mismatched.length;
+
+  if (status.objects === 0) {
     return {
       ok: true,
       detail:
-        "MEDIA bucket is empty, so RECOVERY.md section 3's no-backup acceptance still holds.",
+        "MEDIA bucket holds no objects, so the mirror has nothing to hold either. " +
+        "0 objects, 0 twins, 0 missing: examined nothing rather than verified anything.",
     };
   }
+
+  if (missing === 0 && mismatched === 0) {
+    return {
+      ok: true,
+      detail:
+        `Every MEDIA object has a byte-identical twin: ${status.objects} objects, ` +
+        `${status.twins} twins, 0 missing.`,
+    };
+  }
+
   return {
     ok: false,
     detail:
-      `MEDIA bucket is NO LONGER EMPTY (first key: ${objects[0]?.key ?? "unknown"}). ` +
-      `Uploaded originals are not regenerable and there is no backup. ` +
-      `RECOVERY.md section 3 must be re-decided.`,
+      `Media backup drift: ${status.objects} objects, ${status.twins} twins, ` +
+      `${missing} missing, ${mismatched} mismatched. ` +
+      `First missing: ${status.missing[0] ?? "none"}. ` +
+      `First mismatched: ${status.mismatched[0] ?? "none"}. ` +
+      `Repair with backup_media on the operator API, which only ever copies.`,
+    // THE TWO COUNTS TRAVEL, on the same grounds as mediaDriftVerdict.
+    counts: { expected: status.objects, present: status.twins },
   };
 }
 
@@ -370,7 +404,7 @@ export function withTimeout(promise, ms, name) {
  * Every `detail` on a failing check is useful and none of it belongs on an
  * unauthenticated endpoint. `ask-index-drift` carries how many records the
  * corpus holds and how many the index has; `fts-equality` carries five row
- * counts and the names of the shadow tables; `media-unbacked` carries an R2
+ * counts and the names of the shadow tables; `media-backup-drift` carries an R2
  * OBJECT KEY, which is a path into the bucket.
  *
  * None of that is catastrophic and none of it is anyone's business, and the

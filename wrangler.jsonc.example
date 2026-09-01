@@ -76,6 +76,15 @@
 		{
 			"binding": "OG",
 			"bucket_name": "dustinedwards-og"
+		},
+		// THE MIRROR. Written by the queue consumer as a derived action of the
+		// object-create event, and by the watchdog cron when a message was lost.
+		// NO SITE CODE PATH EVER DELETES FROM IT: pruning the backup is a human
+		// act, by hand. `check:destructive` fails if a delete against this
+		// binding appears. Ruling: decisions-vol-13.md, 2026-09-01.
+		{
+			"binding": "MEDIA_BACKUP",
+			"bucket_name": "dustinedwards-media-backup"
 		}
 	],
 	// Media thumbnails. The library derives every size from the one original in

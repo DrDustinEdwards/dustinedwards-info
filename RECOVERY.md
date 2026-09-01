@@ -150,17 +150,26 @@ regenerated on use, so an empty namespace is a correct starting state.
 ```sh
 npx wrangler r2 bucket create dustinedwards-media
 npx wrangler r2 bucket create dustinedwards-og
+npx wrangler r2 bucket create dustinedwards-media-backup
 ```
 
-Bindings `MEDIA` and `OG`. No id is needed; a bucket is referenced by name.
+Bindings `MEDIA`, `OG` and `MEDIA_BACKUP`. No id is needed; a bucket is
+referenced by name.
 
-**There are TWO buckets and they are split on LIFECYCLE, not on what the UI
+**There are THREE buckets and they are split on LIFECYCLE, not on what the UI
 calls them.** `dustinedwards-media` is irreplaceable: it holds uploaded
 originals, and nothing can regenerate them. `dustinedwards-og` holds social
 cards, every one of which `build:og -- --remote` can rebuild from the artifact,
 so it is safe to empty and is deliberately not in the backup path. Creating only
 the first, which is what this runbook used to say, produces a Worker that fails
 to bind `OG` at deploy. Finding B005.
+
+`dustinedwards-media-backup` is the MIRROR of the first, added 2026-09-01. It is
+written only by copy, and **no site code path ever deletes from it**;
+`check:destructive` sweeps `app/`, `workers/` and `scripts/` and fails on a
+delete against the `MEDIA_BACKUP` binding. Restoring it is never necessary to
+bring the site up: it is a source for a hand-copy back into `MEDIA`, not a thing
+the Worker reads.
 
 **Do not enable public access, and do not attach a custom domain.** Verified
 2026-08-02 against the live bucket: `r2.dev` public access is **disabled** and
@@ -173,17 +182,74 @@ Live buckets for reference, read from the API 2026-08-22: `dustinedwards-media`
 is location `ENAM`, `dustinedwards-og` is location `WNAM`, both storage class
 `Standard`. This line named one location as though it covered both.
 
-### Backup posture, and why there is no backup
+### Backup posture: the media bucket is mirrored
 
-**MEASURED 2026-08-22 AND RE-MEASURED FROM SCRATCH 2026-08-23, and the
-measurement is the whole answer: there is nothing in R2 that a restore could not
-reproduce.**
+**SUPERSEDED 2026-09-01.** The previous posture was ACCEPTANCE rather than a
+backup, on the measurement that `MEDIA` held zero objects and every other byte
+in R2 was a regenerable OG card, and it was explicitly dated and conditional:
+*"It holds exactly while `MEDIA` is empty. The first upload through the admin
+media drawer makes the unrecoverable set non-zero, and nothing in this repo
+announces that. Whoever lands the first upload owns re-deciding this section."*
+Something did announce it, the `media-unbacked` health check, and it fired on
+the first object ever put there. The full previous text and its four checked
+alternatives (R2 versioning, lifecycle rules, bucket lock, per-class second
+copies) are in git history for this file and the ruling is
+`dustinedwards/decisions-vol-13.md`.
+
+**The decision now is a MIRROR, plus a local pull.** What follows is the current
+posture.
+
+#### What actually threatens these bytes, in the ruled order
+
+1. **The site's own code.** The OG prune, the media delete action and the
+   R2-wins reconciliation can each remove an object with no undo. This is the
+   realistic loss, and the same-account mirror covers it completely.
+2. **Account loss or compromise.** A second bucket in the same account is worth
+   nothing here. The answer is `check:backup --remote`, which pulls every
+   `MEDIA` object to the local backup root beside the D1 table exports. That is
+   the only copy outside the account.
+3. **Cloudflare losing an object.** Least likely of the three, and covered by
+   the same local pull.
+
+#### How the mirror is kept
+
+- **On write.** R2 emits an object-create notification, the queue consumer
+  derives the D1 row, and since 2026-09-01 it derives the TWIN as well, from the
+  object as it is now. This keeps the never-a-dual-write rule: the Worker still
+  writes only to `MEDIA`.
+- **On drift.** `media-backup-drift` in `/api/health` compares every `MEDIA`
+  object against its twin and reports `objects`, `twins` and `missing`, so zero
+  missing cannot be mistaken for zero examined. The watchdog cron polls that
+  endpoint every fifteen minutes and self-repairs the class through
+  `backup_media` on the operator API, which is why a lost queue message
+  converges instead of leaving a hole nobody sees.
+- **Never the reverse.** Nothing copies backup to media by code. A stale mirror
+  overwriting a live object is the one way a backup can destroy what it exists
+  to protect, so restoring from it is a deliberate hand-copy.
+- **Deleting a media object leaves its twin.** That is the point rather than an
+  oversight, and it is why pruning the mirror is a human act.
+
+#### Comparison rule
+
+Byte identity is judged by **etag, corroborated by size**. For a single-part R2
+object the etag is the MD5 of the stored bytes, and the upload route caps an
+upload at 10 MB, so nothing here is multipart. Size alone cannot see a
+same-length corruption, which is exactly the case a mirror is for; a full hash
+would mean reading every object body on every health poll. If a multipart etag
+ever appears the comparison degrades to size and says so, so a weaker verdict is
+never mistaken for the strong one.
+
+#### The rest of R2, unchanged
+
+**MEASURED 2026-08-22 AND RE-MEASURED FROM SCRATCH 2026-08-23**, and still the
+answer for everything except the uploaded originals: there is nothing else in R2
+that a restore could not reproduce.
 
 Every class of thing this site stores, and where its second copy is:
 
 | Class | Where it lives | Count | Second copy |
 | --- | --- | --- | --- |
-| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **0** | none needed: the class is EMPTY |
+| Uploaded originals | `dustinedwards-media` (`MEDIA`) | non-zero since 2026-09-01 | **mirrored**: a twin in `dustinedwards-media-backup`, plus the local pull from `check:backup --remote`. The count lives in `media-backup-drift`, not here |
 | Social cards | `dustinedwards-og` (`OG`), all under `og/` | 12 (505,712 bytes) | **regenerable**: `npm run build:og -- --remote` |
 | Static assets | `public/`, not R2 at all | 60 files | **git**: 60 of 60 tracked |
 | Roster photo WebPs | `public/phage-hunters/` | 9 | **git**: all nine tracked |
@@ -232,11 +298,14 @@ thing to go stale. The other candidates were checked rather than assumed:
   lock rule set. A bucket lock is the mechanism if retention is ever wanted, and
   it protects against DELETION, never against loss of the account.
 
-**WHAT MAKES THIS ACCEPTANCE SAFE IS THAT IT IS DATED AND CONDITIONAL.** It holds
-exactly while `MEDIA` is empty. The first upload through the admin media drawer
-makes the unrecoverable set non-zero, and nothing in this repo announces that.
-Whoever lands the first upload owns re-deciding this section; until then there is
-no backup because there is nothing to back up.
+**THAT CONDITION EXPIRED ON 2026-09-01 AND THE MECHANISM WORKED.** The
+acceptance held exactly while `MEDIA` was empty, and the sentence that used to
+sit here said nothing in this repo would announce the first upload. That was
+wrong in the good direction: `media-unbacked` announced it, within one health
+poll, and refused to self-repair because a policy that has expired is not drift.
+The posture above replaced it the same day. What is worth carrying forward is
+not the acceptance but its SHAPE: it was dated, it named the condition it rested
+on, and it named who owned re-deciding it.
 
 ### What restoring actually involves
 
@@ -562,11 +631,14 @@ its run on any non-200, on a body that does not parse, or on `ok: false`.
 that is the whole delivery mechanism.** No notification service, no webhook, no
 secret to set or rotate.
 
-The endpoint runs three checks: `ask-index-drift` (the failure above, by name),
-`media-unbacked` (the one condition section 3's no-backup acceptance depends on)
-and `fts-equality` (the docsize equalities a ship asserts after a sync, which
-nothing measured between syncs). Each is individually timed out, so one wedged
-binding cannot hang the response. The body carries check NAMES and BOOLEANS
+The checks and their order are owned by `runHealthChecks` in
+`app/lib/health/checks.server.ts`; this paragraph points at it rather than
+restating a list that has already gone stale here once. It said "three checks"
+while the endpoint ran five, and named `media-unbacked`, which was replaced by
+`media-backup-drift` on 2026-09-01. What is stable enough to state: it covers
+the Ask index, the media index, the media MIRROR (section 3), the corpus against
+git, and the FTS docsize equalities a ship asserts after a sync. Each is
+individually timed out, so one wedged binding cannot hang the response. The body carries check NAMES and BOOLEANS
 only; the numbers behind a failure are in Workers Logs, because the endpoint is
 unauthenticated.
 
