@@ -235,6 +235,7 @@
     "check:features",
     "check:head",
     "check:headers",
+    "check:image-weight",
     "check:invariants",
     "check:llms",
     "check:logo",

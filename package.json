@@ -36,6 +36,7 @@
     "check:backup": "node scripts/check-backup.mjs",
     "check:browser": "node scripts/check-browser.mjs",
     "check:media": "node scripts/check-media.mjs",
+    "check:image-weight": "node scripts/check-image-weight.mjs",
     "check:diagrams": "node scripts/check-diagrams.mjs",
     "check:search": "node scripts/check-search.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
