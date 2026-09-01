@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 27;
+const MINIMUM_GATES = 28;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -287,6 +287,14 @@ const TIERS = {
    */
   "check:browser": "network",
   "check:media": "network",
+  /*
+   * NETWORK, and it could not be anything else. It fetches the transform route
+   * and compares what comes back against the origin object, so it needs both a
+   * deployed Worker and the R2 objects behind it. `--local` would read an empty
+   * bucket and report a clean sweep, which is the vacuity its own floor exists
+   * to refuse.
+   */
+  "check:image-weight": "network",
 };
 
 /**
