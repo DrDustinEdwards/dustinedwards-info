@@ -14,9 +14,11 @@ This post exists to exercise the image path. It is not an article, and it will b
 
 Here is why it is worth the trouble. The corpus carries no body images at all, so every stage that handles a picture inside prose has only ever run against a fixture. A fixture proves that the collector can parse a form. It does not prove that a reader loading the published page gets a working image, and those are different claims.
 
-One asset is cited three ways: as the cover in the frontmatter above, as a markdown image below, and as a figure directive with a caption. Each form should produce its own row in the reference table, and all of them should name the same key.
+One photograph is cited four ways, and it sits in two places. Three citations point at the copy the site already serves as a static file: the cover in the frontmatter above, a markdown image, and a figure directive with a caption. The fourth points at the same picture stored as an uploaded object instead. Each citation should produce its own row in the reference table.
 
-The asset is a cohort photograph that the site already places elsewhere, so it is indexed, it carries alt text, and nothing about this test creates or destroys a file. Deleting this post must leave that image exactly where it was.
+The split matters because only the uploaded copy passes through the transform route, and the transform route is what supplies a picture at more than one width. A static file is served as itself. Putting both in one post is the shortest way to see that difference rather than argue about it.
+
+Neither copy is created or destroyed by this test. Deleting this post must leave both exactly where they were.
 
 ## The markdown image form
 
@@ -27,5 +29,11 @@ The asset is a cohort photograph that the site already places elsewhere, so it i
 :::figure{src="/phage-hunters/2017.webp" alt="Group photo of the 2017 Phage Discovery Program cohort"}
 The same photograph, carried by a figure directive so that the caption has somewhere to live.
 :::
+
+## The uploaded copy
+
+The same photograph again, this time as an uploaded object rather than a static file. Everything above this heading points at one path, and this one line points at the other.
+
+![Group photo of the 2017 Phage Discovery Program cohort](/media/c3c4391fff3ce67a-1080x810.webp)
 
 That is the whole test.
