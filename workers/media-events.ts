@@ -1,5 +1,6 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
+import { mirrorObject } from "~/lib/media/backup.server";
 
 /**
  * The media index write path: R2 emits, a queue delivers, this derives the row.
@@ -189,4 +190,43 @@ async function indexOne(env: Env, key: string) {
     uploadedAt:
       object.uploaded instanceof Date ? object.uploaded.toISOString() : String(object.uploaded ?? ""),
   });
+
+  /*
+   * THE SECOND DERIVED ACTION: the mirror. Ruled 2026-09-01, decisions-vol-13.
+   *
+   * The row and the twin are derived from the SAME object read, by the same
+   * "ask R2 what is true now" rule the rest of this function runs on, so the
+   * mirror inherits every property that makes this path replay-safe. It is NOT
+   * a dual write: the Worker still writes only to MEDIA, the bucket emits, and
+   * this derives from what the bucket now holds.
+   *
+   * MEDIA ONLY. An `r2-derived` key is an OG card in the OG bucket, which is
+   * regenerable by `build:og` from the corpus and is deliberately emptiable.
+   * Mirroring it would back up the one thing that already has a rebuild door.
+   *
+   * NOTHING HERE DELETES A TWIN, and the absence is the design. The `!object`
+   * branch above deletes the ROW when the object is gone, because D1 is a
+   * projection of R2. The backup is not a projection: it is the copy that
+   * survives the delete, so a deleted media object keeps its twin and pruning
+   * the mirror is a human act. `check:destructive` fails on a delete against
+   * MEDIA_BACKUP anywhere in this repository.
+   *
+   * Failure is LOGGED AND SWALLOWED rather than retried. The row is already
+   * written and correct; throwing here would retry the whole message and
+   * re-derive a row that was fine, and a missing twin is not lost data. It is
+   * drift that `media-backup-drift` sees within one health poll and that
+   * `backup_media` repairs by copying, which is the convergence this arrangement
+   * is built on.
+   */
+  if (storageOf(key) === "r2") {
+    try {
+      await mirrorObject(env, key);
+    } catch (error) {
+      console.log(
+        `media event: mirror failed for ${JSON.stringify(key)}: ` +
+          `${error instanceof Error ? error.message : String(error)}. ` +
+          `The row stands; media-backup-drift will report it and backup_media repairs it.`,
+      );
+    }
+  }
 }

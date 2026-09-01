@@ -48,13 +48,43 @@ test("both drift classes repair both, in a stable order, without duplicates", ()
   assert.equal(plan.alertOnly, false);
 });
 
+test("the mirror is repairable, because a copy cannot lose anything", () => {
+  // ADDED 2026-09-01 with `media-backup-drift`. It is the fourth repairable
+  // class and the only one whose repair has no destructive branch: it copies
+  // MEDIA to MEDIA_BACKUP and never deletes from either.
+  const plan = repairPlan(["media-backup-drift"], WITH);
+  assert.deepEqual(plan.repair, ["backup_media"]);
+  assert.equal(plan.alertOnly, false);
+  assert.deepEqual(plan.unknown, []);
+});
+
+test("the mirror repair joins the others without disturbing their order", () => {
+  const plan = repairPlan(
+    ["media-backup-drift", "content-drift", "ask-index-drift"],
+    WITH,
+  );
+  // Content before Ask is load bearing (sync_posts rewrites what sync_ask
+  // reads); the mirror is order-independent and simply lands last.
+  assert.deepEqual(plan.repair, ["sync_posts", "sync_ask", "backup_media"]);
+});
+
 test("PLANT: A NON-DRIFT FAILURE MUST NOT TRIGGER REPAIR", () => {
   /*
-   * `fts-equality` and `media-unbacked` are real checks with no automated
-   * repair. If either could reach the repair path, an unattended corpus rebuild
-   * would fire at something nobody has diagnosed.
+   * `fts-equality` is a real check with no automated repair. If it could reach
+   * the repair path, an unattended corpus rebuild would fire at something
+   * nobody has diagnosed.
+   *
+   * `media-unbacked` used to sit in this list and is GONE, replaced by
+   * `media-backup-drift` on 2026-09-01. It is named here anyway, as a retired
+   * class: a check that no longer exists must still be treated as unknown
+   * rather than quietly matched, because a stale caller naming it is exactly
+   * the case where firing a repair would be wrong.
    */
-  for (const name of ["fts-equality", "media-unbacked", "something-new-nobody-classified"]) {
+  for (const name of [
+    "fts-equality",
+    "media-unbacked",
+    "something-new-nobody-classified",
+  ]) {
     const plan = repairPlan([name], WITH);
     assert.deepEqual(plan.repair, [], `${name} must not repair`);
     assert.equal(plan.alertOnly, true, `${name} must alert`);
@@ -121,11 +151,26 @@ test("a non-string in the failing list cannot smuggle itself past the classifier
 });
 
 test("every repairable class maps to a tool that goes through the front door", () => {
-  // Rule 18 as an assertion: the value is an operator TOOL NAME, never anything
-  // that writes a row. A future entry pointing at a direct write would fail.
+  /*
+   * Rule 18 as an assertion: the value is an operator TOOL NAME, never anything
+   * that writes a row. A future entry pointing at a direct write would fail.
+   *
+   * WIDENED 2026-09-01 from `/^sync_/`. `backup_media` is the fourth repairable
+   * class and it is not a sync: a sync converges a DERIVED store to its source,
+   * and this copies bytes to a second bucket that nothing derives from. The
+   * assertion is the verb allowlist rather than one prefix, because the
+   * property being protected was never the word "sync": it is that the repair
+   * is an operator operation with a door, and that its verb is one that cannot
+   * be mistaken for a direct write.
+   */
+  const REPAIR_VERBS = ["sync", "backup"];
   for (const [name, tool] of Object.entries(REPAIRABLE)) {
     assert.match(name, /-drift$/, `${name} should be a drift class`);
-    assert.match(tool, /^sync_/, `${tool} should be a sync operation`);
+    const verb = tool.split("_")[0];
+    assert.ok(
+      REPAIR_VERBS.includes(verb),
+      `${tool} should be one of ${REPAIR_VERBS.join(", ")}, got verb ${JSON.stringify(verb)}`,
+    );
   }
 });
 
@@ -167,7 +212,7 @@ test("THE FULL PATH: a real drifted body decides to repair both", () => {
     checks: [
       { name: "ask-index-drift", ok: false, expected: 99, present: 90 },
       { name: "media-index-drift", ok: false, expected: 69, present: 68 },
-      { name: "media-unbacked", ok: true },
+      { name: "media-backup-drift", ok: true },
       { name: "fts-equality", ok: true },
     ],
   };
@@ -207,7 +252,7 @@ const HEALTHY = {
   checks: [
     { name: "ask-index-drift", ok: true },
     { name: "media-index-drift", ok: true },
-    { name: "media-unbacked", ok: true },
+    { name: "media-backup-drift", ok: true },
     { name: "content-drift", ok: true },
     { name: "fts-equality", ok: true },
   ],

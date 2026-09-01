@@ -20,17 +20,24 @@
  *   1. `ask-index-drift`    the failure above, by name
  *   2. `media-index-drift`  the media index against R2 and the asset manifest,
  *                           the same reconciliation `sync_media` proves
- *   3. `media-unbacked`     the R2 acceptance in RECOVERY.md section 3, which
- *                           holds only while the MEDIA bucket is empty
+ *   3. `media-backup-drift` every MEDIA object against its twin in the mirror,
+ *                           which is what RECOVERY.md section 3 now rests on.
+ *                           REPLACED `media-unbacked` 2026-09-01: that asked
+ *                           whether the bucket was still empty, and the
+ *                           acceptance it guarded was re-decided when the first
+ *                           object arrived (decisions-vol-13.md)
  *   4. `fts-equality`       the docsize equalities the ship asserts after a sync
  *   5. `content-drift`      posts.source_blob_sha against the repository's own
  *                           blob shas, from one Contents directory listing.
  *                           Since the artifact arc D1 is the ONLY rendered
  *                           copy, and this is what watches it converge to git.
  *
- * The three drift checks are the ones the workflow can REPAIR by itself,
- * through the same operator operations ship calls. Everything else here alerts
- * a human.
+ * The FOUR drift checks are the ones the workflow can REPAIR by itself, through
+ * the same operator operations ship calls. Everything else here alerts a human.
+ * `media-backup-drift` joined them on 2026-09-01 and is the only one whose
+ * repair cannot lose anything: it copies, and a copy has no destructive branch.
+ * The authoritative list is `REPAIRABLE` in `app/lib/health/repair.mjs`; this
+ * sentence describes it and does not restate it.
  *
  * A gate sees disk; these see the LIVE state between commits, which is a
  * different question rather than a second copy of one a gate already answers.
@@ -53,12 +60,13 @@ import {
   contentDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
-  mediaUnbackedVerdict,
+  mediaBackupDriftVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
 import { listDirectory } from "~/lib/editor/github.server";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
+import { backupStatus } from "~/lib/media/backup.server";
 
 /** One check's verdict. `ok: false` is what turns into an alert. */
 export interface HealthCheck {
@@ -99,24 +107,34 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
   /*
    * ADDED 2026-08-24 with the media sync at ship. Before it, the media index
    * was the one derived store nothing watched between commits: a gate saw it
-   * only when somebody ran the gate. It is placed before `media-unbacked`
-   * because the two are easy to confuse and this is the reconciliation; that
-   * one is the recovery acceptance.
+   * only when somebody ran the gate. It is placed before `media-backup-drift`
+   * because the two are easy to confuse and this is the reconciliation of the
+   * INDEX; that one is the recovery acceptance, and it compares BYTES.
    */
   checks.push(
     await guard("media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
   );
 
   checks.push(
-    await guard("media-unbacked", async () => {
+    await guard("media-backup-drift", async () => {
       /*
-       * NOT a reconciliation. `check:media --remote` owns that and does it in
-       * four directions. This asks the one question that gate does not: is the
-       * bucket still EMPTY? A reconciler is perfectly happy for there to be
-       * more objects, as long as they all have rows.
+       * NOT a reconciliation of the INDEX. `check:media --remote` owns that and
+       * does it in four directions, and `media-index-drift` above watches it
+       * between gate runs. This asks the question neither can: does a second
+       * copy of every byte exist?
+       *
+       * REPLACED `media-unbacked` 2026-09-01 (decisions-vol-13.md). That check
+       * asked whether the bucket was still empty, which was the whole of
+       * RECOVERY.md section 3's no-backup acceptance. It fired correctly on the
+       * first object ever uploaded; the acceptance was re-decided rather than
+       * deferred, and the bucket now has a mirror.
+       *
+       * Both buckets are listed IN FULL, not with `limit: 1`. The old check
+       * only needed to know whether any object existed; this one compares two
+       * key sets and every etag in them, so a truncated read would report a
+       * clean sweep of the part it saw.
        */
-      const listed = await env.MEDIA.list({ limit: 1 });
-      return mediaUnbackedVerdict(listed.objects);
+      return mediaBackupDriftVerdict(await backupStatus(env));
     }),
   );
 

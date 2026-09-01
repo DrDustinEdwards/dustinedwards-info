@@ -296,6 +296,151 @@ for (const id of [...DESTRUCTIVE, ...REVERSIBLE.keys()]) {
 console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTRUCTIVE.size} destructive`);
 
 /*
+ * THE BACKUP BUCKET IS WRITE-AND-READ ONLY. Ruled 2026-09-01, vol 13.
+ *
+ * `MEDIA_BACKUP` exists so that the site's own code deleting a media object
+ * cannot lose the bytes. That is worth exactly as much as the guarantee that
+ * NOTHING here ever deletes from it, and a guarantee held only by prose is the
+ * shape this repo keeps paying for. Pruning the mirror is a human act, by hand.
+ *
+ * WHOLE-SOURCE, not routes: the danger is not a form intent, it is any line
+ * anywhere that reaches the binding with a delete. `app/`, `workers/` and
+ * `scripts/` are all swept.
+ *
+ * COMMENTS ARE STRIPPED FIRST, and that is load bearing rather than tidy. Every
+ * file that touches this binding carries a comment SAYING it never deletes from
+ * it, and several of those sentences contain both the binding name and the word
+ * delete. Matching raw source would fail on the documentation of the rule.
+ */
+{
+  /** @param {string} dir @returns {string[]} */
+  const walk = (dir) => {
+    if (!existsSync(dir)) return [];
+    /** @type {string[]} */
+    const out = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === "dist") continue;
+        out.push(...walk(full));
+      } else if (/\.(ts|tsx|mjs|js)$/.test(entry.name)) {
+        out.push(full);
+      }
+    }
+    return out;
+  };
+
+  /**
+   * Does this stripped source delete from the backup binding?
+   *
+   * The window is what makes it an anchored needle rather than a file-wide
+   * co-occurrence: a file may legitimately name `MEDIA_BACKUP` and, far away,
+   * delete from something else.
+   *
+   * @param {string} stripped
+   * @returns {string[]} offending excerpts
+   */
+  const backupDeletes = (stripped) => {
+    /** @type {string[]} */
+    const hits = [];
+    const needle = /MEDIA_BACKUP/g;
+    for (let m = needle.exec(stripped); m; m = needle.exec(stripped)) {
+      const window = stripped.slice(m.index, m.index + 120);
+      if (/\.\s*delete\s*\(/.test(window)) hits.push(window.replace(/\s+/g, " ").slice(0, 100));
+    }
+    return hits;
+  };
+
+  /*
+   * THE DISCRIMINATION CONTROL, run BEFORE the sweep.
+   *
+   * A matcher that cannot detect the violation agrees with every file it reads,
+   * and a clean sweep by a blind needle is indistinguishable from a clean
+   * repository. So the needle is first shown to FIRE on a known-bad string and
+   * to stay silent on the two shapes that must not trip it.
+   */
+  assertThat(
+    backupDeletes("await env.MEDIA_BACKUP.delete(key);").length === 1,
+    "the backup-delete needle detects a real delete",
+    "it matched nothing, so the sweep below would pass over a genuine violation",
+  );
+  assertThat(
+    backupDeletes("await env.MEDIA_BACKUP.put(key, body);").length === 0,
+    "the backup-delete needle ignores a put",
+    "a needle that fires on any use of the binding would be unusable",
+  );
+  assertThat(
+    backupDeletes("await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").length === 0,
+    "the backup-delete needle does not fire on a delete from MEDIA",
+    "deleting a media object is legitimate; only the mirror is protected",
+  );
+
+  /*
+   * THIS FILE IS EXCLUDED FROM ITS OWN SWEEP, and the exclusion is named rather
+   * than a glob, so it can never widen.
+   *
+   * The discrimination control above is a STRING LITERAL containing exactly the
+   * violation being hunted, which is the point of it. Sweeping this file finds
+   * that literal and reports the gate as the offender. Measured on the first
+   * run of this block: one violation, in `check-destructive.mjs`, at the
+   * control. The alternative was to write the control obfuscated so it would
+   * not match itself, which would mean the control no longer tests the needle
+   * that actually runs.
+   */
+  const SELF = join(root, "scripts", "check-destructive.mjs");
+  const sources = [
+    ...walk(join(root, "app")),
+    ...walk(join(root, "workers")),
+    ...walk(join(root, "scripts")),
+  ].filter((file) => file !== SELF);
+
+  /*
+   * SCOPE FLOOR. A walk that returned nothing reports what a clean sweep
+   * reports, and this whole block would then be a comment.
+   */
+  assertThat(
+    sources.length >= 100,
+    "the backup sweep read a non-empty source tree",
+    `only ${sources.length} file(s) were read, so a clean result means nothing`,
+  );
+
+  let mentioning = 0;
+  /** @type {string[]} */
+  const violations = [];
+  for (const file of sources) {
+    const stripped = strip(readFileSync(file, "utf8"));
+    if (!stripped.includes("MEDIA_BACKUP")) continue;
+    mentioning += 1;
+    for (const hit of backupDeletes(stripped)) {
+      violations.push(`${file.slice(root.length + 1)}: ${hit}`);
+    }
+  }
+
+  /*
+   * AND A FLOOR ON THE SWEEP'S SUBJECT. Zero files naming the binding would
+   * mean the mirror had been removed or renamed, and every assertion above
+   * would then be true of nothing.
+   */
+  assertThat(
+    mentioning > 0,
+    "at least one source file reaches the MEDIA_BACKUP binding",
+    "no file names it, so either the mirror is gone or this gate is watching a " +
+      "binding that no longer exists",
+  );
+
+  assertThat(
+    violations.length === 0,
+    "no source deletes from the backup bucket",
+    `${violations.length} delete(s) against MEDIA_BACKUP: ${violations.join(" | ")}`,
+  );
+
+  console.log(
+    `  backup bucket: ${sources.length} source file(s) swept, ${mentioning} reach ` +
+      `MEDIA_BACKUP, ${violations.length} delete from it`,
+  );
+}
+
+/*
  * EXECUTED-COUNT FLOOR.
  *
  * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-16 by RUNNING it: 53,
@@ -303,6 +448,13 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
  * written here from counting the source by eye, which failed the gate on its
  * own first green run. Floored at 49, slack 4, so retiring one intent does not
  * fail the floor while dropping a whole BLOCK still does.
+ *
+ * RE-MEASURED 2026-09-01, again by running it: 59, over 13 action modules and
+ * the same 19 intents, plus the six assertions the MEDIA_BACKUP block adds. The
+ * FLOOR IS DELIBERATELY NOT RAISED to 55: its job is to catch a whole block
+ * being skipped, and the slack is what lets an intent be retired without a
+ * second edit here. Raising it on every addition would make it a count of the
+ * checks rather than a floor under them.
  */
 const MINIMUM_CHECKS = 49;
 if (checks < MINIMUM_CHECKS) {

@@ -29,7 +29,7 @@ const HEALTHY = JSON.stringify({
   checks: [
     { name: "ask-index-drift", ok: true },
     { name: "media-index-drift", ok: true },
-    { name: "media-unbacked", ok: true },
+    { name: "media-backup-drift", ok: true },
     { name: "content-drift", ok: true },
     { name: "fts-equality", ok: true },
   ],
@@ -41,7 +41,7 @@ const UNHEALTHY = JSON.stringify({
   checks: [
     { name: "ask-index-drift", ok: false, expected: 99, present: 90 },
     { name: "media-index-drift", ok: true },
-    { name: "media-unbacked", ok: true },
+    { name: "media-backup-drift", ok: true },
     { name: "content-drift", ok: true },
     { name: "fts-equality", ok: true },
   ],

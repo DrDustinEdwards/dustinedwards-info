@@ -19,11 +19,103 @@
  * `wrangler.jsonc` and quietly point `npm run dev` at production R2.
  */
 
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { getPlatformProxy } from "wrangler";
+
+/**
+ * Build the throwaway config that binds ONE bucket, and hand back a proxy.
+ *
+ * Lifted out when `downloadAllObjects` became the second caller. The `remote`
+ * flag and the discard-the-config discipline are the two things this file's
+ * header argues for, and a second hand-rolled copy is exactly how one of them
+ * would quietly stop being true.
+ *
+ * @param {string} bucket @param {boolean} remote
+ */
+async function bucketProxy(bucket, remote) {
+  const dir = await mkdtemp(path.join(tmpdir(), "r2-list-"));
+  const configPath = path.join(dir, "wrangler.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      name: "r2-list",
+      compatibility_date: "2026-07-08",
+      compatibility_flags: ["nodejs_compat"],
+      r2_buckets: [{ binding: "BUCKET", bucket_name: bucket, ...(remote ? { remote: true } : {}) }],
+    }),
+    "utf8",
+  );
+  return getPlatformProxy({ configPath });
+}
+
+/**
+ * Pull every object in a bucket to disk. THE ONLY COPY OUTSIDE THE ACCOUNT.
+ *
+ * Ruled 2026-09-01 (decisions-vol-13.md). The same-account mirror covers the
+ * realistic loss, which is this site's own code deleting an object; it does
+ * nothing at all for account loss or compromise. This is the answer to that,
+ * and it is a chore that ends in Dustin's hands, so it is scripted rather than
+ * remembered.
+ *
+ * **THE SIZE IS VERIFIED PER OBJECT, not just the count.** A short read writes
+ * a file that exists, has a plausible name, and restores to a corrupt image. A
+ * backup whose failure mode looks exactly like success is the thing this whole
+ * script family is about, so every write is compared against the size R2
+ * reported for the object and a mismatch is returned rather than logged.
+ *
+ * Keys may carry `/` (the OG cards are `og/<slug>-<hash>.png`), so the
+ * directory structure is recreated rather than the separator flattened, which
+ * would let two distinct keys collide on one filename.
+ *
+ * @param {object} options
+ * @param {string} options.bucket
+ * @param {string} options.destDir
+ * @param {boolean} [options.remote]
+ * @returns {Promise<{ downloaded: number, bytes: number, mismatched: string[] }>}
+ */
+export async function downloadAllObjects({ bucket, destDir, remote = true }) {
+  const proxy = await bucketProxy(bucket, remote);
+  let downloaded = 0;
+  let bytes = 0;
+  /** @type {string[]} */
+  const mismatched = [];
+
+  try {
+    const handle = /** @type {any} */ (proxy.env).BUCKET;
+    /** @type {string | undefined} */
+    let cursor;
+    for (;;) {
+      const page = await handle.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const listed of page.objects) {
+        const object = await handle.get(listed.key);
+        if (!object) {
+          // Listed and then gone. Reported rather than skipped: a backup that
+          // silently omits an object it just saw is the failure being guarded.
+          mismatched.push(`${listed.key} (listed but could not be read)`);
+          continue;
+        }
+        const buffer = Buffer.from(await object.arrayBuffer());
+        const out = path.join(destDir, listed.key);
+        await mkdir(path.dirname(out), { recursive: true });
+        await writeFile(out, buffer);
+        if (buffer.length !== listed.size) {
+          mismatched.push(`${listed.key} (wrote ${buffer.length}, R2 reported ${listed.size})`);
+        }
+        downloaded += 1;
+        bytes += buffer.length;
+      }
+      if (!page.truncated) break;
+      cursor = page.cursor;
+    }
+  } finally {
+    await proxy.dispose();
+  }
+
+  return { downloaded, bytes, mismatched };
+}
 
 /**
  * Every object under a prefix, PAGED TO THE END.
@@ -41,20 +133,7 @@ import { getPlatformProxy } from "wrangler";
  * @returns {Promise<Array<{ key: string, size: number, uploaded: string, etag: string }>>}
  */
 export async function listAllObjects({ bucket, prefix = "", remote = true }) {
-  const dir = await mkdtemp(path.join(tmpdir(), "r2-list-"));
-  const configPath = path.join(dir, "wrangler.json");
-  await writeFile(
-    configPath,
-    JSON.stringify({
-      name: "r2-list",
-      compatibility_date: "2026-07-08",
-      compatibility_flags: ["nodejs_compat"],
-      r2_buckets: [{ binding: "BUCKET", bucket_name: bucket, ...(remote ? { remote: true } : {}) }],
-    }),
-    "utf8",
-  );
-
-  const proxy = await getPlatformProxy({ configPath });
+  const proxy = await bucketProxy(bucket, remote);
 
   /** @type {Array<{ key: string, size: number, uploaded: string, etag: string }>} */
   const objects = [];
