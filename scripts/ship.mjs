@@ -49,8 +49,17 @@
  * command succeeded, because "it seemed to work" is not a deploy record.
  */
 
-import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeSync,
+} from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -66,6 +75,134 @@ import {
 } from "./lib/ask-converge.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/* ------------------------------------------------ ship's own transcript --- */
+
+/**
+ * Where the transcript goes. GITIGNORED, and `.gitignore` carries the two
+ * independent reasons: ship refuses a dirty tree, so an untracked log it wrote
+ * itself would make the next ship refuse because of the last one; and the log
+ * carries the account-scoped ids wrangler prints in its binding table.
+ */
+const LOG_DIR = join(root, ".ship-logs");
+
+/**
+ * PRUNED BY AGE, NEVER BY COUNT.
+ *
+ * A count is only a duration if the write rate is fixed, and ship's is not: a
+ * bad afternoon writes a dozen runs and a quiet fortnight writes none, so
+ * "keep the last twenty" is two weeks in one case and one afternoon in the
+ * other, and it is the afternoon that deletes the log somebody wanted. Fourteen
+ * days is long enough that a Monday can still read the previous Monday's
+ * refusal.
+ */
+const LOG_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * Ship writes its own transcript, every run, pass or fail.
+ *
+ * ## WHY THIS IS A RE-EXEC AND NOT A WRAPPER AROUND `console`
+ *
+ * Almost everything a person needs from a failed ship is printed by a CHILD
+ * rather than by this file: the gate tier, the build, wrangler. `run()` hands
+ * those children `stdio: "inherit"` so their output streams live, which means
+ * this process never sees the bytes and cannot write them anywhere. Capturing
+ * them instead would buy the log at the price of a seven-minute silence during
+ * the gate tier, which is the span somebody is most likely to be watching.
+ *
+ * So the first invocation re-execs itself with stdout and stderr piped, and
+ * forwards every chunk to the real stream AND to the file as it arrives.
+ * Liveness survives because the forwarding streams; grandchildren are captured
+ * because they inherit the pipe rather than the terminal.
+ *
+ * ## WHY IT HAD TO EXIST
+ *
+ * The evidence survived only when whoever ran ship remembered to pipe it. Three
+ * sessions running diagnosed a refusal out of a log that existed by luck, and
+ * one of those refusals named a gate whose failing test name had already been
+ * thrown away upstream. A record that depends on being remembered is not a
+ * record, and this is the same argument the two ordering rules above make about
+ * rules carried in session prompts.
+ *
+ * ## THE BOUNDARY
+ *
+ * It records what ship and its children PRINTED. It is not a deploy record and
+ * proves nothing about the running Worker; that is still `verify-live`'s job.
+ * And a parent killed by the host may leave the child running, which the signal
+ * forwarding below reduces and does not eliminate: a killed ship was always
+ * able to leave work in flight, and this does not change that either way.
+ *
+ * @returns {Promise<number>} the child's exit code
+ */
+async function teeSelfToLog() {
+  mkdirSync(LOG_DIR, { recursive: true });
+
+  const now = Date.now();
+  for (const entry of readdirSync(LOG_DIR)) {
+    if (!entry.startsWith("ship-") || !entry.endsWith(".log")) continue;
+    const full = join(LOG_DIR, entry);
+    try {
+      if (now - statSync(full).mtimeMs > LOG_MAX_AGE_MS) rmSync(full, { force: true });
+    } catch {
+      /* a log that vanished under us needs no pruning */
+    }
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const logPath = join(LOG_DIR, `ship-${stamp}.log`);
+  const handle = openSync(logPath, "a");
+
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
+    cwd: root,
+    env: { ...process.env, SHIP_TRANSCRIPT: logPath },
+    stdio: ["inherit", "pipe", "pipe"],
+  });
+
+  /** @param {import("node:stream").Readable} source @param {NodeJS.WriteStream} sink */
+  const forward = (source, sink) => {
+    source.on("data", (chunk) => {
+      sink.write(chunk);
+      writeSync(handle, chunk);
+    });
+  };
+  forward(child.stdout, process.stdout);
+  forward(child.stderr, process.stderr);
+
+  for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM"])) {
+    process.on(signal, () => {
+      try {
+        child.kill(signal);
+      } catch {
+        /* already gone */
+      }
+    });
+  }
+
+  const code = await new Promise((resolve) => {
+    child.on("exit", (status) => resolve(status ?? 1));
+    child.on("error", () => resolve(1));
+  });
+
+  /*
+   * THE PATH IS THE LAST THING PRINTED ON A FAILURE, deliberately after every
+   * refusal message. A reader scrolling back from the bottom of a red run finds
+   * the transcript before they find anything else, which is the one moment they
+   * need it. On success it is not printed: a green ship already said what it
+   * did, and a line nobody needs at the end of every good run is how people
+   * learn to stop reading the end of the run.
+   */
+  if (code !== 0) {
+    const line = `\n  transcript: ${logPath}\n`;
+    process.stderr.write(line);
+    writeSync(handle, line);
+  }
+  closeSync(handle);
+  return code;
+}
+
+if (!process.env.SHIP_TRANSCRIPT) {
+  process.exit(await teeSelfToLog());
+}
 
 /*
  * THE ORIGIN, IMPORTED rather than restated.

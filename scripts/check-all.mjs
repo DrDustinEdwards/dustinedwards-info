@@ -353,13 +353,12 @@ function runGate(name, args) {
    * A GATE THAT COULD NOT RUN IS NOT A GATE THAT FAILED, and the table must not
    * say it was.
    *
-   * ## MEASURED 2026-08-31, and it cost a diagnosis
+   * ## MEASURED, and it cost three diagnoses
    *
    * A `ship` run recorded `check:types FAILED (2.5s)`, `check:urls FAILED
    * (0.0s)` and `check:worker FAILED (0.0s)`, each with an EMPTY output
-   * section, immediately after a 258.6s `check:head`. They were spawn failures
-   * on a loaded machine, not verdicts: nothing ran, so nothing was asserted
-   * about the subject either way. The same shape is recorded in
+   * section, immediately after a 258.6s `check:head`. Nothing ran, so nothing
+   * was asserted about the subject either way. The same shape is recorded in
    * `check-head.mjs` from 2026-08-20, where fourteen consecutive gates
    * "failed" in 0.0 to 0.2s and every one was green when re-run alone.
    *
@@ -369,39 +368,63 @@ function runGate(name, args) {
    * can hide a real regression, because three noisy reds train the reader to
    * re-run rather than read.
    *
-   * ## The signals, and why all four
+   * ## THE TEST IS THE SHAPE, NOT AN EXIT CODE, AND THAT IS THE SECOND ATTEMPT
    *
-   * `spawnSync` reports a process it could not start or could not reach through
-   * `error`; a process killed by a signal has a null `status` and a non-null
-   * `signal`; and a shell that relays a SIGTERM surfaces it as exit 143, which
-   * is 128 plus 15, at which point `status` is a number and the two fields
-   * above say nothing. Any one of them means the run produced no verdict.
+   * The first version tested for a `spawnSync` error, a null status, a signal,
+   * or exit 143. It was proven by planting a gate that exits 143, it passed
+   * that plant, AND IT DID NOTHING WHEN THE REAL CASCADE HAPPENED: a killed
+   * ship on 2026-08-31 reproduced all sixteen empty gates and the summary still
+   * read `9 passed, 16 failed`. The plant had confirmed the model rather than
+   * the world, which is hard rule 12's own warning about a dichotomy
+   * inheriting its author's frame.
+   *
+   * The measured signature of the real event is: `error` undefined, `signal`
+   * null, `status` a number that is neither 0 nor 143, and BOTH STREAMS EMPTY.
+   * Only the last of those distinguishes it from an ordinary failure, so it is
+   * the whole test. An exit code list can always be one code short; "it printed
+   * nothing at all" cannot.
+   *
+   * ## WHAT LICENSES THE SHAPE IS A MEASUREMENT, NOT AN ARGUMENT
+   *
+   * Every offline gate was run and both streams were counted in bytes, on
+   * 2026-08-31: 25 of 25 wrote to stdout, none produced zero bytes on both
+   * streams, and the quietest wrote 81. So an empty pair cannot be a gate that
+   * ran, because no gate in this repo is capable of running silently.
+   *
+   * BOTH streams, never either: 23 of those 25 wrote nothing to stderr on a
+   * clean pass, so testing either one alone would call almost every green gate
+   * an error. If a future gate is ever written to succeed silently, this
+   * misreports it, and the repair is to make that gate say something, which
+   * every other gate here already does.
    *
    * NOT FOLDED INTO `ok`. An errored gate is not a pass, so `ok` stays false and
    * every caller that gates on it, including the two builds above, still
    * refuses.
    */
-  const errored =
-    result.error !== undefined ||
-    result.status === null ||
-    result.signal !== null ||
-    result.status === 143;
+  const stdout = result.stdout ?? "";
+  const stderr = result.stderr ?? "";
+  const errored = stdout.length === 0 && stderr.length === 0;
 
-  const reason = result.error
-    ? `could not spawn: ${result.error.message}`
-    : result.signal
-      ? `killed by ${result.signal}`
-      : result.status === 143
-        ? "exit 143, which is a relayed SIGTERM"
-        : "exited without a status";
+  /*
+   * The reason REPORTS the disposition; it never decides it. Whatever the exit
+   * code turns out to be on the next host, the classification above already
+   * happened and this only says what was seen alongside it.
+   */
+  const seen = [
+    `status ${result.status === null ? "null" : result.status}`,
+    result.signal ? `signal ${result.signal}` : null,
+    result.error ? `spawn error: ${result.error.message}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return {
     name,
     ok: !errored && result.status === 0,
     errored,
-    reason: errored ? reason : "",
+    reason: errored ? `wrote nothing to either stream (${seen})` : "",
     ms: Date.now() - started,
-    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+    output: `${stdout}${stderr}`,
   };
 }
 
@@ -535,8 +558,12 @@ function main() {
   for (const result of errored) {
     console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
     console.log(`  ${result.reason}`);
-    const said = result.output.trimEnd();
-    console.log(said.length > 0 ? said : "  the gate produced no output, which is consistent with never having started");
+    /*
+     * There is deliberately nothing to print after that line. An errored gate
+     * is DEFINED by both its streams being empty, so a branch here for the case
+     * where it said something would be a condition that cannot be true, which
+     * is hard rule 10's first class. The emptiness IS the evidence.
+     */
   }
 
   console.log(`\n${"-".repeat(52)}`);
