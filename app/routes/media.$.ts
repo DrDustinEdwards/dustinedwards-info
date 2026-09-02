@@ -147,13 +147,40 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   // `Accept` (or anything else) for a variant to be matched against. Workers
   // Cache in front of the Worker DOES honour `Vary` on any header, but this
   // layer does not and cannot. Any response served from here must therefore
-  // depend on nothing but the URL. See the format note below.
+  // depend on nothing but the KEY. See the format note below.
+  //
+  // ## THE ENCODER SETTINGS ARE IN THE KEY, AND THE OMISSION WAS MEASURED
+  //
+  // The sentence above used to end "nothing but the URL", and that stopped
+  // being true the moment `WEBP_QUALITY` became an input to the body. Adding it
+  // changed what this route produces and orphaned NOTHING: every entry stored
+  // under the old encoder stayed live, reachable and `immutable` for a year.
+  //
+  // Measured on production 2026-09-02, hours after the quality fix deployed,
+  // on the canonical `srcset` URLs a reader's browser actually requests:
+  //
+  //     w=320   plain 119,196 B VP8L (HIT)   cold key 28,446 B VP8
+  //     w=1408  plain 979,922 B VP8L (HIT)   cold key 198,908 B VP8
+  //
+  // The code was correct and readers were still being served the pre-fix
+  // lossless bodies. Invalidation was per-colo and partial, so reading one URL
+  // and generalising said the opposite of the truth. There is no purge door for
+  // this cache, and `workers.dev` has no zone to purge through the API, so the
+  // key is the only lever.
+  //
+  // A SYNTHETIC PARAMETER, never served and never linked, exactly the shape
+  // `workers/app.ts` uses to get the resolved theme into its own key. Changing
+  // the encoder now moves every entry to a new key by construction.
+  //
+  // Hard rule 20.
   //
   // `caches.default` is the Workers runtime's own cache. The DOM lib's
   // CacheStorage type does not declare it, so the cast is narrowing to the
   // runtime that actually serves this, not papering over an unknown.
   const cache = (caches as unknown as { default: Cache }).default;
-  const cacheKey = new Request(new URL(request.url).toString(), { method: "GET" });
+  const keyUrl = new URL(request.url);
+  keyUrl.searchParams.set("__enc", `webp${WEBP_QUALITY}`);
+  const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 

@@ -27,8 +27,6 @@ Do this before touching code. Not a formality: the recurring failure here is a s
 
 **THIS FILE IS THE ONE HOME, since 2026-08-21.** They lived in Capsid and were pointed at from here. Capsid cannot be gated, because every gate verifies disk, so the rules the code cites by number sat in the one place no assertion could reach. Source files across `app/`, `scripts/`, `workers/` and `test/` cite them, as do the root documents; `check:invariants` section 15 binds every cited number to a rule that exists here. **The count that used to sit in this sentence had gone badly stale, and the gate is the only place it belongs, so this is a pointer now rather than a digit. Rule 17.**
 
-**Recovered rather than rewritten, and THE DIFF IS DONE. Do not run it a fourth time.** Diffed clause by clause against Capsid `core.md` version 1684 on 2026-08-22 and found COMPLETE. **The remaining defects were never transcription. They were rules that no longer matched the code**, the half every earlier recovery skipped. Check a rule against the CODE, not against 1684 and not against this paragraph.
-
 **EVERY RULE CARRIES A TAG: `GATED by <instrument>` or `UNGATED`.** It replaces the older ONE-LINER and PROSE labels, which encoded the same axis without naming the instrument; keeping both would have been two owners for one fact.
 
 The tag answers one question only: **can `npm run check` fail on this rule.** Read it before trusting a rule to be enforced. A tag is derived by READING THE GATE, never from the rule's own claim about itself, because a rule that says it is checked is exactly the shape that goes stale first. Where a rule has two halves with different answers it carries two tags, and the halves are named.
@@ -221,6 +219,10 @@ No gate can see how a row got where it is, which is what makes this UNGATED. The
 `check:policy` asserts the chain by POSITION in the route's own body, comments stripped, scoped to the action that owns it. Asserting that a stage merely EXISTS would pass on an arrangement that runs it after the money is already spent.
 
 **REMOVED 2026-08-02: the orphaned-assets rule.** Its number is retained and never reused.
+
+### 20. UNGATED. A MANUAL CACHE KEY CARRIES EVERYTHING THE BODY DEPENDS ON.
+
+`caches.default` carries no headers, so a stored body must be a pure function of the key. **A new input to the body goes in the key, or every stored entry stays live, stale and unreachable**: there is no purge door and `workers.dev` has no zone. Use a synthetic key parameter, never served. `workers/app.ts` did this for the theme; `media.$.ts` did not for `WEBP_QUALITY` and served pre-fix bodies for hours after the fix, measured at that cache key. **Invalidation is PER-COLO and PARTIAL**: check the whole closed set, or a cold key, and say which.
 
 **On numbering.** Append-only: a new rule takes the next unused number, and a retired rule keeps its number and is marked REMOVED, so a citation never silently retargets. It is no longer FROZEN. It was frozen because one comment cited a rule by FILE AND LINE, so renumbering broke a line reference; that comment cites the rule by number alone now, and section 15 binds the number to this file. Renumbering is still a bad idea and nothing needs it.
 
