@@ -1413,8 +1413,16 @@ try {
        * 2026-08-26 when it stopped being `private, no-store`; it is one
        * representation under its own URL and has no `<html>` element to carry
        * a `data-theme` attribute at all.
+       *
+       * `sitemap` joined 2026-09-02, when it stopped being `max-age=3600` and
+       * took the same constant the feeds use. It lists exactly the posts those
+       * feeds list, from the same projection, and is XML: there is no
+       * `<html data-theme>` for a theme to leak into and no cookie it reads.
+       * The membership assertion above is what makes this an EXEMPTION rather
+       * than an omission, because a route that quietly gained the shared
+       * headers still fails until somebody classifies it here.
        */
-      .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name));
+      .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(name));
 
     const listed = new Set(THEME_CACHED.map((r) => r.module));
     const missing = declaring.filter((name) => !listed.has(name));
