@@ -7,7 +7,8 @@
  * esbuild directly and does not read that mapping. A `~/` specifier here would
  * typecheck and fail at deploy.
  */
-import { watchdogActions, watchdogOutcome } from "../app/lib/health/repair.mjs";
+import { failingCheckNames, watchdogActions, watchdogOutcome } from "../app/lib/health/repair.mjs";
+import { alertTransition, formatDuration } from "../app/lib/health/alert-state.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo";
 
 /**
@@ -133,6 +134,64 @@ interface WatchdogEnv {
   EMAIL: SendEmail;
   ALERT_EMAIL: string;
   OPERATOR_TOKEN?: string;
+  /** Carries ONE fact between firings: what the last one saw. See `STATE_KEY`. */
+  APP_KV: KVNamespace;
+}
+
+/**
+ * Where the last firing's verdict is kept.
+ *
+ * Namespaced with a `watchdog:` prefix because this shares the site's KV with
+ * Better Auth sessions and the Ask answer cache, and a bare key in a shared
+ * namespace is how two subsystems come to own one string.
+ */
+const STATE_KEY = "watchdog:alert-state";
+
+/**
+ * Reads the last firing's state.
+ *
+ * **ABSENT AND UNREADABLE ARE DIFFERENT ANSWERS**, and collapsing them is the
+ * failure this signature exists to prevent. Absent means nothing has run yet,
+ * which is a baseline and mails nothing. Unreadable means the dedupe is blind,
+ * and a blind dedupe that stays quiet is a monitor that silently stopped
+ * monitoring. `alertTransition` mails on the second and not the first.
+ */
+async function readState(env: WatchdogEnv): Promise<{ readable: boolean; stored: unknown }> {
+  try {
+    return { readable: true, stored: await env.APP_KV.get(STATE_KEY, "json") };
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        watchdog: "state-read-failed",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return { readable: false, stored: null };
+  }
+}
+
+/**
+ * Writes the state. NEVER THROWS.
+ *
+ * A failed write costs the NEXT firing its dedupe, which at worst means one
+ * duplicate mail. Letting it throw would cost THIS firing its alert, which is
+ * the thing the whole Worker exists to deliver. The cheap failure is the right
+ * one to take.
+ */
+async function writeState(
+  env: WatchdogEnv,
+  state: { red: boolean; since: string; checks: string[] },
+): Promise<void> {
+  try {
+    await env.APP_KV.put(STATE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        watchdog: "state-write-failed",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }
 }
 
 /**
@@ -274,67 +333,122 @@ export default {
       const reading = await readHealth(env);
       const actions = watchdogActions(reading, { hasToken: token.length > 0 });
 
+      /*
+       * WHAT THIS FIRING CONCLUDED, decided before anything is mailed.
+       *
+       * THE REPAIRS STILL RUN EVERY FIRING. Only the MAIL is deduplicated: a
+       * condition that can be fixed is fixed on every poll exactly as before,
+       * and `alerting` describes where the firing ENDED, after any repair, not
+       * what the first reading looked like. Fixing something silently is the
+       * behaviour the repair path was built for and is untouched here.
+       */
+      let alerting = false;
+      let subject = "";
+      let lines: string[] = [];
+      let failing: string[] = [];
+
       if (actions.length === 0) {
         console.log(JSON.stringify({ watchdog: "healthy", status: reading.status }));
-        return;
-      }
+      } else {
+        const notify = actions.filter((a) => a.type === "notify");
+        if (notify.length > 0) {
+          const reasons = notify.map((a) => (a as { reason: string }).reason);
+          console.error(JSON.stringify({ watchdog: "alerting", reasons }));
+          alerting = true;
+          failing = failingCheckNames(reading.body);
+          subject = "dustinedwards.info is unhealthy";
+          lines = [...reasons, "", "Nothing was repaired.", "", renderBody(reading)];
+        } else {
+          /*
+           * THE ACTION LIST IS WALKED, NEVER SECOND-GUESSED. The repairs run in
+           * the order the module gave them (content before Ask, because the Ask
+           * corpus is read out of what the content repair rewrites), and the
+           * recheck runs only because the list asked for one. Deleting it there
+           * stops it happening here, which is the coupling that makes the plant
+           * meaningful.
+           */
+          const attempted: string[] = [];
+          const misses: string[] = [];
+          for (const action of actions) {
+            if (action.type !== "repair") continue;
+            attempted.push(action.tool);
+            const miss = await repair(env, token, action.tool);
+            if (miss) misses.push(miss);
+          }
 
-      const notify = actions.filter((a) => a.type === "notify");
-      if (notify.length > 0) {
-        const reasons = notify.map((a) => (a as { reason: string }).reason);
-        console.error(JSON.stringify({ watchdog: "alerting", reasons }));
-        await alert(env, "dustinedwards.info is unhealthy", [
-          ...reasons,
-          "",
-          "Nothing was repaired.",
-          "",
-          renderBody(reading),
-        ]);
-        return;
+          const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
+          const outcome = watchdogOutcome({ misses, recheck });
+
+          console.log(
+            JSON.stringify({
+              watchdog: "repaired",
+              attempted,
+              misses,
+              recheckStatus: recheck?.status ?? null,
+              alerting: outcome.length > 0,
+            }),
+          );
+
+          if (outcome.length > 0) {
+            alerting = true;
+            failing = failingCheckNames((recheck ?? reading).body);
+            subject = "dustinedwards.info: self-repair did not settle it";
+            lines = [
+              ...outcome.map((a) => (a as { reason: string }).reason),
+              "",
+              `Attempted: ${attempted.join(", ") || "(nothing)"}`,
+              "",
+              "Health BEFORE the repair:",
+              renderBody(reading),
+              "",
+              "Health AFTER the repair:",
+              renderBody(recheck),
+            ];
+          }
+        }
       }
 
       /*
-       * THE ACTION LIST IS WALKED, NEVER SECOND-GUESSED. The repairs run in the
-       * order the module gave them (content before Ask, because the Ask corpus
-       * is read out of what the content repair rewrites), and the recheck runs
-       * only because the list asked for one. Deleting it there stops it
-       * happening here, which is the coupling that makes the plant meaningful.
+       * ONE MAIL PER CHANGE OF STATE. Every decision is in `alert-state.mjs`,
+       * which is pure and covered by `check:tests`; this reads KV, writes KV and
+       * sends, and decides nothing.
        */
-      const attempted: string[] = [];
-      const misses: string[] = [];
-      for (const action of actions) {
-        if (action.type !== "repair") continue;
-        attempted.push(action.tool);
-        const miss = await repair(env, token, action.tool);
-        if (miss) misses.push(miss);
-      }
-
-      const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
-      const outcome = watchdogOutcome({ misses, recheck });
+      const { readable, stored } = await readState(env);
+      const now = new Date().toISOString();
+      const transition = alertTransition({ stored, storedReadable: readable, alerting, failing, now });
 
       console.log(
         JSON.stringify({
-          watchdog: "repaired",
-          attempted,
-          misses,
-          recheckStatus: recheck?.status ?? null,
-          alerting: outcome.length > 0,
+          watchdog: "alert-decision",
+          alerting,
+          failing,
+          storedReadable: readable,
+          email: transition.email?.kind ?? "none",
+          reason: transition.reason,
         }),
       );
 
-      if (outcome.length === 0) return;
+      if (transition.write) await writeState(env, transition.state);
 
-      await alert(env, "dustinedwards.info: self-repair did not settle it", [
-        ...outcome.map((a) => (a as { reason: string }).reason),
-        "",
-        `Attempted: ${attempted.join(", ") || "(nothing)"}`,
-        "",
-        "Health BEFORE the repair:",
-        renderBody(reading),
-        "",
-        "Health AFTER the repair:",
-        renderBody(recheck),
-      ]);
+      if (transition.email?.kind === "opened") {
+        const changed = transition.email.checks;
+        await alert(env, subject, [
+          `Changed to unhealthy. Failing now: ${changed.join(", ") || "(the endpoint named none)"}.`,
+          "",
+          "You will not be mailed again about this until it recovers.",
+          "",
+          ...lines,
+        ]);
+      } else if (transition.email?.kind === "recovered") {
+        const was = transition.email.checks;
+        await alert(env, "dustinedwards.info recovered", [
+          `Health is green again after ${formatDuration(transition.email.durationMs)}.`,
+          "",
+          `Was failing: ${was.join(", ") || "(the endpoint named none)"}.`,
+          "",
+          renderBody(reading),
+        ]);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(JSON.stringify({ watchdog: "threw", error: message }));

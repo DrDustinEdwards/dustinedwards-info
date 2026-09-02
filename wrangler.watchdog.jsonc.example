@@ -58,6 +58,28 @@
 			"service": "dustinedwards"
 		}
 	],
+	// WHAT THE LAST FIRING SAW, so this one can tell a CHANGE from a repeat.
+	//
+	// The cron is stateless by nature: it fires, reads, and forgets. That is how
+	// one condition red for an afternoon produced 27 identical emails. The
+	// dedupe needs exactly one fact carried between firings, and KV is the right
+	// shape for it: a single small value, written at most once per firing, read
+	// once, with no ordering or transaction requirement.
+	//
+	// EVENTUAL CONSISTENCY IS FINE HERE and the numbers are why: KV settles well
+	// inside a minute and this cron fires every fifteen, so a write is long
+	// settled before the next read. A Durable Object would buy strict ordering
+	// this does not need and add a class of failure a monitor should not have.
+	//
+	// THE SITE'S NAMESPACE, not a new one. The state is one key under a
+	// `watchdog:` prefix; a second namespace would be a second thing to create
+	// in RECOVERY.md for one value.
+	"kv_namespaces": [
+		{
+			"binding": "APP_KV",
+			"id": "00000000000000000000000000000000"
+		}
+	],
 	// Cloudflare Email Sending. `dustinedwards.info` is onboarded (measured
 	// 2026-08-29 with `wrangler email sending list`) and the alert address is an
 	// already-verified Email Routing destination, which the docs say is free on
