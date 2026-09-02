@@ -1,6 +1,6 @@
 import { listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import { SITE_ORIGIN } from "~/lib/seo";
+import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -84,7 +84,28 @@ ${urls
   return new Response(body, {
     headers: {
       "content-type": "application/xml; charset=utf-8",
-      "cache-control": "public, max-age=3600",
+      /*
+       * THE SAME CONSTANT THE FEEDS USE, since 2026-09-02. It was
+       * `public, max-age=3600`, written here rather than imported, and that
+       * hour was the longest any public surface held a post after it was gone.
+       *
+       * Measured on the image-path test post: deleted, and the sitemap still
+       * listed it while `/blog/<slug>` answered 404 and both feeds had already
+       * dropped it. `max-age` with no `Vary` is not bustable by a cookie
+       * either, so even a signed-in reload served the stale copy.
+       *
+       * The shared constant is `s-maxage`, which is the SHARED cache only, plus
+       * `stale-while-revalidate`. So the browser revalidates, the edge holds it
+       * for ten minutes rather than sixty, and a delete converges on the same
+       * schedule as `blog.rss[.xml].ts` and `blog.feed[.json].ts`, which list
+       * exactly the same posts from exactly the same projection.
+       *
+       * NO `Vary`, and that is correct rather than an omission: this document
+       * embeds no reader state. `HTML_VARY` exists for routes that put the
+       * theme in `<html data-theme>`, and pairing it with this constant is what
+       * rule 8 requires THERE. An XML listing of public URLs has no such half.
+       */
+      "cache-control": SHARED_CACHE_CONTROL,
     },
   });
 }
