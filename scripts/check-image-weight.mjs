@@ -1,49 +1,78 @@
 #!/usr/bin/env node
 /**
- * Every rung of a transform ladder must be SMALLER than the object it resizes.
+ * The transform ladder must be SHAPED like a transform ladder.
  *
- * ## Why this gate exists
+ * ## The defect this was written for
  *
- * `srcset` earns its complexity by sending fewer bytes to a smaller slot. A
- * ladder whose rungs are heavier than the original inverts that: the reader
- * downloads more, the browser picks worse, and every rung is a separately
- * billed transformation for the privilege. That is not a regression anyone
- * would notice by looking, because the page renders correctly either way.
+ * Measured 2026-09-01 on the first content object ever put in the bucket. A
+ * 188,876 byte lossy WebP origin came back from every rung as LOSSLESS WebP,
+ * because `.output()` in `app/routes/media.$.ts` carried no `quality` and the
+ * Images binding defaults to lossless. The 640px rung was 404,020 bytes, the
+ * 1024px 944,030, the 1408px 979,922: every rung heavier than the object it
+ * resizes, which inverts the whole purpose of `srcset` and bills a
+ * transformation for the privilege. The fix is `WEBP_QUALITY` in that file.
  *
- * Measured 2026-09-01 on the first content image ever put in the bucket: a
- * 188,876 byte lossy WebP origin whose 640px rung answered 404,020 bytes, and
- * whose every rung was larger than the original. The cause was an omitted
- * `quality` on the Images binding's `.output()`, which makes it emit LOSSLESS
- * WebP. See `WEBP_QUALITY` in `app/routes/media.$.ts`.
+ * ## THE THREE ASSERTIONS, AND WHY NONE OF THEM CARRIES A NUMBER
  *
- * ## What it asserts, and what it deliberately does not
+ *   1. **Every rung is lossy.** Chunk type `VP8`, never `VP8L`. This is the
+ *      defect verbatim and it needs no threshold.
+ *   2. **Bytes per delivered pixel never rises as delivered pixels rise.**
+ *      Equality allowed. A bigger rendering that costs MORE per pixel than a
+ *      smaller one is broken encoding whatever the absolute numbers are.
+ *   3. **The narrowest rung is smaller than the origin.** Catches the gross
+ *      case of serving the original unresized under a width parameter.
  *
- * For every R2 image row whose ORIGIN IS LOSSY, every width in `ALL_WIDTHS`
- * must come back smaller than the origin object.
+ * A tuned constant here would be a second owner of a value that belongs to the
+ * image, and would need re-tuning every time an asset was re-encoded.
  *
- * **Lossy origins only, and the restriction is the point rather than a
- * convenience.** Re-encoding a LOSSLESS source (a PNG screenshot, a VP8L WebP)
- * into WebP can legitimately grow or shrink depending on the image, so the
- * comparison would be a coin toss and a gate that fails at random gets
- * disabled. A lossy origin has already paid the compression cost, so a resize
- * to fewer pixels that comes back BIGGER is unambiguous.
+ * ## ASSERTION 2 WAS RULED AS RAW BYTES FIRST, AND THE MEASUREMENT CHANGED IT
  *
- * **NO BYTE COUNT IS WRITTEN DOWN HERE.** Every comparison is against the
- * origin fetched in the same run. A literal would rot the day anyone
- * re-encodes an asset, and would make this file a second owner of a number
- * that belongs to the object.
+ * The original ruling was "every rung smaller than the origin", then "bytes are
+ * non-decreasing with width". Both fire on CORRECT output, and this is the
+ * table that showed it, taken after the quality fix shipped:
  *
- * ## The scope floor
+ *     rung      bytes    delivered   pixels    bytes/px
+ *     origin   188,876   1080x810    874,800    0.2159
+ *     w=160      8,500   160x120      19,200    0.4427
+ *     w=320     28,446   320x240      76,800    0.3704
+ *     w=640     91,488   640x480     307,200    0.2978
+ *     w=1024   205,344   1024x768    786,432    0.2611
+ *     w=1408   198,908   1080x810    874,800    0.2274
  *
- * A sweep that examined nothing prints what a clean sweep prints. This gate
- * therefore FAILS when it examined zero lossy-origin rows, and reports the
- * rows it found and skipped with the reason for each, so "0 problems" can
- * always be told apart from "0 examined".
+ * Two things in that table break a raw-byte rule and neither is a defect.
+ * `w=1024` and `w=1408` are BIGGER than the origin, because re-encoding at
+ * quality 85 costs more than a source that was compressed harder than 85. And
+ * `w=1408` is SMALLER than `w=1024` while being a larger image, because 1408
+ * exceeds the source width, so the rung is capped and becomes a native-size
+ * re-encode with no resampling, which reproduces an already-compressed source
+ * very cheaply.
+ *
+ * Bytes per pixel falls monotonically down that whole column, which is what
+ * healthy encoding looks like, and it was 6.1x the origin's rate when the
+ * output was lossless. So it is the measure that separates the two cases
+ * without a threshold.
+ *
+ * ## DELIVERED DIMENSIONS, NEVER THE REQUESTED WIDTH
+ *
+ * Read out of the response body's own header. `w=1408` against a 1080-wide
+ * source delivers 1080, so a ladder ordered by REQUESTED width would compare
+ * two rungs that are the same size and call the result an inversion.
+ *
+ * **Rungs with EQUAL delivered pixels are not compared at all.** The origin and
+ * `w=1408` above are both 874,800 pixels, and their sort order relative to each
+ * other would otherwise decide the verdict, which is a gate whose answer
+ * depends on sort stability. The assertion is about what happens AS PIXELS
+ * RISE; where they do not rise there is nothing to assert.
+ *
+ * ## The floor
+ *
+ * A sweep that examined nothing prints what a clean sweep prints, so this FAILS
+ * when it examined zero lossy-origin rows and reports what it found and skipped
+ * either way.
  *
  * Usage:
- *   node scripts/check-image-weight.mjs                  the deployed site
+ *   node scripts/check-image-weight.mjs
  *   node scripts/check-image-weight.mjs --base http://localhost:8787
- *   PUBLIC_ORIGIN=... node scripts/check-image-weight.mjs
  */
 
 import { spawnSync } from "node:child_process";
@@ -66,16 +95,14 @@ const BASE = (argOf("--base") ?? process.env.PUBLIC_ORIGIN ?? SITE_ORIGIN).repla
  *
  * `wrangler r2 object` has no `list` verb, which is why every reconciliation in
  * this repo reads D1 for the key set. Trashed rows are excluded: the object
- * still exists and still serves, but the library has withdrawn it and nobody is
- * being asked to keep its ladder honest.
+ * still serves, but the library has withdrawn it and nobody is being asked to
+ * keep its ladder honest.
+ *
+ * ONE COMMAND STRING, not an argv array. With `shell: true` on Windows an array
+ * argument carrying spaces is split by the shell before wrangler sees it, and
+ * the SQL arrives as twenty unknown positional arguments.
  */
 function r2ImageRows() {
-  /*
-   * ONE COMMAND STRING, not an argv array, and the difference is not cosmetic.
-   * With `shell: true` on Windows an array argument carrying spaces is split by
-   * the shell before wrangler sees it, and the SQL arrives as twenty unknown
-   * positional arguments. `check-media.mjs` passes a string for the same reason.
-   */
   const result = spawnSync(
     `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
       `"SELECT key, bytes, mime FROM media ` +
@@ -92,57 +119,156 @@ function r2ImageRows() {
 }
 
 /**
- * Whether a buffer is a LOSSY raster, by reading the container rather than the
- * file extension or the stored mime.
+ * What a raster buffer IS, read from the container rather than from a mime
+ * column or a file extension.
  *
  * A WebP is a RIFF file whose image data lives in a `VP8 ` chunk when lossy and
- * a `VP8L` chunk when lossless; `VP8X` is an extended header that carries
- * neither and must be walked past to reach the one that decides. Reading the
- * mime column instead would answer `image/webp` for both and this gate would
- * examine the lossless ones it must skip.
+ * a `VP8L` chunk when lossless; `VP8X` is an extended header carrying neither,
+ * and must be walked past to reach the chunk that decides. Reading the stored
+ * mime instead would answer `image/webp` for both, which is precisely the
+ * distinction assertion 1 exists to make.
+ *
+ * Dimensions come from the same parse, because the delivered size is what
+ * assertion 2 orders by and it is not the requested width.
  *
  * @param {Buffer} buf
- * @returns {{ codec: string, lossy: boolean | null }}
+ * @returns {{ codec: string, lossy: boolean | null, width: number | null, height: number | null }}
  */
-function codecOf(buf) {
+export function codecOf(buf) {
+  const unknown = { codec: "unknown", lossy: null, width: null, height: null };
   if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
-    return { codec: "jpeg", lossy: true };
+    return { codec: "jpeg", lossy: true, width: null, height: null };
   }
   if (buf.length >= 8 && buf.toString("ascii", 1, 4) === "PNG") {
-    return { codec: "png", lossy: false };
+    return { codec: "png", lossy: false, width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
   }
   if (buf.length >= 6 && buf.toString("ascii", 0, 3) === "GIF") {
-    return { codec: "gif", lossy: false };
+    return { codec: "gif", lossy: false, width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) };
   }
   if (
-    buf.length >= 16 &&
-    buf.toString("ascii", 0, 4) === "RIFF" &&
-    buf.toString("ascii", 8, 12) === "WEBP"
+    buf.length < 16 ||
+    buf.toString("ascii", 0, 4) !== "RIFF" ||
+    buf.toString("ascii", 8, 12) !== "WEBP"
   ) {
-    let offset = 12;
-    while (offset + 8 <= buf.length) {
-      const fourcc = buf.toString("ascii", offset, offset + 4);
-      const size = buf.readUInt32LE(offset + 4);
-      if (fourcc === "VP8 ") return { codec: "webp/VP8", lossy: true };
-      if (fourcc === "VP8L") return { codec: "webp/VP8L", lossy: false };
-      // VP8X, ALPH, ANIM and friends carry no verdict. Chunks are padded to an
-      // even length, which is the half a hand-rolled walker forgets.
-      offset += 8 + size + (size % 2);
-    }
-    return { codec: "webp/unknown", lossy: null };
+    return unknown;
   }
-  return { codec: "unknown", lossy: null };
+
+  let offset = 12;
+  while (offset + 8 <= buf.length) {
+    const fourcc = buf.toString("ascii", offset, offset + 4);
+    const size = buf.readUInt32LE(offset + 4);
+    const body = offset + 8;
+    if (fourcc === "VP8 " && body + 10 <= buf.length) {
+      return {
+        codec: "webp/VP8",
+        lossy: true,
+        width: buf.readUInt16LE(body + 6) & 0x3fff,
+        height: buf.readUInt16LE(body + 8) & 0x3fff,
+      };
+    }
+    if (fourcc === "VP8L" && body + 5 <= buf.length) {
+      const bits = buf.readUInt32LE(body + 1);
+      return {
+        codec: "webp/VP8L",
+        lossy: false,
+        width: (bits & 0x3fff) + 1,
+        height: ((bits >> 14) & 0x3fff) + 1,
+      };
+    }
+    // VP8X, ALPH, ANIM and friends carry no verdict. Chunks pad to an even
+    // length, which is the half a hand-rolled walker forgets.
+    offset = body + size + (size % 2);
+  }
+  return { codec: "webp/unknown", lossy: null, width: null, height: null };
+}
+
+/**
+ * THE THREE ASSERTIONS, as a PURE function over an already-fetched ladder.
+ *
+ * Pure so the replay can run it over the real pre-fix bytes with no network and
+ * no deploy, which is what makes rule 12's "replay the defect" possible for a
+ * gate whose subject is a live route.
+ *
+ * @param {string} key
+ * @param {{ bytes: number, pixels: number, codec: string, lossy: boolean | null }} origin
+ * @param {Array<{ label: string, bytes: number, pixels: number, codec: string, lossy: boolean | null }>} rungs
+ * @returns {string[]} problems
+ */
+export function ladderProblems(key, origin, rungs) {
+  /** @type {string[]} */
+  const problems = [];
+
+  // 1. EVERY RUNG IS LOSSY.
+  for (const rung of rungs) {
+    if (rung.lossy !== true) {
+      problems.push(
+        `${key} ${rung.label}: came back ${rung.codec}, not a lossy encoding. ` +
+          `The Images binding returns lossless WebP when no quality is set, and a ` +
+          `lossless rung costs several times what the source did.`,
+      );
+    }
+  }
+
+  // 2. BYTES PER DELIVERED PIXEL NEVER RISES AS DELIVERED PIXELS RISE.
+  const measurable = [{ label: "origin", ...origin }, ...rungs].filter(
+    (entry) => entry.pixels > 0 && entry.bytes > 0,
+  );
+  measurable.sort((a, b) => a.pixels - b.pixels);
+  for (let i = 1; i < measurable.length; i += 1) {
+    const smaller = measurable[i - 1];
+    const larger = measurable[i];
+    // Equal pixel counts are not a rise, so there is nothing to assert between
+    // them, and comparing them would make the verdict depend on sort order.
+    if (larger.pixels === smaller.pixels) continue;
+    const smallerRate = smaller.bytes / smaller.pixels;
+    const largerRate = larger.bytes / larger.pixels;
+    if (largerRate > smallerRate) {
+      problems.push(
+        `${key}: ${larger.label} costs ${largerRate.toFixed(4)} bytes/pixel over ` +
+          `${larger.pixels} pixels while the smaller ${smaller.label} costs ` +
+          `${smallerRate.toFixed(4)} over ${smaller.pixels}. A larger rendering ` +
+          `must not cost MORE per pixel than a smaller one.`,
+      );
+    }
+  }
+
+  // 3. THE NARROWEST RUNG IS SMALLER THAN THE ORIGIN.
+  const narrowest = rungs.reduce(
+    (/** @type {typeof rungs[number] | null} */ best, rung) =>
+      best === null || rung.pixels < best.pixels ? rung : best,
+    null,
+  );
+  if (narrowest && narrowest.bytes >= origin.bytes) {
+    problems.push(
+      `${key} ${narrowest.label}: the NARROWEST rung is ${narrowest.bytes} bytes ` +
+        `against an origin of ${origin.bytes}. The smallest rendering must be ` +
+        `smaller than the object it resizes; this looks like the original served ` +
+        `unresized.`,
+    );
+  }
+
+  return problems;
 }
 
 /** @param {string} url */
-async function fetchBytes(url) {
+async function fetchImage(url) {
   const res = await fetch(url);
   const buf = Buffer.from(await res.arrayBuffer());
-  return { status: res.status, buf, thumb: res.headers.get("x-media-thumb") ?? "" };
+  const info = codecOf(buf);
+  return {
+    status: res.status,
+    bytes: buf.length,
+    pixels: (info.width ?? 0) * (info.height ?? 0),
+    codec: info.codec,
+    lossy: info.lossy,
+    width: info.width,
+    height: info.height,
+    thumb: res.headers.get("x-media-thumb") ?? "",
+  };
 }
 
 async function main() {
-  console.log(`\ncheck:image-weight every rung smaller than its origin (${BASE})\n`);
+  console.log(`\ncheck:image-weight ladder shape over ${BASE}\n`);
 
   const rows = r2ImageRows();
   console.log(`  ${rows.length} R2 image row(s) in the index`);
@@ -156,70 +282,77 @@ async function main() {
 
   for (const row of rows) {
     const originUrl = `${BASE}/media/${row.key}`;
-    const origin = await fetchBytes(originUrl);
+    const origin = await fetchImage(originUrl);
     if (origin.status !== 200) {
-      problems.push(`${row.key}: the origin object answered ${origin.status} at ${originUrl}`);
+      problems.push(`${row.key}: the origin object answered ${origin.status}`);
       continue;
     }
-    const { codec, lossy } = codecOf(origin.buf);
-    if (lossy !== true) {
-      skipped.push(`${row.key} (${codec}, not a lossy origin)`);
+    if (origin.lossy !== true) {
+      // A LOSSLESS ORIGIN IS SKIPPED, and the restriction is the point. A PNG
+      // re-encoded to WebP can legitimately grow or shrink, so every assertion
+      // here would be a coin toss and a gate that fails at random gets turned
+      // off. A lossy origin has already paid the compression cost.
+      skipped.push(`${row.key} (${origin.codec}, not a lossy origin)`);
       continue;
     }
 
     examined += 1;
-    const originBytes = origin.buf.length;
-    console.log(`  ${row.key} origin ${originBytes} bytes (${codec})`);
+    console.log(
+      `  ${row.key} origin ${origin.bytes} bytes, ${origin.width}x${origin.height} (${origin.codec})`,
+    );
 
+    /** @type {Array<{ label: string, bytes: number, pixels: number, codec: string, lossy: boolean | null }>} */
+    const rungs = [];
     for (const width of ALL_WIDTHS) {
-      const url = `${originUrl}?w=${width}`;
-      const rung = await fetchBytes(url);
+      const rung = await fetchImage(`${originUrl}?w=${width}`);
       comparisons += 1;
       if (rung.status !== 200) {
         problems.push(`${row.key} w=${width}: answered ${rung.status}`);
         continue;
       }
-      const rungCodec = codecOf(rung.buf);
-      const ratio = (rung.buf.length / originBytes).toFixed(2);
-      const verdict = rung.buf.length < originBytes ? "ok" : "LARGER THAN ORIGIN";
       console.log(
-        `    w=${String(width).padEnd(5)} ${String(rung.buf.length).padStart(9)} bytes  ` +
-          `${ratio.padStart(5)}x  ${rungCodec.codec.padEnd(12)} ${verdict}`,
+        `    w=${String(width).padEnd(5)} ${String(rung.bytes).padStart(9)} bytes  ` +
+          `${`${rung.width}x${rung.height}`.padEnd(11)} ${String(rung.pixels).padStart(8)} px  ` +
+          `${(rung.bytes / (rung.pixels || 1)).toFixed(4)} b/px  ${rung.codec}`,
       );
-      if (rung.buf.length >= originBytes) {
-        problems.push(
-          `${row.key} w=${width}: ${rung.buf.length} bytes against an origin of ` +
-            `${originBytes} (${ratio}x, ${rungCodec.codec}). A rung must be smaller ` +
-            `than the object it resizes.`,
-        );
-      }
+      rungs.push({
+        label: `w=${width}`,
+        bytes: rung.bytes,
+        pixels: rung.pixels,
+        codec: rung.codec,
+        lossy: rung.lossy,
+      });
     }
+
+    problems.push(
+      ...ladderProblems(
+        row.key,
+        { bytes: origin.bytes, pixels: origin.pixels, codec: origin.codec, lossy: origin.lossy },
+        rungs,
+      ),
+    );
   }
 
   if (skipped.length > 0) {
     console.log(`\n  skipped ${skipped.length}:`);
     for (const s of skipped) console.log(`    ${s}`);
   }
-
-  console.log(
-    `\n  examined ${examined} lossy-origin row(s), ${comparisons} rung comparison(s)`,
-  );
+  console.log(`\n  examined ${examined} lossy-origin row(s), ${comparisons} rung fetch(es)`);
 
   /*
-   * THE FLOOR. Zero examined rows and zero problems are the same output, and
-   * the whole point of this gate is that nobody was watching the thing it
-   * measures. An empty bucket, a changed storage tier or a query that stopped
+   * THE FLOOR. Zero examined rows and zero problems produce the same output,
+   * and the whole point of this gate is that nobody was watching the thing it
+   * measures. An empty bucket, a changed storage tier, or a query that stopped
    * matching all report a clean sweep without it.
    */
   if (examined === 0) {
     problems.push(
       `examined ZERO lossy-origin R2 images, so every assertion above passed ` +
-        `vacuously. ${rows.length} R2 image row(s) were found and ${skipped.length} ` +
-        `skipped as not-lossy.`,
+        `vacuously. ${rows.length} R2 image row(s) found, ${skipped.length} skipped.`,
     );
   }
   if (comparisons === 0) {
-    problems.push("made ZERO rung comparisons, so no width was checked at all");
+    problems.push("fetched ZERO rungs, so no width was checked at all");
   }
 
   if (problems.length > 0) {
@@ -229,12 +362,15 @@ async function main() {
   }
 
   console.log(
-    `\ncheck:image-weight ok. every rung of ${examined} lossy origin(s) came back ` +
-      `smaller than its object.\n`,
+    `\ncheck:image-weight ok. ${examined} lossy origin(s): every rung lossy, ` +
+      `bytes per pixel never rising with size, narrowest rung under the origin.\n`,
   );
 }
 
-main().catch((error) => {
-  console.error(`\ncheck:image-weight failed: ${error.message}`);
-  process.exit(1);
-});
+// Importable for the replay without running the sweep.
+if (process.argv[1] && process.argv[1].endsWith("check-image-weight.mjs")) {
+  main().catch((error) => {
+    console.error(`\ncheck:image-weight failed: ${error.message}`);
+    process.exit(1);
+  });
+}
