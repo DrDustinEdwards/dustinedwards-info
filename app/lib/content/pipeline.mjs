@@ -278,9 +278,35 @@ export const frontmatterSchema = z.object({
          * here rather than reimplemented, so the two can never drift apart.
          * It is declared below in this file and hoists.
          */
+        /**
+         * TWO SHAPES ONLY: an absolute http(s) URL, or a `/blog/` path.
+         *
+         * It was `z.string().url()`, which is absolute-only, so an internal
+         * link had to carry a hostname. **THE ORIGIN CHANGES AT CUTOVER AND A
+         * PATH SURVIVES IT** (`CUTOVER.md`): every absolute internal link
+         * written before the apex move would point at the old host afterwards,
+         * in committed markdown, with nothing to notice. A path has no host to
+         * go stale. That is the whole reason for the widening, recorded here
+         * because a later reader would otherwise see only a loosened rule.
+         *
+         * `/blog/` rather than any site-absolute path, deliberately. This field
+         * renders as a live `<a href>` on the public post, so the set of things
+         * it may name is kept to the one thing the editor's picker can produce.
+         * `//evil.com` and `/\evil.com` do not start with `/blog/` and are
+         * refused by the same test, so the B008 protocol-relative hole this
+         * schema closed elsewhere cannot open here.
+         *
+         * NARROWED IN ONE DIRECTION WHILE WIDENING IN ANOTHER: absolute now
+         * means http or https, where `z.url()` also accepted `mailto:`. No
+         * corpus post sets `further_reading` at all, so nothing is invalidated
+         * today, and "further reading" naming an email address was never the
+         * intent. `isAllowedUrl` still runs and is still the shared predicate,
+         * kept composed rather than folded in for the reason the B001 note
+         * below gives: it must not be reimplemented here.
+         */
         url: z
           .string()
-          .url("must be an absolute URL")
+          .refine(isFurtherReadingUrl, "must be an absolute http(s) URL or a /blog/ path")
           .refine(isAllowedUrl, "protocol is not allowed (https, http, mailto or relative only)"),
       }),
     )
@@ -1232,6 +1258,57 @@ export function isAllowedUrl(value) {
     if (protocol !== null && !ALLOWED_PROTOCOLS.has(protocol)) return false;
   }
   return true;
+}
+
+/** The `/blog/` prefix a `further_reading` internal link must carry. */
+export const INTERNAL_LINK_PREFIX = "/blog/";
+
+/**
+ * The two shapes a `further_reading` url may take. See the field's own comment
+ * for why a path is permitted at all: the origin changes at cutover.
+ *
+ * COMPOSED WITH `isAllowedUrl`, never instead of it. This answers "is the
+ * SHAPE one of the two allowed" and says nothing about protocols; the schema
+ * runs both, so a value has to pass this and the shared allowlist.
+ *
+ * The internal arm demands a non-empty slug segment after the prefix and
+ * refuses a second leading slash, so `/blog/` alone and `/blog//evil.com` are
+ * both out. The external arm parses with the URL constructor and then checks
+ * the protocol explicitly rather than trusting the parse, because
+ * `new URL("mailto:a@b")` succeeds and mailto is not further reading.
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isFurtherReadingUrl(value) {
+  if (value.startsWith(INTERNAL_LINK_PREFIX)) {
+    const slug = value.slice(INTERNAL_LINK_PREFIX.length);
+    return SLUG_PATTERN.test(slug);
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === "https:" || parsed.protocol === "http:";
+}
+
+/**
+ * The slug a `further_reading` internal link names, or null for an external one.
+ *
+ * Exported so `check:content` can resolve every internal link against the
+ * corpus without re-deriving the prefix rule: a deleted post must fail the
+ * build rather than ship a dead link, and a second copy of "what counts as
+ * internal" is how the gate and the schema would come to disagree.
+ *
+ * @param {string} value
+ * @returns {string | null}
+ */
+export function internalLinkSlug(value) {
+  if (!value.startsWith(INTERNAL_LINK_PREFIX)) return null;
+  const slug = value.slice(INTERNAL_LINK_PREFIX.length);
+  return SLUG_PATTERN.test(slug) ? slug : null;
 }
 
 /**

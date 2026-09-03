@@ -316,10 +316,16 @@
       "expect": "allowed"
     },
     {
-      "label": "further_reading mailto",
+      "label": "further_reading internal /blog/ path",
+      "field": "further_reading",
+      "value": "/blog/a-real-post",
+      "expect": "allowed"
+    },
+    {
+      "label": "further_reading mailto (narrowed 2026-09-03)",
       "field": "further_reading",
       "value": "mailto:someone@example.com",
-      "expect": "allowed"
+      "expect": "blocked"
     },
     {
       "label": "PERMANENT NEGATIVE cover protocol-relative",
@@ -362,6 +368,36 @@
       "field": "cover",
       "value": "/publications/a-paper.pdf",
       "expect": "allowed"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading protocol-relative",
+      "field": "further_reading",
+      "value": "//evil.example/x",
+      "expect": "blocked"
+    },
+    {
+      "label": "PERMANENT NEGATIVE further_reading backslash-relative",
+      "field": "further_reading",
+      "value": "/\\evil.example/x",
+      "expect": "blocked"
+    },
+    {
+      "label": "further_reading non-blog site path",
+      "field": "further_reading",
+      "value": "/about",
+      "expect": "blocked"
+    },
+    {
+      "label": "further_reading /blog/ with no slug",
+      "field": "further_reading",
+      "value": "/blog/",
+      "expect": "blocked"
+    },
+    {
+      "label": "further_reading /blog/ with a nested path",
+      "field": "further_reading",
+      "value": "/blog//evil.example",
+      "expect": "blocked"
     }
   ]
 }

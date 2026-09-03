@@ -419,107 +419,123 @@
     "POST /admin/media?tag=roster | intent=rebuild | "
   ],
   "new post, fresh": [
-    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "new post, gate refused the save": [
-    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "new post, saving unavailable": [
-    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/new | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/new | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=,isNew=1,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft that never published": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft that published before": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=republish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=republish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, delete awaiting confirmation": [
     "POST  | intent=delete | confirm-count,headSha=abc1234def5678",
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, first publication awaiting confirmation": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, published": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, scheduled": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, with a cover set": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
+  "edit, featured": [
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+  ],
+  "edit, with further reading set": [
+    "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frInternal,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview-link | ",
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frInternal,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frInternal,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frInternal,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, save refused": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, saving unavailable": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft with no preview links": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, draft with two preview links": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=preview-link | ",
-    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=publish-confirmed | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
     "POST /admin/posts/a-post/edit | intent=revoke-preview-link | token",
-    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=save-draft | body,coverAlt,coverSrc,date,description,featured,firstPublished=,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "edit, published offers no preview links": [
     "POST /admin/posts/a-post/edit | intent=delete | confirm-count,headSha=abc1234def5678",
-    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
-    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
+    "POST /admin/posts/a-post/edit | intent=preview | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=save | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated",
+    "POST /admin/posts/a-post/edit | intent=unpublish | body,coverAlt,coverSrc,date,description,featured,firstPublished=2026-06-01,frControl,frTitle,frUrl,furtherReading,headSha=abc1234def5678,isNew=0,ogDescription,ogTitle,part,publishAt,series,slug,tags,title,updated"
   ],
   "origin requests, loaded": [],
   "origin requests, empty": [],
