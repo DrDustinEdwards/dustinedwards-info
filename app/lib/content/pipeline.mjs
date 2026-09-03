@@ -605,6 +605,11 @@ export function withRelated(posts) {
       .map((other) => ({
         slug: other.slug,
         title: other.title,
+        // Carried so the related list can say what each post IS. It takes no
+        // part in scoring: the sort below reads `shared`, `publishAt` and
+        // `slug`, and nothing else, so the ranking is byte-identical to what it
+        // was before this field existed.
+        description: other.description ?? null,
         shared: other.tags.filter((/** @type {string} */ t) => tags.has(t)).length,
         publishAt: other.publishAt,
       }))
@@ -621,7 +626,7 @@ export function withRelated(posts) {
       ...post,
       related: scored
         .slice(0, RELATED_LIMIT)
-        .map(({ slug, title, shared }) => ({ slug, title, shared })),
+        .map(({ slug, title, description, shared }) => ({ slug, title, description, shared })),
     };
   });
 }

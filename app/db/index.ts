@@ -513,6 +513,10 @@ export async function listPostCorpusForRelated(env: Env) {
       title: posts.title,
       status: posts.status,
       publishAt: posts.publishAt,
+      // Carried so a saved post's related list can hold each neighbour's
+      // description, the same field the build's `withRelated` reads. It takes
+      // no part in scoring; see the comment at the map in pipeline.mjs.
+      description: posts.description,
     })
     .from(posts)
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));

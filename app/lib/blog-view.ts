@@ -89,6 +89,14 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       related: parseJson(post.related, []) as Array<{
         slug: string;
         title: string;
+        /**
+         * OPTIONAL, and that is the migration rather than sloppiness. The field
+         * was added to the stored blob on 2026-09-03; rows written before that
+         * carry none until the next sync or save rewrites them. The renderer
+         * shows it only when present, so an old row degrades to the bare title
+         * it always was instead of rendering "undefined".
+         */
+        description?: string | null;
       }>,
       furtherReading: parseJson(post.furtherReading, []) as Array<{
         title: string;
