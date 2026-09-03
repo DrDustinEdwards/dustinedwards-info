@@ -226,6 +226,7 @@ async function relatedFor(env: PublishEnv, record: any) {
     .map((p) => ({
       slug: p.slug,
       title: p.title,
+      description: p.description,
       tags: p.tags,
       draft: p.status === "draft",
       // ISO strings, matching the shape `withRelated` compares in the build:
@@ -240,6 +241,7 @@ async function relatedFor(env: PublishEnv, record: any) {
     {
       slug: record.slug,
       title: record.title,
+      description: record.description,
       tags: record.tags,
       draft: record.draft,
       publishAt: record.publishAt,
