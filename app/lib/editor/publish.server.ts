@@ -88,6 +88,27 @@ export class EditorError extends Error {
   }
 }
 
+/**
+ * A first publication that nobody has confirmed yet.
+ *
+ * NOT AN ERROR, and it is a distinct class rather than an `EditorError` for
+ * that reason: nothing failed and nothing was refused. The write stopped one
+ * step short of the commit because the ceremony has not been answered, and the
+ * editor turns this into a server-rendered second step exactly as an
+ * unconfirmed delete becomes one (`app/lib/destructive.mjs` states the shape).
+ *
+ * Thrown rather than returned so the ceremony cannot be skipped by a caller
+ * that forgets to read a flag, and thrown from `savePost` rather than checked
+ * in the route because `savePost` is where the prior file is read, which is the
+ * only place that knows whether this IS a first publication.
+ */
+export class FirstPublishConfirmationRequired extends Error {
+  constructor() {
+    super("This post has never been public. The first publication needs confirming.");
+    this.name = "FirstPublishConfirmationRequired";
+  }
+}
+
 type PublishEnv = Env & { GITHUB_TOKEN?: string };
 
 /**
@@ -316,6 +337,23 @@ export async function savePost(
      * for an identity, which is why there is none.
      */
     actor: Actor;
+    /**
+     * WHETHER THIS REQUEST CARRIES THE AUTHOR'S CONFIRMATION of a first
+     * publication, on a path that HAS a ceremony.
+     *
+     * Three-valued on purpose, and the third value is the useful one. `true`
+     * and `false` are the editor answering; ABSENT means "this caller has no
+     * ceremony", which is the truth for the operator API (whom `decide()`
+     * refuses a first publication outright, so a confirmation would be a
+     * question asked of something that may not answer it) and for the posts
+     * index's bulk repair (which publishes nothing).
+     *
+     * So the check below tests `=== false` rather than falsiness. A caller that
+     * says nothing is not a caller that said no, and collapsing the two would
+     * make every existing call site start refusing writes it is allowed to
+     * make. The only way to reach the ceremony is to opt into it.
+     */
+    firstPublishConfirmed?: boolean;
   },
 ) {
   const { actor } = options;
@@ -340,6 +378,21 @@ export async function savePost(
     priorRaw: existing ? existing.content : null,
   });
   const raw = decision.raw;
+
+  /*
+   * THE CEREMONY, CHECKED AGAINST THE PRIOR FILE AND BEFORE ANY WORK.
+   *
+   * `decide()` has just read the committed file, so `published-first` is the
+   * authoritative answer to "is this the moment this post becomes public",
+   * rather than anything the request asserted about itself. Refusing here costs
+   * no render and no commit, and nothing has been written when it throws.
+   *
+   * It sits AFTER `decide()` deliberately, so a policy refusal still wins: a
+   * credential that may not publish at all is told that, not asked to confirm.
+   */
+  if (decision.outcome === "published-first" && options.firstPublishConfirmed === false) {
+    throw new FirstPublishConfirmationRequired();
+  }
 
   // Rendered from the STAMPED markdown, and rendered BEFORE the commit: this
   // is the gate, and its result is deliberately discarded. The row D1 gets is

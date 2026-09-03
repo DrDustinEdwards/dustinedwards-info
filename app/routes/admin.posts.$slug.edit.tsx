@@ -140,10 +140,12 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     const problem = async (message: string) => ({
       kind: "problem" as const,
       fields: parsePost(String(form.get("body") ?? "")),
-      // `conflict` is stated rather than omitted so every problem this route can
-      // return has one shape. An optional property on one arm of the union is
-      // how the component's `actionData.problem.conflict` read stops compiling.
-      problem: { message, conflict: false },
+      // `conflict`, `field` and `line` are stated rather than omitted so every
+      // problem this route can return has one shape. An optional property on
+      // one arm of the union is how the component's `actionData.problem.field`
+      // read stops compiling, which is exactly what it did when `field` and
+      // `line` were first surfaced.
+      problem: { message, conflict: false, field: undefined, line: undefined },
       headSha: await currentHead(env).catch(() => ""),
     });
 
@@ -246,7 +248,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       return {
         kind: "problem" as const,
         fields: parsePost(String(form.get("body") ?? "")),
-        problem: { message, conflict: error instanceof GitHubError && error.conflict },
+        problem: {
+          message,
+          conflict: error instanceof GitHubError && error.conflict,
+          // Same one shape as the arm above. A delete is refused as a whole, so
+          // neither of these is ever known here.
+          field: undefined,
+          line: undefined,
+        },
         headSha: await currentHead(env).catch(() => ""),
       };
     }
@@ -272,8 +281,20 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
    */
   const problemData = actionData?.kind === "problem" ? actionData : null;
   const previewData = actionData?.kind === "preview" ? actionData : null;
-  const fields = problemData?.fields ?? previewData?.fields ?? loaderData.fields;
-  const headSha = problemData?.headSha ?? previewData?.headSha ?? loaderData.headSha;
+  /*
+   * The third arm that carries fields. An unconfirmed first publication is not
+   * a failure, so it is not a `problem`, but it re-renders the editor around
+   * the author's submitted body exactly as one does: the confirming submit is
+   * this same form posting again, so what it posts has to be what they typed.
+   */
+  const confirmPublishData = actionData?.kind === "confirm-publish" ? actionData : null;
+  const fields =
+    problemData?.fields ?? previewData?.fields ?? confirmPublishData?.fields ?? loaderData.fields;
+  const headSha =
+    problemData?.headSha ??
+    previewData?.headSha ??
+    confirmPublishData?.headSha ??
+    loaderData.headSha;
 
   // Persistent until the NEXT action, and the next action is whatever produced
   // an actionData: a failure replaces the message, and a preview clears it,
@@ -284,6 +305,9 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
           state: "failed" as const,
           message: actionData.problem.message,
           conflict: Boolean(actionData.problem.conflict),
+          // The two the action has always carried and this route used to drop.
+          field: actionData.problem.field,
+          line: actionData.problem.line,
         }
       : actionData
         ? null
@@ -333,6 +357,7 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         tagOptions={loaderData.tagOptions}
         linkTargets={loaderData.linkTargets}
         revisions={loaderData.revisions}
+        awaitingPublishConfirmation={confirmPublishData !== null}
         previewLinkSlot={previewLinkSlot}
         historySlot={
           <>

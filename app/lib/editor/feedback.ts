@@ -25,7 +25,14 @@ export type EditorFeedback =
   | { state: "published-first"; sha: string; at: string; slug: string }
   | { state: "republished"; sha: string; slug: string }
   | { state: "unpublished"; sha: string; slug: string }
-  | { state: "failed"; message: string; conflict: boolean };
+  /**
+   * `field` and `line` come from `EditorError`, which has carried both since it
+   * was written and had no way to reach a human until 2026-09-03: the routes
+   * copied `message` and `conflict` and dropped the two values that say WHERE.
+   * Optional because most refusals have neither; the display renders what it is
+   * given and says nothing when it is given nothing.
+   */
+  | { state: "failed"; message: string; conflict: boolean; field?: string; line?: number };
 
 const OUTCOMES: readonly SaveOutcome[] = [
   "saved",

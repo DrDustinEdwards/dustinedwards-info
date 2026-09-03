@@ -15,10 +15,35 @@
  * could be checked by rendering and nothing else, and rendering cannot see what
  * a button does on click.
  *
- * `wantsDraft` is the whole contract with the server. `fieldsFromForm` reads
- * `form.get("draft") === "on"`, so a transition with wantsDraft true must send
- * `draft=on` and one with wantsDraft false must send NO `draft` key at all.
- * Nothing else about the payload changes between transitions.
+ * `wantsDraft` is the whole contract with the server, and THE BUTTON THAT WAS
+ * PRESSED IS WHAT CARRIES IT, since 2026-09-03. Each transition submits its own
+ * `id` as the form's `intent`, and `fieldsFromForm` derives `draft` from that
+ * intent through `draftForIntent` below. Nothing else about the payload changes
+ * between transitions.
+ *
+ * ## WHY IT IS THE SUBMITTER AND NOT A FIELD
+ *
+ * It was a hidden `draft` input that each button flipped in its own `onClick`,
+ * imperatively, through a ref. That reproduced a checkbox exactly and it made
+ * every publication transition DEPEND ON SCRIPT: with scripting off no handler
+ * runs, so the input submits whatever the server rendered it as, and the button
+ * the author pressed has no effect on the request at all. Three transitions
+ * were wrong at once, and two of them were wrong SILENTLY:
+ *
+ *   - Publish, on a never-published draft, could not be reached at all: the
+ *     primary was `type="button"` and both real submits lived inside a
+ *     `<dialog>`.
+ *   - Republish sent `draft=on`, because the post IS a draft and the input was
+ *     rendered enabled. The post was saved as a draft and the editor said
+ *     "Saved".
+ *   - Revert to draft sent NO `draft` key, because the post is public and the
+ *     input was rendered disabled. The post stayed live and the editor said
+ *     "Saved".
+ *
+ * A submitter's name and value are the one part of a form a browser sends
+ * because of what was PRESSED rather than because of what was RENDERED. Putting
+ * the transition there is what makes the button mean the same thing with and
+ * without script, and it is why there is no longer a `draft` input to flip.
  */
 
 /**
@@ -118,6 +143,86 @@ export function transitionsFor(state, everPublished) {
   // already, so the only transition left is withdrawal. What separates them is
   // publish_at, which the schedule control owns, not this table.
   return [SAVE_CHANGES, UNPUBLISH];
+}
+
+/**
+ * THE INTENT A CONFIRMED FIRST PUBLICATION SENDS, and the only one that is not
+ * a transition id.
+ *
+ * A first publication is the one transition that asks twice, so it needs two
+ * distinguishable requests: `publish` is the ASK and this is the ANSWER. The
+ * difference has to live in the submitter for the same reason the draft flag
+ * does, because the confirmation is worth exactly as much as the no-script path
+ * that can express it. A hidden field armed on click would have reproduced the
+ * defect this module was rewritten to remove.
+ *
+ * Both mean draft:false. Only this one satisfies `savePost`'s ceremony check.
+ */
+export const PUBLISH_CONFIRMED_INTENT = "publish-confirmed";
+
+/**
+ * WHAT `draft` A SUBMITTED INTENT MEANS. The server's half of the contract
+ * above.
+ *
+ * Keyed by the transition ids `transitionsFor` hands out, plus the confirmed
+ * publish. Derived from the table rather than restated, so a transition whose
+ * `wantsDraft` changes cannot leave a second copy of the old answer behind:
+ * rule 17, on the one value the whole publish story turns on.
+ *
+ * @type {Readonly<Record<string, boolean>>}
+ */
+export const DRAFT_BY_INTENT = Object.freeze(
+  Object.fromEntries([
+    ...[
+      ...transitionsFor("draft", false),
+      ...transitionsFor("draft", true),
+      ...transitionsFor("published", true),
+    ].map((transition) => [transition.id, transition.wantsDraft]),
+    [PUBLISH_CONFIRMED_INTENT, false],
+  ]),
+);
+
+/**
+ * Reads the draft flag out of the intent, FAILING CLOSED.
+ *
+ * An intent this table does not know is a draft, and that is the safe direction
+ * rather than the tidy one: the failure of an unrecognised intent must be a
+ * post that stays private, never one that goes public. `handleEditorAction`
+ * refuses an unknown intent outright before this matters, so the fallback
+ * guards the case where a second caller appears and forgets to.
+ *
+ * @param {string | null} intent
+ * @returns {boolean}
+ */
+export function draftForIntent(intent) {
+  if (intent === null) return true;
+  return DRAFT_BY_INTENT[intent] ?? true;
+}
+
+/**
+ * The intent for "commit this, and change nothing about who can see it".
+ *
+ * Cmd+S submits with no submitter, so it cannot carry a transition the way a
+ * button does and has to name one itself. The one it names is the transition
+ * whose `wantsDraft` already equals the post's current state, which is what
+ * saving in place means: a draft stays a draft, a public post stays public.
+ *
+ * Stated as a lookup on the table rather than as two literals, so it cannot
+ * drift from the ids the buttons send.
+ *
+ * @param {PostState} state
+ * @returns {string}
+ */
+export function saveInPlaceIntent(state) {
+  const wantsDraft = state === "draft";
+  // `everPublished` does not change which transition saves in place: both
+  // arms of the table carry one for each value of `wantsDraft`. false is
+  // passed because a fresh draft is the state with the fewest assumptions.
+  const list = transitionsFor(state, false);
+  const match = list.find((transition) => transition.wantsDraft === wantsDraft);
+  // Non-null by construction: every arm above offers both. Asserted rather
+  // than assumed by check:admin-ui, which calls this for every state.
+  return match ? match.id : SAVE_DRAFT.id;
 }
 
 /**

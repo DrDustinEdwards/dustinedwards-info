@@ -1,5 +1,8 @@
 import matter from "gray-matter";
 
+import { readIntent } from "./intent.mjs";
+import { draftForIntent } from "./publish-transition.mjs";
+
 /**
  * Turns editor form fields into a markdown file, and back.
  *
@@ -254,7 +257,20 @@ export function fieldsFromForm(form: FormData): PostFields {
     description: get("description"),
     date: get("date"),
     tags: parseTags(get("tags")),
-    draft: form.get("draft") === "on",
+    /*
+     * FROM THE BUTTON THAT WAS PRESSED, not from a field.
+     *
+     * This read `form.get("draft") === "on"`, against a hidden input that each
+     * transition button flipped in its own `onClick`. That made every
+     * publication transition script-dependent: with scripting off no handler
+     * ran, the input submitted whatever the server rendered, and the request
+     * described the post's CURRENT state rather than the one the author asked
+     * for. `publish-transition.mjs` carries the three defects that produced and
+     * the argument for the submitter.
+     *
+     * Fails closed on an intent this table does not know: unknown means draft.
+     */
+    draft: draftForIntent(readIntent(form)),
     publishAt: get("publishAt"),
     coverSrc: get("coverSrc"),
     coverAlt: get("coverAlt"),
