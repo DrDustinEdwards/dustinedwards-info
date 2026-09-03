@@ -72,6 +72,11 @@
       "name": "Capsid",
       "oneLiner": "A namespaced document graph with typed edges, served over MCP.",
       "description": "A knowledge store on Workers and D1 that holds versioned markdown canon in per-project namespaces, with typed edges between documents, FTS5 search, an attributed audit log and integrity linting. It demonstrates that an agent's long-term memory can be a governed database with a schema and a review trail rather than a folder of notes, and it is the store this site's own specifications and rulings live in.",
+      "notable": [
+        "Every write returns a hash of what was stored, and passing it back on the next write makes the server refuse an edit whose base has changed, so two sessions colliding on one document end in a rebase instead of a silent overwrite.",
+        "A partial edit names the text it replaces and is rejected unless that text appears exactly once in the document, so an anchor that has drifted fails loudly instead of quietly matching the wrong paragraph.",
+        "A namespace maps to a fixed set of repositories, and that mapping is the security boundary: anything outside it is refused rather than resolved to the nearest match."
+      ],
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
       "status": "live",
@@ -146,6 +151,11 @@
       "name": "Foxhound",
       "oneLiner": "Recovery for failed Stripe subscription payments, priced on what it actually recovers.",
       "description": "A revenue-recovery layer over Stripe that retries failed recurring charges on a schedule and then escalates to drafted customer sequences when a retry will not fix the underlying decline. It demonstrates a pricing model aligned with the outcome rather than with seats, taking a share only of revenue that was recovered and billing nothing until those funds have been held long enough to be real.",
+      "notable": [
+        "A recovery is attributed before it is billed, and a payment Stripe's own retries would have collected anyway is recorded as baseline and charged nothing, so the fee tracks money the service caused rather than money that arrived while it was running.",
+        "Nothing is billed until a recovery has aged past the window in which it could still be refunded, so a merchant is never charged a share of funds that later go back out.",
+        "Corporate mail scanners open links with a real browser identity, so a list of known bots cannot see them. The click guard measures the time from send to click instead, and a click faster than a person could act is marked suspect and cannot make a recovery billable."
+      ],
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
       "status": "live",
@@ -159,6 +169,11 @@
       "name": "Foxing",
       "oneLiner": "A reader and reading-social product built on the public domain.",
       "description": "A reading application carrying a curated public-domain library from Standard Ebooks and Project Gutenberg, with progress tracking and social features around what people are reading. It demonstrates that a content product can be assembled from freely licensed sources and still feel deliberate, because the work is in the curation, the typography and the reading state rather than in owning the catalogue.",
+      "notable": [
+        "Cover art is downloaded into the project's own storage rather than linked from wherever it was found, so the catalogue does not rot when an upstream host moves a file or starts refusing hotlinks.",
+        "The search index breaks the platform's whole-database export, so backups are taken table by table with the hand-written prose first, and the index's internal tables are deliberately left out because restoring them corrupts the index rather than repairing it.",
+        "The hosted catalogue and the books readers merely log share one table, split by where the row came from, and only catalogue rows carry a file the reader can open."
+      ],
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
       "status": "live",
@@ -172,6 +187,11 @@
       "name": "Germomics",
       "oneLiner": "A narrative podcast on microbiology and history, on a publishing platform built for it.",
       "description": "A narrative podcast on microbiology and its history, distributed through the usual directories, with its own publishing platform behind it. It demonstrates the editorial half of this portfolio rather than the infrastructural one: a subject-matter show that has to earn attention on the storytelling, with the platform staying out of the way.",
+      "notable": [
+        "Publishing is decided when a page is read rather than by a scheduled job, so a post with a future release time stays hidden from every public read until that moment and needs no cron.",
+        "The sitemap is built through the same visibility rule the pages use, so a post still waiting for its release time cannot leak to a search engine through discovery.",
+        "Listing queries drop the body, the transcript and the audio waveform and hand them back empty so the shared type stays intact, so a page of episode cards never loads a full transcript."
+      ],
       "schemaType": "SoftwareApplication",
       "role": "Author and host",
       "status": "live",
