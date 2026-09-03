@@ -14,6 +14,7 @@ import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "~/lib/media/widths.mjs";
+import { tagPath } from "~/lib/tag-path.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -292,8 +293,11 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </p>
             {post.tags.length > 0 && (
               <p className="post-card-tags">
+                {/* To the ARCHIVE, not to a filtered index. `tagPath` is the
+                    one owner of that address; the chips on /blog keep pointing
+                    at the filtered view because theirs composes with the year. */}
                 {post.tags.map((tag) => (
-                  <Link key={tag} to={`/blog?tag=${encodeURIComponent(tag)}`}>
+                  <Link key={tag} to={tagPath(tag)}>
                     {tag}
                   </Link>
                 ))}
