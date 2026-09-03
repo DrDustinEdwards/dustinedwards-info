@@ -306,15 +306,75 @@ export type ArticleSeo = {
   tags: string[];
 };
 
+/**
+ * THE ARTICLE FACTS BOTH VOCABULARIES STATE, derived once.
+ *
+ * JSON-LD and Open Graph describe the same article to two different readers,
+ * and until 2026-09-03 only the first was emitted: a crawler that reads OG and
+ * not JSON-LD got a weaker article than the page already knew about.
+ *
+ * The obvious way to fix that is to write four `article:*` tags in the route,
+ * and it is the wrong one. `dateModified` is not `updatedAt`, it is
+ * `updatedAt ?? publishAt`, and the author is not a string in the route, it is
+ * a shape this file owns. A second derivation would agree on the day it was
+ * written and drift on the day either rule changes, which is the exact defect
+ * the `image` field above already carries a comment about.
+ *
+ * So both callers read THIS. `articleJsonLd` spreads it into schema.org names
+ * and `articleOpenGraph` maps it to `article:*` names, and neither computes a
+ * value of its own. The gate compares the two outputs field by field, so the
+ * claim is checked rather than asserted here.
+ */
+export function articleFacts(origin: string, post: ArticleSeo) {
+  return {
+    publishedTime: post.publishAt?.toISOString(),
+    /** Falls back to publication: an unrevised article was modified when it appeared. */
+    modifiedTime: (post.updatedAt ?? post.publishAt)?.toISOString(),
+    authorName: SITE.name,
+    authorUrl: origin,
+    tags: post.tags,
+  };
+}
+
+/**
+ * The `article:*` Open Graph properties, from `articleFacts` and nothing else.
+ *
+ * `article:tag` REPEATS, one property per tag, which is what the vocabulary
+ * says and is why this returns a list rather than an object. The JSON-LD side
+ * joins the same array into a single `keywords` string, because that is what
+ * schema.org asks for; the two spellings are a property of the vocabularies,
+ * not of the data, and they come from one array either way.
+ *
+ * A tag or a date that is absent yields NO tag rather than an empty one. An
+ * `article:published_time` with no content is a claim that the article has no
+ * publication date, which is worse than saying nothing.
+ */
+export function articleOpenGraph(origin: string, post: ArticleSeo) {
+  const facts = articleFacts(origin, post);
+  const tags: Array<{ property: string; content: string }> = [];
+  if (facts.publishedTime) {
+    tags.push({ property: "article:published_time", content: facts.publishedTime });
+  }
+  if (facts.modifiedTime) {
+    tags.push({ property: "article:modified_time", content: facts.modifiedTime });
+  }
+  tags.push({ property: "article:author", content: facts.authorName });
+  for (const tag of facts.tags) {
+    tags.push({ property: "article:tag", content: tag });
+  }
+  return tags;
+}
+
 /** schema.org Article for one post. */
 export function articleJsonLd(origin: string, post: ArticleSeo) {
+  const facts = articleFacts(origin, post);
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: post.title,
     description: post.description ?? undefined,
-    datePublished: post.publishAt?.toISOString(),
-    dateModified: (post.updatedAt ?? post.publishAt)?.toISOString(),
+    datePublished: facts.publishedTime,
+    dateModified: facts.modifiedTime,
     /*
      * ONE RESOLUTION, SHARED WITH THE CARD.
      *
@@ -335,9 +395,12 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       coverImage: post.coverImage,
       ogImage: post.ogImage ?? null,
     }).image,
-    keywords: post.tags.length > 0 ? post.tags.join(", ") : undefined,
+    // Same array the OG side emits one property per entry from. Joined here
+    // because schema.org wants one string; that difference is the vocabulary's,
+    // not a second opinion about which tags this post has.
+    keywords: facts.tags.length > 0 ? facts.tags.join(", ") : undefined,
     mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/blog/${post.slug}` },
-    author: { "@type": "Person", name: SITE.name, url: origin },
+    author: { "@type": "Person", name: facts.authorName, url: facts.authorUrl },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
   };
 }
