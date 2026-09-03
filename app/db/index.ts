@@ -482,6 +482,15 @@ export async function listAllPostsForAdmin(env: Env) {
       status: posts.status,
       publishAt: posts.publishAt,
       updatedAt: posts.updatedAt,
+      /*
+       * SELECTED SO THE LIST CAN SAY WHICH ROW IS THE HERO.
+       *
+       * The public index promotes one featured post above the rest, and this
+       * list, the only place an author sees the whole corpus, could not see
+       * which one that was: the flag was editable nowhere and visible nowhere,
+       * so the answer lived in twelve markdown files.
+       */
+      featured: posts.featured,
     })
     .from(posts)
     .where(eq(posts.kind, "post"))

@@ -95,12 +95,16 @@ function assert(label, ok, detail = "") {
  * ---------------------------------------------------------------------- */
 
 const POSTS = [
-  { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare"], scheduledInDays: null },
+  // FEATURED, and it is the only row that is. The list marks the hero, so the
+  // fixture needs one row where the mark appears and rows where it does not:
+  // a fixture with the flag on every row, or on none, would satisfy a component
+  // that ignored the flag entirely.
+  { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare"], scheduledInDays: null, featured: true },
   // `scheduledInDays` arrives PRE-COMPUTED, which is the contract the loader
   // owes: the component may not read the clock, so a fixture that made it
   // derive one from the date would be testing a rule the code must not follow.
-  { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare", "d1"], scheduledInDays: 12 },
-  { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z", tags: [], scheduledInDays: null },
+  { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare", "d1"], scheduledInDays: 12, featured: false },
+  { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z", tags: [], scheduledInDays: null, featured: false },
 ];
 
 /** One object in the media library, overridable per scenario. */
@@ -2521,6 +2525,25 @@ structural(
   "the confirmation step says scheduling needs scripting",
   "edit, first publication awaiting confirmation",
   (h) => h.includes("which needs scripting"),
+);
+
+/* -------------------------------------------------------------------------
+ * THE FEATURED MARK ON THE ADMIN LIST.
+ *
+ * Counted, not merely found. `POSTS` carries exactly one featured row, so a
+ * component that marked every row would satisfy "the mark is present" and fail
+ * this; that is the whole difference between the assertion and its negative,
+ * and it is why the fixture carries both values rather than one.
+ * ---------------------------------------------------------------------- */
+
+structural("the featured row is marked", "posts index, clean", (h) =>
+  (h.match(/class="posts-featured"/g) ?? []).length === 1,
+);
+structural("the mark is a word, not only a colour", "posts index, clean", (h) =>
+  /class="posts-featured">Featured</.test(h),
+);
+structural("an empty corpus marks nothing", "posts index, empty corpus", (h) =>
+  !h.includes("posts-featured"),
 );
 
 /* -------------------------------------------------------------------------

@@ -983,6 +983,19 @@ export default function AdminPosts({
                     <Link to={`/admin/posts/${post.slug}/edit`} className="posts-title">
                       {post.title}
                     </Link>
+                    {/*
+                      THE HERO, MARKED. The public index promotes one featured
+                      post above the others and this list could not say which,
+                      so the only way to find it was to read the markdown.
+
+                      A WORD, for the same reason the status pill is a word:
+                      rule 1, and a mark carried only by colour or an icon says
+                      nothing under forced-colors and nothing to a screen
+                      reader. It sits next to the title rather than in the
+                      status column because it is orthogonal to state: a
+                      featured post can be draft, scheduled or published.
+                    */}
+                    {post.featured ? <span className="posts-featured">Featured</span> : null}
                     <span className="posts-slug">/{post.slug}</span>
                   </td>
                   <td className="posts-date">
