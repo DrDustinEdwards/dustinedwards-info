@@ -1394,6 +1394,14 @@ try {
       { path: "/colophon", module: "colophon.tsx" },
       { path: "/search?q=cloudflare", module: "search.tsx" },
       { path: "/privacy", module: "privacy.tsx" },
+      /*
+       * The tag archive, which IS HTML and therefore carries the theme
+       * dimension every other case here is checked for. `cloudflare` is used
+       * because it is the corpus's most-carried tag, so the case survives any
+       * single post being retagged; a tag with one post would make this case
+       * vanish the day that post changed.
+       */
+      { path: "/blog/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     ];
 
     const routeDir = join(root, "app", "routes");
@@ -1421,8 +1429,19 @@ try {
        * The membership assertion above is what makes this an EXEMPTION rather
        * than an omission, because a route that quietly gained the shared
        * headers still fails until somebody classifies it here.
+       *
+       * THE ATOM FEED AND THE TWO TAG FEEDS joined 2026-09-03, on exactly the
+       * same grounds as the two feeds above them: each is a feed document under
+       * its own URL, XML or JSON, with no `<html>` element for a theme to reach
+       * and no cookie read on the way. The tag PAGE is not exempt and is a case
+       * in the list above, because it is HTML and does carry the dimension.
        */
-      .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(name));
+      .filter(
+        (name) =>
+          !/^(blog\.(feed|rss|atom)|blog\.tags\.\$tag\.(rss|feed)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(
+            name,
+          ),
+      );
 
     const listed = new Set(THEME_CACHED.map((r) => r.module));
     const missing = declaring.filter((name) => !listed.has(name));

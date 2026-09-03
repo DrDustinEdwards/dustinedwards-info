@@ -1333,6 +1333,10 @@ console.log("  public HTML routes share one headers()");
     "playground.tsx",
     "projects.tsx",
     "privacy.tsx",
+    // The tag archive. It calls `publicHtmlHeaders()` and negotiates nothing:
+    // its feeds are separate URLs rather than representations of this one, so
+    // it belongs here and not with the Accept-negotiating routes below.
+    "blog.tags.$tag.tsx",
   ];
 
   ok(

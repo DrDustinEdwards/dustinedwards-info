@@ -1,6 +1,6 @@
 import { listBlogPostsFullText } from "~/db";
 import { getEnv } from "~/lib/context";
-import { feedItem } from "~/lib/json-feed.mjs";
+import { jsonFeedDocument } from "~/lib/json-feed.mjs";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.feed[.json]";
 
@@ -22,16 +22,22 @@ const FEED_ITEMS = 20;
 export async function loader({ context }: Route.LoaderArgs) {
   const posts = await listBlogPostsFullText(getEnv(context), { perPage: FEED_ITEMS });
 
-  const feed = {
-    version: "https://jsonfeed.org/version/1.1",
+  /*
+   * THE SHARED ENVELOPE, since the tag feeds landed. `feedItem` was already
+   * shared and this object was not, so a second JSON feed would have copied the
+   * version URL, the language and the authors array. The `version` member is
+   * the one every reader identifies the document by, and the one a copy would
+   * most quietly get wrong.
+   */
+  const feed = jsonFeedDocument({
     title: `${SITE.name} blog`,
-    home_page_url: `${SITE_ORIGIN}/blog`,
-    feed_url: `${SITE_ORIGIN}/blog/feed.json`,
+    homePageUrl: `${SITE_ORIGIN}/blog`,
+    feedUrl: `${SITE_ORIGIN}/blog/feed.json`,
     description: "Writing on building for the web, mostly on Cloudflare.",
-    language: "en-US",
-    authors: [{ name: SITE.name, url: SITE_ORIGIN }],
-    items: posts.map((post) => feedItem(post, SITE_ORIGIN)),
-  };
+    authorName: SITE.name,
+    posts,
+    origin: SITE_ORIGIN,
+  });
 
   return new Response(`${JSON.stringify(feed, null, 2)}\n`, {
     headers: {

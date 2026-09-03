@@ -7,6 +7,26 @@ export default [
   // Ordered before the :slug routes so the feed is not read as a post slug.
   route("blog/rss.xml", "routes/blog.rss[.xml].ts"),
   route("blog/feed.json", "routes/blog.feed[.json].ts"),
+  /*
+   * Atom, alongside RSS and from the same rows. RSS stays the advertised feed;
+   * this is the dialect most validators and some readers prefer. It sits with
+   * the other feeds and, like them, MUST precede `blog/:slug` or "atom.xml"
+   * would be read as a post slug and answer 404.
+   */
+  route("blog/atom.xml", "routes/blog.atom[.xml].ts"),
+  /*
+   * The tag archive and its two feeds.
+   *
+   * `blog/tags/:tag` is two segments where `blog/:slug` is one, so they cannot
+   * collide, but these are grouped with the feeds above rather than after the
+   * post routes so that everything under `/blog/` that is NOT a post reads as
+   * one block. The two feed children are declared before the page for the same
+   * reason the site's other feeds are: it keeps the "more specific first" order
+   * true by eye as well as by the matcher.
+   */
+  route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
+  route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
+  route("blog/tags/:tag", "routes/blog.tags.$tag.tsx"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
   /*
