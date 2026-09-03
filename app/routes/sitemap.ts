@@ -1,6 +1,7 @@
-import { listBlogPosts } from "~/db";
+import { listBlogPosts, listBlogTags } from "~/db";
 import { getEnv } from "~/lib/context";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -58,13 +59,35 @@ export async function loader({ context }: Route.LoaderArgs) {
    * The root-level pages are STATIC_PATHS above, which the same section holds
    * against the route table.
    */
-  const blog = await listBlogPosts(env, { perPage: 1000 });
+  /*
+   * TAGS RIDE ALONG, since the archives landed.
+   *
+   * `listBlogTags` is the SAME read the chip list makes and it composes
+   * `isBlogPost()`, so a tag carried only by drafts or by future-dated posts is
+   * absent from this list for exactly the reason its archive answers 404. That
+   * is the visibility rule the spec asks for, and it is inherited rather than
+   * restated: a second predicate here would be a second answer to which tags
+   * are public, and the one that disagreed would be the one nobody tested.
+   *
+   * NO `lastmod`. A tag has no modification date of its own, and deriving one
+   * from its newest post would be a claim this read cannot support: the tag
+   * list carries counts, not dates, and fetching dates for it would be a second
+   * query to state something a crawler treats as a hint anyway.
+   */
+  const [blog, tagList] = await Promise.all([
+    listBlogPosts(env, { perPage: 1000 }),
+    listBlogTags(env),
+  ]);
 
   const urls = [
     ...STATIC_PATHS.map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/blog/${p.slug}`,
       lastmod: p.updatedAt,
+    })),
+    ...tagList.map((t) => ({
+      loc: `${origin}${tagPath(t.slug)}`,
+      lastmod: null as Date | null,
     })),
   ];
 
