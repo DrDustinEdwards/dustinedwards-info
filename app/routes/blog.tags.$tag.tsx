@@ -111,7 +111,7 @@ export function headers() {
   return new Headers(publicHtmlHeaders());
 }
 
-export function meta({ loaderData, params }: Route.MetaArgs) {
+export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
