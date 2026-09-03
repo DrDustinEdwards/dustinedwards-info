@@ -32,6 +32,7 @@ import { spawnSync } from "node:child_process";
 import { buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
+import { internalLinkSlug } from "../app/lib/content/pipeline.mjs";
 
 /**
  * Names, not a count. A failure that says "3 file(s) missing" sends the reader
@@ -123,8 +124,66 @@ async function main() {
       `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, rendered twice).`,
   );
 
+  checkInternalFurtherReading(posts);
   await checkTemplateRefs();
   await checkAssetManifest();
+}
+
+/**
+ * EVERY `/blog/` LINK IN `further_reading` NAMES A POST THAT EXISTS.
+ *
+ * The schema decides the SHAPE of a url and cannot decide its TARGET: nothing
+ * in `frontmatterSchema` knows which slugs the corpus holds, so a link to a
+ * post that was later deleted or renamed is valid frontmatter and a dead link
+ * on a live page. Internal links only became expressible when the schema was
+ * widened to accept a `/blog/` path, so this gate lands with the widening
+ * rather than after the first dead link.
+ *
+ * A BUILD FAILURE rather than a warning, which is the point of the request: a
+ * deleted post should stop the build, not ship. `check:content` runs in the
+ * offline tier, so it fails before a deploy and before CI goes green.
+ *
+ * **THE EXAMINED COUNT IS PRINTED, and today it is zero.** No corpus post sets
+ * `further_reading`, so a silent "ok" here would be the clean-sweep-over-an-
+ * empty-scope shape in FAILURES.md: indistinguishable from a gate that checked
+ * nothing because it was broken. The line says how many links it resolved, so
+ * a reader can tell "none to check" from "all fine". The gate's real proof is
+ * a planted dead link, not a green run over an empty corpus.
+ *
+ * @param {Array<{ slug: string, furtherReading?: Array<{ title: string, url: string }> }>} posts
+ */
+function checkInternalFurtherReading(posts) {
+  const known = new Set(posts.map((post) => post.slug));
+  /** @type {string[]} */
+  const dead = [];
+  let examined = 0;
+
+  for (const post of posts) {
+    for (const item of post.furtherReading ?? []) {
+      const target = internalLinkSlug(item.url);
+      // External links are out of scope: nothing offline can say whether a
+      // third-party URL still resolves, and pretending otherwise would be a
+      // check that fails on somebody else's outage.
+      if (target === null) continue;
+      examined += 1;
+      if (!known.has(target)) dead.push(`${post.slug} -> ${item.url}`);
+    }
+  }
+
+  if (dead.length > 0) {
+    console.error(
+      `check:content failed. ${dead.length} further_reading link(s) point at a post ` +
+        `that does not exist:`,
+    );
+    console.error(nameThem(dead));
+    process.exit(1);
+    return;
+  }
+
+  console.log(
+    `check:content ok. ${examined} internal further_reading link(s) resolve to a post ` +
+      `(${known.size} slug(s) in the corpus).`,
+  );
 }
 
 /**

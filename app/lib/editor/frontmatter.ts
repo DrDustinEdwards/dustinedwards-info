@@ -248,6 +248,141 @@ export function parsePost(raw: string): PostFields {
   };
 }
 
+/**
+ * THE FIELD NAMES THE FURTHER-READING CONTROLS SUBMIT, stated once.
+ *
+ * The component renders them and the parser below reads them, so a second
+ * spelling would be a control that silently submits into nothing. Rule 17 on a
+ * set of names rather than on a number.
+ *
+ * `FR_CONTROL` is the MARKER, and it is the load-bearing one. See
+ * `furtherReadingFromForm`.
+ */
+export const FR_CONTROL = "frControl";
+export const FR_TITLE = "frTitle";
+export const FR_URL = "frUrl";
+export const FR_INTERNAL = "frInternal";
+
+/** The `/blog/` prefix the internal picker writes. Mirrors the schema's rule. */
+const INTERNAL_PREFIX = "/blog/";
+
+/** An item as it travels in the `further_reading` JSON. */
+type ReadingItem = { title: string; url: string };
+
+/** The stored JSON, parsed, or an empty list if it is absent or malformed. */
+function parseReadingJson(raw: string): ReadingItem[] {
+  if (!raw.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const { title, url } = item as Record<string, unknown>;
+      if (typeof title !== "string" || typeof url !== "string") return [];
+      return [{ title, url }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Splits stored further reading into the two controls that own it. */
+export function splitReading(raw: string) {
+  const items = parseReadingJson(raw);
+  return {
+    external: items.filter((item) => !item.url.startsWith(INTERNAL_PREFIX)),
+    internal: items.filter((item) => item.url.startsWith(INTERNAL_PREFIX)),
+  };
+}
+
+/**
+ * REBUILDS `further_reading` FROM THE CONTROLS, or leaves it exactly as it came.
+ *
+ * ## The marker, and why an absent field cannot mean cleared
+ *
+ * A list control has a genuinely ambiguous empty state: "the author removed
+ * every row" and "this form never rendered the control" both arrive as no
+ * fields at all. Collapsing them is the B004 data-loss class the hidden inputs
+ * exist to prevent, and it is worse here than for a scalar, because the value
+ * being destroyed is a list the author curated.
+ *
+ * So the control renders a hidden marker alongside itself. The marker present
+ * means the control was on the page, so an empty result is the author's
+ * emptiness and is honoured. The marker absent means nothing here was offered,
+ * so the carried `furtherReading` JSON is passed through untouched, which is
+ * exactly what the hidden input did before any of this existed.
+ *
+ * The marker is a hidden input rather than an inference from the row fields,
+ * because inferring it from the rows is the same ambiguity one level down: a
+ * control with every row cleared submits empty strings, and a control that was
+ * never rendered submits nothing, and both would have to be told apart by a
+ * rule that cannot see the difference.
+ *
+ * ## Ordering
+ *
+ * External rows in document order, then internal picks in the order the picker
+ * renders them. A list mixing the two therefore NORMALISES to externals-first
+ * on its first save and is stable after that. Stated because it is a real
+ * effect on the author's file: it is a grouping, nothing is dropped or
+ * reordered within a group, and the alternative (threading original positions
+ * through two separate controls) buys an ordering nobody asked for.
+ *
+ * Rows with neither a title nor a url are dropped, which is how the spare blank
+ * row costs nothing. A row with only one of the two is KEPT, so the schema
+ * refuses it by name rather than this silently discarding what the author typed.
+ */
+export function furtherReadingFromForm(form: FormData, carried: string): string {
+  if (form.get(FR_CONTROL) === null) return carried;
+
+  const titles = form.getAll(FR_TITLE).map((v) => String(v));
+  const urls = form.getAll(FR_URL).map((v) => String(v));
+  const items: ReadingItem[] = [];
+
+  for (let i = 0; i < Math.max(titles.length, urls.length); i += 1) {
+    const title = (titles[i] ?? "").trim();
+    const url = (urls[i] ?? "").trim();
+    if (!title && !url) continue;
+    items.push({ title, url });
+  }
+
+  /*
+   * The picker submits ONE checked box per chosen post, and the box's VALUE
+   * carries both the slug and the title as JSON.
+   *
+   * A parallel hidden `title` field per post was the obvious alternative and it
+   * is worse in a way that matters here: it puts one field NAME per corpus post
+   * into the submission tuple `check:admin-ui` pins, so the fixture would grow
+   * with the blog and a new post would read as an editor payload change. One
+   * name, carrying a compound value, keeps the tuple a property of the editor
+   * rather than of how much has been written.
+   *
+   * The title is a SNAPSHOT taken when the box was ticked, exactly as an
+   * external link's title is typed once. Retitling the target does not rewrite
+   * links that already point at it; `check:content` guards the link resolving,
+   * which is the half that can break silently.
+   */
+  for (const value of form.getAll(FR_INTERNAL)) {
+    let slug = "";
+    let title = "";
+    try {
+      const parsed: unknown = JSON.parse(String(value));
+      if (parsed && typeof parsed === "object") {
+        const record = parsed as Record<string, unknown>;
+        slug = typeof record.slug === "string" ? record.slug : "";
+        title = typeof record.title === "string" ? record.title : "";
+      }
+    } catch {
+      // A value this parser cannot read is dropped rather than guessed at. The
+      // only producer is the picker below, so this is a malformed request.
+      continue;
+    }
+    if (!slug) continue;
+    items.push({ title: title.trim() || slug, url: `${INTERNAL_PREFIX}${slug}` });
+  }
+
+  return items.length > 0 ? JSON.stringify(items) : "";
+}
+
 /** Reads a submitted form into fields, without validating them. */
 export function fieldsFromForm(form: FormData): PostFields {
   const get = (key: string) => String(form.get(key) ?? "");
@@ -283,10 +418,37 @@ export function fieldsFromForm(form: FormData): PostFields {
     // offering a control here, it is relaying a committed value, and presence
     // semantics would turn "the form did not carry it" into "the author cleared
     // it", which is the exact class of loss this finding is about.
-    featured: get("featured") === "true",
+    /*
+     * THE LAST `featured` WINS, and that is what makes a checkbox safe here.
+     *
+     * The field is submitted TWICE when the box is ticked: a hidden "false"
+     * that the form always carries, and the checkbox's own "true" after it. An
+     * unticked checkbox submits nothing, so the hidden value stands alone and
+     * the answer is "false". That is the standard pairing, and it is used
+     * instead of a bare checkbox for the reason the hidden input was introduced
+     * for: a bare checkbox makes "the form did not carry it" and "the author
+     * cleared it" the same request, which is the B004 class.
+     *
+     * Reading the LAST value rather than the first is the whole of the change,
+     * and it changes nothing for any payload that predates the checkbox: with
+     * one value present, first and last are the same value. `form.get()`
+     * returns the FIRST, so keeping it would have made the hidden "false"
+     * permanently win and the control silently do nothing.
+     *
+     * Absent entirely still reads false, exactly as before. This parser has one
+     * caller and the editor always renders the hidden input, so absence is not
+     * reachable from the product; the behaviour is preserved rather than
+     * improved because changing it would change an existing field's meaning.
+     */
+    featured: (() => {
+      const all = form.getAll("featured").map((v) => String(v));
+      return all.length > 0 && all[all.length - 1] === "true";
+    })(),
     series: get("series"),
     part: get("part"),
-    furtherReading: get("furtherReading"),
+    // Rebuilt from the controls when they were on the page, passed through
+    // untouched when they were not. The marker is what tells the two apart.
+    furtherReading: furtherReadingFromForm(form, get("furtherReading")),
     ogTitle: get("ogTitle"),
     ogDescription: get("ogDescription"),
     updated: get("updated"),

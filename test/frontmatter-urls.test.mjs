@@ -45,7 +45,12 @@ const CASES = [
   ["cover: a generated social card", cover, "/og/a-b_c-1200x630.png", true],
   ["cover: a rendered diagram asset", cover, "/diagrams/d.svg", true],
   ["further_reading: an ordinary https url", furtherReading, "https://example.com/a", true],
-  ["further_reading: mailto", furtherReading, "mailto:a@b.c", true],
+  /*
+   * THE INTERNAL LINK, accepted since 2026-09-03. The editor's picker writes a
+   * path rather than an absolute URL because the origin changes at cutover and
+   * a path survives it; the schema's own comment carries the argument.
+   */
+  ["further_reading: an internal /blog/ path", furtherReading, "/blog/a-real-post", true],
 
   // REFUSED. Each was reachable through a write path when it was found.
   ["cover: protocol-relative host (finding B008)", cover, "//evil.com/x.png", false],
@@ -53,6 +58,26 @@ const CASES = [
   ["cover: a full absolute url", cover, "https://evil.com/x.png", false],
   ["further_reading: javascript scheme (finding B001)", furtherReading, "javascript:alert(1)", false],
   ["further_reading: data url", furtherReading, "data:text/html,x", false],
+  /*
+   * NARROWED IN THE SAME CHANGE THAT WIDENED THE FIELD, and it moved from the
+   * accepted group above. `z.url()` took `mailto:` because it is a well-formed
+   * absolute URL, and `isAllowedUrl` permits the protocol elsewhere; further
+   * reading is a list of things to READ, so the field now takes http(s) or a
+   * `/blog/` path and nothing else. No corpus post sets `further_reading`, so
+   * the narrowing invalidated nothing. `isAllowedUrl` still runs and still
+   * governs every other field.
+   */
+  ["further_reading: mailto", furtherReading, "mailto:a@b.c", false],
+  /*
+   * THE HOLE THE WIDENING COULD HAVE OPENED. Accepting paths means the
+   * protocol-relative shape is no longer refused as a side effect of demanding
+   * an absolute URL, so it is pinned here explicitly for this field, the way
+   * `cover` already pins it. `/about` is the same rule from the other side: a
+   * site path that is not a post is not further reading.
+   */
+  ["further_reading: protocol-relative host", furtherReading, "//evil.com/x", false],
+  ["further_reading: a site path that is not a post", furtherReading, "/about", false],
+  ["further_reading: /blog/ with no slug", furtherReading, "/blog/", false],
 ];
 
 for (const [label, field, value, expected] of CASES) {

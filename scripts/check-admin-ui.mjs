@@ -259,6 +259,20 @@ const ASK_DRIFTED = { present: 90, expected: 93, missing: ["a", "b", "c"], stale
 const BUDGET = { count: 4, limit: 200, day: "2026-07-31" };
 
 /** @param {Partial<Record<string, unknown>>} over */
+/*
+ * THE WHOLE `PostFields` SHAPE, since 2026-09-03.
+ *
+ * This omitted the seven B004 keys (`featured` through `updated`) for as long
+ * as the editor relayed them through hidden inputs, because a hidden input
+ * handed `undefined` renders without a value attribute and nothing complains.
+ * The moment they became real controls the omission became a crash: a control
+ * reads its own value, and `splitReading(undefined)` threw on every state.
+ *
+ * The loader has always returned all of them, so the fixture was describing a
+ * loader that does not exist. The drawer's own docblock states the rule this
+ * violated: a loader shape the gate does not supply is a loader shape it is not
+ * actually testing.
+ */
 const fields = (over = {}) => ({
   title: "A post",
   slug: "a-post",
@@ -271,6 +285,13 @@ const fields = (over = {}) => ({
   coverAlt: "",
   body: "# Heading\n\nProse.\n",
   firstPublished: "",
+  featured: false,
+  series: "",
+  part: "",
+  furtherReading: "",
+  ogTitle: "",
+  ogDescription: "",
+  updated: "",
   ...over,
 });
 
@@ -1539,6 +1560,47 @@ const STATES = [
     }),
   },
   {
+    /*
+     * A POST THAT ALREADY HAS FURTHER READING, one external link and one
+     * internal, which is the only state where the picker's checkbox is TICKED.
+     *
+     * Without it `frInternal` never reaches a submission, because an unticked
+     * checkbox is not submitted and every other state leaves the list empty. It
+     * would then be the one field of the new control that the baseline does not
+     * pin, which is the same blindness the fixture exists to remove.
+     *
+     * `live-one` is the published entry in `editLoader`'s `linkTargets`, so the
+     * checkbox this state ticks is a real offer rather than an invented one.
+     */
+    /*
+     * A FEATURED POST. The negative for the checkbox assertions: every other
+     * state has `featured: false`, so without this the "renders unchecked"
+     * assertion would be satisfied by a control that is incapable of rendering
+     * checked at all.
+     */
+    name: "edit, featured",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({ fields: fields({ featured: true }) }),
+  },
+  {
+    name: "edit, with further reading set",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader({
+      fields: fields({
+        furtherReading: JSON.stringify([
+          { title: "An external piece", url: "https://example.com/x" },
+          { title: "A live post", url: "/blog/live-one" },
+        ]),
+      }),
+    }),
+  },
+  {
     name: "edit, save refused",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
     path: "/admin/posts/:slug/edit",
@@ -2195,8 +2257,8 @@ for (const name of Object.keys(actual)) {
  * it, and the assertion that exists to notice exactly that would have passed.
  * It was written when the harness compared one route.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 376.
- * Never summed over the fixtures. The floor is 355, so the slack is 21, which
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 388.
+ * Never summed over the fixtures. The floor is 367, so the slack is 21, which
  * absorbs a state being retired and does not absorb a route going quiet: the
  * media library alone contributes far more than 21.
  *
@@ -2209,8 +2271,8 @@ for (const name of Object.keys(actual)) {
  */
 assert(
   "the comparison actually read submissions",
-  submissionsCompared >= 355,
-  `${submissionsCompared} compared, floor 355, measured 376`,
+  submissionsCompared >= 367,
+  `${submissionsCompared} compared, floor 367, measured 388`,
 );
 
 /*
@@ -2222,15 +2284,15 @@ assert(
  * comparing two shortened lists and agreeing. The floor is the copy `--update`
  * cannot reach, which is the whole difference between a fixture and a gate.
  *
- * Measured by running this gate, 2026-09-03: 80. Floor 75. Moved with the
+ * Measured by running this gate, 2026-09-03: 82. Floor 77. Moved with the
  * submission floor above and for the same reason: the first-publication
  * confirmation step added a state, and a floor whose slack doubles is a floor
  * that has stopped meaning what its own comment says it means.
  */
 assert(
   "the harness rendered its full set of states",
-  STATES.length >= 75,
-  `${STATES.length} state(s), floor 75, measured 80`,
+  STATES.length >= 77,
+  `${STATES.length} state(s), floor 77, measured 82`,
 );
 
 /* -------------------------------------------------------------------------
@@ -2459,6 +2521,107 @@ structural(
   "the confirmation step says scheduling needs scripting",
   "edit, first publication awaiting confirmation",
   (h) => h.includes("which needs scripting"),
+);
+
+/* -------------------------------------------------------------------------
+ * THE FRONTMATTER CONTROLS, and the two properties the payload cannot show.
+ *
+ * The baseline pins WHICH fields are submitted. It cannot pin that `featured`
+ * is a checkbox paired with a hidden "false", nor that the section is reachable
+ * without script, and those are the two things this work is actually about.
+ * ---------------------------------------------------------------------- */
+
+// Reachable with no script. A <details> opens on its own; a <dialog> does not.
+// This is the whole reason the section is not in the settings drawer, so it is
+// asserted rather than left to the component's comment.
+structural("the metadata section is a details disclosure", "edit, published", (h) =>
+  /<details[^>]*class="post-metadata"/.test(h),
+);
+structural("the metadata section is NOT inside the drawer dialog", "edit, published", (h) => {
+  const dialog = /<dialog[^>]*class="drawer"[\s\S]*?<\/dialog>/.exec(h)?.[0] ?? "";
+  return dialog.length > 0 && !dialog.includes('class="post-metadata"');
+});
+
+/*
+ * THE FEATURED PAIRING, both halves, because either alone is the defect.
+ *
+ * A lone hidden input is the old relay with no control. A lone checkbox is the
+ * B004 loss: unticked, it submits nothing and absence reads as cleared. The
+ * order matters too, and is asserted, because `fieldsFromForm` takes the LAST
+ * value: a checkbox rendered BEFORE the hidden "false" would be overridden by
+ * it and the control would silently do nothing.
+ */
+structural("featured carries a hidden false", "edit, published", (h) =>
+  /<input[^>]*type="hidden"[^>]*name="featured"[^>]*value="false"/.test(h),
+);
+structural("featured also renders a real checkbox", "edit, published", (h) =>
+  /<input[^>]*type="checkbox"[^>]*name="featured"[^>]*value="true"/.test(h),
+);
+structural("the hidden false precedes the checkbox", "edit, published", (h) => {
+  const hidden = h.search(/<input[^>]*type="hidden"[^>]*name="featured"/);
+  const box = h.search(/<input[^>]*type="checkbox"[^>]*name="featured"/);
+  return hidden !== -1 && box !== -1 && hidden < box;
+});
+// And the checkbox reflects the stored value in both directions, or it would
+// be a control that always reads false no matter what the post says.
+structural("an unfeatured post renders the box unchecked", "edit, published", (h) => {
+  const box = /<input[^>]*type="checkbox"[^>]*name="featured"[^>]*>/.exec(h)?.[0] ?? "";
+  return box.length > 0 && !box.includes("checked");
+});
+structural("a featured post renders the box checked", "edit, featured", (h) => {
+  const box = /<input[^>]*type="checkbox"[^>]*name="featured"[^>]*>/.exec(h)?.[0] ?? "";
+  return box.includes("checked");
+});
+
+/*
+ * FURTHER READING. The marker is the field that makes an empty list mean the
+ * author's emptiness rather than a form that never offered the control, so its
+ * absence is the data-loss bug and it is asserted by name.
+ */
+structural("further reading carries its marker", "edit, published", (h) =>
+  /<input[^>]*type="hidden"[^>]*name="frControl"/.test(h),
+);
+structural("further reading still carries the stored JSON", "edit, published", (h) =>
+  /<input[^>]*type="hidden"[^>]*name="furtherReading"/.test(h),
+);
+// One spare row on a post with no links, so a link can be added without script.
+structural("an empty list still offers a row", "edit, published", (h) =>
+  (h.match(/name="frUrl"/g) ?? []).length === 1,
+);
+// Existing links render as filled rows, plus the spare.
+structural("an existing external link renders as a row", "edit, with further reading set", (h) =>
+  h.includes('value="https://example.com/x"'),
+);
+structural("filled rows plus one spare", "edit, with further reading set", (h) =>
+  (h.match(/name="frUrl"/g) ?? []).length === 2,
+);
+/*
+ * THE PICKER. Its checkbox value carries slug and title together, which is what
+ * keeps the tuple one field wide no matter how many posts exist; asserting the
+ * shape is what stops that quietly becoming a field per post.
+ */
+structural("the picker ticks the post already linked", "edit, with further reading set", (h) => {
+  const box = /<input[^>]*name="frInternal"[^>]*>/.exec(h)?.[0] ?? "";
+  return box.includes("checked") && box.includes("live-one");
+});
+structural("the picker offers only published posts", "edit, published", (h) => {
+  const boxes = h.match(/<input[^>]*name="frInternal"[^>]*>/g) ?? [];
+  // editLoader offers one published post and one draft; only the live one may
+  // be offered, because further reading renders to the public.
+  return boxes.length === 1 && boxes[0].includes("live-one") && !boxes[0].includes("wip");
+});
+structural("a post is not offered as its own further reading", "edit, published", (h) => {
+  const boxes = h.match(/<input[^>]*name="frInternal"[^>]*>/g) ?? [];
+  return boxes.every((box) => !box.includes('slug\\":\\"a-post'));
+});
+
+// The OG fields say what happens when they are left empty. A note that does not
+// name the fallback is the kind of help that sends somebody to read the source.
+structural("the OG title names its fallback", "edit, published", (h) =>
+  h.includes("cards use the post title"),
+);
+structural("the OG description names its fallback", "edit, published", (h) =>
+  h.includes("cards use the description"),
 );
 
 // The slug is editable in exactly one place: a new post. An existing post

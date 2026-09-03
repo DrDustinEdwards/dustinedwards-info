@@ -920,3 +920,118 @@
   margin: 0;
   font-size: 0.9375rem;
 }
+
+/* The frontmatter controls ------------------------------------------------
+   A <details> in the editing form rather than a drawer section, because the
+   drawer needs script to open and these have to work without it. Rule 5 sends
+   the disclosure's own edge to --border-strong: it is a pinned, elevated
+   surface in the sense that rule means, sitting above the canvas.
+   ---------------------------------------------------------------------- */
+
+.post-metadata {
+  margin-top: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.post-metadata > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.post-metadata-hint {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.post-metadata-body {
+  display: grid;
+  gap: 1.25rem;
+  padding: 0 1rem 1rem;
+}
+
+.post-metadata-group {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.post-metadata-group legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.post-metadata-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.post-metadata-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.post-metadata-check small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.post-metadata-pair {
+  display: grid;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  grid-template-columns: auto 1fr;
+}
+
+.post-metadata-body input[type="text"],
+.post-metadata-body input[type="url"],
+.post-metadata-body input[type="number"] {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.post-metadata-rows,
+.post-metadata-picker ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.post-metadata-row {
+  display: grid;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+}
+
+.post-metadata-picker h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
