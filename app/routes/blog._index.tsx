@@ -1,12 +1,13 @@
 import { Form, Link, data, redirect } from "react-router";
 
+import { PostCard, Pagination } from "~/components/post-card";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
 import { jsonLd } from "~/lib/json-ld.mjs";
+import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
-import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
   HTML_VARY,
@@ -189,7 +190,35 @@ export function meta({ loaderData }: Route.MetaArgs) {
     canonicalParams.set("page", String(loaderData.page));
   }
   const canonicalQuery = canonicalParams.toString();
-  const path = canonicalQuery ? `/blog?${canonicalQuery}` : "/blog";
+
+  /*
+   * A TAG-ONLY FILTER CANONICALISES TO THE ARCHIVE, since the archive exists.
+   *
+   * `/blog?tag=x` and `/blog/tags/x` are the same list of posts at two
+   * addresses, which is duplicate content by construction. The archive is the
+   * better one: it has a title naming the tag, a description, a breadcrumb, its
+   * own feeds and a place in the sitemap, none of which a query-string view of
+   * the index has. So the filtered view keeps working, keeps composing with the
+   * year chips beside it, and tells a crawler where the canonical copy lives.
+   *
+   * ONLY WHEN THE TAG IS THE ONLY FILTER, and that condition is the whole care
+   * in this block. `?tag=x&year=2026` is a DIFFERENT list from the archive, so
+   * naming the archive as its canonical would point a crawler at a page whose
+   * content it does not share, which is the exact defect the comment above
+   * describes and fixed for `year` in the first place. There is no year archive
+   * to send it to, so it stays self-canonical.
+   *
+   * Page two of a tag-only filter maps to page two of the archive, because the
+   * archive paginates the same list in the same order at the same size.
+   */
+  const tagOnly = Boolean(loaderData?.activeTag) && !loaderData?.activeYear;
+  const path = tagOnly
+    ? `${tagPath(loaderData!.activeTag!)}${
+        loaderData?.page && loaderData.page > 1 ? `?page=${loaderData.page}` : ""
+      }`
+    : canonicalQuery
+      ? `/blog?${canonicalQuery}`
+      : "/blog";
 
   /*
    * THE SHARED BUILDER, and nothing else any more.
@@ -347,49 +376,12 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         ) : (
           <ul className="post-list">
             {posts.map((post) => (
-              <li key={post.slug} className="post-card">
-                <h2 className="post-card-title">
-                  <Link to={`/blog/${post.slug}`}>{post.title}</Link>
-                </h2>
-                <p className="post-card-meta">
-                  {post.publishAt && (
-                    <time dateTime={new Date(post.publishAt).toISOString()}>
-                      {longDateUTC(post.publishAt)}
-                    </time>
-                  )}
-                  {post.readingTimeMinutes && (
-                    <> · {post.readingTimeMinutes} min read</>
-                  )}
-                </p>
-                {post.series && (
-                  <p className="post-card-series">
-                    {post.series}, part {post.part}
-                  </p>
-                )}
-                {post.description && <p>{post.description}</p>}
-                {post.tags.length > 0 && (
-                  <p className="post-card-tags">
-                    {post.tags.map((tag) => (
-                      <Link key={tag} to={`/blog?tag=${encodeURIComponent(tag)}`}>
-                        {tag}
-                      </Link>
-                    ))}
-                  </p>
-                )}
-              </li>
+              <PostCard key={post.slug} post={post} />
             ))}
           </ul>
         )}
 
-        {pageCount > 1 && (
-          <nav className="pagination" aria-label="Pagination">
-            {page > 1 && <Link to={pageHref(page - 1)}>Newer</Link>}
-            <span className="muted">
-              Page {page} of {pageCount}
-            </span>
-            {page < pageCount && <Link to={pageHref(page + 1)}>Older</Link>}
-          </nav>
-        )}
+        <Pagination page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
       <SiteFooter />
       {/* NO BlogEnhancements HERE, since 2026-08-27. Every one of that bundle's
