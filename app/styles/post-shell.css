@@ -78,3 +78,72 @@
   border-top: 1px solid var(--border);
   font-size: 0.9375rem;
 }
+
+/* What the model already held ----------------------------------------------
+   Cover, dek, related descriptions, prev/next targets and the share row. Added
+   2026-09-03; all of it was stored and none of it was drawn.
+   ------------------------------------------------------------------------ */
+
+/* The dek. Larger than body text and quieter than the title, which is what a
+   standfirst is: the same sentence the meta description carries, so it reads as
+   a summary rather than as the first paragraph. */
+.post-dek {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+/* The cover. Full column width with the height left to the image, because D1
+   stores no intrinsic dimensions; fixing the width is what bounds the shift to
+   one axis. */
+.post-cover {
+  margin: 0 0 2rem;
+}
+
+.post-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+/* A related entry is a title over its description, so the two do not run
+   together as one sentence. */
+.related-description {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Prev and next as blocks. Rule 5: this is a pinned, bordered target, so the
+   edge is --border-strong rather than --border. */
+.post-nav-target {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  align-items: flex-start;
+  max-width: 20rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+}
+
+.post-nav-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.post-nav-title {
+  font-weight: 500;
+}
+
+/* The share row sits under the agent row and is the same kind of thing, so it
+   inherits .post-actions and only needs its own spacing. */
+.post-share {
+  margin-top: 0.5rem;
+}
