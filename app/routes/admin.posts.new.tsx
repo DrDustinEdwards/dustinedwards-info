@@ -75,6 +75,8 @@ export default function NewPost({ loaderData, actionData }: Route.ComponentProps
               state: "failed",
               message: actionData.problem.message,
               conflict: Boolean(actionData.problem.conflict),
+              field: actionData.problem.field,
+              line: actionData.problem.line,
             }
           : null
       }
@@ -83,6 +85,11 @@ export default function NewPost({ loaderData, actionData }: Route.ComponentProps
       // would be on the first edit after creating it.
       state="draft"
       everPublished={false}
+      // A post that has never existed has never been public, so its first save
+      // with a publish intent is a first publication and gets the same second
+      // step the edit route renders. `fields` above already carries the
+      // submitted body back, because this arm has fields like `problem` does.
+      awaitingPublishConfirmation={actionData?.kind === "confirm-publish"}
       tagOptions={loaderData.tagOptions}
       linkTargets={loaderData.linkTargets}
       existingSlugs={loaderData.existingSlugs}

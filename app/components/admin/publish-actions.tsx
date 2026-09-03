@@ -1,33 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 
-import { transitionsFor, type PostState } from "~/lib/editor/publish-transition.mjs";
+import {
+  PUBLISH_CONFIRMED_INTENT,
+  transitionsFor,
+  type PostState,
+} from "~/lib/editor/publish-transition.mjs";
 import { OverflowMenu } from "./overflow-menu";
 
 /**
  * The publish state machine, as controls.
  *
  * The draft checkbox is gone. What replaced it names the transition instead of
- * stating a field: the primary button says Publish, Republish or Save changes,
- * and the author never has to translate "draft is unticked" into "this is on
- * the internet".
+ * stating a field: the primary button says Publish, Republish or Update, and
+ * the author never has to translate "draft is unticked" into "this is on the
+ * internet".
  *
- * The payload is unchanged, and the mechanism deserves stating because it looks
- * like a trick. `fieldsFromForm` reads `form.get("draft") === "on"`, so a
- * checkbox sent `draft=on` when ticked and sent NOTHING when unticked. A hidden
- * input reproduces exactly that, because a DISABLED control is not submitted:
- * enabled it sends `draft=on`, disabled it sends no key at all. Each button
- * sets that flag in its own `onClick`, which fires before the submit, and it
- * does so imperatively through a ref rather than through state because a React
- * state update would not have landed by the time the form serialises.
+ * ## EVERY BUTTON CARRIES ITS OWN TRANSITION, since 2026-09-03
+ *
+ * Each control submits `intent=<transition id>`, and the server reads the draft
+ * flag off that intent. Nothing is flipped, nothing is armed, and no handler
+ * has to run for the request to say what the author asked for.
+ *
+ * What this replaced was a hidden `draft` input toggled through a ref in each
+ * button's `onClick`. It reproduced a checkbox faithfully and it made all three
+ * publication transitions depend on script, two of them silently: republish
+ * saved a draft, revert-to-draft left the post live, and a first publication
+ * could not be reached at all. `publish-transition.mjs` carries the full
+ * account and the argument for putting the decision in the submitter.
  *
  * That the transitions map correctly is asserted by check:admin-ui against
- * publish-transition.mjs, not by this component. Rendering cannot see what a
- * button does on click, so the table lives in a module a gate can import.
+ * publish-transition.mjs, not by this component. What check:admin-ui CAN now
+ * see, which it could not before, is the whole contract: the intent a button
+ * sends is in the markup, so the gate reads the transition off the rendered
+ * page rather than taking a click handler on trust.
  */
 export function PublishActions({
   state,
   everPublished,
-  draftFieldRef,
   publishAt,
   onPublishAtChange,
   busy,
@@ -35,8 +44,6 @@ export function PublishActions({
 }: {
   state: PostState;
   everPublished: boolean;
-  /** The hidden `draft` input. Toggled, never re-rendered. */
-  draftFieldRef: React.RefObject<HTMLInputElement | null>;
   publishAt: string;
   onPublishAtChange: (value: string) => void;
   busy?: boolean;
@@ -46,12 +53,6 @@ export function PublishActions({
   const transitions = transitionsFor(state, everPublished);
   const [primary, ...secondary] = transitions;
 
-  /** Sets what this submit will send for `draft`, synchronously. */
-  const arm = (wantsDraft: boolean) => {
-    const field = draftFieldRef.current;
-    if (field) field.disabled = !wantsDraft;
-  };
-
   return (
     <div className="publish-actions">
       <OverflowMenu label="More">
@@ -60,13 +61,12 @@ export function PublishActions({
             key={transition.id}
             type="submit"
             name="intent"
-            value="save"
+            value={transition.id}
             data-menu-item
             className={
               transition.danger ? "overflow-menu-item is-danger" : "overflow-menu-item"
             }
             disabled={disabled}
-            onClick={() => arm(transition.wantsDraft)}
           >
             {transition.label}
             <span className="overflow-menu-item-hint">
@@ -93,13 +93,35 @@ export function PublishActions({
 
       {primary.ceremony ? (
         <>
-          {/* A first publication does not happen on a single click. The button
-              opens the choice; the dialog contains the two submits. */}
+          {/*
+            A REAL SUBMIT that a script INTERCEPTS, which is the delete path's
+            shape and is the whole of the fix.
+
+            It was `type="button"`, so with scripting off there was no path to a
+            first publication at all: both real submits lived inside a <dialog>
+            that is display:none until showModal() runs. Now the press always
+            means something. Scripted, the handler opens the dialog instead and
+            the author answers there; unscripted, the request reaches the server
+            as a plain `publish`, which is the ASK rather than the answer, and
+            the server renders the confirmation step.
+
+            The ceremony is not weakened by this, because the ceremony was never
+            the dialog: it is savePost refusing an unconfirmed first
+            publication. The dialog is earlier feedback, and this handler is the
+            same. Note the race it makes harmless, too: a click landing before
+            hydration submits for real and still cannot publish, because the
+            server asks anyway.
+          */}
           <button
-            type="button"
+            type="submit"
+            name="intent"
+            value={primary.id}
             className="btn"
             disabled={disabled || busy}
-            onClick={() => setCeremony(true)}
+            onClick={(event) => {
+              event.preventDefault();
+              setCeremony(true);
+            }}
           >
             {primary.label}
           </button>
@@ -108,7 +130,6 @@ export function PublishActions({
             onClose={() => setCeremony(false)}
             publishAt={publishAt}
             onPublishAtChange={onPublishAtChange}
-            onArm={arm}
           />
         </>
       ) : (
@@ -116,21 +137,33 @@ export function PublishActions({
           <button
             type="submit"
             name="intent"
-            value="save"
+            value={primary.id}
             className="btn"
             disabled={disabled || busy}
-            onClick={() => arm(primary.wantsDraft)}
           >
             {busy ? "Saving" : primary.label}
           </button>
-          <PublishCeremony
-            open={ceremony}
-            onClose={() => setCeremony(false)}
-            publishAt={publishAt}
-            onPublishAtChange={onPublishAtChange}
-            onArm={arm}
-            reschedule
-          />
+          {/*
+            RENDERED ONLY WHERE IT CAN BE OPENED, which is the same condition
+            the Reschedule menu item carries. This arm also serves a WITHDRAWN
+            draft, whose primary is Republish and which offers no Reschedule, so
+            an unconditional dialog would leave two submits in the markup that
+            nothing can reach. They would not be harmless: the reschedule arm
+            sends the in-place `save`, which on a draft means draft:false, so
+            the page would carry a publication nobody can see and check:admin-ui
+            would record it as part of this page's request surface. Held by
+            there being nothing to submit rather than by nothing opening it,
+            which is how the preview-link section holds the same kind of rule.
+          */}
+          {state !== "draft" ? (
+            <PublishCeremony
+              open={ceremony}
+              onClose={() => setCeremony(false)}
+              publishAt={publishAt}
+              onPublishAtChange={onPublishAtChange}
+              reschedule
+            />
+          ) : null}
         </>
       )}
     </div>
@@ -144,24 +177,33 @@ export function PublishActions({
  * real submits of the editing form: the dialog sits INSIDE that form, and
  * `showModal()` moves an element to the top layer visually without moving it in
  * the DOM, so form association by containment still holds.
+ *
+ * BOTH SEND THE CONFIRMED INTENT, which is what separates them from the primary
+ * that opened them. A closed `<dialog>` still submits the fields it contains,
+ * so a confirmation carried in a hidden input here would have to be armed on
+ * click, which is the machinery this whole change removes. The submitter is the
+ * only part of a form that means "this is the control that was pressed".
+ *
+ * The RESCHEDULE arm sends the ordinary in-place save instead: a post that is
+ * already public is not publishing for the first time, so there is nothing to
+ * confirm and the ceremony's intent would be a lie about what is happening.
  */
 function PublishCeremony({
   open,
   onClose,
   publishAt,
   onPublishAtChange,
-  onArm,
   reschedule,
 }: {
   open: boolean;
   onClose: () => void;
   publishAt: string;
   onPublishAtChange: (value: string) => void;
-  onArm: (wantsDraft: boolean) => void;
   reschedule?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [when, setWhen] = useState(() => localInput(publishAt) || soonLocal());
+  const intent = reschedule ? "save" : PUBLISH_CONFIRMED_INTENT;
 
   useEffect(() => {
     const dialog = ref.current;
@@ -194,12 +236,9 @@ function PublishCeremony({
         <button
           type="submit"
           name="intent"
-          value="save"
+          value={intent}
           className="btn"
-          onClick={() => {
-            onPublishAtChange("");
-            onArm(false);
-          }}
+          onClick={() => onPublishAtChange("")}
         >
           Publish now
         </button>
@@ -217,12 +256,9 @@ function PublishCeremony({
           <button
             type="submit"
             name="intent"
-            value="save"
+            value={intent}
             className="btn-ghost"
-            onClick={() => {
-              onPublishAtChange(iso(when));
-              onArm(false);
-            }}
+            onClick={() => onPublishAtChange(iso(when))}
           >
             Schedule
           </button>

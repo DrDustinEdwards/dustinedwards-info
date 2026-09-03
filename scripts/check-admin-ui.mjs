@@ -53,7 +53,14 @@ import {
   SIZES,
   VIEWS,
 } from "../app/lib/media/view.mjs";
-import { stateOf, transitionsFor } from "../app/lib/editor/publish-transition.mjs";
+import {
+  DRAFT_BY_INTENT,
+  PUBLISH_CONFIRMED_INTENT,
+  draftForIntent,
+  saveInPlaceIntent,
+  stateOf,
+  transitionsFor,
+} from "../app/lib/editor/publish-transition.mjs";
 import {
   bundleRoutes,
   importBundled,
@@ -1479,6 +1486,25 @@ const STATES = [
     actionData: { kind: "confirm-delete", slug: "a-post" },
   },
   {
+    /*
+     * The action refused an unconfirmed first publication and handed the fields
+     * back. Same shape as the delete confirmation above: a `kind` the route
+     * turns into a server-rendered second step, on a post whose loader state is
+     * the one that can reach it.
+     */
+    name: "edit, first publication awaiting confirmation",
+    entry: "app/routes/admin.posts.$slug.edit.tsx",
+    path: "/admin/posts/:slug/edit",
+    url: "/admin/posts/a-post/edit",
+    params: { slug: "a-post" },
+    loaderData: editLoader(),
+    actionData: {
+      kind: "confirm-publish",
+      fields: fields(),
+      headSha: "abc1234def5678",
+    },
+  },
+  {
     name: "edit, published",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
     path: "/admin/posts/:slug/edit",
@@ -1678,9 +1704,17 @@ console.log("\ncheck:admin-ui\n");
  * Rendering cannot see what a button does when it is clicked, so the mapping
  * from post state to transition lives in a module and is asserted here, exactly
  * as check:policy asserts publish-policy.mjs. `wantsDraft` is the whole
- * contract with the server: true means the request carries `draft=on`, false
- * means it carries no `draft` key, and `fieldsFromForm` reads nothing else to
- * decide whether a post is public.
+ * contract with the server.
+ *
+ * SINCE 2026-09-03 THAT CONTRACT IS VISIBLE IN THE MARKUP, which changes what
+ * this gate can prove. It used to read: true means the request carries
+ * `draft=on`, false means it carries no `draft` key. That field is gone. Each
+ * button now submits its transition id as `intent`, and `fieldsFromForm`
+ * derives `draft` from it through `draftForIntent`, so section 3 can assert the
+ * whole chain off the rendered page instead of taking a click handler on trust.
+ * That is the point of the change as much as the no-script path is: the old
+ * shape was unassertable by construction, and the three defects it produced
+ * lived in the gap.
  *
  * Every rule is paired with its negative, because a table that only ever
  * asserts what SHOULD be there passes just as happily when everything is there.
@@ -1734,7 +1768,152 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     t(`${label} offers at least two transitions`, list.length >= 2, `${list.length}`);
     t(`${label} labels every transition`, list.every((x) => x.label.trim().length > 0));
     t(`${label} has unique ids`, new Set(list.map((x) => x.id)).size === list.length);
+    /*
+     * EVERY TRANSITION IS AN INTENT THE SERVER WILL ACCEPT, and it means the
+     * same thing on both sides. `fieldsFromForm` reads the draft flag off the
+     * intent now, so a transition missing from the map would be refused as
+     * unknown, and one present with the wrong value would publish or unpublish
+     * against its own label. Both directions, per state.
+     */
+    for (const transition of list) {
+      t(
+        `${label} / ${transition.id} is an intent the server knows`,
+        transition.id in DRAFT_BY_INTENT,
+      );
+      t(
+        `${label} / ${transition.id} means the draft flag its table row claims`,
+        draftForIntent(transition.id) === transition.wantsDraft,
+        `${draftForIntent(transition.id)} vs ${transition.wantsDraft}`,
+      );
+    }
   }
+
+  /*
+   * THE CONFIRMED PUBLISH, which is the one intent that is not a transition.
+   * It has to mean draft:false like the ask it answers; an intent that
+   * confirmed a publication and then saved a draft would be the quietest
+   * possible failure.
+   */
+  t("the confirmed publish is a known intent", PUBLISH_CONFIRMED_INTENT in DRAFT_BY_INTENT);
+  t("the confirmed publish publishes", draftForIntent(PUBLISH_CONFIRMED_INTENT) === false);
+  t(
+    "the confirmed publish is NOT one of the table's transitions",
+    ![...fresh, ...back, ...live, ...soon].some((x) => x.id === PUBLISH_CONFIRMED_INTENT),
+  );
+
+  /*
+   * CMD+S PRESERVES PUBLICATION STATE, per state.
+   *
+   * The shortcut is the one submit with no submitter, so it names its own
+   * intent, and naming the wrong one would publish a draft from a keystroke
+   * that has always meant "save". Asserted against `draftForIntent` rather than
+   * against the id, because what matters is the flag it produces.
+   */
+  for (const [label, state, isDraft] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
+    ["draft", "draft", true],
+    ["published", "published", false],
+    ["scheduled", "scheduled", false],
+  ])) {
+    t(
+      `save-in-place on a ${label} keeps it ${isDraft ? "a draft" : "public"}`,
+      draftForIntent(saveInPlaceIntent(state)) === isDraft,
+      `${saveInPlaceIntent(state)} -> ${draftForIntent(saveInPlaceIntent(state))}`,
+    );
+    t(
+      `save-in-place on a ${label} is never the ceremony`,
+      saveInPlaceIntent(state) !== "publish" &&
+        saveInPlaceIntent(state) !== PUBLISH_CONFIRMED_INTENT,
+      saveInPlaceIntent(state),
+    );
+  }
+
+  /*
+   * FAIL CLOSED. An intent nothing recognises is a draft. This is the direction
+   * that decides whether a future bug leaks a private post or refuses a save,
+   * and only one of those is recoverable.
+   */
+  t("an unknown intent is a draft", draftForIntent("not-a-real-intent") === true);
+  t("an absent intent is a draft", draftForIntent(null) === true);
+  t("the empty string is a draft", draftForIntent("") === true);
+}
+
+/* -------------------------------------------------------------------------
+ * THE LAST LINK: `fieldsFromForm` ACTUALLY READS THE INTENT.
+ *
+ * Everything above asserts `draftForIntent`, and everything in section 3
+ * asserts the markup. Between them sits the one line that joins the two, and
+ * until 2026-09-03 NOTHING reached it: a replay that reverted that line to the
+ * old `form.get("draft") === "on"` left this gate at 513 checks and 0 failures
+ * and the whole test suite at 630 passing. The mechanism was different from the
+ * one this change removed and the blind spot was the same shape, which is the
+ * argument for closing it in the commit that found it rather than filing it.
+ *
+ * Bundled rather than imported: `frontmatter.ts` is TypeScript, so `node:test`
+ * cannot reach it, which is why the rule lives here and not in `test/`. It is
+ * bundled ALONE because esbuild derives its outbase from the common parent of
+ * its entry points, and mixing it with the route entries writes the output into
+ * subdirectories the flat name would not find.
+ * ---------------------------------------------------------------------- */
+
+{
+  const fmBundle = await bundleRoutes(["app/lib/editor/frontmatter.ts"]);
+  const { fieldsFromForm } = /** @type {any} */ (await importBundled(fmBundle.files[0]));
+
+  /** The request a browser sends when a submitter carrying `intent` is pressed. */
+  const draftSentBy = (/** @type {string | null} */ intent) => {
+    const form = new FormData();
+    for (const name of ["title", "slug", "body", "description", "date", "tags", "publishAt", "coverSrc", "coverAlt", "series", "part", "furtherReading", "ogTitle", "ogDescription", "updated", "firstPublished"]) {
+      form.set(name, "");
+    }
+    if (intent !== null) form.set("intent", intent);
+    return fieldsFromForm(form).draft;
+  };
+
+  // Every intent the buttons can send, through the real parser, both directions.
+  let intentsChecked = 0;
+  for (const [intent, wantsDraft] of Object.entries(DRAFT_BY_INTENT)) {
+    intentsChecked += 1;
+    t(
+      `fieldsFromForm reads intent=${intent} as draft:${wantsDraft}`,
+      draftSentBy(intent) === wantsDraft,
+      `${draftSentBy(intent)}`,
+    );
+  }
+  // An assertion that can pass by reading nothing is not an assertion: an empty
+  // table would have satisfied the loop above without examining one intent.
+  t("the intent table was non-empty", intentsChecked >= 6, `${intentsChecked} intents`);
+
+  /*
+   * AND IT READS NOTHING ELSE. This is the half that actually pins the defect:
+   * the assertions above still pass if the parser ALSO honours a `draft` field,
+   * which is the state a half-applied revert leaves behind and the one where
+   * the two mechanisms disagree about the same request.
+   */
+  const withDraftField = (/** @type {string} */ intent) => {
+    const form = new FormData();
+    form.set("intent", intent);
+    form.set("draft", "on");
+    return fieldsFromForm(form).draft;
+  };
+  t(
+    "a stray draft=on cannot un-publish a publish intent",
+    withDraftField("publish") === false,
+    `${withDraftField("publish")}`,
+  );
+  t(
+    "a stray draft=on cannot un-publish a confirmed publish",
+    withDraftField(PUBLISH_CONFIRMED_INTENT) === false,
+  );
+  // The discriminating control. Without it every assertion here would pass on a
+  // parser that returned a constant.
+  t(
+    "the parser discriminates: publish and unpublish differ",
+    draftSentBy("publish") !== draftSentBy("unpublish"),
+    `publish -> ${draftSentBy("publish")}, unpublish -> ${draftSentBy("unpublish")}`,
+  );
+  t("an absent intent parses as a draft", draftSentBy(null) === true);
+
+  await fmBundle.cleanup();
 }
 
 {
@@ -2016,15 +2195,22 @@ for (const name of Object.keys(actual)) {
  * it, and the assertion that exists to notice exactly that would have passed.
  * It was written when the harness compared one route.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-08-24: 351.
- * Never summed over the fixtures. The floor is 330, so the slack is 21, which
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 376.
+ * Never summed over the fixtures. The floor is 355, so the slack is 21, which
  * absorbs a state being retired and does not absorb a route going quiet: the
  * media library alone contributes far more than 21.
+ *
+ * It read 351 against a floor of 330 until 2026-09-03, when splitting the
+ * editor's `intent=save` into one intent per transition added 25 submissions
+ * and a state. Left alone the floor would still have PASSED, which is why it is
+ * moved here rather than noticed later: the number stayed true as a historical
+ * measurement and stopped being true as a floor, because the slack this comment
+ * calls load-bearing had quietly become 46.
  */
 assert(
   "the comparison actually read submissions",
-  submissionsCompared >= 330,
-  `${submissionsCompared} compared, floor 330, measured 351`,
+  submissionsCompared >= 355,
+  `${submissionsCompared} compared, floor 355, measured 376`,
 );
 
 /*
@@ -2036,12 +2222,15 @@ assert(
  * comparing two shortened lists and agreeing. The floor is the copy `--update`
  * cannot reach, which is the whole difference between a fixture and a gate.
  *
- * Measured by running this gate, 2026-08-24: 75. Floor 70.
+ * Measured by running this gate, 2026-09-03: 80. Floor 75. Moved with the
+ * submission floor above and for the same reason: the first-publication
+ * confirmation step added a state, and a floor whose slack doubles is a floor
+ * that has stopped meaning what its own comment says it means.
  */
 assert(
   "the harness rendered its full set of states",
-  STATES.length >= 70,
-  `${STATES.length} state(s), floor 70, measured 75`,
+  STATES.length >= 75,
+  `${STATES.length} state(s), floor 75, measured 80`,
 );
 
 /* -------------------------------------------------------------------------
@@ -2132,16 +2321,145 @@ for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"schedul
   );
 }
 
-// A never-published draft must not be able to publish in one click: the
-// primary is type="button" and opens the ceremony instead of submitting.
-structural("first publication is not a plain submit", "edit, draft that never published", (h) => {
-  const button = /<button[^>]*class="btn"[^>]*>Publish/.exec(h)?.[0] ?? "";
-  return button.includes('type="button"');
+/* -------------------------------------------------------------------------
+ * THE DRAFT FLAG, AS THE MARKUP CARRIES IT. Rewritten 2026-09-03.
+ *
+ * What stood here asserted that the first-publication primary was
+ * `type="button"`. It was a faithful description of the code and it PINNED THE
+ * DEFECT: a button that does not submit cannot be pressed by a browser with no
+ * script, so the gate's green run was the reason nobody looked. The assertion
+ * that replaces it holds the property the old one was reaching for, which was
+ * never "does not submit" but "cannot publish in one press", and holds it
+ * somewhere a no-script reader also lives: the ask and the answer are DIFFERENT
+ * intents, and the page only ever offers the ask.
+ * ---------------------------------------------------------------------- */
+
+// Every transition button submits its own id. This is the whole contract with
+// `fieldsFromForm` now, so it is asserted on the rendered page for each state
+// rather than inferred from the table it was built from.
+for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
+  ["edit, draft that never published", "draft", false],
+  ["edit, draft that published before", "draft", true],
+  ["edit, published", "published", true],
+  ["edit, scheduled", "scheduled", true],
+])) {
+  for (const transition of transitionsFor(post, ever)) {
+    structural(
+      `"${stateName}" submits intent=${transition.id} for ${transition.label}`,
+      stateName,
+      (h) =>
+        new RegExp(
+          `<button[^>]*name="intent"[^>]*value="${transition.id}"|` +
+            `<button[^>]*value="${transition.id}"[^>]*name="intent"`,
+        ).test(h),
+    );
+  }
+}
+
+/*
+ * THE NEGATIVE THAT MAKES THE POSITIVES MEAN SOMETHING.
+ *
+ * The `draft` field is gone from every editor page. Without this, every
+ * assertion above would pass just as happily on a page that ALSO still shipped
+ * the old hidden input, which is the state a half-applied revert leaves behind
+ * and the one where the two mechanisms disagree.
+ */
+for (const stateName of [
+  "edit, draft that never published",
+  "edit, draft that published before",
+  "edit, published",
+  "edit, scheduled",
+  "new post, fresh",
+]) {
+  structural("no page carries a draft field any more", stateName, (h) =>
+    !/<input[^>]*name="draft"/.test(h),
+  );
+}
+
+// A never-published draft must not publish in one press. The primary sends the
+// ASK, and only the ceremony's own submits send the ANSWER.
+structural("first publication asks rather than publishes", "edit, draft that never published", (h) => {
+  const button = /<button[^>]*class="btn"[^>]*>Publish<\/button>/.exec(h)?.[0] ?? "";
+  return button.includes('type="submit"') && button.includes('value="publish"');
 });
+structural(
+  "the primary on a fresh draft does NOT carry the confirmed intent",
+  "edit, draft that never published",
+  (h) => {
+    const button = /<button[^>]*class="btn"[^>]*>Publish<\/button>/.exec(h)?.[0] ?? "";
+    return button.length > 0 && !button.includes(PUBLISH_CONFIRMED_INTENT);
+  },
+);
+// And the answer exists exactly where the ceremony is, so the ask has somewhere
+// to go. Asserted as a count, so "not found" cannot pass as "found nowhere it
+// should not be".
+structural(
+  "the confirmed intent is offered only inside the ceremony dialog",
+  "edit, draft that never published",
+  (h) => {
+    const dialog = /<dialog[^>]*class="ceremony"[\s\S]*?<\/dialog>/.exec(h)?.[0] ?? "";
+    const everywhere = h.split(`value="${PUBLISH_CONFIRMED_INTENT}"`).length - 1;
+    const inside = dialog.split(`value="${PUBLISH_CONFIRMED_INTENT}"`).length - 1;
+    return inside === 2 && everywhere === inside;
+  },
+);
 structural("a republication IS a plain submit", "edit, draft that published before", (h) => {
-  const button = /<button[^>]*class="btn"[^>]*>Republish/.exec(h)?.[0] ?? "";
-  return button.includes('type="submit"');
+  const button = /<button[^>]*class="btn"[^>]*>Republish<\/button>/.exec(h)?.[0] ?? "";
+  return button.includes('type="submit"') && button.includes('value="republish"');
 });
+/*
+ * A WITHDRAWN DRAFT CARRIES NO RESCHEDULE DIALOG. It shares the non-ceremony
+ * arm with a published post, and that arm's dialog submits the in-place `save`,
+ * which on a draft means draft:false. Nothing can open it there, so the only
+ * thing an unconditional render would produce is a publication in the markup
+ * that no control reaches, which is exactly what this gate reads as the page's
+ * request surface.
+ */
+structural("a withdrawn draft ships no ceremony dialog", "edit, draft that published before", (h) =>
+  !/<dialog[^>]*class="ceremony"/.test(h),
+);
+
+/*
+ * THE SERVER-RENDERED SECOND STEP.
+ *
+ * Asserted by SUBTRACTING the ceremony dialog rather than by extracting the
+ * step, because both render the identical button: same type, same intent, same
+ * label. An end anchor on the step's own markup would be a needle whose closing
+ * `</div>` is one of four, which is the neighbour-satisfies-the-match shape in
+ * FAILURES.md. Removing the dialog leaves exactly the submits a scriptless
+ * reader can reach, and the count is what makes "found" mean "found here".
+ */
+/** @param {string} h @returns {string} everything outside the ceremony dialog */
+const withoutCeremonyDialog = (h) =>
+  h.replace(/<dialog[^>]*class="ceremony"[\s\S]*?<\/dialog>/g, "");
+
+structural(
+  "the confirmation step renders outside the dialog",
+  "edit, first publication awaiting confirmation",
+  (h) => h.includes('class="editor-confirm-publish"'),
+);
+structural(
+  "exactly one confirmed submit is reachable without script",
+  "edit, first publication awaiting confirmation",
+  (h) =>
+    withoutCeremonyDialog(h).split(`value="${PUBLISH_CONFIRMED_INTENT}"`).length - 1 === 1,
+);
+/*
+ * THE NEGATIVE, on the state the step does NOT belong to. Without it the
+ * assertion above passes on a component that renders the step unconditionally,
+ * which would put a one-press publication on every fresh draft.
+ */
+structural(
+  "no confirmed submit is reachable without script before the ask",
+  "edit, draft that never published",
+  (h) =>
+    withoutCeremonyDialog(h).split(`value="${PUBLISH_CONFIRMED_INTENT}"`).length - 1 === 0,
+);
+structural(
+  "the confirmation step says scheduling needs scripting",
+  "edit, first publication awaiting confirmation",
+  (h) => h.includes("which needs scripting"),
+);
 
 // The slug is editable in exactly one place: a new post. An existing post
 // renders no slug input at all, which is why only the fresh state is asserted.

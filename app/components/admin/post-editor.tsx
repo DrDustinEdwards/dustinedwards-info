@@ -16,7 +16,11 @@ import {
 } from "~/lib/editor/draft-buffer";
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
-import type { PostState } from "~/lib/editor/publish-transition.mjs";
+import {
+  PUBLISH_CONFIRMED_INTENT,
+  saveInPlaceIntent,
+  type PostState,
+} from "~/lib/editor/publish-transition.mjs";
 import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
@@ -28,11 +32,13 @@ import { SettingsDrawer } from "./settings-drawer";
  * The body is still a textarea. CodeMirror, the exact preview and media
  * insertion are the next session; this one is the shell they land in.
  *
- * What has NOT changed is the payload. Every field the checkbox era submitted
- * is still submitted, under the same name, in the same format, to the same
- * action. That is asserted by check:admin-ui against a baseline generated from
- * the editor as it stood before this rewrite, so the claim is a gate rather
- * than a comment.
+ * The payload was held unchanged from the checkbox era through the redesign,
+ * asserted by check:admin-ui against a baseline generated before it. It CHANGED
+ * on 2026-09-03, deliberately and for one reason: the `draft` field is gone and
+ * the transition rides in the submitter's `intent`, because a payload assembled
+ * by click handlers cannot be sent by a browser that is not running them. The
+ * baseline moved in the same commit and the reasoning is in
+ * publish-transition.mjs.
  */
 
 /**
@@ -125,6 +131,7 @@ export function PostEditor({
   previewLinkSlot,
   historySlot,
   dangerSlot,
+  awaitingPublishConfirmation = false,
 }: {
   fields: PostFields;
   isNew: boolean;
@@ -145,6 +152,12 @@ export function PostEditor({
   previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
+  /**
+   * Whether the action refused an unconfirmed first publication and this render
+   * is the second step. Server state, so the step exists in the first byte of
+   * HTML and needs nothing to run to appear.
+   */
+  awaitingPublishConfirmation?: boolean;
 }) {
   const [title, setTitle] = useState(fields.title);
   const [slug, setSlug] = useState(fields.slug);
@@ -201,7 +214,6 @@ export function PostEditor({
 
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const draftFieldRef = useRef<HTMLInputElement>(null);
   /** Enabled for one submit by the Cmd+S handler; see the field and the handler. */
   const keyboardIntentRef = useRef<HTMLInputElement>(null);
   const autosaveTimer = useRef<number>(0);
@@ -352,13 +364,18 @@ export function PostEditor({
    * shortcut opened the publish dialog, one Return away from making a draft
    * public. Found on the live deploy 2026-08-01.
    *
-   * Now it submits the form directly and arms `draft` to the post's CURRENT
-   * committed state, so a save preserves publication status rather than
-   * changing it.
+   * Now it submits the form directly, naming the transition that preserves
+   * publication status rather than changing it.
    *
-   * **IT SENDS `intent=save` EXPLICITLY**, by enabling a disabled hidden field
-   * just before submitting, the same mechanism this handler already uses for
-   * `draft`. `requestSubmit()` with no submitter sends no `intent` at all, and
+   * **IT SENDS THE IN-PLACE INTENT EXPLICITLY**, by enabling a disabled hidden
+   * field just before submitting. `saveInPlaceIntent(state)` picks it off the
+   * transition table: `save-draft` on a draft, `save` on anything already
+   * public. That replaced arming a `draft` field to the post's current
+   * committed state, which was the same intent expressed in the mechanism this
+   * change removed; the shortcut is the one submit with no submitter, so it is
+   * also the one place a hidden field is still the honest carrier.
+   *
+   * `requestSubmit()` with no submitter sends no `intent` at all, and
    * this path used to rely on the server defaulting an absent intent to "save".
    * That default was removed 2026-08-09: an absent intent on a WRITE path meant
    * a malformed POST performed a write instead of failing, which is hard rule
@@ -378,8 +395,6 @@ export function PostEditor({
       event.preventDefault();
       const form = formRef.current;
       if (!form) return;
-      const draftField = draftFieldRef.current;
-      if (draftField) draftField.disabled = !fields.draft;
       const intentField = keyboardIntentRef.current;
       if (intentField) intentField.disabled = false;
       form.requestSubmit();
@@ -388,7 +403,7 @@ export function PostEditor({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [fields.draft]);
+  }, []);
 
   const touched = () => {
     setDirty(true);
@@ -492,12 +507,18 @@ export function PostEditor({
           Disabled rather than absent so a normal button submit is untouched: a
           disabled control is not in the submission set, so the submitter's own
           `intent` remains the only one sent.
+
+          The VALUE is the in-place transition for this post's state, off the
+          same table the buttons read: `save-draft` on a draft, `save` on
+          anything already public. It was the literal "save" while the draft
+          flag was a separate field; now that the intent carries the flag, a
+          literal here would publish a draft on Cmd+S.
         */}
         <input
           ref={keyboardIntentRef}
           type="hidden"
           name="intent"
-          value="save"
+          value={saveInPlaceIntent(state)}
           disabled
         />
         {/*
@@ -528,29 +549,17 @@ export function PostEditor({
         <input type="hidden" name="ogDescription" value={fields.ogDescription} />
         <input type="hidden" name="updated" value={fields.updated} />
         {/*
-          The draft flag, and the whole of what replaced the checkbox.
+          THERE IS NO `draft` FIELD, and its absence is the fix.
 
-          Rendered ENABLED when the post is currently a draft and DISABLED when
-          it is not, which reproduces a checkbox exactly: `draft=on` present, or
-          the key absent altogether. Each transition button flips
-          `.disabled` in its own onClick, before the submit, through a ref. It
-          is deliberately not driven by React state, because a state update
-          would not have applied by the time the form serialises.
+          It was a hidden input rendered enabled on a draft and disabled on a
+          public post, flipped through a ref by each transition button's
+          onClick. That is a payload decided by a handler, so with scripting off
+          the request carried the post's current state instead of the transition
+          the author pressed, and all three publication transitions were wrong.
+          The flag rides in the submitter's `intent` now; `fieldsFromForm`
+          derives it through `draftForIntent`, and publish-transition.mjs
+          carries the account.
         */}
-        <input
-          ref={draftFieldRef}
-          type="hidden"
-          name="draft"
-          value="on"
-          // `disabled` has to be a real prop, not something set in an effect,
-          // or the server-rendered markup would claim a draft flag the post
-          // does not have. React only writes a DOM attribute when the prop
-          // CHANGES between renders, and this one is derived from server state,
-          // so the imperative flips in PublishActions survive every re-render
-          // that typing causes. If it ever does change, that is the server
-          // saying so, and being overwritten is correct.
-          disabled={!fields.draft}
-        />
 
         {/* ---- Region 1: the command bar ---------------------------------- */}
         <header className="editor-bar">
@@ -723,7 +732,6 @@ export function PostEditor({
               <PublishActions
                 state={state}
                 everPublished={everPublished}
-                draftFieldRef={draftFieldRef}
                 publishAt={publishAt}
                 onPublishAtChange={(value) => {
                   setPublishAt(value);
@@ -758,6 +766,56 @@ export function PostEditor({
             <div className="editor-feedback-slot" role="status" aria-live="polite">
               {feedback ? <FeedbackMessage feedback={feedback} /> : null}
             </div>
+
+            {/*
+              THE SERVER-RENDERED CEREMONY, reached when the action refused an
+              unconfirmed first publication.
+
+              INSIDE the editing form, unlike the delete confirmation, and the
+              difference is what each step needs to carry. A delete needs the
+              slug, which is in the URL, so it gets a form of its own. A publish
+              has to re-send the whole post, because the save serialises a file
+              out of the submitted fields. Sitting inside the form means the
+              second submit is the first one again with the confirmed intent,
+              and nothing has to be duplicated into hidden inputs where it could
+              drift from the controls that own it.
+
+              ONE CHOICE, deliberately, where the dialog offers two. The dialog
+              converts its datetime-local through Date.parse IN THE BROWSER, so
+              the value means the author's local time; with no script the server
+              does that parse and a Worker reads the same string as UTC. Identical
+              markup, two meanings, nothing on the page to say which. Scheduling
+              is script-only rather than silently wrong, which costs a no-script
+              author nothing they had: every other scheduling control lives in
+              the settings drawer, which is a <dialog> and needs script to open.
+            */}
+            {awaitingPublishConfirmation ? (
+              <div className="editor-confirm-publish">
+                <h2>Publish this post</h2>
+                <p>
+                  It has never been public. Publishing puts it on the blog, in
+                  the feed, the sitemap, the search index and the AI answer
+                  layer.
+                </p>
+                <div className="editor-confirm-actions">
+                  <Link to="/admin/posts" className="btn-ghost">
+                    Cancel
+                  </Link>
+                  <button
+                    type="submit"
+                    name="intent"
+                    value={PUBLISH_CONFIRMED_INTENT}
+                    className="btn"
+                  >
+                    Publish now
+                  </button>
+                </div>
+                <p className="muted">
+                  To hold it until a set time instead, set the schedule in Post
+                  settings, which needs scripting.
+                </p>
+              </div>
+            ) : null}
 
             {offer ? (
               <RestoreOffer
@@ -1141,6 +1199,22 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
         <div>
           <strong>{feedback.conflict ? "Conflict. Not saved." : "Not saved."}</strong>
           <p>{feedback.message}</p>
+          {/*
+            WHERE, when the refusal knows. `EditorError` has carried `field` and
+            `line` since it was written and nothing rendered them: the richest
+            validation on the site was the part the author could not see. Each
+            is shown only when present, because most refusals carry neither and
+            a location invented for the ones that do not would be worse than
+            none. Rendered as a second line rather than folded into the message,
+            so the message stays the sentence the gate wrote.
+          */}
+          {feedback.field || feedback.line !== undefined ? (
+            <p className="muted">
+              {feedback.field ? <>Field <code>{feedback.field}</code></> : null}
+              {feedback.field && feedback.line !== undefined ? ", " : null}
+              {feedback.line !== undefined ? <>line {feedback.line}</> : null}
+            </p>
+          ) : null}
         </div>
       </div>
     );
