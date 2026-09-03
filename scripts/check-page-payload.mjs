@@ -681,6 +681,15 @@ const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 5300, total: 6300 },
   "/blog": { id: "routes/blog._index", css: 5800, total: 6800 },
   "/blog/:slug": { id: "routes/blog.$slug", css: 7300, total: 10000 },
+  /*
+   * MEASURED 2026-09-03 through this gate on a fresh build: css 4797 over three
+   * sheets, 5615 total. The ceilings are `/blog`'s, which are the same numbers
+   * twenty percent over would give and are the right ones on their own terms:
+   * this is the same kind of listing, rendering the same cards from the same
+   * stylesheets, so the two pages should be graded against one bar rather than
+   * drifting apart by whichever happened to be measured later.
+   */
+  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 5800, total: 6800 },
   "/search": { id: "routes/search", css: 6100, total: 8700 },
   "/projects": { id: "routes/projects", css: 5300, total: 6300 },
   "/colophon": { id: "routes/colophon", css: 5700, total: 6600 },

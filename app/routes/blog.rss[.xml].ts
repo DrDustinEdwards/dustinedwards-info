@@ -1,6 +1,6 @@
 import { listBlogPostsRendered } from "~/db";
 import { getEnv } from "~/lib/context";
-import { escapeXml, rssItem } from "~/lib/rss-feed.mjs";
+import { rssDocument } from "~/lib/rss-feed.mjs";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.rss[.xml]";
 
@@ -29,20 +29,19 @@ export async function loader({ context }: Route.LoaderArgs) {
   const origin = SITE_ORIGIN;
   const posts = await listBlogPostsRendered(getEnv(context), { perPage: FEED_ITEMS });
 
-  const items = posts.map((post) => rssItem(post, origin)).join("\n");
-
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>${escapeXml(`${SITE.name} blog`)}</title>
-    <link>${escapeXml(`${origin}/blog`)}</link>
-    <description>${escapeXml("Writing on building for the web, mostly on Cloudflare.")}</description>
-    <language>en-us</language>
-    <atom:link href="${escapeXml(`${origin}/blog/rss.xml`)}" rel="self" type="application/rss+xml" />
-${items}
-  </channel>
-</rss>
-`;
+  /*
+   * THE SHARED DOCUMENT BUILDER, since the tag feeds landed. The channel used
+   * to be a template literal here, which made it the one part of the feed a
+   * second feed would have had to copy.
+   */
+  const body = rssDocument({
+    title: `${SITE.name} blog`,
+    link: `${origin}/blog`,
+    description: "Writing on building for the web, mostly on Cloudflare.",
+    selfUrl: `${origin}/blog/rss.xml`,
+    posts,
+    origin,
+  });
 
   return new Response(body, {
     headers: {

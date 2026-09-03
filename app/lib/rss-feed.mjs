@@ -144,3 +144,42 @@ export function rssItem(post, origin) {
     .filter(Boolean)
     .join("\n");
 }
+
+/**
+ * THE WHOLE RSS DOCUMENT, channel and all.
+ *
+ * `rssItem` was already shared and the CHANNEL was not: the wrapper lived
+ * inline in `blog.rss[.xml].ts`, so the tag archive's feed would have had to
+ * copy the version string, the two namespace declarations, the language and the
+ * `atom:link` self reference. Five literals copied once is five literals that
+ * can drift, and a feed reader is the last place a difference gets noticed.
+ *
+ * `selfUrl` is required rather than derived. It is the one field that genuinely
+ * differs per feed, and computing it here would mean this function guessing at
+ * a route's own address.
+ *
+ * @param {{
+ *   title: string,
+ *   link: string,
+ *   description: string,
+ *   selfUrl: string,
+ *   posts: Array<Parameters<typeof rssItem>[0]>,
+ *   origin: string,
+ * }} feed
+ * @returns {string}
+ */
+export function rssDocument(feed) {
+  const items = feed.posts.map((post) => rssItem(post, feed.origin)).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>${escapeXml(feed.title)}</title>
+    <link>${escapeXml(feed.link)}</link>
+    <description>${escapeXml(feed.description)}</description>
+    <language>en-us</language>
+    <atom:link href="${escapeXml(feed.selfUrl)}" rel="self" type="application/rss+xml" />
+${items}
+  </channel>
+</rss>
+`;
+}

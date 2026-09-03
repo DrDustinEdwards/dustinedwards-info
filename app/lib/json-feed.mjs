@@ -47,3 +47,35 @@ export function feedItem(post, origin) {
     image: post.coverImage ? `${origin}${post.coverImage}` : undefined,
   };
 }
+
+/**
+ * THE WHOLE JSON Feed 1.1 DOCUMENT.
+ *
+ * Same reasoning as `rssDocument`: `feedItem` was shared and the envelope was
+ * not, so a second feed would have copied the version URL, the language, the
+ * authors array and the description. The `version` member is what every reader
+ * identifies this document by, and it is the member a copy would most quietly
+ * get wrong.
+ *
+ * @param {{
+ *   title: string,
+ *   homePageUrl: string,
+ *   feedUrl: string,
+ *   description: string,
+ *   authorName: string,
+ *   posts: Array<Parameters<typeof feedItem>[0]>,
+ *   origin: string,
+ * }} feed
+ */
+export function jsonFeedDocument(feed) {
+  return {
+    version: "https://jsonfeed.org/version/1.1",
+    title: feed.title,
+    home_page_url: feed.homePageUrl,
+    feed_url: feed.feedUrl,
+    description: feed.description,
+    language: "en-US",
+    authors: [{ name: feed.authorName, url: feed.origin }],
+    items: feed.posts.map((post) => feedItem(post, feed.origin)),
+  };
+}

@@ -102,6 +102,54 @@ function isBlogPost() {
   return and(eq(posts.kind, "post"), publiclyVisible());
 }
 
+/**
+ * THE TAG PREDICATE, stated once.
+ *
+ * Four readers now ask "which posts carry this tag": the index's `?tag=`
+ * filter, the tag archive, and the archive's two feeds. This was written out
+ * inside `listBlogPosts` and copying it three times is how the page and its own
+ * feed come to disagree about which posts a tag has, which is the failure a
+ * reader notices by subscribing and getting a different list.
+ *
+ * A SUBQUERY on ids rather than a join, deliberately: joining `post_tags` here
+ * would multiply rows by tag count and every caller would have to fold them
+ * back. The id list is what the callers already paginate and limit against.
+ *
+ * The slug is matched exactly, against `tags.slug`, which is the normalisation
+ * the write path already produced. Nothing here lowercases or re-slugifies: a
+ * second normalisation is a second answer to "what is this tag called".
+ */
+function carriesTag(db: DB, tagSlug: string) {
+  return inArray(
+    posts.id,
+    db
+      .select({ id: postTags.postId })
+      .from(postTags)
+      .innerJoin(tags, eq(tags.id, postTags.tagId))
+      .where(eq(tags.slug, tagSlug)),
+  );
+}
+
+/**
+ * One tag, by slug, or null when nothing publicly visible carries it.
+ *
+ * The archive's 404 test. It composes `isBlogPost()` through the same count
+ * join `listBlogTags` uses, so "this tag exists" means exactly what the chip
+ * list means by it: a tag carried only by drafts or by future-dated posts is
+ * absent from both, and the archive for it is a 404 rather than an empty page.
+ */
+export async function getBlogTag(env: Env, tagSlug: string) {
+  const rows = await getDb(env)
+    .select({ slug: tags.slug, name: tags.name, total: count(posts.id) })
+    .from(tags)
+    .innerJoin(postTags, eq(postTags.tagId, tags.id))
+    .innerJoin(posts, eq(posts.id, postTags.postId))
+    .where(and(eq(tags.slug, tagSlug), isBlogPost()))
+    .groupBy(tags.slug, tags.name)
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** Tags carried by a set of posts, as a slug-keyed map. */
 async function tagsForPosts(db: DB, postIds: number[]) {
   /** @type Map<number, string[]> */
@@ -148,18 +196,9 @@ export async function listBlogPosts(
   // Both filters are applied in the query, so the HTML that ships is already
   // narrowed rather than hidden in the browser.
   const clauses = [isBlogPost()];
-  if (tag) {
-    clauses.push(
-      inArray(
-        posts.id,
-        db
-          .select({ id: postTags.postId })
-          .from(postTags)
-          .innerJoin(tags, eq(tags.id, postTags.tagId))
-          .where(eq(tags.slug, tag)),
-      ),
-    );
-  }
+  // Through `carriesTag`, which the archive and its two feeds also call, so all
+  // four agree on which posts a tag has.
+  if (tag) clauses.push(carriesTag(db, tag));
   if (year) {
     clauses.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
   }
@@ -1433,13 +1472,22 @@ const FEED_COLUMNS = {
  */
 export async function listBlogPostsFullText(
   env: Env,
-  options: { perPage?: number } = {},
+  options: { perPage?: number; tag?: string | null } = {},
 ) {
   const db = getDb(env);
+  /*
+   * `tag` NARROWS THE SAME QUERY rather than filtering a full read afterwards.
+   * The archive's feed must be the archive's list, and slicing after the fact
+   * would cap at `perPage` BEFORE narrowing, so a tag whose posts sit outside
+   * the newest twenty would feed empty while its page showed them.
+   */
+  const where = options.tag
+    ? and(isBlogPost(), carriesTag(db, options.tag))
+    : isBlogPost();
   const query = db
     .select({ ...FEED_COLUMNS, body: posts.body })
     .from(posts)
-    .where(isBlogPost())
+    .where(where)
     .orderBy(desc(posts.publishAt));
   const rows = await (options.perPage ? query.limit(options.perPage) : query);
 
@@ -1465,13 +1513,22 @@ export async function listBlogPostsFullText(
  */
 export async function listBlogPostsRendered(
   env: Env,
-  options: { perPage?: number } = {},
+  options: { perPage?: number; tag?: string | null } = {},
 ) {
   const db = getDb(env);
+  /*
+   * `tag` NARROWS THE SAME QUERY rather than filtering a full read afterwards.
+   * The archive's feed must be the archive's list, and slicing after the fact
+   * would cap at `perPage` BEFORE narrowing, so a tag whose posts sit outside
+   * the newest twenty would feed empty while its page showed them.
+   */
+  const where = options.tag
+    ? and(isBlogPost(), carriesTag(db, options.tag))
+    : isBlogPost();
   const query = db
     .select({ ...FEED_COLUMNS, html: posts.html })
     .from(posts)
-    .where(isBlogPost())
+    .where(where)
     .orderBy(desc(posts.publishAt));
   const rows = await (options.perPage ? query.limit(options.perPage) : query);
 
