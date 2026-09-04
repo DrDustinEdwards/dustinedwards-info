@@ -19,6 +19,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
 import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
+import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
@@ -349,6 +350,93 @@ export async function listSeriesParts(env: Env, series: string) {
     .from(posts)
     .where(and(isBlogPost(), eq(posts.series, series)))
     .orderBy(asc(posts.part));
+}
+
+/**
+ * Every series with at least one publicly visible post, with its count.
+ *
+ * THE TAG LIST'S SHAPE AND THE TAG LIST'S RULE. It composes `isBlogPost()`, so
+ * a series carried only by drafts or by future-dated posts is absent here for
+ * exactly the reason its archive answers 404 and the sitemap does not list it.
+ * That is one predicate serving all three, not three that agree today.
+ *
+ * `series` is a column on `posts` rather than a table of its own, so this is a
+ * GROUP BY where the tag list is a join. The set is tiny by construction: a
+ * series is a handful of posts an author wrote on purpose.
+ */
+export async function listBlogSeries(env: Env) {
+  return getDb(env)
+    .select({ name: posts.series, total: count(posts.id) })
+    .from(posts)
+    .where(and(isBlogPost(), isNotNull(posts.series)))
+    .groupBy(posts.series)
+    .orderBy(asc(posts.series));
+}
+
+/**
+ * One series, by its URL slug, or null when nothing publicly visible carries it.
+ *
+ * RESOLVED BY SCANNING THE NAMES, because the slug is derived rather than
+ * stored (see `series-path.mjs` for why). `listBlogSeries` is already the
+ * visible set, so this inherits the visibility rule instead of restating it,
+ * and the scan is over a handful of rows.
+ *
+ * AMBIGUITY IS REFUSED RATHER THAN GUESSED. Two names can slugify to one slug
+ * ("Part One" and "part-one"), and picking either would make the archive show a
+ * set the author never grouped. There are no series at all today, so this
+ * guards a load of zero; it is here because the alternative is a silent wrong
+ * answer the day somebody names a second series carelessly.
+ */
+export async function getBlogSeries(env: Env, slug: string) {
+  const all = await listBlogSeries(env);
+  const matches = all.filter((row) => row.name !== null && seriesSlug(row.name) === slug);
+  const row = matches.length === 1 ? matches[0] : undefined;
+  if (!row) return null;
+  return { name: row.name as string, slug, total: Number(row.total) };
+}
+
+/**
+ * The posts in one series, as CARDS, oldest part first.
+ *
+ * NOT `listSeriesParts`, and the difference is what each caller pays for.
+ * `listSeriesParts` returns three columns for the in-post navigation and is on
+ * the hot post path; a card needs the description, the reading time and the
+ * TAGS, which is a second query to fold. Widening the lean one would make every
+ * post page pay a tag join for an archive's benefit.
+ *
+ * Ordered by `part` ascending, which is the order the author numbered them and
+ * the order a reader reads them. Every other listing on the site is newest
+ * first; a series is the one place that is wrong.
+ */
+export async function listSeriesPosts(
+  env: Env,
+  series: string,
+  options: { page?: number; perPage?: number } = {},
+) {
+  const db = getDb(env);
+  const perPage = options.perPage ?? POSTS_PER_PAGE;
+  const page = Math.max(1, options.page ?? 1);
+  const where = and(isBlogPost(), eq(posts.series, series));
+
+  const [totalRows, rows] = await db.batch([
+    db.select({ n: count() }).from(posts).where(where),
+    db
+      .select({ ...postCard, id: posts.id })
+      .from(posts)
+      .where(where)
+      .orderBy(asc(posts.part), asc(posts.id))
+      .limit(perPage)
+      .offset((page - 1) * perPage),
+  ]);
+
+  const total = Number(totalRows[0]?.n ?? 0);
+  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  return {
+    posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
+    total,
+    page,
+    pageCount: Math.max(1, Math.ceil(total / perPage)),
+  };
 }
 
 /** Every tag that has at least one publicly visible post, with its count. */
@@ -1472,23 +1560,40 @@ const FEED_COLUMNS = {
  */
 export async function listBlogPostsFullText(
   env: Env,
-  options: { perPage?: number; tag?: string | null } = {},
+  options: {
+    perPage?: number;
+    tag?: string | null;
+    series?: string | null;
+    /** `part` for a series feed; anything else is newest first. */
+    orderBy?: "date" | "part";
+  } = {},
 ) {
   const db = getDb(env);
   /*
-   * `tag` NARROWS THE SAME QUERY rather than filtering a full read afterwards.
-   * The archive's feed must be the archive's list, and slicing after the fact
-   * would cap at `perPage` BEFORE narrowing, so a tag whose posts sit outside
-   * the newest twenty would feed empty while its page showed them.
+   * `tag` and `series` NARROW THE SAME QUERY rather than filtering a full read
+   * afterwards. An archive's feed must be that archive's list, and slicing
+   * after the fact would cap at `perPage` BEFORE narrowing, so a tag or series
+   * whose posts sit outside the newest twenty would feed empty while its page
+   * showed them.
    */
-  const where = options.tag
-    ? and(isBlogPost(), carriesTag(db, options.tag))
-    : isBlogPost();
+  const clauses = [isBlogPost()];
+  if (options.tag) clauses.push(carriesTag(db, options.tag));
+  if (options.series) clauses.push(eq(posts.series, options.series));
+  const where = and(...clauses);
+  /*
+   * BY PART FOR A SERIES, which is the one ordering on this site that is not
+   * newest first. A series is numbered by its author and read from part one, so
+   * its feed hands a subscriber part one first; every other feed is a blog and
+   * is reverse chronological. `id` breaks a tie so two parts sharing a number
+   * cannot come back in an order the database chose.
+   */
+  const order =
+    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
   const query = db
     .select({ ...FEED_COLUMNS, body: posts.body })
     .from(posts)
     .where(where)
-    .orderBy(desc(posts.publishAt));
+    .orderBy(...order);
   const rows = await (options.perPage ? query.limit(options.perPage) : query);
 
   const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
@@ -1513,23 +1618,40 @@ export async function listBlogPostsFullText(
  */
 export async function listBlogPostsRendered(
   env: Env,
-  options: { perPage?: number; tag?: string | null } = {},
+  options: {
+    perPage?: number;
+    tag?: string | null;
+    series?: string | null;
+    /** `part` for a series feed; anything else is newest first. */
+    orderBy?: "date" | "part";
+  } = {},
 ) {
   const db = getDb(env);
   /*
-   * `tag` NARROWS THE SAME QUERY rather than filtering a full read afterwards.
-   * The archive's feed must be the archive's list, and slicing after the fact
-   * would cap at `perPage` BEFORE narrowing, so a tag whose posts sit outside
-   * the newest twenty would feed empty while its page showed them.
+   * `tag` and `series` NARROW THE SAME QUERY rather than filtering a full read
+   * afterwards. An archive's feed must be that archive's list, and slicing
+   * after the fact would cap at `perPage` BEFORE narrowing, so a tag or series
+   * whose posts sit outside the newest twenty would feed empty while its page
+   * showed them.
    */
-  const where = options.tag
-    ? and(isBlogPost(), carriesTag(db, options.tag))
-    : isBlogPost();
+  const clauses = [isBlogPost()];
+  if (options.tag) clauses.push(carriesTag(db, options.tag));
+  if (options.series) clauses.push(eq(posts.series, options.series));
+  const where = and(...clauses);
+  /*
+   * BY PART FOR A SERIES, which is the one ordering on this site that is not
+   * newest first. A series is numbered by its author and read from part one, so
+   * its feed hands a subscriber part one first; every other feed is a blog and
+   * is reverse chronological. `id` breaks a tie so two parts sharing a number
+   * cannot come back in an order the database chose.
+   */
+  const order =
+    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
   const query = db
     .select({ ...FEED_COLUMNS, html: posts.html })
     .from(posts)
     .where(where)
-    .orderBy(desc(posts.publishAt));
+    .orderBy(...order);
   const rows = await (options.perPage ? query.limit(options.perPage) : query);
 
   const tagMap = await tagsForPosts(db, rows.map((r) => r.id));

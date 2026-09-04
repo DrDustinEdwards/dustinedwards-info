@@ -1337,6 +1337,9 @@ console.log("  public HTML routes share one headers()");
     // its feeds are separate URLs rather than representations of this one, so
     // it belongs here and not with the Accept-negotiating routes below.
     "blog.tags.$tag.tsx",
+    // The series archive, on the tag archive's terms: `publicHtmlHeaders()`,
+    // and its feeds are separate URLs rather than representations of this one.
+    "blog.series.$series.tsx",
   ];
 
   ok(

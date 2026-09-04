@@ -27,6 +27,15 @@ export default [
   route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
   route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
   route("blog/tags/:tag", "routes/blog.tags.$tag.tsx"),
+  /*
+   * The series archive and its two feeds, on the tag archive's shape and in the
+   * same block for the same reason: everything under `/blog/` that is not a
+   * post reads together, and the feed children precede the page so "more
+   * specific first" is true by eye as well as by the matcher.
+   */
+  route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts"),
+  route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts"),
+  route("blog/series/:series", "routes/blog.series.$series.tsx"),
   route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
   route("blog/:slug", "routes/blog.$slug.tsx"),
   /*

@@ -1404,6 +1404,26 @@ try {
       { path: "/blog/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     ];
 
+    /*
+     * SHARED-CACHED HTML WITH NOTHING IN THE CORPUS TO POINT AT, named with the
+     * reason, on the same rule as every other exemption map in this repo.
+     *
+     * A case here would need a real URL, and a URL that 404s would byte-compare
+     * two renders of the ERROR page: green, and asserting nothing about the
+     * route it names. This gate already SKIPs on the same grounds where the
+     * corpus cannot exercise a case, for footnote previews and for post images,
+     * and says so in its own output rather than passing quietly.
+     *
+     * The moment a series is published this entry is deleted and the route
+     * joins THEME_CACHED with its path, which is a one-line change the closure
+     * assertion below will demand rather than allow.
+     */
+    const THEME_CACHED_PENDING = {
+      "blog.series.$series.tsx":
+        "no post in the corpus carries a series, so every /blog/series/ URL is a " +
+        "404 and a case here would compare two renders of the error page.",
+    };
+
     const routeDir = join(root, "app", "routes");
     const declaring = readdirSync(routeDir)
       .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
@@ -1438,14 +1458,23 @@ try {
        */
       .filter(
         (name) =>
-          !/^(blog\.(feed|rss|atom)|blog\.tags\.\$tag\.(rss|feed)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(
+          !/^(blog\.(feed|rss|atom)|blog\.(tags|series)\.\$(tag|series)\.(rss|feed)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(
             name,
           ),
       );
 
-    const listed = new Set(THEME_CACHED.map((r) => r.module));
+    const listed = new Set([
+      ...THEME_CACHED.map((r) => r.module),
+      ...Object.keys(THEME_CACHED_PENDING),
+    ]);
     const missing = declaring.filter((name) => !listed.has(name));
     const extra = [...listed].filter((name) => !declaring.includes(name));
+    ok(
+      "every pending theme-cached exemption names a route that still declares them",
+      Object.keys(THEME_CACHED_PENDING).every((name) => declaring.includes(name)),
+      `THEME_CACHED_PENDING names a route that no longer declares the shared ` +
+        `headers, so it exempts nothing and hides whatever replaced it`,
+    );
     ok(
       "the theme-cached route list matches the routes that declare shared cache headers",
       missing.length === 0 && extra.length === 0,
