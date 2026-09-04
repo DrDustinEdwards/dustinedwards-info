@@ -14,6 +14,7 @@ import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "~/lib/media/widths.mjs";
+import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
@@ -233,6 +234,25 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
    */
   const { canonical, description: dek } = postSocial(post);
 
+  /*
+   * THE NEIGHBOURING PARTS, off the list already on the page.
+   *
+   * `seriesParts` arrives ordered by part, so the reading path is this post's
+   * position in it plus or minus one. Derived rather than queried: a second
+   * read would be a second answer to what "the next part" means, and it would
+   * have to agree with the list rendered directly beneath it.
+   *
+   * `findIndex` returns -1 when the post is not in its own series list, which
+   * cannot happen for a visible post, and the two lookups below both yield
+   * undefined in that case rather than wrapping to the wrong end.
+   */
+  const partIndex = seriesParts.findIndex((entry) => entry.slug === post.slug);
+  const seriesPrevious = partIndex > 0 ? seriesParts[partIndex - 1] : undefined;
+  const seriesNext =
+    partIndex >= 0 && partIndex < seriesParts.length - 1
+      ? seriesParts[partIndex + 1]
+      : undefined;
+
   const published = post.publishAt ? new Date(post.publishAt).getTime() : null;
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
   const revisedLabel =
@@ -346,10 +366,29 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </figure>
           )}
 
+          {/*
+            THE SERIES BLOCK. The list of parts is not new; what is new is that
+            the series NAME is now a link, and that the reading path has its own
+            two controls.
+
+            The roadmap's own summary of this gap reads "`series`/`part`:
+            in-post navigation, no hub URL". The navigation was here and the
+            name was inert text, so a reader could see the set and could not
+            reach it. `seriesPath` is the one owner of that address.
+
+            THE LIST AND THE PAIR DO DIFFERENT JOBS, which is why both are here
+            rather than one replacing the other. The ordered list is the table
+            of contents: every part, with the current one marked. The previous
+            and next targets are the page turn, and they carry the LABEL as well
+            as the title, so a reader can tell direction without counting. Part
+            one shows no previous and the last shows no next, because there is
+            nothing to offer rather than something to disable.
+          */}
           {post.series && seriesParts.length > 1 && (
             <nav className="post-series" aria-labelledby="series-heading">
               <h2 id="series-heading">
-                Part {post.part} of {seriesParts.length}: {post.series}
+                Part {post.part} of {seriesParts.length}:{" "}
+                <Link to={seriesPath(post.series)}>{post.series}</Link>
               </h2>
               <ol>
                 {seriesParts.map((entry) => (
@@ -362,6 +401,22 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                   </li>
                 ))}
               </ol>
+              {(seriesPrevious || seriesNext) && (
+                <div className="post-series-steps">
+                  {seriesPrevious && (
+                    <Link className="post-nav-target" to={`/blog/${seriesPrevious.slug}`}>
+                      <span className="post-nav-label">Previous part</span>
+                      <span className="post-nav-title">{seriesPrevious.title}</span>
+                    </Link>
+                  )}
+                  {seriesNext && (
+                    <Link className="post-nav-target" to={`/blog/${seriesNext.slug}`}>
+                      <span className="post-nav-label">Next part</span>
+                      <span className="post-nav-title">{seriesNext.title}</span>
+                    </Link>
+                  )}
+                </div>
+              )}
             </nav>
           )}
 
