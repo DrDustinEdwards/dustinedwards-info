@@ -1,6 +1,7 @@
-import { listBlogPosts, listBlogTags } from "~/db";
+import { listBlogPosts, listBlogSeries, listBlogTags } from "~/db";
 import { getEnv } from "~/lib/context";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/sitemap";
 
@@ -74,9 +75,10 @@ export async function loader({ context }: Route.LoaderArgs) {
    * list carries counts, not dates, and fetching dates for it would be a second
    * query to state something a crawler treats as a hint anyway.
    */
-  const [blog, tagList] = await Promise.all([
+  const [blog, tagList, seriesList] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
+    listBlogSeries(env),
   ]);
 
   const urls = [
@@ -89,6 +91,19 @@ export async function loader({ context }: Route.LoaderArgs) {
       loc: `${origin}${tagPath(t.slug)}`,
       lastmod: null as Date | null,
     })),
+    /*
+     * SERIES ARCHIVES, on the tag archives' terms. `listBlogSeries` composes
+     * `isBlogPost()`, so a series carried only by drafts or by future-dated
+     * posts is absent here for the same reason its archive answers 404. No
+     * `lastmod`, for the same reason a tag has none: the list carries counts,
+     * not dates, and inventing one from the newest part would be a claim this
+     * read cannot support.
+     */
+    ...seriesList.flatMap((row) =>
+      row.name === null
+        ? []
+        : [{ loc: `${origin}${seriesPath(row.name)}`, lastmod: null as Date | null }],
+    ),
   ];
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
