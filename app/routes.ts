@@ -81,6 +81,13 @@ export default [
   // The zero-JS half of the theme toggle. Posts the choice, sets the cookie,
   // sends the reader back to the page they were on.
   route("theme", "routes/theme.ts"),
+  // The webmention receiver. Public and unauthenticated because another site's
+  // server sends these with no credential to offer; the four bounds that answer
+  // the CSP sink's storage-exhaustion argument are in the route file. AT THE
+  // ROOT rather than under /api, because H2 advertises it in a <link> and a
+  // Link header and the address is then a published part of this site's
+  // surface, which /api is not.
+  route("webmention", "routes/webmention.ts"),
 
   // Auth
   route("login", "routes/login.tsx"),
@@ -93,6 +100,10 @@ export default [
     // sees, and the panel spends a caption explaining that these are not reads.
     // A URL making the looser claim would undo that in the address bar.
     route("origin-requests", "routes/admin.origin-requests.tsx"),
+    // The webmention moderation queue. `mentions` rather than `webmentions`
+    // because the page shows what other people said, and the protocol's name
+    // is a fact about the transport rather than about the thing being read.
+    route("mentions", "routes/admin.mentions.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     // The media library page. Its loader is also the picker's listing, which is
