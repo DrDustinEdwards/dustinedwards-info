@@ -56,3 +56,6 @@ the whole reason the class is registered as `new_sqlite_classes`.
 The synchronous SQLite API is the only one of the three that landed on its
 ceiling exactly. That is why both Ask counters are Durable Objects, and why the
 choice is recorded as measured rather than preferred.
+
+
+A scriptless save landed this line.
