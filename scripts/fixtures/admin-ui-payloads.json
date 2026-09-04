@@ -2,23 +2,29 @@
   "posts index, clean": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, Ask drifted": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, Ask disabled": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, empty corpus": [
     "GET /admin/posts | (none) | q,status,tag",
@@ -30,42 +36,52 @@
     "GET /admin/posts | (none) | q,status,tag",
     "POST  | intent=sync-ask | confirm-count",
     "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, bulk delete awaiting confirmation": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST  | intent=bulk-delete | confirm-count,slug",
     "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, two selected": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | intent=bulk-add-tag | confirm-count,slug,tag",
     "POST /admin/posts | intent=bulk-delete | confirm-count,slug,tag",
     "POST /admin/posts | intent=bulk-remove-tag | confirm-count,slug,tag",
+    "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
-    "POST /admin/posts | intent=sync-ask | "
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, filtered and selected": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts?status=published | intent=bulk-add-tag | confirm-count,slug,tag",
     "POST /admin/posts?status=published | intent=bulk-delete | confirm-count,slug,tag",
     "POST /admin/posts?status=published | intent=bulk-remove-tag | confirm-count,slug,tag",
+    "POST /admin/posts?status=published | intent=duplicate | slug",
     "POST /admin/posts?status=published | intent=regenerate | ",
     "POST /admin/posts?status=published | intent=reset-ask-budget | ",
-    "POST /admin/posts?status=published | intent=sync-ask | "
+    "POST /admin/posts?status=published | intent=sync-ask | ",
+    "POST /admin/posts?status=published | intent=unpublish | slug"
   ],
   "posts index, filtered with matches": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts?q=live&amp;status=published | (none) | ",
+    "POST /admin/posts?q=live&amp;status=published | intent=duplicate | slug",
     "POST /admin/posts?q=live&amp;status=published | intent=regenerate | ",
     "POST /admin/posts?q=live&amp;status=published | intent=reset-ask-budget | ",
-    "POST /admin/posts?q=live&amp;status=published | intent=sync-ask | "
+    "POST /admin/posts?q=live&amp;status=published | intent=sync-ask | ",
+    "POST /admin/posts?q=live&amp;status=published | intent=unpublish | slug"
   ],
   "posts index, filtered with no matches": [
     "GET /admin/posts | (none) | q,status,tag",

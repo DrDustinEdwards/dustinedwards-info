@@ -75,6 +75,14 @@ const DESTRUCTIVE = new Set([
 const REVERSIBLE = new Map([
   ["admin.posts._index.tsx:bulk-add-tag", "a tag, undone by remove"],
   ["admin.posts._index.tsx:bulk-remove-tag", "a tag, undone by add"],
+  [
+    "admin.posts._index.tsx:duplicate",
+    "creates a new draft; removes and overwrites nothing, and savePost refuses a slug that exists",
+  ],
+  [
+    "admin.posts._index.tsx:unpublish",
+    "sets draft:true, undone by republish; the file, its history and first_published all stand",
+  ],
   ["admin.posts._index.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
   ["admin.posts._index.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
   ["admin.posts.$slug.edit.tsx:preview-link", "mints, removes nothing"],

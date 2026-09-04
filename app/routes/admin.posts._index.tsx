@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Link, data, useNavigation } from "react-router";
+import { Form, Link, data, redirect, useNavigation } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
@@ -16,6 +16,7 @@ import {
   regenerateAllFromRepo,
   savePost,
 } from "~/lib/editor/publish.server";
+import { copySlugCandidates } from "~/lib/editor/duplicate.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import {
   askAvailable,
@@ -52,6 +53,21 @@ function statusOf(
   if (status !== "published") return "draft";
   if (publishAt && publishAt.getTime() > now) return "scheduled";
   return "published";
+}
+
+/**
+ * The id tying a row's button to the form it submits, STATED ONCE.
+ *
+ * The button and the form are rendered in two different places, hundreds of
+ * lines apart, and a browser resolves the pair by string equality alone: a
+ * mismatch produces a button that submits the whole page's default form or
+ * nothing at all, silently, with no error anywhere. One function means the two
+ * spellings cannot drift.
+ *
+ * Slugs match `SLUG_PATTERN`, so the result is always a valid HTML id.
+ */
+function rowFormId(intent: "duplicate" | "unpublish", slug: string) {
+  return `row-${intent}-${slug}`;
 }
 
 /** The three filter keys, named once so the form, the loader and the clear link agree. */
@@ -294,6 +310,151 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         message: `Ask sync failed. ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  /*
+   * DUPLICATE AS TEMPLATE. Section F item 3.
+   *
+   * Reads the committed file, gives it a free slug, and re-enters `savePost` as
+   * a NEW post. There is no second write path and no copy of the frontmatter
+   * logic: the copy is serialized by the same `serializePost` the editor uses,
+   * so anything the editor round-trips, this round-trips.
+   *
+   * ## IT CANNOT BE A BACK DOOR TO A FIRST PUBLICATION, BY CONSTRUCTION
+   *
+   * The copy is written with `draft: true`, so `decide()` sees `wantsPublished`
+   * false and cannot classify the write as `published-first` whatever the
+   * source post's state was. That is the structural half. The stamping half is
+   * the same call: `priorRaw` is null for a new slug and the post is a draft,
+   * so `forceFirstPublished` REMOVES the key rather than carrying the original
+   * one across. Clearing it here as well is belt and braces and is written down
+   * as such, because a reader looking for the guarantee should find it in the
+   * policy module rather than in this route's good manners.
+   *
+   * ## WHAT IS COPIED, AND WHY THE TITLE IS NOT TOUCHED
+   *
+   * Everything except the publication state. Section F asks for the same body
+   * and frontmatter, and a route that also invented a title would be making an
+   * editorial decision on the author's behalf in the one place they are about
+   * to look anyway: the copy opens in the editor. The list tells the two apart
+   * by slug, which is the field that had to change.
+   */
+  if (intent === "duplicate") {
+    const slug = String(form.get("slug") ?? "");
+    const file = await readFile(env, postPath(slug));
+    if (!file) return { message: `No post file exists for "${slug}", so there is nothing to copy.` };
+    const fields = parsePost(file.content);
+
+    /*
+     * The first candidate with no committed file wins. Probed against the
+     * repository rather than against the loader's D1 rows, because D1 is a
+     * DERIVED store (rule 18) and the file is what `savePost` will refuse on.
+     * Asking the derived copy would let a row that had drifted hand out a slug
+     * the commit then rejects.
+     */
+    let target: string | null = null;
+    const candidates = copySlugCandidates(slug);
+    for (const candidate of candidates) {
+      if (!(await readFile(env, postPath(candidate)))) {
+        target = candidate;
+        break;
+      }
+    }
+    if (!target) {
+      return {
+        message:
+          `Could not find a free slug for a copy of "${slug}": the first ` +
+          `${candidates.length} candidates are all taken. Delete some copies first.`,
+      };
+    }
+
+    try {
+      await savePost(env, {
+        slug: target,
+        raw: serializePost({ ...fields, slug: target, draft: true, firstPublished: "" }),
+        isNew: true,
+        actor,
+      });
+      // Straight into the editor. A duplicate exists to be edited, and landing
+      // back on the list would leave the author hunting for the row they just
+      // made among rows with the same title.
+      return redirect(`/admin/posts/${target}/edit`);
+    } catch (error) {
+      return {
+        message: `Duplicate failed. ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  /*
+   * UNPUBLISH FROM THE LIST. Section F item 4.
+   *
+   * THE SAME TRANSITION THE EDITOR'S "Revert to draft" MAKES, reached without
+   * opening the post. No new policy and no new writer: read the committed file,
+   * flip one flag, and go back through `savePost`, which is the door every
+   * other write in this repo uses.
+   *
+   * ## WHY IT IS A READ-MODIFY-WRITE AND NOT A POST TO THE EDIT ROUTE
+   *
+   * The editor's unpublish carries the whole post in its payload, because the
+   * author may have edited the body in the same breath. A list row carries a
+   * slug and nothing else, so posting that payload to the edit route would
+   * serialize a post with an empty body and destroy it. The file is the only
+   * thing that knows what the post says, so the file is what gets read.
+   *
+   * ## NO CONFIRMATION, DELIBERATELY, and the ladder is the reason
+   *
+   * Bulk delete types the count and single delete confirms, because both are
+   * recoverable only through git. This is reversible by its own inverse, in one
+   * click, and the message says how. A ladder whose every rung is the same
+   * height has no rungs, which is the argument the delete path already makes
+   * here in as many words.
+   *
+   * `expectedHeadSha` IS OMITTED, the same no-optimistic-check path the bulk
+ * operations below take and for a weaker version of the same reason. The window
+ * is between this read and the commit, and what it costs is one concurrent edit
+ * to the body being overwritten with the copy this action read. `commitFiles`
+ * re-reads head itself, so nothing is lost from another POST; only a save this
+ * action never saw could be. On a single-admin site with one editor open that
+ * is a window nobody has hit, and carrying a sha from a list page rendered
+ * minutes ago would refuse ordinary unpublishes for a fact the list never
+ * displayed. Stated rather than left for a reader to notice.
+ *
+ * REPUBLISH IS NOT OFFERED ON THE LIST. `first_published` is frontmatter and
+   * not a D1 column, so this loader cannot tell a never-published draft from a
+   * withdrawn one without reading every file from GitHub. A republish control
+   * that could not make that distinction would be a one-click first publication
+   * on the rows where it is wrong, which is exactly what the ceremony reserves
+   * to the editor. Republishing stays where the fact lives.
+   */
+  if (intent === "unpublish") {
+    const slug = String(form.get("slug") ?? "");
+    const file = await readFile(env, postPath(slug));
+    if (!file) return { message: `No post file exists for "${slug}".` };
+    const fields = parsePost(file.content);
+    // The COMMITTED file decides, not the row the page was rendered from. A
+    // list open in another tab can be describing a post that has already been
+    // withdrawn, and writing an identical file would cost a commit that changes
+    // nothing.
+    if (fields.draft) return { message: `"${slug}" is already a draft. Nothing changed.` };
+
+    try {
+      await savePost(env, {
+        slug,
+        raw: serializePost({ ...fields, draft: true }),
+        isNew: false,
+        actor,
+      });
+      return {
+        message:
+          `Unpublished "${slug}". It is a draft now, so it is off the public site, ` +
+          `the feeds and the sitemap. Republish it from its editor.`,
+      };
+    } catch (error) {
+      return {
+        message: `Unpublish failed. ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -1047,6 +1208,39 @@ export default function AdminPosts({
                           <span className="sr-only">(opens in a new tab)</span>
                         </a>
                       ) : null}
+                      {/*
+                        UNPUBLISH, on the rows where it is a real transition.
+                        A draft has nothing to withdraw, and a never-published
+                        draft must not be offered anything that changes public
+                        state from here at all: first publication has a ceremony
+                        and it lives in the editor.
+
+                        Associated by the `form` ATTRIBUTE, because this cell is
+                        inside the bulk selection form and forms cannot nest.
+                        The form itself sits below the table.
+                      */}
+                      {post.state === "published" || post.state === "scheduled" ? (
+                        <button
+                          type="submit"
+                          form={rowFormId("unpublish", post.slug)}
+                          name="intent"
+                          value="unpublish"
+                          className="row-action"
+                        >
+                          Unpublish
+                        </button>
+                      ) : null}
+                      {/* Offered on every row: a published post is the likeliest
+                          template, and a draft is the likeliest thing to fork. */}
+                      <button
+                        type="submit"
+                        form={rowFormId("duplicate", post.slug)}
+                        name="intent"
+                        value="duplicate"
+                        className="row-action"
+                      >
+                        Duplicate
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -1055,6 +1249,53 @@ export default function AdminPosts({
             </table>
             </div>
           </Form>
+
+          {/*
+            THE ROW-ACTION FORMS, one pair per post, OUTSIDE the bulk form.
+
+            They cannot live in the cells that hold their buttons: those cells
+            are inside the selection form, a form cannot nest inside another,
+            and a browser drops the inner one. Same resolution the editor's
+            delete button already uses, by the `form` attribute.
+
+            ## WHY THE SLUG IS A HIDDEN FIELD AND NOT THE BUTTON'S VALUE
+
+            One shared form per intent with `name="slug"` on each button would
+            be two forms in total instead of two per row, and it would put the
+            slug in the SUBMITTER. `check:admin-ui` reads a submitter's name and
+            value as the intent, so the page's submission tuple set would then
+            grow by one entry per post and the fixture would be describing the
+            corpus rather than the request surface. The gate's media pages
+            already record that trap in as many words. With the slug as a field,
+            every row contributes the identical tuple and the distinct set stays
+            one wide however many posts exist.
+
+            No confirmation on either: duplicate creates a draft and changes
+            nothing public, and unpublish is reversible by its own inverse. The
+            typed-count ladder is reserved for what only git can undo.
+          */}
+          {posts.map((post) => (
+            <Form
+              key={`duplicate-${post.slug}`}
+              id={rowFormId("duplicate", post.slug)}
+              method="post"
+              className="posts-row-form"
+            >
+              <input type="hidden" name="slug" value={post.slug} />
+            </Form>
+          ))}
+          {posts
+            .filter((post) => post.state === "published" || post.state === "scheduled")
+            .map((post) => (
+              <Form
+                key={`unpublish-${post.slug}`}
+                id={rowFormId("unpublish", post.slug)}
+                method="post"
+                className="posts-row-form"
+              >
+                <input type="hidden" name="slug" value={post.slug} />
+              </Form>
+            ))}
 
           {/* Reference, not a demand: the numbers that describe the AI layer's
               condition sit under the thing they describe, quiet, and only the
