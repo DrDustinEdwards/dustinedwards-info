@@ -230,7 +230,7 @@ No gate can see how a row got where it is, which is what makes this UNGATED. The
 
 Ratified 2026-07-29, scope THIS REPO ONLY, until the DNS cutover. Grounds: `dustinedwards/workflow-mainline.md`.
 
-No feature branches, no PRs. Everything lands on `main`, committed and pushed immediately. Never leave work uncommitted or a commit unpushed. **The gates are the review**, so they run before every push: `npx tsc -b`, then whichever checks the change touches.
+No feature branches, no PRs. Everything lands on `main`, committed and pushed immediately. Never leave work uncommitted or a commit unpushed. **The gates are the review**, so they run before every push. What runs, in what order, and everything else between a clean tier and a deployed sha is the `ship` skill; rule 16 stays the contract it works against.
 
 Three things this repo has been bitten by, all in `core.md` with the measurements:
 
@@ -238,9 +238,9 @@ Three things this repo has been bitten by, all in `core.md` with the measurement
 - **Every gate verifies DISK, not HEAD.** A gate can be green while its subject is uncommitted.
 - **`git diff <path>` before `git add <path>`.** A named path is not a scoped change if the file carries edits you did not write.
 
-**`check:content` RUNS ITSELF BEFORE A PUSH THAT TOUCHED `app/` OR `content/`, since 2026-08-26.** `.claude/hooks/pre-push-content.sh`, registered on Bash beside `scoped-git-add.sh`, diffs `@{upstream}..HEAD` and blocks the push if the gate fails. It exists because two CI-red pushes in two days were the same shape and neither was a content edit: a new file under `app/` moves the count of sources citing a template asset, which moves `content/generated/template-refs.json`, and adding a route does not look like a content change. Fix when it fires: `npm run build:content`, then add the regenerated file.
+**`check:content` RUNS ITSELF BEFORE A PUSH THAT TOUCHED `app/` OR `content/`, since 2026-08-26.** `.claude/hooks/pre-push-content.sh`, registered on Bash beside `scoped-git-add.sh`, diffs `@{upstream}..HEAD` and blocks the push if the gate fails. It exists because two CI-red pushes in two days were the same shape and neither was a content edit: a new file under `app/` moves the count of sources citing a template asset, and adding a route does not look like a content change. The hook prints its own fix when it fires.
 
-**It narrows the window and does not close it, and the file says so.** It fires on a push made through the agent's Bash tool and cannot fire on one typed into a terminal, because this repo has no git hook mechanism and `.githooks` would be a second place to look when a guard does not fire. CI is still what cannot be bypassed. A push touching neither tree runs nothing.
+**It narrows the window and does not close it.** It fires on a push made through the agent's Bash tool and cannot fire on one typed into a terminal. CI is still what cannot be bypassed. Grounds, including why there is no `.githooks`, are in the hook file.
 
 Unchanged: destructive operations stay with Dustin, and anything touching money paths or auth secrets is flagged before it lands.
 
