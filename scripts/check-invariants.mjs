@@ -5220,6 +5220,96 @@ console.log("\n  25. the health snapshot's poll interval is the watchdog's cron"
   );
 }
 
+console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
+
+/*
+ * THE FACT THAT HAD NO OWNER, GIVEN ONE. 2026-09-04.
+ *
+ * CLAUDE.md carries the binding NAMES, because a session has to recognise `DB`
+ * and `APP_KV` before it can read anything that uses them, and that is what
+ * this file is for. Until today it carried the names AND a description of each,
+ * which was a hand-maintained second copy of `wrangler.jsonc.example` with
+ * nothing comparing them: rule 17's own defect, in the file that states rule 17.
+ *
+ * The consolidation pass had two options for it, remove or gate. Removing the
+ * names would cost a session the vocabulary; the descriptions were the half
+ * that rots, so those went to the example and the names stay here, bound.
+ *
+ * ## BOTH DIRECTIONS, because one direction is the useless one
+ *
+ * A binding added to the config and not to CLAUDE.md is the likely miss. A
+ * binding removed from the config while CLAUDE.md still advertises it is the
+ * dangerous one: it sends a session to `getEnv(context).OLD_THING`, which
+ * typechecks against a stale generated type and is undefined at runtime.
+ *
+ * ## WHY IT PARSES THE EXAMPLE AND NOT THE REAL CONFIG
+ *
+ * `wrangler.jsonc` is gitignored and exists on one machine, so a gate reading
+ * it could not run in CI or on a fresh clone. `check:config` already binds the
+ * example to the real file in both directions on the one machine that has both,
+ * so the chain is complete without this gate needing the secret half.
+ */
+{
+  const claude = readFileSync(join(root, "CLAUDE.md"), "utf8");
+  const examplePath = join(root, "wrangler.jsonc.example");
+  const example = stripComments(readFileSync(examplePath, "utf8"));
+
+  /*
+   * The names CLAUDE.md advertises, from the one indented line that lists them.
+   * Anchored on the `getEnv` sentence above it rather than on a bare scan for
+   * capitals, so prose mentioning a binding by name cannot widen the set.
+   */
+  const listed = new Set(
+    (/Never import bindings globally\.\s*\n\s*\n {4}([A-Z_ \t]+)\n/.exec(claude)?.[1] ?? "")
+      .split(/\s+/)
+      .filter(Boolean),
+  );
+
+  /*
+   * SCOPE, ASSERTED, and this is the assertion that stops the rest being
+   * vacuous: an empty set makes "every listed binding exists" trivially true.
+   */
+  ok(
+    "CLAUDE.md's binding list parses",
+    listed.size >= 5,
+    `parsed ${listed.size} binding name(s) from CLAUDE.md. If this is 0 the ` +
+      `comparison below is measuring the parser, not the file.`,
+  );
+
+  /**
+   * Every binding the example declares, by the two keys wrangler uses. Derived
+   * from the config rather than named here, so a NEW KIND of binding appears in
+   * this set without anybody editing this gate.
+   */
+  const declared = new Set();
+  for (const m of example.matchAll(/"binding"\s*:\s*"([A-Z0-9_]+)"/g)) declared.add(m[1]);
+  for (const m of example.matchAll(/"name"\s*:\s*"([A-Z0-9_]+)"/g)) declared.add(m[1]);
+
+  ok(
+    "wrangler.jsonc.example declares bindings",
+    declared.size >= 5,
+    `parsed ${declared.size} binding(s) from ${relative(root, examplePath)}.`,
+  );
+
+  const advertisedButAbsent = [...listed].filter((name) => !declared.has(name));
+  ok(
+    "every binding CLAUDE.md lists exists in the config",
+    advertisedButAbsent.length === 0,
+    `${advertisedButAbsent.join(", ")} is advertised in CLAUDE.md and not declared. ` +
+      `A session reaching getEnv(context) for it typechecks against a stale ` +
+      `generated type and gets undefined at runtime.`,
+  );
+
+  const declaredButUnlisted = [...declared].filter((name) => !listed.has(name));
+  ok(
+    "every binding in the config is listed in CLAUDE.md",
+    declaredButUnlisted.length === 0,
+    `${declaredButUnlisted.join(", ")} is declared and not listed in CLAUDE.md. ` +
+      `Adding a binding means editing both, which is the same rule check:config ` +
+      `enforces between the example and the real file.`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-08-23 BY RUNNING IT: 226 offline.
  *
@@ -5274,14 +5364,17 @@ console.log("\n  25. the health snapshot's poll interval is the watchdog's cron"
  * 272 reading was taken, so 272 was already a stale observation before this
  * change touched anything. Which is the whole reason this number is re-measured
  * through the gate's own pipeline and never adjusted by arithmetic.
+ * RE-MEASURED 2026-09-04 by RUNNING it after the CLAUDE.md consolidation and
+ * section 26: 296. Floor 278 to 282, margin held at 14. Section 26 is 4
+ * assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 278;
+const MINIMUM_CHECKS = 282;
 if (checks < MINIMUM_CHECKS) {
   ok(
     "this gate executed its assertions",
     false,
     `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-08-29: 292 offline.`,
+      `rather than failing. Measured 2026-09-04: 296 offline.`,
   );
 }
 
