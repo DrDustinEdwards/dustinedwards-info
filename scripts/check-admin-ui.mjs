@@ -516,6 +516,83 @@ const STORES_BEHIND = {
   },
 };
 
+/**
+ * One row per status the moderation queue groups by, plus the two hostile
+ * shapes the render is the boundary for.
+ *
+ * `receivedAt` and friends are `Date` objects because that is what the loader
+ * hands the component: the columns are drizzle `timestamp` mode, and single
+ * fetch preserves a Date across the wire. A string here would render through a
+ * different branch than production takes.
+ */
+const MENTIONS = [
+  {
+    id: 1,
+    sourceUrl: "https://elsewhere.example/a-very-long-path-that-has-no-spaces-in-it-at-all/and-keeps-going",
+    targetSlug: "a-post",
+    status: "pending",
+    authorName: "<script>alert(1)</script>",
+    authorUrl: "https://elsewhere.example/about",
+    excerpt: "I read this and it explains the shape well.",
+    failureReason: null,
+    receivedAt: new Date("2026-09-01T10:00:00.000Z"),
+    verifiedAt: new Date("2026-09-01T10:00:05.000Z"),
+    decidedAt: null,
+  },
+  {
+    id: 2,
+    sourceUrl: "https://another.example/post",
+    targetSlug: "a-post",
+    status: "failed",
+    authorName: "another.example",
+    authorUrl: null,
+    excerpt: null,
+    failureReason: "no-link",
+    receivedAt: new Date("2026-08-20T10:00:00.000Z"),
+    verifiedAt: new Date("2026-08-20T10:00:03.000Z"),
+    decidedAt: null,
+  },
+  {
+    id: 3,
+    sourceUrl: "https://third.example/post",
+    targetSlug: "a-second-post",
+    status: "approved",
+    authorName: "A Writer",
+    authorUrl: "https://third.example/",
+    excerpt: "A short quotation from the linking paragraph.",
+    failureReason: null,
+    receivedAt: new Date("2026-08-25T10:00:00.000Z"),
+    verifiedAt: new Date("2026-08-25T10:00:02.000Z"),
+    decidedAt: new Date("2026-08-26T09:00:00.000Z"),
+  },
+  {
+    id: 4,
+    sourceUrl: "https://spam.example/post",
+    targetSlug: "a-post",
+    status: "rejected",
+    authorName: "spam.example",
+    authorUrl: null,
+    excerpt: "Buy things.",
+    failureReason: null,
+    receivedAt: new Date("2026-08-10T10:00:00.000Z"),
+    verifiedAt: new Date("2026-08-10T10:00:01.000Z"),
+    decidedAt: new Date("2026-08-11T09:00:00.000Z"),
+  },
+  {
+    id: 5,
+    sourceUrl: "https://slow.example/post",
+    targetSlug: "a-post",
+    status: "unverified",
+    authorName: null,
+    authorUrl: null,
+    excerpt: null,
+    failureReason: null,
+    receivedAt: new Date("2026-09-04T10:00:00.000Z"),
+    verifiedAt: null,
+    decidedAt: null,
+  },
+];
+
 /** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string>, props?: Record<string,unknown> }>} */
 const STATES = [
   // ---- posts index --------------------------------------------------------
@@ -1774,6 +1851,51 @@ const STATES = [
     path: "/admin/origin-requests",
     url: "/admin/origin-requests",
     loaderData: { result: TRAFFIC_ERROR },
+  },
+  /*
+   * ---- the webmention moderation queue ------------------------------------
+   *
+   * FOUR STATES, and the two CONFIRMATION states are the reason this route is
+   * here at all rather than being left to a live click. Both destructive
+   * intents on this page refuse in the ACTION and render a second step, which
+   * is what makes the ceremony real for a reader without JavaScript; a
+   * confirmation that only exists in a handler is the exact defect
+   * `app/lib/destructive.mjs` was written for, and the only instrument that can
+   * see the rendered form is this one.
+   *
+   * The rows carry a `<script>` in an author name and a very long source URL,
+   * because everything on this page came from a stranger and the render is the
+   * boundary. Section 3's escaping assertions read the markup back.
+   */
+  {
+    name: "mentions, populated queue",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions",
+    loaderData: { mentions: MENTIONS },
+  },
+  {
+    name: "mentions, empty queue",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions",
+    loaderData: { mentions: [] },
+  },
+  {
+    name: "mentions, delete awaiting confirmation",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions",
+    loaderData: { mentions: MENTIONS },
+    actionData: { confirmDelete: 1 },
+  },
+  {
+    name: "mentions, sweep awaiting confirmation",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions",
+    loaderData: { mentions: MENTIONS },
+    actionData: { confirmSweep: { failed: 2, rejected: 1 } },
   },
   /*
    * ---- the cockpit ---------------------------------------------------------
@@ -4646,6 +4768,107 @@ structural(
   (h) => !h.includes("has not been measured yet"),
 );
 
+/* -------------------------------------------------------------------------
+ * The webmention moderation queue.
+ *
+ * EVERY VALUE ON THIS PAGE CAME FROM A STRANGER, so the render IS the boundary
+ * and the fixture carries the hostile shapes on purpose. An assertion that only
+ * checked the page renders would make that fixture decoration: the `<script>`
+ * in `MENTIONS[0].authorName` has to be read back, in both directions, or a
+ * page that stripped it and a page that executed it would score the same.
+ * ---------------------------------------------------------------------- */
+
+const MENTION_STATES = [
+  "mentions, populated queue",
+  "mentions, delete awaiting confirmation",
+  "mentions, sweep awaiting confirmation",
+];
+
+for (const state of MENTION_STATES) {
+  structural("a stranger's author name is ESCAPED, not stripped", state, (h) =>
+    h.includes(escapeHtml("<script>alert(1)</script>")),
+  );
+  /* The other direction, and it is the one that matters: the escaped form
+     being present does not by itself prove the live form is absent, because a
+     page could render both. */
+  structural("no live script element reaches the markup", state, (h) =>
+    !h.includes("<script>alert(1)</script>"),
+  );
+  /* The source URL is TEXT. An admin page is not a place to put a one-click
+     navigation to a URL an unauthenticated POST chose; H2's public render is
+     the one that gets an anchor, with rel="nofollow ugc noopener". */
+  structural("a stranger's source URL is not an anchor", state, (h) =>
+    !/<a[^>]*href="https:\/\/elsewhere\.example/.test(h),
+  );
+  /* The target IS a link, to the post's editor, because that slug came from
+     this site's own corpus rather than from the sender. */
+  structural("the target slug links to its editor", state, (h) =>
+    h.includes('href="/admin/posts/a-post/edit"'),
+  );
+}
+
+/* Every status the queue groups by is rendered, so a group that silently
+   stopped being shown fails here rather than hiding a pending mention. */
+for (const heading of ["Pending", "Failed verification", "Approved", "Rejected"]) {
+  structural(`the ${heading} group has a heading`, "mentions, populated queue", (h) =>
+    h.includes(`>${heading}</h2>`),
+  );
+}
+
+/* The unverified row is COUNTED rather than listed, which is the one thing a
+   reader could mistake for a missing row. */
+structural(
+  "unverified mentions are counted in the retention panel",
+  "mentions, populated queue",
+  (h) => h.includes("1 mention(s) are currently unverified"),
+);
+
+/*
+ * THE TWO DESTRUCTIVE CONFIRMATIONS, AND THIS IS THE ONLY INSTRUMENT THAT CAN
+ * SEE THEM.
+ *
+ * `check:destructive` proves the ACTION calls `confirmationSatisfied`, and the
+ * worker layer proves the action refuses without it. Neither can see whether
+ * the refusal renders a form a person without JavaScript can actually complete,
+ * which is the whole point of putting the guard in the action rather than in a
+ * handler. A refusal with no second step is a dead end, not a ceremony.
+ */
+structural(
+  "the delete refusal renders a typed-confirmation field",
+  "mentions, delete awaiting confirmation",
+  (h) => h.includes(`name="${CONFIRM_FIELD}"`) && h.includes("Type 1 to confirm"),
+);
+structural(
+  "the delete refusal carries the id back, so the second step names the same row",
+  "mentions, delete awaiting confirmation",
+  (h) => /<input[^>]*name="id"[^>]*value="1"/.test(h),
+);
+structural(
+  "the sweep refusal states the quantity at stake",
+  "mentions, sweep awaiting confirmation",
+  (h) => h.includes("2 failed and 1 rejected mention(s), permanently"),
+);
+structural(
+  "the sweep refusal renders a typed-confirmation field",
+  "mentions, sweep awaiting confirmation",
+  (h) => h.includes(`name="${CONFIRM_FIELD}"`),
+);
+/* And the ordinary page does NOT: a confirmation field rendered before the
+   action asked for one would train the operator to type into it and make the
+   second step meaningless. */
+structural(
+  "no confirmation field is rendered before the action asks for one",
+  "mentions, populated queue",
+  (h) => !h.includes(`name="${CONFIRM_FIELD}"`),
+);
+
+/* The empty state is a sentence per group, not a blank panel. */
+structural(
+  "the empty queue says so in words",
+  "mentions, empty queue",
+  (h) => h.includes("No pending mentions.") && h.includes("empty-state"),
+);
+
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
 
 /*
@@ -4985,12 +5208,13 @@ assert(
 );
 
 /*
- * FLOOR RAISED 414 -> 435 by the cockpit and tools coverage.
+ * FLOOR RAISED 435 -> 591 by the webmention moderation queue's four states.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-25 by RUNNING it: 463,
- * over 79 states. Never summed. Slack of 28 is kept deliberately at the width
- * it already had: it absorbs a state being retired, and dropping the whole
- * cockpit section is 12 assertions, which still fails.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-04 by RUNNING it: 619,
+ * over 89 states. Never summed. It was 435 against 463 over 79 states, measured
+ * 2026-08-25. Slack of 28 is kept at the width it has always had, for the
+ * reason it was chosen: it absorbs a state being retired, and dropping the
+ * whole mentions section is 21 assertions, which still fails.
  *
  * BOTH COPIES OF THE OLD NUMBER WERE STALE, in the same direction. The
  * comment and the message below each said 438 and the gate had been running
@@ -5001,7 +5225,7 @@ assert(
  * only thing that reads the count is the comparison against MINIMUM_CHECKS,
  * and it passed throughout. Re-measured here rather than carried.
  */
-const MINIMUM_CHECKS = 435;
+const MINIMUM_CHECKS = 591;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -5010,7 +5234,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 463.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 619.`,
   );
 }
 

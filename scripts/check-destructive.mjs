@@ -66,6 +66,18 @@ const DESTRUCTIVE = new Set([
    */
   "admin.media._index.tsx:rebuild",
   "admin.posts._index.tsx:sync-ask",
+  /*
+   * BOTH WEBMENTION REMOVALS, 2026-09-04, and they are the first destructive
+   * intents in this repo with NO RECOVERY PATH AT ALL.
+   *
+   * Every other entry above removes something that a rebuild, a sync or the
+   * repository can produce again: media rows are derived from R2, the Ask
+   * index from the corpus, a post's file from git. A webmention row came from
+   * a stranger's POST, converges toward nothing, and hard rule 18's "repair it
+   * through its derivation" has no meaning for it. Deleted is gone.
+   */
+  "admin.mentions.tsx:delete",
+  "admin.mentions.tsx:sweep",
 ]);
 
 /**
@@ -94,6 +106,13 @@ const REVERSIBLE = new Map([
   ["admin.media._index.tsx:bulk-remove-tag", "a tag, undone by add"],
   ["admin.media._index.tsx:set-tags", "replaces the tag set; retypable"],
   ["admin.media._index.tsx:set-alt", "overwrites alt text; retypable"],
+  [
+    "admin.mentions.tsx:approve",
+    "sets a decision on a verified mention, undone by reject: the DB layer's " +
+      "decidable set holds approved and rejected alongside pending precisely so " +
+      "the pair is a two-way door, and no column is removed either way",
+  ],
+  ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
 ]);
 
 /*

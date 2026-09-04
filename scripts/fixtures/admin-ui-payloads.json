@@ -583,6 +583,22 @@
   "origin requests, loaded": [],
   "origin requests, empty": [],
   "origin requests, error": [],
+  "mentions, populated queue": [
+    "POST /admin/mentions | (none) | id,intent",
+    "POST /admin/mentions | (none) | intent"
+  ],
+  "mentions, empty queue": [
+    "POST /admin/mentions | (none) | intent"
+  ],
+  "mentions, delete awaiting confirmation": [
+    "POST /admin/mentions | (none) | confirm-count,id,intent",
+    "POST /admin/mentions | (none) | id,intent",
+    "POST /admin/mentions | (none) | intent"
+  ],
+  "mentions, sweep awaiting confirmation": [
+    "POST /admin/mentions | (none) | confirm-count,intent",
+    "POST /admin/mentions | (none) | id,intent"
+  ],
   "overview, all healthy": [],
   "overview, one check failing": [],
   "tools, all secrets set": [],
