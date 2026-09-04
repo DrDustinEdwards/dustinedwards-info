@@ -147,3 +147,13 @@
 .post-share {
   margin-top: 0.5rem;
 }
+
+/* The series reading path. Two targets side by side under the parts list,
+   sharing .post-nav-target with the prev/next pair at the foot of the post so
+   there is one bordered-target style rather than two. */
+.post-series-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
