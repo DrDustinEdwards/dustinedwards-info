@@ -92,13 +92,15 @@ const TEST_DIR = join(root, "test");
  * Stated as the invariant rather than as a number, because a number here is a
  * third copy of the two constants below.
  */
-/* 56 against 60 measured 2026-08-30 by RUNNING the gate, after
-   og-card-text.test.mjs landed with the v4 social card's fitted type. */
-const MINIMUM_FILES = 56;
-/* 575 against 612, re-measured 2026-08-30 in the same commit, from the same
+/* 58 against 62 measured 2026-09-03 by RUNNING the gate, after
+   editor-duplicate.test.mjs landed with the section F row actions. It read 56
+   against 60 from 2026-08-30, and the set has grown twice since, so the margin
+   had widened on its own, which is the drift the paragraph above names. */
+const MINIMUM_FILES = 58;
+/* 601 against 640, re-measured 2026-09-03 in the same commit, from the same
    run. The file floor above catches a file LEAVING; this one catches a file
    being hollowed out in place, which no file count can see. */
-const MINIMUM_TESTS = 575;
+const MINIMUM_TESTS = 601;
 
 let checks = 0;
 let failures = 0;

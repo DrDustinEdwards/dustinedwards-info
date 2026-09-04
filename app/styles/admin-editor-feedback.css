@@ -102,6 +102,62 @@
   }
 }
 
+/* THE LEAVE GUARD. A navigation the router stopped because the post is dirty.
+
+   The warning family, the same one the drift alert spends, because this is a
+   degradation and not a failure: nothing has been lost and the crash net still
+   holds the text. It is the only tint this component adds and it is a tint the
+   editor already uses, so no new pair enters the palette and check:contrast has
+   nothing new to measure.
+
+   It sits above the form rather than over it: the author's navigation is
+   already held by the router, so there is no need to trap them behind a modal
+   to ask, and a modal would take focus away from the writing they can go back
+   to. */
+.editor-leave-guard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+}
+
+.editor-leave-guard p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.editor-leave-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* The ghost button carries no fill, so on a tint it needs the edge the filled
+   one gets for free. --border-strong rather than --border for the reason the
+   row actions record: this rides a tinted surface. */
+.editor-leave-actions .btn-ghost {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+@media (forced-colors: active) {
+  .editor-leave-guard {
+    border-color: currentColor;
+  }
+}
+
 .editor-upload,
 .editor-preview,
 .editor-danger {

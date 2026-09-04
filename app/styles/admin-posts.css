@@ -631,6 +631,19 @@
   gap: 0.5rem;
 }
 
+/* The row-action forms, one pair per post, parked below the table.
+
+   They exist only to be pointed at by a `form` attribute: the buttons that
+   submit them live in cells inside the bulk selection form, and a form cannot
+   nest inside another. `display: none` rather than a visually-hidden class,
+   because there is nothing here to read. A hidden input is not content, and a
+   form with no rendered control is not a landmark; the same treatment
+   `.editor-delete-form` gets for the same reason. Association by `form` is
+   unaffected by display, so the buttons still submit them. */
+.posts-row-form {
+  display: none;
+}
+
 /* WCAG 2.2 target size (minimum) is 24 by 24 CSS pixels. 1.75rem is 28, so the
    target clears it with the row's own padding still to spare.
    --border-strong rather than --border, because these ride a row that elevates

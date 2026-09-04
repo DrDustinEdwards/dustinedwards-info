@@ -2261,8 +2261,8 @@ for (const name of Object.keys(actual)) {
  * it, and the assertion that exists to notice exactly that would have passed.
  * It was written when the harness compared one route.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 388.
- * Never summed over the fixtures. The floor is 367, so the slack is 21, which
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 404.
+ * Never summed over the fixtures. The floor is 383, so the slack is 21, which
  * absorbs a state being retired and does not absorb a route going quiet: the
  * media library alone contributes far more than 21.
  *
@@ -2272,11 +2272,16 @@ for (const name of Object.keys(actual)) {
  * moved here rather than noticed later: the number stayed true as a historical
  * measurement and stopped being true as a floor, because the slack this comment
  * calls load-bearing had quietly become 46.
+ *
+ * It read 388 against a floor of 367 until later the same day, when the posts
+ * index grew per-row duplicate and unpublish controls: two tuples on each of
+ * the eight states that render at least one row, so 16 submissions. Moved for
+ * the reason above rather than left to drift, and the slack is still 21.
  */
 assert(
   "the comparison actually read submissions",
-  submissionsCompared >= 367,
-  `${submissionsCompared} compared, floor 367, measured 388`,
+  submissionsCompared >= 383,
+  `${submissionsCompared} compared, floor 383, measured 404`,
 );
 
 /*
@@ -2544,6 +2549,76 @@ structural("the mark is a word, not only a colour", "posts index, clean", (h) =>
 );
 structural("an empty corpus marks nothing", "posts index, empty corpus", (h) =>
   !h.includes("posts-featured"),
+);
+
+/* -------------------------------------------------------------------------
+ * THE ROW ACTIONS, and every property here is one the payload baseline cannot
+ * see.
+ *
+ * The baseline records that this page can POST `intent=unpublish` with a
+ * `slug`. It cannot record WHICH ROWS offer it, because the tuple set is
+ * DISTINCT by design and one row contributes the same entry as ten. So a
+ * regression that put an unpublish control on a draft, or a publish control on
+ * the list at all, would move nothing in the fixture.
+ *
+ * The state fixture carries exactly one published, one scheduled and one draft
+ * row, which is what makes counting meaningful: a component that ignored the
+ * state entirely would render three of each and fail here, and one that
+ * rendered none would fail too.
+ * ---------------------------------------------------------------------- */
+structural("every row offers a duplicate", "posts index, clean", (h) =>
+  (h.match(/value="duplicate"/g) ?? []).length === POSTS.length,
+);
+structural("unpublish is offered on the two public rows and no others", "posts index, clean", (h) =>
+  (h.match(/value="unpublish"/g) ?? []).length ===
+  POSTS.filter((post) => post.state === "published" || post.state === "scheduled").length,
+);
+/*
+ * The needle is the ID WITHOUT its attribute, so it matches the form AND any
+ * button pointing at it. Anchoring on `id="` was the first cut and it was too
+ * narrow, proven by planting: rendering the button on every row while leaving
+ * the forms state-gated left the draft row carrying a control aimed at a form
+ * that does not exist, and an assertion that read only the form said nothing.
+ * A dangling control is the worse defect of the two, because it renders.
+ */
+structural("the draft row is offered a duplicate and NOT an unpublish", "posts index, clean", (h) =>
+  h.includes("row-duplicate-wip") && !h.includes("row-unpublish-wip"),
+);
+/*
+ * BUTTONS AND FORMS PAIR UP EXACTLY, in both directions.
+ *
+ * A browser resolves `form="..."` by string equality and says nothing when it
+ * fails: the button submits the enclosing form instead, which here is the BULK
+ * SELECTION form, so a typo in `rowFormId` turns Unpublish into a bulk
+ * submission carrying every ticked slug. Nothing renders differently and
+ * nothing throws. This is the assertion that sees it.
+ */
+structural("every row-action control pairs with the form it names", "posts index, clean", (h) => {
+  const targets = [...h.matchAll(/form="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
+  const ids = [...h.matchAll(/id="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
+  // Non-empty scope first: an empty page satisfies "every" vacuously, which is
+  // the zero-scope class hard rule 10 names.
+  if (targets.length === 0 || ids.length === 0) return false;
+  return (
+    new Set(ids).size === ids.length &&
+    targets.every((target) => ids.includes(target)) &&
+    ids.every((id) => targets.includes(id))
+  );
+});
+/*
+ * THE CEREMONY IS NOT REACHABLE FROM THIS PAGE, which is the one that would
+ * cost something if it broke. First publication is reserved to the editor, and
+ * the reservation is worth nothing if a list row can send the transition. The
+ * needles are the transition ids `publish-transition.mjs` hands out, anchored
+ * on the attribute so a word inside prose cannot satisfy or break them.
+ */
+structural("the list offers no publication transition at all", "posts index, clean", (h) =>
+  !/value="publish"/.test(h) &&
+  !/value="republish"/.test(h) &&
+  !/value="publish-confirmed"/.test(h),
+);
+structural("an empty corpus offers no row actions", "posts index, empty corpus", (h) =>
+  !h.includes("posts-row-form") && !h.includes('value="duplicate"'),
 );
 
 /* -------------------------------------------------------------------------

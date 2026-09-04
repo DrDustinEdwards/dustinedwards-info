@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { Form, Link } from "react-router";
+import { Form, Link, useBlocker } from "react-router";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
@@ -278,6 +278,54 @@ export function PostEditor({
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
 
+  /**
+   * THE OTHER HALF OF THE LEAVE GUARD. Section F item 8.
+   *
+   * `beforeunload` above is the browser's, and it only fires on a real document
+   * unload: closing the tab, a reload, or following a link out of the site. In
+   * a hydrated admin plane, clicking "Posts" in the nav or a row's Edit link is
+   * a CLIENT-SIDE navigation that never unloads anything, so the guard that was
+   * here covered the way an author is least likely to lose work and missed the
+   * way they are most likely to.
+   *
+   * ## IT IS AN ENHANCEMENT, NOT A GATE, and the difference is load bearing
+   *
+   * Nothing here refuses a save, and with scripting off nothing here runs: the
+   * public law (rule 9) exempts the admin plane, but the editor still has to
+   * behave for a reader without script, and it does, because a blocker is a
+   * router-level intercept on a navigation the router is performing. A scriptless
+   * browser is doing full document navigations, where `beforeunload` is the
+   * mechanism and it is the browser's rather than ours. So the two halves cover
+   * the two worlds and neither is required for a save to land.
+   *
+   * ## WHY THE PATHNAME COMPARISON, and it is not cosmetic
+   *
+   * Every save is a POST to this route followed by a redirect the router
+   * performs, which IS a navigation and would otherwise be blocked by the very
+   * flag the save is about to clear. Comparing pathnames lets the save through:
+   * an edit redirects to its own path with new search params. `onSubmit` already
+   * clears `dirty` before the request leaves, so this is the second guard rather
+   * than the only one, and it is the one that survives a new post's save, which
+   * redirects from /admin/posts/new to a DIFFERENT path.
+   */
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  /*
+   * A block that is no longer warranted is RELEASED rather than left standing.
+   *
+   * The state is held by the router, not by this component, so a `dirty` that
+   * goes false underneath a blocked navigation (a save landing in another tab's
+   * response, the buffer offer being accepted) would otherwise leave the author
+   * looking at a question about changes that no longer exist, with the
+   * navigation they asked for still parked.
+   */
+  useEffect(() => {
+    if (blocker.state === "blocked" && !dirty) blocker.reset();
+  }, [blocker, dirty]);
+
   /*
    * Tick the buffer age, ONLY while dirty.
    *
@@ -486,6 +534,37 @@ export function PostEditor({
 
   return (
     <div className="editor-shell">
+      {/*
+        THE LEAVE GUARD'S QUESTION, rendered rather than confirm()ed.
+
+        A `confirm()` here would be shorter and would be the wrong shape twice
+        over: it cannot be styled to say which post is at stake, and this repo
+        has twice found a `confirm()` standing in for a server check that was
+        not there. This one guards nothing on the server by design, so it is
+        allowed to be pure interface, and being pure interface it should look
+        like the rest of the interface.
+
+        `role="alert"` rather than a `<dialog>`: the author's navigation is
+        already stopped by the router, so nothing needs modality to hold them
+        here, and a modal would trap focus around a question they can answer by
+        continuing to type.
+      */}
+      {blocker.state === "blocked" ? (
+        <div className="editor-leave-guard" role="alert">
+          <p>
+            <strong>This post has unsaved changes.</strong> Leaving now keeps
+            them in this browser's crash net, and they are not committed.
+          </p>
+          <div className="editor-leave-actions">
+            <button type="button" className="btn" onClick={() => blocker.reset()}>
+              Stay and save
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => blocker.proceed()}>
+              Leave without saving
+            </button>
+          </div>
+        </div>
+      ) : null}
       <Form
         id={FORM_ID}
         method="post"
