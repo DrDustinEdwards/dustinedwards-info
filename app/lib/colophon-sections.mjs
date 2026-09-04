@@ -120,6 +120,14 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "worth stating plainly.",
   },
   {
+    id: "ai",
+    title: "AI disclosure",
+    lead:
+      "This site is built with AI assistance and says so here rather than " +
+      "leaving you to guess, because a site about how it is built owes you " +
+      "that before it owes you anything else.",
+  },
+  {
     id: "not-adopted",
     title: "What was not adopted",
     lead:
@@ -153,6 +161,47 @@ export const SECURITY_TRADEOFF = Object.freeze([
   "It is acceptable only because these pages carry no writing from anyone but " +
     "me. There are no comments and no user submissions, so there is nowhere " +
     "for a stranger's script to get in and use the shared number.",
+]);
+
+/**
+ * THE AI DISCLOSURE, in one place for the same reason SECURITY_TRADEOFF is: the
+ * page renders these sentences and the search index carries the same ones.
+ *
+ * Ruled 2026-09-04. The EU AI Act's transparency obligations reach anyone
+ * publishing AI-assisted text, with a carve-out for text under human editorial
+ * responsibility. This site already meets the carve-out; the disclosure states
+ * it plainly rather than relying on a reader inferring it.
+ *
+ * ## WHAT THIS DELIBERATELY DOES NOT CLAIM
+ *
+ * An earlier draft asserted that text from models released after a given date
+ * "carries a machine-readable mark applied by the provider". That is a legal
+ * OBLIGATION on providers restated as an accomplished fact about output, and it
+ * is not one this page can stand behind: whether a given provider marks TEXT is
+ * an empirical question, the obligation is keyed to systems on the market
+ * rather than to a model's release date, and text marks are known to degrade
+ * under paraphrase and editing. Since every word here is edited by hand before
+ * it is published, a mark applied upstream would very likely not survive into
+ * what a reader receives. Telling a reader they can detect something they
+ * cannot is worse than saying nothing, so the sentence below is conditional and
+ * points at the human review, which is the guarantee that is actually true.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+export const AI_DISCLOSURE = Object.freeze([
+  "The code and the prose here are written with AI assistance. The model is " +
+    "Anthropic's Claude, driven through Claude Code, and it reaches this site " +
+    "through exactly the same publishing API and the same gates a person does.",
+  "Nothing goes public on a model's say-so. Making a post public for the first " +
+    "time is reserved to me and the reservation is enforced in code, not asked " +
+    "for in a prompt: an agent that attempts it is refused by name.",
+  "Every published post has been read and edited by me before it went live, so " +
+    "what you are reading is human-reviewed writing I am answerable for rather " +
+    "than model output passed straight through.",
+  "Where a provider marks its model's output in a machine-readable way, that " +
+    "mark does not survive being edited, so it is not something you can check " +
+    "on this page. The review above is the guarantee instead, which is why it " +
+    "is stated as a practice and not as a badge.",
 ]);
 
 /** Fragment ids, for a gate that needs the set rather than the order. */
@@ -272,6 +321,10 @@ export function colophonPageInput(stack, features) {
     if (id === "security") {
       // The page renders these sentences; the index gets the same ones.
       return SECURITY_TRADEOFF.join(" ");
+    }
+    if (id === "ai") {
+      // The page renders these sentences; the index gets the same ones.
+      return AI_DISCLOSURE.join(" ");
     }
     if (id === "not-adopted") {
       // `statusLabel`, never `n.status`. The page renders the label, so the

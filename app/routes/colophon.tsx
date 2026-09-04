@@ -5,6 +5,7 @@ import {
   COLOPHON_DESCRIPTION,
   COLOPHON_INTRO,
   COLOPHON_SECTIONS,
+  AI_DISCLOSURE,
   SECURITY_TRADEOFF,
   COLOPHON_TITLE,
   statusLabel,
@@ -287,6 +288,18 @@ export default function Colophon() {
             */}
             <SectionHead id="security" />
             {SECURITY_TRADEOFF.map((sentence) => (
+              <p key={sentence.slice(0, 32)}>{sentence}</p>
+            ))}
+
+            {/*
+              The AI disclosure, rendered from the SAME constant the search
+              index is built from, exactly as the security tradeoff above is.
+              Plain paragraphs: this is the section a reader is most likely to
+              have arrived for, and it should read as prose rather than as a
+              compliance notice.
+            */}
+            <SectionHead id="ai" />
+            {AI_DISCLOSURE.map((sentence) => (
               <p key={sentence.slice(0, 32)}>{sentence}</p>
             ))}
 

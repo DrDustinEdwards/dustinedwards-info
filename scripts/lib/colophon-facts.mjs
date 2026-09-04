@@ -44,7 +44,7 @@
  * @see app/lib/colophon-sections.mjs, scripts/verify-live.mjs
  */
 
-import { SECURITY_TRADEOFF, statusLabel } from "../../app/lib/colophon-sections.mjs";
+import { AI_DISCLOSURE, SECURITY_TRADEOFF, statusLabel } from "../../app/lib/colophon-sections.mjs";
 
 /**
  * Element-delimited, so a token cannot pass on a neighbour's substring.
@@ -114,6 +114,15 @@ export function colophonFacts(stack, features, id) {
      * This is the branch whose absence crashed verify-live after ship window 8.
      */
     return SECURITY_TRADEOFF.map(el);
+  if (id === "ai")
+    /*
+     * The sentences themselves, from the SAME constant the record body is built
+     * from, and the page renders each as its own `<p>` so the element
+     * delimiters are exact. Identical treatment to `security` above, and added
+     * WITH the section rather than after a deploy crashed on its absence, which
+     * is the defect this file's header records.
+     */
+    return AI_DISCLOSURE.map(el);
   if (id === "not-adopted")
     return stack.notAdopted.flatMap((/** @type {any} */ n) => [
       `${n.name} <`,
