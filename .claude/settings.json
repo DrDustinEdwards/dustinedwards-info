@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "OPERATOR_TOKEN_FILE": "C:\\Users\\email\\.dustinedwards-operator-token"
+  },
   "permissions": {
     "allow": [
       "Bash(git:*)",
