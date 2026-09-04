@@ -556,8 +556,17 @@ export function PostEditor({
             them in this browser's crash net, and they are not committed.
           </p>
           <div className="editor-leave-actions">
+            {/*
+              "Stay here", NOT "Stay and save". Found in the live replay of this
+              guard: the label read "Stay and save" and the handler only calls
+              `reset()`, so the button returned the author to the editor with the
+              changes still uncommitted while promising it had saved them. A
+              control that names an action it does not take is worse than one
+              with no label at all, and on the one screen whose whole subject is
+              whether the work is committed.
+            */}
             <button type="button" className="btn" onClick={() => blocker.reset()}>
-              Stay and save
+              Stay here
             </button>
             <button type="button" className="btn-ghost" onClick={() => blocker.proceed()}>
               Leave without saving
