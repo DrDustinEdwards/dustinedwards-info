@@ -690,6 +690,14 @@ const ROUTE_CEILINGS = {
    * drifting apart by whichever happened to be measured later.
    */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 5800, total: 6800 },
+  /*
+   * MEASURED 2026-09-04 through this gate on a fresh build: css 4797 over three
+   * sheets, 5615 total, which is the tag archive's figure to the byte because
+   * it is the same page shape linking the same two stylesheets. The ceilings
+   * are the tag archive's for the same reason: one bar for one kind of page,
+   * rather than two that drift apart by whichever was measured later.
+   */
+  "/blog/series/:series": { id: "routes/blog.series.$series", css: 5800, total: 6800 },
   "/search": { id: "routes/search", css: 6100, total: 8700 },
   "/projects": { id: "routes/projects", css: 5300, total: 6300 },
   "/colophon": { id: "routes/colophon", css: 5700, total: 6600 },
