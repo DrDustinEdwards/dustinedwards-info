@@ -54,12 +54,20 @@ const TEST_DIR = join(root, "test", "worker");
  * before this notices. The margin only ever widens on its own, which is the
  * drift `check:tests` recorded happening five times.
  */
-/* 5 against 6 measured 2026-08-29 by RUNNING the gate. */
-const MINIMUM_FILES = 5;
-/* 62 against 66, re-measured 2026-09-04 by RUNNING the gate after the fixed
-   window case landed. The file floor catches a file LEAVING; this one catches a
-   file being hollowed out in place, which no file count can see. */
-const MINIMUM_CASES = 62;
+/* 6 against 7, re-measured 2026-09-04 by RUNNING the gate after
+   webmention.test.ts landed. It was 5 against 6. One below the measurement, so
+   a single file leaving the *.test.ts pattern trips it, which is the same
+   relationship the previous pair had. */
+const MINIMUM_FILES = 6;
+/* 90 against 96, re-measured 2026-09-04 by RUNNING the gate after the
+   webmention cases landed. It was 62 against 66, taken the same day after the
+   fixed-window case. Taken TWICE during that session and it moved between
+   readings, 89 then 96, because the moderation queue's confirmation cases were
+   written after the first: a measurement is only true of the commit it was
+   taken in, which is why it is re-run rather than adjusted. The file floor
+   catches a file LEAVING; this one catches a file being hollowed out in place,
+   which no file count can see. */
+const MINIMUM_CASES = 90;
 
 let checks = 0;
 let failures = 0;
