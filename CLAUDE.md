@@ -238,9 +238,11 @@ Three things this repo has been bitten by, all in `core.md` with the measurement
 - **Every gate verifies DISK, not HEAD.** A gate can be green while its subject is uncommitted.
 - **`git diff <path>` before `git add <path>`.** A named path is not a scoped change if the file carries edits you did not write.
 
-**`check:content` RUNS ITSELF BEFORE A PUSH THAT TOUCHED `app/` OR `content/`, since 2026-08-26.** `.claude/hooks/pre-push-content.sh`, registered on Bash beside `scoped-git-add.sh`, diffs `@{upstream}..HEAD` and blocks the push if the gate fails. It exists because two CI-red pushes in two days were the same shape and neither was a content edit: a new file under `app/` moves the count of sources citing a template asset, and adding a route does not look like a content change. The hook prints its own fix when it fires.
+**`npm run lint` RUNS BEFORE EVERY PUSH AND `check:content` BEFORE ONE THAT TOUCHED `app/` OR `content/`, since 2026-08-26 and 2026-09-04.** `.claude/hooks/pre-push-content.sh`, registered on Bash beside `scoped-git-add.sh`, blocks the push if either fails. Both replay a CI-red push whose cause was invisible locally: lint is a separate CI step no tier runs, and a new file under `app/` moves the template-refs count. Grounds and the fix are in the hook.
 
 **It narrows the window and does not close it.** It fires on a push made through the agent's Bash tool and cannot fire on one typed into a terminal. CI is still what cannot be bypassed. Grounds, including why there is no `.githooks`, are in the hook file.
+
+**TWO HOOKS GUARD THE DEPLOY DOOR, since 2026-09-04.** `pre-ship-upstream.sh` refuses `npm run ship` when HEAD is behind upstream, because ship deploys local HEAD and a stale tip satisfies rule 16 with a sha that is green and not the tip. `no-direct-deploy.sh` blocks `wrangler deploy`, `versions upload`, `npm run deploy` and non-SELECT `d1 execute`; read-only wrangler passes.
 
 Unchanged: destructive operations stay with Dustin, and anything touching money paths or auth secrets is flagged before it lands.
 
