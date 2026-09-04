@@ -662,14 +662,21 @@ console.log("\ncheck:browser\n");
  * The registry's own docblock calls the leftover the case it exists for, and
  * this is the shape of leftover it cannot see.
  *
- * ## WHAT AN UNCLEARED PORT ACTUALLY COSTS, which is worse than a failure
+ * ## WHAT AN UNCLEARED PORT COST BEFORE `--strictPort`, which was worse than a
+ * failure
  *
- * `vite preview` has no `strictPort`, so it does NOT refuse. Measured the same
- * day: it printed "Port 4173 is in use, trying another one..." and bound 4174.
- * The gate would then poll 4173, get an answer from LAST RUN'S BUILD, and run
- * every public case against a build nobody asked about while reporting on the
- * working tree. A refusal is loud. This is a silent wrong answer, which is the
- * failure this file spends the most words guarding against elsewhere.
+ * `vite preview` DEFAULTS to falling back. Measured 2026-09-03: it printed
+ * "Port 4173 is in use, trying another one..." and bound 4174. The gate then
+ * polled 4173, was answered from LAST RUN'S BUILD, and would have run every
+ * public case against a build nobody asked about while reporting on the working
+ * tree. A refusal is loud. That was a silent wrong answer, which is the failure
+ * this file spends the most words guarding against elsewhere.
+ *
+ * The spawn passes `--strictPort` now, so the fallback cannot happen. This
+ * probe still runs first and still does the useful half: strictPort turns a
+ * held port into a crash, and this turns the gate's OWN leftover into a
+ * cleanup, which is the difference between a run that works and one that
+ * refuses until somebody reads a pid.
  *
  * ## KILLING IS STILL EARNED, NEVER ASSUMED
  *
@@ -836,8 +843,24 @@ const recordServerOutput = (chunk) => {
   }
 };
 
+/*
+ * `--strictPort`, and it is the difference between a failure and a WRONG ANSWER.
+ *
+ * Measured 2026-09-03: without it `vite preview` does not refuse an occupied
+ * port. It prints "Port 4173 is in use, trying another one..." and binds 4174.
+ * The gate then polls 4173, is answered by whatever is still sitting there,
+ * and runs every public case against LAST RUN'S BUILD while its banner says it
+ * is observing the working tree. Every assertion below would be true of a build
+ * nobody asked about.
+ *
+ * The port preflight above already clears or refuses a holder, so this is the
+ * belt rather than the braces. It is worth having anyway: the preflight can
+ * only act on what it can see, and a process that binds 4173 in the seconds
+ * between the probe and this spawn is invisible to it. This makes that race a
+ * loud crash instead of a confident wrong answer.
+ */
 const server = DRIVES_PREVIEW
-  ? spawn("npx", ["vite", "preview", "--port", String(PORT)], {
+  ? spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"], {
       cwd: root,
       shell: true,
       stdio: ["ignore", "pipe", "pipe"],
