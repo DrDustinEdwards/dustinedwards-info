@@ -317,9 +317,98 @@ export const searchDocs = sqliteTable(
   ],
 );
 
+/**
+ * WEBMENTIONS RECEIVED FROM OTHER SITES. Grounds in drizzle/0014_webmentions.sql.
+ *
+ * ## THE FIRST TABLE HERE THAT IS NEITHER AUTHORED NOR DERIVED
+ *
+ * Every other content table on this site is one or the other. `posts` is
+ * authored in the repository; `media`, `media_refs` and `search_docs` are
+ * DERIVED and converge toward the repository and the bucket under hard rule 18.
+ * A webmention row is neither: it was written by a stranger's POST, and there
+ * is no source to converge it back to. So rule 18 does not reach this table,
+ * a rebuild cannot repair it, and the only bound on its size is the one the
+ * endpoint enforces on the way in. `app/routes/webmention.ts` states the four
+ * bounds and why they are the whole answer.
+ *
+ * ## NO IP COLUMN, AND THERE NEVER IS ONE
+ *
+ * The per-IP rate limit is a Durable Object counter keyed on `wm:<ip>`, which
+ * expires with its window and stores no row. Nothing about the sender is
+ * recorded here beyond what the sender's own PAGE says: a URL they published,
+ * a name from their h-card, and a sentence of their own prose. That is what
+ * `/privacy` claims, and this absence is what makes the claim true.
+ *
+ * ## EVERY STRING IS PLAIN TEXT
+ *
+ * `author_name`, `author_url` and `excerpt` are read out of a document this
+ * site does not control. They are stored as text, never as markup, and the H2
+ * render is escaped text plus one validated anchor. A column that held HTML
+ * would make every reader of this table a potential injection site.
+ */
+export const webmentions = sqliteTable(
+  "webmentions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** Absolute http(s) URL of the page that linked here. */
+    sourceUrl: text("source_url").notNull(),
+    /**
+     * THE POST SLUG, NOT A URL, and the difference is the point.
+     *
+     * A stored target URL would carry the origin it was received on, and this
+     * site answers on workers.dev today and on the apex after cutover. Rows
+     * written before the move would then name a host the render no longer
+     * uses, and deduplication would treat the two spellings of one post as two
+     * targets. The slug is what `posts` is keyed by and it does not move.
+     */
+    targetSlug: text("target_slug").notNull(),
+    /**
+     * unverified -> pending | failed, then pending -> approved | rejected.
+     *
+     * `unverified` is what the endpoint writes before it has fetched anything,
+     * so a row exists for the global cap to count from the first moment. Only
+     * `approved` will ever render (H2), which is why an unfetched or refused
+     * mention is inert rather than merely unshown.
+     */
+    status: text("status", {
+      enum: ["unverified", "pending", "approved", "rejected", "failed"],
+    }).notNull(),
+    authorName: text("author_name"),
+    authorUrl: text("author_url"),
+    /** Plain text, at most 280 characters. Never markup. */
+    excerpt: text("excerpt"),
+    /** One of the fixed reasons in app/lib/webmention/verify.server.ts. */
+    failureReason: text("failure_reason"),
+    receivedAt: integer("received_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    verifiedAt: integer("verified_at", { mode: "timestamp" }),
+    decidedAt: integer("decided_at", { mode: "timestamp" }),
+  },
+  (t) => [
+    check(
+      "webmentions_status_check",
+      sql`${t.status} in ('unverified', 'pending', 'approved', 'rejected', 'failed')`,
+    ),
+    /**
+     * ONE ROW PER (SOURCE, TARGET). The third of the four bounds.
+     *
+     * A sender re-announcing the same mention updates the row it already has
+     * rather than adding one, so a loop against this endpoint cannot grow the
+     * table at all: the ceiling is the corpus size times the number of distinct
+     * pages on the internet that link to it, which is a real number rather than
+     * a function of how fast somebody can POST.
+     */
+    uniqueIndex("webmentions_source_target_idx").on(t.sourceUrl, t.targetSlug),
+    /** Covers the moderation queue's grouping and the retention sweep's window. */
+    index("webmentions_status_received_idx").on(t.status, t.receivedAt),
+  ],
+);
+
 export type Post = typeof posts.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Media = typeof media.$inferSelect;
 export type MediaRef = typeof mediaRefs.$inferSelect;
 export type SearchDoc = typeof searchDocs.$inferSelect;
+export type Webmention = typeof webmentions.$inferSelect;

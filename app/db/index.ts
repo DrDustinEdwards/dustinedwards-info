@@ -17,6 +17,11 @@ import {
 import { drizzle } from "drizzle-orm/d1";
 
 import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
+import {
+  FAILED_RETENTION_DAYS,
+  REJECTED_RETENTION_DAYS,
+  daysInMilliseconds,
+} from "../lib/webmention/retention.mjs";
 import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { seriesSlug } from "../lib/series-path.mjs";
@@ -30,6 +35,7 @@ import {
   posts,
   settings,
   tags,
+  webmentions,
   type Media,
   type MediaRef,
 } from "./schema";
@@ -1675,4 +1681,272 @@ export async function getSetting(env: Env, key: string) {
     .where(eq(settings.key, key))
     .limit(1);
   return rows[0]?.value ?? null;
+}
+
+/* Webmentions ---------------------------------------------------------------
+ *
+ * The received-mention queue, item H1. These sit in the chokepoint file with
+ * every other reader for one reason: it is where a person looks to find out
+ * what this site asks its database. Section 6 of `check:invariants` polices
+ * `posts` readers and knows nothing about this table, so nothing here is
+ * enforced by that gate; the placement is a convention and the visibility rule
+ * is enforced somewhere else, at the one place it applies. `webmentionTarget`
+ * below is that place, and it composes `publiclyVisible()` through
+ * `isBlogPost()`.
+ */
+
+/**
+ * The statuses the global cap counts: a mention that is still open.
+ *
+ * Stated once and read by both the counter and the retention sweep, because
+ * "open" is a claim about which states are unfinished, and two spellings of it
+ * would let the cap and the sweep disagree about what they are bounding.
+ */
+const OPEN_WEBMENTION_STATUSES = ["unverified", "pending"] as const;
+
+/**
+ * Does this slug name a post a stranger is allowed to mention?
+ *
+ * COMPOSES `publiclyVisible()` through `isBlogPost()`, which is the whole point
+ * of the function existing rather than the route reading `posts` itself. Hard
+ * rule 1's chokepoint is this file, and a draft or scheduled post must not be a
+ * valid webmention target: accepting one would let a sender confirm that an
+ * unpublished slug exists by watching which answer they got.
+ *
+ * Returns a BOOLEAN and never the row, so nothing about the post can escape
+ * through the endpoint's answer even by accident.
+ */
+export async function webmentionTarget(env: Env, slug: string): Promise<boolean> {
+  const rows = await getDb(env)
+    .select({ slug: posts.slug })
+    .from(posts)
+    .where(and(eq(posts.slug, slug), isBlogPost()))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * How many mentions are still open. The FOURTH bound, measured rather than
+ * assumed: the endpoint refuses at the ceiling instead of trusting that the
+ * other three bounds add up to one.
+ */
+export async function countOpenWebmentions(env: Env): Promise<number> {
+  const rows = await getDb(env)
+    .select({ n: count() })
+    .from(webmentions)
+    .where(inArray(webmentions.status, [...OPEN_WEBMENTION_STATUSES]));
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * Write or reset the row for one (source, target). Returns its id.
+ *
+ * A RE-SENT MENTION RESETS RATHER THAN DUPLICATING, which is the third bound.
+ * The decision fields go back to null with it: a sender who edits their page
+ * after a rejection is making a new claim, and leaving `decided_at` in place
+ * would show the admin a rejected row whose evidence had changed underneath the
+ * decision.
+ *
+ * `received_at` is stamped explicitly on the update arm because the column
+ * default only applies to an insert, and a mention re-sent a year later is
+ * received now.
+ */
+export async function receiveWebmention(
+  env: Env,
+  fields: { sourceUrl: string; targetSlug: string; now?: Date },
+): Promise<number> {
+  const now = fields.now ?? new Date();
+  const rows = await getDb(env)
+    .insert(webmentions)
+    .values({
+      sourceUrl: fields.sourceUrl,
+      targetSlug: fields.targetSlug,
+      status: "unverified",
+      receivedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [webmentions.sourceUrl, webmentions.targetSlug],
+      set: {
+        status: "unverified",
+        receivedAt: now,
+        verifiedAt: null,
+        decidedAt: null,
+        failureReason: null,
+        authorName: null,
+        authorUrl: null,
+        excerpt: null,
+      },
+    })
+    .returning({ id: webmentions.id });
+  /*
+   * The upsert always writes exactly one row, so the fallback is unreachable.
+   * ZERO IS NOT SUBSTITUTED: it would be a valid-looking rowid naming nothing,
+   * which is hard rule 13's shape. A negative id cannot be a rowid, so a caller
+   * that ever received one would fail on its next statement rather than quietly
+   * updating the wrong row.
+   */
+  return rows[0]?.id ?? -1;
+}
+
+/** What verification concluded about one row. */
+export type WebmentionVerdict =
+  | {
+      status: "pending";
+      authorName: string | null;
+      authorUrl: string | null;
+      excerpt: string | null;
+    }
+  | { status: "failed"; failureReason: string };
+
+/**
+ * Record what the verifier found.
+ *
+ * SCOPED TO A ROW STILL IN `unverified`. Verification runs in `waitUntil`, so a
+ * second POST for the same (source, target) can reset the row while the first
+ * fetch is in flight; without this clause the older fetch's verdict would land
+ * on the newer row, and the newer fetch would then write on top of a state it
+ * never observed. The write that loses is the stale one, which is the correct
+ * direction.
+ */
+export async function recordWebmentionVerdict(
+  env: Env,
+  id: number,
+  verdict: WebmentionVerdict,
+  now: Date = new Date(),
+): Promise<void> {
+  const shared = { verifiedAt: now, decidedAt: null };
+  const set =
+    verdict.status === "pending"
+      ? {
+          ...shared,
+          status: "pending" as const,
+          failureReason: null,
+          authorName: verdict.authorName,
+          authorUrl: verdict.authorUrl,
+          excerpt: verdict.excerpt,
+        }
+      : {
+          ...shared,
+          status: "failed" as const,
+          failureReason: verdict.failureReason,
+        };
+  await getDb(env)
+    .update(webmentions)
+    .set(set)
+    .where(and(eq(webmentions.id, id), eq(webmentions.status, "unverified")));
+}
+
+/**
+ * Every mention, for the moderation queue.
+ *
+ * UNFILTERED, and that is what the page is for: an admin moderating a queue has
+ * to see what is in it, failures included. Reached only from `/admin/mentions`,
+ * behind the admin layout's middleware.
+ *
+ * Ordered newest first WITHIN a status; the page does the grouping, because the
+ * order the four groups are shown in is a presentation decision and SQLite has
+ * no ordering over the status values that would express it.
+ */
+export async function listWebmentionsForAdmin(env: Env) {
+  return getDb(env).select().from(webmentions).orderBy(desc(webmentions.receivedAt));
+}
+
+/**
+ * The statuses a decision may be made from: a mention whose evidence has been
+ * checked. `unverified` has no evidence yet and `failed` has evidence against
+ * it, so neither is a thing to approve, and a `where` clause says so rather
+ * than the page's button layout saying it.
+ */
+const DECIDABLE_WEBMENTION_STATUSES = ["pending", "approved", "rejected"] as const;
+
+/**
+ * Approve or reject one mention.
+ *
+ * A DECISION IS REVERSIBLE, which is why `approved` and `rejected` are in the
+ * decidable set alongside `pending` rather than only `pending` being there. An
+ * approve that could not be undone by a reject would be a one-way door on a
+ * page whose whole job is judging strangers' claims, and `check:destructive`
+ * would be right to call it destructive. It is not: no column is removed, the
+ * row keeps its evidence, and the inverse button is on the same row.
+ */
+export async function decideWebmention(
+  env: Env,
+  id: number,
+  status: "approved" | "rejected",
+  now: Date = new Date(),
+): Promise<void> {
+  await getDb(env)
+    .update(webmentions)
+    .set({ status, decidedAt: now })
+    .where(
+      and(
+        eq(webmentions.id, id),
+        inArray(webmentions.status, [...DECIDABLE_WEBMENTION_STATUSES]),
+      ),
+    );
+}
+
+/**
+ * How many rows the sweep WOULD remove right now, by window.
+ *
+ * Exists so the confirmation step can state the quantity at stake instead of
+ * asking an operator to authorise an unknown number. Same predicates as
+ * `sweepWebmentions`, which is the property that makes the number honest; a
+ * count computed a different way would be a second answer to the same question.
+ */
+export async function countExpiringWebmentions(
+  env: Env,
+  now: Date = new Date(),
+): Promise<{ failed: number; rejected: number }> {
+  const db = getDb(env);
+  const failedBefore = new Date(now.getTime() - daysInMilliseconds(FAILED_RETENTION_DAYS));
+  const rejectedBefore = new Date(now.getTime() - daysInMilliseconds(REJECTED_RETENTION_DAYS));
+  const [failed, rejected] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(webmentions)
+      .where(and(eq(webmentions.status, "failed"), lt(webmentions.receivedAt, failedBefore))),
+    db
+      .select({ n: count() })
+      .from(webmentions)
+      .where(and(eq(webmentions.status, "rejected"), lt(webmentions.receivedAt, rejectedBefore))),
+  ]);
+  return { failed: failed[0]?.n ?? 0, rejected: rejected[0]?.n ?? 0 };
+}
+
+/** Remove one mention outright. The only delete an admin makes by hand. */
+export async function deleteWebmention(env: Env, id: number): Promise<void> {
+  await getDb(env).delete(webmentions).where(eq(webmentions.id, id));
+}
+
+/**
+ * The retention sweep. Grounds for both windows: app/lib/webmention/retention.mjs.
+ *
+ * TWO STATEMENTS RATHER THAN ONE WITH AN `OR`, because the two windows are
+ * different lengths and a single predicate would have to carry both cutoffs
+ * anyway. Two also lets the caller report which window removed what, which is
+ * the only part the admin can act on.
+ *
+ * `unverified` and `pending` are untouched at any age, deliberately: they are
+ * exactly what the global cap counts, so expiring them would quietly raise the
+ * cap.
+ */
+export async function sweepWebmentions(
+  env: Env,
+  now: Date = new Date(),
+): Promise<{ failed: number; rejected: number }> {
+  const db = getDb(env);
+  const failedBefore = new Date(now.getTime() - daysInMilliseconds(FAILED_RETENTION_DAYS));
+  const rejectedBefore = new Date(now.getTime() - daysInMilliseconds(REJECTED_RETENTION_DAYS));
+
+  const failed = await db
+    .delete(webmentions)
+    .where(and(eq(webmentions.status, "failed"), lt(webmentions.receivedAt, failedBefore)))
+    .returning({ id: webmentions.id });
+  const rejected = await db
+    .delete(webmentions)
+    .where(and(eq(webmentions.status, "rejected"), lt(webmentions.receivedAt, rejectedBefore)))
+    .returning({ id: webmentions.id });
+
+  return { failed: failed.length, rejected: rejected.length };
 }

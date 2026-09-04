@@ -228,7 +228,8 @@
     "0010_media_role.sql",
     "0011_media_trash_tags.sql",
     "0012_drop_posts_category.sql",
-    "0013_content_hashes.sql"
+    "0013_content_hashes.sql",
+    "0014_webmentions.sql"
   ],
   "gates": [
     "check:admin-ui",
