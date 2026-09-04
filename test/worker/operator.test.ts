@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
 import { runTool } from "~/lib/operator/api.server";
@@ -32,6 +32,15 @@ const bearer = (token: string) =>
     headers: { authorization: `Bearer ${token}` },
   });
 
+/**
+ * The instant every clock-frozen case below starts from.
+ *
+ * ON A MINUTE BOUNDARY deliberately, so a case that advances by the window
+ * length lands exactly on the next one and the arithmetic under test is the
+ * limiter's rather than this fixture's.
+ */
+const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
+
 let gh: GitHubStub;
 
 beforeEach(() => {
@@ -40,6 +49,11 @@ beforeEach(() => {
 
 afterEach(() => {
   gh.restore();
+  /* RESTORED HERE rather than at the end of each case that freezes: a case
+   * that fails mid-assertion never reaches its own cleanup, and a frozen
+   * clock leaking into the next case would be a second failure blamed on the
+   * wrong subject. */
+  vi.useRealTimers();
 });
 
 describe("operator authentication", () => {
@@ -108,7 +122,17 @@ describe("operator metering", () => {
      * The observable form: authenticating N times must not move the limiter.
      * The limit is 30 per 60s, so 40 authentications would refuse if
      * authentication still metered.
+     *
+     * FROZEN FOR THE SAME REASON THE RATE CASE IS, in the other direction.
+     * This one fails OPEN rather than closed: if the defect came back and a
+     * minute boundary landed inside the loop, the reset would hand the loop a
+     * fresh allowance, the metered call at the end would succeed, and the case
+     * would report the defect absent. A regression test whose teeth depend on
+     * the wall clock has teeth only sometimes.
      */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(WINDOW_START);
+
     for (let i = 0; i < 40; i += 1) {
       const auth = await authenticateOperator(operatorEnv(), bearer(testEnv.OPERATOR_TOKEN));
       expect(auth.ok).toBe(true);
@@ -120,6 +144,31 @@ describe("operator metering", () => {
   });
 
   it("REFUSES past the per-operator rate limit, with a Retry-After to hand back", async () => {
+    /*
+     * THE CLOCK IS FROZEN FOR THE WHOLE SPEND, and that is what makes this
+     * case deterministic rather than usually true.
+     *
+     * `AskBudget.hit` keys its counter on
+     * `Math.floor(Date.now() / 1000 / windowSeconds)`, which is a FIXED window
+     * on the wall clock. This loop spends the allowance one unit at a time and
+     * asserts the refusal that follows it. Against the real clock, a minute
+     * boundary landing inside the loop rolls the window and drops the count,
+     * so the refusal arrives late or never arrives at all.
+     *
+     * MEASURED 2026-09-04 by aiming a run at a boundary: a roll at iteration
+     * 25 consumed all 40 iterations and left `refusal` null, which is this
+     * case failing. The refusal index tracks the roll index one for one. It
+     * failed this way three times inside `ship`, most recently at 13,646ms,
+     * and was green on every re-run, because the odds are the loop's duration
+     * over sixty seconds and `ship` is when the machine is slowest.
+     *
+     * ONLY `Date` IS FAKED. The Durable Object call underneath is real RPC,
+     * and faking the timer queue it runs on would be changing a second thing
+     * to fix the first.
+     */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(WINDOW_START);
+
     const id = "rate-limit-case";
     let refusal: Awaited<ReturnType<typeof meterOperator>> | null = null;
     for (let i = 0; i < 40 && refusal === null; i += 1) {
@@ -128,6 +177,44 @@ describe("operator metering", () => {
     }
     expect(refusal).toMatchObject({ ok: false, status: 429 });
     if (refusal && !refusal.ok) expect(refusal.retryAfter).toBeGreaterThan(0);
+  });
+
+  it("RESETS the allowance only when the fixed window ROLLS, not gradually", async () => {
+    /*
+     * THE PROPERTY THE CASE ABOVE DEPENDS ON, stated once rather than assumed
+     * twice. It is here because that dependence used to be on the real clock
+     * and therefore on luck; this replaces it with a statement.
+     *
+     * `AskBudget.hit` keys on `Math.floor(Date.now() / 1000 / windowSeconds)`,
+     * so the window is FIXED rather than sliding: the count does not decay as
+     * time passes, it is dropped whole when the key changes. Both halves are
+     * asserted, because asserting only the reset would pass just as well
+     * against a limiter that had no ceiling at all.
+     *
+     * A LIMIT OF ITS OWN AND AN ID OF ITS OWN, so it neither reads nor moves
+     * the counter any other case is using.
+     */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(WINDOW_START);
+
+    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("op:window-case"));
+
+    for (let i = 0; i < 5; i += 1) {
+      await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: true, used: i + 1 });
+    }
+    /* Spent, and the window has not moved: the next one refuses. */
+    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: false, used: 5 });
+
+    /* ONE SECOND SHORT of the boundary is still the same window. Without this
+     * the case would pass against a limiter that reset on any clock movement
+     * at all. */
+    vi.setSystemTime(WINDOW_START + 59_000);
+    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: false, used: 5 });
+
+    /* Across it, the count is GONE rather than decremented: the next hit is
+     * the first of a new window, not the sixth of an old one. */
+    vi.setSystemTime(WINDOW_START + 60_000);
+    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: true, used: 1 });
   });
 
   it("does NOT serve when the limiter is missing", async () => {

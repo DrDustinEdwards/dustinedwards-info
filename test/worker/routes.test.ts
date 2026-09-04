@@ -1,6 +1,6 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { RouterContextProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cloudflareContext } from "~/lib/context";
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
@@ -39,6 +39,19 @@ function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> 
   context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
   return context;
 }
+
+/**
+ * The instant the rate case freezes at. On a minute boundary, so the window
+ * arithmetic under test is the limiter's rather than this fixture's.
+ */
+const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
+
+/* RESTORED FOR EVERY CASE, not just the one that freezes: a case that fails
+ * mid-assertion never reaches its own cleanup, and a clock left frozen would
+ * surface as a failure in whatever ran next. */
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const themePost = (body: string, headers: HeadersInit = {}) =>
   new Request("https://example.com/theme", {
@@ -352,6 +365,26 @@ describe("/api/health", () => {
      * The limiter is keyed per IP, so this case gets an address of its own and
      * no other case is affected.
      */
+    /*
+     * ## THE CLOCK IS FROZEN ACROSS THE SPEND AND THE ASSERTION BOTH
+     *
+     * The limiter keys its counter on
+     * `Math.floor(Date.now() / 1000 / windowSeconds)`, a FIXED window on the
+     * wall clock. The spend below and the loader call after it have to land in
+     * the SAME window or the case asserts nothing: a minute boundary between
+     * them drops the count and the loader is refused by nothing, having been
+     * handed a fresh allowance.
+     *
+     * This is the same defect as the operator rate case, measured on
+     * 2026-09-04, and it is worth naming that this case is exposed for a
+     * narrower reason: the spend is fast, but the gap between the last `hit`
+     * and the loader's own gate-0 call is where a boundary does the damage.
+     *
+     * Only `Date` is faked, so the loader's real async work is untouched.
+     */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(WINDOW_START);
+
     const ip = "203.0.113.99";
     const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));
     /* The route's own numbers, which it deliberately does not export: 20 per
