@@ -734,3 +734,28 @@
   color: var(--text-muted);
   font-size: 0.8125rem;
 }
+
+/* The origin-requests column. Numerals align on the right so a column of
+   counts is scannable; tabular-nums stops the digits shifting width between
+   rows, which is what makes a column of numbers read as a column. */
+.posts-readership {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.posts-readership-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The absence. Left-aligned and allowed to wrap, because it is a SENTENCE and
+   not a number: right-aligning it under a numeric header would make it read as
+   a value. Muted, but the words carry the meaning on their own, so nothing is
+   lost when the colour is not there. */
+.posts-readership-absent {
+  display: inline-block;
+  max-width: 22ch;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  text-align: left;
+  white-space: normal;
+}

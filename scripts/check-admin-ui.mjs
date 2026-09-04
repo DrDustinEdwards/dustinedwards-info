@@ -45,6 +45,9 @@ import { fileURLToPath } from "node:url";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
+// The caveat is asserted against the CONSTANT, not against a copy of its text,
+// so a paraphrase in the route fails here rather than becoming a second owner.
+import { CACHE_SENTENCE } from "../app/lib/admin/origin-requests.mjs";
 import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
 import {
   DEFAULTS as MEDIA_DEFAULTS,
@@ -256,6 +259,50 @@ const NO_FILTERS = {
   total: POSTS.length,
   scheduledTotal: 1,
   tagOptions: ["cloudflare", "d1", "workers"],
+};
+
+/*
+ * READERSHIP FIXTURES. Roadmap G, and there are four because the column has
+ * four outcomes and three of them are absences that must not look alike.
+ *
+ * The whole point of the column is that a missing number is not a zero, so a
+ * harness that only ever rendered one of these would be asserting the easy
+ * half. `live-complete` and `live-truncated` differ ONLY in `complete`, and the
+ * same slug is missing from `byPath` in both, so the two states are a
+ * controlled pair: same data, one flag, two different renderings.
+ */
+const READERSHIP_LIVE = {
+  status: "live",
+  fetchedAt: "2026-09-04T00:00:00.000Z",
+  data: {
+    windowDays: 7,
+    // `live-one` has a count, `soon` has none. `wip` is absent from both this
+    // and the truncated fixture below, which is what makes the pair work.
+    byPath: { "/blog/live-one": 1234, "/blog/soon": 7 },
+    pathsReturned: 2,
+    complete: true,
+  },
+};
+
+/** Same rows, cut short. The missing slug is now UNKNOWN rather than zero. */
+const READERSHIP_TRUNCATED = {
+  status: "live",
+  fetchedAt: "2026-09-04T00:00:00.000Z",
+  data: {
+    windowDays: 7,
+    byPath: { "/blog/live-one": 1234, "/blog/soon": 7 },
+    pathsReturned: 900,
+    complete: false,
+  },
+};
+
+/** The ordinary state on a development machine: no token, so no number. */
+const READERSHIP_ERROR = {
+  status: "error",
+  data: null,
+  message:
+    "No Analytics Engine read token is configured, so there is nothing to " +
+    "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn this on.",
 };
 
 const ASK_CLEAN = { present: 93, expected: 93, missing: [], stale: [] };
@@ -478,6 +525,27 @@ const STATES = [
     path: "/admin/posts",
     url: "/admin/posts",
     loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
+  },
+  {
+    name: "posts index, readership live",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, readership: READERSHIP_LIVE, ...NO_FILTERS },
+  },
+  {
+    name: "posts index, readership truncated",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, readership: READERSHIP_TRUNCATED, ...NO_FILTERS },
+  },
+  {
+    name: "posts index, readership unavailable",
+    entry: "app/routes/admin.posts._index.tsx",
+    path: "/admin/posts",
+    url: "/admin/posts",
+    loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, readership: READERSHIP_ERROR, ...NO_FILTERS },
   },
   {
     name: "posts index, Ask drifted",
@@ -4369,6 +4437,138 @@ for (const word of FORBIDDEN_COPY) {
       (h) => !pattern.test(withoutCaption(h)),
     );
   }
+}
+
+/* -------------------------------------------------------------------------
+ * THE READERSHIP COLUMN. Roadmap item G, first half.
+ *
+ * The payload baseline cannot see any of this: a `<td>` submits nothing, so
+ * every one of the three new states records the identical tuple set and the
+ * fixture moved only by gaining three names. What is actually at stake here is
+ * whether a MISSING number renders as a missing number, and that is a rendering
+ * property or it is nothing.
+ *
+ * ## THE PAIR THAT MAKES IT MEAN SOMETHING
+ *
+ * `readership live` and `readership truncated` carry the SAME `byPath`, with
+ * the same slug absent from both, and differ in one boolean. So the assertions
+ * below are a controlled comparison rather than two independent readings: if
+ * the component ignored `complete` entirely, one of the two would fail, and a
+ * gate that only ever rendered one of them would pass while it did.
+ * ---------------------------------------------------------------------- */
+
+const READERSHIP_STATES = [
+  "posts index, readership live",
+  "posts index, readership truncated",
+  "posts index, readership unavailable",
+];
+
+/* The honest label, on every state, including the ones with no number to show. */
+for (const state of READERSHIP_STATES) {
+  structural("readership: the column is labelled origin requests", state, (h) =>
+    /<th[^>]*>Origin requests<\/th>/.test(h),
+  );
+}
+
+structural(
+  "readership: a live count renders, formatted",
+  "posts index, readership live",
+  (h) => h.includes("1,234"),
+);
+
+/*
+ * THE MEASURED ZERO. `wip` is absent from `byPath` and the source is complete,
+ * so zero is the answer and the column says zero.
+ */
+structural(
+  "readership: absent from a COMPLETE result renders as zero",
+  "posts index, readership live",
+  (h) => /class="posts-readership-count">0</.test(h),
+);
+
+/*
+ * THE SAME ABSENCE, NOT ZERO, because the result was cut. This is the assertion
+ * ruling 2 exists for and the one a careless implementation fails: the easy
+ * version of this feature renders `byPath[path] ?? 0` and passes everything
+ * above while failing here.
+ */
+structural(
+  "readership: absent from a TRUNCATED result is NOT zero",
+  "posts index, readership truncated",
+  (h) => !/class="posts-readership-count">0</.test(h),
+);
+structural(
+  "readership: a truncated result says why there is no number",
+  "posts index, readership truncated",
+  (h) => h.includes("Not zero.") && h.includes("posts-readership-absent"),
+);
+
+/*
+ * THE DISCRIMINATION CONTROL. The two states differ only in `complete`, so if
+ * their rendered readership cells are identical the flag is not being read and
+ * every assertion above is passing for the wrong reason.
+ */
+{
+  const cells = (/** @type {string} */ h) =>
+    (h.match(/<td class="posts-readership">[\s\S]*?<\/td>/g) ?? []).join("");
+  const live = cells(htmlFor("posts index, readership live"));
+  const cut = cells(htmlFor("posts index, readership truncated"));
+  assert(
+    "structure: readership: complete and truncated render differently",
+    live.length > 0 && cut.length > 0 && live !== cut,
+    `live cells ${live.length} bytes, truncated ${cut.length} bytes, identical: ` +
+      `${live === cut}. One boolean separates these two states; if the markup is ` +
+      `the same the component is not reading it.`,
+  );
+}
+
+/*
+ * THE SOURCE BEING DOWN. Every row carries the reason and NO row carries a
+ * number, which is the pair that stops an absence being read as a zero.
+ */
+structural(
+  "readership: an unavailable source gives every row a reason",
+  "posts index, readership unavailable",
+  (h) => (h.match(/class="posts-readership-absent"/g) ?? []).length === POSTS.length,
+);
+structural(
+  "readership: an unavailable source renders no count at all",
+  "posts index, readership unavailable",
+  (h) => !/class="posts-readership-count"/.test(h),
+);
+
+/*
+ * THE CAVEAT IS THE SHARED SENTENCE, not a second telling of it. Asserted
+ * against the constant itself, so a paraphrase written here later fails rather
+ * than quietly becoming a second owner of a measured claim. Rule 17.
+ */
+for (const state of READERSHIP_STATES) {
+  structural("readership: the caveat is CACHE_SENTENCE verbatim", state, (h) =>
+    h.includes(escapeHtml(CACHE_SENTENCE)) || h.includes(CACHE_SENTENCE),
+  );
+}
+
+/*
+ * THE COPY LAW REACHES THIS PAGE TOO, on the same terms as the panel it takes
+ * its number from: labels claim, prose explains, so the caption is exempt and
+ * every other surface is not. Enumerating the second site is the point; a rule
+ * enforced on one of the two pages showing this number is the "fix in N-1 of N
+ * sites" shape.
+ */
+for (const word of FORBIDDEN_COPY) {
+  const pattern = new RegExp(`\\b${word}\\b`, "i");
+  for (const state of READERSHIP_STATES) {
+    structural(
+      `copy law: "${word}" never labels anything in ${state}`,
+      state,
+      (h) => !pattern.test(withoutCaption(h)),
+    );
+  }
+}
+for (const state of READERSHIP_STATES) {
+  structural(`copy law: ${state} says origin requests`, state, (h) =>
+    /origin requests/i.test(h),
+  );
 }
 
 // The required half. An absence check alone would pass on a blank page.

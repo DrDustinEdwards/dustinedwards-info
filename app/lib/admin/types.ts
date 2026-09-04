@@ -56,3 +56,26 @@ export interface TrafficReport {
   pathsReturned: number;
 }
 
+/**
+ * Origin requests for the whole window, indexed by path, for the post list.
+ *
+ * `byPath` carries only paths that HAD activity. A slug missing from it means
+ * one of two different things and the difference is why `complete` exists: with
+ * `complete` true every path with activity is present, so a missing slug is a
+ * measured zero; with it false the query's limit cut the result and a missing
+ * slug is UNKNOWN. The column renders those two differently and must.
+ *
+ * The number is `SUM(_sample_interval)`, the same sampling-weighted aggregate
+ * the origin-requests panel reports, and it is a FLOOR under readership rather
+ * than a measure of it, for the reason `TrafficRow` states at length.
+ */
+export interface PostReadership {
+  /** Days of history behind every count. */
+  windowDays: number;
+  /** Origin requests by path. Absent path means zero or unknown; see `complete`. */
+  byPath: Record<string, number>;
+  /** Distinct paths with activity in the window, from the total query. */
+  pathsReturned: number;
+  /** Whether `byPath` holds every path with activity, or the limit cut it. */
+  complete: boolean;
+}

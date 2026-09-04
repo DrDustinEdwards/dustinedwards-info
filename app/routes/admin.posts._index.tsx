@@ -17,6 +17,12 @@ import {
   savePost,
 } from "~/lib/editor/publish.server";
 import { copySlugCandidates } from "~/lib/editor/duplicate.mjs";
+import {
+  CACHE_SENTENCE,
+  READERSHIP_ABSENT,
+  postReadershipPath,
+} from "~/lib/admin/origin-requests.mjs";
+import { fetchPostReadership } from "~/lib/admin/traffic.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import {
   askAvailable,
@@ -153,6 +159,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         })
       : Promise.resolve(null);
 
+  /*
+   * A FOURTH INDEPENDENT READ, started here with the other three. Roadmap G.
+   *
+   * Analytics Engine is a fourth backend and shares nothing with D1, AI Search
+   * or the budget Durable Object, so it belongs in the same concurrent group
+   * and the loader's floor stays the SLOWEST of the four rather than their sum.
+   * That is the property the comment above this block measured and it is why
+   * this is a promise rather than an await.
+   *
+   * `fetchPostReadership` never rejects: it returns the error arm of
+   * `SourceResult`, which is what the column renders as an absence with a
+   * reason. So there is no catch here, unlike the budget read.
+   */
+  const readershipPromise = timed(timings, "ae_post_readership", () =>
+    fetchPostReadership(env),
+  );
+
   const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
     Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
   );
@@ -221,6 +244,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
    */
   const budget = await budgetPromise;
 
+  /** Roadmap G. Awaited last of the four; it started first, with the others. */
+  const readership = await readershipPromise;
+
   const payload = {
     posts,
     ask,
@@ -237,6 +263,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     scheduledTotal: all.filter((post) => post.state === "scheduled").length,
     /** Every tag in use, drafts included, for the filter's options. */
     tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
+    /**
+     * Origin requests by path, or the reason there are none. Roadmap G.
+     *
+     * The WHOLE report rather than a per-row number, because the column has to
+     * tell a measured zero from an unasked question and only `complete` and the
+     * error arm carry that. Flattening it to `readership[slug] ?? 0` in the
+     * loader would throw away the distinction ruling 2 turns on.
+     */
+    readership,
   };
 
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
@@ -617,6 +652,41 @@ export default function AdminPosts({
 }: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
+
+  /**
+   * Origin requests for one post's public route, or the reason there is none.
+   *
+   * THREE OUTCOMES AND THEY ARE NOT INTERCHANGEABLE. A number, a measured zero,
+   * or an absence with a sentence. Ruling 2 of the blog roadmap: where the data
+   * source cannot answer, the number is ABSENT and the panel says why, never a
+   * zero and never a dash a reader could read as one.
+   *
+   * The measured zero is a real answer and is rendered as one: the source was
+   * live, the result was complete, and this path had no origin requests in the
+   * window. What it does NOT mean is that nobody read the post, which is what
+   * the caveat under the table is for.
+   *
+   * `readership` is defaulted because `check:admin-ui` renders this component
+   * against fabricated loader data, and a state written before this field
+   * existed must render an honest absence rather than throw.
+   */
+  const readership = loaderData.readership ?? {
+    status: "error" as const,
+    data: null,
+    message: "This view was rendered without a readership source.",
+  };
+  const readershipFor = (slug: string): { count: number } | { absent: string } => {
+    if (readership.status === "error") {
+      return { absent: READERSHIP_ABSENT.source + readership.message };
+    }
+    const count = readership.data.byPath[postReadershipPath(slug)];
+    if (typeof count === "number") return { count };
+    // Absent from the result. Complete means that is a measured zero; truncated
+    // means the query never asked about this path and cannot say.
+    return readership.data.complete
+      ? { count: 0 }
+      : { absent: READERSHIP_ABSENT.truncated };
+  };
 
   /*
    * PENDING STATE, from the router. Every control on this page changes which
@@ -1092,6 +1162,28 @@ export default function AdminPosts({
             */}
             <div className="posts-table-scroll" tabIndex={0} role="region" aria-label="Posts table">
             <table className="posts-table" data-pending={pending || undefined} aria-busy={pending || undefined}>
+              {/*
+                THE CAVEAT, and it is `CACHE_SENTENCE` itself rather than a
+                second telling of it. `app/lib/admin/origin-requests.mjs` owns
+                that sentence and records the probe that produced it; a
+                paraphrase here would be a second copy of a measured claim,
+                free to drift from the measurement. Rule 17.
+
+                IN THE CAPTION, matching the origin-requests panel, and for the
+                same reason its own gate records: a caption is the element whose
+                job is to say what a number is and is not, so it is the one
+                place allowed to name the thing the column is being contrasted
+                against. Every label surface stays plain.
+
+                ONE STRING, not interpolated children, because React SSR splices
+                comment nodes between adjacent text nodes and anything reading
+                the markup back would have to strip them first.
+              */}
+              <caption>
+                {`Origin requests per post over the last ${
+                  readership.status === "live" ? readership.data.windowDays : 0
+                } days, sampling weighted. ` + CACHE_SENTENCE}
+              </caption>
               <thead>
                 <tr>
                   <th scope="col" className="posts-check">
@@ -1113,6 +1205,10 @@ export default function AdminPosts({
                   <th scope="col">Status</th>
                   <th scope="col">Title</th>
                   <th scope="col">Publish date</th>
+                  {/* The honest label, matching the panel that owns this data.
+                      It says what the number IS, and the caption under the
+                      table says what it is not. */}
+                  <th scope="col">Origin requests</th>
                   <th scope="col">Actions</th>
                 </tr>
               </thead>
@@ -1172,6 +1268,27 @@ export default function AdminPosts({
                         in {post.scheduledInDays} day{post.scheduledInDays === 1 ? "" : "s"}
                       </span>
                     ) : null}
+                  </td>
+                  {/*
+                    ORIGIN REQUESTS for this post's public route. Roadmap G.
+                    A number, a measured zero, or an absence carrying its own
+                    sentence: never a bare dash, which reads as zero.
+                  */}
+                  <td className="posts-readership">
+                    {(() => {
+                      const value = readershipFor(post.slug);
+                      return "count" in value ? (
+                        <span className="posts-readership-count">
+                          {value.count.toLocaleString()}
+                        </span>
+                      ) : (
+                        // The reason is the content, not a tooltip: a title
+                        // attribute is invisible to touch and to a screen
+                        // reader that does not announce it, and this sentence
+                        // is the whole point of the cell.
+                        <span className="posts-readership-absent">{value.absent}</span>
+                      );
+                    })()}
                   </td>
                   <td>
                     <div className="posts-actions">
