@@ -92,15 +92,17 @@ const TEST_DIR = join(root, "test");
  * Stated as the invariant rather than as a number, because a number here is a
  * third copy of the two constants below.
  */
-/* 58 against 62 measured 2026-09-03 by RUNNING the gate, after
+/* 59 against 63 measured 2026-09-04 by RUNNING the gate, after
+   post-readership.test.mjs landed with roadmap item G. It read 58 against 62
+   from 2026-09-03. Previously:
    editor-duplicate.test.mjs landed with the section F row actions. It read 56
    against 60 from 2026-08-30, and the set has grown twice since, so the margin
    had widened on its own, which is the drift the paragraph above names. */
-const MINIMUM_FILES = 58;
-/* 601 against 640, re-measured 2026-09-03 in the same commit, from the same
+const MINIMUM_FILES = 59;
+/* 607 against 646, re-measured 2026-09-04 in the same commit, from the same
    run. The file floor above catches a file LEAVING; this one catches a file
    being hollowed out in place, which no file count can see. */
-const MINIMUM_TESTS = 601;
+const MINIMUM_TESTS = 607;
 
 let checks = 0;
 let failures = 0;

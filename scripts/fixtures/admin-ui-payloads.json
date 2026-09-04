@@ -8,6 +8,33 @@
     "POST /admin/posts | intent=sync-ask | ",
     "POST /admin/posts | intent=unpublish | slug"
   ],
+  "posts index, readership live": [
+    "GET /admin/posts | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
+  ],
+  "posts index, readership truncated": [
+    "GET /admin/posts | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
+  ],
+  "posts index, readership unavailable": [
+    "GET /admin/posts | (none) | q,status,tag",
+    "POST /admin/posts | (none) | ",
+    "POST /admin/posts | intent=duplicate | slug",
+    "POST /admin/posts | intent=regenerate | ",
+    "POST /admin/posts | intent=reset-ask-budget | ",
+    "POST /admin/posts | intent=sync-ask | ",
+    "POST /admin/posts | intent=unpublish | slug"
+  ],
   "posts index, Ask drifted": [
     "GET /admin/posts | (none) | q,status,tag",
     "POST /admin/posts | (none) | ",

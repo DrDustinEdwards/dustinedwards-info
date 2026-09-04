@@ -77,3 +77,50 @@ export const CACHE_SENTENCE =
   "actually requested is therefore higher than these numbers, by however much " +
   "the edge served. A point also takes about a minute to arrive, 72 seconds when " +
   "it was measured, so a request from the last minute may not be here yet.";
+
+/**
+ * Paths the per-post readership read asks for.
+ *
+ * `trafficQuery` is ORDERED BY origin_requests DESC and LIMITed, so a limit is
+ * a cut, not a page. This one is set well above the number of distinct paths
+ * this site has ever had so the cut does not bite, and the caller compares it
+ * against `pathsReturned` to KNOW whether it bit rather than assuming it did
+ * not. When it does bite, a post missing from the result is reported as
+ * UNKNOWN, never as zero: the query cannot tell "no origin requests" from
+ * "below the cut" and neither may the column.
+ */
+export const READERSHIP_PATH_LIMIT = 200;
+
+/**
+ * The public route whose origin requests are a post's readership floor.
+ *
+ * `recordTraffic` in `workers/app.ts` writes `url.pathname` verbatim for
+ * anything that is not a preview, so this is the exact key to look up. HTML
+ * only and status 200 only, which means the markdown twin and every redirect
+ * are already out of the dataset and out of this number.
+ *
+ * @param {string} slug
+ * @returns {string}
+ */
+export function postReadershipPath(slug) {
+  return `/blog/${slug}`;
+}
+
+/**
+ * Why a post has no number, in the reader's words.
+ *
+ * ONE SENTENCE PER CAUSE, because "unavailable" covers two situations that a
+ * reader would act on differently: the source is off, or the source is on and
+ * this post fell outside what was asked for. Ruling 2 of the blog roadmap says
+ * the fallback is that the number is ABSENT and the panel says which readers it
+ * cannot see. A dash with no sentence beside it reads as zero, which is the one
+ * thing this must never be mistaken for.
+ */
+export const READERSHIP_ABSENT = {
+  /** The source could not be read at all. Carries the source's own message. */
+  source: "No number: ",
+  /** The source answered, but this path was below the query's cut. */
+  truncated:
+    "No number: more paths had activity than this view asks for, so this post " +
+    "may or may not be among them. Not zero.",
+};
