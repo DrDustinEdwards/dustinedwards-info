@@ -117,10 +117,32 @@ const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
  * a number that already has two owners bound by check:invariants section 25.
  */
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
-import { ChildRegistry, descendantPids, killTree, readProcessTable } from "./lib/child-processes.mjs";
+import {
+  ChildRegistry,
+  descendantPids,
+  killTree,
+  normaliseCommand,
+  portListeners,
+  readProcessTable,
+} from "./lib/child-processes.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
+
+/**
+ * What a live command line must STILL contain before this gate is allowed to
+ * kill the process holding it.
+ *
+ * DECLARED HERE rather than beside the spawn that uses it, because the port
+ * preflight further down runs BEFORE anything is spawned and needs the same
+ * needles. One spelling, one owner: two lists would drift and the drift would
+ * show up as a refusal to clean up the gate's own leftover.
+ *
+ * MEASURED against the real holder 2026-09-03. The process that binds 4173 is
+ * `node .../vite/bin/vite.js preview --port 4173`, not the npx or cmd wrappers
+ * above it, so all three needles are satisfied by the listener itself.
+ */
+const VITE_NEEDLES = ["vite", "preview", String(PORT)];
 
 /**
  * WHAT THIS GATE STARTED, so the next run can clear what a kill left behind.
@@ -627,6 +649,110 @@ console.log("\ncheck:browser\n");
 }
 
 /*
+ * PREFLIGHT, SECOND HALF: ask the OS who is holding the port, INDEPENDENTLY of
+ * the registry above.
+ *
+ * ## WHY THE FIRST HALF IS NOT ENOUGH, measured rather than reasoned about
+ *
+ * The registry is written by the process that dies. A hard kill early enough
+ * leaves a `vite preview` on 4173 with NO ENTRY NAMING IT, and the sweep above
+ * then reports `0 cleared, 0 stale, 0 reused` while the port is occupied.
+ * Measured 2026-09-03 with pid 21108: a preview server survived its parent's
+ * death, the registry file was empty, and preflight said zero of everything.
+ * The registry's own docblock calls the leftover the case it exists for, and
+ * this is the shape of leftover it cannot see.
+ *
+ * ## WHAT AN UNCLEARED PORT ACTUALLY COSTS, which is worse than a failure
+ *
+ * `vite preview` has no `strictPort`, so it does NOT refuse. Measured the same
+ * day: it printed "Port 4173 is in use, trying another one..." and bound 4174.
+ * The gate would then poll 4173, get an answer from LAST RUN'S BUILD, and run
+ * every public case against a build nobody asked about while reporting on the
+ * working tree. A refusal is loud. This is a silent wrong answer, which is the
+ * failure this file spends the most words guarding against elsewhere.
+ *
+ * ## KILLING IS STILL EARNED, NEVER ASSUMED
+ *
+ * The OS names a pid. That is not permission. The pid's live command line is
+ * read and has to satisfy the same needles the registry uses, and anything else
+ * REFUSES THE RUN and names the pid rather than killing it. The needles cannot
+ * tell this gate's leftover from a `vite preview` Dustin started by hand on the
+ * same port, and that is accepted: the gate is about to bind that port either
+ * way, and the server it would find there is serving a build this run did not
+ * make. What the needles DO exclude is everything that is not a vite preview
+ * on this port, which is every process whose loss would cost him something.
+ *
+ * Only when this run is going to bind the port. Under PUBLIC_ORIGIN nothing is
+ * served locally, so a holder is somebody else's business.
+ */
+if (DRIVES_PREVIEW) {
+  const holders = portListeners(PORT);
+  if (holders === null) {
+    // Not collapsed into "free". A probe that cannot read a listing reports
+    // that it could not, and the run continues, because refusing here would
+    // make an unreadable netstat a hard stop for a port that is usually free.
+    console.log(`  preflight: port ${PORT} could NOT be probed, so a holder would go unseen`);
+  } else if (holders.length === 0) {
+    console.log(`  preflight: port ${PORT} probed directly, 0 holders`);
+  } else {
+    const table = readProcessTable();
+    /** @type {{ pid: number, command: string }[]} */
+    const strangers = [];
+    let killed = 0;
+    for (const pid of holders) {
+      const live = table.get(pid);
+      const matches =
+        live && VITE_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)));
+      if (!matches) {
+        strangers.push({ pid, command: live?.command ?? "(no command line could be read)" });
+        continue;
+      }
+      if (killTree(pid)) killed += 1;
+      else strangers.push({ pid, command: `${live.command} (matched, but the kill reported no success)` });
+    }
+
+    if (strangers.length > 0) {
+      console.error(
+        `\ncheck:browser REFUSES TO START. Port ${PORT} is held by a process this gate did not launch.`,
+      );
+      for (const stranger of strangers) {
+        console.error(`  pid ${stranger.pid}: ${stranger.command}`);
+      }
+      console.error(
+        "  Nothing was killed. Stop it yourself, or run with PUBLIC_ORIGIN set to drive a deployed origin.",
+      );
+      registry.clear();
+      process.exit(1);
+    }
+
+    /*
+     * THE KILL REPORTING SUCCESS IS NOT THE PORT BEING FREE, so the freeing is
+     * what gets asserted. `taskkill` returns before the socket is released, and
+     * "I killed it" is exactly the class of claim this gate does not accept
+     * from itself anywhere else. The probe is re-run until the port is clear or
+     * the bound runs out, and the bound expiring is a REFUSAL, not a shrug:
+     * binding after a held port is what produced the silent wrong answer above.
+     */
+    const releasedBy = Date.now() + 5000;
+    let stillHeld = portListeners(PORT) ?? [];
+    while (stillHeld.length > 0 && Date.now() < releasedBy) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      stillHeld = portListeners(PORT) ?? [];
+    }
+    if (stillHeld.length > 0) {
+      console.error(
+        `\ncheck:browser REFUSES TO START. Port ${PORT} was still held after killing ${killed} leftover(s): ${stillHeld.join(", ")}`,
+      );
+      registry.clear();
+      process.exit(1);
+    }
+    console.log(
+      `  preflight: port ${PORT} probed directly, ${killed} leftover preview server(s) cleared, port released`,
+    );
+  }
+}
+
+/*
  * This process is registered FIRST, and it is not the obvious entry.
  *
  * The measured shape on 2026-08-31: killing the npm and cmd wrappers ABOVE this
@@ -736,7 +862,6 @@ server?.on("error", (error) => recordServerOutput(`spawn failed: ${error.message
  * recorded separately once the server answers. Recording only this pid would
  * produce a registry that always looks correct and never clears anything.
  */
-const VITE_NEEDLES = ["vite", "preview", String(PORT)];
 if (server?.pid) registry.record(server.pid, "the vite preview server", VITE_NEEDLES);
 
 /*

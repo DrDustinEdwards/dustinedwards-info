@@ -37,6 +37,17 @@
  * the next run reads that list. `taskkill /F /T` walks the tree from a pid we
  * know rather than from a pattern we hope is specific.
  *
+ * ## THE PORT PROBE IS NOT A REVERSAL OF THAT, AND IT IS THE HALF THE REGISTRY
+ * CANNOT HAVE
+ *
+ * `portListeners` below asks the OS who is listening on ONE port. That is not
+ * the scan this file rejects: it names a single number the gate is about to
+ * bind rather than pattern-matching every process on the machine, and it is
+ * still not permitted to kill on the strength of the answer. The command line
+ * check is the same one the registry uses, applied to the pid the OS named.
+ * What it buys is the case the registry is structurally blind to, because the
+ * registry is written by the process that dies.
+ *
  * ## PID REUSE IS THE WHOLE SAFETY PROBLEM
  *
  * A pid in the file is not a claim that the process is ours. It is a claim that
@@ -189,6 +200,78 @@ export function processExists(pid) {
   } catch (error) {
     return /** @type {NodeJS.ErrnoException} */ (error).code === "EPERM";
   }
+}
+
+/**
+ * The pids LISTENING on a TCP port, asked of the OPERATING SYSTEM.
+ *
+ * ## WHY THIS EXISTS ALONGSIDE THE REGISTRY ABOVE
+ *
+ * The registry is written by the process that dies, so it cannot record the one
+ * thing that outlives a hard kill. Measured 2026-09-03: a killed run left a
+ * `vite preview` holding 4173, the registry file was empty because the kill took
+ * the gate before anything was appended, and the next run's preflight reported
+ * `0 cleared, 0 stale, 0 reused` while the port was occupied the whole time. A
+ * cleanup that reads only its own bookkeeping is blind to exactly the case that
+ * bookkeeping was for.
+ *
+ * The port is the fact that does not depend on this repo having written
+ * anything down, which is why the probe goes to the OS and not to a file.
+ *
+ * ## THE MEASURED GOTCHA, AND IT IS THE WHOLE REASON THIS IS NOT A ONE-LINER
+ *
+ * `netstat -ano -p tcp` DOES NOT LIST THE HOLDER. On Windows that flag selects
+ * IPv4 TCP only, and vite binds `[::1]:4173`, which netstat reports under the
+ * separate `TCPv6` protocol. The first version of this probe used `-p tcp`,
+ * found nothing, and reported a free port while pid 21108 was listening on it.
+ * So the listing is taken UNFILTERED and the protocol is matched here.
+ *
+ * ## THE RETURN VALUE HAS THREE STATES, NOT TWO
+ *
+ * An array is an answer. `null` means the listing could not be taken at all,
+ * which is NOT the same as "nobody is listening" and must never be collapsed
+ * into it: that collapse is how a probe reports a clean sweep of nothing.
+ *
+ * @param {number} port
+ * @returns {number[] | null} listening pids, or null if no listing could be taken
+ */
+export function portListeners(port) {
+  if (!Number.isInteger(port) || port <= 0) return null;
+  /** @type {Set<number>} */
+  const pids = new Set();
+
+  if (isWindows) {
+    const listed = spawnSync("netstat", ["-ano"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+    if (listed.status !== 0 || !listed.stdout) return null;
+    for (const line of listed.stdout.split("\n")) {
+      // "  TCP    [::1]:4173    [::]:0    LISTENING    21108"
+      const columns = line.trim().split(/\s+/);
+      if (columns.length < 5) continue;
+      const [protocol, local, , state, pid] = columns;
+      if (!/^TCP/i.test(protocol) || state.toUpperCase() !== "LISTENING") continue;
+      // Anchored on the LAST colon, so `[::1]:4173` cannot be satisfied by an
+      // address that merely contains the digits, and `:41730` cannot match.
+      if (local.slice(local.lastIndexOf(":") + 1) !== String(port)) continue;
+      const parsed = Number(pid);
+      if (Number.isInteger(parsed) && parsed > 0) pids.add(parsed);
+    }
+    return [...pids];
+  }
+
+  const listed = spawnSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  // lsof exits 1 when it simply matched nothing, which is an ANSWER. Only a
+  // missing or erroring binary is the unverifiable state, and that is what an
+  // absent stdout with a nonzero status that is not 1 looks like.
+  if (listed.error) return null;
+  if (listed.status !== 0 && listed.status !== 1) return null;
+  for (const line of String(listed.stdout ?? "").split("\n")) {
+    const parsed = Number(line.trim());
+    if (Number.isInteger(parsed) && parsed > 0) pids.add(parsed);
+  }
+  return [...pids];
 }
 
 /**
