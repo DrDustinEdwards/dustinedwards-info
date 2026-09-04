@@ -27,13 +27,21 @@
  */
 
 /**
- * @param {Request} request The incoming request.
+ * ## THE PARAMETER IS A BODY, NOT A REQUEST, SINCE 2026-09-04
+ *
+ * It was typed `Request` and only ever touched `.body`. The webmention
+ * verifier reads a RESPONSE the same way and for the same reason: a stranger's
+ * page is exactly as untrustworthy about its size as a stranger's POST, and the
+ * two cases must not get two implementations of the same counting loop. Widened
+ * to what the function actually uses rather than copied.
+ *
+ * @param {{ body: ReadableStream<Uint8Array> | null }} source Anything with a body stream.
  * @param {number} max Hard ceiling in bytes.
  * @returns {Promise<string | null>} The decoded body, or null when over the cap.
  */
-export async function readCapped(request, max) {
-  if (!request.body) return "";
-  const reader = request.body.getReader();
+export async function readCapped(source, max) {
+  if (!source.body) return "";
+  const reader = source.body.getReader();
   /** @type {Uint8Array[]} */
   const chunks = [];
   let total = 0;

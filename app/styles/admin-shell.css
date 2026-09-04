@@ -1209,3 +1209,49 @@
   color: var(--text-muted);
   cursor: not-allowed;
 }
+
+/* The webmention moderation queue.
+   LAYOUT ONLY, and that is deliberate rather than unfinished: every colour on
+   these rows is inherited from `.tool-list`, `.muted`, `.chip` and `.btn`,
+   which check:contrast already measures. A new token pair here would be a new
+   pair to measure for a page that needs no colour of its own. */
+.mention-row {
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.mention-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* A stranger's URL, which can be arbitrarily long and carries no spaces.
+   `anywhere` rather than `break-all` so an ordinary URL still breaks at its
+   slashes and only a pathological one is broken mid-token. */
+.mention-source {
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}
+
+.mention-excerpt {
+  margin: 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.mention-stamps {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The buttons wrap rather than shrinking the row's text side, because a
+   truncated source URL is the one thing on this row that cannot be recovered
+   by looking harder. */
+.mention-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}

@@ -379,6 +379,20 @@ const ICONS = {
     </>
   ),
   /**
+   * A speech bubble, which is what a mention from another site is.
+   *
+   * Chosen against the five already here for the same reason `traffic` was:
+   * Overview is a grid of rectangles, Posts is a stack of lines, Traffic is a
+   * bar chart, Media is a picture and Tools is a slider row. A rounded bubble
+   * with a tail shares no silhouette with any of them at 20px, which is the
+   * size the collapsed rail renders at.
+   */
+  mentions: (
+    <>
+      <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />
+    </>
+  ),
+  /**
    * Ascending bars on a baseline, which is what the panel draws.
    *
    * Chosen against the six already here: Content is a document, Posts is a
@@ -442,6 +456,13 @@ const NAV = [
   // origin requests, and calling the nav item anything shorter would put a
   // claim in the sidebar that the page spends a caption correcting.
   { to: "/admin/origin-requests", label: "Origin requests", icon: ICONS.traffic },
+  // Beside Origin requests and before Tools, because both are things other
+  // people did to this site rather than things the admin authors. NO COUNT
+  // BADGE: the counts here are `posts` and `media`, both computed by
+  // `adminNavCounts` in the layout loader on every admin request, and a pending
+  // mention is not urgent enough to make every admin page pay for a third
+  // query. The page itself is where the queue is read.
+  { to: "/admin/mentions", label: "Mentions", icon: ICONS.mentions },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
 ];
 
