@@ -4,7 +4,7 @@ slug: site-search-fts5-rank-fusion
 description: "How to build site search on Cloudflare D1 with SQLite FTS5: two indexes for stemmed and exact matching, reciprocal rank fusion in place of raw bm25, section-level records, a browse path for filter-only queries, and the D1 export problem every FTS5 user has."
 date: 2026-07-28
 tags: [cloudflare, d1, fts5, search, sqlite]
-draft: false
+draft: true
 first_published: 2026-07-30
 ---
 
