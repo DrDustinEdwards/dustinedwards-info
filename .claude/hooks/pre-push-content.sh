@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
-# PreToolUse hook on Bash: runs check:content before a push that touched app/ or
-# content/, and BLOCKS the push if it fails.
+# PreToolUse hook on Bash: runs npm run lint before EVERY push, and
+# check:content before a push that touched app/ or content/. Blocks on either.
+#
+# ## The second defect, added 2026-09-04: lint
+#
+# `npm run lint` is a separate CI step and NO gate tier runs it. check:all can
+# report twenty eight gates green and CI still goes red on oxlint, which is
+# exactly what happened on 2026-09-03. The two facts are as far apart as the two
+# below: a green local tier reads as "everything passed", and the one thing it
+# does not cover is the one thing that failed.
+#
+# It runs on every push rather than on a path prefilter, because lint covers
+# app, scripts, workers and test, which is nearly every file anyone edits, and a
+# prefilter matching all of them is a prefilter that does nothing except add a
+# way to be wrong. It is fast enough to pay for unconditionally.
 #
 # ## The defect this replays
 #
@@ -102,6 +115,19 @@ fi
 # decision, which is not a reason to skip.
 [ "$is_push" -eq 0 ] || exit 0
 
+# LINT FIRST, and unconditionally. Nothing below narrows it by path: see the
+# header. Same fail direction as check:content below, which is to block.
+if ! lint_out="$(npm run -s lint 2>&1)"; then
+  {
+    echo "$lint_out"
+    echo
+    echo "Blocked: npm run lint FAILED."
+    echo "lint is a separate CI step and no gate tier runs it, so a green check:all does not cover it. That is how CI went red on 2026-09-03 after a clean twenty eight gate run."
+    echo "Fix: resolve the lint errors above, then push."
+  } >&2
+  exit 2
+fi
+
 upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
 
 changed=""
@@ -124,15 +150,15 @@ else
   echo "pre-push: could not resolve @{upstream}, so running check:content rather than skipping it" >&2
 fi
 
-if out="$(npm run -s check:content 2>&1)"; then
-  exit 0
+if ! out="$(npm run -s check:content 2>&1)"; then
+  {
+    echo "$out"
+    echo
+    echo "Blocked: check:content FAILED, and this push touches app/ or content/."
+    echo "This is the shape that turned CI red twice in two days: a new file under app/ moves the template-refs count, and nothing about that looks like a content change."
+    echo "Fix: npm run build:content, then git add the regenerated file under content/generated/ and amend or add a commit."
+  } >&2
+  exit 2
 fi
 
-{
-  echo "$out"
-  echo
-  echo "Blocked: check:content FAILED, and this push touches app/ or content/."
-  echo "This is the shape that turned CI red twice in two days: a new file under app/ moves the template-refs count, and nothing about that looks like a content change."
-  echo "Fix: npm run build:content, then git add the regenerated file under content/generated/ and amend or add a commit."
-} >&2
-exit 2
+exit 0
