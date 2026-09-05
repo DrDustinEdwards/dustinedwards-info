@@ -4,12 +4,10 @@ import { EmptyState, Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
-import { purgePost } from "~/lib/cache-purge.server";
+import { decideMention } from "~/lib/webmention/decide.server";
 import { SHARED_CACHE_MINUTES } from "~/lib/seo";
 import {
   countExpiringWebmentions,
-  decideWebmention,
-  deleteWebmention,
   listWebmentionsForAdmin,
   sweepWebmentions,
 } from "~/db";
@@ -163,28 +161,24 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!confirmationSatisfied(typed, 1)) {
       return data<ActionResult>({ confirmDelete: id });
     }
-    const slug = await deleteWebmention(env, id);
-    // PURGE THE ONE PAGE THIS CHANGED. A deleted mention was rendered under
-    // exactly one post, so `post:<slug>` is the whole blast radius; purging
-    // `posts` would throw away the corpus's cache to fix one page.
-    if (slug) await purgePost(slug, "mention deleted");
+    // ONE DOOR, shared with the operator API since 2026-09-05. The write and
+    // the purge travel together in `decideMention` so a second caller cannot
+    // take only half of them; grounds are on that function.
+    await decideMention(env, id, "delete");
     return data<ActionResult>({ message: "Mention deleted." });
   }
 
   if (intent === "approve") {
-    const slug = await decideWebmention(env, id, "approved");
-    // THE REVERSAL OF RULING 7, at the one call site it was written about.
-    // Approving used to mean waiting out s-maxage and telling the operator so;
-    // it now purges the post's page and the section appears on the next fetch.
-    if (slug) await purgePost(slug, "mention approved");
+    // THE REVERSAL OF RULING 7, PROVEN ON THE WIRE 2026-09-05: the page was a
+    // cache HIT with no section, and after this call it was a MISS carrying it.
+    await decideMention(env, id, "approve");
     return data<ActionResult>({ message: "Mention approved." });
   }
 
   if (intent === "reject") {
-    const slug = await decideWebmention(env, id, "rejected");
     // Rejecting REMOVES a rendered mention, so it changes the page exactly as
     // much as approving did and purges the same tag.
-    if (slug) await purgePost(slug, "mention rejected");
+    await decideMention(env, id, "reject");
     return data<ActionResult>({ message: "Mention rejected." });
   }
 
