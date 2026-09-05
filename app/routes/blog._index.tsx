@@ -10,8 +10,8 @@ import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import {
-  HTML_VARY,
-  SHARED_CACHE_CONTROL,
+  cacheTags,
+  publicHtmlHeaders,
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
@@ -148,13 +148,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  // Publicly cacheable for COOKIELESS readers only. `workers/app.ts` downgrades
-  // this to private, no-store whenever the request carries a cookie, so the only
-  // variant ever stored is the themeless one. Grounds on HTML_VARY in seo.ts.
-  const headers = new Headers({
-    "Cache-Control": SHARED_CACHE_CONTROL,
-    Vary: HTML_VARY,
-  });
+  // Publicly cacheable for EVERY reader since 2026-09-05: the theme is a
+  // dimension of the cache key rather than a Vary, so this page no longer
+  // declares one. Tagged `posts`, because its content is a function of the
+  // corpus and a publish must be able to move it. Grounds on cacheTags in seo.ts.
+  const headers = new Headers(publicHtmlHeaders(cacheTags()));
   // Carried through from the loader. `headers` does not inherit them, so a
   // loader header that is not forwarded here simply never reaches the client.
   const timing = loaderHeaders.get("Server-Timing");

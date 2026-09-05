@@ -12,6 +12,7 @@ import {
   SITE_ORIGIN,
   breadcrumbJsonLd,
   pageMeta,
+  cacheTags,
   publicHtmlHeaders,
 } from "~/lib/seo";
 import { tagPath } from "~/lib/tag-path.mjs";
@@ -94,8 +95,8 @@ export function headers() {
   /*
    * `/blog`'s HEADERS, THROUGH THE HELPER THAT OWNS THEM.
    *
-   * `publicHtmlHeaders()` returns exactly the pair `/blog` sets,
-   * `SHARED_CACHE_CONTROL` with `HTML_VARY`, and calling it is stricter than
+   * `publicHtmlHeaders(cacheTags())` returns exactly the pair `/blog` sets,
+   * `SHARED_CACHE_CONTROL` with the `posts` cache tag, and calling it is stricter than
    * copying the two constants: the helper is the one owner, so this page cannot
    * drift from the others if the pair ever changes.
    *
@@ -108,7 +109,7 @@ export function headers() {
    * `workers/app.ts` downgrades all of it to private for any request carrying a
    * cookie, so the only variant ever stored is the themeless one.
    */
-  return new Headers(publicHtmlHeaders());
+  return new Headers(publicHtmlHeaders(cacheTags()));
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

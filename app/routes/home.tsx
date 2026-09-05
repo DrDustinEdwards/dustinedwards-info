@@ -12,6 +12,7 @@ import { readHealthTile } from "~/lib/health/snapshot.server";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
+  cacheTags,
   publicHtmlHeaders,
   personJsonLd,
   SITE,
@@ -29,10 +30,12 @@ import "~/styles/blog-index.css";
  * This route had no `headers` export and reached `private, no-store` through the
  * hard rule 8 default. That default STAYS and still covers everything unlisted;
  * this route now opts in, and `workers/app.ts` downgrades it right back whenever
- * the request carries a cookie. Grounds on HTML_VARY in seo.ts.
+ * every reader since 2026-09-05: the theme is a dimension of the cache key
+ * rather than a Vary. Tagged `posts`, because the proof tiles and the featured
+ * list read the corpus. Grounds on cacheTags in seo.ts.
  */
 export function headers() {
-  return publicHtmlHeaders();
+  return publicHtmlHeaders(cacheTags());
 }
 
 export function meta() {

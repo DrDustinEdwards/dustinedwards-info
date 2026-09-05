@@ -210,18 +210,28 @@ export function personJsonLd(origin: string) {
  * imagined to use it, because a name that encodes a surface claim goes stale
  * the first time a surface changes its mind, and nothing fails when it does.
  *
- * ## HTML MAY USE IT, BUT ONLY WITH `HTML_VARY`
+ * ## HTML MAY USE IT, AND SINCE 2026-09-05 IT NEEDS NO `Vary` TO BE SAFE
  *
  * The old comment was reaching for something true: an HTML document here
  * embeds reader state, because the theme is read from a cookie and written
  * into `<html data-theme>` in the first byte. A bare `public` on that WOULD
  * serve one reader's theme to another.
  *
- * What makes it safe is the pairing, not the value: an HTML route returns this
- * WITH `Vary: Cookie`, and `workers/app.ts` refuses to store any response
- * generated for a cookie-bearing request. The only variant ever written is the
- * cookieless one. Copy this constant onto an HTML route without `HTML_VARY`
- * and that protection is gone.
+ * What used to make it safe was a pairing: the route returned this WITH
+ * `Vary: Cookie`, and `workers/app.ts` refused to store any response generated
+ * for a cookie-bearing request, so the only variant ever written was the
+ * cookieless one.
+ *
+ * WHAT MAKES IT SAFE NOW IS THE CACHE KEY. The theme is a dimension of the key
+ * the platform owns, passed as `ctx.props` and in `cf.cacheKey` by the gateway
+ * in `workers/app.ts`. A dark document and a light one are different entries
+ * rather than one entry the second reader must be kept away from, which is why
+ * every reader can now be served from cache instead of only the cookieless
+ * ones. Ruling 16, 2026-09-05.
+ *
+ * The pairing did not disappear, it changed partners: what travels with this
+ * string is now `Cache-Tag`, so a response that can be stored can also be
+ * purged. `publicHtmlHeaders` is still the shape that cannot drop half of it.
  */
 /**
  * THE LIFETIME ITSELF, and it is the owner rather than a copy of the string.
@@ -260,53 +270,97 @@ export const SHARED_CACHE_CONTROL =
 export const SHARED_CACHE_MINUTES = SHARED_CACHE_SECONDS / 60;
 
 /**
- * What public HTML varies on. Paired with the downgrade in `workers/app.ts`.
+ * `HTML_VARY` WAS `"Cookie"` AND WAS DELETED 2026-09-05. Ruling 16.
  *
- * A route carrying this is declaring two things: it is publicly cacheable, and
- * its body depends on the Cookie header. The Worker entry then refuses to let
- * any response generated FOR a cookie-bearing request be stored. Together those
- * mean the only variant ever written is the cookieless one.
+ * What it said, and it was true of the arrangement it belonged to: a route
+ * carrying it declared that its body depends on the Cookie header, and
+ * `workers/app.ts` then refused to store any response generated FOR a
+ * cookie-bearing request, so the only variant ever written was the cookieless
+ * one. Measured 2026-08-02: an ABSENT Cookie header is not treated as its own
+ * variant, so a cookieless request matches whatever variant is already stored,
+ * and a reader with `theme=dark` warming the entry served every first-time
+ * visitor a dark document. Full matrix: Capsid
+ * `dustinedwards/workers-cache-vary.md`.
  *
- * **Why not `Vary: Cookie` alone.** Measured 2026-08-02: an ABSENT Cookie header
- * is not treated as its own variant. A cookieless request matches whatever
- * variant is already stored, so if a reader with `theme=dark` warmed the entry,
- * every first-time visitor was served a dark document. Present-but-different
- * cookie values DO separate correctly; absent does not. Grounds and the full
- * matrix: Capsid `dustinedwards/workers-cache-vary.md`.
+ * **THAT DEFECT WAS A PROPERTY OF `Vary`, AND `Vary` IS WHAT WENT.** The theme
+ * is now a dimension of the cache KEY, where absence is not a special case: a
+ * request with no theme cookie resolves to a theme like every other request and
+ * keys on it. There is no stored variant for it to match by accident.
  *
- * `Vary` is still required here, and dropping it would invert the bug: without
- * it a cookie-bearing request would match the stored cookieless variant and see
- * someone else's page. The measurement confirms that direction is safe WITH the
- * header.
+ * Nothing replaced it, deliberately. Emitting `Vary: Cookie` now would fragment
+ * the cache on every unrelated cookie value, which is the cost the old
+ * arrangement paid and this one exists to stop paying.
  */
-export const HTML_VARY = "Cookie";
 
 /**
- * The `headers()` a public HTML route returns. ONE definition, five callers.
+ * Cache tags for a public HTML response. ONE OWNER of the tag vocabulary.
  *
- * ## THE PAIRING IS THE SAFETY PROPERTY, AND IT WAS COPIED FIVE TIMES
+ * Ruling 17, 2026-09-05. Every shared-cacheable HTML response carries
+ * `Cache-Tag`, so that a write can invalidate exactly what it changed instead
+ * of waiting out `s-maxage` or purging everything.
  *
- * Four routes returned this object character for character, and /projects
- * returned nothing at all, so it fell through to hard rule 8's uncached
- * default and was the one public page never edge-cached. That omission is in
- * core.md as a known gap; this helper is what closes it.
+ * ## THE VOCABULARY IS THREE WORDS AND THAT IS ON PURPOSE
  *
- * The two values must travel TOGETHER. The shared string alone on an HTML
- * route serves one reader's theme to another, because every document here
- * embeds reader state in `<html data-theme>` from a cookie. `Vary: Cookie` is
- * what makes the cookieless downgrade in `workers/app.ts` able to keep the
- * stored variant cookieless. A copy-paste that drops the Vary line is the
- * measured theme bug, and a helper is the shape that cannot drop half of it.
+ *   `post:<slug>`  one post's page. The only per-document tag.
+ *   `posts`        anything whose content is a function of the corpus: the
+ *                  post page too, the index, the tag archives, the series
+ *                  hubs, the feeds, the sitemap and llms.txt. A publish moves
+ *                  all of them at once, so they purge together.
+ *   `pages`        the hand-authored pages that do not read the corpus.
  *
- * NOT for the routes that negotiate on Accept: those need HTML_VARY_ACCEPT
- * and say so themselves.
+ * **`pages` IS INERT TODAY AND IS STILL WORTH SENDING.** Nothing calls a purge
+ * for it: those pages change only when the code changes, and the Worker version
+ * is in the cache key, so a deploy already invalidates them. It is here so that
+ * "every shared-cacheable response is purgeable by name" is a property of the
+ * site rather than a description of most of it, and so the gate that asserts
+ * the header can be universal rather than carrying an exemption list.
+ *
+ * A SPELLING MISTAKE HERE IS A PURGE THAT SILENTLY DOES NOTHING, which is why
+ * this is a function and not a literal at eleven call sites: `cache.purge`
+ * reports `success: true` for a tag that matches no stored response, because
+ * there is nothing for it to report. One owner is the only defence.
+ *
+ * @param slug when present, the post this response IS
  */
-export function publicHtmlHeaders() {
-  return { "Cache-Control": SHARED_CACHE_CONTROL, Vary: HTML_VARY };
+export function cacheTags(slug?: string): string {
+  return slug ? `post:${slug},posts` : "posts";
 }
 
-/** For the two routes that also negotiate on Accept. */
-export const HTML_VARY_ACCEPT = "Accept, Cookie";
+/** The tag for a page that does not read the corpus. See `cacheTags`. */
+export const PAGES_CACHE_TAG = "pages";
+
+/**
+ * The `headers()` a public HTML route returns. ONE definition, many callers.
+ *
+ * ## IT WAS A PAIRING AND IT IS STILL A PAIRING, with a different second half
+ *
+ * Four routes once returned `Cache-Control` and `Vary` character for character,
+ * and /projects returned nothing at all, so it fell through to hard rule 8's
+ * uncached default and was the one public page never edge-cached. That is why
+ * this helper exists and the reason has not changed.
+ *
+ * What travels with the shared string now is `Cache-Tag` rather than `Vary`. A
+ * copy-paste that dropped the old second half was the measured theme bug; one
+ * that drops this one is a response nothing can purge, which fails quietly
+ * instead of visibly. `check:headers` asserts the pairing on every route that
+ * names the shared string, in both directions.
+ *
+ * @param tag the cache tag for this response, from `cacheTags` or `PAGES_CACHE_TAG`
+ */
+export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG) {
+  return { "Cache-Control": SHARED_CACHE_CONTROL, "Cache-Tag": tag };
+}
+
+/**
+ * For the routes that negotiate on Accept.
+ *
+ * `Cookie` LEFT THIS STRING 2026-09-05 and `Accept` stays, because the two were
+ * never the same kind of claim. The post page and `/search` genuinely serve
+ * more than one representation at one URL, and a shared cache that ignored that
+ * would hand a markdown request the HTML copy: measured on the wire after
+ * `2f0b4d5`, 31,869 bytes of `text/html` answering `Accept: text/markdown`.
+ */
+export const HTML_VARY_ACCEPT = "Accept";
 
 /**
  * THE STRING THAT REFUSES STORAGE. Nothing may keep this response: not a

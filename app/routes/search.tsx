@@ -16,6 +16,7 @@ import {
 import {
   NO_STORE_CACHE_CONTROL,
   HTML_VARY_ACCEPT,
+  cacheTags,
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -163,10 +164,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function headers() {
   return new Headers({
-    // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
-    // it when a cookie is present. Varies on Accept (the JSON twin) AND on
-    // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
+    // Publicly cacheable for EVERY reader since 2026-09-05: the theme is a
+    // dimension of the cache key rather than a Vary. `Accept` STAYS, because
+    // this URL really does serve a JSON representation as well as HTML and a
+    // cache that ignored that would hand one to the other.
+    //
+    // Tagged `posts`: the results are the corpus, so a publish must move them.
     "Cache-Control": SHARED_CACHE_CONTROL,
+    "Cache-Tag": cacheTags(),
     Vary: HTML_VARY_ACCEPT,
   });
 }
