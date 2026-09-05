@@ -4,11 +4,14 @@ import { BlogEnhancements } from "~/components/blog-enhancements";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
+  approvedMentionsFor,
   getBlogPost,
   getBlogPostMarkdown,
   listSeriesParts,
   publiclyVisibleSlugs,
 } from "~/db";
+import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
+import { safeHttpHref } from "~/lib/webmention/urls.mjs";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
@@ -97,15 +100,44 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     view.post.related.map((item) => item.slug),
   );
 
+  /*
+   * THE APPROVED MENTIONS, READ HERE AND NOT IN `blogPostView`.
+   *
+   * `/preview/:token` shares that projection, and a draft preview must not grow
+   * a mentions section: the projection's whole claim is that a reviewer sees
+   * what a reader would see, and a draft has no readers and therefore no
+   * approved mentions to see. Putting the read in the projection would also put
+   * a second D1 query on every preview render to return an empty array every
+   * time. So it sits beside the view rather than inside it, which is the one
+   * place these two routes are allowed to differ.
+   *
+   * AFTER the post resolves, which is not merely ordering: a 404 above means
+   * this never runs, and `approvedMentionsFor` composes `publiclyVisible()`
+   * itself besides. Both halves are stated on that function.
+   */
+  const mentions = await approvedMentionsFor(getEnv(context), post.slug);
+
   return data(
     {
       ...view,
+      mentions,
       post: {
         ...view.post,
         related: view.post.related.filter((item) => stillPublic.has(item.slug)),
       },
     },
-    { headers: { Link: linkToMarkdown(post.slug) } },
+    {
+      /*
+       * TWO VALUES IN ONE `Link`, comma-joined, which is how RFC 8288 spells a
+       * header carrying more than one relation. The markdown twin has been here
+       * since the twin shipped; the webmention endpoint joins it because a
+       * sender reads discovery out of this header before it parses anything.
+       *
+       * Both are built by a named function from `SITE_ORIGIN`, so the two
+       * values cannot come to name different hosts.
+       */
+      headers: { Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", ") },
+    },
   );
 }
 
@@ -188,6 +220,18 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${canonical}.md`,
     },
+    /*
+     * THE WEBMENTION ENDPOINT, beside the twin because both are discovery.
+     *
+     * A sender looks in two places and stops at the first: the `Link` header,
+     * which the loader above sets, and this element. Both are emitted, because
+     * a sender that finds one and not the other has to decide which this site
+     * meant, and the protocol's answer to that is that the header wins, which
+     * is not a decision worth making it take.
+     *
+     * `WEBMENTION_URL` is the same constant the header is built from.
+     */
+    { tagName: "link", rel: "webmention", href: WEBMENTION_URL },
   ];
 }
 
@@ -221,8 +265,88 @@ function coverResponsive(src: string): { srcSet?: string; sizes?: string } {
   return { srcSet: contentSrcSet(src.slice("/media/".length)), sizes: CONTENT_SIZES };
 }
 
+/**
+ * THE ONE PLACE ON THIS PAGE WHERE THE TEXT IS NOT OURS.
+ *
+ * The body two hundred lines below is injected with `dangerouslySetInnerHTML`,
+ * and the comment there says why: it is rendered at build time from markdown we
+ * author, it contains no third-party input, and injecting it is the point of
+ * having a pipeline at all.
+ *
+ * A mention is the exact inverse. Every string in it was read out of a page
+ * this site does not control, by a Worker that fetched a URL a stranger chose.
+ * So it is RENDERED AS TEXT: React children, escaped by React, with no
+ * `dangerouslySetInnerHTML` anywhere in this section, no image, no attribute
+ * carrying a source-supplied value except one `href` that `safeHttpHref` has
+ * re-parsed at render time.
+ *
+ * The two sit on one page and the distinction between them is the whole of the
+ * rule. First-party markup is injected because we wrote it. Third-party text is
+ * escaped because we did not. Neither half is a precaution against the other
+ * going wrong; they are two different kinds of thing that happen to render
+ * beside each other, and the moment somebody reads this section as "the body is
+ * injected, so this could be too" is the moment the rule is gone.
+ *
+ * @param mention one approved row, as `approvedMentionsFor` selected it
+ */
+function Mention({
+  mention,
+}: {
+  mention: Route.ComponentProps["loaderData"]["mentions"][number];
+}) {
+  /*
+   * THE AUTHOR'S OWN URL FIRST, THE SOURCE PAGE SECOND, and neither if neither
+   * parses. `readAuthor` stores an `author_url` only when the source publishes
+   * an h-card carrying one, so most rows fall through to the source, which is
+   * the page that did the linking and the more useful destination anyway.
+   *
+   * A row whose URLs BOTH fail the check still renders: the name becomes plain
+   * text with no anchor. Dropping the mention instead would hide something the
+   * admin approved from the reader while the moderation queue kept showing it
+   * as published, which is a disagreement between two surfaces about what is
+   * live.
+   */
+  const href = safeHttpHref(mention.authorUrl) ?? safeHttpHref(mention.sourceUrl);
+
+  /*
+   * THE NAME FALLS BACK TO THE SOURCE URL, not to a word like "Someone".
+   *
+   * H1's verifier already falls back to the source's hostname, so a row written
+   * by the endpoint always carries a name. This covers a row written any other
+   * way, and it substitutes a FACT rather than a placeholder: hard rule 13's
+   * distinction, in a spot where the invented value would be attributed to a
+   * real person on a public page.
+   */
+  const name = mention.authorName ?? mention.sourceUrl;
+  const decided = longDateUTC(mention.decidedAt);
+
+  return (
+    <li>
+      {href ? (
+        /*
+         * `nofollow ugc noopener noreferrer`. `ugc` is what this link IS,
+         * `nofollow` is what it must not pass on, and the other two are this
+         * site's default on every outbound anchor. A validated href in a React
+         * element is not injected HTML.
+         */
+        <a href={href} rel="nofollow ugc noopener noreferrer">
+          {name}
+        </a>
+      ) : (
+        <span>{name}</span>
+      )}
+      {mention.excerpt ? <p className="post-mention-excerpt">{mention.excerpt}</p> : null}
+      {decided ? (
+        <time className="post-mention-date" dateTime={new Date(mention.decidedAt!).toISOString()}>
+          {decided}
+        </time>
+      ) : null}
+    </li>
+  );
+}
+
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
-  const { post, toc, seriesParts } = loaderData;
+  const { post, toc, seriesParts, mentions } = loaderData;
 
   /*
    * ONE `postSocial` CALL for the two things this component needs from it: the
@@ -546,6 +670,28 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               Share by email
             </a>
           </nav>
+
+          {/*
+            MENTIONS FROM OTHER SITES, and the grounds are on the `Mention`
+            component above: this is the one block on the page whose text is not
+            ours, and it is therefore escaped text where the body is injected
+            markup. Read that comment beside the body's.
+
+            ABSENT, NOT EMPTY, on the cover figure's grounds a few hundred lines
+            up: an empty section is a landmark a screen reader announces and a
+            heading a reader scrolls to, for nothing. Most posts have no
+            approved mention and should render no trace of the feature.
+          */}
+          {mentions.length > 0 && (
+            <section className="post-mentions" aria-labelledby="mentions-heading">
+              <h2 id="mentions-heading">Mentions</h2>
+              <ul>
+                {mentions.map((mention) => (
+                  <Mention key={mention.id} mention={mention} />
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/*
             ONE LINE, in the template, for every post. Ratified in

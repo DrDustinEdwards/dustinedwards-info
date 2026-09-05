@@ -241,9 +241,20 @@
   color: var(--brand);
 }
 
-/* Further reading and related. */
+/* Further reading, related, and mentions.
+
+   MENTIONS JOINS THESE SELECTORS RATHER THAN COPYING THEM. It is the same kind
+   of block: a bordered list of pointers under the article, and "the same
+   spacing rhythm as further-reading" is a shared rule here rather than three
+   numbers repeated in a fourth place that agree until one of them moves.
+
+   Its own rules below are only what a citation list needs and further reading
+   does not: a gap between entries, because each one is three lines rather than
+   one, and no bullet, because the author's name is the marker. NO NEW COLOUR
+   TOKEN: every colour here is inherited or already declared. */
 .further-reading,
-.related-posts {
+.related-posts,
+.post-mentions {
   max-width: 44rem;
   margin: 2.5rem auto 0;
   padding-top: 1.5rem;
@@ -251,16 +262,43 @@
 }
 
 .further-reading h2,
-.related-posts h2 {
+.related-posts h2,
+.post-mentions h2 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
 }
 
 .further-reading ul,
-.related-posts ul {
+.related-posts ul,
+.post-mentions ul {
   margin: 0;
   padding-left: 1.25rem;
   display: grid;
   gap: 0.375rem;
   font-size: 0.9375rem;
+}
+
+/* A citation is a block, not a line, so the entries need air between them and
+   nothing to the left of them. */
+.post-mentions ul {
+  padding-left: 0;
+  gap: 1rem;
+  list-style: none;
+}
+
+.post-mentions li {
+  display: grid;
+  gap: 0.25rem;
+}
+
+/* A stranger's excerpt, which can be up to 280 characters with no spaces in it
+   if they choose. `anywhere` keeps it inside the column. */
+.post-mention-excerpt {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.post-mention-date {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
 }
