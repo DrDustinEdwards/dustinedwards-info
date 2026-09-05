@@ -322,6 +322,142 @@ for (const id of [...DESTRUCTIVE, ...REVERSIBLE.keys()]) {
 
 console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTRUCTIVE.size} destructive`);
 
+/* ------------------------------------------- the operator API's own verbs --- */
+
+/*
+ * THE SECOND WRITE SURFACE, WHICH THIS GATE COULD NOT SEE UNTIL 2026-09-05.
+ *
+ * Everything above reads `intent === "..."` out of a route action, which is how
+ * the admin plane spells a verb. The operator API spells it differently: a
+ * bearer-token POST carrying `{tool, args}`, dispatched on a `ToolName`. So a
+ * gate whose vocabulary is one string comparison saw NONE of it, and
+ * `delete_post` has been a delete authority nothing here classified since the
+ * operator API shipped.
+ *
+ * That is FAILURES.md's newest shape in a third form. It was first a `reject`
+ * hidden behind a ternary; then the same class with a different spelling; and
+ * here it is an entire surface using a different noun. The lesson each time is
+ * that a classifier which reads syntax is blind to any verb expressed another
+ * way, and the repair each time is to teach it the other way rather than to
+ * trust that somebody will remember.
+ *
+ * ## WHAT IS ASSERTED, AND WHY IT IS NOT A TYPED CONFIRMATION
+ *
+ * The admin plane's ceremony is `confirmationSatisfied`, a human typing a count
+ * into a form. That is the right ceremony for a person who may be mistaken
+ * about which button they are on. It is the wrong one for a machine caller: an
+ * agent typing "1" into its own request proves nothing, and the credential IS
+ * the ceremony there.
+ *
+ * So the operator's equivalent is a declared POLICY: a destructive tool must
+ * carry a `policy` string in `TOOL_DESCRIPTORS`, which `GET /api/operator`
+ * serves, so a caller learns the refusal before it tries. A destructive tool
+ * with no policy is one an agent will discover by being refused, which is the
+ * failure this asserts against.
+ */
+{
+  const apiPath = join(root, "app", "lib", "operator", "api.server.ts");
+  const apiRaw = readFileSync(apiPath, "utf8");
+
+  /** Every tool name, from the `TOOLS` literal the dispatch is keyed on. */
+  const toolsBlock = apiRaw.match(/const TOOLS = \[([\s\S]*?)\] as const;/);
+  assertThat(
+    toolsBlock !== null,
+    "the operator TOOLS list was located",
+    "nothing below examines anything, so every tool would read as classified",
+  );
+  const toolNames = toolsBlock
+    ? [...toolsBlock[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
+    : [];
+
+  /*
+   * SCOPE, ASSERTED. An empty parse classifies nothing and reports no problem,
+   * which is what a compliant surface reports. MEASURED 2026-09-05 by RUNNING
+   * this: 11.
+   */
+  assertThat(
+    toolNames.length >= 9,
+    "the operator tool list parsed",
+    `parsed ${toolNames.length} tool(s), floor 9, measured 11. A zero-scope parse agrees with anything.`,
+  );
+
+  /**
+   * DESTRUCTIVE operator tools. Each removes something no derivation can
+   * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
+   */
+  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention"]);
+
+  /** REVERSIBLE, with the reason, because "not destructive" is a judgement. */
+  const OPERATOR_REVERSIBLE = new Map([
+    ["list_posts", "a read"],
+    ["get_post", "a read"],
+    ["sync_status", "a read"],
+    ["list_mentions", "a read"],
+    [
+      "save_post",
+      "creates or edits a post through the same door the editor uses; the file, " +
+        "its git history and first_published all stand, and unpublish is a field " +
+        "change rather than a removal",
+    ],
+    [
+      "sync_ask",
+      "converges a DERIVED index to the corpus through its own derivation, which " +
+        "hard rule 18 calls repair rather than destruction. Idempotent, and it " +
+        "reports a read-back reconciliation rather than its own counters",
+    ],
+    ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
+    ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
+    [
+      "backup_media",
+      "COPIES ONLY. It has no delete branch in either bucket and nothing is ever " +
+        "copied backup to media; check:destructive's own MEDIA_BACKUP sweep below " +
+        "is what holds that",
+    ],
+  ]);
+
+  for (const name of toolNames) {
+    assertThat(
+      OPERATOR_DESTRUCTIVE.has(name) || OPERATOR_REVERSIBLE.has(name),
+      `operator tool ${name} is classified`,
+      `a tool is callable over the operator token and nobody has said whether it ` +
+        `destroys anything. Add it to OPERATOR_DESTRUCTIVE (and give it a policy in ` +
+        `TOOL_DESCRIPTORS) or to OPERATOR_REVERSIBLE with the reason.`,
+    );
+  }
+  for (const name of [...OPERATOR_DESTRUCTIVE, ...OPERATOR_REVERSIBLE.keys()]) {
+    assertThat(
+      toolNames.includes(name),
+      `operator classification ${name} still names a live tool`,
+      "classified here but absent from TOOLS; the entry is stale",
+    );
+  }
+
+  /*
+   * THE POLICY IS THE OPERATOR'S CEREMONY, so a destructive tool must carry
+   * one. Read out of the descriptor block by name, comments left in place:
+   * `policy` is a property whose value is a string literal, so prose cannot
+   * satisfy it the way a bare needle would.
+   */
+  for (const name of OPERATOR_DESTRUCTIVE) {
+    const descriptor = apiRaw.match(
+      new RegExp(`\\n  ${name}: \\{([\\s\\S]*?)\\n  \\},`),
+    );
+    assertThat(
+      descriptor !== null,
+      `${name}: its TOOL_DESCRIPTORS entry was located`,
+      "the assertion below would examine nothing",
+    );
+    assertThat(
+      descriptor !== null && /\bpolicy:\s*$|\bpolicy:\s*"/m.test(descriptor[1]),
+      `${name}: declares the policy that refuses it`,
+      `a destructive tool with no \`policy\` in its descriptor is one an agent ` +
+        `discovers by being refused. GET /api/operator serves this block, so the ` +
+        `refusal is documented before it is hit.`,
+    );
+  }
+}
+
+
 /*
  * THE BACKUP BUCKET IS WRITE-AND-READ ONLY. Ruled 2026-09-01, vol 13.
  *
