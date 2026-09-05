@@ -51,6 +51,12 @@ which is what repeats across people and sessions.
   30 KB constant planted in source was folded to 3e4 by the minifier; the
   gated chunk grew 17 bytes and the plant was never applied.
   `scripts/check-page-payload.mjs`
+- **A replay aimed at wall-clock time measures the instrument's own latency
+  first.** A loop aimed 300 ms before a minute boundary started 39 s later, at
+  a random phase; 0 of 3 reproduced a failure that was real. `1748513`
+- **On Windows, `spawnSync` with `shell: true` joins argv unquoted.** A seed
+  SQL string became a program named after its first word, and the seed the
+  plant depended on never ran. `scripts/check-browser.mjs`
 
 ## Measuring the wrong thing
 
@@ -76,3 +82,11 @@ which is what repeats across people and sessions.
   query, since AI Search searches the last user message; every question then
   retrieved nothing and the new zero-chunk guard answered every reader with the
   no-answer text, correctly. `app/lib/search/ask-prompt.mjs`
+- **A read the gate cannot see is not exempt; it is a read with no gate.** The
+  mentions reader passed both visibility sections with no predicate because
+  neither scans a `webmentions` query. It was given a `posts` reference so the
+  gate could see it, then the gate was proven to bite. `app/db/index.ts`
+  `approvedMentionsFor`
+- **An intent expressed as an expression is invisible to a classifier that
+  reads statements.** `check:destructive` could not see `reject` behind a
+  ternary. `app/routes/admin.mentions.tsx`
