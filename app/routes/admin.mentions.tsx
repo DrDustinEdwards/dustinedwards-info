@@ -4,6 +4,7 @@ import { EmptyState, Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
+import { purgePost } from "~/lib/cache-purge.server";
 import { SHARED_CACHE_MINUTES } from "~/lib/seo";
 import {
   countExpiringWebmentions,
@@ -42,13 +43,17 @@ import type { Route } from "./+types/admin.mentions";
  * asserted in `test/worker/webmention.test.ts` against the middleware, which is
  * where it actually lives.
  *
- * ## NOTHING HERE RENDERS TO A READER
+ * ## APPROVING IS NOW IMMEDIATE, AND IT WAS NOT
  *
- * Approving a mention sets a column. There is no public surface for it in H1:
- * the render under the post, the cache invalidation on approve and the
- * advertising of the endpoint are all H2. So this page is the only place a
- * received mention is visible to anybody, which is why it shows the failures
- * too rather than only the queue.
+ * This docblock said "there is no public surface for it in H1" and then, after
+ * H2, that an approval reached readers within ten minutes. Both were true when
+ * written. Since 2026-09-05 an approval PURGES `post:<slug>` and the section
+ * appears on the next fetch, because Workers Cache gained a purge API and
+ * ruling 7 was reversed by ruling 10.
+ *
+ * The page still shows the failures as well as the queue, which is unchanged
+ * and is why it is the only place a received mention is visible to anybody
+ * before it is approved.
  *
  * ## EVERY VALUE ON IT CAME FROM A STRANGER
  *
@@ -158,17 +163,28 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!confirmationSatisfied(typed, 1)) {
       return data<ActionResult>({ confirmDelete: id });
     }
-    await deleteWebmention(env, id);
+    const slug = await deleteWebmention(env, id);
+    // PURGE THE ONE PAGE THIS CHANGED. A deleted mention was rendered under
+    // exactly one post, so `post:<slug>` is the whole blast radius; purging
+    // `posts` would throw away the corpus's cache to fix one page.
+    if (slug) await purgePost(slug, "mention deleted");
     return data<ActionResult>({ message: "Mention deleted." });
   }
 
   if (intent === "approve") {
-    await decideWebmention(env, id, "approved");
+    const slug = await decideWebmention(env, id, "approved");
+    // THE REVERSAL OF RULING 7, at the one call site it was written about.
+    // Approving used to mean waiting out s-maxage and telling the operator so;
+    // it now purges the post's page and the section appears on the next fetch.
+    if (slug) await purgePost(slug, "mention approved");
     return data<ActionResult>({ message: "Mention approved." });
   }
 
   if (intent === "reject") {
-    await decideWebmention(env, id, "rejected");
+    const slug = await decideWebmention(env, id, "rejected");
+    // Rejecting REMOVES a rendered mention, so it changes the page exactly as
+    // much as approving did and purges the same tag.
+    if (slug) await purgePost(slug, "mention rejected");
     return data<ActionResult>({ message: "Mention rejected." });
   }
 
@@ -386,29 +402,25 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
             {/*
               WHAT APPROVING ACTUALLY DOES, beside the control that does it.
 
-              THE NUMBER IS DERIVED FROM `SHARED_CACHE_CONTROL`, never typed.
-              `SHARED_CACHE_MINUTES` is `s-maxage` divided by sixty and the
-              header is built from the same constant, so this sentence cannot
-              disagree with the policy it describes. Hard rule 17: a measured
-              value lives where it is applied or nowhere.
+              REWRITTEN 2026-09-05, and the previous version is worth one line
+              because it was correct and is now false. It said there is no purge
+              and there deliberately never will be, and told the operator to
+              refresh after ten minutes. That was ruling 7, and ruling 10
+              reversed it on a change in the world rather than in the reasoning:
+              Workers Cache shipped a purge API.
 
-              THE SECOND HALF IS THE PART THAT SAVES AN AFTERNOON. There is no
-              purge here and there deliberately never will be, so the operator
-              who approves a mention and immediately reloads the post will not
-              see it, and the obvious conclusion is that approving is broken.
-              It is not: this admin session carries a cookie, `workers/app.ts`
-              serves any cookie-bearing reader from its own themed
-              `caches.default` entry looked up before rendering, and that entry
-              was stored with the same lifetime. So the admin reads exactly what
-              a reader reads, aged the same amount, which is a better property
-              than a privileged bypass would be and is worth one sentence.
+              THE NUMBER IS STILL DERIVED FROM `SHARED_CACHE_CONTROL`, never
+              typed, because it is still the honest fallback: a purge is rate
+              limited at the Free-tier zone limits regardless of plan, and a
+              refused purge leaves exactly the old behaviour. Saying so is
+              better than promising immediacy the API can decline to give.
             */}
             {group.status === "pending" && rows.length > 0 ? (
               <p className="muted">
-                {`Approving shows a mention under the post within ${SHARED_CACHE_MINUTES} ` +
-                  `minutes. This admin session carries a cookie, so it is served the same ` +
-                  `edge copy a reader is: refresh after that long rather than expecting it ` +
-                  `at once. Nothing here purges the cache.`}
+                {`Approving purges this post's cached page, so the mention appears on the ` +
+                  `next fetch rather than within ${SHARED_CACHE_MINUTES} minutes. If a purge ` +
+                  `is refused, which is rate limited, the page still updates within that ` +
+                  `long on its own.`}
               </p>
             ) : null}
             {rows.length === 0 ? (

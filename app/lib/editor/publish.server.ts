@@ -17,6 +17,7 @@
 import { imageSize } from "image-size";
 
 import { mediaRefKey } from "~/lib/media-ref-key.mjs";
+import { purgePost, purgePosts } from "~/lib/cache-purge.server";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
@@ -290,6 +291,39 @@ export async function renderAndWrite(
 
   record.related = await relatedFor(env, record);
   await syncPostToD1(env, record);
+
+  /*
+   * THE CACHE PURGE, AT THE ONE DOOR. Ruling 17, 2026-09-05.
+   *
+   * ## WHY HERE AND NOT AT FIVE CALL SITES
+   *
+   * Ruling 17 names five writes that purge `posts`: a publish, an unpublish, a
+   * save of a published post, a content-drift repair, and the operator's corpus
+   * sync. Every one of them reaches D1 through THIS FUNCTION, because hard rule
+   * 18 already made it the one door and `regenerateAllFromRepo` the one bulk
+   * form. Wiring the purge to the door rather than to the five callers means a
+   * sixth writer added later is purged by construction rather than by somebody
+   * remembering, which is the same argument that put the door here.
+   *
+   * ## IT PURGES ON A DRAFT SAVE TOO, AND THAT IS THE ACCEPTED COST
+   *
+   * A draft save changes nothing a reader can see, so this purge is wasted work
+   * on those. The alternative is a condition on the record's status, and the
+   * condition is where this gets subtly wrong: an UNPUBLISH writes a row whose
+   * status is draft while changing every public listing, so "skip drafts" would
+   * skip the one case that most needs the purge. Being right about unpublish is
+   * worth a handful of unnecessary purges a day on a single-author site.
+   *
+   * Purge rate limits are the Free-tier zone limits regardless of plan. If that
+   * ever binds, the fix is a condition that reads the PREVIOUS status rather
+   * than this one, not a condition on the incoming record.
+   *
+   * It cannot fail this write: `purgePosts` reads `success`, logs, and returns
+   * a boolean. Hard rule 18's second clause, a failed index write never reverts
+   * the source, applied to a cache.
+   */
+  await purgePosts(`renderAndWrite ${slug}`);
+
   return record;
 }
 
@@ -833,6 +867,14 @@ function searchStatements(db: D1Database, record: any) {
  * a delete either records that the citations are gone or does not happen.
  */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
+  // The row is going, so every listing that carried it is stale AND the post's
+  // own page must stop being served from cache. Both tags, because the page and
+  // the listings are different entries. Purged BEFORE the delete rather than
+  // after, deliberately: a purge that lands first can only cost a re-render of
+  // a page that still exists, where one that lands after a slow delete could
+  // re-store the page it was meant to remove.
+  await purgePost(slug, `deletePostFromD1 ${slug}`);
+  await purgePosts(`deletePostFromD1 ${slug}`);
   await env.DB.batch([
     env.DB.prepare(
       `DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`,

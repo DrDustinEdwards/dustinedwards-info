@@ -1935,8 +1935,18 @@ export async function decideWebmention(
   id: number,
   status: "approved" | "rejected",
   now: Date = new Date(),
-): Promise<void> {
-  await getDb(env)
+): Promise<string | null> {
+  /*
+   * IT RETURNS THE TARGET SLUG, and that is for the cache purge rather than for
+   * the caller's convenience. The page that changed is that post's, and
+   * `purgePost` needs to name it. Returning it from the write is the only way
+   * to be sure the purge names the row the write actually moved: a separate
+   * read could answer about a row this statement's `where` refused.
+   *
+   * NULL when nothing was updated, which is the unverified and failed cases the
+   * clause exists to refuse. A null purges nothing, correctly.
+   */
+  const rows = await getDb(env)
     .update(webmentions)
     .set({ status, decidedAt: now })
     .where(
@@ -1944,7 +1954,9 @@ export async function decideWebmention(
         eq(webmentions.id, id),
         inArray(webmentions.status, [...DECIDABLE_WEBMENTION_STATUSES]),
       ),
-    );
+    )
+    .returning({ targetSlug: webmentions.targetSlug });
+  return rows[0]?.targetSlug ?? null;
 }
 
 /**
@@ -1976,8 +1988,13 @@ export async function countExpiringWebmentions(
 }
 
 /** Remove one mention outright. The only delete an admin makes by hand. */
-export async function deleteWebmention(env: Env, id: number): Promise<void> {
-  await getDb(env).delete(webmentions).where(eq(webmentions.id, id));
+export async function deleteWebmention(env: Env, id: number): Promise<string | null> {
+  // The slug comes back for the purge, on the same grounds as decideWebmention.
+  const rows = await getDb(env)
+    .delete(webmentions)
+    .where(eq(webmentions.id, id))
+    .returning({ targetSlug: webmentions.targetSlug });
+  return rows[0]?.targetSlug ?? null;
 }
 
 /**
