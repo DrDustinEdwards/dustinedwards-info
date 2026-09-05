@@ -818,6 +818,98 @@ if (DRIVES_PREVIEW) {
 }
 
 /*
+ * THE SEEDED APPROVED MENTION, and it exists because the byte-identity case
+ * below would otherwise be asserting nothing about this feature.
+ *
+ * `/blog/ten-years-on-cloudflare` is already in THEME_CACHED, where two
+ * documents are compared for a credentialed reader and a cookieless one. That
+ * comparison is what licenses caching the page on path plus theme, and item H2
+ * added a section to it whose contents come out of D1. A post with NO approved
+ * mention renders no section at all, so the comparison would keep passing while
+ * saying nothing about the markup the feature actually emits: the clean-sweep
+ * shape, over an empty scope, on the one case that matters.
+ *
+ * So two rows are written first, and their presence in the rendered document is
+ * asserted before the comparison is believed.
+ *
+ * ## WHY THE ROWS ARE HAND-WRITTEN AND NOT SENT THROUGH THE ENDPOINT
+ *
+ * The endpoint cannot produce either of them. `sourceVerdict` refuses a
+ * `javascript:` source and `readAuthor` keeps an `author_url` only when it
+ * parses as absolute http(s), so the hostile row below is unreachable through
+ * `POST /webmention` by construction. That is exactly why it is worth
+ * rendering: `safeHttpHref` is a render-time check on a value two earlier
+ * checks should already have refused, and the only way to exercise it is to
+ * write the row those checks cannot produce.
+ *
+ * ## LOCAL ONLY, AND IT SAYS SO WHEN IT SKIPS
+ *
+ * Under PUBLIC_ORIGIN this gate observes the deployed site, where nothing here
+ * may write a row and no approved mention exists. The assertions SKIP with the
+ * reason rather than passing quietly, on the same grounds the series-route
+ * exemption below gives.
+ */
+const MENTION_POST_PATH = "/blog/ten-years-on-cloudflare";
+const MENTION_SLUG = MENTION_POST_PATH.slice("/blog/".length);
+/** The seed's own source prefix, so the cleanup below can name its own rows. */
+const MENTION_SEED_PREFIX = "https://gate.example/";
+/** A fixed instant, so the rendered date is the same in every fetch. */
+const MENTION_DECIDED_AT = Math.floor(Date.UTC(2026, 7, 20) / 1000);
+/** The hostile author name. Stored as these characters and rendered as them. */
+const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
+
+/** How many rows the seed writes. Asserted, so a silent failure is not a pass. */
+const MENTION_SEED_ROWS = 2;
+
+if (DRIVES_PREVIEW) {
+  /*
+   * DELETE THEN INSERT, so a re-run is idempotent and the count below means
+   * "this run wrote them" rather than "some earlier run did". The delete names
+   * only rows this seed could have written.
+   */
+  const sql = [
+    `DELETE FROM webmentions WHERE source_url LIKE '${MENTION_SEED_PREFIX}%'`,
+    `INSERT INTO webmentions ` +
+      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
+      `('${MENTION_SEED_PREFIX}ordinary', '${MENTION_SLUG}', 'approved', 'A Reader', ` +
+      `'https://gate.example/about', 'A sentence somebody wrote about this post.', ` +
+      `${MENTION_DECIDED_AT}, ${MENTION_DECIDED_AT})`,
+    `INSERT INTO webmentions ` +
+      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
+      `('${MENTION_SEED_PREFIX}hostile', '${MENTION_SLUG}', 'approved', '${MENTION_HOSTILE_NAME}', ` +
+      `'javascript:alert(1)', 'An excerpt from a page that cannot be linked to.', ` +
+      `${MENTION_DECIDED_AT - 60}, ${MENTION_DECIDED_AT - 60})`,
+  ].join("; ");
+
+  /*
+   * ONE COMMAND STRING, NOT AN ARGV ARRAY, and this cost a run to learn.
+   *
+   * `spawnSync(cmd, args, { shell: true })` on Windows joins the array into a
+   * command line WITHOUT quoting it, so every space in the SQL became an
+   * argument boundary and cmd answered "The system cannot find the file
+   * specified" about a program named after the first word of the statement.
+   *
+   * The repair is the shape `check-worker.mjs` already uses for the same
+   * reason: build the line, quote the one argument that needs it. The SQL below
+   * contains single quotes only, so the double quotes here cannot be closed
+   * from inside it, and the angle brackets in the hostile author name are
+   * inside those quotes where cmd does not read them as redirection.
+   */
+  const seeded = spawnSync(
+    `npx wrangler d1 execute dustinedwards --local --command "${sql}"`,
+    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (seeded.status !== 0) {
+    console.error("check:browser failed. the mention seed did not apply, so the byte-identity");
+    console.error("case below would compare two renders of a page with no Mentions section.");
+    console.error((seeded.stderr || seeded.stdout || "").slice(-1200));
+    registry.clear();
+    process.exit(1);
+  }
+  console.log(`  seeded ${MENTION_SEED_ROWS} approved mention(s) on ${MENTION_POST_PATH}`);
+}
+
+/*
  * THE SERVER'S OUTPUT IS KEPT, and until 2026-08-24 it was thrown away.
  *
  * `stdio: "ignore"` meant that when the startup poll timed out, the gate could
@@ -1832,6 +1924,80 @@ try {
           `longer read at render time or this page has no themed markup. A cache ` +
           `keyed on theme would be keying on nothing.`,
       );
+
+      /*
+       * THE MENTIONS SECTION, ON THE DOCUMENT THE COMPARISON ABOVE JUST RAN ON.
+       *
+       * Deliberately not a fetch of its own. The property being established is
+       * that the page carrying this section is the page proven byte-identical
+       * for a credentialed reader, and a second fetch would be a second
+       * document that only probably matches the first.
+       *
+       * THE FIRST ASSERTION IS THE SCOPE ASSERTION. Without the section
+       * present, everything below it passes by examining nothing and the
+       * comparison above says nothing about the feature, which is the shape
+       * this repository has been bitten by more than any other.
+       */
+      if (path === MENTION_POST_PATH) {
+        if (!DRIVES_PREVIEW) {
+          skip(
+            `${path}: the seeded mention cases`,
+            `this run observes ${PUBLIC_ORIGIN}, where nothing may write a row and no ` +
+              `mention has been approved. The section's markup is unexercised here.`,
+          );
+        } else {
+          ok(
+            `${path}: the seeded approved mentions render`,
+            stranger.includes('class="post-mentions"') &&
+              stranger.includes('id="mentions-heading"'),
+            `no Mentions section in the served document, so the seed did not reach the ` +
+              `render and every assertion below it, INCLUDING the byte-identity pair, is ` +
+              `about a page without the feature on it.`,
+          );
+          ok(
+            `${path}: the ordinary mention is an anchor carrying the full rel`,
+            /<a href="https:\/\/gate\.example\/about" rel="nofollow ugc noopener noreferrer">A Reader<\/a>/.test(
+              stranger,
+            ),
+            `the anchor is missing or its rel is not the four tokens. A ugc link that ` +
+              `passes ranking or leaks a referrer is the whole reason this rel exists.`,
+          );
+
+          /*
+           * THE HOSTILE ROW, BOTH DIRECTIONS. The escaped form being present
+           * does not prove the live form is absent: a page could render both.
+           */
+          ok(
+            `${path}: a script-shaped author name is ESCAPED`,
+            stranger.includes("&lt;script&gt;alert(1)&lt;/script&gt;"),
+            `the escaped literal is not in the document, so either the name was ` +
+              `stripped or the row did not render. Escaping is the whole difference ` +
+              `between this section and the injected body above it.`,
+          );
+          ok(
+            `${path}: no live script element reaches the document from a mention`,
+            !stranger.includes("<script>alert(1)</script>"),
+            `the author name reached the markup as a real element. This is the defect ` +
+              `the escaped-text ruling exists to prevent, on the one block of this page ` +
+              `whose text was written by a stranger.`,
+          );
+          ok(
+            `${path}: a javascript: author_url renders NO anchor`,
+            !/javascript:/i.test(stranger),
+            `a javascript: URL survived into the document. safeHttpHref refuses it at ` +
+              `render time and the name is meant to fall back to plain text; nothing on ` +
+              `this page may put a stranger's scheme in an href.`,
+          );
+          ok(
+            `${path}: the refused row still renders its name and excerpt`,
+            stranger.includes("An excerpt from a page that cannot be linked to."),
+            `the mention whose URLs both failed the check vanished instead of ` +
+              `degrading to text. A moderated mention the reader cannot see, while the ` +
+              `admin page shows it as published, is two surfaces disagreeing about what ` +
+              `is live.`,
+          );
+        }
+      }
 
       const residue = firstDiff(maskTheme(stranger), maskTheme(dark));
       ok(
@@ -5341,6 +5507,37 @@ try {
  * carrying a code fence, and the live-href assertion only for one with a
  * demoted URL. Both conditions are held by `check:features`, which reconciles
  * the snippet set in both directions, so they cannot quietly go absent.
+ *
+ * ## RE-MEASURED 2026-09-04 WITH THE SEEDED MENTION CASES: **246**
+ *
+ * **BOTH ENDS MEASURED BY RUNNING**, on the convention the previous entry set
+ * and for the reason it gives. The baseline was taken by putting HEAD's copy of
+ * this file on disk and running it: 240, against 246 with the new block. Six
+ * assertions on the one route that now carries a seeded approved mention: the
+ * section renders at all (the precondition, without which the other five and
+ * the byte-identity pair beside them are all about a page with no feature on
+ * it), the ordinary mention is an anchor carrying the full four-token rel, a
+ * script-shaped author name is escaped, no live script element reaches the
+ * document, a `javascript:` author URL renders no anchor, and the row whose
+ * URLs both failed still renders its text.
+ *
+ * **THE DELTA WAS THE CROSS-CHECK AND IT CAUGHT A MISCOUNT.** The block was
+ * expected to add five; it added six, and the sixth is the degradation
+ * assertion. Counting assertions off the source is what the previous entry
+ * warns against, and this is the same mistake caught the same way.
+ *
+ * The run-mode floor moves from 214 to 226, about eight percent under.
+ *
+ * **SKIP MODE IS 187, DERIVED**, on the basis this file has used since the
+ * home-tile entry: these six are in the PUBLIC block, which executes
+ * identically in both modes, and skip mode turns on the ADMIN credential
+ * rather than on the preview. 181 + 6 = 187, floored at 172.
+ *
+ * **A `PUBLIC_ORIGIN` RUN SCORES SIX LOWER IN EITHER MODE**, and that is a
+ * SKIP rather than a collapse: the deployed site has no approved mention and
+ * nothing here may write one, so the block says so and does not increment.
+ * 240 against a floor of 226 still passes, which is the slack that mode needs
+ * and the reason the floor is not set nearer the measurement.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -5352,7 +5549,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 214 : 166;
+  const MINIMUM_CHECKS = adminCasesRan ? 226 : 172;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

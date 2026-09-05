@@ -59,15 +59,13 @@ const TEST_DIR = join(root, "test", "worker");
    a single file leaving the *.test.ts pattern trips it, which is the same
    relationship the previous pair had. */
 const MINIMUM_FILES = 6;
-/* 90 against 96, re-measured 2026-09-04 by RUNNING the gate after the
-   webmention cases landed. It was 62 against 66, taken the same day after the
-   fixed-window case. Taken TWICE during that session and it moved between
-   readings, 89 then 96, because the moderation queue's confirmation cases were
-   written after the first: a measurement is only true of the commit it was
-   taken in, which is why it is re-run rather than adjusted. The file floor
-   catches a file LEAVING; this one catches a file being hollowed out in place,
-   which no file count can see. */
-const MINIMUM_CASES = 90;
+/* 95 against 101, re-measured 2026-09-04 by RUNNING the gate after item H2's
+   post-loader cases landed. It was 90 against 96 earlier the same day, and 62
+   against 66 before that. Three readings in one day, each true only of the
+   commit it was taken in, which is why this is re-run rather than adjusted.
+   The file floor catches a file LEAVING; this one catches a file being
+   hollowed out in place, which no file count can see. */
+const MINIMUM_CASES = 95;
 
 let checks = 0;
 let failures = 0;
