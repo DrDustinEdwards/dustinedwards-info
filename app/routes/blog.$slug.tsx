@@ -23,6 +23,7 @@ import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdow
 import {
   HTML_VARY_ACCEPT,
   NO_STORE_CACHE_CONTROL,
+  cacheTags,
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -136,21 +137,41 @@ export async function loader({ params, context }: Route.LoaderArgs) {
        * Both are built by a named function from `SITE_ORIGIN`, so the two
        * values cannot come to name different hosts.
        */
-      headers: { Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", ") },
+      headers: {
+        Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", "),
+        /*
+         * THE CACHE TAG IS SET IN THE LOADER, not in `headers()`, and that is
+         * forced rather than chosen: `HeadersArgs` carries `loaderHeaders` and
+         * no `params`, so the slug is not in scope down there. The loader is
+         * where the post is known, so it is where the tag is built, and
+         * `headers()` forwards it exactly as it forwards `Link`.
+         */
+        "Cache-Tag": cacheTags(post.slug),
+      },
     },
   );
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   const headers = new Headers({
-    // Publicly cacheable for COOKIELESS readers only; workers/app.ts downgrades
-    // it when a cookie is present. Varies on Accept (the markdown twin) AND on
-    // Cookie (the theme). Grounds on HTML_VARY in seo.ts.
+    // Publicly cacheable for EVERY reader since 2026-09-05: the theme is a
+    // dimension of the cache key rather than a Vary. `Accept` STAYS, because
+    // this URL really does serve a markdown representation as well as HTML.
+    //
+    // TWO TAGS, and this is the only route that gets a per-document one.
+    // Approving a mention on THIS post purges `post:<slug>` and nothing else;
+    // a publish purges `posts` and moves every page that lists the corpus,
+    // this one included. Grounds on cacheTags in seo.ts.
     "Cache-Control": SHARED_CACHE_CONTROL,
     Vary: HTML_VARY_ACCEPT,
   });
+  // Both carried through from the loader, which is the only place the slug is
+  // in scope. A header the loader sets and this does not forward simply never
+  // reaches the client.
   const link = loaderHeaders.get("Link");
   if (link) headers.set("Link", link);
+  const tag = loaderHeaders.get("Cache-Tag");
+  if (tag) headers.set("Cache-Tag", tag);
   return headers;
 }
 

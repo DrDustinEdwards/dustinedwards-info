@@ -1,6 +1,11 @@
 import type { ServerBuild } from "react-router";
 
-import { NO_STORE_CACHE_CONTROL, SHARED_CACHE_CONTROL, HTML_VARY, HTML_VARY_ACCEPT } from "~/lib/seo";
+import {
+  NO_STORE_CACHE_CONTROL,
+  SHARED_CACHE_CONTROL,
+  HTML_VARY_ACCEPT,
+  cacheTags,
+} from "~/lib/seo";
 
 /**
  * A hand-written React Router server build, standing in for the one the vite
@@ -14,11 +19,14 @@ import { NO_STORE_CACHE_CONTROL, SHARED_CACHE_CONTROL, HTML_VARY, HTML_VARY_ACCE
  * the last build left on disk, which is the staleness class `check:page-payload`
  * already has to live with.
  *
- * The SUBJECT of the cases that reach for this is `workers/app.ts`: the themed
- * cache key, the cookie downgrade, the negotiation bypass, the security header
- * stamp, the order of store-then-downgrade. None of that is about which routes
- * exist. So the route table is the part that gets replaced, and the transport
- * around it is real.
+ * The SUBJECT of the cases that reach for this is `workers/app.ts`: the cache
+ * key the gateway builds, the negotiation bypass, the security header stamp and
+ * hard rule 8's uncached default. None of that is about which routes exist. So
+ * the route table is the part that gets replaced, and the transport around it is
+ * real.
+ *
+ * THE THEMED-CACHE SUBJECTS ARE GONE, 2026-09-05, with the layer: there is no
+ * store-then-downgrade order left to assert and no hand-built key to separate.
  *
  * ## RESOURCE ROUTES ONLY, WHICH IS WHAT KEEPS THIS SMALL
  *
@@ -86,7 +94,7 @@ const routes: Record<string, StubRoute> = {
           headers: {
             "content-type": "text/html; charset=utf-8",
             "cache-control": SHARED_CACHE_CONTROL,
-            vary: HTML_VARY,
+            "cache-tag": cacheTags(),
           },
         }),
     },
@@ -119,6 +127,7 @@ const routes: Record<string, StubRoute> = {
           headers: {
             "content-type": "text/html; charset=utf-8",
             "cache-control": SHARED_CACHE_CONTROL,
+            "cache-tag": cacheTags(),
             vary: HTML_VARY_ACCEPT,
           },
         });
@@ -143,7 +152,7 @@ const routes: Record<string, StubRoute> = {
           headers: {
             "content-type": "text/html; charset=utf-8",
             "cache-control": SHARED_CACHE_CONTROL,
-            vary: HTML_VARY,
+            "cache-tag": cacheTags(),
             "set-cookie": "planted=1; Path=/",
           },
         }),

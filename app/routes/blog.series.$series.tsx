@@ -12,6 +12,7 @@ import {
   SITE_ORIGIN,
   breadcrumbJsonLd,
   pageMeta,
+  cacheTags,
   publicHtmlHeaders,
 } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
@@ -70,9 +71,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
 export function headers() {
   // The tag archive's headers, through the same helper that owns them, which is
-  // `SHARED_CACHE_CONTROL` with `HTML_VARY`. This page negotiates nothing, so it
+  // `SHARED_CACHE_CONTROL` with the `posts` cache tag. This page negotiates
+  // nothing, so it
   // takes the helper rather than writing the pair out.
-  return new Headers(publicHtmlHeaders());
+  return new Headers(publicHtmlHeaders(cacheTags()));
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
