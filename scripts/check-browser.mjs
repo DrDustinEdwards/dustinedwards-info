@@ -4338,6 +4338,20 @@ try {
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
       ["/admin/origin-requests", "origin requests"],
+      /*
+       * ADDED 2026-09-05 with ruling 21's redesign, and what it asserts is
+       * deliberately NOT the redesign.
+       *
+       * These cases observe ADMIN_ORIGIN, a DEPLOYED Worker, so an assertion
+       * written against the new markup would be red from the moment it is
+       * committed until the moment it ships, and green for the wrong reason in
+       * between. The page's STRUCTURE is check:admin-ui's, which renders the
+       * working tree: filter chips, counts, the box a message lands in, the
+       * three button weights. What only a browser can say is that the route
+       * renders inside the shell at all and that it does not overflow, and that
+       * is what this and the width loop below take.
+       */
+      ["/admin/mentions", "the mentions queue"],
     ];
     for (const [path, what] of SURFACES) {
       await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
@@ -5015,6 +5029,12 @@ try {
       for (const [path, what] of [
         ["/admin", "the cockpit"],
         ["/admin/posts", "the posts list"],
+        /* The mentions queue joined this loop with ruling 21, because the
+           redesign puts a row of chips, a quoted excerpt and three buttons on
+           one line and every one of those is a thing that pushes past a narrow
+           viewport. 375 is the width that matters here and it is already in the
+           list. */
+        ["/admin/mentions", "the mentions queue"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
         const o = await admin.evaluate(() => {
@@ -5486,6 +5506,18 @@ try {
  * nothing here may write one, so the block says so and does not increment.
  * 240 against a floor of 226 still passes, which is the slack that mode needs
  * and the reason the floor is not set nearer the measurement.
+ *
+ * ## RE-MEASURED 2026-09-05 WITH THE MENTIONS QUEUE: **249**
+ *
+ * Run through this gate's own pipeline, never summed: 241 before, 249 after,
+ * and the arithmetic that makes 249 credible rather than merely observed is one
+ * surface case plus one overflow case at each of the seven widths. Floored at
+ * 234, which is the slack of 15 this floor has always carried.
+ *
+ * THE PUBLIC_ORIGIN MODE STILL CLEARS IT. That mode scores six lower for the
+ * reason above, so it reads 243 against 234 and passes with nine to spare. A
+ * floor set nearer the 249 would go red on a run this file already documents as
+ * correct, which is the unfailable-floor class inverted.
  */
 /*
  * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
@@ -5497,7 +5529,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 226 : 172;
+  const MINIMUM_CHECKS = adminCasesRan ? 234 : 172;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

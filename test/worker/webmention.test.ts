@@ -8,7 +8,10 @@ import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
 import { middleware as adminMiddleware } from "~/routes/admin";
-import { action as mentionsAction } from "~/routes/admin.mentions";
+import {
+  action as mentionsAction,
+  loader as mentionsLoader,
+} from "~/routes/admin.mentions";
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
 import { loader as blogLoader } from "~/routes/blog.$slug";
 
@@ -731,7 +734,29 @@ describe("the moderation queue", () => {
     return (await mentionsAction({
       request: adminPost(body),
       context: routeContext(ctx),
-    } as never)) as unknown as { data: { message?: string; confirmDelete?: number; confirmSweep?: { failed: number; rejected: number } } };
+    } as never)) as unknown as {
+      data: {
+        ok?: boolean;
+        message?: string;
+        confirmDelete?: number;
+        confirmSweep?: { failed: number; rejected: number };
+      };
+    };
+  }
+
+  /** The loader, at whatever `?status=` the case wants to ask about. */
+  async function runLoader(query = "") {
+    const ctx = createExecutionContext();
+    return (await mentionsLoader({
+      request: new Request(`${SITE_ORIGIN}/admin/mentions${query}`),
+      context: routeContext(ctx),
+    } as never)) as unknown as {
+      data: {
+        mentions: Array<{ status: string }>;
+        expiring: { failed: number; rejected: number };
+        status: string;
+      };
+    };
   }
 
   async function statusOf(sourceUrl: string) {
@@ -858,6 +883,132 @@ describe("the moderation queue", () => {
         "not valid",
       );
     }
+  });
+
+  /*
+   * RULING 21c, AND THIS IS THE LAYER THAT OWNS IT.
+   *
+   * The page renders a message into `editor-notice` or into `panel-error` on
+   * `ok` alone, and `check:admin-ui` asserts that it picks the right box for a
+   * DECLARED `ok`. Nothing there runs the action, so nothing there can say the
+   * action sets the flag correctly. That is this layer's half, and the two
+   * together are what stops a success reappearing in the error box.
+   *
+   * THE FLAG IS ASSERTED BESIDE THE EFFECT, never on its own: a run that
+   * checked `ok === true` and not the row would pass on an action that reported
+   * success and did nothing.
+   */
+  it("MARKS AN OUTCOME ok AND A REFUSAL NOT, so the page can pick the right box", async () => {
+    const source = "https://elsewhere.example/flagged";
+    const id = await seedMention(source, "pending", 1);
+
+    const approved = await runAction({ intent: "approve", id: String(id) });
+    expect(approved.data.ok).toBe(true);
+    expect(await statusOf(source)).toBe("approved");
+
+    const rejected = await runAction({ intent: "reject", id: String(id) });
+    expect(rejected.data.ok).toBe(true);
+    expect(await statusOf(source)).toBe("rejected");
+
+    const swept = await runAction({ intent: "sweep", "confirm-count": "1" });
+    expect(swept.data.ok).toBe(true);
+
+    const deleted = await runAction({ intent: "delete", id: String(id), "confirm-count": "1" });
+    expect(deleted.data.ok).toBe(true);
+    expect(await mentionRow(source)).toBeNull();
+
+    /* THE TWO REFUSALS, and neither may be `ok`. Both carry a message, which is
+       exactly why the page cannot classify by reading one. */
+    const badIntent = await runAction({ intent: "incinerate" });
+    expect(badIntent.data.ok).toBe(false);
+    expect(badIntent.data.message).toBeTruthy();
+
+    const badId = await runAction({ intent: "delete", id: "0", "confirm-count": "1" });
+    expect(badId.data.ok).toBe(false);
+    expect(badId.data.message).toBeTruthy();
+  });
+
+  /* A CONFIRMATION STEP IS NEITHER. It carries no message at all, so the page
+     renders no box and shows the second step instead, which is the whole
+     ceremony `app/lib/destructive.mjs` asks for. */
+  it("LEAVES ok UNSET on a confirmation step, so neither box renders", async () => {
+    const id = await seedMention("https://elsewhere.example/pending-confirm", "rejected", 1);
+
+    const del = await runAction({ intent: "delete", id: String(id) });
+    expect(del.data.ok).toBeUndefined();
+    expect(del.data.message).toBeUndefined();
+    expect(del.data.confirmDelete).toBe(id);
+
+    const sweep = await runAction({ intent: "sweep" });
+    expect(sweep.data.ok).toBeUndefined();
+    expect(sweep.data.message).toBeUndefined();
+    expect(sweep.data.confirmSweep).toBeTruthy();
+  });
+
+  /*
+   * RULING 21a's DEFAULT, and it is a loader property rather than a component
+   * one: the filter is resolved on the server so the page needs no script and
+   * the rendered HTML is the whole answer. `check:admin-ui` DECLARES a status
+   * in its fixture, so it cannot see this; only running the loader can.
+   */
+  it("DEFAULTS TO PENDING when anything is pending, and to all when nothing is", async () => {
+    await seedMention("https://elsewhere.example/settled", "approved", 1);
+
+    /* Nothing pending, so the default is the log rather than a quiet line about
+       an empty queue. */
+    const quiet = await runLoader();
+    expect(quiet.data.status).toBe("all");
+
+    await seedMention("https://elsewhere.example/waiting", "pending", 1);
+    const busy = await runLoader();
+    expect(busy.data.status).toBe("pending");
+  });
+
+  it("HONOURS an explicit ?status=, and treats an unrecognised one as absent", async () => {
+    await seedMention("https://elsewhere.example/waiting", "pending", 1);
+
+    /* `all` is how a reader asks for everything ON PURPOSE, which is why it
+       cannot be the same thing as the parameter being missing. */
+    expect((await runLoader("?status=all")).data.status).toBe("all");
+    expect((await runLoader("?status=rejected")).data.status).toBe("rejected");
+
+    /* An empty or unknown value falls back to the default rather than to `all`,
+       so a truncated link cannot silently widen what is on screen. */
+    expect((await runLoader("?status=")).data.status).toBe("pending");
+    expect((await runLoader("?status=everything")).data.status).toBe("pending");
+  });
+
+  /*
+   * THE LOADER HANDS OVER EVERY ROW, and the component filters. That is what
+   * makes the chip counts and the list agree by construction: they are derived
+   * from one array. A loader that filtered in SQL would have to count in a
+   * second query, which is the shape the media library's Unused chip shipped
+   * with and got wrong.
+   */
+  it("RETURNS EVERY ROW INCLUDING UNVERIFIED, whatever the filter says", async () => {
+    await seedMention("https://elsewhere.example/a", "pending", 1);
+    await seedMention("https://elsewhere.example/b", "unverified", 1);
+    await seedMention("https://elsewhere.example/c", "failed", 1);
+
+    for (const query of ["", "?status=pending", "?status=all"]) {
+      const result = await runLoader(query);
+      expect(result.data.mentions.length, `filter ${JSON.stringify(query)}`).toBe(3);
+      expect(result.data.mentions.some((m) => m.status === "unverified")).toBe(true);
+    }
+  });
+
+  /* The sweep button is LABELLED with this count, so the loader owes it on
+     every request rather than only on the confirmation step. */
+  it("CARRIES THE EXPIRING COUNT, so the sweep control can name what it removes", async () => {
+    const empty = await runLoader();
+    expect(empty.data.expiring).toEqual({ failed: 0, rejected: 0 });
+
+    await seedMention("https://elsewhere.example/old-failure", "failed", 40);
+    await seedMention("https://elsewhere.example/old-rejection", "rejected", 100);
+    await seedMention("https://elsewhere.example/recent-failure", "failed", 20);
+
+    const loaded = await runLoader();
+    expect(loaded.data.expiring).toEqual({ failed: 1, rejected: 1 });
   });
 });
 

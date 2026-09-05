@@ -48,6 +48,14 @@
     // so the origin invariant has one source rather than two agreeing lists.
     "app/lib/media/upload-contract.mjs",
     "app/lib/destructive.mjs",
+    // The two webmention retention windows. The admin page labels its sweep
+    // with them and check:admin-ui asserts the label against the CONSTANTS
+    // rather than against a copy of the sentence, on exactly the footing
+    // CACHE_SENTENCE below is on: a paraphrase in the route that hard-coded 30
+    // and 90 would satisfy a text comparison and would be a second owner of a
+    // number hard rule 17 gives to one module. Constants and one pure helper,
+    // no Env and no DOM.
+    "app/lib/webmention/retention.mjs",
     "app/lib/media/view.mjs",
     // The folder table view.mjs groups by. Same reason as view.mjs above:
     // check:admin-ui reaches the module, so this project has to list it.

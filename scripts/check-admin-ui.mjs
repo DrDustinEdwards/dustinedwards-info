@@ -45,6 +45,14 @@ import { fileURLToPath } from "node:url";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
+// The retention windows are asserted against the CONSTANTS, not against a copy
+// of the sentence, for the same reason CACHE_SENTENCE below is: a paraphrase in
+// the route that hard-coded the two numbers would pass a text comparison and
+// would be a second owner of a fact hard rule 17 gives to one module.
+import {
+  FAILED_RETENTION_DAYS,
+  REJECTED_RETENTION_DAYS,
+} from "../app/lib/webmention/retention.mjs";
 // The caveat is asserted against the CONSTANT, not against a copy of its text,
 // so a paraphrase in the route fails here rather than becoming a second owner.
 import { CACHE_SENTENCE } from "../app/lib/admin/origin-requests.mjs";
@@ -1867,35 +1875,113 @@ const STATES = [
    * because everything on this page came from a stranger and the render is the
    * boundary. Section 3's escaping assertions read the markup back.
    */
+  /*
+   * ---- ruling 21: one queue behind a status filter -------------------------
+   *
+   * `status` ARRIVES IN loaderData because the route resolves the filter in its
+   * LOADER rather than from a hook, so a state here declares the filter the
+   * same way the server would hand it over. `expiring` arrives for the same
+   * reason: the sweep button is LABELLED with the count, so the label is a
+   * loader fact and a state can choose it.
+   *
+   * The populated queue is rendered at `all` rather than at the default,
+   * because every escaping assertion below reads MENTIONS[0] and a state that
+   * filtered it out would leave those cases green over a row they never saw.
+   */
   {
     name: "mentions, populated queue",
     entry: "app/routes/admin.mentions.tsx",
     path: "/admin/mentions",
-    url: "/admin/mentions",
-    loaderData: { mentions: MENTIONS },
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
+  },
+  {
+    name: "mentions, pending filter",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions?status=pending",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "pending" },
+  },
+  /*
+   * AN EMPTY FILTER WITH ROWS BEHIND IT, which is the state the old page could
+   * not produce at all and the one ruling 21a is about. It must show the quiet
+   * line and NOT the four rows that exist under other statuses, so it can fail
+   * in both directions: a filter that stopped filtering and a filter that
+   * stopped saying why the list is empty.
+   */
+  {
+    name: "mentions, empty pending filter",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions?status=pending",
+    loaderData: {
+      mentions: MENTIONS.filter((m) => m.status !== "pending"),
+      expiring: { failed: 2, rejected: 1 },
+      status: "pending",
+    },
   },
   {
     name: "mentions, empty queue",
     entry: "app/routes/admin.mentions.tsx",
     path: "/admin/mentions",
     url: "/admin/mentions",
-    loaderData: { mentions: [] },
+    loaderData: { mentions: [], expiring: { failed: 0, rejected: 0 }, status: "all" },
+  },
+  /* Nothing expired, so the sweep control is disabled and still carries its
+     count.
+
+     ITS PAYLOAD IS UNCHANGED, and the baseline records that rather than an
+     absence: the BUTTON is disabled, the hidden `intent` field beside it is
+     not, so the form still reports `intent` here. A browser will not submit it
+     at all while the button is the only submitter and it is disabled, which is
+     a fact about the browser that this harness does not model and this comment
+     must not claim it does. What the state is really for is the LABEL, which
+     the structural case below reads. */
+  {
+    name: "mentions, nothing expired",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 0, rejected: 0 }, status: "all" },
   },
   {
     name: "mentions, delete awaiting confirmation",
     entry: "app/routes/admin.mentions.tsx",
     path: "/admin/mentions",
-    url: "/admin/mentions",
-    loaderData: { mentions: MENTIONS },
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
     actionData: { confirmDelete: 1 },
   },
   {
     name: "mentions, sweep awaiting confirmation",
     entry: "app/routes/admin.mentions.tsx",
     path: "/admin/mentions",
-    url: "/admin/mentions",
-    loaderData: { mentions: MENTIONS },
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
     actionData: { confirmSweep: { failed: 2, rejected: 1 } },
+  },
+  /*
+   * THE TWO FEEDBACK STATES, and they are separate states rather than one,
+   * because the property under ruling 21c is that the BOX MATCHES THE OUTCOME.
+   * One state could only ever assert that some box rendered. Two can assert
+   * that each renders its own and not the other, which is what fails when a
+   * success goes back into the error box.
+   */
+  {
+    name: "mentions, success notice",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
+    actionData: { ok: true, message: "Mention approved." },
+  },
+  {
+    name: "mentions, refusal",
+    entry: "app/routes/admin.mentions.tsx",
+    path: "/admin/mentions",
+    url: "/admin/mentions?status=all",
+    loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
+    actionData: { ok: false, message: "That mention id is not valid." },
   },
   /*
    * ---- the cockpit ---------------------------------------------------------
@@ -2467,11 +2553,15 @@ for (const name of Object.keys(actual)) {
  * index grew per-row duplicate and unpublish controls: two tuples on each of
  * the eight states that render at least one row, so 16 submissions. Moved for
  * the reason above rather than left to drift, and the slack is still 21.
+ *
+ * It read 404 against a floor of 383 until 2026-09-05 and ruling 21, which
+ * added five mentions states carrying 38 submissions between them. RE-MEASURED
+ * BY RUNNING, never summed: 442. The slack is still 21.
  */
 assert(
   "the comparison actually read submissions",
-  submissionsCompared >= 383,
-  `${submissionsCompared} compared, floor 383, measured 404`,
+  submissionsCompared >= 421,
+  `${submissionsCompared} compared, floor 421, measured 442`,
 );
 
 /*
@@ -2487,11 +2577,16 @@ assert(
  * submission floor above and for the same reason: the first-publication
  * confirmation step added a state, and a floor whose slack doubles is a floor
  * that has stopped meaning what its own comment says it means.
+ *
+ * RE-MEASURED BY RUNNING, 2026-09-05: 94. It read 89 against 77 until ruling 21
+ * split the mentions page's four states into nine, and a slack of 17 is a floor
+ * that would sit through the whole of that section being deleted. Floor 89,
+ * slack 5, which is the width it has always had.
  */
 assert(
   "the harness rendered its full set of states",
-  STATES.length >= 77,
-  `${STATES.length} state(s), floor 77, measured 82`,
+  STATES.length >= 89,
+  `${STATES.length} state(s), floor 89, measured 94`,
 );
 
 /* -------------------------------------------------------------------------
@@ -4805,22 +4900,249 @@ for (const state of MENTION_STATES) {
   structural("the target slug links to its editor", state, (h) =>
     h.includes('href="/admin/posts/a-post/edit"'),
   );
-}
-
-/* Every status the queue groups by is rendered, so a group that silently
-   stopped being shown fails here rather than hiding a pending mention. */
-for (const heading of ["Pending", "Failed verification", "Approved", "Rejected"]) {
-  structural(`the ${heading} group has a heading`, "mentions, populated queue", (h) =>
-    h.includes(`>${heading}</h2>`),
+  /* RULING 21b: the excerpt LEADS, and it leads as a quotation. A row whose
+     evidence rendered as another paragraph would read as the page's own prose
+     rather than as something a stranger wrote. */
+  structural("the excerpt is a blockquote", state, (h) =>
+    h.includes('<blockquote class="mention-quote">'),
   );
 }
 
-/* The unverified row is COUNTED rather than listed, which is the one thing a
-   reader could mistake for a missing row. */
+/*
+ * THE FILTER ROW, which is ruling 21a and is the whole shape of the redesign.
+ *
+ * Asserted as five chips WITH THEIR COUNTS rather than as five links, because
+ * a row of chips carrying no numbers is the same navigation with the reason to
+ * look at it removed, and that is exactly what a refactor drops first.
+ */
+/** @type {Array<[string, number]>} */
+const FILTER_CHIPS = [
+  ["Pending", 1],
+  ["Failed", 1],
+  ["Approved", 1],
+  ["Rejected", 1],
+  ["All", 5],
+];
+for (const [label, count] of FILTER_CHIPS) {
+  structural(`the ${label} filter is a chip carrying its count`, "mentions, populated queue", (h) =>
+    new RegExp(
+      `<a[^>]*href="/admin/mentions\\?status=${label.toLowerCase()}"[^>]*>${label} ` +
+        `<span class="mention-chip-count">${count}</span></a>`,
+    ).test(h),
+  );
+}
+
+/*
+ * THE ALL COUNT IS THE WHOLE TABLE, which is what makes the row honest: four
+ * status counts plus the unverified chip equals it. MENTIONS carries one row of
+ * every status including `unverified`, so an `all` that quietly excluded the
+ * unverified row would read 4 here and this would fail. That is the assertion,
+ * not the number: the fixture has five rows and the chip says five.
+ */
 structural(
-  "unverified mentions are counted in the retention panel",
+  "the All count is every row in the fixture, so the chips account for all of them",
   "mentions, populated queue",
-  (h) => h.includes("1 mention(s) are currently unverified"),
+  (h) => h.includes('<span class="mention-chip-count">5</span>'),
+);
+
+/* Exactly one chip is current, and it is the one the loader resolved. */
+structural(
+  "the current filter is the only one marked aria-current",
+  "mentions, pending filter",
+  (h) =>
+    (h.match(/aria-current="page"/g) ?? []).length === 1 &&
+    /<a[^>]*aria-current="page"[^>]*href="\/admin\/mentions\?status=pending"/.test(h),
+);
+structural(
+  "the current filter carries the active class the stylesheet keys on",
+  "mentions, pending filter",
+  (h) => h.includes('class="mention-chip is-active"'),
+);
+
+/* RULING 21f. The unverified count is a chip on the same row, and it is NOT a
+   link, because there is no decision to make about a row that has not been
+   verified yet. */
+structural(
+  "unverified mentions are a chip on the filter row",
+  "mentions, populated queue",
+  (h) => /<span class="chip mention-unverified">\s*1 unverified\s*<\/span>/.test(h),
+);
+/* And it is ABSENT rather than reading zero. A chip saying 0 is an alarm about
+   nothing, which is the rule the media library's lens dots already follow. */
+structural(
+  "the unverified chip is absent when there are none",
+  "mentions, empty queue",
+  (h) => !h.includes("mention-unverified"),
+);
+
+/*
+ * NO PANEL HEADINGS. The four `<h2>` group headings are what ruling 21a
+ * removed, and their absence is asserted rather than assumed: a redesign that
+ * kept the filter row AND the headings would look finished and would still be
+ * the page the operator rejected.
+ */
+for (const heading of ["Pending", "Failed verification", "Approved", "Rejected"]) {
+  structural(`the ${heading} group heading is gone`, "mentions, populated queue", (h) =>
+    !h.includes(`>${heading}</h2>`),
+  );
+}
+
+/*
+ * THE EMPTY FILTER IS ONE QUIET LINE. Three properties, because the failure
+ * this replaces had three parts: a heading, a box, and rows that should have
+ * been filtered out.
+ */
+structural(
+  "an empty filter says which filter is empty",
+  "mentions, empty pending filter",
+  (h) => h.includes("No pending mentions."),
+);
+structural(
+  "an empty filter renders no empty-state box",
+  "mentions, empty pending filter",
+  (h) => !h.includes("empty-state"),
+);
+structural(
+  "an empty filter shows no rows from the other statuses",
+  "mentions, empty pending filter",
+  (h) => !h.includes("mention-row"),
+);
+structural(
+  "an empty table says so in words too",
+  "mentions, empty queue",
+  (h) => h.includes("No mentions yet.") && !h.includes("empty-state"),
+);
+
+/*
+ * RULING 21c: THE BOX MATCHES THE OUTCOME, and both directions are asserted on
+ * both states. The defect this closes rendered every message in `panel-error`,
+ * so an assertion that only checked "the success text appears" was green
+ * throughout it.
+ */
+structural(
+  "a success renders in the notice box",
+  "mentions, success notice",
+  (h) => /<p class="editor-notice mention-feedback" role="status">Mention approved\.<\/p>/.test(h),
+);
+structural(
+  "a success does NOT render in the error box",
+  "mentions, success notice",
+  (h) => !h.includes("panel-error"),
+);
+structural(
+  "a refusal renders in the error box",
+  "mentions, refusal",
+  (h) => /<p class="panel-error mention-feedback" role="status">That mention id is not valid\.<\/p>/.test(h),
+);
+structural(
+  "a refusal does NOT render in the notice box",
+  "mentions, refusal",
+  (h) => !h.includes("editor-notice"),
+);
+
+/*
+ * RULING 21d: THE ACTION HIERARCHY, read as classes because that is what the
+ * weight is made of. `.btn` is the brand fill, `.btn-ghost` is the bordered
+ * secondary and `.btn-text` is the text weight; three buttons all wearing
+ * `.btn` is the page as it was, where Delete was a filled red control shouting
+ * on every row including the ones with nothing wrong with them.
+ */
+structural(
+  "Approve is the primary",
+  "mentions, populated queue",
+  (h) => /<button type="submit" class="btn">\s*Approve\s*<\/button>/.test(h),
+);
+structural(
+  "Reject is the secondary",
+  "mentions, populated queue",
+  (h) => /<button type="submit" class="btn-ghost">\s*Reject\s*<\/button>/.test(h),
+);
+structural(
+  "Delete is the text weight",
+  "mentions, populated queue",
+  (h) => /<button type="submit" class="btn-text">\s*Delete\s*<\/button>/.test(h),
+);
+/* And nothing on a row is the danger fill any more. The confirmation step still
+   is, which is why this reads the ordinary queue and not that one. */
+structural(
+  "no row action is a danger fill",
+  "mentions, populated queue",
+  (h) => !h.includes("btn-danger"),
+);
+
+/* RULING 21e: one clause beside Approve, on the rows that can be approved from
+   pending, and nowhere else. The old paragraph is gone with its minute count. */
+structural(
+  "the purge clause sits beside Approve",
+  "mentions, populated queue",
+  (h) => h.includes("Appears on the post within seconds."),
+);
+structural(
+  "the purge paragraph and its minute count are gone",
+  "mentions, populated queue",
+  (h) => !h.includes("Approving purges") && !h.includes("within 10 minutes"),
+);
+/* It appears ONCE, on the one pending row in the fixture. A clause repeated on
+   every row would be the essay back in a different shape. */
+structural(
+  "the clause is on the pending row only",
+  "mentions, populated queue",
+  (h) => (h.match(/Appears on the post within seconds\./g) ?? []).length === 1,
+);
+
+/*
+ * THE RETENTION FOOTNOTE, which is the essay reduced to one line and a button.
+ *
+ * The two windows are read from the CONSTANTS, so a paraphrase in the route
+ * that hard-coded 30 and 90 would pass and a drift in the constants would fail
+ * here rather than shipping a label that disagrees with the sweep.
+ */
+structural(
+  "the retention line names both windows, from the constants",
+  "mentions, populated queue",
+  (h) =>
+    h.includes(
+      `Failed mentions are removed after ${FAILED_RETENTION_DAYS} days, rejected after ` +
+        `${REJECTED_RETENTION_DAYS} days.`,
+    ),
+);
+structural(
+  "the retention essay is gone",
+  "mentions, populated queue",
+  (h) => !h.includes("are never swept") && !h.includes("open-queue cap"),
+);
+/* The button carries the count, which is the whole of ruling 21e's second half:
+   a verb with no object became a quantity. 2 failed plus 1 rejected is 3. */
+structural(
+  "the sweep button is labelled with what it would remove",
+  "mentions, populated queue",
+  (h) => /<button type="submit" class="btn-ghost">Remove 3 expired<\/button>/.test(h),
+);
+structural(
+  "with nothing expired the button is disabled and keeps its label",
+  "mentions, nothing expired",
+  (h) => /<button type="submit" class="btn-ghost" disabled="">Remove 0 expired<\/button>/.test(h),
+);
+
+/*
+ * THE VERIFIED STAMP IS GONE and the other three are not. Asserted together,
+ * because "verified is absent" alone would pass on a row that rendered no
+ * stamps at all.
+ */
+structural(
+  "the row stamps received, and drops verified",
+  "mentions, populated queue",
+  (h) => h.includes("received 2026-09-01T10:00:00Z") && !h.includes("verified 2026-09-01"),
+);
+structural(
+  "a decided row stamps when it was decided",
+  "mentions, populated queue",
+  (h) => h.includes("received 2026-08-26T09:00:00Z") || h.includes("decided 2026-08-26T09:00:00Z"),
+);
+structural(
+  "a failed row stamps its reason",
+  "mentions, populated queue",
+  (h) => h.includes(", reason no-link"),
 );
 
 /*
@@ -4860,13 +5182,6 @@ structural(
   "no confirmation field is rendered before the action asks for one",
   "mentions, populated queue",
   (h) => !h.includes(`name="${CONFIRM_FIELD}"`),
-);
-
-/* The empty state is a sentence per group, not a blank panel. */
-structural(
-  "the empty queue says so in words",
-  "mentions, empty queue",
-  (h) => h.includes("No pending mentions.") && h.includes("empty-state"),
 );
 
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
@@ -5224,8 +5539,14 @@ assert(
  * copies drift together and agreeing with each other is all they can do. The
  * only thing that reads the count is the comparison against MINIMUM_CHECKS,
  * and it passed throughout. Re-measured here rather than carried.
+ *
+ * RAISED 591 -> 634 by ruling 21's redesign of that same queue, 2026-09-05.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE BY RUNNING IT: 662, over 94
+ * states. Never summed. Slack of 28 is unchanged, and it still absorbs a state
+ * being retired: dropping the whole mentions section is now 40 assertions,
+ * which fails by a wide margin.
  */
-const MINIMUM_CHECKS = 591;
+const MINIMUM_CHECKS = 634;
 if (checks < MINIMUM_CHECKS) {
   fail(
     // The measurement is stated in the message as well as in the comment above,
@@ -5234,7 +5555,7 @@ if (checks < MINIMUM_CHECKS) {
     // number a failure prints is an instrument, and this one was reporting the
     // previous session's reading to whoever the gate stops.
     `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 619.`,
+      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 662.`,
   );
 }
 
