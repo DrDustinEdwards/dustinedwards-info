@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { analyticsPath } from "~/lib/analytics-path.mjs";
@@ -52,72 +53,101 @@ const requestHandler = createRequestHandler(
 const UNCACHED = "private, no-store";
 
 /**
- * THE THEMED EDGE CACHE, for the readers the platform cache cannot serve.
+ * WHAT THE CACHE KEY IS, now that the platform can hold the whole dimension.
  *
- * ## The defect, measured on the wire 2026-08-26
+ * ## THE LAYER THIS REPLACES, and the measurement that justified both
  *
- * `Vary: Cookie` plus the downgrade below means the only variant the platform
- * will ever store is the cookieless one, which is what makes the arrangement
- * safe. It also means that ANY cookie takes a reader out of the edge cache for
- * every HTML page, permanently:
+ * Until 2026-09-05 this file ran a SECOND cache by hand, in `caches.default`,
+ * keyed on a synthetic `__theme` and `__build` query parameter. It existed for
+ * one reason, recorded here because the reason is the whole arc: the platform's
+ * key was the entrypoint, path, query and Worker version, and nothing this
+ * Worker could do put the theme into it. So public HTML declared `Vary: Cookie`,
+ * every cookie-bearing reader was downgraded to `private, no-store`, and the
+ * platform stored only the cookieless variant.
+ *
+ * The cost of that, measured on the wire 2026-08-26:
  *
  *     no cookie        HIT
  *     theme=dark       BYPASS   private, no-store
  *     _ga=1            BYPASS   private, no-store
  *
- * So a reader who touched the theme toggle, which is the site's own feature, or
- * who is signed in, paid a full origin render on every click. On the throttled
- * profile the audits used, that is the difference between 1.2 s and 2.0 s to
- * first paint on the home page.
+ * A reader who touched the theme toggle, which is the site's own feature, or
+ * who carried any analytics cookie at all, paid a full origin render on every
+ * click. On the throttled profile the audits used, 1.2 s against 2.0 s to first
+ * paint on the home page. The hand-built layer bought that back for cookied
+ * readers and could not be tiered, could not collapse concurrent requests, and
+ * could not be purged: `caches.default` is per data centre, which is why
+ * ruling 7 refused to invalidate on approve at all.
  *
- * ## What is stored, and why the key is path plus theme
+ * ## WHAT CHANGED, 2026-09-05 (decisions vol 14, rulings 10, 11, 15 and 16)
  *
- * `caches.default` is keyed by the REQUEST YOU HAND IT and carries no headers,
- * which `media.$.ts` records in full: a `Vary` this layer cannot honour is
- * worse than none. So the dimension goes in the key itself, as a synthetic
- * `__theme` query parameter on a URL that is never served and never linked.
+ * Workers Cache now takes `ctx.props` into the key, and a gateway entrypoint
+ * can call a renderer entrypoint through `ctx.exports` with an explicit
+ * `cf.cacheKey`. So the theme goes in the key the platform itself owns, and
+ * every reader, cookied or not, gets the tiered, request-collapsing,
+ * PURGEABLE cache. Cloudflare's own guidance is to prefer this over
+ * `caches.default`, which does none of those three.
  *
- * The theme is the ONLY thing read off the cookie. That is licensed by
- * measurement rather than by assertion: `check:browser` proves, on all eight
- * routes that declare the shared cache headers, that a credentialed reader
- * gets byte-identical HTML and that the theme changes only the `data-theme`
- * attribute and the toggle's `aria-pressed`. If that ever stops being true the
- * gate goes red before this becomes a leak.
+ * **THE PLATFORM CACHE IS NOW THE ONLY CACHE.** `caches.default` is not used
+ * anywhere in this file. If you are reading this because you are about to add a
+ * second one, the thing to know is that the first one was deleted on purpose.
  *
- * ## WHAT IS DELIBERATELY NOT DONE: `Vary: Cookie` AND THE DOWNGRADE STAY
+ * ## THE DIMENSION IS IN BOTH HALVES OF THE KEY, and one of those is enough
  *
- * The obvious version of this change removes both and lets the platform cache
- * every reader under a theme-keyed entry. It cannot: the platform's key is the
- * entrypoint, path, query string and Worker version, and NOTHING this Worker
- * can add puts the theme into it. Dropping `Vary: Cookie` would hand the
- * platform one document to serve to everyone, which is the light-document-to-a-
- * dark-reader bug the pairing exists to prevent.
+ * `ctx.props` is in the key by construction and cannot be dropped; a custom
+ * `cf.cacheKey` REPLACES the path and query and is honoured only for
+ * same-account loopback calls. So passing the theme in props alone would be
+ * sufficient, and the docs say so in as many words. It goes in both because the
+ * pair is what this function returns and what the tests read: a key string that
+ * did not mention the theme would make the pure function's output a poor
+ * description of the real key, and the next reader would have to know the props
+ * rule to see the dimension at all.
  *
- * Keeping them makes this layer purely ADDITIVE, and that is the whole safety
- * argument:
+ * ## The old layer's own measurement is still what licenses this
  *
- *   cookieless reader   unchanged. The platform answers on a HIT and this
- *                       Worker is not invoked at all. No regression is possible
- *                       for the readers who are fastest today.
- *   cookied reader      BYPASSES the platform exactly as before, reaches this
- *                       Worker, and is now answered from the edge instead of
- *                       from a full render.
- *
- * A response served to a cookie-bearing request is still `private, no-store` on
- * the wire, so the platform still stores nothing for it. The public copy exists
- * only inside `caches.default`, under a key the platform would never look up.
+ * The theme is the ONLY thing read off the cookie. `check:browser` proves, on
+ * every route that declares the shared cache headers, that a credentialed
+ * reader gets byte-identical HTML and that the theme changes only the
+ * `data-theme` attribute and the colour-scheme meta. If that stops being true
+ * the gate goes red before this becomes a leak. That assertion did not change
+ * with the cache under it, and it is the reason this key is allowed to be as
+ * short as it is.
  */
-const THEME_CACHE_PARAM = "__theme";
+export type RendererProps = { theme?: string };
 
 /**
- * The other half of the key: which BUILD produced the document.
+ * The cache key and the props for one request. PURE, so it can be tested.
  *
- * Separate from the theme parameter because they answer different questions
- * and fail differently. A missing theme serves one reader's colours to
- * another; a missing build serves last deploy's HTML, which asks for asset
- * URLs that no longer exist.
+ * `URL` builds the key so the separator is handled: a path that already carries
+ * a query string keys correctly instead of producing a second `?`. That detail
+ * outlived the layer it was written for.
+ *
+ * THE THEME DIMENSION IS ADDED ONLY WHERE A DOCUMENT COULD CARRY IT. A GET, not
+ * an admin path, not a request negotiating away from HTML. Admin responses are
+ * `private, no-store` by their own declaration and are never stored whatever
+ * the key says, so this is belt and braces there; the negotiated case is not,
+ * and the grounds are on `negotiatesAwayFromHtml`.
+ *
+ * @param url     the request URL, already parsed by the caller
+ * @param request the incoming request, for its method and Accept
+ * @param theme   the resolved theme, one of the three `Theme` values
  */
-const BUILD_KEY_PARAM = "__build";
+export function cacheDimensions(
+  url: URL,
+  request: Request,
+  theme: string,
+): { cacheKey: string; props: RendererProps } {
+  const themed =
+    request.method === "GET" &&
+    !isAdminPath(url.pathname) &&
+    !negotiatesAwayFromHtml(request);
+
+  if (!themed) return { cacheKey: `${url.pathname}${url.search}`, props: {} };
+
+  const keyUrl = new URL(url);
+  keyUrl.searchParams.set("theme", theme);
+  return { cacheKey: `${keyUrl.pathname}${keyUrl.search}`, props: { theme } };
+}
 
 /**
  * Security headers, on EVERY response. Ratified 2026-08-06 (Phase A).
@@ -220,61 +250,20 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Cross-Origin-Resource-Policy": "cross-origin",
 };
 
-/**
- * The synthetic key a themed document is stored under. Never served, never
- * linked, never on a response: it exists only as the argument to `cache.match`
- * and `cache.put`.
+/*
+ * `cookieDowngrade` WAS DELETED HERE, 2026-09-05, and it is worth one note.
  *
- * `URL` handles the separator, so a path that already carries a query string
- * (`/search?q=cloudflare`) keys correctly instead of producing a second `?`.
+ * It answered "does this response have to be downgraded because the request
+ * carried a cookie", and it decided by reading the response's own `Vary`. That
+ * scoping was the whole function: a route that did not vary on Cookie was never
+ * downgraded, which is what kept the feeds public.
  *
- * @param request the incoming request, for its URL
- * @param theme   the resolved theme, one of the three `Theme` values
+ * NOTHING VARIES ON COOKIE NOW, so the predicate could only ever answer false.
+ * A guard whose condition cannot be met is worse than no guard: it reads as
+ * protection and is not. The downgrade it served survives in the gateway,
+ * decided from the response's declared cache-control instead, which is a
+ * condition that can actually be true.
  */
-function themedCacheKey(request: Request, theme: string): Request {
-  const keyUrl = new URL(request.url);
-  keyUrl.searchParams.set(THEME_CACHE_PARAM, theme);
-  /*
-   * THE BUILD, IN THE KEY. Without it this cache outlives the deploy that
-   * filled it.
-   *
-   * The platform's automatic cache includes the Worker version, so a deploy
-   * invalidates every entry it holds. A hand-built key contains only what is
-   * put in it, and this one held the path and the theme. MEASURED during the
-   * build of this feature: a `check:browser` run was served HTML from a build
-   * several generations old, still inside its ten minute lifetime, asking for
-   * `root-Dhhz26dV.css` when the build on disk had `root-B62ve9c3.css`.
-   * Workers Assets serves the CURRENT manifest only, so that URL answers 404
-   * and the page arrives with no stylesheet. In production it would be every
-   * cookie-bearing reader for up to ten minutes after every deploy.
-   *
-   * The gate caught it as an unstyled page rather than as a cache defect,
-   * which is worth recording: the symptom and the cause were four steps apart.
-   */
-  keyUrl.searchParams.set(BUILD_KEY_PARAM, __BUILD_ID__);
-  return new Request(keyUrl.toString(), { method: "GET" });
-}
-
-/**
- * Does this response have to be downgraded because the request carried a cookie?
- *
- * ONE STATEMENT, because there are two callers now: the render path and the
- * themed cache's hit path. A second spelling of this predicate is the rule 17
- * defect in the place it is least affordable, since the two answering
- * differently is how a `public` document reaches a cookied reader.
- *
- * Keyed on the PRESENCE of any cookie rather than on a theme cookie, for the
- * reason the block at the call site gives at length: a request carrying only a
- * session cookie would otherwise count as cookieless.
- *
- * @param request the incoming request
- * @param vary    the response's own `Vary`, which scopes this to routes that
- *                opted in. A route that does not vary on Cookie is never
- *                downgraded, which is what keeps the feeds public.
- */
-function cookieDowngrade(request: Request, vary: string | null): boolean {
-  return request.headers.has("cookie") && /(^|,)\s*cookie\s*(,|$)/i.test(vary ?? "");
-}
 
 /** @param headers the response headers to stamp, mutable or a fresh copy */
 function applySecurityHeaders(headers: Headers) {
@@ -570,110 +559,48 @@ function isFeed(contentType: string | null): boolean {
   return type === "application/rss+xml" || type === "application/json";
 }
 
-export default {
-  async fetch(request, env, ctx) {
+/**
+ * THE RENDERER. Everything that produces a document, and the entrypoint the
+ * platform is allowed to cache.
+ *
+ * ## WHY THIS IS A SEPARATE ENTRYPOINT AT ALL
+ *
+ * Ruled 2026-09-05 (decisions vol 14, ruling 15). Workers Cache is configured
+ * per entrypoint, and the two things this Worker does want opposite answers:
+ * the traffic row must be written on EVERY request, and the document should be
+ * served without running any code at all. One entrypoint cannot do both, and
+ * the previous arrangement resolved that by having no cache the Worker could
+ * see, which is what the gateway below and this class replace.
+ *
+ * So `default` is cache DISABLED and runs always; this is cache ENABLED and
+ * runs on a miss. The split is the whole design and the config states it in
+ * `exports`; the two files cannot drift, because `check:config` compares them.
+ *
+ * ## WHAT IT MUST NOT DO
+ *
+ * It must not write the traffic row. On a hit this code does not run, so a
+ * count taken here would silently become a count of cache misses, which is a
+ * worse instrument than the one item G replaced: it would look like readership
+ * and would move with cache behaviour. `recordTraffic` is called by the
+ * gateway, after this returns, for exactly that reason.
+ *
+ * ## WHAT IT STILL OWNS, unchanged from when this was one handler
+ *
+ * The nonce, the render, the timing header, the security headers, the CSP, the
+ * Reporting-Endpoints header, and hard rule 8's uncached default. All of those
+ * belong to the DOCUMENT, so they belong in the copy that is stored: a header
+ * stamped after the cache would be absent from every hit.
+ */
+export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
+  override async fetch(request: Request): Promise<Response> {
+    const env = this.env;
+    const ctx = this.ctx;
     /*
-     * PLAINTEXT GOES TO HTTPS BEFORE ANYTHING ELSE HAPPENS.
-     *
-     * Measured on the live site 2026-08-23: http:// returned 200 with the
-     * full page, and the shared cache did not separate the schemes, so a
-     * plaintext request was answered with the byte-identical cached HTTPS
-     * response INCLUDING ITS CSP NONCE. The grounds, the three consequences
-     * and the part this cannot reach are all on the predicate.
-     *
-     * `no-store` is load-bearing rather than tidy. The scheme is not in the
-     * cache key, so a cacheable redirect stored under a shared key would be
-     * handed to HTTPS readers as well and send them to the URL they already
-     * asked for. Hard rule 8: an absent Cache-Control is CACHED, so this is
-     * stated and not left to a default.
-     */
-    const secure = httpsRedirectTarget(request.url);
-    if (secure !== null) {
-      return new Response(null, {
-        status: httpsRedirectStatus(request.method),
-        headers: { Location: secure, "Cache-Control": "no-store" },
-      });
-    }
-
-    /*
-     * THE THEMED LOOKUP, before anything is rendered. Grounds on
-     * THEME_CACHE_PARAM above.
-     *
-     * Scoped to GET on a non-admin path. A HEAD is excluded rather than
-     * handled: the runtime answers one from a stored GET itself, and writing a
-     * second path for it would be a second place to get the key wrong. The
-     * admin exclusion is belt and braces, since nothing under /admin ever
-     * declares the shared cache-control and only that string is stored, but a
-     * cache lookup on an authenticated path is not a thing to leave to a
-     * property of a different file.
-     *
-     * A HIT is returned VERBATIM. Every header it needs was stamped before it
-     * was stored, including the Content-Security-Policy whose nonce matches the
-     * one in the stored body. Re-stamping a fresh nonce here would produce a
-     * policy that forbids the document's own scripts, which is the one failure
-     * mode that would look like a mysterious blank page.
+     * Parsed once. The CSP's `Reporting-Endpoints` and the admin branch of the
+     * policy both read it, and it used to be parsed up at the themed cache
+     * lookup, which no longer exists.
      */
     const url = new URL(request.url);
-    const themeForCache = themeFromRequest(request);
-    /*
-     * A NEGOTIATED REQUEST IS NOT CACHEABLE HERE, and this clause is a fix for
-     * a defect that reached production.
-     *
-     * The key below is the URL plus the theme plus the build. Two routes serve
-     * more than one representation at ONE URL and say so with `Vary: Accept`,
-     * which the platform honours and `caches.default` cannot see. So the HTML
-     * copy answered the markdown request: MEASURED on the wire after the
-     * deploy of 2f0b4d5, `Accept: text/markdown` on a post returned 31,869
-     * bytes of `text/html` marked `x-theme-cache: hit`.
-     *
-     * ONE EXPRESSION GATES BOTH THE LOOKUP AND THE STORE, which is why the
-     * clause is here rather than beside the `edge.match` below: the store
-     * guard reads `cacheable` too, so the two halves cannot drift apart. The
-     * store was already safe by accident, since an alternate representation
-     * declares `no-store` and only `SHARED_CACHE_CONTROL` is stored; safe by
-     * accident is not a property to leave load-bearing.
-     *
-     * Grounds, the measurement and why this is a bypass rather than a fourth
-     * key dimension are all on `negotiatesAwayFromHtml`.
-     */
-    const cacheable =
-      request.method === "GET" && !isAdminPath(url.pathname) && !negotiatesAwayFromHtml(request);
-    const edge = (caches as unknown as { default: Cache }).default;
-    if (cacheable) {
-      const hit = await edge.match(themedCacheKey(request, themeForCache));
-      if (hit) {
-        /*
-         * A HIT IS REBUILT, NOT RETURNED AS FOUND, and both reasons were
-         * MEASURED on a preview rather than reasoned about.
-         *
-         * 1. **THE STORED COPY SAYS `public`, AND A COOKIED READER MUST NOT
-         *    RECEIVE THAT.** The whole safety argument for this layer is that
-         *    a cookie-bearing response stays `private, no-store` on the wire so
-         *    the platform stores nothing for it. The stored copy is deliberately
-         *    `public` because that is what makes it storable HERE. Returning it
-         *    verbatim handed a cookied reader `public, s-maxage=600`, which the
-         *    platform in front is then free to keep under its theme-blind key:
-         *    precisely the light-document-to-a-dark-reader bug this exists to
-         *    prevent, reintroduced by the fix for it.
-         *
-         * 2. A `Response` from `cache.match` has IMMUTABLE headers, so the
-         *    marker below was silently swallowed and every hit reported `miss`.
-         *
-         * The body is passed through rather than copied, so this costs a
-         * `Headers` clone and a wrapper, not a buffer.
-         */
-        const headers = new Headers(hit.headers);
-        headers.set("x-theme-cache", `hit; theme=${themeForCache}`);
-        if (cookieDowngrade(request, headers.get("vary"))) {
-          headers.set("cache-control", UNCACHED);
-        }
-        return new Response(hit.body, {
-          status: hit.status,
-          statusText: hit.statusText,
-          headers,
-        });
-      }
-    }
 
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
@@ -744,45 +671,29 @@ export default {
       timings.push({ name: "worker_total", ms: performance.now() - handlerStart });
     }
 
-    // THE COOKIELESS-ONLY RULE.
+    // THE COOKIELESS-ONLY RULE IS GONE, 2026-09-05, and this is what replaced it.
     //
-    // A route that sets `Vary: Cookie` is declaring that its body depends on the
-    // Cookie header and that it wants to be shared-cached. `Vary` alone is not
-    // enough to make that safe here, and the reason is measured rather than
-    // assumed: an ABSENT Cookie header is not treated as its own variant, so a
-    // cookieless request matches whatever variant is already stored. With
-    // `theme=dark` warming the entry first, every first-time visitor was served
-    // a dark document. Present-but-different cookie values DO separate; absent
-    // does not. Full matrix in Capsid `dustinedwards/workers-cache-vary.md`.
+    // What stood here: a route setting `Vary: Cookie` was declaring that its
+    // body depends on the Cookie header, and `Vary` alone was not enough to
+    // make that safe, because an ABSENT Cookie header is not treated as its own
+    // variant. With `theme=dark` warming the entry first, every first-time
+    // visitor was served a dark document. Present-but-different cookie values
+    // DO separate; absent does not. Full matrix in Capsid
+    // `dustinedwards/workers-cache-vary.md`.
     //
-    // So the response to any request that CARRIES a cookie is downgraded and
-    // never stored. The only variant that can ever exist is the cookieless one,
-    // which is correct for exactly the readers who match it, and the broken
-    // direction is never exercised. That makes the order-dependence structurally
-    // impossible instead of avoided by luck.
+    // THAT MEASUREMENT IS STILL TRUE AND NO LONGER APPLIES, because nothing on
+    // this site varies on Cookie any more. The theme is in the CACHE KEY, where
+    // absence is not a special case: a request with no theme cookie resolves to
+    // a theme like any other and keys on it. The whole class of defect the
+    // cookieless-only rule was built to avoid was a property of `Vary`, and
+    // `Vary` is what went.
     //
-    // Keyed on the PRESENCE of any cookie, not on a theme cookie. If it looked
-    // for `theme=` specifically, a request carrying only a Better Auth session
-    // cookie would count as cookieless and its response would be stored as the
-    // shared variant, leaking anything session-dependent to everyone. Presence
-    // is the fail-closed reading.
-    //
-    // Scoped by the response's own `Vary`, so it touches only routes that opted
-    // in. The feeds stay publicly cached for every reader because they do not
-    // vary on Cookie and do not carry the header.
-    //
-    // THE MARKDOWN TWINS WERE NAMED HERE AND THE CLAIM WAS FALSE, corrected
-    // 2026-08-26. They were never reached by this downgrade, which is what the
-    // sentence said, and they were not publicly cached either: the twin route
-    // declared no `Cache-Control` at all, so hard rule 8's default below
-    // stamped `private, no-store` on it and every fetch was a BYPASS. Measured
-    // on the wire before the fix. Two true halves were joined into a false
-    // conclusion, which is the shape a boundary note goes stale in.
-    //
-    // The twin at its own URL now declares `SHARED_CACHE_CONTROL` itself, so
-    // the sentence is true of it by its own declaration rather than by a
-    // default nobody had checked. The NEGOTIATED markdown under `/blog/:slug`
-    // is still never stored, deliberately; grounds on `markdownResponse`.
+    // The downgrade itself SURVIVES and moved to the gateway (ruling 16, kept
+    // as belt and braces). It has to be there rather than here: this response
+    // is the one the platform STORES, so writing `private, no-store` on it for
+    // a cookied reader would mean cookied readers were never cached, which is
+    // the regression the whole arc exists to end. The gateway stamps the wire
+    // copy after the cache has already stored the public one.
     /*
      * ALL response-level policy, in ONE place with ONE immutable fallback.
      *
@@ -792,19 +703,13 @@ export default {
      * the general path: routing every response through a new one is pointless
      * work on the routes that stream.
      *
-     * **The cookieless downgrade moved INSIDE this block**, and that is not
-     * tidying. It used to run unguarded above, so on an immutable response it
-     * would throw and take the whole request with it, and the security headers
-     * below would never be reached. A security header set that can be skipped
-     * by an exception on the line before it is not applied to every response,
-     * which is the one property this block exists to have. Both halves now
-     * share the fallback: whatever throws, the rebuild applies everything.
+     * The property this block exists to have is that the security headers are
+     * applied to EVERY response, including one whose headers refuse a `set`.
+     * Both branches apply the same set; whatever throws, the rebuild covers it.
      *
-     * `/admin` returning 302 is the live case, and it carries no `Vary`, so it
-     * reaches only the cache-control default. It is asserted in verify-live
+     * `/admin` returning 302 is the live case. It is asserted in verify-live
      * anyway, because it is a DIFFERENT code branch from a 200.
      */
-    const downgradeForCookie = cookieDowngrade(request, response.headers.get("vary"));
 
     // Absolute, because `Reporting-Endpoints` takes a URL and MDN notes that
     // non-secure endpoints are ignored. Derived from the request so it is
@@ -821,51 +726,52 @@ export default {
     const csp = contentSecurityPolicy(nonce, isAdminPath(url.pathname));
 
     /*
-     * ONE call site, ABOVE the header block, and both of those are deliberate.
+     * `recordTraffic` USED TO BE CALLED HERE AND IS NOW THE GATEWAY'S, 2026-09-05.
      *
-     * Below it there are TWO returns: the normal path and the immutable-headers
-     * rebuild in the catch. Calling from each would be two places to forget.
-     * Everything this reads (status, content-type) is already final here, so
-     * placing it above means every response is counted exactly once no matter
-     * which branch returns, and the header block below is reached identically
-     * whether this ran or not.
+     * The old comment argued for this position at length: one call site above
+     * two returns, everything it reads already final. All of that was right
+     * about this function and is now beside the point, because this function no
+     * longer runs on every request. On a cache HIT the platform answers without
+     * invoking this entrypoint at all, so a count taken here would have become
+     * a count of MISSES the day the cache started working, and would have read
+     * like readership while moving with cache behaviour.
+     *
+     * It moved to the gateway, which is cache disabled and therefore runs
+     * always. Ruling 12 is the same observation from the other side: the
+     * gateway is what finally makes the count complete.
      */
-    recordTraffic(request, response, env, url);
 
     /*
-     * STORED BEFORE THE DOWNGRADE, and the order is the whole trick.
+     * THE STORE BLOCK IS GONE, 2026-09-05, with the layer it wrote to.
      *
-     * What goes into `caches.default` is the PUBLIC document: the response as
-     * the route declared it, with every security header and the CSP whose
-     * nonce matches this body. What goes on the wire to a cookie-bearing
-     * reader is that same document with `private, no-store`, so the platform
-     * stores nothing for them. Reading the cache-control here, before the
-     * downgrade overwrites it, is what lets one render serve both purposes.
+     * It hand-wrote the public document into `caches.default` under three
+     * conditions, and each of those is now the platform's own answer rather
+     * than this file's:
      *
-     * THREE CONDITIONS, and each closes a different way of storing something
-     * that must not be stored:
+     *   the route declared the shared string   still the rule, and now it is
+     *                                          the only rule. The platform
+     *                                          stores what the response says
+     *                                          is storable, and hard rule 8's
+     *                                          default below is what makes a
+     *                                          route that says nothing refuse.
+     *   GET, not an admin path                 Workers Cache caches GET and
+     *                                          HEAD only, per the docs, and an
+     *                                          admin response is `private,
+     *                                          no-store` by its own headers.
+     *   no Set-Cookie                          documented as an AUTOMATIC
+     *                                          bypass. A response that mints a
+     *                                          session or a theme is per reader
+     *                                          by definition, and the platform
+     *                                          refuses to store it without
+     *                                          being asked.
      *
-     *   the route declared the shared string   only a route that asked to be
-     *                                          shared is shared. Every /admin
-     *                                          response fails this, as does
-     *                                          anything on the uncached default.
-     *   GET, not an admin path                 already true of `cacheable`,
-     *                                          which also gated the lookup.
-     *   no Set-Cookie                          a response that mints a session
-     *                                          or a theme is per reader by
-     *                                          definition. Nothing shared-cached
-     *                                          sets one today; this is here so
-     *                                          that a route that starts to
-     *                                          cannot leak it to everybody.
-     *
-     * `waitUntil` because a reader never waits on bookkeeping, and `clone()`
-     * because a body can be read once and the reader must get the copy this
-     * does not consume.
+     * So the guard that used to be written out here survives as configuration
+     * plus two documented platform behaviours. That is a real reduction in
+     * things this file can get wrong, and it is the reason to prefer the
+     * platform cache rather than a preference for less code.
      */
-    const declared = response.headers.get("cache-control");
 
     try {
-      if (downgradeForCookie) response.headers.set("cache-control", UNCACHED);
       if (timings) response.headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(response.headers);
       response.headers.set("Reporting-Endpoints", reportTo);
@@ -875,24 +781,8 @@ export default {
       if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
       }
-      if (cacheable && declared === SHARED_CACHE_CONTROL && !response.headers.has("set-cookie")) {
-        response.headers.set("x-theme-cache", `miss; theme=${themeForCache}`);
-        const storable = new Headers(response.headers);
-        storable.set("cache-control", SHARED_CACHE_CONTROL);
-        ctx.waitUntil(
-          edge.put(
-            themedCacheKey(request, themeForCache),
-            new Response(response.clone().body, {
-              status: response.status,
-              statusText: response.statusText,
-              headers: storable,
-            }),
-          ),
-        );
-      }
     } catch {
       const headers = new Headers(response.headers);
-      if (downgradeForCookie) headers.set("cache-control", UNCACHED);
       if (timings) headers.set("Server-Timing", serverTiming(timings));
       applySecurityHeaders(headers);
       headers.set("Reporting-Endpoints", reportTo);
@@ -908,6 +798,146 @@ export default {
     }
 
     return response;
+  }
+}
+
+/**
+ * THE GATEWAY. Cache disabled, so it runs on every single request.
+ *
+ * Ruled 2026-09-05 (decisions vol 14, ruling 15). It does only the four things
+ * that must not be skipped, and hands everything else to the `Renderer` above
+ * through a loopback the platform is allowed to answer from cache.
+ *
+ *   1. the HTTPS redirect, before anything is parsed
+ *   2. the theme cookie read, which becomes the cache key's one dimension
+ *   3. the loopback, with that key and those props
+ *   4. the traffic row, AFTER the response comes back, hit or miss
+ *
+ * ## WHY IT COSTS A WORKER INVOCATION ON EVERY REQUEST, AND WHY THAT IS FINE
+ *
+ * A cache hit no longer skips this Worker entirely; it skips the RENDERER.
+ * Cloudflare bills a request either way and bills CPU time only when code runs,
+ * so what this costs is the microseconds of the four steps below. What it buys
+ * is ruling 12: `recordTraffic` finally sees every page view rather than only
+ * the ones that missed, which is the second half of item G answered by
+ * construction rather than by a beacon.
+ *
+ * ## THE ORDER IS LOAD BEARING
+ *
+ * The redirect is first because a plaintext request must never reach a cache
+ * lookup keyed on a path that ignores the scheme. Everything else follows the
+ * response, so the traffic row is written from the finished thing rather than
+ * from an intention.
+ */
+export default {
+  async fetch(request, env, ctx) {
+    /*
+     * PLAINTEXT GOES TO HTTPS BEFORE ANYTHING ELSE HAPPENS.
+     *
+     * Measured on the live site 2026-08-23: http:// returned 200 with the
+     * full page, and the shared cache did not separate the schemes, so a
+     * plaintext request was answered with the byte-identical cached HTTPS
+     * response INCLUDING ITS CSP NONCE. The grounds, the three consequences
+     * and the part this cannot reach are all on the predicate.
+     *
+     * `no-store` is load-bearing rather than tidy. The scheme is not in the
+     * cache key, so a cacheable redirect stored under a shared key would be
+     * handed to HTTPS readers as well and send them to the URL they already
+     * asked for. Hard rule 8: an absent Cache-Control is CACHED, so this is
+     * stated and not left to a default.
+     *
+     * IT IS IN THE GATEWAY, which is cache disabled, so the redirect could not
+     * be stored even if the header were forgotten. The header stays anyway: it
+     * is one string, and the property it asserts should not depend on which
+     * entrypoint somebody later moves this to.
+     */
+    const secure = httpsRedirectTarget(request.url);
+    if (secure !== null) {
+      return new Response(null, {
+        status: httpsRedirectStatus(request.method),
+        headers: { Location: secure, "Cache-Control": "no-store" },
+      });
+    }
+
+    const url = new URL(request.url);
+
+    /*
+     * THE ONE THING READ OFF THE COOKIE, and it becomes the key's one dimension.
+     * Grounds on `cacheDimensions`, including why the theme is in both the
+     * custom key and the props.
+     */
+    const theme = themeFromRequest(request);
+    const { cacheKey, props } = cacheDimensions(url, request, theme);
+
+    /*
+     * THE LOOPBACK. This is where the platform cache sits.
+     *
+     * `ctx.exports.Renderer` is a loopback service binding to the class above,
+     * which Cloudflare documents as a cacheable invocation. On a hit the
+     * Renderer does not run and this line returns a stored response; on a miss
+     * it runs and its response is stored under the key given here.
+     *
+     * `enable_ctx_exports` has been default since compatibility date
+     * 2025-11-17 and this Worker is on 2026-07-08, so no flag is needed. It was
+     * MEASURED under `vite preview` before this was written, because a design
+     * that only works in production is a design nobody can gate.
+     */
+    const response = await ctx.exports.Renderer({ props }).fetch(request, {
+      cf: { cacheKey },
+    });
+
+    /*
+     * THE COOKIE DOWNGRADE, kept as belt and braces (ruling 16) and moved here.
+     *
+     * It cannot live in the Renderer any more: that response is the one the
+     * platform STORES, so writing `private, no-store` on it for a cookied
+     * reader would mean cookied readers were never cached, which is the exact
+     * regression this whole arc exists to end. Stamping it here changes only
+     * the copy on the wire.
+     *
+     * WHAT IT IS FOR NOW, since the reason changed with the layer. There is no
+     * shared cache in front of the gateway on workers.dev, so this is not
+     * protecting the platform cache from itself; it is telling a BROWSER or an
+     * intermediary proxy not to hold a document that genuinely differs per
+     * reader. One header, and it fails in the safe direction.
+     *
+     * Keyed on the PRESENCE of any cookie and on the response having declared
+     * the shared string. Presence rather than a theme cookie specifically is
+     * the fail-closed reading, and it is the same reasoning the deleted
+     * `cookieDowngrade` carried: a request holding only a session cookie must
+     * not read as cookieless.
+     *
+     * Wrapped, because a response from the cache can have immutable headers and
+     * a throw here would cost the reader their page for the sake of one header.
+     */
+    const shared = response.headers.get("cache-control") === SHARED_CACHE_CONTROL;
+    let out = response;
+    if (shared && request.headers.has("cookie")) {
+      try {
+        response.headers.set("cache-control", UNCACHED);
+      } catch {
+        const headers = new Headers(response.headers);
+        headers.set("cache-control", UNCACHED);
+        out = new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+    }
+
+    /*
+     * THE TRAFFIC ROW, from the gateway, which is the whole of ruling 12.
+     *
+     * It reads the FINISHED response's status and content type, so it counts
+     * what the reader actually got, and it runs whether that came from the
+     * cache or from a render. Every refusal it carries is unchanged: HTML only,
+     * 200 only, never the admin plane, referer reduced to a host, path
+     * redacted. Grounds on the function.
+     */
+    recordTraffic(request, out, env, url);
+
+    return out;
   },
 
   /**
@@ -916,6 +946,10 @@ export default {
    * Separate from `fetch` on purpose: no HTTP request ever triggers this, and no
    * reader ever waits on it. The grounds and the idempotency argument are in
    * `media-events.ts`.
+   *
+   * ON THE GATEWAY rather than the Renderer, and the docs make that the only
+   * option: queue invocations bypass the cache entirely, so an entrypoint that
+   * exists to be cached is the wrong home for one.
    */
   async queue(batch, env) {
     await handleMediaEvents(batch, env);
