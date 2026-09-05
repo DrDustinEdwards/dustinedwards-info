@@ -31,7 +31,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -113,7 +113,22 @@ const CASES = [
   },
   {
     label: "the LAST cd wins, so cd out then back is blocked",
-    command: "cd ../dustinedwards-mcp && cd ../dustinedwards-info && npm run deploy",
+    /*
+     * THE RETURN PATH IS DERIVED FROM THE CHECKOUT, not written out as
+     * `dustinedwards-info`.
+     *
+     * CAUGHT BY `check:head` ON THIS CASE'S FIRST RUN. That gate replays the
+     * offline tier against a fresh checkout of HEAD in a temp directory, where
+     * `cd ../dustinedwards-info` lands somewhere genuinely outside the repo, so
+     * the hook correctly ALLOWED the deploy and this case failed. The hook was
+     * right and the fixture was wrong.
+     *
+     * The case had been asserting something about the checkout's NAME rather
+     * than about the behaviour under test: a fixture that holds only while the
+     * world is arranged the way its author happened to find it. Deriving the
+     * name is what makes it a statement about the last `cd` winning.
+     */
+    command: `cd ../dustinedwards-mcp && cd ../${basename(root)} && npm run deploy`,
     cwd: root,
     expect: 2,
     why:
