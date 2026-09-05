@@ -2,6 +2,7 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { RouterContextProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { approvedMentionsFor } from "~/db";
 import { cloudflareContext } from "~/lib/context";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -9,6 +10,7 @@ import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
 import { middleware as adminMiddleware } from "~/routes/admin";
 import { action as mentionsAction } from "~/routes/admin.mentions";
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
+import { loader as blogLoader } from "~/routes/blog.$slug";
 
 /**
  * The webmention receiver, its four bounds, its verifier and its moderation
@@ -856,5 +858,188 @@ describe("the moderation queue", () => {
         "not valid",
       );
     }
+  });
+});
+
+describe("the post loader carries approved mentions and advertises the endpoint", () => {
+  /**
+   * The post route's loader, driven directly.
+   *
+   * OBSERVATION BOUNDARY, and it is narrower than it looks. This layer runs
+   * loaders, not React, so what is asserted here is WHICH ROWS reach the
+   * component and what the response headers carry. Whether those rows render as
+   * escaped text, whether a refused URL renders without an anchor, and whether
+   * the section is absent rather than empty are facts about the RENDER, and
+   * they are asserted in `check:browser` against a real document built from a
+   * seeded row. Splitting them is not a gap: each half is asserted by the only
+   * instrument that can see it.
+   */
+
+  const POST_SLUG = "a-mentioned-post";
+
+  async function seedApproved(
+    sourceUrl: string,
+    fields: {
+      slug?: string;
+      status?: string;
+      authorName?: string | null;
+      authorUrl?: string | null;
+      excerpt?: string | null;
+      decidedAt?: number | null;
+    } = {},
+  ) {
+    const decided = fields.decidedAt ?? Math.floor(Date.UTC(2026, 7, 20) / 1000);
+    await env.DB.prepare(
+      `INSERT INTO webmentions
+         (source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+    )
+      .bind(
+        sourceUrl,
+        fields.slug ?? POST_SLUG,
+        fields.status ?? "approved",
+        fields.authorName ?? "A Reader",
+        fields.authorUrl ?? null,
+        fields.excerpt ?? "A sentence about the post.",
+        decided,
+        fields.decidedAt === null ? null : decided,
+      )
+      .run();
+  }
+
+  async function loadPost(slug: string) {
+    const ctx = createExecutionContext();
+    return blogLoader({
+      params: { slug },
+      context: routeContext(ctx),
+      request: new Request(`${SITE_ORIGIN}/blog/${slug}`),
+    } as never);
+  }
+
+  it("carries NO mentions when none are approved", async () => {
+    /*
+     * The absence case, and it is the one most posts are in. Every other status
+     * for the same slug is seeded here, so this is not "an empty table returns
+     * nothing": it is the predicate refusing four rows that exist.
+     */
+    await seedApproved("https://elsewhere.example/pending", { status: "pending" });
+    await seedApproved("https://elsewhere.example/rejected", { status: "rejected" });
+    await seedApproved("https://elsewhere.example/failed", { status: "failed" });
+    await seedApproved("https://elsewhere.example/unverified", { status: "unverified" });
+
+    const result = await loadPost(POST_SLUG);
+    expect(result.data.mentions).toEqual([]);
+
+    /* SCOPE, ASSERTED. Four rows for this slug exist, so an empty result is the
+     * predicate working rather than the seed having failed. */
+    const seeded = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM webmentions WHERE target_slug = ?1`,
+    )
+      .bind(POST_SLUG)
+      .first<{ n: number }>();
+    expect(seeded?.n).toBe(4);
+  });
+
+  it("carries the approved mention, newest decision first", async () => {
+    const older = Math.floor(Date.UTC(2026, 7, 1) / 1000);
+    const newer = Math.floor(Date.UTC(2026, 7, 20) / 1000);
+    await seedApproved("https://elsewhere.example/older", { decidedAt: older });
+    await seedApproved("https://elsewhere.example/newer", { decidedAt: newer });
+    /* And one of every other status, so the ordering assertion is not also
+     * standing in for the filter. */
+    await seedApproved("https://elsewhere.example/still-pending", { status: "pending" });
+
+    const result = await loadPost(POST_SLUG);
+    expect(result.data.mentions).toHaveLength(2);
+    expect(result.data.mentions[0]?.sourceUrl).toBe("https://elsewhere.example/newer");
+    expect(result.data.mentions[1]?.sourceUrl).toBe("https://elsewhere.example/older");
+    /* The projection is the six columns the render needs and nothing else: a
+     * status or a failure reason reaching the client would be moderation state
+     * on a public page. */
+    expect(Object.keys(result.data.mentions[0] ?? {}).sort()).toEqual([
+      "authorName",
+      "authorUrl",
+      "decidedAt",
+      "excerpt",
+      "id",
+      "sourceUrl",
+    ]);
+  });
+
+  it("A DRAFT'S APPROVED MENTION IS UNREACHABLE, at the route AND at the reader", async () => {
+    /*
+     * SEEDED DIRECTLY, because the endpoint cannot produce this row: H1 refuses
+     * a draft target at the moment of receipt. What it CAN produce is this row's
+     * successor, a post unpublished after its mentions were approved, and that
+     * is the ordinary case this covers.
+     *
+     * BOTH LEVELS, because either alone is a weaker claim. The route 404s, which
+     * is the positional guarantee. `approvedMentionsFor` also composes
+     * `publiclyVisible()` itself, which is the guarantee that survives somebody
+     * calling it from somewhere else.
+     */
+    await env.DB.prepare(
+      `INSERT INTO posts (slug, kind, title, body, status) VALUES (?1, 'post', 'A draft', 'Body.', 'draft')
+       ON CONFLICT(slug) DO UPDATE SET status = 'draft'`,
+    )
+      .bind("a-drafted-post")
+      .run();
+    await seedApproved("https://elsewhere.example/on-a-draft", { slug: "a-drafted-post" });
+
+    /* The reader refuses it on its own. */
+    await expect(approvedMentionsFor(env as never, "a-drafted-post")).resolves.toEqual([]);
+
+    /* And the route never gets that far. */
+    let thrown: unknown;
+    try {
+      await loadPost("a-drafted-post");
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeTruthy();
+    expect((thrown as { init?: { status?: number } })?.init?.status ?? (thrown as Response)?.status).toBe(404);
+
+    /* SCOPE, ASSERTED. The approved row really is there, so both refusals above
+     * are refusals rather than an empty table. */
+    const row = await env.DB.prepare(
+      `SELECT status FROM webmentions WHERE source_url = 'https://elsewhere.example/on-a-draft'`,
+    ).first<{ status: string }>();
+    expect(row?.status).toBe("approved");
+  });
+
+  it("A SCHEDULED POST'S mentions are refused too, on the same predicate", async () => {
+    /*
+     * The other half of `publiclyVisible()`. A post published with a future
+     * `publish_at` is not draft and is not visible, and a predicate that only
+     * checked status would pass this case while leaking it.
+     */
+    const future = Math.floor((Date.now() + 90 * 24 * 60 * 60 * 1000) / 1000);
+    await env.DB.prepare(
+      `INSERT INTO posts (slug, kind, title, body, status, publish_at)
+       VALUES (?1, 'post', 'Scheduled', 'Body.', 'published', ?2)
+       ON CONFLICT(slug) DO UPDATE SET publish_at = excluded.publish_at`,
+    )
+      .bind("a-scheduled-post", future)
+      .run();
+    await seedApproved("https://elsewhere.example/on-a-schedule", { slug: "a-scheduled-post" });
+
+    await expect(approvedMentionsFor(env as never, "a-scheduled-post")).resolves.toEqual([]);
+  });
+
+  it("ADVERTISES the endpoint in the Link header, beside the markdown twin", async () => {
+    const result = await loadPost(POST_SLUG);
+    const link = result.init?.headers
+      ? new Headers(result.init.headers as HeadersInit).get("Link")
+      : null;
+
+    expect(link).toContain(`rel="webmention"`);
+    expect(link).toContain(`${SITE_ORIGIN}/webmention`);
+    /* BOTH VALUES. The twin has been advertised here since it shipped, and a
+     * header that gained the endpoint by replacing it would be a regression
+     * nothing else would notice. */
+    expect(link).toContain(`rel="alternate"`);
+    expect(link).toContain(`/blog/${POST_SLUG}.md`);
+    /* One header, two values, comma joined, which is how RFC 8288 spells it. */
+    expect(link?.split(", ")).toHaveLength(2);
   });
 });
