@@ -1239,10 +1239,17 @@ const ASK_PROBE_LIMIT = 3;
   // assert HTML is never served from cache, which was right while all HTML was
   // `private, no-store`. Half of it is now the opposite.
   for (const path of HTML_ROUTES) {
-    // Cookieless first, repeatedly: the entry needs a couple of requests to
-    // settle, and a BYPASS proves nothing about caching. Measured: after a
-    // cookie-bearing request the next cookieless one can read BYPASS, then MISS,
-    // then HIT.
+    /*
+     * MEASUREMENT (a): A COOKIELESS READER IS SERVED FROM CACHE. Ruling 18.
+     *
+     * Unchanged in intent from the version this replaces, and it is the one
+     * assertion the whole arc had to not break: the readers who were fastest
+     * before must not be slower after.
+     *
+     * The retry loop stays. An entry needs a couple of requests to settle and a
+     * BYPASS proves nothing about caching, which was measured on the old layer
+     * and is a property of the platform rather than of either design.
+     */
     let cookieless = await warm(path, "");
     for (let i = 0; i < 4 && cookieless.cf !== "HIT"; i += 1) {
       cookieless = await warm(path, "");
@@ -1259,59 +1266,85 @@ const ASK_PROBE_LIMIT = 3;
       `rendered ${themeOf(cookieless.body)} with no cookie sent (cf ${cookieless.cf})`,
     );
 
-    // A cookie-bearing request must never be served from, or written to, the
-    // shared entry. `private, no-store` is what guarantees the second half.
+    /*
+     * MEASUREMENT (b): A COOKIED READER IS NOW CACHED TOO, AND THIS ASSERTION
+     * IS THE INVERSE OF THE ONE IT REPLACES.
+     *
+     * What stood here: "a cookie-bearing request must never be served from, or
+     * written to, the shared entry", asserting `dark.cf !== "HIT"`. That was
+     * correct and load-bearing under `Vary: Cookie`, where the only variant the
+     * platform could hold was the cookieless one and a cookied hit would have
+     * meant one reader's theme reaching another.
+     *
+     * The theme is a dimension of the KEY now (rulings 11, 15), so a dark reader
+     * and a light reader address different entries and a cookied HIT is the
+     * feature rather than the defect. THE OLD ASSERTION WOULD NOW FAIL ON A
+     * WORKING SITE, which is exactly why it is rewritten rather than left.
+     *
+     * FIRST READ MAY BE ANY STATUS, second must be a HIT: the first one is what
+     * stores the entry, and this cookie has not been used on this URL in this
+     * run.
+     */
     const dark = await warm(path, "theme=dark");
-    check(
-      `cache: ${path} bypasses the cache for a cookie-bearing reader`,
-      dark.cf !== "HIT" &&
-        (dark.res.headers.get("cache-control") ?? "").includes("no-store"),
-      `cf ${dark.cf}, cache-control ${dark.res.headers.get("cache-control")}`,
-    );
     check(
       `cache: ${path} renders the theme the cookie asked for`,
       themeOf(dark.body) === "dark",
       `sent theme=dark, rendered ${themeOf(dark.body)} (cf ${dark.cf})`,
     );
 
-    /*
-     * AND THE COOKIED READER IS NOW SERVED FROM THE EDGE, which is the half
-     * the four assertions above cannot see.
-     *
-     * All four remain exactly as true as they were: a cookie-bearing request
-     * still bypasses the PLATFORM cache and still receives `private, no-store`.
-     * That is what made them compatible with a fix and also what made them
-     * blind to it. `cf-cache-status` describes the layer in FRONT of the
-     * Worker, and the themed cache is inside it, so a reader answered from
-     * `caches.default` in a few milliseconds and a reader who paid a full
-     * render both read BYPASS.
-     *
-     * `x-theme-cache` is the only way to tell those apart from outside, which
-     * is why the Worker sets it. The second read must be a hit: the first one
-     * stored the entry.
-     */
     const darkAgain = await warm(path, "theme=dark");
     check(
-      `cache: ${path} serves a cookie-bearing reader from the themed cache`,
-      (darkAgain.res.headers.get("x-theme-cache") ?? "").startsWith("hit"),
-      `second cookied read marked ${JSON.stringify(darkAgain.res.headers.get("x-theme-cache"))}, ` +
-        `expected a hit. Before this layer existed every one of these was a full ` +
-        `origin render, which is what made the theme toggle cost a reader the ` +
-        `edge cache for every page on the site.`,
+      `cache: ${path} serves a COOKIED reader from cache on the second read`,
+      darkAgain.cf === "HIT",
+      `second cookied read reported cf-cache-status ${darkAgain.cf}, expected HIT. ` +
+        `Before the cache arc every one of these was a full origin render, which is ` +
+        `what made the theme toggle cost a reader the edge cache on every page. If ` +
+        `this reads BYPASS the theme is not reaching the key, or the response is not ` +
+        `storable; if it reads MISS on every attempt the entry is not being written.`,
     );
     check(
-      `cache: ${path} still refuses to hand a cookied reader a public policy`,
-      (darkAgain.res.headers.get("cache-control") ?? "").includes("no-store"),
-      `a themed-cache hit sent ${darkAgain.res.headers.get("cache-control")}. The ` +
-        `stored copy is public so it can be stored at all; serving that header to ` +
-        `a cookie-bearing reader lets the platform keep it under a theme-blind ` +
-        `key, which is the bug the whole layer exists to prevent.`,
-    );
-    check(
-      `cache: ${path} themed-cache hit still renders the requested theme`,
+      `cache: ${path} a cookied HIT still renders the requested theme`,
       themeOf(darkAgain.body) === "dark",
-      `a hit rendered ${themeOf(darkAgain.body)} for theme=dark. The key has ` +
-        `stopped separating the themes.`,
+      `a hit rendered ${themeOf(darkAgain.body)} for theme=dark. The key has stopped ` +
+        `separating the themes, which serves the first reader's document to everyone.`,
+    );
+
+    /*
+     * AND THE WIRE HEADER IS STILL A REFUSAL. Ruling 16 kept the downgrade as
+     * belt and braces and the split moved it to the gateway, which is what lets
+     * the stored copy stay public while the copy a cookied reader receives says
+     * `private, no-store`. Asserted on the HIT specifically: a downgrade that
+     * only applied on a miss would be a downgrade that mostly did not happen.
+     */
+    check(
+      `cache: ${path} never hands a cookied reader a public policy, hit or miss`,
+      (dark.res.headers.get("cache-control") ?? "").includes("no-store") &&
+        (darkAgain.res.headers.get("cache-control") ?? "").includes("no-store"),
+      `miss sent ${dark.res.headers.get("cache-control")} and hit sent ` +
+        `${darkAgain.res.headers.get("cache-control")}. The stored copy is public so ` +
+        `that it can be stored at all; handing that header to a cookie-bearing reader ` +
+        `invites a browser or an intermediary to keep a document that differs per reader.`,
+    );
+
+    /*
+     * MEASUREMENT (c) IS NOT HERE, deliberately. That light and dark differ only
+     * by the theme attributes is `check:browser`'s, which owns `maskTheme` and
+     * the enumeration under hard rule 8. Naming it here would be a second owner
+     * of the one fact that licenses this key being as short as it is.
+     */
+
+    /*
+     * AND THE `Vary` IS GONE. The routes that negotiate keep `Accept`; nothing
+     * on this site varies on Cookie any more, and a `Vary: Cookie` that came
+     * back would fragment every entry on every unrelated cookie value, which is
+     * the cost the arc exists to stop paying.
+     */
+    check(
+      `cache: ${path} does not vary on Cookie`,
+      !/(^|,)\s*cookie\s*(,|$)/i.test(cookieless.res.headers.get("vary") ?? ""),
+      `Vary was ${JSON.stringify(cookieless.res.headers.get("vary"))}. The theme is in ` +
+        `the cache key now; a Cookie dimension on top of it would split every entry by ` +
+        `analytics cookies the document does not read.`,
     );
   }
 
@@ -1643,18 +1676,23 @@ const ASK_PROBE_LIMIT = 3;
      * cached response, header and body together, and their nonces would be
      * identical for a reason that has nothing to do with the generator.
      *
-     * THE COOKIE USED TO BE ENOUGH AND STOPPED BEING ENOUGH, 2026-08-27. The
-     * note here read "a cookie-bearing request bypasses the cache and is
-     * rendered fresh", which was true of the PLATFORM cache and became false
-     * the day `workers/app.ts` grew a themed cache of its own: a cookied reader
-     * is exactly the reader that layer was built to serve, so the second
-     * request was a hit replaying the first one's stored nonce and this
-     * assertion went red against a site doing precisely what it was designed to
-     * do. That is hard rule 7's shape, a boundary note ageing into a false
-     * claim, and it is fixed by measuring rather than by assuming: each probe
-     * carries its own cache-busting query, so each is its own key, and
-     * `x-theme-cache` is READ BACK to prove both were misses. An assertion
-     * about two generations now fails if it was handed fewer than two.
+     * THE COOKIE USED TO BE ENOUGH AND STOPPED BEING ENOUGH, 2026-08-27, and
+     * the same lesson landed twice. The note here first read "a cookie-bearing
+     * request bypasses the cache and is rendered fresh", which was true of the
+     * PLATFORM cache and became false the day `workers/app.ts` grew a themed
+     * cache of its own. The repair was a cache-busting query per probe plus a
+     * read-back of `x-theme-cache` to prove both were misses.
+     *
+     * THE MARKER IS GONE WITH THAT LAYER, 2026-09-05, and the cookie is now
+     * enough for even less than it was: every reader is cacheable, so a cookie
+     * buys no freshness at all. What survives is the half that never depended
+     * on either, the CACHE-BUSTING QUERY: each probe is its own key, so each is
+     * its own render whatever the cache does. `cf-cache-status` replaces the
+     * marker as the read-back, and it is the platform's own header rather than
+     * one this Worker sets, which is a strictly better instrument.
+     *
+     * An assertion about two generations still fails if it was handed fewer
+     * than two.
      */
     const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
     const nonceProbe = (/** @type {number} */ n) =>
@@ -1663,16 +1701,18 @@ const ASK_PROBE_LIMIT = 3;
     const second = await nonceProbe(2);
     const n1 = nonceOf(first.res.headers.get(ENFORCED) ?? "");
     const n2 = nonceOf(second.res.headers.get(ENFORCED) ?? "");
-    const m1 = first.res.headers.get("x-theme-cache") ?? "";
-    const m2 = second.res.headers.get("x-theme-cache") ?? "";
+    const m1 = first.res.headers.get("cf-cache-status") ?? "(none)";
+    const m2 = second.res.headers.get("cf-cache-status") ?? "(none)";
 
     check("csp: the header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
     check(
-      "csp: both nonce probes were rendered, not replayed from the themed cache",
-      m1.startsWith("miss") && m2.startsWith("miss"),
-      `markers ${JSON.stringify(m1)} and ${JSON.stringify(m2)}. The assertion below ` +
-        `compares two GENERATIONS; served a stored copy it would compare one ` +
-        `generation with itself and report a static nonce on a correct site.`,
+      "csp: both nonce probes were rendered, not replayed from cache",
+      m1 !== "HIT" && m2 !== "HIT",
+      `cf-cache-status ${JSON.stringify(m1)} and ${JSON.stringify(m2)}. The assertion ` +
+        `below compares two GENERATIONS; served a stored copy it would compare one ` +
+        `generation with itself and report a static nonce on a correct site. Each ` +
+        `probe carries its own cache-busting query, so a HIT here means the query is ` +
+        `no longer part of the key.`,
     );
     check(
       "csp: THE NONCE VARIES between two Worker-rendered responses",

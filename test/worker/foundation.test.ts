@@ -62,11 +62,19 @@ describe("the instrument is pointed at something", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(STUB_PAGE_BODY);
     /*
-     * The marker only `workers/app.ts` sets. If this layer were driving
-     * something else that merely returned the stub body, this header would be
-     * absent and every themed-cache case would be about nothing.
+     * THE MARKER CHANGED WITH THE SPLIT, 2026-09-05. It was `x-theme-cache`,
+     * which only `workers/app.ts` set and which went with the hand-built cache
+     * layer that set it.
+     *
+     * `Reporting-Endpoints` and the nonced CSP replace it, and they are a
+     * STRONGER claim than the old one. Both are stamped inside the `Renderer`
+     * entrypoint, and this request enters at the GATEWAY, so seeing them proves
+     * the loopback ran: the gateway called `ctx.exports.Renderer` and got a real
+     * render back. A layer driving something else that merely returned the stub
+     * body would fail here, which is what this case is for.
      */
-    expect(response.headers.get("x-theme-cache")).toBeTruthy();
+    expect(response.headers.get("reporting-endpoints")).toBeTruthy();
+    expect(response.headers.get("content-security-policy")).toContain("nonce-");
   });
 
   it("REFUSES the network by default, which is what makes 'never live' a mechanism", async () => {
