@@ -211,3 +211,42 @@ export function collapseExcerpt(text) {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > EXCERPT_MAX_CHARS ? flat.slice(0, EXCERPT_MAX_CHARS) : flat;
 }
+
+/**
+ * The href a rendered mention may carry, or null.
+ *
+ * ## A RENDER-TIME CHECK ON A VALUE THAT WAS ALREADY CHECKED
+ *
+ * `sourceVerdict` refused a bad `source` on the way in and `readAuthor` kept an
+ * `author_url` only if it parsed as absolute http(s). So every stored value
+ * should already pass this. It is applied again at the point of RENDER anyway,
+ * and the reason is hard rule 6's: validate where the value enters a context,
+ * not where it entered the system. The row can outlive the code that wrote it,
+ * a hand-written row skips both earlier checks entirely, and an `href` is the
+ * one attribute on this page where being wrong is an executable defect rather
+ * than a cosmetic one.
+ *
+ * **NULL IS A RENDERING DECISION, NOT AN ERROR.** The caller renders the name
+ * as plain text with no anchor, which is the honest degradation: a mention
+ * whose URLs cannot be trusted is still a mention somebody sent, and dropping
+ * it entirely would hide moderated content from the reader while the admin page
+ * kept showing it as approved.
+ *
+ * Returns the PARSER'S OWN OUTPUT rather than the input string. `URL` has
+ * already decided what the value means by the time this can answer, so handing
+ * back the original would render an attribute the check was never applied to.
+ *
+ * @param {string | null | undefined} value
+ * @returns {string | null}
+ */
+export function safeHttpHref(value) {
+  if (!value) return null;
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  return url.href;
+}

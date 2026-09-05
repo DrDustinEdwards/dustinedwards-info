@@ -5,6 +5,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gt,
   inArray,
   isNotNull,
@@ -1834,6 +1835,66 @@ export async function recordWebmentionVerdict(
     .update(webmentions)
     .set(set)
     .where(and(eq(webmentions.id, id), eq(webmentions.status, "unverified")));
+}
+
+/**
+ * The APPROVED mentions for one post, for the public render. Item H2.
+ *
+ * ## IT COMPOSES `publiclyVisible()` EVEN THOUGH NOTHING MADE IT
+ *
+ * The caller resolves the post through `getBlogPost` first, which composes the
+ * predicate, and 404s before reaching this. So the slug handed in is already a
+ * publicly visible post's, and a positional argument like that is a real
+ * guarantee for exactly as long as the two calls stay in that order.
+ *
+ * That is the whole problem with it. Hard rule 1 is not "a draft's mentions are
+ * unreachable today", it is that every public object derived from a post goes
+ * through the predicate, and `check:invariants` sections 6 and 8 were both
+ * checked before this was written: section 6 scans for `.from(<posts binding>)`
+ * and section 8 knows only `search_docs`, so a read of `webmentions` alone is
+ * invisible to both. Neither gate asked for anything.
+ *
+ * The EXISTS clause below is what makes them ask. It puts a `.from(posts)` in
+ * this function, which brings it inside section 6's scan, and section 6 then
+ * requires the predicate here forever. A positional guarantee became a gated
+ * one for the price of a subquery, which is the trade hard rule 1's second
+ * paragraph is describing.
+ *
+ * **It is not redundant even today.** A row can name a draft: `/admin/mentions`
+ * cannot create one, but nothing stops a hand-written row, and H1's endpoint
+ * refuses a draft target only at the moment of receipt. A post unpublished
+ * AFTER its mentions were approved is the ordinary case, and without this
+ * clause the only thing standing between those rows and a reader would be the
+ * route's own 404.
+ *
+ * Ordered by `decided_at` descending: the newest judgement first, which is the
+ * order the admin made them in and the order a reader meets them.
+ */
+export async function approvedMentionsFor(env: Env, slug: string) {
+  const db = getDb(env);
+  return db
+    .select({
+      id: webmentions.id,
+      sourceUrl: webmentions.sourceUrl,
+      authorName: webmentions.authorName,
+      authorUrl: webmentions.authorUrl,
+      excerpt: webmentions.excerpt,
+      decidedAt: webmentions.decidedAt,
+    })
+    .from(webmentions)
+    .where(
+      and(
+        eq(webmentions.targetSlug, slug),
+        eq(webmentions.status, "approved"),
+        exists(
+          db
+            .select({ visible: posts.id })
+            .from(posts)
+            .where(and(eq(posts.slug, slug), publiclyVisible())),
+        ),
+      ),
+    )
+    .orderBy(desc(webmentions.decidedAt));
 }
 
 /**

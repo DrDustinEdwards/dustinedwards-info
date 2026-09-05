@@ -223,8 +223,41 @@ export function personJsonLd(origin: string) {
  * cookieless one. Copy this constant onto an HTML route without `HTML_VARY`
  * and that protection is gone.
  */
+/**
+ * THE LIFETIME ITSELF, and it is the owner rather than a copy of the string.
+ *
+ * INVERTED 2026-09-04, when `/admin/mentions` had to tell an operator how long
+ * an approval takes to reach a reader. That sentence is a statement about this
+ * number, and hard rule 17 gives a measured value one owner: a page typing
+ * "ten minutes" beside a constant reading 600 is two owners that agree until
+ * the day somebody changes one.
+ *
+ * So the number is declared and the header is built from it. The alternative
+ * considered and refused was parsing `s-maxage=(\d+)` back out of the string,
+ * which reintroduces the same problem one level down: a parse that stops
+ * matching has to substitute something, and a substituted cache lifetime is a
+ * false claim rather than a missing one.
+ *
+ * Nothing compares this header's TEXT against a literal, checked before the
+ * inversion: `check:headers`, `check:browser`, `check:features` and
+ * `check:page-payload` all test for the IDENTIFIER's presence, and
+ * `verify-live` reads the value through this export. Two prose mentions of
+ * `s-maxage=600` exist in gate comments and neither is an assertion.
+ */
+const SHARED_CACHE_SECONDS = 600;
+
 export const SHARED_CACHE_CONTROL =
-  "public, s-maxage=600, stale-while-revalidate=86400";
+  `public, s-maxage=${SHARED_CACHE_SECONDS}, stale-while-revalidate=86400`;
+
+/**
+ * The same lifetime in minutes, for prose that has to state it.
+ *
+ * ONE READER TODAY: the approval note on `/admin/mentions`. It is exported
+ * rather than computed there because the thing being stated is a property of
+ * the cache policy, not of the admin page, and a page that derived it itself
+ * would be the second owner this constant exists to prevent.
+ */
+export const SHARED_CACHE_MINUTES = SHARED_CACHE_SECONDS / 60;
 
 /**
  * What public HTML varies on. Paired with the downgrade in `workers/app.ts`.
