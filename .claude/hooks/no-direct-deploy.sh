@@ -28,6 +28,28 @@
 # shape in FAILURES.md. `npm run ship` is untouched: it invokes wrangler as a
 # child process, which no PreToolUse hook sees or should see.
 #
+# ## SCOPED TO THIS REPO, 2026-09-05, ruling 20
+#
+# The deploy arms fire only when the command runs INSIDE the site repo. Hard
+# rule 16 is a statement about this Worker, not about every repository a session
+# happens to touch, and this hook fires on every Bash call in a session started
+# here. So `cd ../dustinedwards-mcp && npm run deploy` was refused for a rule
+# with nothing to say about it: the admin MCP has no ship pipeline and deploys
+# exactly that way by its own README. That block cost a deploy and was recorded
+# as owed before it was recognised as a scope bug.
+#
+# The effective directory is the LAST `cd` in the command resolved against the
+# payload's `cwd`, which is what a shell does. Everything unresolvable reads as
+# INSIDE, so the failure direction is unchanged: toward blocking.
+#
+# THE D1 ARMS ARE NOT SCOPED and stay global. Their subject is named in the
+# command's own argument (the site's database) rather than by the directory it
+# runs in, so a `cd` elsewhere does not make them somebody else's business.
+#
+# Replayed both directions by `scripts/check-hook-deploy-scope.mjs`, which is in
+# the offline tier. Six cases: the block inside, the allow outside, the last-cd
+# rule, an absolute path, a d1 delete still refused outside, and a bare `cd`.
+#
 # ## Read-only wrangler stays allowed
 #
 # `wrangler tail`, `whoami`, `d1 info`, `r2 object get`, `secret list`,
@@ -73,8 +95,20 @@ if [ -z "$PY" ]; then
   block "no-direct-deploy hook: no working Python found (tried python3, python, py). The deploy check could not run, so this command is BLOCKED rather than passed silently."
 fi
 
+# THE SITE REPO ROOT, DERIVED FROM THIS FILE rather than hardcoded, so a clone
+# at any path is still the thing this hook protects. Two levels up from
+# .claude/hooks/ is the directory holding .claude.
+#
+# `pwd -W` is MSYS asking for the WINDOWS spelling. Without it git bash answers
+# `/c/Users/...` while the hook payload's `cwd` carries `C:\Users\...`, and the
+# comparison below would find every path outside the repo, which fails toward
+# ALLOWING. It falls back to plain `pwd` where the flag does not exist, which is
+# already the right answer there.
+SITE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && { pwd -W 2>/dev/null || pwd; })"
+export SITE_ROOT
+
 printf '%s' "$payload" | "$PY" -c '
-import json, re, sys
+import json, os, posixpath, re, sys
 
 raw = sys.stdin.buffer.read().decode("utf-8", "replace")
 try:
@@ -83,12 +117,103 @@ except Exception:
     sys.exit(4)
 cmd = str((d.get("tool_input") or {}).get("command") or "")
 
+
+def normalise(path):
+    """One spelling for two operating systems and three shells.
+
+    Lowercased, forward slashes, and the MSYS drive form folded onto the
+    Windows one, because the payload and the shell disagree about which to
+    write and a comparison between the two spellings is always false.
+    """
+    p = path.replace("\\", "/")
+    m = re.match(r"^/(?:cygdrive/)?([A-Za-z])/(.*)$", p)
+    if m:
+        p = m.group(1) + ":/" + m.group(2)
+    return posixpath.normpath(p).rstrip("/").lower()
+
+
+def effective_dir(command, cwd):
+    """Where the command actually runs, or None when that cannot be known.
+
+    THE LAST `cd` WINS, which is what a shell does: `cd a && cd b` runs in b.
+    Splitting on the separators means a `cd` inside a quoted string is not
+    mistaken for one, which is the cheap approximation this needs; the
+    expensive alternative is a shell parser, and the failure direction below
+    makes the approximation safe.
+
+    NONE IS RETURNED FOR EVERY CASE THIS CANNOT RESOLVE: a bare `cd` (which
+    goes home), a `cd -` (which goes wherever the shell was last), a variable,
+    or a path that will not resolve. The caller treats None as INSIDE the site
+    repo, so an unreadable command fails toward blocking.
+    """
+    target = None
+    for part in re.split(r"&&|\|\||[;|]", command):
+        stripped = part.strip()
+        if not re.match(r"^cd(\s|$)", stripped):
+            continue
+        arg = stripped[2:].strip()
+        # A bare `cd`, a `cd -`, or anything that reads a variable.
+        if not arg or arg.startswith("-") or "$" in arg or "%" in arg:
+            return None
+        # QUOTE CHARACTERS BY CODE POINT, never written literally. This whole
+        # block is inside a single-quoted bash string, so one apostrophe here
+        # ends the program and hands the rest of it to bash as commands. That
+        # is not hypothetical: it happened while this was being written, and
+        # the hook then refused every Bash call in the session with a bash
+        # syntax error. Fail-closed, loudly, which is the right direction and
+        # still an outage.
+        quotes = (chr(34), chr(39))
+        if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quotes:
+            arg = arg[1:-1]
+        target = arg
+    if target is None:
+        return cwd or None
+    if not cwd and not os.path.isabs(target):
+        return None
+    try:
+        return os.path.normpath(os.path.join(cwd or "", target))
+    except Exception:
+        return None
+
+
+# WHERE THIS COMMAND RUNS, and whether that is this repo. Ruling 20, 2026-09-05.
+#
+# Hard rule 16 is a statement about THE SITE: `npm run ship` is the only
+# reproducible way to deploy this Worker. It is not a statement about every
+# repository a session happens to touch, and this hook fires on every Bash call
+# in a session started here, so `cd ../dustinedwards-mcp && npm run deploy` was
+# refused for a rule that has nothing to say about it. The admin MCP has no ship
+# pipeline and deploys exactly that way by its own README.
+#
+# So the deploy arms below are scoped: outside this repo they do not fire. The
+# d1 arms are NOT scoped and stay global, because they name the site database in
+# an argument the command itself carries, so their subject travels with the
+# command rather than with the directory.
+#
+# NO APOSTROPHE APPEARS ANYWHERE BELOW THIS LINE, and that is a constraint
+# rather than a style. Every line from here to the closing quote is inside a
+# single-quoted bash string, so one apostrophe ends the program and hands the
+# remainder to bash. Write "the command itself carries" rather than the
+# possessive, and quote characters by code point.
+#
+# THE FAILURE DIRECTION IS TOWARD BLOCKING. A `cd` this cannot resolve, a
+# missing cwd, or an unreadable site root all read as INSIDE, which is the
+# answer that refuses. The old behaviour is what a broken parse falls back to.
+site_root = os.environ.get("SITE_ROOT") or ""
+where = effective_dir(cmd, str(d.get("cwd") or ""))
+if not site_root or where is None:
+    outside_site = False
+else:
+    root = normalise(site_root)
+    here = normalise(where)
+    outside_site = here != root and not here.startswith(root + "/")
+
 # `npm run ship` is the one door and is never blocked, even though it deploys.
 # Checked first so a compound command that ships is not caught by a later arm.
 if re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bship\b", cmd):
     sys.exit(0)
 
-if re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd):
+if not outside_site and re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd):
     sys.exit(5)
 
 # Every wrangler invocation in the string, with the words that follow it up to
@@ -99,9 +224,9 @@ for m in re.finditer(r"\bwrangler\b([^|;&]*)", cmd):
     args = [a for a in m.group(1).split() if not a.startswith("-")]
     if not args:
         continue
-    if args[0] == "deploy":
+    if not outside_site and args[0] == "deploy":
         sys.exit(6)
-    if args[0] == "versions" and len(args) > 1 and args[1] == "upload":
+    if not outside_site and args[0] == "versions" and len(args) > 1 and args[1] == "upload":
         sys.exit(7)
     # `wrangler d1 execute <database>`, so the verb is args[1] and the database
     # name is args[2]. This read args[2] for one revision and the replay caught

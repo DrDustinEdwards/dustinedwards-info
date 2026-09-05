@@ -48,6 +48,7 @@
     "check:media-axes": "node scripts/check-media-axes.mjs",
     "check:page-payload": "node scripts/check-page-payload.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",
+    "check:hook-scope": "node scripts/check-hook-deploy-scope.mjs",
     "check:stack": "node scripts/check-stack.mjs",
     "check:features": "node scripts/check-features.mjs",
     "check:headers": "node scripts/check-headers.mjs",
