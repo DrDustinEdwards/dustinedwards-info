@@ -37,6 +37,8 @@ import {
 } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import { listWebmentionsForAdmin } from "~/db";
+import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import {
   askAvailable,
@@ -92,6 +94,8 @@ const TOOLS = [
   "sync_media",
   "sync_posts",
   "backup_media",
+  "list_mentions",
+  "decide_mention",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -181,6 +185,29 @@ export const TOOL_DESCRIPTORS: Readonly<
       "uses. Idempotent. A read-back reconciliation: expected, present, and " +
       "a converged verdict.",
   },
+  list_mentions: {
+    args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
+    returns:
+      "Received webmentions, newest first, with id, source, target slug, status, " +
+      "author, excerpt and the received, verified and decided timestamps. " +
+      "Unfiltered when no status is given, which is what the moderation queue " +
+      "shows.",
+  },
+  decide_mention: {
+    args: {
+      id: "number, the mention row id from list_mentions",
+      decision: "string: approve, reject or delete",
+    },
+    returns:
+      "changed, and the target slug when a row moved. Approving or rejecting " +
+      "PURGES that post's cached page, so the change reaches readers on the " +
+      "next fetch rather than within the ten minute shared-cache lifetime.",
+    policy:
+      "Approve and reject need write and are reversible. DELETE is refused " +
+      "with 403 mention-delete-requires-admin: it removes the only copy of " +
+      "what a stranger sent, and there is no repository behind this table. " +
+      "Reject instead.",
+  },
   backup_media: {
     args: {},
     returns:
@@ -191,6 +218,135 @@ export const TOOL_DESCRIPTORS: Readonly<
       "the writes rather than from the loop's own counters.",
   },
 };
+
+/**
+ * The moderation queue, over the operator token.
+ *
+ * WHY THE OPERATOR GETS THIS AT ALL. Approving a mention was the one step in
+ * the webmention path that needed a human with a browser, and it was proven on
+ * 2026-09-05 by asking Dustin to click a button so a purge could be measured.
+ * A step that can only be taken by hand is a step that gets taken late, and
+ * this is a moderation queue whose whole value is being read.
+ *
+ * UNFILTERED BY DEFAULT, which is what `/admin/mentions` shows and for the same
+ * reason: an operator triaging a queue has to see the failures as well as the
+ * pending rows, or it cannot tell "nothing arrived" from "everything was
+ * refused".
+ *
+ * READS THROUGH THE SAME FUNCTION THE ADMIN PAGE READS. The status filter is
+ * applied here rather than in a second query, so there is one statement of what
+ * the queue IS and this cannot come to disagree with the page about it. The
+ * table is bounded by the endpoint's open-queue cap plus whatever has been
+ * approved, so filtering in memory costs nothing worth a second query shape.
+ */
+async function listMentionsTool(
+  env: OperatorEnv,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const status = typeof args.status === "string" ? args.status.trim() : "";
+
+  const rows = await listWebmentionsForAdmin(env as unknown as Env);
+
+  if (status) {
+    /*
+     * A STATUS THE COLUMN CANNOT HOLD IS A 400, not an empty list. An agent
+     * that typed `pendign` and got `[]` would conclude the queue was empty,
+     * which is the wrong repair and is indistinguishable from the right one.
+     * The set is the schema's CHECK constraint, stated here because a caller
+     * needs to be told what it may ask for.
+     */
+    const allowed = ["unverified", "pending", "approved", "rejected", "failed"];
+    if (!allowed.includes(status)) {
+      return {
+        ok: false,
+        status: 400,
+        error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
+      };
+    }
+  }
+
+  const filtered = status ? rows.filter((row) => row.status === status) : rows;
+
+  return {
+    ok: true,
+    data: {
+      status: status || "all",
+      count: filtered.length,
+      mentions: filtered.map((row) => ({
+        id: row.id,
+        source: row.sourceUrl,
+        target: row.targetSlug,
+        status: row.status,
+        author: row.authorName,
+        authorUrl: row.authorUrl,
+        excerpt: row.excerpt,
+        failureReason: row.failureReason,
+        receivedAt: row.receivedAt,
+        verifiedAt: row.verifiedAt,
+        decidedAt: row.decidedAt,
+      })),
+    },
+  };
+}
+
+/**
+ * Approve, reject or delete one mention, and purge the page it changed.
+ *
+ * IT CALLS `decideMention` AND NOTHING ELSE, which is the point of that
+ * function existing. The write and the purge travel together there, so this
+ * cannot ship the half that changes the database without the half that makes
+ * the change visible. The admin page's action calls the same door.
+ *
+ * THE CAPABILITY CHECK IS INSIDE THAT DOOR TOO, reading `WRITE_CAPABILITIES`,
+ * so the refusal is the same one whichever caller asks. An operator may
+ * approve and reject and may not delete, which is `delete_post`'s shape and
+ * `delete_post`'s reason: this removes the only copy of what a stranger sent.
+ */
+async function decideMentionTool(
+  env: OperatorEnv,
+  actor: Actor,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const id = typeof args.id === "number" ? args.id : Number(args.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: `decide_mention needs a positive integer id, got ${JSON.stringify(args.id)}. ` +
+        `Call list_mentions for the ids.`,
+    };
+  }
+
+  const decision = typeof args.decision === "string" ? args.decision.trim() : "";
+  if (decision !== "approve" && decision !== "reject" && decision !== "delete") {
+    return {
+      ok: false,
+      status: 400,
+      error: `decide_mention needs a decision of approve, reject or delete, got ` +
+        `${JSON.stringify(args.decision)}.`,
+    };
+  }
+
+  const result = await decideMention(env as unknown as Env, id, decision, actor);
+
+  /*
+   * `changed: false` IS A REAL ANSWER AND NOT AN ERROR. The row may not exist,
+   * or may be `unverified` or `failed`, which the DB layer's `where` refuses
+   * because neither has evidence to approve. Reporting that as a 404 would make
+   * a caller retry something that will never succeed; reporting it as success
+   * with `changed: false` tells it what happened.
+   */
+  return {
+    ok: true,
+    data: {
+      id,
+      decision,
+      changed: result.changed,
+      slug: result.slug,
+      purged: result.changed ? `post:${result.slug}` : null,
+    },
+  };
+}
 
 /**
  * Runs one tool.
@@ -231,6 +387,12 @@ export async function runTool(
 
       case "backup_media":
         return await backupMedia(env);
+
+      case "list_mentions":
+        return await listMentionsTool(env, args);
+
+      case "decide_mention":
+        return await decideMentionTool(env, actor, args);
     }
   } catch (error) {
     return translate(error);
