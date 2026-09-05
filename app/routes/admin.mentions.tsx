@@ -4,6 +4,7 @@ import { EmptyState, Panel } from "~/components/admin/panel";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
+import { SHARED_CACHE_MINUTES } from "~/lib/seo";
 import {
   countExpiringWebmentions,
   decideWebmention,
@@ -212,8 +213,19 @@ const GROUPS: ReadonlyArray<{
   },
   {
     status: "approved",
+    /*
+     * THE DESCRIPTION CHANGED WITH THE FEATURE, 2026-09-04. It read "Approved
+     * mentions have no public effect yet; rendering is a later step", which was
+     * true for exactly as long as H1 was the whole of it.
+     *
+     * Recorded rather than quietly edited, because it is hard rule 17's second
+     * clause caught in the act: a tense-bound state claim in prose, with no gate
+     * able to read tense, going false in the commit that made it false. The
+     * sentence below states what is true now and points at the note above the
+     * pending queue for the timing, which IS derived.
+     */
     title: "Approved",
-    description: "Kept. Approved mentions have no public effect yet; rendering is a later step.",
+    description: "Published under the post, as escaped text with a validated link.",
   },
   {
     status: "rejected",
@@ -371,6 +383,34 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
             description={group.description}
             actions={<span className="chip">{rows.length}</span>}
           >
+            {/*
+              WHAT APPROVING ACTUALLY DOES, beside the control that does it.
+
+              THE NUMBER IS DERIVED FROM `SHARED_CACHE_CONTROL`, never typed.
+              `SHARED_CACHE_MINUTES` is `s-maxage` divided by sixty and the
+              header is built from the same constant, so this sentence cannot
+              disagree with the policy it describes. Hard rule 17: a measured
+              value lives where it is applied or nowhere.
+
+              THE SECOND HALF IS THE PART THAT SAVES AN AFTERNOON. There is no
+              purge here and there deliberately never will be, so the operator
+              who approves a mention and immediately reloads the post will not
+              see it, and the obvious conclusion is that approving is broken.
+              It is not: this admin session carries a cookie, `workers/app.ts`
+              serves any cookie-bearing reader from its own themed
+              `caches.default` entry looked up before rendering, and that entry
+              was stored with the same lifetime. So the admin reads exactly what
+              a reader reads, aged the same amount, which is a better property
+              than a privileged bypass would be and is worth one sentence.
+            */}
+            {group.status === "pending" && rows.length > 0 ? (
+              <p className="muted">
+                {`Approving shows a mention under the post within ${SHARED_CACHE_MINUTES} ` +
+                  `minutes. This admin session carries a cookie, so it is served the same ` +
+                  `edge copy a reader is: refresh after that long rather than expecting it ` +
+                  `at once. Nothing here purges the cache.`}
+              </p>
+            ) : null}
             {rows.length === 0 ? (
               <EmptyState title={`No ${group.title.toLowerCase()} mentions.`} />
             ) : (
