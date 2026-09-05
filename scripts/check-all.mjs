@@ -50,7 +50,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 28;
+const MINIMUM_GATES = 29;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -215,6 +215,18 @@ const TIERS = {
   // calls the confirmation predicate inside its own branch. It runs no action,
   // so it sees a guard ABSENT, not a guard present and wrong.
   "check:destructive": "offline",
+  /*
+   * OFFLINE, and it has to be: it replays a PreToolUse hook against constructed
+   * payloads and reads exit codes. No network, no build, no deployment, and
+   * nothing it does depends on which machine it runs on.
+   *
+   * IN CI TOO, deliberately not excluded. The hook is the only thing standing
+   * between a session and an unreproducible deploy of this Worker, and its
+   * scope was narrowed on 2026-09-05; a scope change to a guard fails silently
+   * and in the permissive direction, which is exactly the class CI should be
+   * watching for rather than one machine.
+   */
+  "check:hook-scope": "offline",
   // Reads the tracked example config, package.json and drizzle/. No network.
   "check:stack": "offline",
   // Parses routes.ts and reads gate scripts off disk. No network.

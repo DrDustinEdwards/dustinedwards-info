@@ -244,6 +244,7 @@
     "check:features",
     "check:head",
     "check:headers",
+    "check:hook-scope",
     "check:image-weight",
     "check:invariants",
     "check:llms",
