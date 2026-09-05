@@ -27,12 +27,23 @@
  *
  * FAILS CLOSED. An unreadable hook, a missing interpreter or an unexpected exit
  * code is a failure, never a skip.
+ *
+ * ## THE INTERPRETER IS RESOLVED, NOT NAMED
+ *
+ * This spawned `bash` by bare name until 2026-09-05, which made it a gate that
+ * depended on the shell it was written in: green in every Claude Code session,
+ * because that harness runs git bash, and `spawnSync bash ENOENT` six times over
+ * at `npm run ship` step 4, because ship runs from PowerShell where `bash` is
+ * not on PATH. `scripts/lib/bash.mjs` finds a bash once and PROVES it runs; a
+ * machine with none fails here, in one line, before any case is read.
  */
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { bashNotFoundMessage, resolveBash } from "./lib/bash.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HOOK = join(root, ".claude", "hooks", "no-direct-deploy.sh");
@@ -57,6 +68,31 @@ if (!existsSync(HOOK)) {
   process.exit(1);
 }
 
+/*
+ * RESOLVED BEFORE THE FIRST CASE, and a failure is ONE line.
+ *
+ * The order matters as much as the resolution. Resolving inside `runHook` would
+ * report a missing interpreter once per case, which is what the ENOENT run
+ * looked like: six failures describing the same single fact, none of which named
+ * it. This is a precondition of the gate, so it is stated where preconditions
+ * are, next to the missing-hook check and in the same voice.
+ */
+const BASH = resolveBash();
+if (!BASH) {
+  console.log(`  FAIL  ${bashNotFoundMessage()}`);
+  console.log("");
+  process.exit(1);
+}
+/*
+ * The path is bound to its own const rather than read off `BASH` at the call
+ * site. `runHook` is a hoisted function declaration, so the compiler cannot
+ * carry the null check above into a body that could in principle run before it,
+ * and a non-null assertion there would be the check written twice with only one
+ * of them enforced.
+ */
+const BASH_PATH = BASH.path;
+console.log(`  bash: ${BASH_PATH}  (${BASH.source})\n`);
+
 /**
  * Run the hook against one command, from one working directory.
  *
@@ -70,7 +106,7 @@ if (!existsSync(HOOK)) {
  */
 function runHook(command, cwd) {
   const payload = JSON.stringify({ cwd, tool_input: { command } });
-  const result = spawnSync("bash", [HOOK], {
+  const result = spawnSync(BASH_PATH, [HOOK], {
     input: payload,
     encoding: "utf8",
     cwd: root,
