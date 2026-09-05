@@ -46,6 +46,42 @@
 	// stored and served to anyone. `workers/app.ts` closes that by defaulting
 	// every response without an explicit Cache-Control to `private, no-store`.
 	"cache": { "enabled": true },
+	// THE TWO ENTRYPOINTS, and which of them the platform may cache.
+	//
+	// Ruled 2026-09-05 (decisions vol 14, ruling 15). `workers/app.ts` exports a
+	// GATEWAY as `default` and a `Renderer` class. The gateway runs on every
+	// request and does only what must not be skipped: the HTTPS redirect, the
+	// theme cookie read, and the Analytics Engine write. It then calls
+	// `ctx.exports.Renderer` through a loopback with an explicit `cf.cacheKey`
+	// and `{ theme }` in props, and the RENDERER is the entrypoint whose
+	// responses are stored.
+	//
+	// **THE GATEWAY IS CACHE DISABLED, AND THAT IS THE WHOLE POINT.** If it were
+	// cacheable the platform could answer a request without running it, and the
+	// traffic row would go unwritten on every hit: exactly the blindness item G
+	// was about. Disabling it costs one Worker invocation per request and buys a
+	// count that is finally complete. A cache hit still costs no CPU time, per
+	// Cloudflare's pricing note.
+	//
+	// **`cross_version_cache` IS DELIBERATELY ABSENT**, which means it is false
+	// and the Worker version stays in the cache key. That is what makes a deploy
+	// invalidate every entry, and it is the property that replaced the
+	// hand-built `__build` key parameter the old themed layer carried. Turning
+	// it on would serve last deploy's HTML, asking for asset URLs the current
+	// manifest no longer has.
+	//
+	// The top-level switch above stays: per-entrypoint settings override it, and
+	// leaving it on is what covers the Images binding responses it was added for.
+	"exports": {
+		"default": {
+			"type": "worker",
+			"cache": { "enabled": false }
+		},
+		"Renderer": {
+			"type": "worker",
+			"cache": { "enabled": true }
+		}
+	},
 	// Static assets, so the Worker can read them through a binding. The Vite
 	// plugin supplies `directory` from the client build output; setting it here
 	// would fight that.
