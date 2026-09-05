@@ -57,6 +57,11 @@ which is what repeats across people and sessions.
 - **On Windows, `spawnSync` with `shell: true` joins argv unquoted.** A seed
   SQL string became a program named after its first word, and the seed the
   plant depended on never ran. `scripts/check-browser.mjs`
+- **A gate that spawns a tool by bare name is green in the shell it was written
+  in and absent in the one that ships.** `check:hook-scope` spawned `bash`,
+  passed every session because the agent harness runs git bash, and refused six
+  times with ENOENT at ship step 4 in PowerShell, where it is not on PATH.
+  Resolve the binary once and prove it runs. `scripts/lib/bash.mjs`
 
 ## Measuring the wrong thing
 
@@ -82,11 +87,10 @@ which is what repeats across people and sessions.
   query, since AI Search searches the last user message; every question then
   retrieved nothing and the new zero-chunk guard answered every reader with the
   no-answer text, correctly. `app/lib/search/ask-prompt.mjs`
-- **A read the gate cannot see is not exempt; it is a read with no gate.** The
-  mentions reader passed both visibility sections with no predicate because
-  neither scans a `webmentions` query. It was given a `posts` reference so the
-  gate could see it, then the gate was proven to bite. `app/db/index.ts`
-  `approvedMentionsFor`
-- **An intent expressed as an expression is invisible to a classifier that
-  reads statements.** `check:destructive` could not see `reject` behind a
-  ternary. `app/routes/admin.mentions.tsx`
+- **A construct the scan does not reach is not exempt; it is a subject with no
+  gate, and the pass reads as absence.** Three forms so far: the mentions reader
+  passed both visibility sections by carrying no predicate either scans; a
+  `reject` hid from `check:destructive` behind a ternary; an entire operator
+  surface spelled its verbs with a different noun. Teach the gate the other
+  spelling, then prove it bites. `app/db/index.ts`
+  `app/routes/admin.mentions.tsx` `scripts/check-destructive.mjs`
