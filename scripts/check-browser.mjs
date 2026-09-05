@@ -2011,102 +2011,67 @@ try {
       );
     }
 
-    /* ------ the themed edge cache actually separates the two documents ---- */
+    /* ------ the cache itself moved to verify-live, and here is why --------- */
 
     /*
-     * THE KEY IS PATH PLUS THEME, AND THIS IS WHAT PROVES THE THEME HALF.
+     * THREE CACHE ASSERTIONS USED TO LIVE HERE AND CANNOT ANY MORE, 2026-09-05.
      *
-     * The assertions above deliberately cache-bust every fetch, so they say
-     * nothing about the cache at all: each one is a fresh key and a fresh
-     * render. This case does the opposite and reuses ONE key across four
-     * requests, because the property it is about is what happens on the second
-     * one.
+     * They reused one key across four requests and read `x-theme-cache`, the
+     * marker the hand-built `caches.default` layer set: a miss then a hit on the
+     * same theme, a cookied reader never receiving a public cache-control, and a
+     * light reader not being served the warmed dark document. Three more did the
+     * same for the negotiated representations.
      *
-     * The failure it exists to catch is a key that drops the theme. That key
-     * is not obviously wrong, it makes every hit faster, and it serves the
-     * FIRST reader's document to everyone: dark to a light reader for ten
-     * minutes. Nothing else in this suite can see it, because the byte
-     * comparisons above never reach the cache and `verify-live` cannot force a
-     * miss on a shared key.
+     * ## WHY THEY CANNOT BE PORTED, AND IT IS MEASURED RATHER THAN ASSUMED
      *
-     * `x-theme-cache` is the marker `workers/app.ts` sets for exactly this;
-     * `caches.default` contributes no `CF-Cache-Status`, so without it a hit
-     * and a fast render are indistinguishable from outside.
+     * The layer is gone (rulings 11, 15, 16) and the platform cache replaced it.
+     * MINIFLARE DOES NOT IMPLEMENT WORKERS CACHE. Measured 2026-09-05 under this
+     * gate's own `vite preview`, before the split was written: a response
+     * carrying `public, s-maxage=600` and a fixed `cf.cacheKey` was re-rendered
+     * on all three fetches, the body's timestamp changed every time, and no
+     * `Cf-Cache-Status` header appeared at all. The same is true in the worker
+     * test pool, which is the same runtime.
+     *
+     * So there is no local cache to warm, no marker to read, and a ported
+     * assertion would be green on a site whose cache was completely broken.
+     * That is worse than no assertion, which is why this is a SKIP that names
+     * the instrument rather than a quiet deletion.
+     *
+     * ## WHAT STILL COVERS IT
+     *
+     * `verify-live` owns all six wire measurements now (ruling 18), against
+     * production, reading `Cf-Cache-Status` and the theme attribute. What THIS
+     * gate still owns is the half that licenses the key being short: the
+     * byte-identity and theme-only-difference assertions in the loop above,
+     * which are untouched and are what would catch the document starting to
+     * depend on the cookie for some other reason.
      */
-    {
-      const key = `${BASE}/?themecache=${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      /** @param {string} theme */
-      const withTheme = async (theme) => {
-        const res = await fetch(key, { headers: { cookie: `theme=${theme}` }, redirect: "manual" });
-        const body = await res.text();
-        return {
-          marker: res.headers.get("x-theme-cache") ?? "",
-          cacheControl: res.headers.get("cache-control") ?? "",
-          attribute: (/<html[^>]*data-theme="([a-z]+)"/.exec(body) ?? [])[1] ?? "(none)",
-        };
-      };
+    skip(
+      "the cache stores, separates by theme, and refuses a negotiated read",
+      "miniflare does not implement Workers Cache: measured 2026-09-05, three fetches " +
+        "of a response with public, s-maxage=600 and a fixed cf.cacheKey each re-rendered " +
+        "and carried no Cf-Cache-Status. These are verify-live's six measurements now, " +
+        "against production. The theme-only-difference assertions above are unaffected.",
+    );
 
-      const darkFirst = await withTheme("dark");
-      const darkAgain = await withTheme("dark");
-      const lightFirst = await withTheme("light");
-
-      ok(
-        "the themed cache stores a public document and serves it on the second read",
-        darkFirst.marker.startsWith("miss") && darkAgain.marker.startsWith("hit"),
-        `first read marked ${JSON.stringify(darkFirst.marker)} and second read ` +
-          `marked ${JSON.stringify(darkAgain.marker)}. Expected a miss then a hit. ` +
-          `Without a hit the layer is storing nothing and a cookied reader is ` +
-          `still paying a full render on every click.`,
-      );
-
-      ok(
-        "A COOKIED READER NEVER RECEIVES A PUBLIC CACHE-CONTROL, hit or miss",
-        darkFirst.cacheControl === "private, no-store" &&
-          darkAgain.cacheControl === "private, no-store",
-        `miss sent ${JSON.stringify(darkFirst.cacheControl)} and hit sent ` +
-          `${JSON.stringify(darkAgain.cacheControl)}. The stored copy is public so ` +
-          `that it can be stored HERE; handing that header to a cookie-bearing ` +
-          `reader lets the platform in front keep it under a theme-blind key, ` +
-          `which is the exact bug this layer exists to prevent. Measured on a ` +
-          `preview during the build: returning the hit verbatim did this.`,
-      );
-
-      ok(
-        "THE CACHE KEY CARRIES THE THEME: a light reader is not served the dark document",
-        lightFirst.attribute === "light",
-        `after two dark reads warmed the entry, a light reader got ` +
-          `data-theme="${lightFirst.attribute}" (marker ${JSON.stringify(lightFirst.marker)}). ` +
-          `The cache key has stopped separating the themes, so the first reader's ` +
-          `document is being served to everyone on this path.`,
-      );
-    }
-
-    /* ------ and it never answers a request that negotiated away from HTML -- */
+    /* ------ the negotiated ROUTING half, which needs no cache -------------- */
 
     /*
-     * THE DEFECT THIS REPLAYS REACHED PRODUCTION, which is why it is a case
-     * here rather than a note on the key.
+     * WHAT SURVIVES THE MOVE, and it is the half that was actually broken.
      *
-     * `caches.default` is keyed by the Request handed to it and carries no
-     * headers, so `Vary: Accept` cannot reach it. Two routes serve two
-     * representations at ONE URL: `/blog/:slug` answers `Accept:
-     * text/markdown` with markdown, `/search` answers `Accept:
-     * application/json` with JSON. The HTML copy was stored under a key the
-     * markdown request also matched. MEASURED on the wire after the deploy of
-     * 2f0b4d5: 31,869 bytes of `text/html` marked `x-theme-cache: hit` in
-     * answer to a markdown request. `verify-live` caught it AFTER the deploy;
-     * this catches it before one.
+     * The defect this replays reached production: after the deploy of 2f0b4d5,
+     * `Accept: text/markdown` on a post returned 31,869 bytes of `text/html`.
+     * The CACHE was the mechanism, but the property a reader cares about is
+     * simply that asking for markdown gets markdown, and that property is
+     * testable with no cache at all.
      *
-     * THE ORDER IS THE WHOLE CASE. The HTML must be warmed FIRST, on the same
-     * key, or the alternate representation renders fresh for the ordinary
-     * reason and the case passes on a broken site. That is why the two warming
-     * reads are asserted to have produced a hit before the third read is
-     * believed: an assertion whose setup silently failed reports what a clean
-     * sweep reports.
-     *
-     * `/search` is the second subject rather than a second flavour of the
-     * first: it is a different route with a different negotiated type, and the
-     * defect was one line in the Worker that governed both.
+     * The old version warmed the HTML entry first and asserted the warming,
+     * because without a warm entry the alternate representation rendered fresh
+     * for the boring reason and the case passed on a broken site. THAT
+     * PRECONDITION IS GONE WITH THE CACHE and is not reconstructible here, so
+     * this case is deliberately weaker than the one it replaces: it proves the
+     * routing and says nothing about what the cache would have answered.
+     * `verify-live` measurement (a) is where the cache half is established.
      */
     const NEGOTIATED = [
       {
@@ -2126,49 +2091,32 @@ try {
     for (const { path, accept, wanted, label } of NEGOTIATED) {
       const sep = path.includes("?") ? "&" : "?";
       const key = `${BASE}${path}${sep}negotiated=${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      /** @param {Record<string,string>} headers */
-      const read = async (headers) => {
-        const res = await fetch(key, {
-          headers: { cookie: "theme=dark", ...headers },
-          redirect: "manual",
-        });
-        const body = await res.text();
-        return {
-          marker: res.headers.get("x-theme-cache") ?? "",
-          type: res.headers.get("content-type") ?? "",
-          bytes: body.length,
-        };
-      };
-
-      const warm = await read({});
-      const warmAgain = await read({});
+      const negotiated = await fetch(key, {
+        headers: { cookie: "theme=dark", accept },
+        redirect: "manual",
+      });
+      const type = negotiated.headers.get("content-type") ?? "";
       ok(
-        `${label}: the HTML entry is warm before the negotiated read`,
-        warm.marker.startsWith("miss") && warmAgain.marker.startsWith("hit"),
-        `first read marked ${JSON.stringify(warm.marker)} and second marked ` +
-          `${JSON.stringify(warmAgain.marker)}. Expected a miss then a hit. The ` +
-          `assertion below is VACUOUS without this: with nothing stored on this ` +
-          `key, a fresh render of the alternate representation proves nothing ` +
-          `about what the cache would have answered.`,
+        `${label}: an ${accept} request is answered with ${wanted}`,
+        type.includes(wanted),
+        `got ${JSON.stringify(type)}. The route stopped negotiating, or the gateway's ` +
+          `key stopped excluding the negotiated representation. See ` +
+          `negotiatesAwayFromHtml in app/lib/negotiate.mjs and cacheDimensions in ` +
+          `workers/app.ts.`,
       );
-
-      const negotiated = await read({ accept });
+      /*
+       * AND IT DECLARES ITSELF UNSTORABLE. This is the part of the old
+       * three-assertion block that survives without a cache: the negotiated
+       * response must say `no-store` on its own, which is what keeps the
+       * platform from holding it under a key the HTML reader also matches.
+       */
       ok(
-        `${label}: a warm HTML entry does NOT answer an ${accept} request`,
-        negotiated.type.includes(wanted),
-        `got ${JSON.stringify(negotiated.type)} in ${negotiated.bytes} bytes, marker ` +
-          `${JSON.stringify(negotiated.marker)}, against ${warmAgain.bytes} bytes of ` +
-          `HTML already stored on this key. The Worker's cache key does not carry ` +
-          `the negotiated representation and cannot: caches.default sees no ` +
-          `headers, so the request must skip the cache instead. See ` +
-          `negotiatesAwayFromHtml in app/lib/negotiate.mjs.`,
-      );
-      ok(
-        `${label}: the negotiated read is not stored either`,
-        !negotiated.marker.startsWith("hit"),
-        `marker ${JSON.stringify(negotiated.marker)}. An alternate representation ` +
-          `served FROM this cache is the same defect in the other direction: the ` +
-          `next HTML reader on this key would be handed ${wanted}.`,
+        `${label}: the negotiated response refuses storage on its own headers`,
+        (negotiated.headers.get("cache-control") ?? "").includes("no-store"),
+        `cache-control was ${JSON.stringify(negotiated.headers.get("cache-control"))}. ` +
+          `An alternate representation the platform is allowed to store is the same ` +
+          `defect in the other direction: the next HTML reader on this key would be ` +
+          `handed ${wanted}.`,
       );
     }
 

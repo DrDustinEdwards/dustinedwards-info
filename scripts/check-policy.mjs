@@ -1414,6 +1414,63 @@ refuses(
   );
 }
 
+/* ------------------------------------------------ the cache split, in config */
+
+/*
+ * WHICH ENTRYPOINT THE PLATFORM MAY CACHE. Ruling 15, 2026-09-05.
+ *
+ * ## WHY THIS IS A POLICY ASSERTION AND NOT A CONFIG ONE
+ *
+ * `check:config` already reconciles the example against the real file in both
+ * directions, so the two cannot drift. What it does not know is which VALUE is
+ * correct, and the correct value here is a policy decision with a failure mode
+ * on each side:
+ *
+ *   gateway cache ENABLED    the platform could answer a request without
+ *                            running the gateway, and `recordTraffic` would go
+ *                            unwritten on every hit. The readership count would
+ *                            silently become a count of cache misses and would
+ *                            still look like readership. That is the blindness
+ *                            item G existed to end, reintroduced by a config
+ *                            flag rather than by code.
+ *   Renderer cache DISABLED  every request renders, which is the state this
+ *                            whole arc replaced, and nothing would say so
+ *                            except a latency graph nobody reads.
+ *
+ * ## AND `cross_version_cache` STAYS OFF
+ *
+ * With it off the Worker version is part of the cache key, so a deploy
+ * invalidates every entry. That is what replaced the hand-built `__build` key
+ * parameter the deleted themed layer carried, and the measurement behind it is
+ * on that layer's grave in `workers/app.ts`: a `check:browser` run was once
+ * served HTML from a build several generations old, asking for a stylesheet URL
+ * the current manifest no longer had.
+ *
+ * Asserted against the EXAMPLE, which is the tracked file. The real config is
+ * gitignored and `check:config` is what binds it to this one.
+ */
+{
+  const exampleRaw = readFileSync(join(root, "wrangler.jsonc.example"), "utf8");
+  /* Comments stripped before parsing: the file is JSONC and is mostly prose. */
+  const example = JSON.parse(
+    exampleRaw.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, ""),
+  );
+
+  eq("the example config still enables Workers Cache at the top level", example.cache?.enabled, true);
+  eq("the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled, false);
+  eq("the RENDERER entrypoint has cache ENABLED", example.exports?.Renderer?.cache?.enabled, true);
+  /*
+   * ABSENT rather than `false`, and asserted as absent. Writing it explicitly
+   * would be a second place to state a default, and the default is the safe
+   * direction here.
+   */
+  eq(
+    "cross_version_cache is not enabled, so a deploy invalidates the cache",
+    example.cache?.cross_version_cache ?? false,
+    false,
+  );
+}
+
 /**
  * Drafts must never reach the AI index.
  *
@@ -1755,12 +1812,20 @@ refuses(
  * 141 under the 128 floor before this session touched it, so the slack was
  * back to thirteen and is now reset. Floor 128 to 135, about seven percent
  * under, which is the same proportion the 2026-08-24 entry chose.
+ *
+ * RE-MEASURED 2026-09-05 by RUNNING it, after the cache-split assertions: 181.
+ * THE FLOOR HAD DRIFTED FORTY-SIX BELOW THE COUNT, which is the exact condition
+ * the 2026-08-24 entry above says it exists to prevent, and it happened again
+ * in the way that entry predicted: the count moved with every session and the
+ * floor moved with none of them. Four of those 181 are new here; the other
+ * forty-two accumulated unremarked. Floor 135 to 168, about seven percent
+ * under, the same proportion both earlier entries chose.
  */
-const MINIMUM_CHECKS = 135;
+const MINIMUM_CHECKS = 168;
 if (checks < MINIMUM_CHECKS) {
   failures.push(
     `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-08-26: 145.`,
+      `A block was SKIPPED rather than failing. Measured 2026-09-05: 181.`,
   );
 }
 

@@ -1257,23 +1257,59 @@ console.log("  plaintext requests are upgraded before anything else runs");
    * has already produced a response is not a redirect, and presence alone would
    * pass on exactly that.
    */
+  /*
+   * RE-SCOPED TO THE GATEWAY, 2026-09-05, and the re-scope is a finding.
+   *
+   * This block used to take the FIRST `async fetch(` in the file and assert
+   * that `httpsRedirectTarget` appeared before `RouterContextProvider` inside
+   * it. After the entrypoint split the first `async fetch(` is the RENDERER's,
+   * which constructs the router and never redirects, so the needle was pointing
+   * at the wrong handler and this gate went red. It was right to: an assertion
+   * about POSITION has to know which body it is reading, and this one silently
+   * changed subject when the file's shape changed.
+   *
+   * The property is now stated against the shape that exists, and it is
+   * STRONGER than the old claim. The redirect must be in the GATEWAY and must
+   * come before the loopback: before the loopback means before anything could
+   * be answered from cache, where the old one only meant before a render.
+   */
   const appCode = stripComments(readFileSync(APP_PATH, "utf8"));
-  const fetchAt = appCode.search(/async\s+fetch\s*\(/);
-  ok("the Worker exports a fetch handler", fetchAt !== -1, "nothing below examines anything");
-  const fetchBody = fetchAt === -1 ? "" : appCode.slice(fetchAt);
-  ok("the fetch body is non-empty", fetchBody.length > 200, `${fetchBody.length} chars`);
+  const gatewayAt = appCode.search(/export\s+default\s*\{/);
+  ok("the Worker exports a default gateway", gatewayAt !== -1, "nothing below examines anything");
+  const fetchBody = gatewayAt === -1 ? "" : appCode.slice(gatewayAt);
+  ok("the gateway body is non-empty", fetchBody.length > 200, `${fetchBody.length} chars`);
 
   const redirectAt = fetchBody.indexOf("httpsRedirectTarget(");
-  const routerAt = fetchBody.indexOf("RouterContextProvider");
+  const loopbackAt = fetchBody.indexOf("ctx.exports.Renderer");
   ok(
-    "the Worker takes an https redirect decision",
+    "the gateway takes an https redirect decision",
     redirectAt !== -1,
-    "plaintext would reach the router and be answered 200, which is what was measured live",
+    "plaintext would reach the renderer and be answered 200, which is what was measured live",
   );
   ok(
-    "THE UPGRADE RUNS BEFORE THE ROUTER IS EVEN CONSTRUCTED",
-    redirectAt !== -1 && routerAt !== -1 && redirectAt < routerAt,
-    "a redirect decided after the response exists is not a redirect",
+    "THE UPGRADE RUNS BEFORE THE LOOPBACK, so plaintext never reaches a cache lookup",
+    redirectAt !== -1 && loopbackAt !== -1 && redirectAt < loopbackAt,
+    "a redirect decided after the response exists is not a redirect, and one decided after " +
+      "the loopback could be answered from a cache entry the scheme is not part of",
+  );
+  /*
+   * AND THE RENDERER DOES NOT REDIRECT, which is the other direction. Without
+   * it the assertion above could be satisfied by a copy of the redirect having
+   * moved into the entrypoint that runs on a miss only, where it would be
+   * skipped on every hit.
+   */
+  const rendererAt = appCode.search(/export\s+class\s+Renderer\b/);
+  const rendererBody =
+    rendererAt === -1 || gatewayAt === -1 ? "" : appCode.slice(rendererAt, gatewayAt);
+  ok(
+    "the Renderer body was located",
+    rendererBody.length > 200,
+    `${rendererBody.length} chars between the class and the default export`,
+  );
+  ok(
+    "the https upgrade lives in the gateway ONLY",
+    !rendererBody.includes("httpsRedirectTarget("),
+    "the renderer runs on a cache miss only, so an upgrade decided there is skipped on a hit",
   );
 
   /*
@@ -1340,6 +1376,12 @@ console.log("  public HTML routes share one headers()");
     // The series archive, on the tag archive's terms: `publicHtmlHeaders()`,
     // and its feeds are separate URLs rather than representations of this one.
     "blog.series.$series.tsx",
+    // MOVED HERE FROM THE ACCEPT-NEGOTIATING LIST, 2026-09-05. `/blog` was in
+    // that list because it set its own `Vary`, and the Vary it set was
+    // `Cookie` rather than `Accept`: it has no twin representation and never
+    // did. With the theme in the cache key instead, it has no reason for a Vary
+    // at all and calls the helper like every other listing page.
+    "blog._index.tsx",
   ];
 
   ok(
@@ -1349,12 +1391,17 @@ console.log("  public HTML routes share one headers()");
   );
 
   /*
-   * THE ACCEPT-NEGOTIATING THREE, asserted on the string rather than on the
+   * THE ACCEPT-NEGOTIATING PAIR, asserted on the string rather than on the
    * helper. They cannot call publicHtmlHeaders(): each pairs the shared
    * Cache-Control with its own Vary, because each has a twin representation
    * (markdown, or JSON) that Accept selects between.
+   *
+   * IT WAS THREE UNTIL 2026-09-05. `/blog` was here for a `Vary: Cookie` it no
+   * longer sets, and it never negotiated on Accept; the theme is a cache key
+   * dimension now, so the only Vary left on this site is the one that names a
+   * real second representation.
    */
-  const ACCEPT_NEGOTIATED = ["blog.$slug.tsx", "blog._index.tsx", "search.tsx"];
+  const ACCEPT_NEGOTIATED = ["blog.$slug.tsx", "search.tsx"];
   for (const name of ACCEPT_NEGOTIATED) {
     const routePath = join(root, "app", "routes", name);
     const routeCode = existsSync(routePath) ? stripComments(readFileSync(routePath, "utf8")) : "";
@@ -1365,6 +1412,68 @@ console.log("  public HTML routes share one headers()");
         "shared-cacheable the exposure narrows and the narration in workers/app.ts must follow",
     );
   }
+
+  /*
+   * EVERY SHARED-CACHEABLE ROUTE ALSO SETS A CACHE TAG. Ruling 17, 2026-09-05.
+   *
+   * ## WHY THIS IS A GATE AND NOT A CONVENTION
+   *
+   * A response that can be stored and cannot be purged is a page that stays
+   * wrong for ten minutes after a write that was supposed to fix it, and the
+   * failure is SILENT in both directions: the write reports success, and
+   * `cache.purge` reports `success: true` for a tag that matches nothing,
+   * because there is nothing for it to report. Neither end says anything. The
+   * only place the omission is visible is here, in the source, before it ships.
+   *
+   * ## IT IS THE PAIRING THAT IS ASSERTED
+   *
+   * `publicHtmlHeaders` returns both halves together, so a route that calls it
+   * passes by construction. The two Accept-negotiating routes build their
+   * headers by hand and are exactly where a half can go missing, which is why
+   * this is checked FROM the same derived list the section above closes over
+   * rather than from a hand-kept set of route names.
+   *
+   * The needle is the CALL or the header name, never the tag's VALUE. What the
+   * tag should say is `cacheTags`' business and hard rule 17 gives that one
+   * owner; a gate that restated the vocabulary would be the second owner.
+   */
+  const TAG_NEEDLE = /publicHtmlHeaders\s*\(|"Cache-Tag"|cacheTags\s*\(/;
+  const untagged = [];
+  let taggedSeen = 0;
+  for (const name of [...PUBLIC_HTML, ...ACCEPT_NEGOTIATED]) {
+    const routePath = join(root, "app", "routes", name);
+    if (!existsSync(routePath)) continue;
+    const routeCode = stripComments(readFileSync(routePath, "utf8"));
+    if (!routeCode.includes("SHARED_CACHE_CONTROL") && !routeCode.includes("publicHtmlHeaders")) {
+      continue;
+    }
+    if (TAG_NEEDLE.test(routeCode)) taggedSeen += 1;
+    else untagged.push(name);
+  }
+
+  /*
+   * SCOPE, ASSERTED. An empty walk reports no untagged routes, which is exactly
+   * what a compliant tree reports.
+   *
+   * MEASURED THROUGH THIS LOOP on 2026-09-05 by RUNNING the gate: 11. The first
+   * figure written here was 10, counted off the two list literals above rather
+   * than run, and it was wrong by one. Hard rule 10's own example, in the commit
+   * that added the assertion: a floor arrived at by reading is not a floor.
+   */
+  ok(
+    "the cache-tag walk examined the shared-cacheable routes",
+    taggedSeen >= 10,
+    `${taggedSeen} route(s) carried a tag, floor 10, measured 11. A zero-scope walk ` +
+      `agrees with anything.`,
+  );
+  ok(
+    "every shared-cacheable route also sets a Cache-Tag",
+    untagged.length === 0,
+    `${untagged.join(", ")} declare SHARED_CACHE_CONTROL and set no Cache-Tag. A ` +
+      `response that can be stored and cannot be purged stays wrong until s-maxage ` +
+      `expires, and neither the write nor the purge reports anything, because a purge ` +
+      `for a tag nothing carries succeeds by doing nothing.`,
+  );
 
   /*
    * CLOSURE, AND IT IS THE HALF THAT MAKES THESE LISTS AN OWNER RATHER THAN A
