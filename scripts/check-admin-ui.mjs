@@ -5071,24 +5071,52 @@ structural(
   (h) => !h.includes("btn-danger"),
 );
 
-/* RULING 21e: one clause beside Approve, on the rows that can be approved from
-   pending, and nowhere else. The old paragraph is gone with its minute count. */
+/* RULING 21e AS AMENDED 2026-09-06: the clause is stated ONCE, under the filter
+   row, on the pending filter. It was rendered per pending row, so a queue of
+   twelve said the same sentence twelve times; it states a property of the
+   filter rather than of any one mention. The old paragraph is gone with its
+   minute count.
+
+   A LITERAL STRING, never a /g regex. A global regex carries lastIndex between
+   calls, so the same `.test()` alternates true and false across the four
+   assertions below and two of them would be reading the previous one's
+   leftovers. */
+const PURGE_CLAUSE = "Approving appears on the post within seconds.";
+const purgeCount = (/** @type {string} */ h) => h.split(PURGE_CLAUSE).length - 1;
+
 structural(
-  "the purge clause sits beside Approve",
+  "the purge clause is stated once on the pending filter",
+  "mentions, pending filter",
+  (h) => purgeCount(h) === 1,
+);
+/* PLACEMENT, not just presence: it has to sit ABOVE the queue, or "once" would
+   also be satisfied by a clause on the single last row. */
+structural(
+  "the purge clause sits above the queue, not inside it",
+  "mentions, pending filter",
+  (h) => {
+    const clause = h.indexOf(PURGE_CLAUSE);
+    const queue = h.indexOf("mention-queue");
+    return clause !== -1 && queue !== -1 && clause < queue;
+  },
+);
+/* BOTH NEGATIVES. A clause on every filter is the essay back in a different
+   shape, and one over an empty queue is advice about an action nobody can
+   take. */
+structural(
+  "the purge clause is absent on the all filter",
   "mentions, populated queue",
-  (h) => h.includes("Appears on the post within seconds."),
+  (h) => purgeCount(h) === 0,
+);
+structural(
+  "the purge clause is absent when the pending filter is empty",
+  "mentions, empty pending filter",
+  (h) => purgeCount(h) === 0,
 );
 structural(
   "the purge paragraph and its minute count are gone",
   "mentions, populated queue",
   (h) => !h.includes("Approving purges") && !h.includes("within 10 minutes"),
-);
-/* It appears ONCE, on the one pending row in the fixture. A clause repeated on
-   every row would be the essay back in a different shape. */
-structural(
-  "the clause is on the pending row only",
-  "mentions, populated queue",
-  (h) => (h.match(/Appears on the post within seconds\./g) ?? []).length === 1,
 );
 
 /*
