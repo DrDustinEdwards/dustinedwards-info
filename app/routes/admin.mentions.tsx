@@ -422,9 +422,6 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
             <button type="submit" className="btn">
               Approve
             </button>
-            {mention.status === "pending" ? (
-              <span className="muted mention-hint">Appears on the post within seconds.</span>
-            ) : null}
           </Form>
         ) : null}
         {decidable && mention.status !== "rejected" ? (
@@ -509,6 +506,21 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
           </span>
         ) : null}
       </nav>
+
+      {/* THE PURGE CLAUSE, ONCE. Ruling 21e asked for it beside Approve, and it
+          was rendered per pending row: on a queue of twelve it said the same
+          sentence twelve times, which is how a page stops being read. It states
+          a property of the whole pending filter, not of any one mention, so it
+          belongs where the filter is chosen. Amended 2026-09-06.
+
+          Shown only on the pending filter and only when there is something to
+          approve: on an empty queue it would be advice about an action nobody
+          can take. */}
+      {status === "pending" && rows.length > 0 ? (
+        <p className="muted mention-hint mention-purge-note">
+          Approving appears on the post within seconds.
+        </p>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="muted mention-empty">{EMPTY_LINE[status]}</p>
