@@ -36,7 +36,7 @@ export function MediaDisplayGroup({
           <Link
             key={id}
             to={hrefFor(id)}
-            className={`search-chip${current === id ? " is-active" : ""}`}
+            className={`admin-chip${current === id ? " is-active" : ""}`}
             aria-current={current === id ? "true" : undefined}
           >
             {text}

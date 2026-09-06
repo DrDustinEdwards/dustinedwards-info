@@ -494,10 +494,10 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
           <Link
             key={filter.id}
             to={`?status=${filter.id}`}
-            className={`mention-chip${filter.id === status ? " is-active" : ""}`}
+            className={`admin-chip${filter.id === status ? " is-active" : ""}`}
             aria-current={filter.id === status ? "page" : undefined}
           >
-            {filter.label} <span className="mention-chip-count">{countOf(filter.id)}</span>
+            {filter.label} <span className="admin-chip-count">{countOf(filter.id)}</span>
           </Link>
         ))}
         {unverified > 0 ? (

@@ -11,7 +11,7 @@
 /* ---- MOVED HERE FROM playground.css, 2026-08-23 -------------------------
  *
  * Everything from `MEDIA v6 session 5` to the end of this file was the TAIL of
- * playground.css. It is 42 admin-only classes and one `.search-chip.is-active
+ * playground.css. It is 42 admin-only classes and one `.admin-chip.is-active
  * .media-lens-dot` rule, all of them referenced by `admin.media._index.tsx`
  * and by nothing else. They were cut into playground.css on 2026-08-21 because
  * that is where they sat in the 9,269-line app.css, not because they have
@@ -160,7 +160,7 @@
 /* On the active chip the fill is brand, so a rust dot on it is invisible. The
    dot inverts to the on-brand token rather than being hidden, because its job
    there is to say "this lens has a count" and that is still true. */
-.search-chip.is-active .media-lens-dot {
+.admin-chip.is-active .media-lens-dot {
   background: var(--on-brand);
 }
 

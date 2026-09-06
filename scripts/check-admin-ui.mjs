@@ -4928,7 +4928,7 @@ for (const [label, count] of FILTER_CHIPS) {
   structural(`the ${label} filter is a chip carrying its count`, "mentions, populated queue", (h) =>
     new RegExp(
       `<a[^>]*href="/admin/mentions\\?status=${label.toLowerCase()}"[^>]*>${label} ` +
-        `<span class="mention-chip-count">${count}</span></a>`,
+        `<span class="admin-chip-count">${count}</span></a>`,
     ).test(h),
   );
 }
@@ -4943,7 +4943,7 @@ for (const [label, count] of FILTER_CHIPS) {
 structural(
   "the All count is every row in the fixture, so the chips account for all of them",
   "mentions, populated queue",
-  (h) => h.includes('<span class="mention-chip-count">5</span>'),
+  (h) => h.includes('<span class="admin-chip-count">5</span>'),
 );
 
 /* Exactly one chip is current, and it is the one the loader resolved. */
@@ -4957,7 +4957,7 @@ structural(
 structural(
   "the current filter carries the active class the stylesheet keys on",
   "mentions, pending filter",
-  (h) => h.includes('class="mention-chip is-active"'),
+  (h) => h.includes('class="admin-chip is-active"'),
 );
 
 /* RULING 21f. The unverified count is a chip on the same row, and it is NOT a

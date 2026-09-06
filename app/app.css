@@ -769,6 +769,11 @@
   .ask-badge,
   .tag-chip[aria-current="true"],
   .search-chip.is-active,
+  /* The admin plane's chip, promoted out of .mention-chip 2026-09-06 and now
+     worn by the mentions filters and the media lenses. It carries its active
+     state in a brand fill, which is exactly what this mode removes, so it
+     needs the same forced outline the search chip has. */
+  .admin-chip.is-active,
   .palette-option[aria-selected="true"] {
     outline: 1px solid transparent;
   }
