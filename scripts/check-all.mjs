@@ -54,6 +54,30 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MINIMUM_GATES = 31;
 
 /**
+ * The one gate this runner does not spawn like the others, because its input is
+ * the other gates' output. Named once so the hold-out and the feed cannot come
+ * to disagree about which gate that is.
+ */
+const FLOOR_READER = "check:floors";
+
+/**
+ * Gates whose output the floor reader must NOT be fed, with the reason.
+ *
+ * `check:head` runs the whole offline tier inside an extraction of HEAD, so its
+ * stdout carries a full second set of floor lines belonging to OTHER gates and
+ * measured against a different tree. Fed in, they arrive after the same gates'
+ * own lines and win the dedupe, so a dirty working tree would be judged by the
+ * checkout's counts with nothing saying so. `check-floors.mjs` excludes the same
+ * gate from its standalone run, for the recursion reason recorded there; this is
+ * the same exclusion arriving by a different road.
+ *
+ * @type {Record<string, string>}
+ */
+const FLOOR_OUTPUT_EXCLUDED = {
+  "check:head": "its stdout carries the whole tier's floor lines, measured against a checkout rather than disk.",
+};
+
+/**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
  *
  * MEASURED 2026-08-20, not guessed: HEAD was extracted with `git archive`,
@@ -557,7 +581,23 @@ function main() {
 
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
-  for (const name of selected) {
+  /*
+   * check:floors RUNS LAST AND READS, RATHER THAN RUNNING EVERYTHING AGAIN.
+   *
+   * It compares each floor against the count the owning gate printed, and every
+   * one of those lines is already in the output captured just below. Spawning it
+   * as an ordinary gate made it re-run the whole offline tier to reproduce text
+   * this loop had already collected: 223.3s of a 1065s tier, measured 2026-09-06,
+   * paid on every ship.
+   *
+   * So it is held out of the loop and fed afterwards. Held out rather than
+   * reordered in the list, because the list is DERIVED and sorting it by hand
+   * would be a second opinion about what runs.
+   */
+  const readsFloorLines = selected.includes(FLOOR_READER);
+  const spawnable = selected.filter((name) => name !== FLOOR_READER);
+
+  for (const name of spawnable) {
     // JUSTIFIED SUBSTITUTION (hard rule 13). `REMOTE_ARGS` is DELIBERATELY
     // PARTIAL: most gates take no remote arguments, and their absence from the
     // map means exactly that. The empty array is the correct value for a gate
@@ -575,6 +615,56 @@ function main() {
       result.errored
         ? `ERRORED (${seconds}s) ${result.reason}`
         : result.ok
+          ? `ok (${seconds}s)`
+          : `FAILED (${seconds}s)`,
+    );
+  }
+
+  /*
+   * THE FLOOR READER, fed the run that just happened.
+   *
+   * `gates` is passed separately and is not derivable from the text: the
+   * silent-gate assertion asks which gates printed NO floor line, and a gate
+   * that printed nothing leaves no trace in a concatenation of what was
+   * printed.
+   *
+   * Only gates that PASSED contribute. A floor line from a gate that then
+   * refused is a number the producing gate disowned, and check:all is already
+   * reporting that gate as red; letting its floors through would have the same
+   * failure argued twice, in two voices, one of them wrong about the cause.
+   */
+  if (readsFloorLines) {
+    process.stdout.write(`  ${FLOOR_READER} ... `);
+    const usable = results.filter((r) => r.ok && !FLOOR_OUTPUT_EXCLUDED[r.name]);
+    const payload = JSON.stringify({
+      gates: usable.map((r) => r.name),
+      output: usable.map((r) => r.output).join("\n"),
+    });
+    const started = Date.now();
+    const spawned = spawnSync(
+      process.execPath,
+      [join(root, "scripts", "check-floors.mjs"), "--from-stdin"],
+      { cwd: root, encoding: "utf8", input: payload, maxBuffer: 64 * 1024 * 1024 },
+    );
+    const stdout = spawned.stdout ?? "";
+    const stderr = spawned.stderr ?? "";
+    const floorsResult = {
+      name: FLOOR_READER,
+      ok: spawned.status === 0 && (stdout.length > 0 || stderr.length > 0),
+      errored: stdout.length === 0 && stderr.length === 0,
+      reason:
+        stdout.length === 0 && stderr.length === 0
+          ? `wrote nothing to either stream (status ${spawned.status})`
+          : "",
+      ms: Date.now() - started,
+      output: `${stdout}${stderr}`,
+    };
+    results.push(floorsResult);
+    const seconds = (floorsResult.ms / 1000).toFixed(1);
+    console.log(
+      floorsResult.errored
+        ? `ERRORED (${seconds}s) ${floorsResult.reason}`
+        : floorsResult.ok
           ? `ok (${seconds}s)`
           : `FAILED (${seconds}s)`,
     );

@@ -5369,10 +5369,27 @@ console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
  * section 26: 296. Floor 278 to 282, margin held at 14. Section 26 is 4
  * assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 284;
+/*
+ * ONE FLOOR PER BRANCH, measured 2026-09-06 by RUNNING both: 299 offline, 338
+ * with --remote, which adds the live-database comparison. Each is its count
+ * minus the check:floors tolerance at that count.
+ *
+ * A single floor here read 284 against the remote branch's 338, a gap of 54
+ * against a tolerance of 17, and nothing saw it until check:floors started
+ * reading check:all's run (where this gate runs --remote) rather than running
+ * it bare. Same shape as check:contrast's build-absent floor.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 321 : 284;
 const floorBreach = assertFloor(
   "check:invariants",
-  "checks",
+  /*
+   * NAMED PER BRANCH, vol 15 binding. --remote adds the live-database
+   * comparison and the count moves with it: 299 offline, 338 remote, measured
+   * 2026-09-06. One name for both would judge whichever branch ran last
+   * against a floor set from the other, which is how check:contrast's
+   * build-absent floor sat 32 under its count until CI reached it.
+   */
+  wantsRemote ? "checks-remote" : "checks-offline",
   checks,
   MINIMUM_CHECKS,
   "A SECTION was skipped rather than failing. The offline branch is the smaller one.",

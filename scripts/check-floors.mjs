@@ -16,24 +16,38 @@
  * A floor that far under its count is not a safety margin. It is a floor nobody
  * has measured since the gate was half its current size.
  *
- * ## HOW IT MEASURES: it RUNS the gates
+ * ## HOW IT MEASURES: it READS under check:all, and RUNS standalone
  *
  * Each counting gate prints `floor <gate>:<name> executed=<N> minimum=<M>` on a
- * passing run, from `scripts/lib/floor.mjs`. This gate runs them and reads those
- * lines back.
+ * passing run, from `scripts/lib/floor.mjs`.
  *
- * Running them is the expensive option and it is the correct one. The two
- * alternatives were considered and both are worse:
+ * Under `check:all` those lines are ALREADY in the output that runner captured,
+ * so it pipes them here (`--from-stdin`) and nothing is run twice. Re-running
+ * the tier to reproduce text the caller was holding cost 223.3s of a 1065s tier,
+ * measured 2026-09-06, on every ship. Standalone there is no such output, so the
+ * gates are run: a gate that only works as somebody else's passenger is one
+ * nobody can re-run while fixing what it found.
  *
- *   READING THE FLOORS OUT OF SOURCE would compare a number in a file against
- *   another number in the same file. It could not see a count at all, which is
- *   half the comparison.
+ * READING FROM A PIPE IS NOT READING A STORED LOG, and the difference is the
+ * whole of hard rule 10's fixture independence. A log on disk is an artifact of
+ * some EARLIER run, can be stale, and is produced by the process under test.
+ * The pipe carries the output of the run happening now, in the same process
+ * tree, and cannot outlive it: the subject and the reading are one event.
  *
- *   READING A LOG `check:all` LEFT BEHIND would make this gate's verdict depend
- *   on an artifact produced by the process it is checking, which is the
- *   fixture-independence rule in hard rule 10. It would also be unrunnable
- *   standalone and in CI, where no such log exists, and a gate that needs
- *   another gate to have run first is a gate that reports staleness as health.
+ * READING THE FLOORS OUT OF SOURCE was the other option and is still rejected.
+ * It would compare a number in a file against another number in the same file
+ * and could not see a count at all, which is half the comparison.
+ *
+ * ## THE COUNT DEPENDS ON HOW THE GATE WAS INVOKED, so floors are named per
+ * ## BRANCH
+ *
+ * `check:invariants` runs 299 assertions offline and 338 with `--remote`;
+ * `check:llms` runs 9 and 11. Under check:all both take `--remote`, standalone
+ * neither does. A single floor name per gate would mean whichever branch ran
+ * last was judged against a floor measured from the other, silently. Both now
+ * print `checks-offline` or `checks-remote`, so the two readings never collide
+ * in the dedupe. Found by this refactor: reading check:all's run put the remote
+ * branch in front of a floor set from the offline one, 338 against 284.
  *
  * ## THE TOLERANCE
  *
@@ -110,6 +124,12 @@ export const FLOOR_TOLERANCE = (/** @type {number} */ executed) =>
 const UNFLOORED = {
   "check:types": "delegates wholly to tsc -b, which owns its own reporting.",
   "check:content": "carries two scope floors on files and assets walked.",
+  /*
+   * NETWORK TIER, so a standalone offline run never reaches it and only the
+   * check:all read sees it at all. Its floor is a scope proof on reconciled
+   * objects, not an executed count.
+   */
+  "check:media": "carries a scope floor on reconciled objects, not an executed-count floor.",
   /*
    * OFFLINE TIER, contrary to the obvious guess: it defaults to `--local` and
    * only `check:all` passes it `--remote`, so it IS run from here. Its four
@@ -194,49 +214,17 @@ function ok(label, condition, detail = "") {
  */
 const inCI = Boolean(process.env.CI);
 
-const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-const gates = gateNames(pkg).filter(
-  (name) =>
-    !NOT_RUN[name] && TIERS[name] === "offline" && !(inCI && CI_EXCLUDED[name]),
-);
-
-if (gates.length === 0) {
-  console.log("  FAIL  no gates discovered. Every assertion below would pass by running nothing.\n");
-  process.exit(1);
-}
-
-console.log(`  running ${gates.length} gate(s) for their floor lines\n`);
-
-/** @type {{ gate: string, name: string, executed: number, minimum: number }[]} */
-const floors = [];
-/** @type {string[]} */
-const silent = [];
-
-for (const gate of gates) {
-  const result = spawnSync(`npm run -s ${gate}`, {
-    cwd: root,
-    encoding: "utf8",
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-
-  /*
-   * A GATE THAT FAILED IS NOT A FLOOR READING. Its floor lines, if any, came
-   * from a run that had already refused, and treating them as measurements
-   * would let this gate report on numbers the producing gate disowned. The
-   * failure is reported here and the gate contributes nothing.
-   */
-  if (result.status !== 0) {
-    ok(
-      `${gate} passed, so its floor lines are readable`,
-      false,
-      `it exited ${result.status}. check:floors cannot read a floor from a run that ` +
-        `refused; fix that gate first, then re-run this one.`,
-    );
-    continue;
-  }
-
+/**
+ * Every floor line in one gate's output.
+ *
+ * The gate NAME comes off the line rather than from whoever produced the text,
+ * which is what makes reading a whole run's concatenated output safe: a floor
+ * printed by a child of check:head files under the gate that owns it.
+ *
+ * @param {string} output
+ * @returns {{ gate: string, name: string, executed: number, minimum: number }[]}
+ */
+function floorLinesIn(output) {
   const found = [];
   for (const line of output.split("\n")) {
     const match = FLOOR_LINE.exec(line.trim());
@@ -248,9 +236,123 @@ for (const gate of gates) {
       minimum: Number(match[4]),
     });
   }
+  return found;
+}
 
-  if (found.length === 0 && !UNFLOORED[gate]) silent.push(gate);
+/*
+ * TWO WAYS IN, AND THE CHEAP ONE IS THE DEFAULT UNDER check:all.
+ *
+ * ## --from-stdin: READ, NEVER RERUN
+ *
+ * `check:all` has already run every gate and already captured every gate's
+ * stdout. Re-running all of them to read lines that text already contains cost
+ * 223.3s of a 1065s tier, measured 2026-09-06: the whole offline tier, paid
+ * twice, once per ship. So check:all pipes what it captured and this gate reads
+ * it.
+ *
+ * The payload is `{ gates: string[], output: string }` on stdin. `gates` is
+ * needed and is not derivable from the text: the silent-gate assertion below
+ * asks which gates produced NO floor line, and a gate that printed nothing is
+ * invisible in a concatenation of what was printed.
+ *
+ * THIS IS NOT THE STORED-LOG SHAPE THIS GATE'S HEADER REJECTS. The rejected
+ * design read an artifact a PREVIOUS run left on disk, which can be stale and
+ * is produced by the process under test. This reads the output of the run
+ * happening right now, in the same process tree, over a pipe that cannot
+ * outlive it. The subject and the reading are the same event.
+ *
+ * ## standalone: still runs them
+ *
+ * `npm run check:floors` on its own has no captured output to read, and a gate
+ * that only works as somebody else's passenger is a gate nobody can re-run
+ * while fixing what it found. So the standalone path is unchanged.
+ */
+const fromStdin = process.argv.includes("--from-stdin");
+
+/** @type {{ gate: string, name: string, executed: number, minimum: number }[]} */
+const floors = [];
+/** @type {string[]} */
+const silent = [];
+/** @type {string[]} */
+let gates = [];
+
+if (fromStdin) {
+  let payload;
+  try {
+    payload = JSON.parse(readFileSync(0, "utf8"));
+  } catch (error) {
+    console.log(
+      `  FAIL  --from-stdin was passed and the payload could not be read: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+    );
+    console.log("        Refusing rather than falling back to re-running the gates: a silent\n" +
+      "        fallback would hide the wiring breaking and cost the tier twice.\n");
+    process.exit(1);
+  }
+  gates = Array.isArray(payload?.gates) ? payload.gates : [];
+  const output = typeof payload?.output === "string" ? payload.output : "";
+
+  if (gates.length === 0 || output.length === 0) {
+    console.log("  FAIL  the piped payload named no gates or carried no output.");
+    console.log("        Every assertion below would pass by reading nothing.\n");
+    process.exit(1);
+  }
+
+  console.log(`  reading ${gates.length} gate(s) already run by check:all\n`);
+
+  const found = floorLinesIn(output);
   floors.push(...found);
+  const producers = new Set(found.map((f) => f.gate));
+  for (const gate of gates) {
+    if (!producers.has(gate) && !UNFLOORED[gate]) silent.push(gate);
+  }
+} else {
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  gates = gateNames(pkg).filter(
+    (name) =>
+      !NOT_RUN[name] && TIERS[name] === "offline" && !(inCI && CI_EXCLUDED[name]),
+  );
+
+  if (gates.length === 0) {
+    console.log("  FAIL  no gates discovered. Every assertion below would pass by running nothing.\n");
+    process.exit(1);
+  }
+
+  console.log(`  running ${gates.length} gate(s) for their floor lines\n`);
+
+  for (const gate of gates) {
+    const result = spawnSync(`npm run -s ${gate}`, {
+      cwd: root,
+      encoding: "utf8",
+      shell: true,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+
+    /*
+     * A GATE THAT FAILED IS NOT A FLOOR READING. Its floor lines, if any, came
+     * from a run that had already refused, and treating them as measurements
+     * would let this gate report on numbers the producing gate disowned. The
+     * failure is reported here and the gate contributes nothing.
+     *
+     * The --from-stdin path needs no equivalent: check:all reports a failing
+     * gate in its own table, so a second complaint here would be the same fact
+     * counted twice.
+     */
+    if (result.status !== 0) {
+      ok(
+        `${gate} passed, so its floor lines are readable`,
+        false,
+        `it exited ${result.status}. check:floors cannot read a floor from a run that ` +
+          `refused; fix that gate first, then re-run this one.`,
+      );
+      continue;
+    }
+
+    const found = floorLinesIn(output);
+    if (found.length === 0 && !UNFLOORED[gate]) silent.push(gate);
+    floors.push(...found);
+  }
 }
 
 /*
