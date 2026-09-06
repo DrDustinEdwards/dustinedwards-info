@@ -100,6 +100,128 @@ export function absolutiseUrls(html, origin) {
 }
 
 /**
+ * Rendered math, put back to the TeX an author wrote.
+ *
+ * ## WHY A FEED DOES NOT GET THE KaTeX MARKUP
+ *
+ * The ruling above stands: `content:encoded` carries the RENDERED post, because
+ * a feed reader is a rendering surface. Math is the one construction where that
+ * argument inverts, and it inverts for a stated reason rather than by taste.
+ *
+ * KaTeX's `htmlAndMathml` output is TWO trees for one expression: a MathML tree
+ * clipped to a 1px box by `katex.css`, and an HTML layout tree marked
+ * `aria-hidden` and positioned by 288 inline style attributes on one fixture
+ * post. A feed reader has no `katex.css` and cannot be given one: this site's
+ * math stylesheet is linked by the DOCUMENT, on the posts that need it. So
+ * without this, a reader shows both trees at once, unclipped and unpositioned,
+ * which is the expression rendered twice and garbled both times.
+ *
+ * `$E = mc^2$` is worse typography and better reading, and it is the one thing
+ * in the item a person can act on.
+ *
+ * ## THE SOURCE IS KaTeX'S OWN ANNOTATION, NOT A REVERSE ENGINEERING
+ *
+ * Every expression carries `<annotation encoding="application/x-tex">` holding
+ * the exact TeX it was built from. That is the round trip, and it is taken
+ * VERBATIM, still XML-escaped: the annotation stores `a &lt; b`, the feed body
+ * is parsed as HTML inside its CDATA section, and unescaping on the way through
+ * would put a stray `<` into somebody else's document.
+ *
+ * ## WHY IT COUNTS SPANS RATHER THAN PARSING
+ *
+ * Same constraint `absolutiseUrls` states above: no HTML parser on the feed
+ * path, and this module stays dependency-free so `node:test` can reach it. The
+ * scan is a bracket match over ONE tag name, which is sound here because
+ * nothing KaTeX nests inside an expression can close a span it did not open:
+ * the only other elements it emits are `math` and its children, and `svg` with
+ * `path` and `line`. A `<span` opens, a `</span>` closes, and the depth reaches
+ * zero exactly at the wrapper's own end tag.
+ *
+ * An expression whose wrapper never closes, or which carries no annotation, is
+ * LEFT ALONE rather than half-rewritten. That cannot happen from this
+ * pipeline's own output, and leaving it is the failure that costs a reader an
+ * ugly item instead of a broken one.
+ *
+ * @param {string} html
+ */
+export function mathToTex(html) {
+  const source = String(html);
+  let out = "";
+  let cursor = 0;
+
+  for (;;) {
+    /*
+     * `katex-display` is matched first at each position because it WRAPS the
+     * `katex` span: finding the inner one first would leave the outer wrapper
+     * behind, empty, around a `$$`.
+     */
+    const display = source.indexOf('<span class="katex-display">', cursor);
+    const inline = source.indexOf('<span class="katex">', cursor);
+    if (display === -1 && inline === -1) break;
+    const start =
+      display === -1 ? inline : inline === -1 ? display : Math.min(display, inline);
+    const isDisplay = start === display;
+
+    const end = spanEnd(source, start);
+    if (end === -1) break;
+
+    const region = source.slice(start, end);
+    const annotation = region.match(
+      /<annotation encoding="application\/x-tex">([\s\S]*?)<\/annotation>/,
+    );
+    /*
+     * The capture group is checked as well as the match, so the "leave it
+     * alone" branch covers an EMPTY annotation too. `annotation[1]` is
+     * `string | undefined` to the compiler because a group can fail to
+     * participate, and the honest handling of an expression whose recorded
+     * source is empty is the same as one with no annotation at all: leave the
+     * markup rather than emit a bare pair of dollar signs.
+     */
+    if (!annotation || !annotation[1]) {
+      out += source.slice(cursor, end);
+      cursor = end;
+      continue;
+    }
+
+    const tex = annotation[1].trim();
+    const delimiter = isDisplay ? "$$" : "$";
+    out += source.slice(cursor, start) + delimiter + tex + delimiter;
+    cursor = end;
+  }
+
+  return out + source.slice(cursor);
+}
+
+/**
+ * The index just past the `</span>` that closes the span opening at `start`.
+ *
+ * -1 when the depth never returns to zero, which the caller treats as "leave
+ * this alone" rather than as a reason to guess.
+ *
+ * @param {string} source @param {number} start index of the opening `<span`
+ */
+function spanEnd(source, start) {
+  const OPEN = "<span";
+  const CLOSE = "</span>";
+  let depth = 0;
+  let i = start;
+  while (i < source.length) {
+    const open = source.indexOf(OPEN, i);
+    const close = source.indexOf(CLOSE, i);
+    if (close === -1) return -1;
+    if (open !== -1 && open < close) {
+      depth += 1;
+      i = open + OPEN.length;
+      continue;
+    }
+    depth -= 1;
+    i = close + CLOSE.length;
+    if (depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
  * One `<item>`, as the lines that make it, indented for the channel.
  *
  * Returns a STRING rather than a structure, unlike `feedItem` next door, and
@@ -130,12 +252,17 @@ export function rssItem(post, origin) {
     `      <guid isPermaLink="true">${escapeXml(url)}</guid>`,
     post.description ? `      <description>${escapeXml(post.description)}</description>` : null,
     /*
-     * The body, absolutised and wrapped. Omitted rather than emitted empty when
-     * a row carries no rendered HTML: an empty `content:encoded` tells a reader
-     * the post IS empty, where an absent one tells it to follow the link.
+     * The body, with math put back to TeX, absolutised, and wrapped. Omitted
+     * rather than emitted empty when a row carries no rendered HTML: an empty
+     * `content:encoded` tells a reader the post IS empty, where an absent one
+     * tells it to follow the link.
+     *
+     * `mathToTex` first, so `absolutiseUrls` scans a body that no longer holds
+     * a tree of positioning spans. Neither pass can affect the other's subject:
+     * KaTeX emits no `href`, `src` or `srcset`.
      */
     post.html
-      ? `      <content:encoded>${cdata(absolutiseUrls(post.html, origin))}</content:encoded>`
+      ? `      <content:encoded>${cdata(absolutiseUrls(mathToTex(post.html), origin))}</content:encoded>`
       : null,
     published ? `      <pubDate>${published}</pubDate>` : null,
     ...post.tags.map((tag) => `      <category>${escapeXml(tag)}</category>`),
