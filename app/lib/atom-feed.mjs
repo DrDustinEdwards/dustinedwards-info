@@ -28,7 +28,7 @@
  *      were all unpublished between two crawls).
  */
 
-import { absolutiseUrls, cdata, escapeXml } from "./rss-feed.mjs";
+import { absolutiseUrls, cdata, escapeXml, mathToTex } from "./rss-feed.mjs";
 
 /**
  * One `<entry>`.
@@ -69,8 +69,13 @@ export function atomEntry(post, origin) {
     `      <updated>${(updated ?? new Date(0)).toISOString()}</updated>`,
     published ? `      <published>${published.toISOString()}</published>` : null,
     post.description ? `      <summary>${escapeXml(post.description)}</summary>` : null,
+    /*
+     * Math goes back to TeX before absolutising, exactly as it does for RSS and
+     * for the reason `mathToTex` states there. Same function, so the two
+     * dialects cannot differ about what a feed reader is shown.
+     */
     post.html
-      ? `      <content type="html">${cdata(absolutiseUrls(post.html, origin))}</content>`
+      ? `      <content type="html">${cdata(absolutiseUrls(mathToTex(post.html), origin))}</content>`
       : null,
     ...post.tags.map((tag) => `      <category term="${escapeXml(tag)}" />`),
     "    </entry>",
