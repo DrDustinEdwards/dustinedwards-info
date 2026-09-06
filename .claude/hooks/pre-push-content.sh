@@ -117,7 +117,43 @@ fi
 
 # LINT FIRST, and unconditionally. Nothing below narrows it by path: see the
 # header. Same fail direction as check:content below, which is to block.
-if ! lint_out="$(npm run -s lint 2>&1)"; then
+# A LINT THAT FOUND PROBLEMS AND A LINT THAT NEVER RAN ARE DIFFERENT FACTS, and
+# this said "lint FAILED" for both until 2026-09-06.
+#
+# Told "lint FAILED", a reader goes looking for lint errors in a diff that has
+# none, which is the direction that wastes the most time. check-all.mjs already
+# refuses the same conflation for gates: a gate that could not run is not a gate
+# that failed.
+#
+# THE EXIT CODE CANNOT TELL THEM APART, MEASURED. The obvious test is "oxlint
+# exits 1 on findings, so anything else is a tool that never ran". It is wrong
+# here: with the binary moved away, `npm run -s lint` returns 1, not 127, because
+# npm collapses the shell's not-found into its own failure code. The first
+# version of this block used that test, and its own plant printed "lint FAILED"
+# for a lint that had never run.
+#
+# So the OUTPUT is what discriminates, and the signatures are taken from running
+# it rather than guessed. Windows cmd says `'oxlint' is not recognized as an
+# internal or external command`; a POSIX shell says `command not found`; an
+# execvp failure says `No such file or directory` or ENOENT.
+#
+# A NEEDLE ON OUTPUT IS FRAGILE and that is accepted here, because the fail
+# direction is safe: BOTH branches block the push. A misread costs the reader a
+# wrong explanation, never a wrong verdict, and the alternative is testing for
+# the binary directly, which would be a second statement of what "lint" is when
+# package.json is supposed to be the only one.
+lint_out="$(npm run -s lint 2>&1)"
+lint_rc=$?
+if [ "$lint_rc" -ne 0 ] && printf '%s' "$lint_out" | grep -qE "is not recognized as an internal or external command|command not found|No such file or directory|ENOENT"; then
+  {
+    echo "$lint_out"
+    echo
+    echo "Blocked: npm run lint COULD NOT RUN (exit $lint_rc). This is NOT a lint finding."
+    echo "The output above is a shell or npm refusal, not oxlint's. Usual causes: the binary is missing (run npm ci), the script was renamed, or a config or flag is wrong."
+    echo "Blocking anyway: a lint that did not run covers nothing, and CI is the only thing behind this push."
+  } >&2
+  exit 2
+elif [ "$lint_rc" -ne 0 ]; then
   {
     echo "$lint_out"
     echo
