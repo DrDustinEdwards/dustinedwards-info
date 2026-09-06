@@ -187,6 +187,7 @@ The four PreToolUse hooks in `.claude/settings.json` are what enforce this rathe
 - `check:admin-ui -- --update` rewrites the baseline, deliberately loud.
 - `check-all.mjs` DERIVES the gate list from `package.json` and refuses below `MINIMUM_GATES` or on an untiered gate, so adding a gate means editing that file in the same commit.
 - Migrations apply through wrangler directly: `wrangler d1 migrations apply dustinedwards [--local|--remote]`.
+- **Debugging a local run: `wrangler dev` exposes `/cdn-cgi/explorer/api`**, an OpenAPI surface carrying read-only traces and logs. Query it before adding a `console.log`.
 
 ## Bindings
 
