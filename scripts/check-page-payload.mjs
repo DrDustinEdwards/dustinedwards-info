@@ -722,6 +722,31 @@ const ROUTE_CEILINGS = {
 };
 
 /**
+ * THE MATH VARIANT'S CEILINGS, in BROTLI bytes. The only copies, rule 17.
+ *
+ * MEASURED 2026-09-06 through this gate on a fresh build: `/blog/:slug` is css
+ * 6,493 over four sheets and 9,099 total; the math stylesheet adds 2,819, so a
+ * post with an expression in it is css 9,312 and 11,918 total.
+ *
+ * The margins are `/blog/:slug`'s own, proportionally: 12 percent on css and 10
+ * on the total, which is what that route carries and is the right bar because
+ * this IS that route, with one more sheet. A wider margin would be room for the
+ * stylesheet to grow, and the stylesheet is generated from a pinned package and
+ * cannot grow without a version bump somebody chose.
+ */
+const MATH_CEILING = { css: 10500, total: 13200 };
+
+/**
+ * Floor on the faces the math stylesheet names.
+ *
+ * MEASURED 2026-09-06 through this gate: 20, which is katex 0.16.47's whole
+ * woff2 set. A floor rather than an equality so an upstream face ADDED in a
+ * later version does not fail the gate, while the trim in `build-katex.mjs`
+ * quietly dropping one does.
+ */
+const MINIMUM_MATH_FACES = 20;
+
+/**
  * Fonts that are reachable and deliberately NOT preloaded, with the reason.
  *
  * The italic face is 79,716 bytes and is needed only by a page that renders
@@ -910,6 +935,314 @@ function gradeEveryPage() {
     ![...rootAssets].some((a) => a.includes("enhance/dist/palette")),
     "root reaches app/enhance/dist/palette.js through an import, so a search dialog is " +
       "on every document again. It is fetched on the gesture; see search-trigger.tsx.",
+  );
+
+  gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile);
+}
+
+/**
+ * THE ONE PAGE THIS GATE'S ROUTE MODEL CANNOT SEE.
+ *
+ * Everything above resolves a route's stylesheets from React Router's manifest,
+ * which is PER ROUTE. The math stylesheet is linked PER POST: `/blog/:slug` is
+ * one route serving thirteen posts, one of which has math, and root decides at
+ * render time from the loader's `hasMath`. So the sheet is in no manifest, the
+ * loop above cannot find it, and without this section a 2.8 kB stylesheet and
+ * twenty font faces would ride on a page with no ceiling anywhere. That is the
+ * exact hole this file's own header describes for the pre-2026-08-27 stylesheet.
+ *
+ * Four things are asserted, and the first two are a pair:
+ *
+ *   1. THE SHEET IS NOT IN `/blog/:slug`'s MANIFEST CSS. This is the whole
+ *      "posts without math ship no extra bytes" claim, and it is what would
+ *      break first: a `import "./styles/katex.generated.css"` anywhere, dropping
+ *      the `?url`, puts it back on all thirteen and this fails.
+ *   2. THE SHEET IS REACHABLE FROM ROOT. Without this, assertion 1 passes
+ *      perfectly on a build where the stylesheet was deleted, and the math page
+ *      would render unstyled with a clean gate. The pair is the measurement.
+ *   3. THE MATH VARIANT'S BYTES, against a measured ceiling of its own.
+ *   4. NO FACE IS INLINED AS A `data:` URI, which is a CSP refusal and not a
+ *      preference; grounds at the assertion.
+ *
+ * @param {any} manifest @param {Set<string>} rootAssets @param {string} rootSource
+ * @param {string} clientDir @param {(p: string) => string} assetFile
+ */
+function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile) {
+  console.log("\n  the math variant of /blog/:slug\n");
+
+  /* ---- 2. the sheet is reachable from root, so 1 is not vacuous ---------- */
+
+  const read = (/** @type {string} */ path) => {
+    try {
+      return readFileSync(path, "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const postRouteFile = join(root, "app", "routes", "blog.$slug.tsx");
+  const postAssets = reachableAssets(postRouteFile, join(root, "app"), read).assets;
+  /*
+   * A SET, because the two walks OVERLAP. `blog.$slug.tsx` and `root.tsx` share
+   * most of their import graph, so a specifier reachable from both is found
+   * twice and the raw count says two where there is one file. The claim is
+   * about distinct specifiers.
+   */
+  const imported = [...new Set([...postAssets, ...rootAssets])].filter((a) =>
+    a.endsWith("katex.generated.css"),
+  );
+  ok(
+    "the math stylesheet is `?url`-imported, so there is a variant to grade",
+    imported.length === 1,
+    `the reachability walk over blog.$slug.tsx and root.tsx found ${imported.length} ` +
+      `distinct specifier(s) ending in katex.generated.css. Zero means the conditional ` +
+      `link is gone and every assertion below is about a stylesheet nobody ships; two ` +
+      `means there are two copies of the file.`,
+  );
+
+  /*
+   * THE BUILT ASSET IS FOUND BY CONTENT, NOT BY NAME.
+   *
+   * The name-based version is `katex.generated-*.css`, and this file already
+   * records why that is the weak form for the enhancement bundles: a Vite hash
+   * may contain a dash. Byte equality against the source is not available
+   * either, because Vite compiles the stylesheet on the way through, which is
+   * the entire reason it is a `?url` import.
+   *
+   * So the anchor is a rule only this stylesheet can contain, and the count is
+   * asserted: exactly one CSS asset in the build carries `.katex-display`.
+   */
+  const cssAssets = readdirSync(join(clientDir, "assets")).filter((n) => n.endsWith(".css"));
+  const mathSheets = cssAssets.filter((name) =>
+    readFileSync(join(clientDir, "assets", name), "utf8").includes(".katex-display"),
+  );
+  ok(
+    "exactly one built stylesheet carries the math rules",
+    mathSheets.length === 1,
+    `${mathSheets.length} of ${cssAssets.length} CSS asset(s) in the build contain ` +
+      `.katex-display: ${mathSheets.join(", ") || "none"}. Zero means build:katex or the ` +
+      `?url import is broken; more than one means the rules have been duplicated into a ` +
+      `route sheet as well, which is assertion 1 failing by another route.`,
+  );
+  if (mathSheets.length !== 1) return;
+  const mathSheet = /** @type {string} */ (mathSheets[0]);
+  const mathBytes = readFileSync(join(clientDir, "assets", mathSheet));
+
+  /* ---- 1. and it is on no route's manifest, which is the mathless cost --- */
+
+  const onRoutes = Object.entries(ROUTE_CEILINGS)
+    .filter(([, ceiling]) =>
+      stylesheetsFor(manifest, ceiling.id).some((s) => s.endsWith(mathSheet)),
+    )
+    .map(([path]) => path);
+  ok(
+    "no route links the math stylesheet from its manifest",
+    onRoutes.length === 0,
+    `${onRoutes.join(", ")} link(s) it as route CSS, so every post pays ` +
+      `${brotliSize(mathBytes)} brotli whether or not it has an expression in it. It is ` +
+      `linked per POST by root.tsx from the loader's hasMath, through a "?url" import; ` +
+      `a plain CSS import puts it back on the whole route.`,
+  );
+
+  /*
+   * THE LINK IS CONDITIONAL, AND ROOT'S ID LIST IS RECONCILED AGAINST THE ROUTES.
+   *
+   * Three source facts, none of which any other instrument can see:
+   *
+   *   The `<link>` is guarded by `linksMath`. Drop the guard and every page on
+   *   the site links the sheet, which is assertion 1 above failing from the
+   *   other direction and which that assertion CANNOT see: it reads the route
+   *   manifest, and a component-rendered link is in no manifest.
+   *
+   *   The link carries NO `precedence`. That attribute makes React 19 treat the
+   *   element as a resource and hoist it to the top of `<head>`, above
+   *   `<meta name="color-scheme">`. MEASURED 2026-09-06 on the rendered page,
+   *   after check:browser failed by name on "the colour scheme is declared
+   *   before the first stylesheet": the meta is load-bearing precisely because
+   *   it arrives before the first stylesheet request, and hoisting inverted
+   *   that on every math page.
+   *
+   *   Root names TWO ROUTE IDS, and that is a mirror. It is reconciled here
+   *   against the routes that actually return `blogPostView(...)`, in both
+   *   directions, so a third route rendering a post cannot render it unstyled
+   *   with nothing complaining.
+   */
+  const rootStripped = stripComments(rootSource);
+  ok(
+    "root links the math stylesheet only when linksMath, and without precedence",
+    /\{linksMath \?[\s\S]{0,120}rel="stylesheet"[\s\S]{0,60}\}/.test(rootStripped) &&
+      !/precedence/.test(rootStripped),
+    `root.tsx must render it as {linksMath ? <link rel="stylesheet" ` +
+      `href={katexCssUrl} /> : null}. Without the guard every page links it; with a ` +
+      `precedence attribute React hoists it above the colour-scheme meta. Neither ` +
+      `failure is visible to the manifest assertions above.`,
+  );
+
+  /*
+   * THE EDITOR ROUTES OPT IN, and the set is derived rather than declared.
+   *
+   * A route rendering `<PostEditor` shows the exact-preview pane, which copies
+   * this document's stylesheets into its iframe. Without the handle an author
+   * typing an expression sees it unstyled, on the one surface where this
+   * feature is authored. Two routes render the editor today; a third would
+   * inherit the defect silently, so the two sets are compared rather than one
+   * being trusted.
+   */
+  const editorRoutes = readdirSync(join(root, "app", "routes"))
+    .filter((name) => name.endsWith(".tsx"))
+    .filter((name) =>
+      /<PostEditor/.test(stripComments(readFileSync(join(root, "app", "routes", name), "utf8"))),
+    )
+    .sort();
+  const optedIn = editorRoutes.filter((name) =>
+    /export const handle = \{[^}]*\bmath:\s*true/.test(
+      stripComments(readFileSync(join(root, "app", "routes", name), "utf8")),
+    ),
+  );
+  ok(
+    "every route that renders the editor opts into the math stylesheet",
+    editorRoutes.length >= 2 && optedIn.length === editorRoutes.length,
+    `routes rendering <PostEditor>: [${editorRoutes.join(", ")}]; of those, opted in ` +
+      `with "export const handle = { math: true }": [${optedIn.join(", ")}]. A route in ` +
+      `the first list and not the second shows an author unstyled maths in the preview ` +
+      `pane. Fewer than two means the derivation stopped finding them.`,
+  );
+
+  /*
+   * THE ROUTES THAT CAN CARRY MATH ARE DERIVED, then compared with the ids root
+   * reads. A route renders a post exactly when its loader returns the shared
+   * projection, so `blogPostView(` is the discriminator rather than a name
+   * pattern: `/preview/:token` is not called `blog.anything`.
+   */
+  const routesDir2 = join(root, "app", "routes");
+  const postRoutes = readdirSync(routesDir2)
+    .filter((name) => name.endsWith(".tsx"))
+    .filter((name) =>
+      /blogPostView\(/.test(stripComments(readFileSync(join(routesDir2, name), "utf8"))),
+    )
+    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
+    .sort();
+  const namedInRoot = [...rootStripped.matchAll(/useRouteLoaderData\(\s*"([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((id) => id !== "root")
+    .sort();
+  ok(
+    "every route that renders a post is one root reads hasMath from, and vice versa",
+    postRoutes.join(", ") === namedInRoot.join(", ") && postRoutes.length >= 2,
+    `routes returning blogPostView(): [${postRoutes.join(", ")}]; ids root reads with ` +
+      `useRouteLoaderData: [${namedInRoot.join(", ")}]. A route in the first list and ` +
+      `not the second renders every equation unstyled; one in the second and not the ` +
+      `first is a dead read. Fewer than two means the derivation stopped finding them.`,
+  );
+
+  /*
+   * AND THE FIELD ROOT READS IS THE ONE THE PROJECTION WRITES, asserted because
+   * it is a STRING on both sides.
+   *
+   * `blog-view.ts` puts `hasMath` on the payload and root reads that name off
+   * whichever route's data it got. Nothing types the two together: root casts
+   * the loader data, so a rename in the projection leaves root reading
+   * `undefined`, linking nothing, and rendering every equation unstyled with a
+   * green typecheck. That is the same blind spot that let `mentions` go missing
+   * from the preview payload for two days (fixed 2026-09-06).
+   */
+  const viewSource = stripComments(readFileSync(join(root, "app", "lib", "blog-view.ts"), "utf8"));
+  ok(
+    "blog-view.ts publishes hasMath and root reads that exact name",
+    /hasMath:\s*htmlHasMath\(/.test(viewSource) &&
+      /hasMath\?:\s*boolean/.test(rootStripped),
+    `the projection sets it as "hasMath: htmlHasMath(...)" and root reads it as ` +
+      `"{ hasMath?: boolean }". A rename on one side leaves root reading undefined and ` +
+      `every equation renders unstyled, with no type error anywhere.`,
+  );
+
+  /* ---- 3. what a math post actually costs -------------------------------- */
+
+  const base = ROUTE_CEILINGS["/blog/:slug"];
+  const baseSheets = stylesheetsFor(manifest, base.id);
+  const baseCss = baseSheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+  const mathCss = baseCss + brotliSize(mathBytes);
+
+  const bundles = [...new Set([...postAssets, ...rootAssets])]
+    .filter((a) => a.includes("enhance/dist/"))
+    .map((a) => a.split("/").pop() ?? a);
+  const bundleTotal = enhancementAssets()
+    .filter((b) => bundles.includes(b.module))
+    .reduce((n, b) => n + b.brotli, 0);
+  const mathTotal = mathCss + bundleTotal;
+
+  console.log(
+    `  ${"/blog/:slug (math)".padEnd(18)} css ${String(mathCss).padStart(5)} ` +
+      `(${baseSheets.length + 1} sheet) bundles ${String(bundleTotal).padStart(5)} ` +
+      `total ${String(mathTotal).padStart(5)} of ${MATH_CEILING.total}\n`,
+  );
+
+  ok(
+    `/blog/:slug (math): stylesheets are under ${MATH_CEILING.css} brotli`,
+    mathCss <= MATH_CEILING.css,
+    `${mathCss} bytes: ${baseCss} of route sheets plus ${brotliSize(mathBytes)} of math.`,
+  );
+  ok(
+    `/blog/:slug (math): the whole cold load is under ${MATH_CEILING.total} brotli`,
+    mathTotal <= MATH_CEILING.total,
+    `${mathTotal} bytes: ${mathCss} of stylesheet and ${bundleTotal} of enhancement bundles.`,
+  );
+
+  /* ---- 4. the faces, and the one that was inlined ------------------------ */
+
+  const faces = fontsIn([mathBytes.toString("utf8")]);
+  ok(
+    "the math stylesheet still names its whole font set",
+    faces.length >= MINIMUM_MATH_FACES,
+    `${faces.length} @font-face src(s), floor ${MINIMUM_MATH_FACES}, measured 20 for ` +
+      `katex 0.16.47. Fewer means the woff2 trim in build-katex.mjs has started removing ` +
+      `faces rather than formats, and the missing ones fall back to a system font with no ` +
+      `error anywhere. check:content owns the disk-side reconciliation of the same set.`,
+  );
+
+  /*
+   * NOT A PREFERENCE. A `data:` font is REFUSED by this site's CSP.
+   *
+   * MEASURED 2026-09-06 on the first build after the stylesheet landed:
+   * `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under Vite's default
+   * 4096-byte inline limit, and Vite emitted it as base64 inside the sheet.
+   * `font-src` is `'self'` and carries no `data:` source (only `img-src`
+   * does), so the browser would have refused that one face while fetching the
+   * other nineteen: big delimiters in a fallback serif on some equations and
+   * not others, with nothing failing. It also put 4.8 kB of base64 into a file
+   * every math page downloads, for a face most posts never use.
+   *
+   * `vite.config.ts` refuses to inline any `.woff2`. This is the assertion that
+   * says so, because a config edit is invisible until something reads the build.
+   */
+  const inlined = faces.filter((f) => f.startsWith("data:"));
+  ok(
+    "no font face is inlined as a data: URI",
+    inlined.length === 0,
+    `${inlined.length} face(s) are base64 inside the stylesheet. font-src is 'self' with ` +
+      `no data: source, so the browser REFUSES them, and the symptom is one size of ` +
+      `delimiter in a fallback serif. See build.assetsInlineLimit in vite.config.ts.`,
+  );
+
+  /*
+   * AND THEY ARE DELIBERATELY NOT PRELOADED, which is the opposite of the rule
+   * the per-route loop applies and needs its reason stated here rather than
+   * being an omission.
+   *
+   * The loop above demands a preload for a reachable font because the site's
+   * own face is used by every page, so a late discovery costs every reader. A
+   * KaTeX face is used by an EXPRESSION: `KaTeX_Fraktur` is fetched only by a
+   * post containing `\mathfrak`, and a page with one inline fraction touches
+   * three of the twenty. Preloading the set would be 260 kB of speculative
+   * fetches on a page that needs 30 kB of it, and the browser warns about every
+   * preload it does not use within a few seconds.
+   */
+  const preloadBlock = rootSource.slice(rootSource.indexOf('rel: "preload"'));
+  ok(
+    "no math face is preloaded, which is the deliberate opposite of the rule above",
+    !preloadBlock.slice(0, 400).includes("katex"),
+    `root.tsx preloads a KaTeX face. They are fetched on demand by the expression that ` +
+      `uses them; preloading the set is 260 kB speculatively for a page that needs a ` +
+      `fraction of it.`,
   );
 }
 

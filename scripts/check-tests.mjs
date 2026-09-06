@@ -100,12 +100,15 @@ const TEST_DIR = join(root, "test");
    editor-duplicate.test.mjs landed with the section F row actions. It read 56
    against 60 from 2026-08-30, and the set has grown twice since, so the margin
    had widened on its own, which is the drift the paragraph above names. */
-const MINIMUM_FILES = 60;
-/* 612 against 651, re-measured 2026-09-04 in the same commit, from the same
-   run. It was 607 against 646. The file floor above catches a file LEAVING;
-   this one catches a file being hollowed out in place, which no file count can
-   see. */
-const MINIMUM_TESTS = 618;
+/* RE-MEASURED 2026-09-06 by RUNNING the gate, after math-outputs.test.mjs
+   landed with KaTeX: 65 files. Set to count minus check:floors' tolerance,
+   max(3, ceil(count * 0.05)), which is 4 here. */
+const MINIMUM_FILES = 61;
+/* 628 against 662, re-measured 2026-09-06 in the same run, after the eleven
+   math-output cases. It was 618 against 651. The file floor above catches a
+   file LEAVING; this one catches a file being hollowed out in place, which no
+   file count can see. Same tolerance rule, which is 34 at this count. */
+const MINIMUM_TESTS = 628;
 
 let checks = 0;
 let failures = 0;

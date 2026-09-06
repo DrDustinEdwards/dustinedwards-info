@@ -7,7 +7,8 @@
  * sync writes match what it rendered; that comparison is ship's drift report
  * and the content-drift health check.
  *
- * THREE subjects since the artifact arc:
+ * FIVE subjects. The first three are the artifact arc's; the last two arrived
+ * with math on 2026-09-06 and are 4 and 5 below.
  *
  *   1. THE CORPUS RENDER IS VALID AND DETERMINISTIC. posts.json stopped being
  *      committed (git holds markdown; D1 holds the only rendered copy), so
@@ -22,17 +23,33 @@
  *      COMMITTED, deliberately: it is a repo fact with no database owner.
  *   3. `assets.json`, byte-compared against a walk of `public/`, with the
  *      gitignore tripwire. Also still committed.
+ *   4. MATH OUTPUTS. One output carries the rendered form and every other one
+ *      carries the TeX an author typed, and that distinction lives in five
+ *      modules with nothing else comparing them. Includes the scope control
+ *      that keeps the whole section from passing over a corpus with no math in
+ *      it, and the two independent derivations of `hasMath` made to argue.
+ *   5. `katex.generated.css` AND ITS FACES, byte-compared against a fresh
+ *      derivation from the installed katex package, faces reconciled both ways.
  *
  * This check fails closed: a generator that throws is a failure, never a pass.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 
 import { buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
+import {
+  KATEX_CSS_PATH,
+  KATEX_FONT_DIR,
+  generateKatexCss,
+} from "./build-katex.mjs";
 import { internalLinkSlug } from "../app/lib/content/pipeline.mjs";
+import { htmlHasMath } from "../app/lib/content/math.mjs";
+import { mathToTex } from "../app/lib/rss-feed.mjs";
+import { recordsForPosts } from "../app/lib/search/records.mjs";
 
 /**
  * Names, not a count. A failure that says "3 file(s) missing" sends the reader
@@ -125,8 +142,311 @@ async function main() {
   );
 
   checkInternalFurtherReading(posts);
+  checkMath(posts);
+  await checkKatexArtifact();
   await checkTemplateRefs();
   await checkAssetManifest();
+}
+
+/**
+ * THE FOURTH SUBJECT: math, and what each output carries of it.
+ *
+ * The determinism pass above already covers KaTeX for free, because a
+ * nondeterministic renderer would move the bytes between two runs. What it
+ * cannot see is the thing the math arc actually decided, which is that ONE
+ * output carries the rendered form and every other one carries the TeX an
+ * author typed. That distinction lives in five different modules and nothing
+ * else compares them.
+ *
+ * ## THE SCOPE CONTROL COMES FIRST, and it is the assertion that matters most
+ *
+ * Every claim below is of the form "no post's markdown carries KaTeX markup",
+ * and a corpus with no math in it satisfies every one of them perfectly. That
+ * is the clean-sweep-over-an-empty-scope shape this file already guards against
+ * for `further_reading`. So the first thing asserted is that the corpus
+ * contains at least one post WITH math and at least one WITHOUT: the fixture
+ * `math-typesetting-fixture` provides the first and the other twelve the
+ * second. Delete the fixture and this gate fails rather than going quietly
+ * vacuous.
+ *
+ * ## TWO DERIVATIONS OF `hasMath`, MADE TO ARGUE
+ *
+ * `remarkMathValidate` sets the flag from the mdast, before anything is
+ * rendered. `htmlHasMath` reads it back off the rendered html, and is what the
+ * ROUTE uses to decide whether to link the stylesheet. They are computed at
+ * different times from different artifacts by different code, and if they ever
+ * disagree the page is either downloading 3 kB it does not need or rendering
+ * math with no stylesheet. Comparing them is the only thing that can notice.
+ *
+ * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
+ *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
+ */
+function checkMath(posts) {
+  /** @type {string[]} */
+  const problems = [];
+
+  const withMath = posts.filter((post) => post.hasMath === true);
+  const withoutMath = posts.filter((post) => post.hasMath !== true);
+
+  if (withMath.length === 0 || withoutMath.length === 0) {
+    console.error(
+      `check:content failed. the corpus has ${withMath.length} post(s) with math and ` +
+        `${withoutMath.length} without. Every math assertion below passes trivially over ` +
+        `a corpus missing either side: with none, "no markdown carries KaTeX" is true of ` +
+        `nothing, and with all, "a mathless post links no stylesheet" is. The fixture ` +
+        `content/posts/math-typesetting-fixture.md exists to keep both sides populated.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  for (const post of posts) {
+    const astSaysMath = post.hasMath === true;
+    const htmlSaysMath = htmlHasMath(post.html);
+    if (astSaysMath !== htmlSaysMath) {
+      problems.push(
+        `${post.slug}: the renderer's AST flag says ${astSaysMath} and htmlHasMath says ` +
+          `${htmlSaysMath}. The route reads the second, so they cannot differ.`,
+      );
+    }
+
+    /*
+     * NO ERROR BOX, EVER, on any post. This is the assertion that proves
+     * `remarkMathValidate` is doing its job rather than merely existing:
+     * rehype-katex's own failure path emits `class="katex-error"`, and the
+     * validator exists precisely so that path is unreachable. If this ever
+     * fires, an expression got past the validator and shipped a red box.
+     */
+    if (post.html.includes("katex-error")) {
+      problems.push(
+        `${post.slug}: the rendered html carries a katex-error span. An expression ` +
+          `reached rehype-katex's fallback render, which remarkMathValidate is supposed ` +
+          `to make impossible.`,
+      );
+    }
+
+    /*
+     * THE MARKDOWN SIDE, which is FOUR outputs at once and is why it is
+     * asserted on the record rather than per route: `posts.body` is what
+     * `/blog/:slug.md`, `llms-full.txt`, the JSON feed's `content_text` and the
+     * `Accept: text/markdown` representation all serve, unmodified. If the
+     * source held markup, all four would.
+     */
+    if (post.markdown.includes("katex")) {
+      problems.push(
+        `${post.slug}: the stored markdown carries the string "katex". The four outputs ` +
+          `that serve posts.body verbatim would carry it too.`,
+      );
+    }
+    if (astSaysMath && !/\$/.test(post.markdown)) {
+      problems.push(
+        `${post.slug}: the renderer found math but the stored markdown has no "$" in it, ` +
+          `so the .md twin, llms-full.txt and the JSON feed carry no expression at all.`,
+      );
+    }
+
+    /* THE HTML SIDE. The one output that carries the rendered form, and it
+       carries BOTH trees, because htmlAndMathml is the ruled output mode and a
+       silent drop to html-only would take the MathML away from a screen reader
+       with nothing else noticing. */
+    if (astSaysMath) {
+      if (!post.html.includes("<math")) {
+        problems.push(
+          `${post.slug}: the rendered html carries no <math> element, so the output mode ` +
+            `is no longer htmlAndMathml and a screen reader gets the layout tree only.`,
+        );
+      }
+      if (!post.html.includes('<annotation encoding="application/x-tex">')) {
+        problems.push(
+          `${post.slug}: the rendered html carries no x-tex annotation. That annotation is ` +
+            `what mathToTex reads to put the feeds back to source, so the feeds would ` +
+            `silently keep their markup.`,
+        );
+      }
+    }
+
+    /* THE FEED SIDE, asserted through the transform the feeds actually call.
+       `test/math-outputs.test.mjs` owns the item markup; this owns the claim
+       over the REAL corpus, which no fixture can make. */
+    const feedBody = mathToTex(post.html);
+    if (feedBody.includes("katex")) {
+      problems.push(
+        `${post.slug}: mathToTex left KaTeX markup in the feed body, so RSS and Atom ` +
+          `would ship an expression rendered twice and garbled both times.`,
+      );
+    }
+    if (astSaysMath && !feedBody.includes("$")) {
+      problems.push(`${post.slug}: mathToTex removed the math and left no TeX behind.`);
+    }
+  }
+
+  /*
+   * THE SEARCH AND ASK SIDE. Both indexes are built by `recordsForPosts` from
+   * the MARKDOWN, so what they carry is the TeX source; this proves it over the
+   * corpus rather than by reading that module. A record carrying markup would
+   * put span soup into a search snippet and into the Ask context window.
+   */
+  const records = recordsForPosts(
+    posts.map((post) => ({
+      slug: post.slug,
+      title: post.title,
+      markdown: post.markdown,
+      body: post.markdown,
+      toc: post.toc,
+      tags: post.tags,
+      publishAt: post.publishAt,
+      draft: post.draft,
+    })),
+  );
+  if (records.length === 0) {
+    console.error(
+      `check:content failed. recordsForPosts produced 0 record(s) over ${posts.length} ` +
+        `post(s), so every search assertion below is about an empty set.`,
+    );
+    process.exit(1);
+    return;
+  }
+  const markupRecords = records.filter((r) => String(r.body ?? "").includes("katex"));
+  if (markupRecords.length > 0) {
+    problems.push(
+      `${markupRecords.length} search record(s) carry KaTeX markup, starting with ` +
+        `${markupRecords[0].uid}. The index is built from markdown and should carry TeX.`,
+    );
+  }
+
+  if (problems.length > 0) {
+    console.error(`check:content failed. ${problems.length} math output problem(s):`);
+    console.error(nameThem(problems));
+    process.exit(1);
+    return;
+  }
+
+  const expressions = withMath.reduce(
+    (n, post) => n + (post.html.match(/<annotation encoding="application\/x-tex">/g) ?? []).length,
+    0,
+  );
+  console.log(
+    `check:content ok. math outputs agree across ${posts.length} post(s): ` +
+      `${withMath.length} with math (${expressions} expression(s)), ${withoutMath.length} ` +
+      `without, ${records.length} search record(s) carrying TeX rather than markup.`,
+  );
+}
+
+/**
+ * THE FIFTH GENERATED ARTIFACT: the math stylesheet and its font faces.
+ *
+ * Same contract as `template-refs.json` above, and it exists for a failure that
+ * is invisible in every other direction. `app/styles/katex.generated.css` is
+ * derived from the INSTALLED katex package, and the markup it styles is
+ * produced by that same package at build time. Bump katex without running
+ * `npm run build:katex` and the two go out of step: the renderer starts
+ * emitting a class the committed stylesheet has no rule for, and the symptom is
+ * an equation that is slightly wrong on a page nobody is looking at.
+ *
+ * Byte-compared against a fresh derivation, and the FACES are reconciled in
+ * BOTH directions: a face the stylesheet names and the repo does not hold is a
+ * 404 that falls back to a system font silently, and a face on disk the
+ * stylesheet no longer names is a stale binary nobody will ever delete.
+ */
+async function checkKatexArtifact() {
+  /** @type {{ css: string, faces: string[], version: string }} */
+  let derived;
+  try {
+    derived = generateKatexCss();
+  } catch (error) {
+    console.error(
+      `check:content failed. the math stylesheet could not be derived from the installed ` +
+        `katex package: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  /** @type {string} */
+  let committed;
+  try {
+    committed = await readFile(KATEX_CSS_PATH, "utf8");
+  } catch {
+    console.error(
+      `check:content failed. ${KATEX_CSS_PATH} is missing or unreadable. ` +
+        `Run npm run build:katex.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  if (committed !== derived.css) {
+    const diff = firstDifference(committed, derived.css);
+    console.error(
+      `check:content failed. ${KATEX_CSS_PATH} differs from a fresh derivation of ` +
+        `katex ${derived.version} plus app/styles/katex-overrides.css.`,
+    );
+    if (diff) {
+      console.error(`  first difference at line ${diff.line}`);
+      console.error(`  committed: ${diff.committed.trim().slice(0, 200)}`);
+      console.error(`  fresh:     ${diff.fresh.trim().slice(0, 200)}`);
+    }
+    console.error("  Run npm run build:katex and commit the result.");
+    process.exit(1);
+    return;
+  }
+
+  /*
+   * SCOPE, ASSERTED, before either direction is compared. A derivation that
+   * named zero faces would agree with an empty directory, and both would look
+   * like a clean reconciliation.
+   */
+  if (derived.faces.length < 20) {
+    console.error(
+      `check:content failed. the math stylesheet names ${derived.faces.length} font face(s), ` +
+        `floor 20, measured 20 for katex ${derived.version}. Fewer means the woff2 trim in ` +
+        `build-katex.mjs has started removing faces rather than formats.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  /** @type {string[]} */
+  let onDisk;
+  try {
+    onDisk = (await readdir(KATEX_FONT_DIR)).sort();
+  } catch {
+    console.error(
+      `check:content failed. ${KATEX_FONT_DIR}/ is missing. Run npm run build:katex.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  const missing = derived.faces.filter((face) => !onDisk.includes(face));
+  const orphaned = onDisk.filter((face) => !derived.faces.includes(face));
+  if (missing.length > 0 || orphaned.length > 0) {
+    console.error(
+      `check:content failed. ${KATEX_FONT_DIR}/ does not match the faces the stylesheet ` +
+        `names.`,
+    );
+    if (missing.length > 0) {
+      console.error(`  named and not on disk (a 404 and a silent system-font fallback):`);
+      console.error(nameThem(missing));
+    }
+    if (orphaned.length > 0) {
+      console.error(`  on disk and not named (stale binaries after a version bump):`);
+      console.error(nameThem(orphaned));
+    }
+    console.error("  Run npm run build:katex and commit the result.");
+    process.exit(1);
+    return;
+  }
+
+  const bytes = (
+    await Promise.all(derived.faces.map((f) => stat(join(KATEX_FONT_DIR, f))))
+  ).reduce((n, s) => n + s.size, 0);
+
+  console.log(
+    `check:content ok. ${KATEX_CSS_PATH} matches a fresh derivation of katex ` +
+      `${derived.version} (${Buffer.byteLength(committed)} bytes), and ${onDisk.length} ` +
+      `woff2 face(s) totalling ${bytes} bytes reconcile with it in both directions.`,
+  );
 }
 
 /**
@@ -240,22 +560,33 @@ async function checkTemplateRefs() {
   // that discriminate. Floors rather than equalities, so adding a source file
   // does not fail the gate, but losing the whole tree does.
   //
-  // RE-MEASURED 2026-08-24 through this gate by running it: 183 files read, 59
-  // assets considered. Both floors are about eight percent under. The file
-  // floor had been 100 against 183, which let nearly half the tree stop being
-  // walked while the assertion that exists to notice that reported clean.
-  if (!(parsed.filesRead >= 168)) {
+  // RE-MEASURED 2026-09-06 through this gate by running it: 233 files read, 59
+  // assets considered. Set to count minus check:floors' own tolerance,
+  // max(3, ceil(count * 0.05)), which is the sweep's rule applied by hand.
+  //
+  // BY HAND BECAUSE THIS GATE IS NOT IN THE SWEEP. These are bespoke scope
+  // floors rather than executed-count floors, so this file prints no
+  // `floor check:content:...` line and check:floors names it in the gates it
+  // deliberately does not read. Nothing re-measures them automatically; the
+  // trigger is touching this file, which is what happened here.
+  //
+  // The drift they had accumulated is exactly what the sweep exists to catch:
+  // the file floor was 168 against 183 when it was last set on 2026-08-24, and
+  // the tree had grown to 233 by today with the floor unmoved, so 65 source
+  // files could have stopped being walked and the assertion that exists to
+  // notice that would have reported clean.
+  if (!(parsed.filesRead >= 221)) {
     console.error(
       `check:content failed. the template scan read ${parsed.filesRead} source file(s), ` +
-        `floor 168, measured 183. A zero-scope scan reports "no references" and looks correct.`,
+        `floor 221, measured 233. A zero-scope scan reports "no references" and looks correct.`,
     );
     process.exit(1);
     return;
   }
-  if (!(parsed.assetsConsidered >= 54)) {
+  if (!(parsed.assetsConsidered >= 56)) {
     console.error(
       `check:content failed. the template scan considered ${parsed.assetsConsidered} asset(s), ` +
-        `floor 54, measured 59. The asset manifest is empty or was not loaded.`,
+        `floor 56, measured 59. The asset manifest is empty or was not loaded.`,
     );
     process.exit(1);
     return;
