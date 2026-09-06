@@ -231,7 +231,14 @@ console.log(
 const MINIMUM_CHECKS = 9;
 const floorBreach = assertFloor(
   "check:llms",
-  "checks",
+  /*
+   * NAMED PER BRANCH, vol 15 binding, even though one VALUE covers both: 9
+   * offline and 11 with --remote, measured 2026-09-06, and 11 minus the
+   * tolerance is 8, so the offline floor of 9 is the stricter of the two and
+   * is kept for both. The names still differ, because a single name would let
+   * whichever branch ran last be judged against the other's reading.
+   */
+  target === "--remote" ? "checks-remote" : "checks-offline",
   checks,
   MINIMUM_CHECKS,
   "The offline branch is the smaller one; --remote adds the live comparison.",
