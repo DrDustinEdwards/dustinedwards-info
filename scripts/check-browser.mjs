@@ -1086,7 +1086,41 @@ async function waitForServer(timeoutMs = 180_000) {
   }
 
   const deadline = started + timeoutMs;
+  /*
+   * THE SURVIVORS ARE RECORDED WHILE WAITING, NOT ONLY ONCE THE SERVER ANSWERS.
+   *
+   * MEASURED 2026-09-06 by hard-killing the gate node mid-startup. The registry
+   * held two entries, the gate and the pid `spawn()` returned, and `taskkill /F`
+   * on the gate took both: they are npx wrappers and they die with the parent
+   * whose stdio they hold. What SURVIVED was the real vite (a node running
+   * vite.js preview) plus its esbuild and workerd, five processes, and the real
+   * vite's parent was an intermediate that was already gone, so it was not a
+   * descendant of anything recorded.
+   *
+   * The next run then reported `0 cleared, 5 stale, 0 reused, 1 FAILED TO KILL`:
+   * every recorded pid was gone, and the tree that was still standing had never
+   * been written down. The port probe could not see it either, because vite had
+   * not bound 4173 yet, which is exactly the window the probe cannot cover.
+   *
+   * So the capture happens on every poll of the wait loop, not once at the end.
+   * The whole point of the registry is the case where the gate dies without
+   * warning, and recording only at the moment of success leaves the entire
+   * startup uncovered, which is when a slow or wedged start makes a kill most
+   * likely.
+   *
+   * `record` is idempotent enough for this: a repeated pid appends a line, and
+   * `preflight` verifies the live command line before killing anything, so a
+   * duplicate costs a string comparison rather than a wrong kill. Reading the
+   * process table is the expensive half, so it is throttled rather than run on
+   * every iteration of a tight loop.
+   */
+  let lastCapture = 0;
+  const CAPTURE_INTERVAL_MS = 2000;
   while (Date.now() < deadline) {
+    if (Date.now() - lastCapture >= CAPTURE_INTERVAL_MS) {
+      recordServerSurvivors();
+      lastCapture = Date.now();
+    }
     try {
       const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
@@ -1155,15 +1189,30 @@ function serverDiagnosis() {
  * omissions: they say nothing about vite on their own command lines, and
  * `taskkill /T` from the vite process reaches them anyway.
  */
+/**
+ * Pids already written, so a repeated capture does not append them again.
+ *
+ * The capture now runs on every poll of the startup wait, and without this the
+ * same three pids are appended each time: one killed run wrote twelve lines for
+ * four processes and the next preflight reported `20 stale`, which is a count of
+ * duplicates rather than of anything that happened. In memory rather than by
+ * re-reading the file, because the file is append-only ON PURPOSE (a rewritten
+ * one would be empty in exactly the case it exists for) and this only needs to
+ * be right for the life of the process doing the writing.
+ */
+const recorded = new Set();
+
 function recordServerSurvivors() {
   if (!server?.pid) return;
   const table = readProcessTable();
   if (table.size === 0) return;
   for (const pid of descendantPids(server.pid, table)) {
+    if (recorded.has(pid)) continue;
     const live = table.get(pid);
     if (!live) continue;
     if (!VITE_NEEDLES.every((needle) => live.command.includes(needle.toLowerCase()))) continue;
     registry.record(pid, "the vite preview server", VITE_NEEDLES);
+    recorded.add(pid);
   }
 }
 
