@@ -27,11 +27,16 @@ import { isPubliclyVisible, statusForDraft } from "../search/visibility.mjs";
 import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
 import { toString as hastToString } from "hast-util-to-string";
+// Imported for VALIDATION, not for rendering: `remarkMathValidate` calls it to
+// fail the build, and `rehype-katex` calls it again to produce the markup.
+import katex from "katex";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { createHighlighterCore } from "shiki/core";
@@ -46,6 +51,7 @@ import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
 import { buildChartModel, renderChartHast } from "./chart.mjs";
 import { buildDiagramModel, renderDiagramHast } from "./diagram.mjs";
+import { KATEX_OPTIONS } from "./math.mjs";
 
 import bash from "shiki/langs/bash.mjs";
 import css from "shiki/langs/css.mjs";
@@ -935,6 +941,66 @@ function remarkNumericTextDirectives(source) {
 }
 
 /**
+ * Fails the build on an expression KaTeX cannot render, naming the post.
+ *
+ * The remark half of the split `remarkChart` uses and for the reason recorded
+ * there: validation belongs in remark, so a bad expression fails the build
+ * naming the post before anything is rendered. `math.mjs` owns WHY an option
+ * cannot do this job, and throws a plain Error; this wraps it in the file, the
+ * line and the expression, because "KaTeX parse error" on its own sends the
+ * reader hunting through a post for a dollar sign.
+ *
+ * Also the AST-side owner of `hasMath`. The html-side reader is `htmlHasMath`,
+ * and `check:content` makes the two argue over the whole corpus.
+ *
+ * @param {string} file
+ * @param {{ value: boolean }} sink set to true when the post carries any math
+ */
+function remarkMathValidate(file, sink) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
+      if (node.type !== "inlineMath" && node.type !== "math") return;
+      sink.value = true;
+
+      const expression = String(/** @type {any} */ (node).value ?? "");
+      const line = node.position?.start?.line;
+      try {
+        /*
+         * The rendered string is discarded: this call is about whether it
+         * throws. `KATEX_OPTIONS` is the SAME object rehype-katex is handed
+         * below, which is what makes surviving this pass a proof that its
+         * catch branch is unreachable.
+         */
+        katex.renderToString(expression, {
+          ...KATEX_OPTIONS,
+          displayMode: node.type === "math",
+          throwOnError: true,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        /*
+         * "OF THE BODY", and the qualifier is a correction rather than pedantry.
+         *
+         * The plant on 2026-09-06 put a malformed expression on line 21 of the
+         * file and this said "line 13", because the tree was parsed from
+         * `parsed.content`, which has the frontmatter stripped. Adding the
+         * offset back is not available: `renderBody` is also the editor's
+         * preview renderer and is handed a body with no file around it, so the
+         * number would be right for the build and wrong for the pane. Saying
+         * which line it is a line OF is correct for both callers.
+         */
+        throw new ContentError(
+          file,
+          `KaTeX cannot render ${node.type === "math" ? "the display" : "the inline"} ` +
+            `expression${line ? ` on line ${line} of the body` : ""}: ${detail}. ` +
+            `The expression is: ${expression.trim()}`,
+        );
+      }
+    });
+  };
+}
+
+/**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
 export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure"];
@@ -1570,12 +1636,22 @@ export async function renderBody({ file, body, resolveImage }) {
    * @type {Array<{ file: string, tag: string, url: string }>}
    */
   const blockedUrls = [];
+  /**
+   * Whether this post carries any math, set from the AST by the validator.
+   * @type {{ value: boolean }}
+   */
+  const math = { value: false };
 
   const highlighter = await getHighlighter();
 
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
+    // Before remarkDirective, and it does not matter which side it sits on:
+    // `$` and `:::` are disjoint syntaxes and neither extension can consume the
+    // other's opener. Placed with the other syntax extensions rather than with
+    // the handlers so the reading order matches what micromark is doing.
+    .use(remarkMath)
     .use(remarkDirective)
     // Runs before any directive is interpreted, so prose that only LOOKS like a
     // directive is text again before remarkFigure or remarkChart can see it.
@@ -1583,6 +1659,9 @@ export async function renderBody({ file, body, resolveImage }) {
     // Fails closed on anything the pipeline does not implement, before any
     // handler runs, so a typo is a named build error rather than a silent div.
     .use(remarkUnknownDirectives, file)
+    // Same footing, for the same reason: a malformed expression is a named
+    // build error here rather than a red error box rendered onto the page.
+    .use(remarkMathValidate, file, math)
     // Before remarkFigure, so a `:::figure` is still a directive and its form
     // can be told apart from an ordinary markdown image.
     .use(remarkCollectMedia, mediaRefs)
@@ -1624,6 +1703,23 @@ export async function renderBody({ file, body, resolveImage }) {
       behavior: "append",
       content: { type: "text", value: "#" },
     })
+    /*
+     * AFTER rehypeSlug, rehypeCollectToc AND the heading autolinks, and the
+     * order is the whole decision rather than a placement.
+     *
+     * All three of those read a heading's TEXT. Until this plugin runs, an
+     * expression in a heading is still its TeX source sitting in a span, so
+     * `## Solving $x^2 + 1 = 0$` gives the id `solving-x2--1--0` and a table of
+     * contents entry a person can read. Run KaTeX first and the same three read
+     * the RENDERED tree instead, whose text is the MathML annotation and the
+     * HTML layout layer CONCATENATED: the id and the toc entry both become the
+     * expression twice over, and neither is recoverable afterwards.
+     *
+     * Nothing downstream cares. Shiki matches `pre code`, and rehypeUrlProtocols
+     * matches `a` and `img`; KaTeX emits none of those, only spans, an `svg`
+     * for stretched delimiters, and one `math` element per expression.
+     */
+    .use(rehypeKatex, KATEX_OPTIONS)
     .use(rehypeImageSources, file, resolveImage, pending)
     .use(rehypeShikiFromHighlighter, highlighter, {
       themes: {
@@ -1665,6 +1761,14 @@ export async function renderBody({ file, body, resolveImage }) {
   return {
     html: processor.stringify(transformed),
     toc,
+    /*
+     * From the AST, not from the html. It is the same fact `htmlHasMath` reads
+     * off the rendered output, derived independently, and `check:content` makes
+     * the two argue over the whole corpus. Not a durable field on the record:
+     * the route reads the html-side function, so nothing here has to be stored,
+     * migrated or synced. See `htmlHasMath`.
+     */
+    hasMath: math.value,
     // The keys and sources every diagram in this post resolved to. `build:diagrams`
     // reads them off the artifact rather than parsing markdown a second time, on
     // the same principle as `withRelated` and `records.mjs`: anything two callers
@@ -1710,7 +1814,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     );
   }
 
-  const { html, toc, diagrams, mediaRefs } = await renderBody({
+  const { html, toc, diagrams, mediaRefs, hasMath } = await renderBody({
     file,
     body: parsed.content,
     resolveImage,
@@ -1749,6 +1853,17 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     ogDescription: fm.og_description ?? null,
     updated: fm.updated ?? null,
     readingTimeMinutes: readingTimeMinutes(parsed.content),
+    /*
+     * RIDES ON THE RECORD, IS NEVER STORED, and both halves are the point.
+     *
+     * No writer maps it to a column and none should: the route answers this
+     * question with `htmlHasMath` off the row it already has, which is why
+     * there is no migration here. What it rides for is `check:content`, which
+     * compares this AST-derived value against that html-derived one for every
+     * post in the corpus. Two derivations that can disagree are worth more than
+     * one that is trusted, and this is the cheap half of the pair.
+     */
+    hasMath,
     toc,
     diagrams,
     mediaRefs,
