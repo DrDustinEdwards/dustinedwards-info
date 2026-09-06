@@ -1235,7 +1235,30 @@ function opacityExempt(selectorGroup) {
 }
 
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 609 : 486;
+
+/*
+ * TWO FLOORS, AND ONLY ONE OF THEM IS REACHABLE ON A DEVELOPER MACHINE.
+ *
+ * This machine always has build/, so `npm run check` and `check:floors` only
+ * ever exercise the build-PRESENT branch. The absent branch runs where nothing
+ * has built the client, which in practice means CI, and its floor is therefore
+ * the one number here that no local run can observe drifting.
+ *
+ * That is not hypothetical. On 2026-09-06 the floor sweep re-measured every
+ * floor it could REACH, moved seventeen of them, and left this one at 486
+ * because reaching it needs build/ moved aside. CI then failed at 3bcf858 with
+ * 518 against 486, a gap of 32 against a tolerance of 26. The sweep's own
+ * instrument could not see the floor the sweep had missed.
+ *
+ * RE-MEASURED 2026-09-06 by RUNNING the gate with build/ renamed away, which is
+ * the same method the 2026-08-28 entry used and the only one that works: 518
+ * absent, 642 present. Floors are those minus the check:floors tolerance at
+ * each count, 26 and 33.
+ *
+ * When this branch's count moves, CI is the instrument that says so. Re-measure
+ * it the same way rather than deriving it from the present-branch number.
+ */
+const MINIMUM_CHECKS = buildPresent ? 609 : 492;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
