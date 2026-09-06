@@ -84,6 +84,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, s
 import { tmpdir } from "node:os";
 import { dirname, extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -100,6 +101,22 @@ const EXCLUDED = {
    * extracts a worktree, which runs check:head, which extracts a worktree.
    */
   "check:head": "recursion. It would extract a worktree inside a worktree, forever.",
+  /*
+   * RECURSION OF THE SECOND KIND, and it squares rather than looping forever.
+   *
+   * `check:floors` runs every counting gate to read its floor lines. This gate
+   * runs the offline tier, which contains `check:floors`. Left in, one
+   * extraction would run every counting gate once for the tier and once more
+   * inside check:floors, and the whole tier would be paid twice inside a gate
+   * that already costs three minutes.
+   *
+   * Nothing is lost. `check:floors` compares a floor against a count, and both
+   * numbers are properties of the GATE, not of the checkout: an extraction of
+   * HEAD reports the same floors as disk unless disk is dirty, and a dirty tree
+   * is what the rest of this gate is for. `check-floors.mjs`'s own NOT_RUN
+   * carries the matching entry in the other direction.
+   */
+  "check:floors": "recursion: it runs the whole offline tier, which this gate is running.",
   /*
    * MEASURED 2026-08-10, not guessed. `bootstrap-config.mjs` creates
    * `wrangler.jsonc` BY COPYING `wrangler.jsonc.example`, because the real one
@@ -488,11 +505,18 @@ try {
   }
   executed = results;
 
+  const executedFloorBreach = assertFloor(
+    "check:head",
+    "gates-executed",
+    executed.length,
+    MINIMUM_EXECUTED,
+    'A run that executes almost nothing reports the same "0 failures" as a clean ' +
+      "checkout, which is the failure this floor exists to prevent.",
+  );
   ok(
     `at least ${MINIMUM_EXECUTED} gates ran inside the extraction`,
-    executed.length >= MINIMUM_EXECUTED,
-    `${executed.length} ran. A run that executes almost nothing reports the same "0 failures" ` +
-      `as a clean checkout, which is the failure this floor exists to prevent.`,
+    !executedFloorBreach,
+    executedFloorBreach ?? "",
   );
 
   for (const r of executed) {
@@ -551,14 +575,8 @@ console.log(
  * when a gate is added and by more only when the tier is re-tiered.
  */
 const MINIMUM_CHECKS = 27;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-24: 31.`,
-  );
-}
+const floorBreach = assertFloor("check:head", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
