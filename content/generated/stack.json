@@ -155,6 +155,10 @@
       "range": "^2.0.2"
     },
     {
+      "name": "katex",
+      "range": "0.16.47"
+    },
+    {
       "name": "linkedom",
       "range": "0.18.13"
     },
@@ -175,6 +179,10 @@
       "range": "^7.1.0"
     },
     {
+      "name": "rehype-katex",
+      "range": "7.0.1"
+    },
+    {
       "name": "rehype-slug",
       "range": "^6.0.0"
     },
@@ -189,6 +197,10 @@
     {
       "name": "remark-gfm",
       "range": "^4.0.1"
+    },
+    {
+      "name": "remark-math",
+      "range": "6.0.0"
     },
     {
       "name": "remark-parse",
