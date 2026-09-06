@@ -161,7 +161,7 @@ const EXCLUDED = {
 };
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */
-const MINIMUM_EXECUTED = 18;
+const MINIMUM_EXECUTED = 20;
 
 /*
  * HOW MUCH OF AN INNER GATE'S OUTPUT REACHES THIS ONE'S.
@@ -574,7 +574,7 @@ console.log(
  * three: most of the count is one assertion per gate run, so it steps by one
  * when a gate is added and by more only when the tier is re-tiered.
  */
-const MINIMUM_CHECKS = 27;
+const MINIMUM_CHECKS = 33;
 const floorBreach = assertFloor("check:head", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
