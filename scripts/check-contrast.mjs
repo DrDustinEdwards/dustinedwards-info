@@ -92,6 +92,7 @@ import { apca, contrast } from "../app/lib/contrast.mjs";
  * having two answers to that would be the drift, not the safeguard.
  */
 import { allSourceCss, stylesheetPaths } from "./lib/tokens.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
@@ -1234,23 +1235,22 @@ function opacityExempt(selectorGroup) {
 }
 
 const buildPresent = existsSync(assetDir);
-const MINIMUM_CHECKS = buildPresent ? 603 : 486;
-if (checks < MINIMUM_CHECKS) {
-  failures.push(
-    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS} ` +
-      `(build ${buildPresent ? "present" : "absent"}). A block was SKIPPED rather than ` +
-      `failing. RE-MEASURED 2026-08-28 by RUNNING the gate in BOTH branches, which ` +
-      `is what the audit asked for and what nothing had done for a while: 642 with ` +
-      `the built stylesheet compared, and 518 without it, taken by moving build/ ` +
-      `aside rather than by reasoning about which assertions skip. Floors are 94 ` +
-      `percent of each, 603 and 486.` +
-      `\n        THE ABSENT-BUILD FLOOR WAS THE STALE ONE, and it was stale because ` +
-      `it was DERIVED rather than run: each change added its new assertions to the ` +
-      `previous derived figure, and the chain had drifted about ten below the real ` +
-      `count. A floor arrived at by arithmetic over a floor arrived at by arithmetic ` +
-      `is a number nobody has measured.`,
-  );
-}
+const MINIMUM_CHECKS = buildPresent ? 609 : 486;
+const floorBreach = assertFloor(
+  "check:contrast",
+  buildPresent ? "checks-build-present" : "checks-build-absent",
+  checks,
+  MINIMUM_CHECKS,
+  `Build ${buildPresent ? "present" : "absent"}. RE-MEASURED 2026-08-28 by RUNNING ` +
+    `the gate in BOTH branches, taken by moving build/ aside rather than by reasoning ` +
+    `about which assertions skip.` +
+    `\n        THE ABSENT-BUILD FLOOR WAS THE STALE ONE, and it was stale because ` +
+    `it was DERIVED rather than run: each change added its new assertions to the ` +
+    `previous derived figure, and the chain had drifted about ten below the real ` +
+    `count. A floor arrived at by arithmetic over a floor arrived at by arithmetic ` +
+    `is a number nobody has measured.`,
+);
+if (floorBreach) failures.push(floorBreach);
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} FAILED of ${checks} checks:\n`);

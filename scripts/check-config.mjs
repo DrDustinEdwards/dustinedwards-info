@@ -57,6 +57,7 @@ import {
   surfaceOf,
   unhandledBindingKinds,
 } from "./lib/wrangler-surface.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -631,15 +632,9 @@ console.log(
  * steps by two or three per binding and per var, so a single added binding
  * moves it visibly and a deleted one should be a deliberate diff.
  */
-const MINIMUM_CHECKS = 87;
-if (checks < MINIMUM_CHECKS) {
-  assertThat(
-    false,
-    "this gate executed its assertions",
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 95.`,
-  );
-}
+const MINIMUM_CHECKS = 95;
+const floorBreach = assertFloor("check:config", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);

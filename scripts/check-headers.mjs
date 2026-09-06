@@ -50,6 +50,7 @@ import { fileURLToPath } from "node:url";
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
@@ -1573,15 +1574,9 @@ console.log("  public HTML routes share one headers()");
  * floor being a floor rather than an equality. The delta is stated as a
  * measurement of two runs, never as arithmetic on the new block.
  */
-const MINIMUM_CHECKS = 173;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-23: 184.`,
-  );
-}
+const MINIMUM_CHECKS = 187;
+const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

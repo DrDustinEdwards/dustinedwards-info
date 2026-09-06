@@ -34,6 +34,7 @@ import {
   SMOKE_READ_ONLY_POLICY,
   WRITE_CAPABILITIES,
 } from "../app/lib/editor/publish-policy.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 /** Repo root, so the source assertions below read real files. */
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -1821,13 +1822,9 @@ refuses(
  * forty-two accumulated unremarked. Floor 135 to 168, about seven percent
  * under, the same proportion both earlier entries chose.
  */
-const MINIMUM_CHECKS = 168;
-if (checks < MINIMUM_CHECKS) {
-  failures.push(
-    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured 2026-09-05: 181.`,
-  );
-}
+const MINIMUM_CHECKS = 171;
+const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) failures.push(floorBreach);
 
 if (failures.length > 0) {
   console.error(`check:policy FAILED, ${failures.length} of ${checks} checks:\n`);

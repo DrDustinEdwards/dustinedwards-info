@@ -41,6 +41,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTES = join(root, "app", "routes");
@@ -619,15 +620,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
  * second edit here. Raising it on every addition would make it a count of the
  * checks rather than a floor under them.
  */
-const MINIMUM_CHECKS = 49;
-if (checks < MINIMUM_CHECKS) {
-  assertThat(
-    false,
-    "this gate executed its assertions",
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was ` +
-      `SKIPPED rather than failing. Measured: 53.`,
-  );
-}
+const MINIMUM_CHECKS = 97;
+const floorBreach = assertFloor("check:destructive", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);

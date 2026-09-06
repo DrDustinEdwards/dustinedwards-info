@@ -37,6 +37,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { retryRead } from "./lib/retry.mjs";
 import { createHash } from "node:crypto";
+import { assertFloor } from "./lib/floor.mjs";
 
 const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
@@ -228,14 +229,14 @@ console.log(
 }
 
 const MINIMUM_CHECKS = 9;
-if (checks < MINIMUM_CHECKS) {
-  assertThat(
-    false,
-    "this gate executed its assertions",
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-24: 9 offline.`,
-  );
-}
+const floorBreach = assertFloor(
+  "check:llms",
+  "checks",
+  checks,
+  MINIMUM_CHECKS,
+  "The offline branch is the smaller one; --remote adds the live comparison.",
+);
+if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);

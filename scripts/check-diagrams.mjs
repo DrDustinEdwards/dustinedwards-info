@@ -50,6 +50,7 @@ import {
 import { KNOWN_DIRECTIVES } from "../app/lib/content/pipeline.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
@@ -359,13 +360,9 @@ if (!existsSync(ARTIFACT)) {
  * committed diagrams and the rules reachable inside each, so it steps sharply
  * when a diagram is added and should not drift otherwise.
  */
-const MINIMUM_CHECKS = 380;
-if (checks < MINIMUM_CHECKS) {
-  failures.push(
-    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 409.`,
-  );
-}
+const MINIMUM_CHECKS = 390;
+const floorBreach = assertFloor("check:diagrams", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) failures.push(floorBreach);
 
 if (failures.length > 0) {
   console.error(`check:diagrams FAILED ${failures.length} of ${checks} assertions\n`);

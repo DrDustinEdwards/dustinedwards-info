@@ -36,6 +36,7 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const DB_PATH = "app/db/index.ts";
 const CORE_PATH = "app/lib/media/core.server.ts";
@@ -295,14 +296,8 @@ console.log(
  * dropping a whole BLOCK still does.
  */
 const MINIMUM_CHECKS = 22;
-if (checks < MINIMUM_CHECKS) {
-  assertThat(
-    false,
-    "this gate executed its assertions",
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was ` +
-      `SKIPPED rather than failing. Measured 2026-08-24: 24.`,
-  );
-}
+const floorBreach = assertFloor("check:media-axes", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 process.exit(failures > 0 ? 1 : 0);

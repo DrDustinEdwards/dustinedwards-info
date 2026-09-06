@@ -69,6 +69,7 @@ import { fileURLToPath } from "node:url";
 
 import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
 import { stripCommentsAndStrings } from "./lib/strip-comments.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_TYPES = join(root, "app", "env.d.ts");
@@ -489,15 +490,9 @@ console.log(
  * is driven by the secret list and the per-root pairs, so it steps by a known
  * amount when a secret is added, as it did going from seven to eight.
  */
-const MINIMUM_CHECKS = 31;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured 2026-08-24: 33.`,
-  );
-}
+const MINIMUM_CHECKS = 32;
+const floorBreach = assertFloor("check:secrets", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);

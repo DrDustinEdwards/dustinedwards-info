@@ -44,6 +44,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { bashNotFoundMessage, resolveBash } from "./lib/bash.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HOOK = join(root, ".claude", "hooks", "no-direct-deploy.sh");
@@ -232,14 +233,15 @@ console.log("");
  * cases and a drop is a removed case rather than natural movement.
  */
 const MINIMUM_CHECKS = 6;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its cases",
-    false,
-    `only ${checks} ran, expected ${MINIMUM_CHECKS}. A block was SKIPPED rather ` +
-      `than failing. Measured: 6.`,
-  );
-}
+const floorBreach = assertFloor(
+  "check:hook-scope",
+  "checks",
+  checks,
+  MINIMUM_CHECKS,
+  "The case set is a fixed enumeration of ruling 20's own cases, so the slack is " +
+    "ZERO by design and a drop is a removed case rather than natural movement.",
+);
+if (floorBreach) ok("this gate executed its cases", false, floorBreach);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);

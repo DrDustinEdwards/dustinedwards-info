@@ -43,6 +43,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertFloor } from "./lib/floor.mjs";
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
 // The retention windows are asserted against the CONSTANTS, not against a copy
@@ -5547,17 +5548,17 @@ assert(
  * which fails by a wide margin.
  */
 const MINIMUM_CHECKS = 634;
-if (checks < MINIMUM_CHECKS) {
-  fail(
-    // The measurement is stated in the message as well as in the comment above,
-    // and it went STALE here first: plant (d) raised the floor to 202, fired
-    // correctly, and printed "Measured: 200" while the docblock said 215. A
-    // number a failure prints is an instrument, and this one was reporting the
-    // previous session's reading to whoever the gate stops.
-    `this gate executed its assertions: only ${checks} ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 662.`,
-  );
-}
+/*
+ * The literal "Measured: N" that used to close this message is GONE, and its
+ * removal is the point rather than tidying. It went stale here first: plant (d)
+ * raised the floor to 202, fired correctly, and printed "Measured: 200" while
+ * the docblock said 215. A number a failure prints is an instrument, and that
+ * one was reporting a previous session's reading to whoever the gate stopped.
+ * `assertFloor` now prints the live count on every passing run instead, so the
+ * only copy of the number is the one that re-derives itself (hard rule 17).
+ */
+const floorBreach = assertFloor("check:admin-ui", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) fail(`this gate executed its assertions: ${floorBreach}`);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);
