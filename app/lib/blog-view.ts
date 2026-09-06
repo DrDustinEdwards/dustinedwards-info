@@ -1,4 +1,5 @@
 import type { getBlogPost, listSeriesParts } from "~/db";
+import { htmlHasMath } from "~/lib/content/math.mjs";
 
 /**
  * The loader payload one post page renders from, built in ONE place.
@@ -68,6 +69,19 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
   return {
     toc,
     seriesParts,
+    /*
+     * AT THE TOP LEVEL OF THE PAYLOAD, not inside `post`, because root reads it
+     * with `useRouteLoaderData` and a nested field would make root know the
+     * shape of this route's `post` as well as its own name for the flag. The
+     * name is the contract between the two files and nothing types it: root
+     * casts what the hook returns, so `check:page-payload` asserts both
+     * spellings against each other.
+     *
+     * Derived from the html rather than stored, so nothing has to migrate, sync
+     * or stay true; `htmlHasMath` carries the argument for that, and
+     * `check:content` makes it argue with the renderer's own AST flag.
+     */
+    hasMath: htmlHasMath(post.html),
     post: {
       slug: post.slug,
       title: post.title,

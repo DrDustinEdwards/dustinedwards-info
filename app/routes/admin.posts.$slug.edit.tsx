@@ -25,6 +25,16 @@ import { postPath } from "~/lib/content/pipeline.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 
+/*
+ * THE MATH STYLESHEET, ALWAYS, on both routes that render the editor.
+ *
+ * A handle rather than a loader field, because the flag every other reader uses
+ * is a property of what has been SAVED and an author is typing something that
+ * has not been. Read by root.tsx, which links the sheet; the grounds, including
+ * why the preview pane needs the link on THIS document, are there.
+ */
+export const handle = { math: true };
+
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `Edit ${params.slug} · Admin` }, { name: "robots", content: "noindex" }];
 }
