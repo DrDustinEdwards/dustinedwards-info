@@ -49,6 +49,8 @@
     "check:page-payload": "node scripts/check-page-payload.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",
     "check:hook-scope": "node scripts/check-hook-deploy-scope.mjs",
+    "check:hook-syntax": "node scripts/check-hook-syntax.mjs",
+    "check:floors": "node scripts/check-floors.mjs",
     "check:stack": "node scripts/check-stack.mjs",
     "check:features": "node scripts/check-features.mjs",
     "check:headers": "node scripts/check-headers.mjs",

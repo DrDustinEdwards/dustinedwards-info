@@ -45,8 +45,12 @@ which is what repeats across people and sessions.
 - **An empty needle matches every line and returns a plausible number.** Two
   files reported "436 CRLF lines" and "521 CRLF lines". Those are their total
   line counts. `VERIFICATION.md`
-- **A threshold larger than its input is not a threshold.** A 10,000-character
-  ceiling on an 8,479-character file could not fail. `VERIFICATION.md`
+- **A limit positioned where it cannot bite is not a limit, and it drifts there
+  quietly.** Three forms: a 10,000-character ceiling over an 8,479-character
+  file; a floor 54 under its own count, so 54 assertions could stop running and
+  still pass; and a breach that set `process.exitCode = 1` one line above an
+  unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
+  old number. `VERIFICATION.md` `scripts/check-floors.mjs`
 - **A plant is proven in the ARTIFACT THE GATE READS, not in the source.** A
   30 KB constant planted in source was folded to 3e4 by the minifier; the
   gated chunk grew 17 bytes and the plant was never applied.

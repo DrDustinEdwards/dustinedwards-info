@@ -38,7 +38,8 @@ import { readFileSync } from "node:fs";
 import { gateNames } from "./build-stack.mjs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -50,7 +51,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 29;
+const MINIMUM_GATES = 31;
 
 /**
  * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
@@ -68,7 +69,7 @@ const MINIMUM_GATES = 29;
  *
  * @type {Record<string, string>}
  */
-const CI_EXCLUDED = {
+export const CI_EXCLUDED = {
   /*
    * MEASURED in the clean checkout. It asserts the tracked example DIFFERS from
    * the real `wrangler.jsonc` in the two account-scoped ids. A checkout has no
@@ -151,7 +152,7 @@ const CI_EXCLUDED = {
  *
  * @type {Record<string, "offline" | "network" | undefined>}
  */
-const TIERS = {
+export const TIERS = {
   /*
    * THE TYPECHECK IS A GATE, ruled 2026-08-20 after the suite certified a build
    * it had never compiled.
@@ -227,6 +228,22 @@ const TIERS = {
    * watching for rather than one machine.
    */
   "check:hook-scope": "offline",
+  /*
+   * Runs `bash -n` over every hook and compiles the Python each one embeds. No
+   * network, no build. IN CI for the same reason check:hook-scope is: a hook
+   * that stops parsing takes the session's guards with it, and twice on
+   * 2026-09-05 one did.
+   */
+  "check:hook-syntax": "offline",
+  /*
+   * OFFLINE, and it is the slowest gate here by a wide margin because it RUNS
+   * the other counting gates to read their floor lines back. That cost is the
+   * price of comparing a floor against a count rather than against another
+   * number in the same file; the alternatives are argued in the gate's own
+   * header. `check-head.mjs` EXCLUDES it, or an extraction would run every
+   * counting gate inside a gate that is running every counting gate.
+   */
+  "check:floors": "offline",
   // Reads the tracked example config, package.json and drizzle/. No network.
   "check:stack": "offline",
   // Parses routes.ts and reads gate scripts off disk. No network.
@@ -340,12 +357,16 @@ function discoverGates() {
    */
   const names = gateNames(pkg);
 
-  if (names.length < MINIMUM_GATES) {
-    throw new Error(
-      `discovered ${names.length} gate(s) but expected at least ${MINIMUM_GATES}. ` +
-        `A gate has been deleted or renamed out of the check: namespace. If that was ` +
-        `deliberate, lower MINIMUM_GATES in the same commit.\n  found: ${names.join(", ")}`,
-    );
+  const gatesFloorBreach = assertFloor(
+    "check:all",
+    "gates-discovered",
+    names.length,
+    MINIMUM_GATES,
+    "A gate has been deleted or renamed out of the check: namespace. If that was " +
+      "deliberate, lower MINIMUM_GATES in the same commit.",
+  );
+  if (gatesFloorBreach) {
+    throw new Error(`${gatesFloorBreach}\n  found: ${names.join(", ")}`);
   }
 
   const untiered = names.filter((name) => !TIERS[name]);
@@ -627,9 +648,23 @@ function main() {
   process.exit(failed.length > 0 || errored.length > 0 ? 1 : 0);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(`\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(1);
+/*
+ * MAIN GUARD, so `TIERS` above can be imported without running the suite.
+ *
+ * `check:floors` needs the tier map: it runs gates to read their floor lines
+ * back, and it must run the OFFLINE ones only, or an offline tier would reach
+ * the network through it. Without this guard, importing that map would start a
+ * full check run inside the gate that was asking which gates to run.
+ *
+ * `pathToFileURL` rather than string surgery on process.argv[1], and the reason
+ * is measured in `build-stack.mjs`: on Windows the hand-built `file://C:\...`
+ * form never equals import.meta.url, so the guard silently never fires.
+ */
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
 }
