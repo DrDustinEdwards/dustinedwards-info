@@ -50,23 +50,31 @@ const TEST_DIR = join(root, "test", "worker");
  *
  * Tight rather than slack, on `check:tests`' convention and for its reason:
  * these move UP when somebody adds a case, a one-line edit in the same commit,
- * and the whole point is to notice the set SHRINKING. Each sits at about 94
- * percent of its measurement, so the layer has to lose roughly six percent
- * before this notices. The margin only ever widens on its own, which is the
- * drift `check:tests` recorded happening five times.
+ * and the whole point is to notice the set SHRINKING.
+ *
+ * HOW FAR UNDER IS `check:floors`' TO SAY, and it is not restated here. This
+ * docblock used to carry "about 94 percent", which is a second owner of a rule
+ * that gate enforces, and the two disagreed by one case on the first run after
+ * it was written down: 113 satisfied the sentence and failed the gate.
  */
-/* 7 against 8, re-measured 2026-09-05 by RUNNING the gate after
-   operator-mentions.test.ts landed. It was 6 against 7. One below the
-   measurement, so a single file leaving the *.test.ts pattern trips it, which
-   is the relationship every pair here has had. */
-const MINIMUM_FILES = 7;
-/* 105 against 112, re-measured 2026-09-05 by RUNNING the gate after the
-   operator mention cases landed. It was 95 against 101, and three readings
-   before that on 2026-09-04, each true only of the commit it was taken in,
-   which is why this is re-run rather than adjusted. The file floor catches a
-   file LEAVING; this one catches a file being hollowed out in place, which no
-   file count can see. */
-const MINIMUM_CASES = 112;
+/* 8 against 9, re-measured 2026-09-06 by RUNNING the gate after
+   media-events.test.ts landed. It was 7 against 8. One below the measurement,
+   so a single file leaving the *.test.ts pattern trips it, which is the
+   relationship every pair here has had. */
+const MINIMUM_FILES = 8;
+/* 114 against 120, re-measured 2026-09-06 by RUNNING the gate after the two
+   placeholder cases landed, then corrected from 113 by check:floors, which
+   allows a gap of at most 6 at this count. The file floor catches a file
+   LEAVING; this one catches a file being hollowed out in place, which no file
+   count can see.
+
+   THE PREVIOUS PAIR DID NOT FOLLOW THE CONVENTION ABOVE, and it is corrected
+   here rather than carried: the comment recorded "105 against 112" and the
+   constant read 112, the measurement itself. That fails in the safe direction
+   (it trips on a single case leaving) and it also went stale silently, because
+   by today the layer had grown to 118 cases against a floor written for a
+   112-case run. Re-run, never adjusted by arithmetic. */
+const MINIMUM_CASES = 114;
 
 let checks = 0;
 let failures = 0;
