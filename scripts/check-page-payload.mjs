@@ -414,6 +414,21 @@ function main() {
     }
   }
   rmSync(scratch, { recursive: true, force: true });
+  /*
+   * DELIBERATELY NOT an `assertFloor`, and the reason is what the number is.
+   *
+   * This counts BUILT CHUNKS, not assertions this gate executed. It is a SCOPE
+   * floor in hard rule 10's sense: it proves the syntax pass below has something
+   * to examine, and it guards a partial build. Measured 2026-09-05 it stands at
+   * 78 against a floor of 15, which looks like drift and is not: the chunk count
+   * is a property of the bundler's splitting on the day, and pinning it near 78
+   * would fail every build that happens to emit fewer.
+   *
+   * `check:floors` compares executed counts against their floors and would read
+   * that gap as drift, so this floor stays out of the mechanism rather than
+   * being given a tolerance wide enough to be meaningless. The scope floors are
+   * their own sweep.
+   */
   ok(
     `the syntax pass examined at least ${MINIMUM_ASSETS_SYNTAX_CHECKED} asset(s)`,
     assetNames.length >= MINIMUM_ASSETS_SYNTAX_CHECKED,

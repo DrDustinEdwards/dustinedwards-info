@@ -66,6 +66,7 @@ import satori from "satori";
 import { markElement, readMark } from "./lib/mark.mjs";
 import { icoPayload, pngCornerPixel, pngSize, readIco } from "./lib/raster.mjs";
 import { THEME_SELECTORS, allSourceCss, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -477,12 +478,13 @@ for (const raster of icons.rasters) {
 // would fail on their own before a count could notice they had gone.
 const ICON_CHECKS = checks - checksBeforeIcons;
 const MINIMUM_ICON_CHECKS = 34;
-if (ICON_CHECKS < MINIMUM_ICON_CHECKS) {
-  failures.push(
-    `the icon section executed only ${ICON_CHECKS} assertions, expected at least ` +
-      `${MINIMUM_ICON_CHECKS}. A block was SKIPPED rather than failing. Measured: 37.`,
-  );
-}
+const iconFloorBreach = assertFloor(
+  "check:logo",
+  "icon-checks",
+  ICON_CHECKS,
+  MINIMUM_ICON_CHECKS,
+);
+if (iconFloorBreach) failures.push(`the icon section: ${iconFloorBreach}`);
 
 /* --- The mark as it is RENDERED, not as it is written ----------------------
  *
@@ -682,12 +684,13 @@ const checksBeforeRender = checks;
  */
 const RENDER_CHECKS = checks - checksBeforeRender;
 const MINIMUM_RENDER_CHECKS = 8;
-if (RENDER_CHECKS < MINIMUM_RENDER_CHECKS) {
-  failures.push(
-    `the render section executed only ${RENDER_CHECKS} assertions, expected at least ` +
-      `${MINIMUM_RENDER_CHECKS}. A block was SKIPPED rather than failing. Measured: 9.`,
-  );
-}
+const renderFloorBreach = assertFloor(
+  "check:logo",
+  "render-checks",
+  RENDER_CHECKS,
+  MINIMUM_RENDER_CHECKS,
+);
+if (renderFloorBreach) failures.push(`the render section: ${renderFloorBreach}`);
 
 // --- Report ---------------------------------------------------------------
 
@@ -707,13 +710,9 @@ if (RENDER_CHECKS < MINIMUM_RENDER_CHECKS) {
  * Floored at 124, roughly 6 percent: the count is a fixed function of the
  * fixture list and the raster manifest, so it steps when an asset is added.
  */
-const MINIMUM_CHECKS = 124;
-if (checks < MINIMUM_CHECKS) {
-  failures.push(
-    `only ${checks} assertions executed, expected at least ${MINIMUM_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 132.`,
-  );
-}
+const MINIMUM_CHECKS = 125;
+const floorBreach = assertFloor("check:logo", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) failures.push(floorBreach);
 
 if (failures.length > 0) {
   console.error(`check:logo FAILED, ${failures.length} of ${checks} checks:\n`);

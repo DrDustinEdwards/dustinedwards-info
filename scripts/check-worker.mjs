@@ -39,6 +39,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } 
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test", "worker");
@@ -65,7 +66,7 @@ const MINIMUM_FILES = 7;
    which is why this is re-run rather than adjusted. The file floor catches a
    file LEAVING; this one catches a file being hollowed out in place, which no
    file count can see. */
-const MINIMUM_CASES = 105;
+const MINIMUM_CASES = 112;
 
 let checks = 0;
 let failures = 0;
@@ -195,13 +196,15 @@ ok(
     .slice(0, 12)
     .join("\n        ")}`,
 );
-ok(
-  "the executed worker case count has not shrunk",
-  (total ?? 0) >= MINIMUM_CASES,
-  `${total} case(s) executed, expected at least ${MINIMUM_CASES}. Cases were removed, ` +
-    `or a file stopped being discovered. Vitest exits 0 on an empty run, which is the ` +
-    `whole reason this floor exists.`,
+const casesFloorBreach = assertFloor(
+  "check:worker",
+  "cases",
+  total ?? 0,
+  MINIMUM_CASES,
+  "Cases were removed, or a file stopped being discovered. Vitest exits 0 on an " +
+    "empty run, which is the whole reason this floor exists.",
 );
+ok("the executed worker case count has not shrunk", !casesFloorBreach, casesFloorBreach ?? "");
 
 /*
  * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS.
@@ -218,14 +221,8 @@ ok(
  * rather than natural movement, and a rise arrives in the commit that adds one.
  */
 const MINIMUM_CHECKS = 5;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 5.`,
-  );
-}
+const floorBreach = assertFloor("check:worker", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

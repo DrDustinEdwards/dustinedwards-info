@@ -55,6 +55,7 @@ import {
   renderChartHast,
 } from "../app/lib/content/chart.mjs";
 import { KNOWN_DIRECTIVES, renderBody } from "../app/lib/content/pipeline.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const HERE = fileURLToPath(import.meta.url);
 
@@ -525,13 +526,11 @@ async function main() {
    * function of the eight fixtures crossed with the mark types and the planted
    * negatives, so it moves only when a fixture or a rule is added.
    */
-  const MINIMUM_PASSED = 170;
-  if (passed < MINIMUM_PASSED) {
+  const MINIMUM_PASSED = 173;
+  const floorBreach = assertFloor("check:charts", "passed", passed, MINIMUM_PASSED);
+  if (floorBreach) {
     failed += 1;
-    console.error(
-      `  FAIL  only ${passed} assertions executed, expected at least ${MINIMUM_PASSED}. ` +
-        `A block was SKIPPED rather than failing. Measured: 181.`,
-    );
+    console.error(`  FAIL  ${floorBreach}`);
   }
 
   console.log(`check:charts ${failed === 0 ? "ok" : "FAILED"}. ${passed} assertions passed, ${failed} failed.`);

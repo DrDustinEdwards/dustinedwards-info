@@ -72,6 +72,7 @@ import {
   surfaceOf,
   unhandledBindingKinds,
 } from "./lib/wrangler-surface.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -298,14 +299,8 @@ console.log(
  * stack rather than wandering.
  */
 const MINIMUM_CHECKS = 22;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 24.`,
-  );
-}
+const floorBreach = assertFloor("check:stack", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

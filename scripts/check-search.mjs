@@ -27,6 +27,7 @@ import {
   toMatchExpression,
   RRF_K,
 } from "../app/lib/search/query.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 let checks = 0;
 /** @type {string[]} */
@@ -276,11 +277,9 @@ if (failures.length > 0) {
  * a case is written.
  */
 const MINIMUM_CHECKS = 45;
-if (checks < MINIMUM_CHECKS) {
-  console.error(
-    `check:search failed. Only ${checks} assertions ran, expected at least ` +
-      `${MINIMUM_CHECKS}. A block was SKIPPED rather than failing. Measured: 48.`,
-  );
+const floorBreach = assertFloor("check:search", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) {
+  console.error(`check:search failed. ${floorBreach}`);
   process.exit(1);
 }
 

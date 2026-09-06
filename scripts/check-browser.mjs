@@ -104,6 +104,8 @@ import { fileURLToPath } from "node:url";
 
 import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
+import { assertFloor } from "./lib/floor.mjs";
+
 /*
  * The profile the /blog layout shift was found on, named rather than restated
  * so it cannot drift from the measurement that set the ceiling below.
@@ -5529,7 +5531,7 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 234 : 172;
+  const MINIMUM_CHECKS = adminCasesRan ? 236 : 172;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
@@ -5587,12 +5589,25 @@ if (subjectReachable) {
       "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
       "        attribute; a page that lays out correctly and is unreadable passes.\n",
   );
-  if (checks < MINIMUM_CHECKS) {
-    console.error(
-      `check:browser REFUSED: only ${checks} assertion(s) ran, expected at least ` +
-        `${MINIMUM_CHECKS}. A block was skipped rather than failing.`,
-    );
-    process.exitCode = 1;
+  /*
+   * THIS FLOOR COULD NOT FAIL THE GATE UNTIL 2026-09-05, and the defect is the
+   * reason the floor sweep exists.
+   *
+   * The breach set `process.exitCode = 1` and the line immediately below it then
+   * assigned `process.exitCode = failures > 0 ? 1 : 0` UNCONDITIONALLY, so a
+   * breach with no other failure was overwritten with 0 before the process
+   * exited. The gate printed its REFUSED line and exited green. That is hard
+   * rule 10's unfailable-condition class, in the gate with the largest and most
+   * skippable case set here.
+   *
+   * The repair is to fold the breach into `failures`, which is the number the
+   * exit code is actually computed from, rather than to reorder two assignments
+   * and leave the next editor the same trap.
+   */
+  const floorBreach = assertFloor("check:browser", "checks", checks, MINIMUM_CHECKS);
+  if (floorBreach) {
+    console.error(`check:browser REFUSED: ${floorBreach}`);
+    failures += 1;
   }
   process.exitCode = failures > 0 ? 1 : 0;
 

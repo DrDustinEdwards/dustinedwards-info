@@ -114,6 +114,7 @@ import {
   buildChartModel,
   renderChartHast,
 } from "../app/lib/content/chart.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
@@ -1748,14 +1749,15 @@ for (const anchor of recordAnchors) {
  * where a whole BLOCK stops running, which a length assertion cannot see.
  */
 const projectsChecks = checks - projectsChecksBefore;
-const MINIMUM_PROJECT_CHECKS = 250;
-if (projectsChecks < MINIMUM_PROJECT_CHECKS) {
-  ok(
-    "the projects section executed its assertions",
-    false,
-    `only ${projectsChecks} ran, expected at least ${MINIMUM_PROJECT_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 275 on 2026-08-30.`,
-  );
+const MINIMUM_PROJECT_CHECKS = 281;
+const projectsFloorBreach = assertFloor(
+  "check:features",
+  "projects-checks",
+  projectsChecks,
+  MINIMUM_PROJECT_CHECKS,
+);
+if (projectsFloorBreach) {
+  ok("the projects section executed its assertions", false, projectsFloorBreach);
 }
 
 console.log(
@@ -2819,16 +2821,17 @@ for (const anchor of playgroundRecordAnchors) {
  * less the ~8% margin the rest of the family uses.
  */
 const playgroundChecks = checks - playgroundChecksBefore;
-const MINIMUM_PLAYGROUND_CHECKS = 285;
-if (playgroundChecks < MINIMUM_PLAYGROUND_CHECKS) {
-  ok(
-    "the playground section executed its assertions",
-    false,
-    `only ${playgroundChecks} ran, expected at least ${MINIMUM_PLAYGROUND_CHECKS}. ` +
-      `A block was SKIPPED rather than failing. Measured: 310 on 2026-08-30, ` +
-      `against 278 before the markdown demo, 226 before the theme demo and 142 ` +
-      `before the key demo.`,
-  );
+const MINIMUM_PLAYGROUND_CHECKS = 294;
+const playgroundFloorBreach = assertFloor(
+  "check:features",
+  "playground-checks",
+  playgroundChecks,
+  MINIMUM_PLAYGROUND_CHECKS,
+  "This count steps sharply per demo: it was 278 before the markdown demo, 226 " +
+    "before the theme demo and 142 before the key demo.",
+);
+if (playgroundFloorBreach) {
+  ok("the playground section executed its assertions", false, playgroundFloorBreach);
 }
 
 console.log(
@@ -2860,15 +2863,15 @@ console.log(
  * because this count moves with the CORPUS: posts, tags, projects and demos all
  * feed it, so ordinary content work shifts it by tens.
  */
-const MINIMUM_CHECKS = 820;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured: 887 on 2026-08-30.`,
-  );
-}
+const MINIMUM_CHECKS = 864;
+const floorBreach = assertFloor(
+  "check:features",
+  "checks",
+  checks,
+  MINIMUM_CHECKS,
+  "A SECTION was skipped rather than failing.",
+);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

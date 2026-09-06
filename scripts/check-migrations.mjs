@@ -63,6 +63,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = join(root, "drizzle");
@@ -474,15 +475,9 @@ if (ledger === null) {
  * migrations this arc added and before the ledger section, and the count steps
  * by a fixed amount per migration, which is append-only by hard rule 14.
  */
-const MINIMUM_CHECKS = 44;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 33.`,
-  );
-}
+const MINIMUM_CHECKS = 53;
+const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);

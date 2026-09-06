@@ -42,6 +42,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
@@ -332,15 +333,9 @@ console.log(
  * Never summed. Floored at 92, roughly 5 percent: the count is a fixed function
  * of the fixture's case lists, so it moves only when a case is added.
  */
-const MINIMUM_CHECKS = 92;
-if (checks < MINIMUM_CHECKS) {
-  assert(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A block was SKIPPED ` +
-      `rather than failing. Measured: 97.`,
-  );
-}
+const MINIMUM_CHECKS = 97;
+const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);
+if (floorBreach) assert("this gate executed its assertions", false, floorBreach);
 
 if (failures > 0) {
   console.log(`\n${failures} FAILED of ${checks} checks\n`);

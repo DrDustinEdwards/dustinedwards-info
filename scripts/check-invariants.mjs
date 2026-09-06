@@ -67,6 +67,7 @@ import { classifySqliteTables, ftsOwnedTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import { stripComments, stripCommentsAndStrings } from "./lib/strip-comments.mjs";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 /**
  * Whole-line `#` comments out of a YAML file, replaced with a space.
@@ -5368,15 +5369,15 @@ console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
  * section 26: 296. Floor 278 to 282, margin held at 14. Section 26 is 4
  * assertions, so losing it whole still fails.
  */
-const MINIMUM_CHECKS = 282;
-if (checks < MINIMUM_CHECKS) {
-  ok(
-    "this gate executed its assertions",
-    false,
-    `only ${checks} ran, expected at least ${MINIMUM_CHECKS}. A section was SKIPPED ` +
-      `rather than failing. Measured 2026-09-04: 296 offline.`,
-  );
-}
+const MINIMUM_CHECKS = 284;
+const floorBreach = assertFloor(
+  "check:invariants",
+  "checks",
+  checks,
+  MINIMUM_CHECKS,
+  "A SECTION was skipped rather than failing. The offline branch is the smaller one.",
+);
+if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
