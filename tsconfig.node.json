@@ -22,6 +22,18 @@
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
+    // The KaTeX options and the html-side `hasMath` reader. Three callers, which
+    // is why it is its own module and why it is listed here: the pipeline passes
+    // KATEX_OPTIONS to both the validator and rehype-katex, blog-view.ts asks
+    // htmlHasMath on every post request, and check:content makes the two
+    // derivations of that flag argue. Dependency-free by design, so listing it
+    // costs this project nothing.
+    "app/lib/content/math.mjs",
+    // The feed item shapes. check:content asserts over the REAL corpus that
+    // `mathToTex` leaves no KaTeX markup in a feed body, which needs the module
+    // the feeds themselves call rather than a second transform that agrees with
+    // it today. `.mjs` and dependency-free for the reason its own header gives.
+    "app/lib/rss-feed.mjs",
     // How the social card's text is fitted and cut. `build:og` paints with it
     // and `ogImageKey` hashes through it, which is the whole reason it is a
     // module: the key must hash the string the template draws, not the field
