@@ -1477,8 +1477,37 @@ function textOf(node) {
  * the counter is touched, on the same class test that excludes them from
  * measurement.
  *
+ * ## THE PLACEHOLDER IS STATIC ONLY, AND `/media/` KEYS ARE EXCLUDED
+ *
+ * A `public/` content image gets an LQIP background; an uploaded object does
+ * not, and the asymmetry is deliberate rather than unfinished.
+ *
+ * This plugin is a PURE function of the src plus whatever the injected
+ * `resolveImage` returns, and that is finding B002's repair: the rendered HTML
+ * is byte-compared by `check:content`, so anything baked into it must be
+ * reproducible from a clone with no bindings and no network. A `public/`
+ * placeholder is: `build:assets` derives it with sharp and commits it to
+ * `content/generated/assets.json`, and both resolvers read that one file. A
+ * `/media/` placeholder is not. The bytes live only in R2, nothing in the
+ * repository can derive one, and the key cannot carry it the way it carries
+ * dimensions, because a data URI is hundreds of bytes and the key is an
+ * address. Three other candidates were considered and refused: writing the
+ * attribute in a route (a second place that writes img attributes, rule 17),
+ * fetching it at render time (a race against the image it stands in for), and
+ * reading it from D1 (which inverts rule 18, the index deriving the artifact).
+ *
+ * QUEUED, not built: a dominant colour carried in the `/media/` key grammar at
+ * upload time, which WOULD be pure from the key. That is a change to the key
+ * grammar and to every uploaded object, so it is its own decision.
+ *
+ * WHAT IT COSTS, measured 2026-09-06 on `images-in-prose-fixture` by stripping
+ * exactly these two attributes from the rendered HTML and compressing both: 483
+ * bytes raw, 370 brotli, per image. Base64 is already high entropy, so brotli
+ * takes almost nothing off it. A dated observation, not a property: there is no
+ * ceiling on this and nothing recomputes it.
+ *
  * @param {string} file
- * @param {(src: string) => Promise<{ width: number, height: number }>} resolveImage
+ * @param {(src: string) => Promise<{ width: number, height: number, placeholder?: string }>} resolveImage
  * @param {Array<Promise<void>>} pending
  */
 function rehypeImageSources(file, resolveImage, pending) {
@@ -1563,7 +1592,7 @@ function rehypeImageSources(file, resolveImage, pending) {
       const first = seen === 1;
 
       pending.push(
-        resolveImage(src).then(({ width, height }) => {
+        resolveImage(src).then(({ width, height, placeholder }) => {
           node.properties = {
             ...node.properties,
             ...responsive,
@@ -1574,6 +1603,44 @@ function rehypeImageSources(file, resolveImage, pending) {
             // Only on the first. `fetchpriority="high"` is a budget, not a
             // dial: marking several images high is the same as marking none.
             ...(first ? { fetchpriority: "high" } : {}),
+            /*
+             * THE PLACEHOLDER, as a background the real image covers.
+             *
+             * A class carries the sizing (`post.css`, `.has-lqip`) and the
+             * inline style carries only the URL, which is per image and cannot
+             * live in a stylesheet. `style-src-attr 'unsafe-inline'` and
+             * `img-src 'self' data:` are already the policy, so this needs no
+             * CSP change; a background is not an `<img>` and is governed by
+             * `img-src` either way.
+             *
+             * No layout shift, because `width` and `height` are set two lines
+             * up and always have been. Nothing here depends on script.
+             */
+            ...(placeholder
+              ? {
+                  /*
+                   * MEASURED, not assumed: no image reaching this line carries
+                   * a class today. The figure directive sets none, raw HTML is
+                   * stripped before it gets here, and the diagram pair returns
+                   * above on the class test. The spread is what keeps that
+                   * true if one ever does, and it is the same
+                   * `Array.isArray(className)` idiom the two exclusions above
+                   * use rather than a fourth spelling of it. A string form is
+                   * NOT handled: nothing produces one, and a branch nothing can
+                   * reach is hard rule 10's unfailable condition.
+                   */
+                  className: [
+                    ...(Array.isArray(node.properties?.className) ? node.properties.className : []),
+                    "has-lqip",
+                  ],
+                  // The serializer escapes the quotes to `&#x22;`, and single
+                  // quotes are escaped just the same, so this is the plain
+                  // spelling rather than a saving. Nothing can break out of it:
+                  // the payload is base64, whose alphabet holds no quote,
+                  // parenthesis or space.
+                  style: `background-image:url("${placeholder}")`,
+                }
+              : {}),
           };
         }),
       );

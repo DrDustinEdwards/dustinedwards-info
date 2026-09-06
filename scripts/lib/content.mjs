@@ -18,11 +18,34 @@ import {
   renderPost as renderPostShared,
 } from "../../app/lib/content/pipeline.mjs";
 import { dimensionsFromKey } from "../../app/lib/media/classify.mjs";
+import { ASSET_MANIFEST_PATH } from "../../app/lib/media/manifest.mjs";
 
 export { ContentError };
 
 /** Where site-absolute image paths resolve from at build time. */
 const PUBLIC_DIR = "public";
+
+/**
+ * The committed manifest, READ rather than imported, once per process.
+ *
+ * Read for two reasons. It is what the Worker side does, so the two resolvers
+ * differ in the path they read and in nothing else. And an `import ... with {
+ * type: "json" }` gives TypeScript a type with nine literal keys, so indexing
+ * it by a variable is an error that has to be cast away, which is a cast around
+ * the only interesting property of the lookup.
+ *
+ * Module scope, not per resolver: `build:content` makes one resolver per post
+ * and the artifact does not change under a build.
+ *
+ * @type {Promise<Record<string, { sha: string, lqip: string }>> | null}
+ */
+let placeholderMemo = null;
+function assetPlaceholders() {
+  placeholderMemo ??= readFile(ASSET_MANIFEST_PATH, "utf8").then(
+    (text) => JSON.parse(text).placeholders ?? {},
+  );
+  return placeholderMemo;
+}
 
 /**
  * Builds a resolver that measures an image on disk. A missing or unreadable
@@ -36,11 +59,18 @@ const PUBLIC_DIR = "public";
  * `-<w>x<h>` and both resolvers parse it with the same `dimensionsFromKey`, so
  * neither reads bytes and there is nothing left to disagree about.
  *
+ * THE PLACEHOLDER COMES FROM THE COMMITTED MANIFEST, for the same reason and
+ * with the same shape. It cannot be derived here: this side has sharp and the
+ * Worker does not, so a value computed at render time would be a value the two
+ * writers could never agree on. `build:assets` derives it once, commits it, and
+ * both resolvers look it up. `/media/` gets none, which is the exclusion stated
+ * in `rehypeImageSources`.
+ *
  * Exported so `check:invariants` can compare it against the Worker's resolver
  * directly rather than inferring their agreement from rendered HTML.
  *
  * @param {string} file source markdown path, for the error message
- * @returns {(src: string) => Promise<{ width: number, height: number }>}
+ * @returns {(src: string) => Promise<{ width: number, height: number, placeholder?: string }>}
  */
 export function makeResolveImage(file) {
   return async (/** @type {string} */ src) => {
@@ -73,7 +103,11 @@ export function makeResolveImage(file) {
     if (!size.width || !size.height) {
       throw new ContentError(file, `image "${src}" has no readable dimensions`);
     }
-    return { width: size.width, height: size.height };
+    // Absent for anything the manifest does not cover, which is every static
+    // asset that is not a content raster. Absent is a real answer: the image
+    // renders without a placeholder, exactly as it did before this existed.
+    const placeholder = (await assetPlaceholders())[src]?.lqip;
+    return { width: size.width, height: size.height, ...(placeholder ? { placeholder } : {}) };
   };
 }
 

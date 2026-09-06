@@ -31,6 +31,7 @@ import {
 // Side-effect import: installs the Worker WASM loader before anything renders.
 import "~/lib/content/wasm.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
+import { ASSET_MANIFEST_PATH } from "~/lib/media/manifest.mjs";
 import {
   commitFiles,
   getHead,
@@ -112,6 +113,9 @@ export class FirstPublishConfirmationRequired extends Error {
 
 type PublishEnv = Env & { GITHUB_TOKEN?: string };
 
+/** The half of the asset manifest this module reads. Shape owned by manifest.mjs. */
+type AssetManifest = { placeholders?: Record<string, { sha: string; lqip: string }> };
+
 /**
  * Measures an image the editor referenced.
  *
@@ -134,11 +138,42 @@ type PublishEnv = Env & { GITHUB_TOKEN?: string };
  * numbers for the same src. The repo is what a clone builds from, so the repo
  * is what this measures.
  *
+ * THE PLACEHOLDER IS READ FROM THE REPOSITORY TOO, and from the same ref, which
+ * is the whole reason it is not read from the bundled copy of the manifest this
+ * Worker already imports. That copy is the manifest as of the last DEPLOY. The
+ * dimensions three lines up come from the repository as of NOW, and a render
+ * that mixed the two vintages would bake a placeholder from one commit beside a
+ * measurement from another. B002 is exactly that class of mistake, one store
+ * further out. One read per render rather than one per image: the manifest does
+ * not change between two images in the same document.
+ *
  * Exported so the admin preview route resolves images exactly as a save does.
  * There must not be a second implementation: preview's whole claim is that what
  * it renders is what publishes.
  */
 export function makeResolveImage(env: PublishEnv) {
+  /** The committed manifest, fetched at most once per resolver. */
+  let manifest: Promise<AssetManifest> | null = null;
+  const placeholders = async () => {
+    manifest ??= readFile(env, ASSET_MANIFEST_PATH).then((file) => {
+      // A manifest that is missing or unparseable yields no placeholders rather
+      // than failing the save. The value is an enhancement, the gate that keeps
+      // it current is `check:content`, and refusing to publish a post because a
+      // generated artifact could not be read would be a new way to lose an
+      // article. It is logged, because silence here is the drift.
+      try {
+        return file ? (JSON.parse(file.content) as AssetManifest) : {};
+      } catch (error) {
+        console.error(
+          `${ASSET_MANIFEST_PATH} did not parse; rendering without placeholders. ` +
+            `${error instanceof Error ? error.message : String(error)}`,
+        );
+        return {};
+      }
+    });
+    return (await manifest).placeholders ?? {};
+  };
+
   return async (src: string) => {
     if (!src.startsWith("/")) {
       throw new EditorError(`Image src "${src}" must be a site-absolute path.`);
@@ -167,7 +202,11 @@ export function makeResolveImage(env: PublishEnv) {
     if (!size.width || !size.height) {
       throw new EditorError(`Image "${src}" has no readable dimensions.`);
     }
-    return { width: size.width, height: size.height };
+    // Absent for anything the manifest does not cover, which is every static
+    // asset that is not a content raster. Absent is a real answer: the image
+    // renders without a placeholder, exactly as it did before this existed.
+    const placeholder = (await placeholders())[src]?.lqip;
+    return { width: size.width, height: size.height, ...(placeholder ? { placeholder } : {}) };
   };
 }
 

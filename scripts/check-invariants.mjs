@@ -433,6 +433,15 @@ console.log("\n  3. the Node and Worker resolveImage paths agree");
  * repository over the GitHub API, so neither is a pure function and there is
  * nothing an offline gate can compare. Before B002 that was true of `/media/`
  * too, which is precisely why the dimensions moved into the key.
+ *
+ * THE PLACEHOLDER IS COMPARED TOO, and for these srcs the assertion is that
+ * NEITHER resolver returns one. That is the `/media/` exclusion stated in
+ * `rehypeImageSources`, held by a gate rather than by a docblock: a resolver
+ * that started inventing a placeholder for an uploaded key would bake a value
+ * into the HTML that the other writer could not reproduce, which is B002's
+ * shape and the reason this section exists at all. The proxy env below makes it
+ * a live assertion rather than a hopeful one, because any attempt to reach a
+ * binding to find one throws.
  */
 const MEDIA_SRCS = [
   "/media/0001020304050607-1600x900.webp",
@@ -506,14 +515,30 @@ try {
       const b = await settle(workerResolve);
       compared += 1;
 
+      // The whole answer, not just the dimensions: a resolver that agreed on
+      // the size and differed on the placeholder would still produce two
+      // different documents from one source, which is the thing being refused.
       const dims = (/** @type {{ok: boolean, value: any}} */ r) =>
-        r.ok ? `${r.value.width}x${r.value.height}` : "refused";
+        r.ok
+          ? `${r.value.width}x${r.value.height} lqip=${r.value.placeholder ? "yes" : "none"}`
+          : "refused";
       const same = a.ok === b.ok && dims(a) === dims(b);
       if (same) agreements += 1;
       ok(
         `both resolvers agree on ${src}`,
         same,
         `Node ${dims(a)}, Worker ${dims(b)}`,
+      );
+      // AND NEITHER INVENTS ONE. The line above would pass if both resolvers
+      // agreed to return a placeholder for an uploaded key, which is exactly
+      // the excluded case; agreement is not the same as correctness.
+      const lqip = (/** @type {{ok: boolean, value: any}} */ r) =>
+        Boolean(r.ok && r.value.placeholder);
+      ok(
+        `neither resolver returns a placeholder for ${src}`,
+        !lqip(a) && !lqip(b),
+        `a /media/ key has no build-time derivation, so a placeholder here is a ` +
+          `value one writer could produce and the other could not.`,
       );
     }
 
@@ -5379,7 +5404,13 @@ console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
  * reading check:all's run (where this gate runs --remote) rather than running
  * it bare. Same shape as check:contrast's build-absent floor.
  */
-const MINIMUM_CHECKS = wantsRemote ? 321 : 284;
+/*
+ * RE-MEASURED 2026-09-06 by RUNNING both branches after section 3 gained the
+ * placeholder comparison (12 assertions, 6 srcs times two): 305 offline, 344
+ * remote. Floors 284 to 290 and 321 to 328, each its count minus the
+ * check:floors tolerance at that count.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 328 : 290;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

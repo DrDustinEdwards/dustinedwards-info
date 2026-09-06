@@ -125,6 +125,17 @@
     // serves from them, so both projects must reach the one definition: a width
     // the pipeline advertises but the route refuses is a 400 mid-article.
     "app/lib/media/widths.mjs",
+    // The WebP quality every Images-binding call emits at. build:assets encodes
+    // its placeholders with the SAME constant the Worker transforms with, which
+    // is the whole reason it is a module rather than a literal in a route: it
+    // had two call sites before this project ever reached it, and they
+    // disagreed for months.
+    "app/lib/media/encoding.mjs",
+    // Where the asset manifest lives, POSIX and repo-relative. build:assets
+    // writes it, check:content reconciles it and the Node resolver reads it;
+    // the Worker asks GitHub for the same string. One statement, because a
+    // path.join spelling would 404 on the contents API.
+    "app/lib/media/manifest.mjs",
     // The operator publish policy: the Worker imports it and check:policy
     // imports it, on the same principle as query.mjs and check:search.
     "app/lib/editor/publish-policy.mjs",
