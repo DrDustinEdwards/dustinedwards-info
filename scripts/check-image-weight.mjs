@@ -303,6 +303,12 @@ export function ladderProblems(key, origin, rungs) {
 /**
  * THE FOURTH ASSERTION, over a STORED placeholder rather than a served rung.
  *
+ * TWO ARTIFACTS SATISFY THIS ONE FUNCTION: the `placeholder` column in D1,
+ * swept below, and the `placeholders` map in `content/generated/assets.json`,
+ * which `check:content` checks by importing this. One statement of what a
+ * placeholder IS. A second copy over there is how the two would come to
+ * disagree about the defect they were both written for.
+ *
  * ## The defect this was written for
  *
  * `placeholderFor` in `app/lib/media/rebuild.server.ts` called the Images
@@ -351,9 +357,10 @@ export function placeholderProblems(key, placeholder) {
   if (info.lossy !== true) {
     problems.push(
       `${key}: the stored placeholder is ${info.codec}, not a lossy encoding. ` +
-        `The Images binding returns lossless WebP when no quality is set, and a ` +
-        `lossless LQIP costs several times what a lossy one does in a column ` +
-        `whose whole purpose is to be small enough to inline.`,
+        `Both encoders that write one, the Images binding and sharp, return ` +
+        `lossless WebP when no quality is set, and a lossless LQIP costs several ` +
+        `times what a lossy one does in a value whose whole purpose is to be ` +
+        `small enough to inline. Check WEBP_QUALITY reached the call.`,
     );
   }
   return problems;

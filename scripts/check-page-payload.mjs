@@ -314,6 +314,28 @@ export function enhancementAssets() {
   });
 }
 
+/**
+ * Every source file under one directory, recursively.
+ *
+ * ONE WALKER, ONE ARGUMENT ORDER, hoisted 2026-09-06 when a second section
+ * needed it. Two inline copies of a recursive walk is the shape hard rule 10's
+ * helper-signature line names: they agree until one of them gains an extension
+ * and the other silently stops reading it.
+ *
+ * @param {string} dir
+ * @returns {string[]} absolute paths
+ */
+function walkSource(dir) {
+  /** @type {string[]} */
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walkSource(full));
+    else if (/\.(ts|tsx|mjs)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
 function main() {
   const { files, manifestFile } = walkHydrationSet();
   const bundles = enhancementAssets();
@@ -512,16 +534,7 @@ function main() {
    * assertion that the split is still a split.
    */
   const importScopeDirs = [join(root, "app"), join(root, "workers")];
-  /** @type {string[]} */
-  const importScope = [];
-  const walkSources = (/** @type {string} */ dir) => {
-    for (const name of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, name.name);
-      if (name.isDirectory()) walkSources(full);
-      else if (/\.(ts|tsx|mjs)$/.test(name.name)) importScope.push(full);
-    }
-  };
-  for (const dir of importScopeDirs) walkSources(dir);
+  const importScope = importScopeDirs.flatMap((dir) => walkSource(dir));
 
   ok(
     "the dynamic-import scan walked a non-empty scope",
@@ -626,6 +639,8 @@ function main() {
       .join("\n        "),
   );
 
+  gradeBuildOnlyDependencies();
+
   gradeEveryPage();
 
   if (failures > 0) {
@@ -633,6 +648,112 @@ function main() {
     process.exit(1);
   }
   console.log(`\n${checks} checks, 0 failures\n`);
+}
+
+/**
+ * A NATIVE BUILD-TIME DEPENDENCY MAY NOT REACH THE WORKER, in either bundle.
+ *
+ * ## The subject, and why it is this gate's
+ *
+ * `sharp` arrived 2026-09-06 so `build:assets` could derive a body placeholder
+ * for every static content image. It is a native libvips binding: Node only,
+ * platform specific, tens of megabytes of prebuilt binary. `workerd` has no
+ * filesystem and no native modules, so an import that reached the Worker would
+ * not be a size problem, it would be a Worker that fails to start.
+ *
+ * This gate owns it because it is the only one that READS THE BUILD ON DISK and
+ * fails closed when there is none. Every other candidate would have had to
+ * either skip when the build is absent, which is the vacuous branch
+ * `check:contrast` already paid for, or assert on source alone.
+ *
+ * ## THREE ASSERTIONS, AND THE FIRST TWO ARE NOT THE POINT
+ *
+ * A source scan says nobody wrote the import today. The manifest says nobody
+ * declared it as a runtime dependency. Neither is evidence about what SHIPPED:
+ * FAILURES.md's line is that a plant is proven in the artifact the gate reads,
+ * and the artifact here is `build/server/index.js`. So the third assertion
+ * greps the emitted Worker, which is what a deploy uploads.
+ *
+ * The scan and the manifest stay because they name the defect at the right
+ * altitude when it happens: "you imported sharp in app/lib/x.ts" is a fix, and
+ * "the Worker bundle mentions sharp" is a hunt.
+ */
+function gradeBuildOnlyDependencies() {
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+
+  ok(
+    "sharp is a devDependency and not a runtime dependency",
+    Boolean(pkg.devDependencies?.sharp) && !pkg.dependencies?.sharp,
+    `sharp is ${pkg.dependencies?.sharp ? "in dependencies" : "not in devDependencies"}. ` +
+      `It is a native Node binding used by build:assets and nothing else.`,
+  );
+  ok(
+    "sharp is pinned to an exact version",
+    /^\d+\.\d+\.\d+$/.test(String(pkg.devDependencies?.sharp ?? "")),
+    `sharp is "${pkg.devDependencies?.sharp}". A range would let a minor bump change ` +
+      `the encoder that writes every committed placeholder, and the manifest is a ` +
+      `byte-gated artifact.`,
+  );
+
+  /*
+   * THE SOURCE SCAN. Comments stripped, because a comment that names the module
+   * has both satisfied and failed an assertion in this repo before, and the
+   * paragraph above this function is itself full of the word.
+   */
+  const importers = [];
+  for (const dir of ["app", "workers"]) {
+    for (const file of walkSource(join(root, dir))) {
+      const code = stripComments(readFileSync(file, "utf8"));
+      if (/\bfrom\s*["']sharp["']|\brequire\(\s*["']sharp["']\s*\)|\bimport\(\s*["']sharp["']/.test(code)) {
+        importers.push(relative(root, file).split("\\").join("/"));
+      }
+    }
+  }
+  ok(
+    "nothing under app/ or workers/ imports sharp",
+    importers.length === 0,
+    `${importers.join(", ")} imports sharp. It is a native Node module; workerd has ` +
+      `no native modules, so this is a Worker that does not start.`,
+  );
+  /*
+   * SCOPE, ASSERTED. A walk that read nothing agrees with a clean tree, which
+   * is the zero-scope class in hard rule 10.
+   */
+  const scanned = walkSource(join(root, "app")).length + walkSource(join(root, "workers")).length;
+  ok(
+    "the import scan read a plausible number of source files",
+    scanned >= 100,
+    `scanned ${scanned} file(s) under app/ and workers/. A scan this small is a ` +
+      `broken walk, and a broken walk finds no importer either.`,
+  );
+
+  /*
+   * THE ARTIFACT. `build/server/index.js` is what wrangler uploads.
+   *
+   * A bare substring, not an import pattern: the bundler rewrites the syntax
+   * and a require of a native module can survive as a string, a banner or an
+   * external. Anything mentioning it at all is worth failing on, because
+   * nothing legitimate in the Worker has cause to.
+   */
+  const serverBundle = join(root, "build", "server", "index.js");
+  let bundle = "";
+  try {
+    bundle = readFileSync(serverBundle, "utf8");
+  } catch {
+    /* Falls to the assertion below, which names the missing build. */
+  }
+  ok(
+    "the Worker bundle is on disk to be read",
+    bundle.length > 0,
+    `${relative(root, serverBundle)} is missing or empty. This gate measures the ` +
+      `build on disk; run npm run build first.`,
+  );
+  ok(
+    "the built Worker does not carry sharp",
+    bundle.length > 0 && !/["']sharp["']/.test(bundle),
+    `build/server/index.js mentions sharp. Something under app/ or workers/ reached ` +
+      `a build-only module, and the deploy would upload it.`,
+  );
 }
 
 /**

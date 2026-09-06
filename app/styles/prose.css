@@ -54,6 +54,35 @@
 }
 
 /*
+ * THE LOW QUALITY PLACEHOLDER, behind the image it stands in for.
+ *
+ * The pipeline writes `class="has-lqip"` and a `background-image` carrying a
+ * twenty pixel WebP as a data URI (pipeline.mjs, rehypeImageSources). Only the
+ * URL is inline, because it is per image; everything that is the same for every
+ * image is here, which is the split the no-inline-style rule asks for.
+ *
+ * `cover` and `center` rather than a stretch, so the placeholder is cropped the
+ * way the image will be rather than distorted. It is upscaled from twenty
+ * pixels either way, which is the entire idea: a blurred wash of the real
+ * colours while the bytes arrive.
+ *
+ * NO TRANSITION AND NOTHING TO CLEAN UP. The loaded image is opaque and covers
+ * the background completely, so there is no state to leave behind and no script
+ * to remove a class. A transparent PNG would show the wash through its
+ * transparent regions; the corpus has none in prose, and if one ever appears
+ * the fix is to exclude it at derivation rather than to add a script here.
+ *
+ * Layout is unaffected: `width` and `height` are always written onto the image,
+ * so the box exists at its final size before either the placeholder or the
+ * image paints.
+ */
+.prose img.has-lqip {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/*
  * Every body image is a link to its original file (pipeline.mjs,
  * rehypeImageSources), so this rule exists on every figure in the corpus.
  *

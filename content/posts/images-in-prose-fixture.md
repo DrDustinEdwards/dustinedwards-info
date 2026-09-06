@@ -29,8 +29,11 @@ object instead.
 
 The split is the point rather than an accident of how the fixture was written.
 Only the uploaded copy passes through the transform route, so only it gets a
-`srcset` and a `sizes`. A static file is served as itself. That difference is
-easier to see in one document than to argue about.
+`srcset` and a `sizes`. A static file is served as itself. And only the static
+copy carries a placeholder, because a placeholder has to be derived from the
+repository at build time for both writers to agree on it, and an uploaded object
+is not in the repository. That difference is easier to see in one document than
+to argue about.
 
 Neither copy is created or destroyed by this post. Deleting it must leave both
 exactly where they were.

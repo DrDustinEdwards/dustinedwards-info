@@ -36,11 +36,17 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import path, { join } from "node:path";
+import { createHash } from "node:crypto";
 
 import { buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
-import { ASSET_MANIFEST_PATH, PUBLIC_DIR, walkPublic } from "./build-assets.mjs";
+import { ASSET_MANIFEST_PATH, PUBLIC_DIR, placeholderPaths, walkPublic } from "./build-assets.mjs";
+/* The one statement of what a stored placeholder IS, imported rather than
+   restated. That gate owns the assertion for the D1 column; this artifact has
+   to satisfy the same one, and a second copy here is how the two would come to
+   disagree about a defect they were both written for. */
+import { placeholderProblems } from "./check-image-weight.mjs";
 import {
   KATEX_CSS_PATH,
   KATEX_FONT_DIR,
@@ -664,6 +670,8 @@ async function checkAssetManifest() {
 
   /** @type {string[]} */
   let manifestPaths;
+  /** @type {Record<string, { sha?: string, lqip?: string }>} */
+  let manifestPlaceholders;
   try {
     const parsed = JSON.parse(await readFile(ASSET_MANIFEST_PATH, "utf8"));
     // `?? []` is deliberately absent. A manifest whose `paths` key is missing is
@@ -671,7 +679,12 @@ async function checkAssetManifest() {
     // into "every file is missing from the manifest", which is a true statement
     // that names the wrong defect.
     if (!Array.isArray(parsed.paths)) throw new Error("no `paths` array");
+    // Same rule for the second half: absent is broken, not empty.
+    if (!parsed.placeholders || typeof parsed.placeholders !== "object") {
+      throw new Error("no `placeholders` object");
+    }
     manifestPaths = parsed.paths;
+    manifestPlaceholders = parsed.placeholders;
   } catch (error) {
     console.error(
       `check:content failed. ${ASSET_MANIFEST_PATH} is missing or unparseable ` +
@@ -707,11 +720,105 @@ async function checkAssetManifest() {
   }
 
   await checkManifestIsRepoWide(manifestPaths);
+  await checkManifestPlaceholders(files, manifestPlaceholders);
 
   console.log(
     `check:content ok. ${ASSET_MANIFEST_PATH} matches ${PUBLIC_DIR}/ ` +
-      `(${files.length} file(s), none of them gitignored).`,
+      `(${files.length} file(s), none of them gitignored, ` +
+      `${Object.keys(manifestPlaceholders).length} with a body placeholder).`,
   );
+}
+
+/**
+ * THE PLACEHOLDER HALF OF THE MANIFEST, reconciled three ways.
+ *
+ * A placeholder is baked into the rendered HTML that this same gate byte
+ * compares, so a stale one is not a cosmetic problem: it is a value both
+ * writers agree on and neither can check, which is the shape finding B002 had.
+ *
+ *   1. MEMBERSHIP, both directions. The set is derived from the walk by
+ *      `placeholderPaths`, the same function `build:assets` uses, so an image
+ *      added to `public/` without a rebuild is named, and an entry whose file
+ *      is gone is named. A one-directional check would pass on either.
+ *   2. THE SOURCE DIGEST. Membership cannot see a file EDITED IN PLACE, and a
+ *      `public/` path is not content addressed, so that is the one way a static
+ *      asset changes. The file is re-hashed here and compared against the
+ *      digest the manifest recorded.
+ *   3. THE STORED VALUE IS A LOSSY WEBP DATA URI, through the SAME function
+ *      `check:image-weight` uses on the D1 column. One statement of what a
+ *      placeholder is, two artifacts that must satisfy it.
+ *
+ * IT DOES NOT RE-ENCODE. That would compare this machine's sharp against the
+ * one that wrote the manifest, and two platforms differing by a byte in a WebP
+ * encoder would make the gate fail on Linux and pass on Windows. The digest
+ * answers staleness without asserting anything about the encoder.
+ *
+ * @param {string[]} files every path under public/, from the walk
+ * @param {Record<string, { sha?: string, lqip?: string }>} placeholders
+ */
+async function checkManifestPlaceholders(files, placeholders) {
+  const wanted = placeholderPaths(files);
+
+  // FAILS CLOSED ON AN EMPTY EXPECTATION, the discipline this file applies to
+  // every other derived set: if the classifier stopped calling anything a
+  // content raster, every comparison below would agree with an empty manifest.
+  if (wanted.length === 0) {
+    console.error(
+      `check:content failed. the walk found 0 content raster image(s) under ` +
+        `${PUBLIC_DIR}/, so every placeholder assertion would pass vacuously.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  const have = new Set(Object.keys(placeholders));
+  const missing = wanted.filter((p) => !have.has(p));
+  const extra = [...have].filter((p) => !wanted.includes(p));
+  /** @type {string[]} */
+  const stale = [];
+  /** @type {string[]} */
+  const malformed = [];
+  let verified = 0;
+
+  for (const p of wanted) {
+    const entry = placeholders[p];
+    if (!entry) continue;
+    const bytes = await readFile(path.join(PUBLIC_DIR, p.slice(1)));
+    const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+    if (entry.sha !== sha) {
+      stale.push(`${p}: manifest records ${entry.sha}, the file hashes ${sha}`);
+      continue;
+    }
+    malformed.push(...placeholderProblems(p, String(entry.lqip ?? "")));
+    verified += 1;
+  }
+
+  if (missing.length + extra.length + stale.length + malformed.length > 0) {
+    console.error(`check:content failed. ${ASSET_MANIFEST_PATH} placeholders are out of date.`);
+    if (missing.length > 0) {
+      console.error(`  ${missing.length} content image(s) with no placeholder:`);
+      console.error(nameThem(missing));
+    }
+    if (extra.length > 0) {
+      console.error(`  ${extra.length} placeholder(s) for a path that is not a content image:`);
+      console.error(nameThem(extra));
+    }
+    for (const s of stale) console.error(`  STALE  ${s}`);
+    for (const m of malformed) console.error(`  BAD    ${m}`);
+    console.error("  Run npm run build:assets and commit the result.");
+    process.exit(1);
+    return;
+  }
+
+  // The executed count, paired with the content check, so "0 problems" cannot
+  // mean "0 examined". `wanted.length` is floored above; this is what was
+  // actually hashed and decoded.
+  if (verified !== wanted.length) {
+    console.error(
+      `check:content failed. ${verified} of ${wanted.length} placeholder(s) were verified.`,
+    );
+    process.exit(1);
+  }
 }
 
 /**
