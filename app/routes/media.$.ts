@@ -1,5 +1,6 @@
 import { getEnv } from "~/lib/context";
 import { bucketFor, cropSafe } from "~/lib/media/classify.mjs";
+import { WEBP_QUALITY } from "~/lib/media/encoding.mjs";
 import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import type { Route } from "./+types/media.$";
 
@@ -62,33 +63,6 @@ import type { Route } from "./+types/media.$";
  *
  * @param {Headers} headers Headers already carrying the object's metadata.
  */
-/**
- * The WebP quality every transform this route emits is encoded at.
- *
- * **OMITTING IT IS NOT A NEUTRAL DEFAULT.** With no `quality`, the Images
- * binding returns LOSSLESS WebP, which on a photograph is pathological rather
- * than merely conservative: the encoder is asked to reproduce a source that has
- * already thrown information away, and it spends whatever it takes.
- *
- * Measured 2026-09-01 against a 188,876 byte lossy origin (a `VP8` chunk), the
- * first content object ever put in the bucket. Every rung of the content ladder
- * came back `VP8L` and LARGER than the object it resizes: 640px at 404,020
- * bytes, 1024px at 944,030, 1408px at 979,922. A ladder heavier than its
- * original inverts the entire purpose of `srcset`, and each rung is a
- * separately billed transformation for the privilege.
- *
- * 85 is Cloudflare's own documented default for resizing.
- *
- * ONE CONSTANT, because the value is a property of what this route emits rather
- * than of any single call, and a second spelling is how the crop path and the
- * plain path would come to disagree.
- *
- * `check:image-weight` is the instrument: for every lossy-origin R2 image it
- * asserts that every width comes back smaller than the origin object. It is
- * the gate that would have caught this on the day the ladder was widened.
- */
-const WEBP_QUALITY = 85;
-
 function attachIfActive(headers: Headers) {
   const type = (headers.get("content-type") ?? "").toLowerCase();
   if (!type.startsWith("image/svg+xml")) return;
