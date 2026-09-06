@@ -1579,10 +1579,10 @@ export default function AdminMedia({
         <nav aria-labelledby="media-facet-lens" className="media-filters">
           <Link
             to={linkTo({ lens: "", trash: false, page: 1 })}
-            className={`search-chip${!view.lens && !view.trash ? " is-active" : ""}`}
+            className={`admin-chip${!view.lens && !view.trash ? " is-active" : ""}`}
             aria-current={!view.lens && !view.trash ? "page" : undefined}
           >
-            All <span className="search-chip-count">{lensCounts.all}</span>
+            All <span className="admin-chip-count">{lensCounts.all}</span>
           </Link>
           {LENS_CHIPS.map((lens) => {
             const n = lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id];
@@ -1590,7 +1590,7 @@ export default function AdminMedia({
               <Link
                 key={lens.id}
                 to={linkTo({ lens: lens.id, trash: false, page: 1 })}
-                className={`search-chip${view.lens === lens.id ? " is-active" : ""}`}
+                className={`admin-chip${view.lens === lens.id ? " is-active" : ""}`}
                 aria-current={view.lens === lens.id ? "page" : undefined}
                 title={lens.hint}
               >
@@ -1601,7 +1601,7 @@ export default function AdminMedia({
                 {n > 0 ? (
                   <span className="media-lens-dot" data-lens={lens.id} aria-hidden="true" />
                 ) : null}
-                {lens.label} <span className="search-chip-count">{n}</span>
+                {lens.label} <span className="admin-chip-count">{n}</span>
               </Link>
             );
           })}
@@ -1609,11 +1609,11 @@ export default function AdminMedia({
               kind of question: which files are in which state. */}
           <Link
             to={linkTo({ trash: !view.trash, lens: "", page: 1, key: "" })}
-            className={`search-chip${view.trash ? " is-active" : ""}`}
+            className={`admin-chip${view.trash ? " is-active" : ""}`}
             aria-current={view.trash ? "page" : undefined}
             title="A library view, not a takedown. A trashed file keeps its address and any page using it is unchanged."
           >
-            Trash <span className="search-chip-count">{trashedCount}</span>
+            Trash <span className="admin-chip-count">{trashedCount}</span>
           </Link>
         </nav>
         <span className="media-facet-hint">
@@ -1641,10 +1641,10 @@ export default function AdminMedia({
               <Link
                 key={t.tag}
                 to={tagHref(t.tag)}
-                className={`search-chip${view.tag === t.tag ? " is-active" : ""}`}
+                className={`admin-chip${view.tag === t.tag ? " is-active" : ""}`}
                 aria-current={view.tag === t.tag ? "page" : undefined}
               >
-                {t.tag} <span className="search-chip-count">{t.n}</span>
+                {t.tag} <span className="admin-chip-count">{t.n}</span>
               </Link>
             ))}
           </nav>
@@ -1703,7 +1703,7 @@ export default function AdminMedia({
             <Link
               key={id}
               to={linkTo({ view: id })}
-              className={`search-chip${view.view === id ? " is-active" : ""}`}
+              className={`admin-chip${view.view === id ? " is-active" : ""}`}
               aria-current={view.view === id ? "page" : undefined}
             >
               {label}

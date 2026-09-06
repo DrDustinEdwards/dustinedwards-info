@@ -1258,7 +1258,7 @@
 
 /* 1.75rem is 28px, clear of the WCAG 2.2 24px target minimum, which a chip
    sized only by its 0.8125rem text would miss. */
-.mention-chip {
+.admin-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -1278,14 +1278,14 @@
    class-only colour, so a chip whose destination is in history would be
    painted --visited on --surface, a pair the matrix does not carry. Naming the
    states puts these at (0,2,0) and the colour lands back on a measured pair. */
-.mention-chip,
-.mention-chip:visited,
-.mention-chip:hover,
-.mention-chip:active {
+.admin-chip,
+.admin-chip:visited,
+.admin-chip:hover,
+.admin-chip:active {
   color: var(--text);
 }
 
-.mention-chip:hover {
+.admin-chip:hover {
   border-color: var(--brand);
 }
 
@@ -1294,17 +1294,17 @@
    forced-colors takes the tint and the hue and leaves the weight and the edge,
    so the active chip is still findable there, and aria-current carries it to
    assistive tech in every mode. */
-.mention-chip.is-active,
-.mention-chip.is-active:visited,
-.mention-chip.is-active:hover,
-.mention-chip.is-active:active {
+.admin-chip.is-active,
+.admin-chip.is-active:visited,
+.admin-chip.is-active:hover,
+.admin-chip.is-active:active {
   border-color: var(--brand);
   background: var(--tint-brand);
   color: var(--brand);
   font-weight: 600;
 }
 
-.mention-chip-count {
+.admin-chip-count {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1312,7 +1312,7 @@
 /* INHERIT, never --text-muted: on the active chip the count sits on
    --tint-brand, and --text-muted has not been measured against that surface.
    Inheriting puts it on --brand over --tint-brand, which has. */
-.mention-chip.is-active .mention-chip-count {
+.admin-chip.is-active .admin-chip-count {
   color: inherit;
 }
 
@@ -1538,7 +1538,7 @@
    * above survives on its own, and the edge is restated in currentColor so the
    * chosen filter is still the one with a visible boundary.
    */
-  .mention-chip.is-active {
+  .admin-chip.is-active {
     border-color: currentColor;
   }
 }
