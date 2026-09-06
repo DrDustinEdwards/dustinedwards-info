@@ -61,4 +61,33 @@ if printf '%s' "$payload" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]
   exit 0
 fi
 
-npm run -s typecheck
+# TSC WRITES ITS DIAGNOSTICS TO STDOUT, AND A STOP HOOK IS READ ON STDERR.
+#
+# Until 2026-09-06 this was a bare command. The exit code propagated correctly,
+# so a red build did block the stop, but the message the harness surfaces comes
+# from STDERR and tsc had written everything to stdout. The hook therefore
+# reported "No stderr output" while the build was red. Measured twice in one
+# session on 2026-09-05: an unused import in check-page-payload.mjs, then three
+# errors in check-hook-syntax.mjs, both caught only because the typecheck was
+# re-run by hand, neither surfaced here.
+#
+# check-all.mjs already carries the same fact in its own words, from the day a
+# suite certified a build it had never compiled: the Stop hook reported "No
+# stderr output" because tsc writes diagnostics to STDOUT.
+#
+# So the output is CAPTURED and re-emitted on stderr when the typecheck fails.
+# BOTH streams are captured, because the failure may be npm's rather than tsc's
+# and npm does use stderr; merging them is what makes this independent of which
+# tool refused.
+#
+# ON SUCCESS NOTHING IS PRINTED, deliberately. A hook that speaks on every clean
+# stop is a hook whose output stops being read.
+if ! typecheck_out="$(npm run -s typecheck 2>&1)"; then
+  {
+    echo "$typecheck_out"
+    echo
+    echo "Blocked: npm run typecheck FAILED. The diagnostics above are tsc's own."
+    echo "tsc writes them to stdout, so this hook captures both streams and re-emits them here. A bare command reports \"No stderr output\" while the build is red."
+  } >&2
+  exit 2
+fi
