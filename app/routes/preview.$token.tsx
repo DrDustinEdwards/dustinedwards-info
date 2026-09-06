@@ -131,7 +131,34 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
   const seriesParts = post.series ? await listSeriesParts(env, post.series) : [];
 
-  return blogPostView(post, seriesParts);
+  /*
+   * `mentions: []`, AND ITS ABSENCE WAS A 500 ON EVERY PREVIEW.
+   *
+   * MEASURED 2026-09-06, the first time anything drove this route: every
+   * `/preview/:token` answered 500 with `TypeError: Cannot read properties of
+   * undefined (reading 'length')` from `BlogPost`. It had been doing so since
+   * `e839bfc` on 2026-09-04, and it shipped.
+   *
+   * The component reads `mentions.length` to decide whether to render the
+   * section. `blogPostView` does not carry the field, deliberately and for the
+   * reason recorded on the read in `blog.$slug.tsx`: a draft has no readers and
+   * therefore no approved mentions, so the query has no business running here.
+   * That reasoning is intact. What was missing is the SHAPE: the projection's
+   * whole claim is that a reviewer sees what a reader would see, and a
+   * component rendered against a payload missing a field it destructures does
+   * not see anything at all.
+   *
+   * **TYPECHECK CANNOT SEE THIS AND WILL NOT START.** `preview.$token.tsx`
+   * re-exports `blog.$slug`'s default export, so the component is typed against
+   * THAT route's `loaderData` while being rendered with this one's. The
+   * re-export is what makes the two pages provably identical and is also what
+   * hides the mismatch, which is why the gate that found it is a browser
+   * driving a seeded token (`check:browser`, section 4a) rather than `tsc`.
+   *
+   * Empty rather than read, and empty is the honest value: an unpublished post
+   * has no approved mention by construction.
+   */
+  return { ...blogPostView(post, seriesParts), mentions: [] };
 }
 
 export function headers() {
