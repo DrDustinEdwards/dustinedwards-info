@@ -44,9 +44,29 @@ export default defineConfig({
      * inlined bundle becomes a data: URI in a <script src>, which works only
      * because the element carries a nonce, bloats every page it rides on, and
      * is invisible to check:page-payload's byte-equality pass against
-     * app/enhance/dist/. Everything else keeps the default behaviour.
+     * app/enhance/dist/.
+     *
+     * **AND NEITHER IS A WEBFONT, and this one is a CSP refusal rather than a
+     * preference.** MEASURED 2026-09-06 on the first build after the math
+     * stylesheet landed: `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the
+     * same 4096-byte limit, and Vite inlined it as a base64 `data:` URI inside
+     * the stylesheet. `font-src` is `'self'` and does NOT carry `data:` (only
+     * `img-src` does), so the browser would have refused that one face while
+     * fetching the other nineteen, and the symptom is a big delimiter rendered
+     * in a fallback serif on some equations and not others. It also puts 4.8 kB
+     * of base64 into a file every math page downloads, for a face most posts
+     * never use.
+     *
+     * Matched on the EXTENSION rather than on the katex directory, because the
+     * rule is about what a webfont is and not about where this one lives: the
+     * next face dropped into `app/fonts/` inherits it. Everything else keeps
+     * the default behaviour.
      */
-    assetsInlineLimit: (filePath) =>
-      filePath.split("\\").join("/").includes("app/enhance/dist/") ? false : undefined,
+    assetsInlineLimit: (filePath) => {
+      const path = filePath.split("\\").join("/");
+      if (path.includes("app/enhance/dist/")) return false;
+      if (path.endsWith(".woff2")) return false;
+      return undefined;
+    },
   },
 });
