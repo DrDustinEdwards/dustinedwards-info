@@ -47,8 +47,19 @@
 # runs in, so a `cd` elsewhere does not make them somebody else's business.
 #
 # Replayed both directions by `scripts/check-hook-deploy-scope.mjs`, which is in
-# the offline tier. Six cases: the block inside, the allow outside, the last-cd
-# rule, an absolute path, a d1 delete still refused outside, and a bare `cd`.
+# the offline tier. Eight cases: the block inside, the allow outside, the
+# last-cd rule, an absolute path, a d1 delete still refused outside, a bare
+# `cd`, a `--dry-run` allowed inside, and a deploy with no such flag still
+# refused beside it.
+#
+# ## `wrangler deploy --dry-run` IS ALLOWED, 2026-09-06
+#
+# It bundles and prints; it creates no version and no deployment and changes
+# nothing on the account. The arm below therefore reads the flag. Blocking a
+# read was the safe direction and was still wrong: it cost a dependency
+# session its before-and-after module measurement and pushed that session into
+# running deploy commands from outside the guard, which is a worse habit than
+# the one the block bought.
 #
 # ## Read-only wrangler stays allowed
 #
@@ -221,10 +232,26 @@ if not outside_site and re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd
 # the reason scoped-git-add.sh records: the anchored form let three real
 # bypasses through.
 for m in re.finditer(r"\bwrangler\b([^|;&]*)", cmd):
+    flags = [a for a in m.group(1).split() if a.startswith("-")]
     args = [a for a in m.group(1).split() if not a.startswith("-")]
     if not args:
         continue
-    if not outside_site and args[0] == "deploy":
+    # A DRY RUN UPLOADS NOTHING, so it is not the act this hook exists to
+    # refuse. It bundles, prints the module table and exits; no version is
+    # created, no deployment is made, and nothing on the account changes.
+    #
+    # Ruled 2026-09-06 after the block cost a measurement: a dependency session
+    # needed the module set and sizes before and after a wrangler upgrade,
+    # which is exactly what --dry-run answers, and had to run it from outside
+    # the repo to get it. Blocking a read is the safe direction and is still
+    # wrong, because the workaround it forces is a session routinely running
+    # deploy commands from outside the guard.
+    #
+    # THE FLAG IS READ FROM THE SAME SEGMENT as the verb, so a --dry-run
+    # belonging to some other command in a compound line cannot license this
+    # one. Nothing else here is loosened: without the flag, exit 6 as before.
+    dry_run = "--dry-run" in flags
+    if not outside_site and args[0] == "deploy" and not dry_run:
         sys.exit(6)
     if not outside_site and args[0] == "versions" and len(args) > 1 and args[1] == "upload":
         sys.exit(7)
