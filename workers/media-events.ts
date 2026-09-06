@@ -1,6 +1,7 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { mirrorObject } from "~/lib/media/backup.server";
+import { placeholderFor } from "~/lib/media/core.server";
 
 /**
  * The media index write path: R2 emits, a queue delivers, this derives the row.
@@ -154,6 +155,7 @@ async function indexOne(env: Env, key: string) {
 
   let width: number | null = null;
   let height: number | null = null;
+  let placeholder: string | null = null;
   if (isRaster(key)) {
     try {
       const info = await env.IMAGES.info(object.body);
@@ -167,6 +169,35 @@ async function indexOne(env: Env, key: string) {
       // outright would make the index disagree with the bucket, which is the one
       // thing it may never do.
     }
+
+    /*
+     * THE PLACEHOLDER, DERIVED HERE, since 2026-09-06.
+     *
+     * It used to be deferred to the bulk rebuild, on the reasoning that this
+     * path runs on every write and a second body read is not free. That
+     * reasoning was measured and it was wrong in the direction that matters:
+     * the row this consumer writes carried NO placeholder, `upsertDerivedMedia`
+     * turned that into NULL, and the upsert then ERASED whatever the last bulk
+     * pass had derived. So the deferral did not merely postpone the work, it
+     * destroyed the result of the work already done, and an editor upload could
+     * never have a placeholder at all without someone running a rebuild by
+     * hand. Both halves are fixed: this derives one, and the writer no longer
+     * blanks a stored one when a caller has none.
+     *
+     * A SECOND R2 GET, because a body is a stream and `.info()` above has
+     * already consumed the first. Same pattern the rebuild uses for the same
+     * reason. The cost is one class B operation and one binding call per
+     * uploaded image, against a queue whose first billable operation arrives at
+     * roughly 333,000 media writes a month.
+     *
+     * NULL IS A REAL ANSWER. An SVG, a PDF or a corrupt upload has no
+     * placeholder and gets a row anyway, exactly as it gets a row with no
+     * dimensions. `placeholderFor` returns null rather than throwing, so this
+     * cannot fail a message and send an otherwise good row to the dead-letter
+     * queue.
+     */
+    const reread = await bucketFor(env, key).get(key);
+    if (reread) placeholder = await placeholderFor(env, reread.body);
   }
 
   await upsertDerivedMedia(env, {
@@ -184,9 +215,10 @@ async function indexOne(env: Env, key: string) {
     // had one source that was allowed to fail. Null for anything uploaded
     // without it, which `upsertDerivedMedia` treats as "do not touch".
     originalName: object.customMetadata?.originalName ?? null,
-    // The placeholder is NOT derived here. It needs a second read of the body
-    // and this path runs on every write; the rebuild computes it in bulk, where
-    // paying for it once per object is the right trade.
+    // Derived above, from a second read of the same object. Null when the
+    // transformer could not read it, which `upsertDerivedMedia` treats as "do
+    // not touch" rather than as an instruction to erase.
+    placeholder,
     uploadedAt:
       object.uploaded instanceof Date ? object.uploaded.toISOString() : String(object.uploaded ?? ""),
   });

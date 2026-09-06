@@ -1,6 +1,7 @@
 import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
+import { WEBP_QUALITY } from "./encoding.mjs";
 
 /**
  * MEDIA CORE. Library listing, upload, thumbnails, metadata and delete mechanics.
@@ -183,6 +184,58 @@ export async function measureDimensions(
       return { width: info.width, height: info.height };
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+/** The LQIP width, in pixels. What that costs as a data URI is check:image-weight's. */
+const PLACEHOLDER_WIDTH = 20;
+
+/**
+ * A tiny base64 data URI standing in for the image until it loads.
+ *
+ * LQIP rather than ThumbHash or BlurHash: both of those need client-side
+ * decoding, and this site's public plane ships no framework script (rule 4). A
+ * data URI is bigger than a hash and renders with no script at all, which is
+ * the trade the rule forces. The size it actually costs is MEASURED by
+ * `check:image-weight`, which prints the mean over every stored placeholder;
+ * the figure that used to sit in this sentence was written before the quality
+ * defect below existed and was wrong by roughly a factor of two the whole time.
+ *
+ * Returns null rather than throwing. A placeholder is an enhancement; an image
+ * the transformer cannot read (an SVG, a PDF, a corrupt upload) simply has none,
+ * and that must not be able to fail a rebuild or a queue message.
+ *
+ * **THE QUALITY IS NOT OPTIONAL, and this call omitted it until 2026-09-06.**
+ * The binding emits LOSSLESS WebP when no quality is given, so every
+ * placeholder ever stored was a VP8L data URI, in the one column whose entire
+ * purpose is to be small enough to inline in a document. Measured that day: 26
+ * of 26 stored placeholders came back VP8L, across all three storage tiers,
+ * which is what proved this was a defect in the derivation rather than in one
+ * caller. `WEBP_QUALITY` is a shared constant precisely because there turned
+ * out to be two callers of the binding.
+ *
+ * **IT LIVES HERE, beside `measureDimensions`, because it has two callers of
+ * its own.** The bulk rebuild derives it for every object; the queue consumer
+ * derives it for the one object an event names. A copy in each would be two
+ * placeholder encoders, and the whole reason this file exists is that a
+ * measurement with two implementations is two answers.
+ */
+export async function placeholderFor(
+  env: Env,
+  body: ReadableStream | ArrayBuffer,
+): Promise<string | null> {
+  const stream = body instanceof ArrayBuffer ? new Blob([body]).stream() : body;
+  try {
+    const result = await env.IMAGES.input(stream)
+      .transform({ width: PLACEHOLDER_WIDTH })
+      .output({ format: "image/webp", quality: WEBP_QUALITY });
+    const buffer = await result.response().arrayBuffer();
+    let binary = "";
+    const view = new Uint8Array(buffer);
+    for (const byte of view) binary += String.fromCharCode(byte);
+    return `data:image/webp;base64,${btoa(binary)}`;
   } catch {
     return null;
   }

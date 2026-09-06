@@ -1331,6 +1331,12 @@ export async function mediaRecord(env: Env, key: string) {
  * the caller's object. A column added later is then absent from this list and
  * simply not updated, which is the safe failure; spreading would have made the
  * unsafe direction the default.
+ *
+ * TWO OF THE DERIVED COLUMNS ARE WRITE-WHEN-PRESENT rather than write-always,
+ * `original_name` and `placeholder`, and each earned it the same way: a caller
+ * that could not measure the value was blanking one a caller that could had
+ * already stored. Recomputable does not mean cheap to recompute, and "leave it
+ * alone" is the only answer that is right for both callers.
  */
 export async function upsertDerivedMedia(
   env: Env,
@@ -1357,17 +1363,39 @@ export async function upsertDerivedMedia(
     bytes: record.bytes ?? null,
     width: record.width ?? null,
     height: record.height ?? null,
-    placeholder: record.placeholder ?? null,
     uploadedAt: record.uploadedAt ?? null,
     updatedAt: now,
   };
   await getDb(env)
     .insert(media)
-    .values({ key: record.key, ...derived, originalName: record.originalName ?? null })
+    .values({
+      key: record.key,
+      ...derived,
+      originalName: record.originalName ?? null,
+      placeholder: record.placeholder ?? null,
+    })
     .onConflictDoUpdate({
       target: media.key,
       set: {
         ...derived,
+        // WRITTEN WHEN THERE IS ONE, NEVER BLANKED. Same rule as the filename
+        // below, and it was found the same way.
+        //
+        // The queue consumer upserts on every R2 event and passed no
+        // placeholder, so `?? null` wrote NULL over whatever the last rebuild
+        // had derived: an upload erased its own placeholder moments after the
+        // bulk pass computed one, and the only way back was another bulk pass.
+        // The consumer now derives one itself, which makes the common case
+        // correct, and this makes the CLASS correct: any caller that cannot
+        // measure a placeholder leaves the stored one alone rather than
+        // destroying it.
+        //
+        // The cost, taken knowingly: a placeholder cannot be CLEARED through
+        // this door. Nothing wants to. It is recomputable from the object, an
+        // object is content-addressed and immutable, and a static file that
+        // changes shape keeps a stale placeholder only until the next rebuild
+        // overwrites it with a real one.
+        ...(record.placeholder ? { placeholder: record.placeholder } : {}),
         // WRITTEN WHEN THERE IS ONE, NEVER BLANKED.
         //
         // The comment here used to say this column was the only surviving copy

@@ -2,7 +2,7 @@ import assetManifest from "../../../content/generated/assets.json";
 
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
-import { WEBP_QUALITY } from "./encoding.mjs";
+import { placeholderFor } from "./core.server";
 
 /**
  * Re-derives the media index from the things that are actually true.
@@ -34,50 +34,6 @@ export type RebuildReport = {
   /** Keys that could not be derived. Reported, never silently skipped. */
   failures: string[];
 };
-
-/** The LQIP width, in pixels. What that costs as a data URI is check:image-weight's. */
-const PLACEHOLDER_WIDTH = 20;
-
-/**
- * A tiny base64 data URI standing in for the image until it loads.
- *
- * LQIP rather than ThumbHash or BlurHash: both of those need client-side
- * decoding, and this site's public plane ships no framework script (rule 4). A
- * data URI is bigger than a hash and renders with no script at all, which is
- * the trade the rule forces. The size it actually costs is MEASURED by
- * `check:image-weight`, which prints the mean over every stored placeholder;
- * the figure that used to sit in this sentence was written before the quality
- * defect below existed and was wrong by roughly a factor of two the whole time.
- *
- * Returns null rather than throwing. A placeholder is an enhancement; an image
- * the transformer cannot read (an SVG, a PDF, a corrupt upload) simply has none,
- * and that must not be able to fail a rebuild.
- *
- * **THE QUALITY IS NOT OPTIONAL, and this call site omitted it until
- * 2026-09-06.** The binding emits LOSSLESS WebP when no quality is given, so
- * every placeholder this has ever stored was a VP8L data URI, in the one column
- * whose entire purpose is to be small enough to inline in a document. Measured
- * that day: 26 of 26 stored placeholders came back VP8L, across all three
- * storage tiers, which is what proved this was a defect in the derivation
- * rather than in one caller. Same defect the transform ladder carried and the
- * same fix; `WEBP_QUALITY` is a shared constant precisely because this was its
- * second site. `check:image-weight` asserts the stored bytes decode as VP8 and
- * owns the byte figure.
- */
-async function placeholderFor(env: Env, body: ReadableStream): Promise<string | null> {
-  try {
-    const result = await env.IMAGES.input(body)
-      .transform({ width: PLACEHOLDER_WIDTH })
-      .output({ format: "image/webp", quality: WEBP_QUALITY });
-    const buffer = await result.response().arrayBuffer();
-    let binary = "";
-    const view = new Uint8Array(buffer);
-    for (const byte of view) binary += String.fromCharCode(byte);
-    return `data:image/webp;base64,${btoa(binary)}`;
-  } catch {
-    return null;
-  }
-}
 
 /** Intrinsic dimensions, read from the bytes rather than trusted from anywhere. */
 async function dimensionsFor(env: Env, body: ReadableStream) {
