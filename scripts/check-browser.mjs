@@ -4233,10 +4233,26 @@ try {
    * clicks here, where they would rot next to a second copy of themselves.
    */
   if (!CREDENTIAL_PRESENT) {
-    skip(
-      "the admin plane (6 surfaces, the editor mount, the two mark fills, the four media " +
-        "interactions, and the sideways-scroll cases at 1280, 553, 480, 400 and 320)",
-      `no admin credential of either kind. These cases need a REAL one and are deliberately ` +
+    /*
+     * A FAILURE, NOT A SKIP, since 2026-09-06 (vol 15).
+     *
+     * This was `skip`, which counts nothing, and the floor then dropped from 236
+     * to 172 to accommodate it. So a machine with no credential ran a quarter of
+     * this gate and printed a green result, and the smaller floor made that
+     * green look measured. The gate's whole admin half was optional in a way
+     * nothing announced.
+     *
+     * The gate now refuses. Everything it could not observe is named below, and
+     * the remedy is two commands rather than a mystery, so failing costs a
+     * reader nothing they were not going to have to do anyway.
+     */
+    ok(
+      "the admin plane has a credential to observe it with",
+      false,
+      `no admin credential of either kind, so NONE of this ran: the 6 admin surfaces, the ` +
+        `editor mount, the two mark fills, the four media interactions, and the ` +
+        `sideways-scroll cases at 1280, 553, 480, 400 and 320.\n` +
+        `        These cases need a REAL credential and are deliberately ` +
         `not stubbed: a fake auth path would not render what production renders, and the ` +
         `defects they exist to catch live in the authenticated render.\n` +
         `        PREFERRED, and the one that runs unattended: mint a smoke token with ` +
@@ -5531,7 +5547,21 @@ try {
  * to. The exit code is already 1.
  */
 if (subjectReachable) {
-  const MINIMUM_CHECKS = adminCasesRan ? 236 : 172;
+  /*
+   * ONE FLOOR. The admin-absent branch was DELETED 2026-09-06 (vol 15).
+   *
+   * It read `adminCasesRan ? 236 : 172`, and nothing ever exercised the 172:
+   * this machine always has a credential, and the gate is CI-excluded, so no
+   * instrument reached that branch and its floor could drift as far as it liked
+   * without anything noticing. An unreachable branch is a mirror of the real
+   * one that nobody maintains.
+   *
+   * The half that made it reachable at all was a SKIP on a missing credential,
+   * which counts nothing and then quietly halves the floor. A gate that cannot
+   * see its subject now says so and fails, so the smaller floor has nothing to
+   * be for.
+   */
+  const MINIMUM_CHECKS = 236;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
@@ -5549,7 +5579,9 @@ if (subjectReachable) {
       "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
         "  mount was not checked, neither mark fill was measured, and NOTHING ON THIS PLANE\n" +
         "  WAS MEASURED AT ANY NARROW WIDTH. The public pages are gated at 320 and the admin\n" +
-        "  plane was not, which is how it came to scroll sideways below 576 unnoticed. A\n" +
+        "  plane was not, which is how it came to scroll sideways below 576 unnoticed. The\n" +
+        "  run above is RED for this reason since 2026-09-06: it used to be a skip under a\n" +
+        "  halved floor, which let a quarter-run print green. A\n" +
         "  green result above is a statement about the public pages only.\n",
     );
   }
