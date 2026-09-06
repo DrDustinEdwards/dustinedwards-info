@@ -98,7 +98,8 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -909,6 +910,162 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
   console.log(`  seeded ${MENTION_SEED_ROWS} approved mention(s) on ${MENTION_POST_PATH}`);
+}
+
+/*
+ * THE MATH PAGE, REACHED THROUGH A SEEDED PREVIEW TOKEN.
+ *
+ * ## THE PROBLEM THIS SOLVES
+ *
+ * The math fixture is `draft: true`, on the same footing as the chart fixture,
+ * because nothing in it is written for a reader. A draft has no public URL: the
+ * candidate list this gate builds from the artifact filters `draft !== true`,
+ * and `/blog/math-typesetting-fixture` answers 404 by design. So the one page
+ * on this site with an equation on it is the one page a browser gate cannot
+ * visit, and every claim about how math RENDERS would have to be made offline
+ * against markup, which is the class hard rule 7 is about.
+ *
+ * `/preview/:token` is the door that already exists. It re-exports
+ * `blog.$slug`'s component and shares `blogPostView`, so what it renders IS the
+ * published page for everything this section measures. Two rows are written to
+ * make it resolve: the post itself, and the KV record the token names.
+ *
+ * ## THE POST ROW IS SEEDED FROM THE ARTIFACT, NOT ASSUMED PRESENT
+ *
+ * The local database is whatever the last `sync:content --local` left, which on
+ * this machine predates the fixture and on a colleague's may predate the
+ * corpus. Seeding it from `content/generated/posts.json` makes the page a
+ * function of the build this gate is grading rather than of somebody's sync
+ * history, which is the same reason the mention rows above are written here.
+ *
+ * ## `--file`, NOT `--command`, AND THAT IS NOT A STYLE CHOICE
+ *
+ * The mention seed above records why its SQL is one quoted command string. That
+ * shape cannot carry this one: the value is rendered post HTML, it is full of
+ * double quotes (`class="katex"` alone appears seventeen times), and every one
+ * of them would close the quote cmd is holding the statement in. A file has no
+ * shell in the path at all, so the only escaping left is SQL's own, which is
+ * doubling single quotes.
+ *
+ * ## LOCAL ONLY
+ *
+ * Under `PUBLIC_ORIGIN` this gate observes the deployed site, where nothing
+ * here may write a row and no preview token of ours exists. The assertions SKIP
+ * with the reason, exactly as the mention cases do.
+ */
+const MATH_SLUG = "math-typesetting-fixture";
+/**
+ * A FIXED token, not a minted one, and the fixed-ness is the point twice over.
+ *
+ * A re-run overwrites one KV record instead of leaving a trail of live preview
+ * links behind it, and a failure names a URL somebody can open by hand. It is
+ * 43 base64url characters because `isWellFormedToken` is length-exact and
+ * anchored, which the route checks BEFORE it spends a KV read.
+ */
+const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
+/** A post with no math, for the paired control. Already driven by other cases. */
+const MATHLESS_POST_PATH = "/blog/ten-years-on-cloudflare";
+
+/** True once both rows are written, so the cases can SKIP rather than fail. */
+let mathPreviewSeeded = false;
+
+if (DRIVES_PREVIEW) {
+  const artifact = JSON.parse(
+    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
+  );
+  const fixture = artifact.posts.find((/** @type {any} */ p) => p.slug === MATH_SLUG);
+
+  /*
+   * FAILS RATHER THAN SKIPS. A missing fixture is not a mode this gate runs in:
+   * `check:content` already refuses a corpus with no math in it, so by the time
+   * anything gets here the post exists or the build is broken.
+   */
+  if (!fixture) {
+    console.error(
+      `check:browser failed. content/generated/posts.json carries no post "${MATH_SLUG}", ` +
+        `so the math cases below would have no page to visit. Run npm run build:content.`,
+    );
+    registry.clear();
+    process.exit(1);
+  }
+  if (fixture.draft !== true) {
+    console.error(
+      `check:browser failed. "${MATH_SLUG}" is not a draft. The fixture must stay ` +
+        `unpublished (it is a fixture), and the preview door below only opens for a draft.`,
+    );
+    registry.clear();
+    process.exit(1);
+  }
+
+  /** SQL string literal: the only escaping a --file path needs. */
+  const q = (/** @type {unknown} */ v) =>
+    v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
+
+  const publishAt = Math.floor(new Date(fixture.publishAt).getTime() / 1000);
+  const sqlFile = join(mkdtempSync(join(tmpdir(), "gate-math-")), "seed.sql");
+  writeFileSync(
+    sqlFile,
+    [
+      `DELETE FROM posts WHERE slug = ${q(MATH_SLUG)};`,
+      `INSERT INTO posts (slug, kind, title, body, status, publish_at, html, description, ` +
+        `toc, reading_time_minutes, source_path, featured) VALUES (` +
+        [
+          q(fixture.slug),
+          q("post"),
+          q(fixture.title),
+          q(fixture.markdown),
+          q("draft"),
+          String(publishAt),
+          q(fixture.html),
+          q(fixture.description),
+          q(JSON.stringify(fixture.toc)),
+          String(fixture.readingTimeMinutes ?? 1),
+          q(fixture.sourcePath),
+          "0",
+        ].join(", ") +
+        `);`,
+    ].join("\n"),
+    "utf8",
+  );
+
+  const row = spawnSync(
+    `npx wrangler d1 execute dustinedwards --local --file "${sqlFile}"`,
+    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (row.status !== 0) {
+    console.error("check:browser failed. the math fixture row did not apply, so /preview");
+    console.error("would answer 404 and every math case below would report the wrong cause.");
+    console.error((row.stderr || row.stdout || "").slice(-1200));
+    registry.clear();
+    process.exit(1);
+  }
+
+  /*
+   * The KV record is the AUTHORITY: the token is a lookup key carrying no
+   * claims, so this JSON is what decides which post the link opens. Its shape
+   * is `preview-links.server.ts`'s, and `resolvePreview` re-reads the post's
+   * status afterwards regardless, which is why a stale record cannot leak a
+   * published post.
+   */
+  const record = JSON.stringify({
+    slug: MATH_SLUG,
+    createdAt: Date.UTC(2026, 8, 6),
+    label: "check:browser math fixture",
+  });
+  const kv = spawnSync(
+    `npx wrangler kv key put --binding APP_KV --local ` +
+      `"preview:token:${MATH_PREVIEW_TOKEN}" "${record.split('"').join('\\"')}"`,
+    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 8 * 1024 * 1024 },
+  );
+  if (kv.status !== 0) {
+    console.error("check:browser failed. the preview token did not reach local KV.");
+    console.error((kv.stderr || kv.stdout || "").slice(-1200));
+    registry.clear();
+    process.exit(1);
+  }
+
+  mathPreviewSeeded = true;
+  console.log(`  seeded the ${MATH_SLUG} draft row and its preview token`);
 }
 
 /*
@@ -2998,6 +3155,263 @@ try {
       `${path}: no horizontal scroll at 320px`,
       o.scrollW <= o.clientW,
       `scrollWidth ${o.scrollW} exceeds clientWidth ${o.clientW}. Widest: ${o.over.join(", ")}`,
+    );
+  }
+
+  /* ------------------- 4a. MATH: the one page that must not drag the doc --- */
+
+  /*
+   * WHY 375 AND NOT 320. The loop above runs at 320, which is the narrowest
+   * width this site claims, and this case runs at 375 because that is the width
+   * the ruling names and the one a phone actually has. Both are in the admin
+   * loop's list for the same reason. A display equation is wider than the
+   * column at EVERY width, so the case is not width-sensitive in the way the
+   * chrome above is: what it proves is that the box scrolls and the document
+   * does not, and 375 is where a person would see it fail.
+   *
+   * ## THE PAIRED CONTROL IS THE HALF THAT MAKES IT A MEASUREMENT
+   *
+   * "The document does not scroll sideways" is true of a page whose equation
+   * failed to render at all, and true of a page where the stylesheet never
+   * loaded and every expression collapsed to unstyled text. So the overflow
+   * assertion is bracketed: the display box must itself be WIDER than its own
+   * client width (there is really something overflowing), and the stylesheet
+   * must be linked (it is really being styled). Neither alone means anything.
+   *
+   * ## AND A MATHLESS POST LINKS NOTHING, which is hard rule 4's half
+   *
+   * `check:page-payload` proves the sheet is in no route manifest, offline,
+   * from the build. This proves the OTHER direction on the wire: the document a
+   * reader of a mathless post receives carries no link to it. Two instruments,
+   * two artifacts, one claim.
+   */
+  if (!mathPreviewSeeded) {
+    skip(
+      "the math page cases",
+      `they need a seeded draft row and preview token in local storage, which only the ` +
+        `preview-driving mode writes. Under PUBLIC_ORIGIN the fixture is unpublished on ` +
+        `the deployed site and nothing here may publish it.`,
+    );
+  } else {
+    const MATH_PATH = `/preview/${MATH_PREVIEW_TOKEN}`;
+    const NARROW_MATH = 375;
+
+    await page.setViewport({ width: NARROW_MATH, height: 800 });
+    const response = await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
+
+    /*
+     * THE DOOR OPENED, ASSERTED FIRST. `/preview/:token` answers one 404 for
+     * every refusal it has, so a stale KV record, a revoked token and a
+     * published post are indistinguishable from here. Reading anything into the
+     * assertions below without this would be reading it out of an error page.
+     */
+    ok(
+      `${MATH_PATH}: the preview door opened`,
+      response?.status() === 200,
+      `the preview answered ${response?.status()}. That route returns one 404 for every ` +
+        `refusal, so this is a seed problem: either the KV record is missing, or the row ` +
+        `is not a draft, or the slugs disagree.`,
+    );
+
+    /*
+     * THE HEAD ORDER ON THIS PAGE, and it is here because the defect that
+     * forced it was invisible everywhere else.
+     *
+     * The colour-scheme meta must be declared before the first stylesheet
+     * request; that is asserted for five public paths in the theme block above,
+     * and a math page is in none of them. The first implementation rendered the
+     * link from the post component with React 19's `precedence`, which HOISTS a
+     * managed stylesheet to the top of `<head>`, above the meta. It was caught
+     * only because the plant that forced the flag true put the sheet on
+     * `/blog/ten-years-on-cloudflare`, which IS in that set. Without this line
+     * the arrangement would have been correct on twelve posts and inverted on
+     * the one with maths.
+     */
+    const order = await page.evaluate(() => {
+      const html = document.documentElement.outerHTML;
+      const head = html.slice(0, html.indexOf("</head>"));
+      return { meta: head.indexOf("color-scheme"), sheet: head.indexOf('rel="stylesheet"') };
+    });
+    ok(
+      `${MATH_PATH}: the colour scheme is declared before the first stylesheet`,
+      order.meta >= 0 && order.sheet >= 0 && order.meta < order.sheet,
+      `color-scheme at ${order.meta}, first stylesheet at ${order.sheet}. A signal that ` +
+        `arrives after the stylesheet has been requested arrived too late to matter. A ` +
+        `React "precedence" attribute on the math link puts it above the meta.`,
+    );
+
+    const math = await page.evaluate(() => {
+      const doc = document.documentElement;
+      const displays = [...document.querySelectorAll(".prose .katex-display")];
+      const widest = displays
+        .map((el) => ({
+          scroll: el.scrollWidth,
+          client: el.clientWidth,
+          overflowX: getComputedStyle(el).overflowX,
+        }))
+        .sort((a, b) => b.scroll - b.client - (a.scroll - a.client))[0];
+      const over = [];
+      for (const el of document.querySelectorAll("body *")) {
+        const r = el.getBoundingClientRect();
+        if (r.left < -1000) continue;
+        if (r.right > doc.clientWidth + 0.5) {
+          const cls = typeof el.className === "string" ? el.className : "";
+          over.push(
+            `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
+          );
+        }
+      }
+      const prose = document.querySelector(".prose");
+      const katex = document.querySelector(".prose .katex");
+      return {
+        sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(
+          (l) => l.getAttribute("href") ?? "",
+        ),
+        expressions: document.querySelectorAll(".prose .katex").length,
+        mathml: document.querySelectorAll(".prose .katex-mathml math").length,
+        errors: document.querySelectorAll(".katex-error").length,
+        displays: displays.length,
+        widest: widest ?? null,
+        scrollW: doc.scrollWidth,
+        clientW: doc.clientWidth,
+        over: over.slice(0, 4),
+        proseColour: prose ? getComputedStyle(prose).color : null,
+        katexColour: katex ? getComputedStyle(katex).color : null,
+      };
+    });
+
+    ok(
+      `${MATH_PATH}: the page renders expressions and no error box`,
+      math.expressions >= 15 && math.displays >= 4 && math.errors === 0,
+      `${math.expressions} .katex element(s), ${math.displays} display block(s), ` +
+        `${math.errors} error box(es). The fixture carries 17 expressions in 4 display ` +
+        `blocks; fewer means the render changed and every measurement below is about a ` +
+        `different page, and an error box means an expression got past remarkMathValidate.`,
+    );
+    ok(
+      `${MATH_PATH}: every expression carries its MathML, not the layout tree alone`,
+      math.mathml >= 15,
+      `${math.mathml} <math> element(s) against ${math.expressions} expression(s). The ` +
+        `output mode has dropped to html-only and a screen reader is getting the ` +
+        `positioning spans, which are aria-hidden, and therefore nothing.`,
+    );
+    ok(
+      `${MATH_PATH}: the document links the math stylesheet`,
+      math.sheets.some((href) => href.includes("katex")),
+      `stylesheets on the page: ${math.sheets.join(", ") || "none"}. root.tsx links it ` +
+        `from the loader's hasMath; without it every equation renders in the body font ` +
+        `with no positioning, which still does not scroll and would pass the case below.`,
+    );
+
+    /* The overflow really exists, so the assertion after it is not vacuous. */
+    ok(
+      `${MATH_PATH}: a display equation really is wider than its own box`,
+      Boolean(math.widest) && math.widest.scroll > math.widest.client,
+      `the widest display block measures scrollWidth ${math.widest?.scroll} against ` +
+        `clientWidth ${math.widest?.client} at ${NARROW_MATH}px. Nothing overflows, so ` +
+        `"the page does not scroll sideways" is true of this page for a reason that has ` +
+        `nothing to do with the container.`,
+    );
+    ok(
+      `${MATH_PATH}: the display block is the thing that scrolls`,
+      math.widest?.overflowX === "auto" || math.widest?.overflowX === "scroll",
+      `.katex-display computes overflow-x: ${math.widest?.overflowX}. The rule is in ` +
+        `app/styles/katex-overrides.css and rides in the generated stylesheet.`,
+    );
+    ok(
+      `${MATH_PATH}: no horizontal scroll at ${NARROW_MATH}px`,
+      math.scrollW <= math.clientW,
+      `scrollWidth ${math.scrollW} exceeds clientWidth ${math.clientW} by ` +
+        `${math.scrollW - math.clientW}px. Widest: ${math.over.join(", ") || "(nothing " +
+          "measured wider than the viewport, so it is on an element this scan skipped)"}`,
+    );
+
+    /*
+     * COLOUR, MEASURED RATHER THAN REASONED ABOUT, and this is the case
+     * `check:contrast` cannot carry.
+     *
+     * That gate computes ratios from token hexes in the stylesheet and says so
+     * in its own header: it does not render, so it cannot see a colour that is
+     * inherited rather than declared. KaTeX declares none. Its glyphs are text,
+     * its rules are borders, and its stretched delimiters are SVG with
+     * `fill: currentColor`, so the whole expression takes whatever `.prose` is
+     * painting. The way to check an inherited value is to read the COMPUTED one
+     * off a rendered page, which is this instrument.
+     *
+     * Equality against the prose colour is the right assertion rather than a
+     * ratio: if they are equal, every contrast fact `check:contrast` already
+     * proves about body text is a fact about the maths too, in both themes and
+     * under forced-colors, without this gate restating a single threshold.
+     */
+    ok(
+      `${MATH_PATH}: maths takes the prose colour rather than declaring one`,
+      math.katexColour !== null && math.katexColour === math.proseColour,
+      `.katex computes ${math.katexColour} and .prose computes ${math.proseColour}. A ` +
+        `declared colour would survive a theme change and break both of them.`,
+    );
+
+    /*
+     * FORCED COLOURS GOES THROUGH CDP, not through `page.emulateMediaFeatures`.
+     *
+     * MEASURED 2026-09-06: puppeteer 25.4.0 validates the feature name against
+     * its own allowlist and throws `Unsupported media feature: forced-colors`
+     * before anything reaches the browser. Chrome supports it perfectly well;
+     * it is the wrapper that does not know about it. `Emulation.setEmulatedMedia`
+     * is the call puppeteer would have made, so this is the same instrument with
+     * one fewer layer, and it is the shape this file already uses for the
+     * Preload domain.
+     */
+    const emulation = await page.createCDPSession();
+    for (const mode of [
+      { label: "dark", cookie: "dark", features: [] },
+      {
+        label: "forced-colors",
+        cookie: null,
+        features: [{ name: "forced-colors", value: "active" }],
+      },
+    ]) {
+      if (mode.cookie) {
+        await page.setCookie({ url: BASE, name: "theme", value: mode.cookie, path: "/" });
+      }
+      if (mode.features.length > 0) {
+        await emulation.send("Emulation.setEmulatedMedia", { features: mode.features });
+      }
+      await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
+      const colours = await page.evaluate(() => {
+        const prose = document.querySelector(".prose");
+        const katex = document.querySelector(".prose .katex");
+        return {
+          prose: prose ? getComputedStyle(prose).color : null,
+          katex: katex ? getComputedStyle(katex).color : null,
+        };
+      });
+      ok(
+        `${MATH_PATH}: maths still takes the prose colour under ${mode.label}`,
+        colours.katex !== null && colours.katex === colours.prose,
+        `.katex computes ${colours.katex} and .prose computes ${colours.prose} under ` +
+          `${mode.label}. The two must move together, because that is what makes ` +
+          `check:contrast's thresholds cover the maths without restating one.`,
+      );
+    }
+    await emulation.send("Emulation.setEmulatedMedia", { features: [] });
+    await emulation.detach();
+    await page.deleteCookie({ url: BASE, name: "theme", path: "/" });
+
+    /* ---- and the control: a mathless post links nothing extra ----------- */
+
+    await page.goto(`${BASE}${MATHLESS_POST_PATH}`, { waitUntil: "networkidle0" });
+    const mathless = await page.evaluate(() => ({
+      sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(
+        (l) => l.getAttribute("href") ?? "",
+      ),
+      expressions: document.querySelectorAll(".katex").length,
+    }));
+    ok(
+      `${MATHLESS_POST_PATH}: a post with no maths links no math stylesheet`,
+      !mathless.sheets.some((href) => href.includes("katex")) && mathless.expressions === 0,
+      `stylesheets: ${mathless.sheets.join(", ")}, .katex elements: ` +
+        `${mathless.expressions}. Twelve of the thirteen posts have no expression in ` +
+        `them and must pay nothing for the one that does.`,
     );
   }
 
@@ -5597,20 +6011,39 @@ try {
  */
 if (subjectReachable) {
   /*
-   * ONE FLOOR. The admin-absent branch was DELETED 2026-09-06 (vol 15).
+   * TWO FLOORS, ONE PER MODE, AND THE ADMIN-ABSENT ONE STAYS DELETED.
    *
-   * It read `adminCasesRan ? 236 : 172`, and nothing ever exercised the 172:
-   * this machine always has a credential, and the gate is CI-excluded, so no
-   * instrument reached that branch and its floor could drift as far as it liked
-   * without anything noticing. An unreachable branch is a mirror of the real
-   * one that nobody maintains.
+   * The admin-absent branch went on 2026-09-06 (vol 15) because nothing ever
+   * exercised it: this machine always has a credential, the gate is CI-excluded
+   * in its preview mode, and an unreachable branch is a mirror of the real one
+   * that nobody maintains. That reasoning is unchanged and that branch is gone.
    *
-   * The half that made it reachable at all was a SKIP on a missing credential,
-   * which counts nothing and then quietly halves the floor. A gate that cannot
-   * see its subject now says so and fails, so the smaller floor has nothing to
-   * be for.
+   * **THE MODE SPLIT IS DIFFERENT, because both sides are RUN.**
+   * `.github/workflows/browser.yml` runs this gate twice: once with no
+   * `PUBLIC_ORIGIN`, against a preview build of the working tree, and once with
+   * it set, against the deployed site. So this is ruling 23's per-branch floor
+   * rather than the mirror ruling 26 deleted: a single value would be judged
+   * against whichever mode ran last, silently.
+   *
+   * The gap between them is what the deployed mode CANNOT write: six mention
+   * assertions (nothing may seed an approved mention on production) and twelve
+   * math assertions (the fixture is a draft and nothing here may publish it).
+   * Both blocks SKIP with their reason rather than passing quietly.
+   *
+   * ## RE-MEASURED 2026-09-06 WITH THE MATH CASES, BY RUNNING BOTH MODES
+   *
+   * Never summed, and the arithmetic is shown only to make the two numbers
+   * credible against each other: **261** driving the preview, **243** against
+   * `https://dustinedwards.dustin-edwards.workers.dev`, a difference of 18 which
+   * is the 6 + 12 above. Before the math cases the figures were 249 and 243.
+   *
+   * Floored at 248 and 230, which is `check:floors`' own tolerance,
+   * `max(3, ceil(count * 0.05))`, applied by hand: 13 under each. By hand
+   * because this gate is tiered `network`, so `check:floors` reads the offline
+   * tier and never sees these lines. Nothing re-measures them automatically and
+   * the trigger is touching this file.
    */
-  const MINIMUM_CHECKS = 236;
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
@@ -5685,7 +6118,17 @@ if (subjectReachable) {
    * exit code is actually computed from, rather than to reorder two assignments
    * and leave the next editor the same trap.
    */
-  const floorBreach = assertFloor("check:browser", "checks", checks, MINIMUM_CHECKS);
+  /*
+   * THE FLOOR NAME CARRIES THE MODE, per ruling 23's amendment. One name for
+   * two branches would file both readings under one label, and whichever ran
+   * last would be judged against a floor measured from the other.
+   */
+  const floorBreach = assertFloor(
+    "check:browser",
+    DRIVES_PREVIEW ? "checks:preview" : "checks:deployed",
+    checks,
+    MINIMUM_CHECKS,
+  );
   if (floorBreach) {
     console.error(`check:browser REFUSED: ${floorBreach}`);
     failures += 1;
