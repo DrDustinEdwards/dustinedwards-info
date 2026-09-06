@@ -13,6 +13,14 @@ import { currentHead } from "~/lib/editor/publish.server";
 import { adminActorContext } from "~/lib/auth.server";
 import type { Route } from "./+types/admin.posts.new";
 
+/*
+ * THE MATH STYLESHEET, ALWAYS. Same reason as the edit route beside it: the
+ * exact-preview pane copies this document's stylesheets into its iframe, so an
+ * author typing an expression needs the sheet on the page they are typing on.
+ * Grounds in root.tsx, which reads this handle.
+ */
+export const handle = { math: true };
+
 export function meta() {
   return [{ title: "New post · Admin" }, { name: "robots", content: "noindex" }];
 }
