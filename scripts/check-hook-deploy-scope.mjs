@@ -25,6 +25,11 @@
  * file existing in the matcher list. A hook unregistered in settings would pass
  * every case here and protect nothing.
  *
+ * THE LAST TWO CASES ARE A PAIR and are read as one: a dry run allowed, and the
+ * same command without the flag still refused. Either alone would pass on a
+ * hook that had simply stopped blocking deploys, which is the failure a
+ * loosening introduces and the one that is silent.
+ *
  * FAILS CLOSED. An unreadable hook, a missing interpreter or an unexpected exit
  * code is a failure, never a skip.
  *
@@ -121,7 +126,7 @@ function runHook(command, cwd) {
 }
 
 /*
- * THE SIX CASES, and each one names the defect it would catch.
+ * THE EIGHT CASES, and each one names the defect it would catch.
  *
  * The parent directory is derived rather than written, so this reads correctly
  * from any clone path. `../dustinedwards-mcp` is a real sibling on the machine
@@ -202,6 +207,33 @@ const CASES = [
       "a bare cd goes home, which this cannot resolve. Everything unresolvable " +
       "must read as inside, or an unparseable command becomes a way through.",
   },
+  {
+    label: "wrangler deploy --dry-run INSIDE the site repo is allowed",
+    command: "npx wrangler deploy --dry-run --outdir ./out",
+    cwd: root,
+    expect: 0,
+    why:
+      "ruled 2026-09-06. A dry run bundles and prints: no version, no " +
+      "deployment, nothing changed on the account. Blocking it cost a " +
+      "dependency session its module measurement and pushed that measurement " +
+      "outside the guard, which is the worse habit.",
+  },
+  {
+    label: "a real deploy BESIDE a dry run is still blocked",
+    /*
+     * THE PAIR IS THE ASSERTION. The case above alone would pass on a hook
+     * that had simply stopped blocking deploys, which is the failure the
+     * loosening could introduce and the one that is silent. This is the same
+     * command with the flag removed, so the two differ in exactly the thing
+     * under test and nothing else.
+     */
+    command: "npx wrangler deploy --outdir ./out",
+    cwd: root,
+    expect: 2,
+    why:
+      "without --dry-run this is the act hard rule 16 reserves to ship. If " +
+      "this allows, the flag check is matching something other than the flag.",
+  },
 ];
 
 for (const { label, command, cwd, expect, why } of CASES) {
@@ -228,11 +260,12 @@ console.log("");
  * the shape that fails quietly: an array that stopped parsing would run zero
  * cases and report a clean sweep of a security guard.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-05 by RUNNING it: 6.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-06 by RUNNING it: 8.
+ * It was 6, before the dry-run pair landed with the 2026-09-06 loosening.
  * Slack of zero, because the set is a fixed enumeration of the ruling's own
  * cases and a drop is a removed case rather than natural movement.
  */
-const MINIMUM_CHECKS = 6;
+const MINIMUM_CHECKS = 8;
 const floorBreach = assertFloor(
   "check:hook-scope",
   "checks",
