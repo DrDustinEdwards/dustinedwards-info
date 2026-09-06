@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * The transform ladder must be SHAPED like a transform ladder.
+ * Every image byte this site derives through the Images binding must be LOSSY,
+ * and the transform ladder must be SHAPED like a transform ladder.
  *
  * ## The defect this was written for
  *
@@ -10,9 +11,10 @@
  * Images binding defaults to lossless. The 640px rung was 404,020 bytes, the
  * 1024px 944,030, the 1408px 979,922: every rung heavier than the object it
  * resizes, which inverts the whole purpose of `srcset` and bills a
- * transformation for the privilege. The fix is `WEBP_QUALITY` in that file.
+ * transformation for the privilege. The fix is `WEBP_QUALITY`, which lives in
+ * `app/lib/media/encoding.mjs` since the second call site was found.
  *
- * ## THE THREE ASSERTIONS, AND WHY NONE OF THEM CARRIES A NUMBER
+ * ## THE FOUR ASSERTIONS, AND WHY NONE OF THEM CARRIES A NUMBER
  *
  *   1. **Every rung is lossy.** Chunk type `VP8`, never `VP8L`. This is the
  *      defect verbatim and it needs no threshold.
@@ -21,9 +23,22 @@
  *      smaller one is broken encoding whatever the absolute numbers are.
  *   3. **The narrowest rung is smaller than the origin.** Catches the gross
  *      case of serving the original unresized under a width parameter.
+ *   4. **Every STORED placeholder is lossy**, decoded from the data URI in the
+ *      `placeholder` column. Added 2026-09-06 when the same missing `quality`
+ *      was found at its second call site, in the rebuild rather than the
+ *      route, where nothing was watching it at all.
  *
  * A tuned constant here would be a second owner of a value that belongs to the
  * image, and would need re-tuning every time an asset was re-encoded.
+ *
+ * ## THE SUBJECT IS WIDER THAN THE ROUTE, AND ASSERTION 4 IS WHY
+ *
+ * One to three read what the transform route SERVES. Four reads what the
+ * rebuild STORED, over every tier rather than over R2 alone, because the
+ * function that derives a placeholder runs over static files in the same loop.
+ * Both halves are the same defect: the Images binding emits lossless WebP when
+ * no `quality` is given, and the constant that says otherwise now lives in
+ * `app/lib/media/encoding.mjs` because there turned out to be two callers.
  *
  * ## ASSERTION 2 WAS RULED AS RAW BYTES FIRST, AND THE MEASUREMENT CHANGED IT
  *
@@ -64,11 +79,17 @@
  * depends on sort stability. The assertion is about what happens AS PIXELS
  * RISE; where they do not rise there is nothing to assert.
  *
- * ## The floor
+ * ## The floors, one per subject
  *
  * A sweep that examined nothing prints what a clean sweep prints, so this FAILS
  * when it examined zero lossy-origin rows and reports what it found and skipped
  * either way.
+ *
+ * TWO floors rather than one, because the two subjects are selected by
+ * different queries over different rows: a bucket full of gradeable ladders
+ * satisfies the first while the `placeholder` column is empty, and an index
+ * full of placeholders satisfies the second with no R2 image in it. One floor
+ * covering both would be satisfied by either.
  *
  * Usage:
  *   node scripts/check-image-weight.mjs
@@ -91,22 +112,20 @@ function argOf(flag) {
 const BASE = (argOf("--base") ?? process.env.PUBLIC_ORIGIN ?? SITE_ORIGIN).replace(/\/+$/, "");
 
 /**
- * The R2 image rows, read from the index rather than by listing the bucket.
+ * One read against the media index.
  *
  * `wrangler r2 object` has no `list` verb, which is why every reconciliation in
- * this repo reads D1 for the key set. Trashed rows are excluded: the object
- * still serves, but the library has withdrawn it and nobody is being asked to
- * keep its ladder honest.
+ * this repo reads D1 for the key set.
  *
  * ONE COMMAND STRING, not an argv array. With `shell: true` on Windows an array
  * argument carrying spaces is split by the shell before wrangler sees it, and
  * the SQL arrives as twenty unknown positional arguments.
+ *
+ * @param {string} sql a SELECT, inlined so the repo's own hook can read it
  */
-function r2ImageRows() {
+function mediaRows(sql) {
   const result = spawnSync(
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
-      `"SELECT key, bytes, mime FROM media ` +
-      `WHERE storage = 'r2' AND kind = 'image' AND trashed_at IS NULL ORDER BY key;"`,
+    `npx wrangler d1 execute ${DB_NAME} --remote --json --command "${sql}"`,
     { encoding: "utf8", shell: true, maxBuffer: 32 * 1024 * 1024 },
   );
   const out = `${result.stdout ?? ""}${result.stderr ?? ""}`;
@@ -116,6 +135,37 @@ function r2ImageRows() {
     throw new Error("could not read the media table");
   }
   return JSON.parse(match[0])[0].results;
+}
+
+/**
+ * The R2 image rows whose ladder is graded.
+ *
+ * Trashed rows are excluded: the object still serves, but the library has
+ * withdrawn it and nobody is being asked to keep its ladder honest.
+ */
+function r2ImageRows() {
+  return mediaRows(
+    "SELECT key, bytes, mime FROM media " +
+      "WHERE storage = 'r2' AND kind = 'image' AND trashed_at IS NULL ORDER BY key;",
+  );
+}
+
+/**
+ * EVERY STORED PLACEHOLDER, whatever tier produced it.
+ *
+ * Deliberately NOT narrowed to `storage = 'r2'` the way the ladder query is,
+ * and the width is the assertion rather than a convenience: `placeholderFor`
+ * runs over R2 objects and over static files from the asset manifest in the
+ * same rebuild, so a defect in it reaches both tiers at once. A query that
+ * looked at one would report the other clean without examining it, which is
+ * FAILURES.md's "a fix in N-1 of N sites is not a fix" reproduced inside the
+ * gate written to catch it.
+ */
+function placeholderRows() {
+  return mediaRows(
+    "SELECT key, storage, placeholder FROM media " +
+      "WHERE placeholder IS NOT NULL AND placeholder != '' AND trashed_at IS NULL ORDER BY key;",
+  );
 }
 
 /**
@@ -250,6 +300,65 @@ export function ladderProblems(key, origin, rungs) {
   return problems;
 }
 
+/**
+ * THE FOURTH ASSERTION, over a STORED placeholder rather than a served rung.
+ *
+ * ## The defect this was written for
+ *
+ * `placeholderFor` in `app/lib/media/rebuild.server.ts` called the Images
+ * binding with no `quality`, exactly as the transform route did before
+ * 2026-09-01, so every LQIP in the index is a LOSSLESS VP8L data URI. The
+ * column exists to hold something small enough to inline in a document, and
+ * lossless is roughly three times the bytes of the lossy encoding of the same
+ * twenty pixel wide image. The ladder fix landed at one of the two call sites
+ * and this is the other.
+ *
+ * ## Why a pure function
+ *
+ * Same reason `ladderProblems` is one: the replay feeds it a placeholder read
+ * out of the live index BEFORE the fix, with no network and no deploy, and
+ * watches it name the defect. A gate whose red case can only be produced by
+ * breaking production is a gate nobody proves.
+ *
+ * ## No threshold, again
+ *
+ * The assertion is the CHUNK TYPE, `VP8` and never `VP8L`, decoded from the
+ * base64 payload of the data URI. A byte ceiling would be a second owner of a
+ * number that belongs to the image, and would need re-tuning every time the
+ * placeholder width moved. The prefix is asserted too, because a row holding
+ * something that is not a WebP data URI at all would otherwise decode to
+ * garbage and be reported as an unknown codec rather than as a wrong column.
+ *
+ * @param {string} key
+ * @param {string} placeholder the stored data URI
+ * @returns {string[]} problems
+ */
+export function placeholderProblems(key, placeholder) {
+  /** @type {string[]} */
+  const problems = [];
+  const prefix = "data:image/webp;base64,";
+
+  if (!placeholder.startsWith(prefix)) {
+    problems.push(
+      `${key}: the stored placeholder does not begin ${prefix}. It is ` +
+        `${JSON.stringify(placeholder.slice(0, 40))}, which is not a WebP data URI.`,
+    );
+    return problems;
+  }
+
+  const buf = Buffer.from(placeholder.slice(prefix.length), "base64");
+  const info = codecOf(buf);
+  if (info.lossy !== true) {
+    problems.push(
+      `${key}: the stored placeholder is ${info.codec}, not a lossy encoding. ` +
+        `The Images binding returns lossless WebP when no quality is set, and a ` +
+        `lossless LQIP costs several times what a lossy one does in a column ` +
+        `whose whole purpose is to be small enough to inline.`,
+    );
+  }
+  return problems;
+}
+
 /** @param {string} url */
 async function fetchImage(url) {
   const res = await fetch(url);
@@ -355,6 +464,44 @@ async function main() {
     problems.push("fetched ZERO rungs, so no width was checked at all");
   }
 
+  /*
+   * ---- 4. EVERY STORED PLACEHOLDER IS LOSSY. -------------------------------
+   *
+   * Read out of the index rather than off the wire, because a placeholder is
+   * not served: it is a column, inlined into whatever renders it. The bytes
+   * under test are therefore the STORED bytes and nothing else.
+   */
+  const stored = placeholderRows();
+  console.log(`\n  ${stored.length} stored placeholder(s) in the index`);
+  let placeholders = 0;
+  let placeholderBytes = 0;
+  for (const row of stored) {
+    placeholders += 1;
+    placeholderBytes += String(row.placeholder).length;
+    problems.push(...placeholderProblems(row.key, String(row.placeholder)));
+  }
+  if (placeholders > 0) {
+    console.log(
+      `  ${placeholders} examined, ${Math.round(placeholderBytes / placeholders)} bytes ` +
+        `mean as stored`,
+    );
+  }
+
+  /*
+   * ITS OWN FLOOR, and it needs one for a reason the ladder's floor does not
+   * cover: the ladder query and this one select different rows, so a full
+   * bucket can satisfy the first while this one examines nothing. A rebuild
+   * that stopped deriving placeholders entirely would empty this column, and
+   * an empty column and a clean column print the same line.
+   */
+  if (placeholders === 0) {
+    problems.push(
+      `examined ZERO stored placeholders, so assertion 4 passed vacuously. ` +
+        `Either nothing in the index carries one, which means the rebuild has ` +
+        `stopped deriving them, or the query no longer matches the column.`,
+    );
+  }
+
   if (problems.length > 0) {
     for (const p of problems) console.error(`\n  FAIL  ${p}`);
     console.error("");
@@ -363,7 +510,8 @@ async function main() {
 
   console.log(
     `\ncheck:image-weight ok. ${examined} lossy origin(s): every rung lossy, ` +
-      `bytes per pixel never rising with size, narrowest rung under the origin.\n`,
+      `bytes per pixel never rising with size, narrowest rung under the origin. ` +
+      `${placeholders} stored placeholder(s), every one lossy.\n`,
   );
 }
 
