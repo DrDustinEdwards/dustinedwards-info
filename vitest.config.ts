@@ -127,9 +127,13 @@ export default defineConfig({
       miniflare: {
         /* Matched to wrangler.jsonc.example. A different compatibility date is
          * a different runtime, and a test layer running on one while the deploy
-         * runs on another is measuring something else. */
-        compatibilityDate: "2026-07-08",
-        compatibilityFlags: ["nodejs_compat"],
+         * runs on another is measuring something else.
+         *
+         * NO FLAGS, for the reason the config states at length: at 2026-08-04
+         * and later `nodejs_compat` and `nodejs_compat_v2` are both on by
+         * default, so listing one here would be a flag the runtime ignores and
+         * a reader takes for a decision. */
+        compatibilityDate: "2026-09-01",
         /*
          * ONIGURUMA, AS A COMPILED MODULE. `app/lib/content/wasm.server.ts`
          * statically imports `shiki/onig.wasm` because Workers refuse

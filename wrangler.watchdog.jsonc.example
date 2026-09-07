@@ -20,7 +20,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "dustinedwards-watchdog",
-	"compatibility_date": "2026-07-08",
+	"compatibility_date": "2026-09-01",
 	"main": "./workers/watchdog.ts",
 	// NO PUBLIC SURFACE. This Worker exports `scheduled` and nothing else, so a
 	// workers.dev route would answer errors to anyone who found it and would be

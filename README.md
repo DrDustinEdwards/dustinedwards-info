@@ -40,7 +40,7 @@ is the method behind the gates, written from the times it was got wrong.
 
 | Layer | What |
 | --- | --- |
-| Runtime | Cloudflare Workers, `nodejs_compat` |
+| Runtime | Cloudflare Workers, Node compatibility on by compatibility date |
 | Framework | React Router 8 (SSR), Vite |
 | Database | D1 (`dustinedwards`), Drizzle, hand-written migrations |
 | Auth | Better Auth, Google, single admin, sessions in KV |

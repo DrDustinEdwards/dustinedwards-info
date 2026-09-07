@@ -7,9 +7,18 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "dustinedwards",
-	"compatibility_date": "2026-07-08",
+	"compatibility_date": "2026-09-01",
 	"main": "./workers/app.ts",
-	"compatibility_flags": ["nodejs_compat"],
+	// NO `compatibility_flags`, and the absence is the setting. `nodejs_compat`
+	// and `nodejs_compat_v2` are BOTH on by default for a compatibility date of
+	// 2026-08-04 or later, so an explicit `nodejs_compat` here would be a flag
+	// wrangler ignores and a reader would take for a decision. Measured on the
+	// installed runtime before the flag came out: at this date with no flags,
+	// `Buffer` is a function and `process` is an object.
+	//
+	// Turning Node compatibility OFF at this date is `no_nodejs_compat` and
+	// `no_nodejs_compat_v2`, which is the pair to reach for if that is ever
+	// wanted; removing a positive flag no longer does it.
 	"keep_vars": true,
 	// INVOCATION LOGS ARE OFF, and that is a PRIVACY setting rather than a cost
 	// one. An invocation log is "enriched with information available to

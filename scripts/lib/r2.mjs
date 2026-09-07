@@ -42,8 +42,9 @@ async function bucketProxy(bucket, remote) {
     configPath,
     JSON.stringify({
       name: "r2-list",
-      compatibility_date: "2026-07-08",
-      compatibility_flags: ["nodejs_compat"],
+      // Matched to wrangler.jsonc.example, and no flags for its reason: Node
+      // compatibility is on by default at this date.
+      compatibility_date: "2026-09-01",
       r2_buckets: [{ binding: "BUCKET", bucket_name: bucket, ...(remote ? { remote: true } : {}) }],
     }),
     "utf8",
