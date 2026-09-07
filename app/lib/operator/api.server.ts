@@ -49,6 +49,8 @@ import {
 import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { copyMissingTwins } from "~/lib/media/backup.server";
+import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
+import { storeUpload } from "~/lib/media/upload.server";
 import { listDirectory, readFile } from "~/lib/editor/github.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
@@ -94,6 +96,7 @@ const TOOLS = [
   "sync_media",
   "sync_posts",
   "backup_media",
+  "upload_media",
   "list_mentions",
   "decide_mention",
 ] as const;
@@ -216,6 +219,26 @@ export const TOOL_DESCRIPTORS: Readonly<
       "and nothing is ever copied backup to media. Idempotent. A read-back " +
       "reconciliation: objects, twins, missing and mismatched, counted after " +
       "the writes rather than from the loop's own counters.",
+  },
+  upload_media: {
+    args: {
+      data: "string, optional, base64 bytes or a full data: URI. Either this or url.",
+      url: "string, optional, an https URL the API fetches server-side. Either this or data.",
+      type: "string, optional, the image MIME type. Defaults to the data: URI's " +
+        "own type or the fetched response's Content-Type.",
+      name: "string, optional, the filename to record as original_name. Defaults " +
+        "to the URL's last path segment, or upload.<ext>.",
+    },
+    returns:
+      "url and key, the same two the editor's upload returns, plus bytes, " +
+      "width, height and `recorded`. The url is what goes in the markdown. " +
+      "Idempotent: the key is a digest of the bytes, so the same image " +
+      "uploaded twice is one object.",
+    policy:
+      "MEDIA is the irreplaceable bucket and there is no delete tool over " +
+      "this token, so an object put here stays until an admin removes it. " +
+      "Accepts only the image types in ALLOWED, refuses anything over " +
+      "MAX_BYTES, and fetches only https URLs.",
   },
 };
 
@@ -387,6 +410,9 @@ export async function runTool(
 
       case "backup_media":
         return await backupMedia(env);
+
+      case "upload_media":
+        return await uploadMediaTool(env, args);
 
       case "list_mentions":
         return await listMentionsTool(env, args);
@@ -755,6 +781,339 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
       missing: status.missing,
       extra: status.extra,
     }),
+  };
+}
+
+/**
+ * A `data:` URI's own declaration, or null when this is bare base64.
+ *
+ * Parsed rather than stripped, because the prefix carries the MIME type and an
+ * agent that pasted a whole data URI has already told us what it thinks the
+ * bytes are. Only base64 payloads are accepted: a percent-encoded `data:` URI
+ * is a different encoding and silently mis-decoding one would store rubbish
+ * under a digest that looks perfectly valid.
+ */
+function readDataUri(value: string): { type: string; payload: string } | null {
+  const match = /^data:([^;,]*)(;base64)?,/i.exec(value);
+  if (!match) return null;
+  if (!match[2]) return null;
+  return { type: (match[1] ?? "").toLowerCase(), payload: value.slice(match[0].length) };
+}
+
+/** Base64 to bytes, or null when it is not base64 at all. */
+function decodeBase64(payload: string): Uint8Array | null {
+  // Whitespace is what a base64 blob acquires by travelling through a chat or a
+  // YAML block, and `atob` throws on it.
+  const packed = payload.replace(/\s+/g, "");
+  try {
+    const binary = atob(packed);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The response body, up to a cap, or null if it went past it.
+ *
+ * READ IN CHUNKS AND ABANDONED AT THE CAP, rather than `arrayBuffer()` then a
+ * length check. A `Content-Length` is a claim the far end makes and a body can
+ * simply not stop; buffering it whole to discover that is the shape where a
+ * remote URL decides how much memory this isolate uses.
+ */
+async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promise<Uint8Array | null> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > cap) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return out;
+}
+
+/**
+ * What to record as `original_name` when the caller did not say.
+ *
+ * The URL's last path segment first, because that is what the file was called
+ * at the far end and is the closest thing to a name a person chose. Otherwise
+ * `upload.<ext>`, which at least describes the object.
+ */
+function defaultName(type: string, url: string): string {
+  if (url) {
+    try {
+      const base = new URL(url).pathname.split("/").filter(Boolean).pop();
+      if (base) return decodeURIComponent(base);
+    } catch {
+      // An unparseable URL never gets this far; `uploadMediaTool` parsed it to
+      // check the protocol. Caught anyway rather than thrown out of a naming
+      // helper, and the extension form below is the answer.
+    }
+  }
+  const extension = ALLOWED.get(type);
+  // NOT a substituted default (hard rule 13): a type outside the allowlist is
+  // one statement away from being refused by `storeUpload`, so this name is
+  // never stored. Returning `upload.bin` would be the substitution.
+  return extension ? `upload.${extension}` : "upload";
+}
+
+/**
+ * THE BUCKET, as an operator operation. Ruling 32d.
+ *
+ * ## IT IS AN ADAPTER, and `storeUpload` is the write
+ *
+ * Everything that decides what lands in MEDIA is in `app/lib/media/upload.server.ts`
+ * and is the same code `/admin/media/upload` runs: the same allowlist, the same
+ * size limit, the same content-addressed key, the same custom metadata and the
+ * same non-fatal annotation row. What is here is only how bytes REACH that
+ * door over an HTTP tool call, which is the half the editor solves with a
+ * multipart form.
+ *
+ * ## TWO WAYS IN, AND THE URL IS THE LOAD-BEARING ONE
+ *
+ * `data` is base64, which is the obvious shape and the one that does not scale:
+ * a 13 MB photograph is 17 MB of base64 and no agent is carrying that through a
+ * conversation. `url` is what makes the tool usable, and it is why the ruling
+ * named both.
+ *
+ * ## WHAT GUARDS THE FETCH
+ *
+ * The primary control is that this endpoint is behind `OPERATOR_TOKEN` and a
+ * rate limiter, so the caller is already trusted. Said plainly because the
+ * three checks below are secondary and should not be mistaken for the fence:
+ *
+ *   HTTPS ONLY   `http:` is refused along with every other scheme. This Worker
+ *                holds GITHUB_TOKEN and OPERATOR_TOKEN, and a fetch is the one
+ *                place a caller chooses where it goes.
+ *   CAPPED READ  `readCapped` abandons the body past MAX_BYTES rather than
+ *                buffering it to find out how big it was.
+ *   THE SAME CONTRACT  the bytes then meet `validateUpload` exactly as a form
+ *                upload does, so a fetched HTML page is refused by the
+ *                allowlist and a mislabelled SVG by the markup check.
+ *
+ * The type the caller declares WINS over the response's own `Content-Type`, and
+ * that is deliberate: a perfectly good PNG served as `application/octet-stream`
+ * is common, and refusing it would make the URL path useless against half the
+ * web. It is safe because the declared type is checked against the allowlist
+ * and against the bytes, which is the same treatment `file.type` gets on the
+ * form path, where it is equally a claim.
+ */
+async function uploadMediaTool(
+  env: OperatorEnv,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const data = typeof args.data === "string" ? args.data.trim() : "";
+  const url = typeof args.url === "string" ? args.url.trim() : "";
+  const declaredType = typeof args.type === "string" ? args.type.trim().toLowerCase() : "";
+  const declaredName = typeof args.name === "string" ? args.name.trim() : "";
+
+  /*
+   * EXACTLY ONE SOURCE. Both given is refused rather than resolved by a
+   * precedence rule, because a caller that supplied both has two different
+   * images in mind and silently picking one stores the wrong photograph under a
+   * digest that will never look wrong.
+   */
+  if (data && url) {
+    return {
+      ok: false,
+      status: 400,
+      error: "upload_media takes `data` or `url`, never both. Send one.",
+    };
+  }
+  if (!data && !url) {
+    return {
+      ok: false,
+      status: 400,
+      error:
+        "upload_media needs either `data` (base64 bytes or a data: URI) or " +
+        "`url` (an https URL this API will fetch).",
+    };
+  }
+
+  let bytes: Uint8Array;
+  let type = declaredType;
+
+  if (data) {
+    const uri = readDataUri(data);
+    if (data.startsWith("data:") && !uri) {
+      return {
+        ok: false,
+        status: 400,
+        error:
+          "`data` looks like a data: URI but is not base64-encoded. Send " +
+          "`data:<type>;base64,<payload>` or bare base64.",
+      };
+    }
+
+    // The URI's own type only when the caller named none: an explicit argument
+    // is the more deliberate statement of the two.
+    if (!type && uri) type = uri.type;
+
+    /*
+     * REFUSED ON THE ENCODED LENGTH, before `atob` allocates anything. Base64
+     * is 4 characters per 3 bytes, so this is arithmetic on the string in hand
+     * rather than a guess, and it is deliberately GENEROUS: it only has to stop
+     * an absurd payload from being decoded, and `validateUpload` states the
+     * real limit afterwards against the real byte count.
+     */
+    const packedLength = (uri ? uri.payload : data).replace(/\s+/g, "").length;
+    if (packedLength > Math.ceil(MAX_BYTES / 3) * 4 + 4) {
+      return {
+        ok: false,
+        status: 413,
+        error:
+          `That base64 payload decodes to more than the ` +
+          `${MAX_BYTES / (1024 * 1024)} MB limit. Upload it with \`url\` instead.`,
+      };
+    }
+
+    const decoded = decodeBase64(uri ? uri.payload : data);
+    if (!decoded) {
+      return { ok: false, status: 400, error: "`data` is not valid base64." };
+    }
+    bytes = decoded;
+  } else {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { ok: false, status: 400, error: `\`url\` is not a URL: ${JSON.stringify(url)}.` };
+    }
+    if (parsed.protocol !== "https:") {
+      return {
+        ok: false,
+        status: 400,
+        error: `upload_media fetches https only, not ${parsed.protocol.replace(":", "")}.`,
+      };
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(parsed, { headers: { accept: "image/*" } });
+    } catch (error) {
+      return {
+        ok: false,
+        status: 502,
+        error: `Fetching ${parsed.href} failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+    /*
+     * THE PROTOCOL IS CHECKED AGAIN, ON WHERE IT LANDED.
+     *
+     * `fetch` follows redirects, and a `https://` URL is free to redirect to
+     * `http://`. Checking only the URL the caller typed would make the https
+     * rule above a check on the caller's typing rather than on where the bytes
+     * came from, which is the wrong half of the question.
+     *
+     * `response.url` is the post-redirect URL; falling back to the request's
+     * own href keeps this closed rather than open if it is ever empty.
+     */
+    let landed = "";
+    try {
+      landed = new URL(response.url || parsed.href).protocol;
+    } catch {
+      landed = "";
+    }
+    if (landed !== "https:") {
+      return {
+        ok: false,
+        status: 400,
+        error:
+          `${parsed.href} redirected to ${response.url || "somewhere unparseable"}, ` +
+          `which is not https. upload_media fetches https only, redirects included.`,
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: 502,
+        error: `${parsed.href} answered ${response.status}.`,
+      };
+    }
+    if (!response.body) {
+      return { ok: false, status: 502, error: `${parsed.href} answered with no body.` };
+    }
+
+    const read = await readCapped(response.body, MAX_BYTES);
+    if (!read) {
+      return {
+        ok: false,
+        status: 413,
+        error:
+          `${parsed.href} is over the ${MAX_BYTES / (1024 * 1024)} MB limit; the ` +
+          `download was abandoned.`,
+      };
+    }
+    bytes = read;
+
+    // The response's own claim, only when the caller made none. Split on `;`
+    // because `image/svg+xml; charset=utf-8` is one of the two types where a
+    // charset parameter is normal, and the allowlist holds bare types.
+    if (!type) {
+      type = (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+    }
+  }
+
+  /*
+   * COPIED INTO A FRESH ArrayBuffer rather than handed `bytes.buffer`.
+   *
+   * Two reasons, and the second is the one that would have hurt. `.buffer` is
+   * typed `ArrayBufferLike`, so it does not satisfy the door's parameter at
+   * all. And it is the whole underlying allocation, not the view: it happens to
+   * be exactly the content today because `decodeBase64` and `readCapped` each
+   * size their array to what they read, but that is a property of those two
+   * functions rather than of this call. A later change to either would hash and
+   * store the wrong bytes under a key that still looks perfectly valid.
+   */
+  const payload = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(payload).set(bytes);
+
+  const stored = await storeUpload(env, {
+    bytes: payload,
+    type,
+    name: declaredName || defaultName(type, url),
+  });
+
+  if (!stored.ok) {
+    return { ok: false, status: stored.status, error: stored.message, detail: { code: stored.code } };
+  }
+
+  return {
+    ok: true,
+    data: {
+      // The editors' own two keys, from the same function that builds theirs,
+      // so the string an agent puts in markdown and the string the editor
+      // inserts are one statement rather than two that agree today.
+      ...uploadSuccessBody(stored.key),
+      bytes: stored.bytes,
+      width: stored.width,
+      height: stored.height,
+      /*
+       * THE ANNOTATION ROW IS REPORTED, not assumed. It is written non-fatally
+       * because the object is already in R2 and a D1 hiccup must not report
+       * failure for a write that happened, which is right and leaves an
+       * operator with no way to see it. `false` here means the object landed
+       * and the row did not: the repair is `sync_media`, which re-derives it.
+       */
+      recorded: stored.recorded,
+    },
   };
 }
 

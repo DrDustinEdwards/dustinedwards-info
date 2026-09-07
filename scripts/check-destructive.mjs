@@ -414,6 +414,14 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "copied backup to media; check:destructive's own MEDIA_BACKUP sweep below " +
         "is what holds that",
     ],
+    [
+      "upload_media",
+      "ADDS ONLY, and cannot overwrite anything with different bytes: the key is " +
+        "a digest of the content, so the one object a second upload can land on " +
+        "is the byte-identical one it just recomputed. It has no delete branch, " +
+        "it writes to MEDIA alone, and the annotation row goes through " +
+        "upsertMediaRecord the way every other writer's does",
+    ],
   ]);
 
   for (const name of toolNames) {
@@ -619,8 +627,15 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
  * being skipped, and the slack is what lets an intent be retired without a
  * second edit here. Raising it on every addition would make it a count of the
  * checks rather than a floor under them.
+ *
+ * RE-MEASURED 2026-09-07, by running it: 105, after `upload_media` joined the
+ * operator classification and brought its two per-tool assertions with it. Not
+ * raised by hand for the same reason as above; raised now because check:floors
+ * FAILED it at a gap of 8 against a tolerance of 6, which is that gate saying
+ * the slack has stopped being slack and become a place 8 assertions could stop
+ * running unnoticed. 99 is the count minus this count's tolerance.
  */
-const MINIMUM_CHECKS = 97;
+const MINIMUM_CHECKS = 99;
 const floorBreach = assertFloor("check:destructive", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
