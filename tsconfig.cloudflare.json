@@ -45,9 +45,9 @@
      */
     "noUncheckedIndexedAccess": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    // `cloudflare:test` is the pool's virtual module: `env`, `createExecutionContext`
+    // `cloudflare:test` is the plugin's virtual module: `env`, `createExecutionContext`
     // and `applyD1Migrations`, which test/worker/ imports and nothing else does.
-    "types": ["vite/client", "@cloudflare/vitest-pool-workers/types"],
+    "types": ["vite/client", "@cloudflare/vitest-plugin/types"],
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",

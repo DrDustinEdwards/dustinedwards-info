@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -136,7 +136,7 @@ export default defineConfig({
          * `WebAssembly.instantiate()` on raw bytes, and the Cloudflare Vite
          * plugin turns that import into an already-compiled module at build
          * time. This rule is what makes the same import mean the same thing
-         * here; without it the pool tries to load the wasm as JavaScript and
+         * here; without it the plugin tries to load the wasm as JavaScript and
          * the whole render pipeline fails to import.
          */
         modulesRules: [{ type: "CompiledWasm", include: ["**/*.wasm"] }],
