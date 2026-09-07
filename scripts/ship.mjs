@@ -865,11 +865,57 @@ if (sync.code !== 0) {
   const driftLine = sync.text.match(/sync:content drift: .*render-drift=(\d+)/);
   if (driftLine && Number(driftLine[1]) > 0) {
     const slugs = sync.text.match(/RENDER DRIFT on \d+ slug\(s\): ([^.]*)\./);
-    renderDriftMiss =
-      `sync:content reported render drift on ${driftLine[1]} slug(s)` +
-      `${slugs ? `: ${slugs[1]}` : ""}. The Worker and the Node build rendered the ` +
-      `same source differently; D1 was converged to the build.`;
-    console.log(`  MISSED: ${renderDriftMiss}`);
+    const named = slugs ? slugs[1] : "unnamed slug(s)";
+
+    /*
+     * DRIFT ON THE FIRST SYNC IS NOT YET A DEFECT. Ruling 30, vol 15.
+     *
+     * THE ORDERING ARTIFACT, which is what this usually is. The previously
+     * deployed Worker's content-drift poll front-runs the deploy by up to one
+     * poll interval: it pulls the new markdown, renders it with the OLD
+     * renderer and writes that hash to D1. The sync above then reads a D1 hash
+     * the old pipeline produced, compares it against the NEW build, and calls
+     * it drift. Proven byte-exact when it was first met, by rendering the
+     * flagged slug through the old pipeline and matching the flagged hash.
+     * Nothing is wrong: the write the sync just did is the repair.
+     *
+     * THE SECOND SYNC IS WHAT TELLS THE TWO APART, and it is the same
+     * read-back the three index repairs use rather than a new idea. The first
+     * sync converged every row to the build, so a second one reads zero UNLESS
+     * the converge write did not take, and that is a real defect: a partially
+     * applied write, or something else writing render_hash behind us. A report
+     * assembled from the first run's own counters cannot see either.
+     *
+     * So drift confirmed by a second run FAILS the ship, and drift that
+     * clears completes it. This used to report every first-run drift as "a
+     * pipeline defect to find", which cried wolf on two consecutive ships
+     * where the artifact was benign and had already been ruled benign.
+     */
+    console.log(`  render drift on ${named}: converged, confirming with a second sync`);
+    const confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
+    const confirmLine = confirm.text.match(/sync:content drift: .*render-drift=(\d+)/);
+
+    if (!confirmLine) {
+      refuse(
+        "the confirming sync did not report a drift line",
+        "The first sync converged D1 and the second could not be read, so whether " +
+          "the drift cleared is UNKNOWN. Re-run `npm run ship`.",
+      );
+    } else if (Number(confirmLine[1]) === 0) {
+      console.log(
+        `  confirmed benign: the second sync reads render-drift=0, so D1 carried a ` +
+          `render from the previously deployed Worker (ruling 30) and the converge ` +
+          `write took. Not a pipeline defect.`,
+      );
+    } else {
+      renderDriftMiss =
+        `render drift on ${named} SURVIVED a converge write: the first sync wrote ` +
+        `the build's render to every row and a second sync still reads ` +
+        `render-drift=${confirmLine[1]}. This is not the ordering artifact of ruling ` +
+        `30, which clears on the second run. Either the write is not taking or ` +
+        `something is rewriting render_hash behind the sync.`;
+      console.log(`  MISSED: ${renderDriftMiss}`);
+    }
   } else {
     refuse("the sync failed", "D1 may be partially written. Re-run `npm run ship`.");
   }
@@ -1209,8 +1255,10 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
  * FAILURES.md opens with.
  *
  * Nothing is rolled back. The index operations are idempotent and the drift
- * report's D1 side was already converged by the sync; the render-drift remedy
- * is finding the pipeline divergence, not a re-run.
+ * report's D1 side was already converged by the sync. A render-drift miss
+ * reaching here has survived that converge AND a second sync, so it is the
+ * defect rather than the ordering artifact, and its remedy is finding what
+ * wrote the D1 hash rather than a re-run.
  */
 if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss) {
   const behind = [
@@ -1234,9 +1282,12 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss) {
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
       `  assets until its sync succeeds; both operations are idempotent: re-run\n` +
       `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n` +
-      `  Render drift means the Worker and the Node build disagree about the\n` +
-      `  same bytes; D1 was converged to the build, and the repair is finding\n` +
-      `  the divergence in the pipeline, not a re-run.\n\n` +
+      `  Render drift here has ALREADY SURVIVED a converge write and a second\n` +
+      `  sync, so it is not the benign ordering artifact of ruling 30, which\n` +
+      `  clears on the second run and is reported as confirmed benign above.\n` +
+      `  Either the sync's write is not taking or something else is writing\n` +
+      `  render_hash. Read the two hashes the sync named, and start at what\n` +
+      `  wrote the D1 one; a re-run is not the repair.\n\n` +
       `  A WATCHDOG miss is the one line above that is about the WATCHER rather\n` +
       `  than the site: the previously deployed watchdog keeps firing, so the\n` +
       `  site is still watched, by older code. Re-run \`npm run ship\`, or deploy\n` +
