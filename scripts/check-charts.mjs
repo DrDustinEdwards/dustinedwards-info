@@ -152,7 +152,7 @@ if (process.argv.includes("--hashes")) {
 /** Bundles the chart module for workerd and returns the SVG hashes it produces. */
 async function workerHashes() {
   const { build } = await import("esbuild");
-  const { Miniflare } = await import("miniflare");
+  const { Miniflare, convertV4MiniflareOptions } = await import("miniflare");
 
   const entry = `
     import { buildChartModel, renderChartHast } from ${JSON.stringify(
@@ -208,12 +208,28 @@ async function workerHashes() {
       .replace(/^\s*\/\/.*$/gm, ""),
   );
 
-  const mf = new Miniflare({
-    modules: true,
-    script: bundled.outputFiles[0].text,
-    compatibilityDate: compat.compatibility_date,
-    compatibilityFlags: compat.compatibility_flags ?? [],
-  });
+  /*
+   * THROUGH `convertV4MiniflareOptions`, and the indirection is not decoration.
+   *
+   * Miniflare 5 (which arrives with wrangler 4.117 and later) reshaped the
+   * constructor: worker options moved under a `workers[].config` object and the
+   * top-level `modules`/`script` pair it used to take is refused outright. The
+   * library ships this converter for exactly this case, so the options below
+   * stay in the shape a reader can compare against `wrangler.jsonc.example`
+   * beside them, and the translation is the library's rather than a hand-built
+   * copy of it that would drift at the next reshape.
+   *
+   * Found by RUNNING, not by reading a changelog: the upgrade turned this gate
+   * red with a zod validation error naming `workers: undefined`.
+   */
+  const mf = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: bundled.outputFiles[0].text,
+      compatibilityDate: compat.compatibility_date,
+      compatibilityFlags: compat.compatibility_flags ?? [],
+    }),
+  );
   try {
     const response = await mf.dispatchFetch("http://localhost/");
     const rendered = /** @type {string[]} */ (await response.json());
