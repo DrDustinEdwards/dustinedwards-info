@@ -326,8 +326,13 @@ async function main() {
    *   RENDER DRIFT    the SAME source with a DIFFERENT render_hash: the
    *                   Worker and the Node build rendered identical bytes
    *                   differently. This is the Worker-versus-Node class the
-   *                   byte gate existed for, and the one class that is a
-   *                   pipeline defect rather than ordinary staleness.
+   *                   byte gate existed for. NOT a defect on its own: the
+   *                   commonest cause is the previously deployed Worker's
+   *                   content-drift poll rendering new markdown with the old
+   *                   renderer just before the deploy (ruling 30, vol 15),
+   *                   and this run's write is what repairs it. The verdict
+   *                   belongs to a SECOND run, which ship performs; one
+   *                   reading of this table cannot tell the two apart.
    *   missing-in-d1   a file with no row: a new post, or a lost row.
    *   extra-in-d1     a row with no file: a deleted post; the write cleans it.
    *
@@ -528,8 +533,11 @@ async function main() {
     console.error(
       `sync:content: RENDER DRIFT on ${renderDrift.length} slug(s): ` +
         `${renderDrift.join(", ")}. The Worker and the Node build rendered the same ` +
-        `source bytes differently; D1 has been converged to the build, and the drift ` +
-        `is a pipeline defect to find, not a state to repair.`,
+        `source bytes differently; D1 has been converged to the build. Whether that ` +
+        `is a defect or the benign ordering artifact of ruling 30 is decided by a ` +
+        `SECOND run of this sync, which ship performs: drift that clears was a row ` +
+        `written by the previously deployed Worker, and drift that survives the ` +
+        `converge is the defect.`,
     );
     process.exit(1);
   }
