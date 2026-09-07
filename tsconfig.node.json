@@ -59,6 +59,12 @@
     // The upload allowlist. check:headers derives the attachment rule from it,
     // so the origin invariant has one source rather than two agreeing lists.
     "app/lib/media/upload-contract.mjs",
+    // Listed because upload-contract.mjs IMPORTS it, not because a script here
+    // calls it: `validateUpload` composes the too-large sentence and the one
+    // owner of "this byte count, as a size a person reads" is this module. A
+    // project must list every file it reaches, so a transitive import of a
+    // listed file lands here too. Dependency-free, so it costs nothing.
+    "app/lib/media/byte-size.mjs",
     "app/lib/destructive.mjs",
     // The two webmention retention windows. The admin page labels its sweep
     // with them and check:admin-ui asserts the label against the CONSTANTS

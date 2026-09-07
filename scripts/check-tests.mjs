@@ -105,12 +105,13 @@ const TEST_DIR = join(root, "test");
    the same day, after math-outputs.test.mjs landed with KaTeX. Set to count
    minus check:floors' tolerance, max(3, ceil(count * 0.05)), which is 4 here. */
 const MINIMUM_FILES = 62;
-/* 632 against 666, re-measured 2026-09-06 in the same run, after the four
-   placeholder cases. It was 628 against 662, which was AT the tolerance: four
-   cases arriving is what pushed the old floor one past it. The file floor
+/* 638 against 672, RE-MEASURED 2026-09-07 by running this gate, after the six
+   cases the shared upload refusal landed with. It read 632 against 666 the day
+   before, which check:floors then failed at a gap of 40 against a tolerance of
+   34: six cases arriving is what pushed that floor past it. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
    place, which no file count can see. Same tolerance rule, 34 at this count. */
-const MINIMUM_TESTS = 632;
+const MINIMUM_TESTS = 638;
 
 let checks = 0;
 let failures = 0;

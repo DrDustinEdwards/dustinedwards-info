@@ -1,52 +1,37 @@
 import { redirect } from "react-router";
 
-import { upsertMediaRecord } from "~/db";
 import { getEnv } from "~/lib/context";
-import { byteSize } from "~/lib/media/byte-size.mjs";
-import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
-import { measureDimensions } from "~/lib/media/core.server";
 import {
-  ALLOWED,
-  MAX_BYTES,
   isFormUpload,
   uploadErrorBody,
   uploadRedirectTo,
   uploadSuccessBody,
 } from "~/lib/media/upload-contract.mjs";
+import { storeUpload } from "~/lib/media/upload.server";
 import type { Route } from "./+types/admin.media.upload";
 
 /**
  * Image upload for the editor. Sits under /admin so the existing Better Auth
  * middleware gates it; there is no unauthenticated write path to the bucket.
  *
- * ## Keys are CONTENT-ADDRESSED
+ * ## AN ADAPTER, since 2026-09-07, and the store is `upload.server.ts`
  *
- * Ruling: decisions.md 2026-08-02. `sha256(bytes)` truncated plus the extension,
- * replacing `posts/<year>/<slug>-<8hex>.<ext>`.
+ * Everything this route used to do after the bytes arrived, it now asks
+ * `storeUpload` to do: refuse, measure, address, put, annotate. Ruling 32d gave
+ * MEDIA a second writer in the operator API's `upload_media`, and the sequence
+ * is not one two copies stay equal to, so it moved to a door they share. The
+ * grounds are at that function; the content-addressing ruling is at
+ * `contentKey` in `classify.mjs`, which is where the key is actually made.
  *
- * **The security argument is what decided it.** `/media/*` is public and
- * unauthenticated, and the old key was derivable from public information: a
- * draft post's images were reachable by anyone who guessed a slug the sitemap
- * publishes plus eight hex characters. A content-addressed key is not derivable
- * from anything public, because it is a function of bytes nobody outside has.
- *
- * Secondary, all real: the same photo uploaded twice is now ONE object rather
- * than two; immutability stops being a convention the uploader maintains and
- * becomes arithmetic, which is what makes the `immutable` cache header provably
- * safe rather than merely intended; and the key is VERIFIABLE against the bytes,
- * which nothing in the old scheme could be.
- *
- * The cost, taken knowingly: deduplication makes delete a REFCOUNT rather than
- * an object operation, because once two posts share a blob, deleting for one
- * must not delete for the other. `media_refs` is what will answer that.
- *
- * Human readability moved to `original_name`. The key is an address, not a
- * label, and the filename the author chose survives in D1 where it belongs.
+ * WHAT IS LEFT HERE IS EXACTLY WHAT IS THIS ROUTE'S: parsing a multipart form,
+ * naming its own missing-input refusal, and choosing between a redirect and a
+ * JSON body. All three are properties of who is asking rather than of what is
+ * being stored, which is the line the extraction was cut along.
  */
 
 /* The accepted types, the size limit and the reply shapes live in
- * `upload-contract.mjs`, which is a plain module with no imports so `node:test`
- * can assert them. Two editors read the JSON this route returns and neither may
+ * `upload-contract.mjs`, which is a plain module `node:test` can load so it can
+ * assert them. Two editors read the JSON this route returns and neither may
  * change, so the contract is a tested object rather than a convention. */
 
 /* `slugifyName` lived here to build the human-readable half of a key. Content
@@ -98,109 +83,31 @@ export async function action({ request, context }: Route.ActionArgs) {
     return refuse("no-file", "No file was submitted.", 400);
   }
 
-  const extension = ALLOWED.get(file.type);
-  if (!extension) {
-    return refuse(
-      "unsupported-type",
-      `Unsupported image type "${file.type || "unknown"}".`,
-      415,
-    );
-  }
-
-  if (file.size > MAX_BYTES) {
-    return refuse(
-      "too-large",
-      `Image is ${byteSize(file.size)}, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
-      413,
-    );
-  }
-
-  // Read once. The bytes are needed twice, to hash and to store, and a File's
-  // stream cannot be consumed twice.
-  const bytes = await file.arrayBuffer();
-
-  /**
-   * MEASURED BEFORE THE KEY EXISTS, because the key carries the measurement.
+  /*
+   * READ, THEN REFUSE, and the ordering costs nothing measurable.
    *
-   * Finding B002: image dimensions are baked into the gated HTML, and the two
-   * writers measured them from two different stores, one of which a clone
-   * cannot reach. The key carries `-<w>x<h>` so both resolvers parse rather
-   * than fetch. That makes this measurement an input to the key, which is why
-   * it happens here rather than by reading the object back after the put.
+   * The type and size checks used to run against `file.type` and `file.size`
+   * before the bytes were touched, which reads as the thrifty order and is not:
+   * `request.formData()` above has already buffered the entire body into this
+   * isolate, so `arrayBuffer()` is a copy out of memory rather than a read off
+   * the wire, and an oversized post was oversized in here before any of this
+   * ran. What the old order actually bought was a second statement of the size
+   * rule living in this file, which is the thing the extraction was for.
    *
-   * Null is a real answer and not a failure: an SVG has no intrinsic pixel
-   * size, so it gets a key with no dimension segment, exactly as the `media`
-   * table records a NULL width for the same reason.
+   * Read once, too: the bytes are needed to hash and to store, and a File's
+   * stream cannot be consumed twice.
    */
-  const dimensions = await measureDimensions(env, bytes);
-  const key = contentKey(
-    await crypto.subtle.digest("SHA-256", bytes),
-    extension,
-    dimensions,
-  );
-
-  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the
-  // bytes, so re-uploading the same image overwrites an object with a
-  // byte-identical one. There is deliberately no "does it exist" check first,
-  // which would cost a round trip to save a write that changes nothing.
-  await env.MEDIA.put(key, bytes, {
-    httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
-    // THE FILENAME LIVES ON THE OBJECT, not only in the row.
-    //
-    // A content-addressed key is a digest, so the name the author chose is not
-    // recoverable from it and a rebuild cannot re-derive what only D1 held. The
-    // D1 write below is deliberately non-fatal, and the queue consumer inserts
-    // its own row from the event without one, so the name had exactly one
-    // source and that source was allowed to fail silently.
-    //
-    // Custom metadata makes it a property of the OBJECT, which is the same rule
-    // the whole module runs on: R2 is the truth, D1 is derived, and anything
-    // derived must be re-derivable. Found by audit 2026-08-02.
-    customMetadata: { originalName: file.name },
+  const stored = await storeUpload(env, {
+    bytes: await file.arrayBuffer(),
+    type: file.type,
+    name: file.name,
   });
 
-  /**
-   * The annotation row, created HERE rather than left to the backfill.
-   *
-   * The backfill exists for objects that predate the table; making it also the
-   * only path that measures dimensions would mean every fresh upload showed no
-   * dimensions in the library until someone remembered to run it, which is a
-   * chore the system can do for itself. Alt starts empty, because nobody has
-   * written one yet, and the library is where it gets filled in.
-   *
-   * Non-fatal, deliberately: the object is already in R2 and the upload has
-   * succeeded, so a D1 hiccup must not report failure for a write that
-   * happened. The library lists objects from the BUCKET and treats a missing
-   * row as empty metadata, so the worst case is an un-annotated object and a
-   * backfill button offering to fix it.
-   */
-  try {
-    // `dimensions` is the measurement the key was built from, reused rather
-    // than re-read: one measurement means the row and the key cannot disagree,
-    // and it drops a round trip back to R2 for bytes we just had in hand.
-    const { kind, mime } = classify(key);
-    await upsertMediaRecord(env, {
-      key,
-      alt: "",
-      storage: "r2",
-      kind,
-      role: roleOf(key),
-      mime,
-      bytes: bytes.byteLength,
-      // The ONLY surviving copy of what the author called this file. The key
-      // cannot carry it any more, so losing this loses it outright.
-      originalName: file.name,
-      uploadedAt: new Date().toISOString(),
-      width: dimensions?.width ?? null,
-      height: dimensions?.height ?? null,
-    });
-  } catch (error) {
-    console.error("media record write failed after upload", error);
-  }
+  if (!stored.ok) return refuse(stored.code, stored.message, stored.status);
 
   // The library navigates back to itself carrying the key; the editors get the
   // two-key body they have always read. Same upload, two answers, one branch.
   return asForm
-    ? redirect(uploadRedirectTo({ ok: true, key }))
-    : Response.json(uploadSuccessBody(key));
+    ? redirect(uploadRedirectTo({ ok: true, key: stored.key }))
+    : Response.json(uploadSuccessBody(stored.key));
 }
