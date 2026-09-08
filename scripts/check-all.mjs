@@ -51,7 +51,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 31;
+const MINIMUM_GATES = 32;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -348,6 +348,14 @@ export const TIERS = {
    * to refuse.
    */
   "check:image-weight": "network",
+  /*
+   * NETWORK, and there is no local form of it to fall back to. It reads the
+   * monitors off UptimeRobot's API with an operator credential from `.dev.vars`,
+   * and a clean checkout has neither the credential nor anything local to read:
+   * an "offline" mode could only report that it did not look, which is the
+   * vacuity its own fail-closed branches exist to refuse.
+   */
+  "check:uptime": "network",
 };
 
 /**
@@ -362,6 +370,14 @@ const REMOTE_ARGS = {
   // third source, the live database, which is where an unapplied migration or a
   // hand-altered column would show up and nowhere else.
   "check:invariants": ["--remote"],
+  /*
+   * Its config-against-example comparison is pure and stays in the offline tier
+   * ship runs. `--remote` adds the third source, the cron triggers actually
+   * REGISTERED on the two Workers, which is where a trigger that exists on the
+   * platform and in no config shows up and nowhere else. One did, hourly, for
+   * fifteen days.
+   */
+  "check:config": ["--remote"],
 };
 
 const all = process.argv.includes("--all");

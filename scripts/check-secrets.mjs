@@ -70,6 +70,7 @@ import { fileURLToPath } from "node:url";
 import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
 import { stripCommentsAndStrings } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { readDevVar } from "./lib/dev-vars.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_TYPES = join(root, "app", "env.d.ts");
@@ -472,6 +473,140 @@ if (existsSync(examplePath)) {
   );
 }
 
+/* ================================ the operator credentials in .dev.vars */
+
+/*
+ * THE `.dev.vars` CREDENTIALS ARE NOT WRANGLER SECRETS, AND ARE STILL GUARDED.
+ *
+ * Added 2026-09-07 with the uptime monitors. `UPTIMEROBOT_API_KEY` and
+ * `CLOUDFLARE_API_TOKEN` are read by Node programs in `scripts/`, never by
+ * deployed code, so neither belongs on `REQUIRED_SECRETS`: that list is the
+ * ratified set of WRANGLER secrets, and this gate asserts each of those is
+ * declared in `app/env.d.ts` and read only inside the server boundary. Adding
+ * an operator credential to it would make those assertions demand a
+ * declaration for a value the Worker never sees.
+ *
+ * What they need instead is the one thing that actually matters for a
+ * credential that lives in a file on a developer's disk: **it must never reach
+ * git.** That is the same question `check:config` asks of the redacted config
+ * values, asked here for the two credentials that have no config to live in.
+ *
+ * ## TWO ASSERTIONS, AND THE FIRST ONE WORKS WITHOUT THE FILE
+ *
+ * The SHAPE scan runs everywhere, CI included, and needs no credential: it
+ * looks for anything in a tracked file that matches an UptimeRobot key. That
+ * is the fixture-independent half, and it is the half that still catches a
+ * committed key on a machine that has no `.dev.vars` at all.
+ *
+ * The EXACT-VALUE scan runs only where the file exists. It is strictly
+ * stronger there and impossible elsewhere, which is why it is conditional
+ * rather than fail-closed: a clean checkout has no `.dev.vars` by design, and
+ * failing on its absence would make this gate red in CI forever for a
+ * condition that is correct.
+ *
+ * The pairing is deliberate. A conditional assertion that could pass by
+ * reading nothing is exactly what hard rule 10 warns about, so the
+ * unconditional shape scan is always there underneath it.
+ */
+{
+  const lsFiles = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
+  if (lsFiles.status !== 0) {
+    throw new Error(
+      `git ls-files could not answer (status ${lsFiles.status}). Treating an unreadable ` +
+        `tree as "no credentials found" would be the fail-open reading.`,
+    );
+  }
+  const tracked = lsFiles.stdout.split("\0").filter(Boolean);
+
+  ok(
+    "the tracked-file scan for credentials has a non-empty scope",
+    tracked.length > 0,
+    "git ls-files returned nothing, so the two scans below would report a clean sweep " +
+      "of a tree they never read.",
+  );
+
+  // REUSES `gitIgnores` rather than spelling check-ignore a second time. One
+  // helper, one argument order, one idea of what a non-zero status means:
+  // hard rule 10's "one helper name, one argument order".
+  ok(
+    ".dev.vars is ignored by git",
+    gitIgnores(".dev.vars"),
+    "`.dev.vars` is NOT gitignored, so the operator credentials in it are one " +
+      "`git add` away from being published.",
+  );
+
+  /*
+   * The UptimeRobot key shape: `u`, the account's numeric id, a dash, then an
+   * alphanumeric secret. Deliberately loose on the lengths, because guessing a
+   * width would make the needle miss a key of a different vintage, and this
+   * scan is the one that has to work with no credential in hand to compare
+   * against.
+   */
+  /*
+   * NO LEADING `\b`, AND THE PLANT IS WHY. Written as
+   * `/\bu\d{4,12}-[A-Za-z0-9]{16,64}\b/` and replayed against a key-shaped
+   * string planted in a tracked file, it did NOT fire: the plant read
+   * `_PLANT_u1234567-...`, and `_` is a word character, so there is no word
+   * boundary before the `u`. A word boundary is the wrong anchor for a needle
+   * that has to find a credential ANYWHERE in a file, including glued to a
+   * prefix. The shape is specific enough to carry itself: a lowercase `u`, four
+   * to twelve digits, a dash, then at least sixteen alphanumerics. Verified
+   * against all 548 tracked files with zero false positives.
+   */
+  const UPTIMEROBOT_SHAPE = /u\d{4,12}-[A-Za-z0-9]{16,64}/;
+
+  /** Files that legitimately DISCUSS these names. The VALUE is what is banned. */
+  const scanned = tracked.filter((rel) => {
+    const full = join(root, rel);
+    if (!existsSync(full)) return false;
+    return statSync(full).isFile() && statSync(full).size < 2_000_000;
+  });
+
+  const shapeHits = [];
+  const valueHits = [];
+  const uptimeKey = readDevVar("UPTIMEROBOT_API_KEY");
+  const cloudflareToken = readDevVar("CLOUDFLARE_API_TOKEN");
+
+  for (const rel of scanned) {
+    let text;
+    try {
+      text = readFileSync(join(root, rel), "utf8");
+    } catch {
+      continue; // unreadable or binary; the shape scan is text-only by nature
+    }
+    if (UPTIMEROBOT_SHAPE.test(text)) shapeHits.push(rel);
+    // Guarded on length so an empty or one-character value cannot match every
+    // file and report a plausible number. Hard rule 10, the empty needle.
+    for (const [what, value] of [
+      ["UPTIMEROBOT_API_KEY", uptimeKey],
+      ["CLOUDFLARE_API_TOKEN", cloudflareToken],
+    ]) {
+      if (typeof value === "string" && value.length >= 12 && text.includes(value)) {
+        valueHits.push(`${rel} (${what})`);
+      }
+    }
+  }
+
+  ok(
+    "no tracked file carries anything shaped like an UptimeRobot API key",
+    shapeHits.length === 0,
+    `${shapeHits.join(", ")}. A monitoring key in git is a key anyone who clones this ` +
+      `can pause the monitors with.`,
+  );
+
+  ok(
+    "no tracked file carries a .dev.vars credential verbatim",
+    valueHits.length === 0,
+    `${valueHits.join(", ")}. Replace it with a placeholder and read it through ` +
+      `readDevVar().`,
+  );
+
+  console.log(
+    `  ${scanned.length} tracked file(s) scanned for credentials; ` +
+      `.dev.vars ${uptimeKey || cloudflareToken ? "present" : "absent"} on this machine`,
+  );
+}
+
 console.log(
   `  ${SECRETS.length} secret(s), ${files.length} file(s) scanned, ` +
     `${readsFound} read(s), ${Object.keys(CLIENT_ALLOWED).length} allowlisted`,
@@ -490,7 +625,12 @@ console.log(
  * is driven by the secret list and the per-root pairs, so it steps by a known
  * amount when a secret is added, as it did going from seven to eight.
  */
-const MINIMUM_CHECKS = 32;
+/* RE-MEASURED 2026-09-07 by RUNNING this gate, after the .dev.vars credential
+   section landed: 39 checks, up from 33. check:floors had just failed the old
+   32 at a gap of 7 against a tolerance of 3. Tolerance is 3 at this count, so
+   36 is the slackest legal value and is what the slack-of-two convention above
+   gives. */
+const MINIMUM_CHECKS = 36;
 const floorBreach = assertFloor("check:secrets", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
