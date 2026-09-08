@@ -356,6 +356,7 @@ export const TIERS = {
    * vacuity its own fail-closed branches exist to refuse.
    */
   "check:uptime": "network",
+  "check:mail": "network",
 };
 
 /**
