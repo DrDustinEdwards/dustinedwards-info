@@ -271,6 +271,7 @@
     "check:stack",
     "check:tests",
     "check:types",
+    "check:uptime",
     "check:urls",
     "check:worker"
   ],

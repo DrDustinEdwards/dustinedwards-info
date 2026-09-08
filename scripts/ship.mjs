@@ -821,6 +821,65 @@ let watchdogMiss = "";
   if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
 }
 
+/*
+ * ## THE EXTERNAL UPTIME MONITORS, POINTED AT WHAT THIS RUN DEPLOYED
+ *
+ * AFTER READINESS AND AFTER THE WATCHDOG, and the position carries the same
+ * argument the watchdog step does: both bind an outside instrument to this
+ * site, and neither may be pointed at a build this run has not proven. If the
+ * readiness step refused, ship never reaches here and the monitors keep
+ * watching the previous deploy, which is the correct behaviour rather than a
+ * gap.
+ *
+ * **THIS IS THE STEP THAT MAKES THE CUTOVER ONE EDIT.** `SITE_ORIGIN` is the
+ * one owner of the hostname (rule 17); `uptime-ensure` derives both monitor
+ * URLs from it and PATCHes the live monitors to match. So the DNS cutover
+ * changes one constant, and the next ship repoints the monitors without anyone
+ * opening a dashboard. `check:uptime` is what refuses if that ever stops being
+ * true.
+ *
+ * A MISS, NOT A REFUSAL, on the watchdog step's rule. The deploy STANDS: the
+ * site is live and healthy by this point, and an UptimeRobot API failure is a
+ * reason to tell somebody, never a reason to unmake a good deploy. It is
+ * reported LOUD and ship exits nonzero at the end with it named beside any
+ * other miss.
+ *
+ * IDEMPOTENT, so running it on every ship costs nothing when nothing moved:
+ * measured 2026-09-07, a second consecutive run reports "0 change(s) applied"
+ * and rewrites the manifest byte-identically.
+ */
+announce("Point the uptime monitors at this deploy");
+
+/** Set when uptime-ensure did not land. Read at the very end. */
+let uptimeMiss = "";
+
+{
+  const ensured = run("node", ["scripts/uptime-ensure.mjs"], { capture: true });
+  if (ensured.code !== 0) {
+    uptimeMiss =
+      "uptime-ensure did not complete, so the external monitors may still point at the " +
+      "previous hostname or may not exist. The deploy stands and is healthy; what is " +
+      "unproven is whether anything outside Cloudflare is watching it";
+    console.log(`  MISSED: ${uptimeMiss}`);
+  } else {
+    /*
+     * THE VERDICT IS READ, NEVER INFERRED FROM EXIT 0, which is the rule this
+     * file applies to every operator round trip. `uptime-ensure` prints one
+     * line per monitor and a change count; a run that somehow reconciled
+     * nothing would still exit 0, and that is the shape worth catching.
+     */
+    const applied = ensured.text.match(/(\d+) change\(s\) applied/);
+    if (!applied) {
+      uptimeMiss =
+        "uptime-ensure exited 0 without reporting a change count, so nothing proves it " +
+        "reconciled the monitors";
+      console.log(`  MISSED: ${uptimeMiss}`);
+    } else {
+      console.log(`  monitors reconciled, ${applied[1]} change(s)`);
+    }
+  }
+}
+
 /* ------------------------------------------------------- 6. gate, then sync */
 
 /*
@@ -1260,23 +1319,25 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
  * defect rather than the ordering artifact, and its remedy is finding what
  * wrote the D1 hash rather than a re-run.
  */
-if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss) {
+if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",
     mediaMiss ? "THE MEDIA INDEX" : "",
     renderDriftMiss ? "THE RENDER" : "",
     watchdogMiss ? "THE WATCHDOG" : "",
+    uptimeMiss ? "THE UPTIME MONITORS" : "",
   ]
     .filter(Boolean)
     .join(" AND ");
   const several =
-    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss].filter(Boolean).length > 1;
+    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss].filter(Boolean).length > 1;
   console.error(`\n${"!".repeat(64)}`);
   console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
   if (askMiss) console.error(`  ask:      ${askMiss}`);
   if (mediaMiss) console.error(`  media:    ${mediaMiss}`);
   if (renderDriftMiss) console.error(`  render:   ${renderDriftMiss}`);
   if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
+  if (uptimeMiss) console.error(`  uptime:   ${uptimeMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
