@@ -9,7 +9,22 @@
  */
 import { failingCheckNames, watchdogActions, watchdogOutcome } from "../app/lib/health/repair.mjs";
 import { alertTransition, formatDuration } from "../app/lib/health/alert-state.mjs";
+import {
+  ERROR_WINDOW_MINUTES,
+  errorRateQuery,
+  errorRateVerdict,
+} from "../app/lib/health/error-rate.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo";
+
+/**
+ * The Worker the error rate is asked about.
+ *
+ * The SITE, never this watchdog. Written out rather than derived from
+ * SITE_ORIGIN, because the origin is a hostname and this is a script name: they
+ * are equal today by coincidence of naming and the cutover changes one of them.
+ * `check:config` binds it to the site config's `name`.
+ */
+const SITE_SCRIPT_NAME = "dustinedwards";
 
 /**
  * THE WATCHDOG. A separate Worker whose only job is to notice that this site
@@ -136,6 +151,21 @@ interface WatchdogEnv {
   OPERATOR_TOKEN?: string;
   /** Carries ONE fact between firings: what the last one saw. See `STATE_KEY`. */
   APP_KV: KVNamespace;
+  /**
+   * The account the invocations query is asked of, and the credential for it.
+   *
+   * `CLOUDFLARE_ACCOUNT_ID` is a VAR on the `ALERT_EMAIL` precedent: an account
+   * id is an identifier rather than a credential. `CLOUDFLARE_API_TOKEN` IS a
+   * credential and is a wrangler secret, scoped to Account Analytics Read and
+   * nothing else, because all it does is run one read-only GraphQL query.
+   *
+   * BOTH OPTIONAL, and their absence is a NAMED state rather than silence, the
+   * same shape `OPERATOR_TOKEN` takes above: `errorRateReading` reports "not
+   * configured" and the firing says so, so a watchdog that quietly lost the
+   * ability to see errors does not look like one seeing none.
+   */
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
 }
 
 /**
@@ -311,6 +341,109 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
   }
 }
 
+/**
+ * The site's error rate over the last window, read from Cloudflare's own
+ * numbers rather than from anything the site says about itself.
+ *
+ * ## WHY THIS IS HERE AND NOT A SIXTH HEALTH CHECK
+ *
+ * `/api/health`'s five checks are all DRIFT checks: a derived store against its
+ * source, each one repairable through the operator door. An error rate is a
+ * SYMPTOM, it is not repairable, and folding it into that endpoint would have
+ * two costs worth refusing. It would add a GraphQL round trip to a route
+ * already measured at 1.2 to 4.6 seconds and rate limited at 20 per minute; and
+ * because `ship` refuses to proceed unless `/api/health` reports ok, a transient
+ * error spike would start blocking DEPLOYS, which is the opposite of useful
+ * when the thing you want to ship is the fix.
+ *
+ * So it lives where the alerting lives. The watchdog already fires every
+ * fifteen minutes, already deduplicates its mail, and already knows how to
+ * report a failing check by name.
+ *
+ * NEVER THROWS, on this file's standing rule. Every failure returns a verdict:
+ * an unreachable API or a GraphQL error is reported as NOT OK, because an
+ * error-rate check that could not read the error rate has not established that
+ * it is fine. That is the fail-closed direction, and `errorRateVerdict` takes
+ * the same stance about an unreadable body.
+ *
+ * NOT CONFIGURED IS ITS OWN ANSWER, and it is `ok: true` with a detail saying
+ * so. It is a state to report rather than an alert to send: mailing every
+ * fifteen minutes about a missing var would train the reader to filter the
+ * watchdog, and the run log names it on every firing either way.
+ */
+async function readErrorRate(
+  env: WatchdogEnv,
+): Promise<{ ok: boolean; detail: string; configured: boolean }> {
+  const account = env.CLOUDFLARE_ACCOUNT_ID ?? "";
+  const token = env.CLOUDFLARE_API_TOKEN ?? "";
+  if (!account || !token) {
+    return {
+      ok: true,
+      configured: false,
+      detail:
+        "error rate NOT CHECKED: " +
+        `${!account ? "CLOUDFLARE_ACCOUNT_ID" : "CLOUDFLARE_API_TOKEN"} is not set on this ` +
+        "Worker. Set it with `wrangler secret put CLOUDFLARE_API_TOKEN -c " +
+        "wrangler.watchdog.jsonc` (Account / Account Analytics / Read).",
+    };
+  }
+
+  const until = new Date();
+  const since = new Date(until.getTime() - ERROR_WINDOW_MINUTES * 60 * 1000);
+  const body = errorRateQuery({
+    accountId: account,
+    scriptName: SITE_SCRIPT_NAME,
+    since: since.toISOString(),
+    until: until.toISOString(),
+  });
+
+  let payload: any;
+  try {
+    const response = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return {
+        ok: false,
+        configured: true,
+        detail: `the invocations query answered HTTP ${response.status}, so the error rate is unknown.`,
+      };
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      detail:
+        "the invocations query did not complete, so the error rate is unknown: " +
+        `${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+
+  /*
+   * A GraphQL 200 CARRYING ERRORS IS A FAILURE, and this is the trap that shape
+   * of API sets: the transport succeeded and the query did not, so a reader
+   * that only checked the status code would go on to sum an absent `data` field
+   * to zero errors and report perfect health.
+   */
+  if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+    return {
+      ok: false,
+      configured: true,
+      detail:
+        "the invocations query returned GraphQL errors, so the error rate is unknown: " +
+        `${payload.errors.map((e: any) => e?.message).join("; ").slice(0, 200)}`,
+    };
+  }
+
+  const verdict = errorRateVerdict(
+    payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive,
+  );
+  return { ok: verdict.ok, configured: true, detail: verdict.detail };
+}
+
 /** The health body, pretty-printed for the mail, or a statement that there was none. */
 const renderBody = (reading: Reading | null): string =>
   reading === null
@@ -406,6 +539,50 @@ export default {
             ];
           }
         }
+      }
+
+      /*
+       * ## THE ERROR RATE, FOLDED IN AS ONE MORE FAILING CHECK
+       *
+       * READ EVERY FIRING, whatever the health verdict said, because the two
+       * are independent: the defect this was written for had all five health
+       * checks green while the Worker threw 24 times a day for fifteen days.
+       * Reading it only when health was already red would have found nothing.
+       *
+       * IT JOINS `failing` RATHER THAN MAILING ON ITS OWN. That is what buys
+       * the dedupe for free: `alertTransition` mails on the way into red, on
+       * recovery, and when the failing set GROWS, so a rate that stays high for
+       * an afternoon sends one mail rather than sixteen. A second mail path
+       * would have had to reimplement that, and would have got it wrong,
+       * because the 27-email flap is exactly what that module exists about.
+       *
+       * IT IS NOT REPAIRABLE and deliberately not in `REPAIRABLE`. Firing a
+       * corpus rebuild at a Worker that is throwing would be acting on a
+       * symptom whose cause nobody has classified, which `repairPlan`'s first
+       * refusal already says in full.
+       */
+      const errorRate = await readErrorRate(env);
+      console.log(
+        JSON.stringify({
+          watchdog: "error-rate",
+          ok: errorRate.ok,
+          configured: errorRate.configured,
+          detail: errorRate.detail,
+        }),
+      );
+      if (!errorRate.ok) {
+        if (!alerting) {
+          // First thing to go wrong this firing, so it owns the subject line.
+          subject = "dustinedwards.info is throwing";
+          lines = [errorRate.detail];
+        } else {
+          // Health already had something to say. Both are reported, on the
+          // N-1-of-N rule: a mail naming only the drift would send somebody to
+          // re-run a sync while the Worker was crashing.
+          lines = [...lines, "", `Error rate: ${errorRate.detail}`];
+        }
+        alerting = true;
+        failing = [...failing, "error-rate"];
       }
 
       /*

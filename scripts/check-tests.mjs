@@ -103,15 +103,23 @@ const TEST_DIR = join(root, "test");
 /* RE-MEASURED 2026-09-06 by RUNNING the gate, after post-image-lqip.test.mjs
    landed with the body placeholder: 66 files. It read 61 against 65 earlier
    the same day, after math-outputs.test.mjs landed with KaTeX. Set to count
-   minus check:floors' tolerance, max(3, ceil(count * 0.05)), which is 4 here. */
-const MINIMUM_FILES = 62;
+   minus check:floors' tolerance, max(3, ceil(count * 0.05)), which is 4 here.
+   RE-MEASURED 2026-09-07 by RUNNING the gate, after error-rate.test.mjs landed
+   with the watchdog's error-rate check: 67 files. Tolerance is 4 at this
+   count, so 63. */
+const MINIMUM_FILES = 63;
 /* 638 against 672, RE-MEASURED 2026-09-07 by running this gate, after the six
    cases the shared upload refusal landed with. It read 632 against 666 the day
    before, which check:floors then failed at a gap of 40 against a tolerance of
    34: six cases arriving is what pushed that floor past it. The file floor
    above catches a file LEAVING; this one catches a file being hollowed out in
-   place, which no file count can see. Same tolerance rule, 34 at this count. */
-const MINIMUM_TESTS = 638;
+   place, which no file count can see. Same tolerance rule, 34 at this count.
+   RE-MEASURED 2026-09-07 by RUNNING this gate, after error-rate.test.mjs
+   landed with eleven cases: 683 tests. check:floors had just failed the old
+   638 at a gap of 45 against a tolerance of 35, which is the mechanism working:
+   eleven cases arriving is what pushed that floor past it. Tolerance is 35 at
+   this count, so anything from 648 up is legal; 660 leaves the usual slack. */
+const MINIMUM_TESTS = 660;
 
 let checks = 0;
 let failures = 0;
