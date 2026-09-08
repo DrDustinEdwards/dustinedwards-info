@@ -207,6 +207,6 @@ What each one is, and the queue consumer and cache flag beside them, is `wrangle
 
 ## Where everything else lives
 
-In this repo, because a gate can reach it: `FAILURES.md` (recurring failure shapes, read it at session start, gated for length), `VERIFICATION.md` (how to prove a deploy, a claim or a gate; the method behind rules 7, 10 and 12), `RECOVERY.md`, `CUTOVER.md`, `README.md`. Skills live in `.claude/skills/<name>/SKILL.md`; a flat `.md` at that path is never loaded.
+In this repo, because a gate can reach it: `FAILURES.md` (recurring failure shapes, read it at session start, gated for length), `VERIFICATION.md` (how to prove a deploy, a claim or a gate; the method behind rules 7, 10 and 12), `RECOVERY.md` (rebuild the account from nothing), `docs/RUNBOOK.md` (fix a broken site at 2am; bound to `REQUIRED_SECRETS` by `check:invariants` section 27), `CUTOVER.md`, `README.md`. Skills live in `.claude/skills/<name>/SKILL.md`; a flat `.md` at that path is never loaded.
 
 Everything else is a Capsid document in the `dustinedwards` namespace. Start a session with `brief("dustinedwards")`, or read `capsid/conventions.md` then `dustinedwards/core.md` by hand, before touching code. `core.md` is current state; `decisions-vol-*.md` is the ruling log and holds the grounds for everything above. Sessions READ Capsid and never write it.

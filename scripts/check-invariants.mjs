@@ -5410,7 +5410,119 @@ console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
  * remote. Floors 284 to 290 and 321 to 328, each its count minus the
  * check:floors tolerance at that count.
  */
-const MINIMUM_CHECKS = wantsRemote ? 328 : 290;
+console.log("\n  27. the runbook exists and names every secret");
+
+/*
+ * THE 2AM PAGE IS BOUND TO THE SECRET LIST, 2026-09-08.
+ *
+ * `docs/RUNBOOK.md` carries a rotation table: for each secret, where else it
+ * lives and what breaks if you rotate it and stop. That table is exactly the
+ * kind of hand-maintained mirror rule 17 exists to refuse, and RECOVERY.md has
+ * already demonstrated the failure twice: its secrets section said "Seven" for
+ * eight days after `ANALYTICS_READ_TOKEN` landed, and said "eight" while the
+ * ratified list held nine. Prose counts read nothing.
+ *
+ * ## THE OWNER IS `REQUIRED_SECRETS`, NOT `wrangler.jsonc.example`
+ *
+ * The prompt that asked for this gate said to assert the runbook names every
+ * secret in `wrangler.jsonc.example`. MEASURED 2026-09-08: that file contains
+ * ZERO of the nine names, and cannot contain any, because a secret has never
+ * lived in wrangler config and RECOVERY.md section 7 records that as a
+ * property worth stating. The file holds BINDINGS, which is section 26's
+ * subject. The owner of the secret list is `app/lib/secrets.mjs`, which
+ * `check:secrets` already treats as ratified rather than derived.
+ *
+ * ## BOTH DIRECTIONS
+ *
+ * A secret added to the list and not to the runbook is the likely miss, and it
+ * is the one that costs an outage: the rotation table is what tells a reader
+ * that `OPERATOR_TOKEN` has three holders. A name in the runbook that is no
+ * longer a secret is the other direction and is asserted too, because it sends
+ * somebody to `wrangler secret put` for a value nothing reads.
+ *
+ * The needle is the name inside a table cell delimited by backticks, not a
+ * bare mention, so a secret discussed in a sentence does not satisfy the
+ * assertion for a row that is missing. Hard rule 10: a comment, or a
+ * neighbouring sentence, has satisfied an assertion in this repo before.
+ */
+{
+  const runbookPath = join(root, "docs", "RUNBOOK.md");
+  ok(
+    "docs/RUNBOOK.md exists",
+    existsSync(runbookPath),
+    "the runbook is gone. It is the only page that carries what breaks when a " +
+      "secret is rotated alone, and no other document claims that job.",
+  );
+
+  if (existsSync(runbookPath)) {
+    const runbook = readFileSync(runbookPath, "utf8");
+    const secretsSource = readFileSync(join(root, "app", "lib", "secrets.mjs"), "utf8");
+    const listed = [...secretsSource.matchAll(/^\s*"([A-Z][A-Z0-9_]+)",\s*$/gm)].map((m) => m[1]);
+
+    ok(
+      "[scope] the ratified secret list parsed non-empty",
+      listed.length > 0,
+      "parsed zero names out of app/lib/secrets.mjs REQUIRED_SECRETS. Every " +
+        "assertion below would then sweep an empty set and report clean.",
+    );
+
+    /* Every name the runbook puts in a backticked cell, whatever it is. */
+    const named = new Set(
+      [...runbook.matchAll(/`([A-Z][A-Z0-9_]{3,})`/g)].map((m) => m[1]),
+    );
+
+    for (const secret of listed) {
+      ok(
+        `the runbook names ${secret}`,
+        named.has(secret),
+        `${secret} is in REQUIRED_SECRETS and nowhere in docs/RUNBOOK.md. A ` +
+          `secret with no rotation row is a secret somebody rotates alone at ` +
+          `2am without being told what it takes down.`,
+      );
+    }
+
+    /*
+     * The reverse. Restricted to names the runbook presents AS SECRETS, which
+     * is its rotation table, because the page legitimately backticks other
+     * shouty identifiers (`PRAGMA`, `MEDIA_BACKUP`, `DIR`). The table rows are
+     * the claim; anything outside them is prose.
+     */
+    const table = runbook.slice(
+      runbook.indexOf("| Secret | Also lives in |"),
+      runbook.indexOf("### `OPERATOR_TOKEN` has THREE holders"),
+    );
+    const rows = [...table.matchAll(/^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|/gm)].map((m) => m[1]);
+    ok(
+      "[scope] the runbook's rotation table parsed non-empty",
+      rows.length > 0,
+      "found no rotation rows in docs/RUNBOOK.md. The reverse assertion below " +
+        "would pass by reading nothing, which is this gate's own vacuity class.",
+    );
+    for (const row of rows) {
+      ok(
+        `the runbook's ${row} row names a secret that still exists`,
+        listed.includes(row),
+        `${row} has a rotation row in docs/RUNBOOK.md and is not in ` +
+          `REQUIRED_SECRETS. It sends a reader to rotate something nothing reads.`,
+      );
+    }
+  }
+}
+
+/*
+ * RE-MEASURED 2026-09-08 BY RUNNING BOTH BRANCHES after section 27 (the runbook
+ * is bound to the ratified secret list): 326 offline, 365 remote, against 305
+ * and 344 before it. Section 27 is 21 assertions, two of them scope checks, and
+ * eighteen of them one per secret in each direction, so the count moves with
+ * `REQUIRED_SECRETS` and will move again the next time a secret is added.
+ *
+ * Floors 290 to 309 and 328 to 346, each its measured count minus the
+ * `check:floors` tolerance at that count. Not adjusted by arithmetic from the
+ * old numbers: the previous entry in this comment records 272 having been a
+ * stale reading before anything touched it, which is why every one of these is
+ * taken by running the gate.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 346 : 309;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
