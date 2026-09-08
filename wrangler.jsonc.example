@@ -37,11 +37,41 @@
 	// automatic per-request record, which was also the only per-path source.
 	// Analytics Engine now owns that job, carrying no IP and no cookie by
 	// construction.
+	//
+	// TRACES ARE OFF, AND THE `false` IS A RULING RATHER THAN A DEFAULT.
+	//
+	// Ruled 2026-09-08 by Dustin: export LOGS to Sentry, never traces. The
+	// grounds are the same class as the invocation-log decision above, and they
+	// are specific rather than general.
+	//
+	// MEASURED against the current Cloudflare docs 2026-09-07: a fetch handler
+	// span carries `url.full`, `url.path` and `url.query` as attributes. This
+	// site puts a 43-character CAPABILITY in a PATH at `/preview/<token>`, so
+	// enabling traces would ship preview tokens to a third party. That is the
+	// exact exposure `recordTraffic` was fixed for on 2026-08-15, when the same
+	// token was found written verbatim into Analytics Engine, and the fix there
+	// was to redact the path before the write.
+	//
+	// `redact_query_string` DOES NOT HELP, which is the trap worth writing down:
+	// the token is in the PATH, not the query string, so the one setting that
+	// looks like it addresses this does not.
+	//
+	// What traces do NOT carry, checked in the same pass so the refusal is not
+	// broader than the reason: cookies and client IPs are absent from the
+	// documented attribute set. Only the four `url.*` attributes are the problem.
+	//
+	// STATED EXPLICITLY EVEN THOUGH FALSE IS THE DEFAULT, per the 2026-08-13
+	// cold-audit rule in capsid/conventions.md: "an upstream default is not a
+	// decision. Where a default is load-bearing for a security or growth
+	// property, set it explicitly to the value you want, even when that value is
+	// the default." `check:config` asserts this stays false in both files, so
+	// turning it on is a diff somebody has to argue for.
 	"observability": {
 		"enabled": true,
 		"logs": {
 			"invocation_logs": false
-		}
+		},
+		"traces": { "enabled": false }
 	},
 	"upload_source_maps": true,
 	// Workers Cache, in front of the Worker. Added for the Images binding: its
