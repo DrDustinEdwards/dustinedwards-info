@@ -51,7 +51,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 32;
+const MINIMUM_GATES = 33;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -357,6 +357,21 @@ export const TIERS = {
    */
   "check:uptime": "network",
   "check:mail": "network",
+  /*
+   * NETWORK, and there is no offline form of it that means anything.
+   *
+   * It creates a real D1 database, applies the migrations to it, loads an
+   * export taken from the deployed database, and deletes it again. A `--local`
+   * form would restore miniflare state into miniflare state and compare an
+   * empty database with an empty database, which is the vacuity every floor in
+   * this repo exists to refuse.
+   *
+   * It is also the most EXPENSIVE gate here by wall clock, because every step
+   * is a round trip to the platform rather than a local read. That is why the
+   * weekly workflow runs it and `check:all` reaches it only when somebody asks
+   * for the whole tier.
+   */
+  "check:restore": "network",
 };
 
 /**

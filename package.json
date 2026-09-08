@@ -58,6 +58,7 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:uptime": "node scripts/check-uptime.mjs",
     "check:mail": "node scripts/check-mail.mjs",
+    "check:restore": "node scripts/restore-drill.mjs",
     "check:head": "node scripts/check-head.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:tests": "node scripts/check-tests.mjs",
