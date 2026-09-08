@@ -70,6 +70,18 @@ import { readDevVar } from "./lib/dev-vars.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+/**
+ * Whether the caller asked for the live half.
+ *
+ * DECLARED HERE rather than beside the floor that reads it, because the
+ * `--remote` block runs long before that point and a `const` further down the
+ * module is in the temporal dead zone when it does. Caught by running both
+ * modes: each exited 1 with a ReferenceError and printed no floor line at all,
+ * which is the shape worth noticing, since a gate that dies before its floor
+ * prints has no floor.
+ */
+const wantsRemote = process.argv.includes("--remote");
+
 let failures = 0;
 let checks = 0;
 
@@ -734,7 +746,7 @@ for (const [label, config] of [
  * could not reach the API would report the same green for "no stray cron" and
  * "I did not look".
  */
-if (process.argv.includes("--remote")) {
+if (wantsRemote) {
   const token = readDevVar("CLOUDFLARE_API_TOKEN");
   const account = site.real.vars?.CLOUDFLARE_ACCOUNT_ID;
 
@@ -846,12 +858,38 @@ console.log(
  * assertions and a floor set to the remote count would breach on every offline
  * run, which is the tier ship uses.
  */
-/* RE-MEASURED 2026-09-08 by RUNNING it, after the traces ruling and the
-   observability block joining settingKeys: 118 offline. Tolerance is 6 at this
-   count. */
-const MINIMUM_CHECKS = 113;
-const floorBreach = assertFloor("check:config", "checks", checks, MINIMUM_CHECKS);
+/*
+ * NAMED PER BRANCH, on check:invariants' vol 15 binding, and this gate needed
+ * it the moment `--remote` landed. MEASURED 2026-09-08 by RUNNING each mode:
+ * 118 offline, 124 remote. One name for both judges whichever branch ran last
+ * against a floor set from the other, which is exactly what happened here: the
+ * offline floor of 113 passed a standalone run and then failed inside
+ * `check:all`, where the gate runs `--remote` and the extra six schedule
+ * assertions push the gap past the tolerance.
+ *
+ * Tolerance is 6 at both counts, so each floor sits five under its own.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 119 : 113;
+const floorBreach = assertFloor(
+  "check:config",
+  wantsRemote ? "checks-remote" : "checks-offline",
+  checks,
+  MINIMUM_CHECKS,
+);
 if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
-process.exit(failures > 0 ? 1 : 0);
+/*
+ * `exitCode` RATHER THAN `process.exit()`, since `--remote` made this gate do
+ * network I/O.
+ *
+ * MEASURED 2026-09-08: the remote branch printed a clean floor line and 0
+ * failures and then exited 127 with libuv's
+ * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`, because
+ * `process.exit()` tears the process down while undici's keep-alive sockets
+ * from the schedules API are still closing. It is a RACE, so it did not fire on
+ * every run, which is worse than a consistent failure: `check-all.mjs` reads
+ * exit codes and cannot see the clean table above one. Same fix, and same
+ * reason, as `check:uptime`.
+ */
+process.exitCode = failures > 0 ? 1 : 0;
