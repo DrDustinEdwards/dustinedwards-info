@@ -149,8 +149,57 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       503,
     );
   }
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${clientIp(request)}`));
-  const { ok: withinRate } = await limiter.hit(HEALTH_RATE_LIMIT, HEALTH_RATE_PERIOD_SECONDS);
+  /*
+   * THE LIMITER CALL IS INSIDE A TRY, AND IT WAS NOT. Fixed 2026-09-07.
+   *
+   * MEASURED ON PRODUCTION over the seven days to 2026-09-07: 283 invocations
+   * of this route ended in `scriptThrewException`, every one of them carrying
+   * NO log line. That is the tell. The `try` below logs `health-run-threw` on
+   * anything that fails inside it, so a throw with no message escaped BEFORE
+   * that block, and the only awaited work above it was these two lines. A
+   * Durable Object call is a network call and can fail; `idFromName` and `hit`
+   * were both outside every guard on the route.
+   *
+   * REPRODUCED BOTH WAYS before this landed, by planting a throw in
+   * `AskBudget.hit` and driving the route locally. Before: `HTTP 500`,
+   * `content-type: text/plain`, the body `Unexpected Server Error`, and the
+   * gateway's `private, no-store` rather than this route's own header, because
+   * the route never constructed a response at all. After: the 503 below.
+   *
+   * WHY 503 AND A NAMED CHECK rather than letting it through to the checks.
+   * Hard rule: without the limiter this does not serve. A limiter that THREW
+   * is not a limiter that said yes, and treating a failed guard as a pass is
+   * the fail-open shape this repo keeps writing down. It is the same stance
+   * the `!env.ASK_BUDGET` branch above takes, one line up.
+   *
+   * A SEPARATE NAME FROM `rate-limiter-unavailable`, deliberately. Absent and
+   * BROKEN are different answers and collapsing them costs the reader the
+   * triage: one is a deployment missing a binding, the other is a Durable
+   * Object failing under load. `workers/watchdog.ts` draws the identical
+   * distinction in `readState` and for the identical reason.
+   *
+   * NEITHER NAME IS IN `REPAIRABLE`, which is correct rather than an omission.
+   * `repairPlan` returns alert-only for an unknown class, so a broken limiter
+   * wakes somebody instead of firing a corpus rebuild at a site whose failure
+   * nobody has classified.
+   */
+  let withinRate: boolean;
+  try {
+    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${clientIp(request)}`));
+    ({ ok: withinRate } = await limiter.hit(HEALTH_RATE_LIMIT, HEALTH_RATE_PERIOD_SECONDS));
+  } catch (error) {
+    // LOGGED BY NAME. The wire body carries names and booleans only, so this
+    // console line is the entire record of WHY the limiter failed, and it is
+    // the thing that was missing for 283 invocations.
+    console.error(
+      JSON.stringify({
+        alert: "health-rate-limiter-threw",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return healthJson({ ok: false, checks: [{ name: "rate-limiter-failed", ok: false }] }, 503);
+  }
+
   if (!withinRate) {
     /*
      * THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the workflow's parse
