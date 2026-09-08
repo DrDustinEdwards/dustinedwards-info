@@ -35,7 +35,9 @@
 		"enabled": true,
 		"logs": {
 			"invocation_logs": false
-		}
+		},
+		// Traces off. Grounds, with the url.full measurement, in the example file.
+		"traces": { "enabled": false }
 	},
 	// EVERY FIFTEEN MINUTES, and this cron is now the ONE owner of the poll
 	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs

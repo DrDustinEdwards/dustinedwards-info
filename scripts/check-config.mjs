@@ -370,7 +370,7 @@ const site = comparePair({
   examplePath: join(root, "wrangler.jsonc.example"),
   floor: 9,
   measured: 10,
-  settingKeys: ["name", "main", "compatibility_date", "keep_vars", "upload_source_maps"],
+  settingKeys: ["name", "main", "compatibility_date", "keep_vars", "upload_source_maps", "observability"],
 });
 
 assertThat(
@@ -471,7 +471,7 @@ const watchdog = comparePair({
   examplePath: join(root, "wrangler.watchdog.jsonc.example"),
   floor: 2,
   measured: 2,
-  settingKeys: ["name", "main", "compatibility_date", "workers_dev"],
+  settingKeys: ["name", "main", "compatibility_date", "workers_dev", "observability"],
 });
 
 for (const [label, config] of [
@@ -652,6 +652,51 @@ for (const [name, redaction] of REDACTED_VARS) {
   );
 }
 
+/* =================================================== the traces ruling */
+
+/*
+ * TRACES STAY OFF ON BOTH WORKERS, and this asserts the RULING rather than the
+ * default.
+ *
+ * Ruled 2026-09-08: export logs to Sentry, never traces. A fetch span carries
+ * `url.full`, `url.path` and `url.query`, and this site puts a 43-character
+ * capability in a path at `/preview/<token>`, so traces would ship preview
+ * tokens to a third party. That is the exposure `recordTraffic` was fixed for
+ * on 2026-08-15. `redact_query_string` does not reach it, because the token is
+ * in the path. Full grounds are in `wrangler.jsonc.example`.
+ *
+ * ASSERTED AS EXPLICITLY-FALSE, not merely falsy. `traces` absent is also
+ * "off", and it is off by somebody not having decided; `{ enabled: false }` is
+ * off because somebody decided. The distinction is the whole of the
+ * cold-audit rule this implements, so a config that DROPPED the key would pass
+ * a truthiness check and fail this one.
+ *
+ * Adding `destinations` to `logs` later does not touch this. That is the point
+ * of splitting the two: the log export can be turned on without anyone having
+ * to reason again about what a span carries.
+ */
+for (const [label, config] of [
+  ["site real", site.real],
+  ["site example", site.example],
+  ["watchdog real", watchdog.real],
+  ["watchdog example", watchdog.example],
+]) {
+  const traces = config.observability?.traces;
+  assertThat(
+    traces !== undefined && traces !== null,
+    `${label} declares observability.traces explicitly`,
+    `found ${JSON.stringify(traces ?? null)}. An ABSENT traces key is off by nobody ` +
+      `deciding; the ruling wants off by somebody deciding, so the key has to be there.`,
+  );
+  assertThat(
+    traces?.enabled === false,
+    `${label} has traces disabled`,
+    `found enabled=${JSON.stringify(traces?.enabled)}. Turning traces on ships ` +
+      `url.full, and this site puts a preview capability in a URL path. If this is ` +
+      `deliberate, the redaction has to be solved first.`,
+  );
+}
+
 /* ============================================ --remote: the live schedules */
 
 /*
@@ -801,7 +846,10 @@ console.log(
  * assertions and a floor set to the remote count would breach on every offline
  * run, which is the tier ship uses.
  */
-const MINIMUM_CHECKS = 103;
+/* RE-MEASURED 2026-09-08 by RUNNING it, after the traces ruling and the
+   observability block joining settingKeys: 118 offline. Tolerance is 6 at this
+   count. */
+const MINIMUM_CHECKS = 113;
 const floorBreach = assertFloor("check:config", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
