@@ -234,7 +234,14 @@ ok(
  * a monitor silently dropping out of the desired set shows up as a smaller
  * number rather than as a clean run.
  */
-const MINIMUM_CHECKS = 18;
+/*
+ * RE-MEASURED 2026-09-08 by RUNNING it: 22. Set to 18 at first, which
+ * `check:floors` refused at a gap of 4 against a tolerance of 3, and it only
+ * refused inside `check:all`: this gate is network-tiered, so the offline tier
+ * that `check:floors` runs standalone never reaches it. Tolerance is 3 at this
+ * count, so 19 is the slackest legal value.
+ */
+const MINIMUM_CHECKS = 19;
 const breach = assertFloor("check:uptime", "checks", checks, MINIMUM_CHECKS);
 if (breach) ok("this gate executed its assertions", false, breach);
 
