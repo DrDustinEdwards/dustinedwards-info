@@ -3,6 +3,14 @@
  *
  *   npm run check:stack
  *
+ * THE SUBJECT IS A BUILD PRODUCT, NOT A COMMIT (ruling 39a, 2026-09-08).
+ * `content/generated/stack.json` is gitignored and written by `build:stack`,
+ * which runs before the gates in `check-all.mjs`, in ship's build step and in
+ * CI. This gate therefore asserts that a build HAPPENED and that what it
+ * produced reconciles with its sources; it no longer asserts that a committed
+ * copy equals a fresh derivation, because that compared a commit to a build
+ * and made every dependency bump a two-file change no bot could complete.
+ *
  * OBSERVATION BOUNDARY, and there are TWO limits, not one.
  *
  * **First, it cannot tell whether the prose is TRUE.** A hand-written
@@ -54,7 +62,7 @@
  * "0 differences" must never be reachable by examining nothing.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,7 +70,6 @@ import {
   NOTES_PATH,
   STACK_PATH,
   EXAMPLE_CONFIG,
-  buildStack,
   gateNames,
   migrationFiles,
   runtimeVersions,
@@ -118,7 +125,10 @@ console.log("\ncheck:stack\n");
 
 if (!existsSync(STACK_PATH)) {
   console.log("  FAIL  content/generated/stack.json is missing.");
-  console.log("        Generate it with: npm run build:stack\n");
+  console.log("        It is a gitignored build product since ruling 39a, not a commit.");
+  console.log("        Generate it with: npm run build:stack");
+  console.log("        check-all, ship and CI run that before any gate; if one of them");
+  console.log("        reached here, its build step is missing.\n");
   process.exit(1);
 }
 
@@ -184,14 +194,38 @@ ok(
   `stack.json is version ${artifact.version}; this gate reads version 1`,
 );
 
-// The strongest single assertion here: regenerate from the live sources and
-// compare. It subsumes every field, including ones added later that nobody
-// remembered to write a comparison for.
-const fresh = buildStack();
+/*
+ * FRESHNESS, WHICH REPLACED A COMPARISON THAT WAS ASKING THE WRONG QUESTION.
+ *
+ * Until ruling 39a this line read `JSON.stringify(buildStack()) ===
+ * JSON.stringify(artifact)` and was described as the strongest assertion in the
+ * file. It was comparing A COMMIT TO A BUILD, and that is the defect rather
+ * than a strength: the only way to satisfy it was for a human to run
+ * `build:stack` and commit the result in the same change as the package.json
+ * edit that moved it. Renovate cannot run a build, so all three of its first
+ * pin PRs (#19 to #21, 2026-09-07) arrived red here with nothing wrong in them.
+ *
+ * stack.json is now a gitignored build product, derived before the gates in
+ * check-all, in ship's build step and in CI. So the question worth asking is no
+ * longer "does the commit match a build" but "did a build actually happen",
+ * and mtime against package.json is what answers it. package.json is the input
+ * this gate exists to track: it carries the dependencies and the gate names,
+ * and it is the file a dependency PR edits.
+ *
+ * The reconciles below still fail on a stale artifact, and they are not
+ * redundant with this: they read the artifact's CONTENT, so they catch a
+ * regeneration that ran and produced the wrong thing, where mtime only catches
+ * one that did not run at all.
+ */
+const stackMtime = statSync(STACK_PATH).mtimeMs;
+const pkgMtime = statSync(join(root, "package.json")).mtimeMs;
 ok(
-  "stack.json matches a fresh generation",
-  JSON.stringify(fresh) === JSON.stringify(artifact),
-  "the committed artifact differs from what build:stack produces now. Run build:stack.",
+  "the generated stack.json is newer than package.json",
+  stackMtime >= pkgMtime,
+  `content/generated/stack.json predates the last change to package.json, so it was ` +
+    `derived from an older one (by ${pkgMtime - stackMtime}ms). Run build:stack. ` +
+    `check-all, ship, check:head and CI all do this before any gate runs, so seeing this ` +
+    `from one of them means the build step is missing rather than that you forgot.`,
 );
 
 /* --------------------------------------------------------- both directions */

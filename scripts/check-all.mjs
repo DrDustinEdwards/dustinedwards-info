@@ -513,6 +513,28 @@ function main() {
   const gates = discoverGates();
 
   /*
+   * THE STACK ARTIFACT, BUILT FIRST, and the order is load-bearing rather than
+   * tidy: `build:content` reads content/generated/stack.json to emit the
+   * colophon's page records, so a run that built the corpus first would render
+   * pages from whatever stack.json a previous run left behind.
+   *
+   * Gitignored since ruling 39a. It was committed and byte-gated until then,
+   * which made every package.json change a two-file change and put every
+   * Renovate PR red on check:stack with no defect in it. Same class of step as
+   * the two below: not a gate, no table row, no floor.
+   */
+  process.stdout.write("  build:stack (the colophon artifact build:content reads) ... ");
+  const stacked = runGate("build:stack", []);
+  if (!stacked.ok) {
+    console.log("FAILED");
+    console.log(stacked.output.trimEnd());
+    throw new Error(
+      "build:stack failed, so content/generated/stack.json does not exist on disk. " +
+        "Nothing below ran; fix the stack build first.",
+    );
+  }
+  console.log(`ok (${(stacked.ms / 1000).toFixed(1)}s)`);
+  /*
    * THE LOCAL BUILD PRODUCT IS BUILT BEFORE ANY GATE READS IT. Since the
    * artifact arc, content/generated/posts.json is gitignored: git holds
    * markdown, D1 holds the rendered copy, and this file exists on disk only

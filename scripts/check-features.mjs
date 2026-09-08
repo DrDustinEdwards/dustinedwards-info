@@ -1232,9 +1232,9 @@ const projectsChecksBefore = checks;
  * assembles them: from artifacts that already have owners.
  *
  * `content/generated/stack.json` is generated from package.json by
- * `build:stack` and byte-gated by `check:stack`, so the gate count reaches the
- * card through the pipe that already owns it rather than through a second
- * count taken here. `PHAGE_YEARS` is the data the roster page renders.
+ * `build:stack` and reconciled against its sources by `check:stack`, so the
+ * gate count reaches the card through the pipe that already owns it rather
+ * than through a second count taken here. `PHAGE_YEARS` is the data the roster page renders.
  *
  * NOT fixture-independent, and it does not need to be: hard rule 10's fixture
  * rule forbids a gate whose EXPECTED value is produced by the code under test,

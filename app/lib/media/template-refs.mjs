@@ -32,12 +32,14 @@
  * Storing the answer in D1 does not help, because something still has to compute
  * it, and nothing inside the Worker can.
  *
- * **So it runs at BUILD time and ships as a committed artifact**, the
- * pattern `assets.json` and `stack.json` follow: generated, committed,
- * imported at build time and reconciled by a gate. (The post corpus used to
- * be the third such artifact; it is a local build product now, and D1 holds
- * the rendered copy.) `content/generated/template-refs.json` is committed
- * because it is a repo fact with no database owner.
+ * **So it runs at BUILD time and ships as a committed artifact**, the pattern
+ * `assets.json` follows: generated, committed, imported at build time and
+ * reconciled by a gate. `content/generated/template-refs.json` is committed
+ * because it is a repo fact with no database owner, and so is `assets.json`.
+ * (Two former members of that set are local build products now: the post
+ * corpus, because D1 holds the rendered copy, and `stack.json` as of ruling
+ * 39a, because everything it derives from is tracked and committing it made
+ * every package.json edit a two-file change no bot could complete.)
  * A build-time import also means the answer cannot drift from the code that
  * produced it: they ship in the same bundle.
  *

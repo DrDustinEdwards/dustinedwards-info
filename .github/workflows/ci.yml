@@ -90,16 +90,25 @@ jobs:
       # `--local` only; nothing here can reach the deployed database, and
       # this workflow still declares no secrets.
       #
-      # The order is load-bearing: migrations build the schema, build:content
-      # renders the corpus, sync reads what build:content wrote.
+      # The order is load-bearing: migrations build the schema, build:stack
+      # emits the colophon artifact build:content reads, build:content renders
+      # the corpus, sync reads what build:content wrote.
       # build:enhance rides here too: app/enhance/dist/ is gitignored, so a
       # checkout has enhancement source and no bundles. The gates that read
       # the bundles or the build are CI-excluded today, but the tier is
       # derived, and a future gate that reads them should find them built
       # rather than silently absent.
-      - name: Migrations, content build, enhancement bundles, local sync
+      #
+      # build:stack joined this step on 2026-09-08, ruling 39a.
+      # content/generated/stack.json was committed and byte-gated, so every
+      # package.json change was a two-file change, and Renovate, which cannot
+      # run a build, opened three PRs that were red on check:stack with no
+      # defect in them. Deriving it here is what lets a dependency PR be
+      # judged on its dependency.
+      - name: Migrations, stack and content build, enhancement bundles, local sync
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
+          npm run build:stack
           npm run build:content
           npm run build:enhance
           npm run sync:content -- --local
