@@ -14,6 +14,23 @@
 # caller, and the scorer's Job B refuses a holdout case importing a name that is
 # NOT here.
 #
-# THIS LIST IS EMPTY AND THAT IS NOT A CLAIM. Job B prints every name it finds
-# when the list is short, so the first scored run after this commit reports the
-# real set for dustinedwards. Fill it from that run.
+# Harvested from the first run of that gate on 2026-09-08, which reports every
+# name it finds. An EXTRA name here costs nothing; a missing one is a red gate.
+
+ALL_WIDTHS
+CONTENT_SIZES
+FAILED_RETENTION_DAYS
+REJECTED_RETENTION_DAYS
+THUMB_WIDTHS
+apca
+channels
+contentSrcSet
+contrast
+countWords
+daysInMilliseconds
+folderFor
+luminance
+minutesForWords
+normalizeHex
+readingTimeMinutes
+tagPath
