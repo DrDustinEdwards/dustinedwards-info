@@ -443,6 +443,27 @@ try {
   );
 
   /*
+   * THE STACK ARTIFACT, built IN THE WORKTREE and BEFORE build:content, which
+   * reads it to emit the colophon's page records. Gitignored since ruling 39a,
+   * so an extraction has its sources and not it, exactly like the two build
+   * products below. Without this step build:content fails on a missing file
+   * that is not HEAD's fault, which is the failure mode this whole block
+   * exists to prevent.
+   */
+  const bs = spawnSync("npm run build:stack", {
+    cwd: worktree,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  ok(
+    "build:stack produced the worktree's stack artifact",
+    bs.status === 0,
+    `${(bs.stdout ?? "")}${(bs.stderr ?? "")}`.trim().slice(-200),
+  );
+  if (bs.status !== 0) throw new Error("the worktree stack build failed; the tier has no subject");
+
+  /*
    * THE LOCAL BUILD PRODUCT, built IN THE WORKTREE. posts.json is gitignored
    * since the artifact arc, so an extraction has markdown and no build
    * product; the gates that read it would otherwise fail on a missing file

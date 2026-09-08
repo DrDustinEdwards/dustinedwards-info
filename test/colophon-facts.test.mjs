@@ -43,8 +43,10 @@ import { colophonFacts, el } from "../scripts/lib/colophon-facts.mjs";
 const json = (rel) =>
   JSON.parse(readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8"));
 
-// The committed artifacts the page itself renders from. Reading them rather
-// than fabricating a stack keeps this honest about the real shapes.
+// The artifacts the page itself renders from. Reading them rather than
+// fabricating a stack keeps this honest about the real shapes. stack.json is a
+// gitignored build product since ruling 39a, so `npm test` needs build:stack to
+// have run; check-all builds it before the tier that runs check:tests.
 const stack = json("../content/generated/stack.json");
 const features = json("../content/features.json");
 

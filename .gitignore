@@ -17,6 +17,17 @@
 # committed because they are repo facts with no database owner.
 /content/generated/posts.json
 
+# The colophon's stack data. Same class as posts.json, and it became one on
+# 2026-09-08 (ruling 39a): it is derived entirely from tracked sources
+# (package.json, wrangler.jsonc.example, drizzle/, .nvmrc, stack-notes.json),
+# so committing it made every change to any of those a two-file change that
+# only a machine running build:stack could complete. Renovate cannot run
+# build:stack, so every dependency PR arrived red on check:stack with no
+# defect in it (#19 to #21, 2026-09-07). build:stack now runs before the gates
+# in check-all, in ship's build step and in CI, exactly where build:content
+# does, and check:stack asserts the file is fresh rather than committed.
+/content/generated/stack.json
+
 # The enhancement bundles. Same class as posts.json: a build product that
 # exists on disk because build:enhance wrote it (check-all, check-head, ship,
 # CI and dev all build it before anything reads it). Source is app/enhance/;

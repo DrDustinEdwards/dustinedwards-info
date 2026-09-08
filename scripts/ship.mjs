@@ -492,7 +492,19 @@ console.log(`  ${migrations.reason}.`);
 /* --------------------------------------------------------------- 2. build */
 
 announce("Build");
-// The enhancement bundles first: the app build's ?url imports name files under
+/*
+ * THE STACK ARTIFACT FIRST, and it has to be inside the build step rather than
+ * beside build:content at step 12. content/generated/stack.json is gitignored
+ * since ruling 39a, and three route modules import it statically, so the Worker
+ * bundle carries its bytes. A run that derived it after the deploy would ship
+ * whatever a previous run left on disk, or fail the build outright on a clean
+ * clone. Deriving it here also serves the two later readers for free: the gates
+ * at step 3 and build:content at step 12 both find it already written.
+ */
+if (run("npm", ["run", "build:stack"]).code !== 0) {
+  refuse("the stack artifact build failed", "Fix build:stack. Nothing was deployed.");
+}
+// The enhancement bundles next: the app build's ?url imports name files under
 // the gitignored app/enhance/dist/, so a build without this step fails on a
 // missing file that is not the tree's fault.
 if (run("npm", ["run", "build:enhance"]).code !== 0) {
