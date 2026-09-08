@@ -104,7 +104,22 @@
 	// The placeholder is on example.com, which RFC 2606 reserves and which can
 	// therefore never be a real inbox. `check:config` asserts the example
 	// carries that reserved domain and does NOT carry the real value.
+	// THE ACCOUNT THE ERROR-RATE QUERY IS ASKED OF.
+	//
+	// Added 2026-09-07 with the error-rate check. A VAR rather than a secret, on
+	// the ALERT_EMAIL precedent above and the site config's: an account id is an
+	// identifier, not a credential, and guarding it with check:secrets would spend
+	// that gate's signal on a value that grants nothing.
+	//
+	// ITS CREDENTIAL IS A SECRET AND IS NOT HERE:
+	//   npx wrangler secret put CLOUDFLARE_API_TOKEN -c wrangler.watchdog.jsonc
+	// scoped to Account / Account Analytics / Read and nothing else, because all
+	// it does is run one read-only GraphQL query against
+	// workersInvocationsAdaptive. With either missing the check reports "NOT
+	// CHECKED" by name every firing rather than reporting no errors, which is the
+	// distinction the whole watchdog is built on.
 	"vars": {
-		"ALERT_EMAIL": "alerts@example.com"
+		"ALERT_EMAIL": "alerts@example.com",
+		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000"
 	}
 }
