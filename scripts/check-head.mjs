@@ -590,12 +590,18 @@ console.log(
  * exclusions and the per-gate verdicts. If those stopped running, the gate floor
  * above would stop being consulted and the run would still report clean.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 30,
- * with 20 gates executed and 3 excluded. Never summed. Floored at 27, slack of
- * three: most of the count is one assertion per gate run, so it steps by one
- * when a gate is added and by more only when the tier is re-tiered.
+ * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-08 by RUNNING it:
+ * 37, with 23 gates executed. Never summed. Floored at 34, slack of three: most
+ * of the count is one assertion per gate run, so it steps by one when a gate is
+ * added and by more only when the tier is re-tiered.
+ *
+ * The prose here said 30 measured and 27 floored while the constant read 33,
+ * which is rule 17's rot in its ordinary form: the constant was raised as the
+ * tier grew and the sentence justifying it was not. The number above is what
+ * the gate printed on the run that set it, and the floor line the gate emits is
+ * what owns it from here.
  */
-const MINIMUM_CHECKS = 33;
+const MINIMUM_CHECKS = 34;
 const floorBreach = assertFloor("check:head", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
