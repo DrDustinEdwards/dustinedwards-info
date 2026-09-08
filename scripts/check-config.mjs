@@ -12,10 +12,18 @@
  * Cloudflare whether any of these resources EXIST, so a binding naming a
  * deleted bucket passes, a service binding naming a Worker nobody deployed
  * passes, and it only knows the binding kinds `surfaceOf()` enumerates: a new
- * kind is invisible until added there. It also cannot tell whether a cron
- * TRIGGER is actually registered on the deployed Worker, only what the config
- * asks for; that half is proven live by the freshness assertion in
- * `check:browser`.
+ * kind is invisible until added there.
+ *
+ * **THE CRON HALF MOVED INSIDE THAT BOUNDARY ON 2026-09-07.** This note used to
+ * say the gate "cannot tell whether a cron TRIGGER is actually registered on
+ * the deployed Worker, only what the config asks for; that half is proven live
+ * by the freshness assertion in check:browser". That was a boundary note, which
+ * FAILURES.md classes as a claim that ages, and it aged: `check:browser`'s
+ * freshness assertion proves the WATCHDOG's cron fires and says nothing about a
+ * cron registered on the SITE Worker that should not exist. One was, for fifteen
+ * days. `--remote` now reads the registered schedules and compares them to the
+ * declared set in both directions. WITHOUT `--remote` the old limitation still
+ * holds exactly as written.
  *
  * Why this exists. The real config is gitignored portfolio-wide
  * (capsid/conventions.md, "Public-repo hygiene": secrets live in
@@ -58,6 +66,7 @@ import {
   unhandledBindingKinds,
 } from "./lib/wrangler-surface.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { readDevVar } from "./lib/dev-vars.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -527,6 +536,39 @@ assertThat(
     `example: ${JSON.stringify(watchdog.example.triggers ?? null)}`,
 );
 
+/*
+ * THE SITE'S CRON SET IS DECLARED, AND DECLARING IT EMPTY IS THE POINT.
+ *
+ * Added 2026-09-07. `triggers` was ABSENT from both site configs, and absent
+ * is not empty: wrangler syncs the cron set from that key, so with no key it
+ * leaves whatever is registered on the account untouched. An hourly
+ * `0 * * * *` created 2026-08-23 sat on this Worker, which exports no
+ * `scheduled()`, and threw on every firing for fifteen days. Grounds and the
+ * measurement are in `wrangler.jsonc.example`.
+ *
+ * ASSERTED AS PRESENT-AND-ARRAY rather than merely equal to each other. Two
+ * files that both omit the key agree perfectly, which is exactly the state
+ * that hid the defect, so "they match" is not a strong enough assertion here.
+ */
+for (const [label, config] of [
+  ["real", site.real],
+  ["example", site.example],
+]) {
+  assertThat(
+    Array.isArray(config.triggers?.crons),
+    `the site declares a triggers.crons array in the ${label} config`,
+    `found ${JSON.stringify(config.triggers ?? null)}. An ABSENT triggers key does not ` +
+      `mean "no crons": wrangler leaves already-registered triggers alone, so the key ` +
+      `has to be present and empty for this config to own the cron set.`,
+  );
+}
+assertThat(
+  JSON.stringify(site.real.triggers ?? null) === JSON.stringify(site.example.triggers ?? null),
+  "the site's triggers block matches",
+  `real: ${JSON.stringify(site.real.triggers ?? null)} | ` +
+    `example: ${JSON.stringify(site.example.triggers ?? null)}`,
+);
+
 /* ================================================ both, against the tree */
 
 for (const [name, redaction] of REDACTED_VARS) {
@@ -610,6 +652,122 @@ for (const [name, redaction] of REDACTED_VARS) {
   );
 }
 
+/* ============================================ --remote: the live schedules */
+
+/*
+ * THE ONE ASSERTION THIS GATE COULD NOT MAKE, until 2026-09-07.
+ *
+ * The docblock at the top of this file used to say, correctly, that it "cannot
+ * tell whether a cron TRIGGER is actually registered on the deployed Worker,
+ * only what the config asks for; that half is proven live by the freshness
+ * assertion in check:browser". That boundary note was a CLAIM, and it aged
+ * exactly the way FAILURES.md says a boundary note ages. The freshness
+ * assertion proves the WATCHDOG's cron fires. It says nothing about a cron
+ * registered on the SITE Worker that should not exist at all, and one was:
+ * `0 * * * *`, created 2026-08-23, throwing on every firing for fifteen days
+ * because `workers/app.ts` exports no `scheduled()`.
+ *
+ * So this reads the schedules the platform actually holds and compares them to
+ * what the configs declare, IN BOTH DIRECTIONS. A trigger in the config and not
+ * on the platform is a Worker that will not fire; a trigger on the platform and
+ * not in the config is the defect above.
+ *
+ * ## WHY IT IS BEHIND `--remote` AND NOT A NEW GATE
+ *
+ * `check:config` is tiered OFFLINE and ship runs the offline tier, which is
+ * what makes it load bearing on the one machine that deploys. Moving it to the
+ * network tier to gain this would have taken it out of ship. So it keeps its
+ * offline body and gains a network half behind a flag, which is the shape
+ * `check:backup`, `check:llms` and `check:invariants` already use and which
+ * `check-all.mjs` already knows how to pass through in `check:all`.
+ *
+ * ## FAILS CLOSED ON A MISSING CREDENTIAL
+ *
+ * `--remote` was ASKED FOR, so being unable to answer is a failure and not a
+ * skip. The house stance, stated in `repair.mjs`: degrading to alert-only is
+ * correct, degrading to silence is not. A gate that quietly passed when it
+ * could not reach the API would report the same green for "no stray cron" and
+ * "I did not look".
+ */
+if (process.argv.includes("--remote")) {
+  const token = readDevVar("CLOUDFLARE_API_TOKEN");
+  const account = site.real.vars?.CLOUDFLARE_ACCOUNT_ID;
+
+  assertThat(
+    Boolean(token),
+    "CLOUDFLARE_API_TOKEN is readable from .dev.vars",
+    "Absent, so the live schedules cannot be read and --remote proves nothing. It needs " +
+      "only Account / Workers Scripts / Read. It is an operator credential for this " +
+      "machine rather than a wrangler secret, because no deployed code reads it; put it " +
+      "in .dev.vars, which is gitignored.",
+  );
+  assertThat(
+    typeof account === "string" && !/^0+$/.test(account),
+    "the real config carries a usable CLOUDFLARE_ACCOUNT_ID",
+    `found ${JSON.stringify(account ?? null)}. The example's placeholder cannot address ` +
+      `an account.`,
+  );
+
+  if (token && typeof account === "string" && !/^0+$/.test(account)) {
+    for (const [worker, config] of [
+      ["dustinedwards", site.real],
+      ["dustinedwards-watchdog", watchdog.real],
+    ]) {
+      const declared = [...(config.triggers?.crons ?? [])].sort();
+      let live = null;
+      try {
+        const res = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${worker}/schedules`,
+          { headers: { authorization: `Bearer ${token}` } },
+        );
+        const body = await res.json();
+        if (!res.ok || body?.success !== true) {
+          // The API echoes error CODES, never the credential, so this is safe to print.
+          assertThat(
+            false,
+            `the schedules API answered for ${worker}`,
+            `HTTP ${res.status}: ${JSON.stringify(body?.errors ?? body).slice(0, 300)}`,
+          );
+          continue;
+        }
+        live = (body.result?.schedules ?? [])
+          .map((/** @type {{ cron: string }} */ s) => s.cron)
+          .sort();
+      } catch (error) {
+        assertThat(
+          false,
+          `the schedules API answered for ${worker}`,
+          error instanceof Error ? error.message : String(error),
+        );
+        continue;
+      }
+
+      /*
+       * BOTH DIRECTIONS, NAMED SEPARATELY. One assertion comparing two sorted
+       * arrays would report "they differ" and leave the reader to work out
+       * which way, and the two directions mean genuinely different things.
+       */
+      const stray = live.filter((/** @type {string} */ c) => !declared.includes(c));
+      const missing = declared.filter((/** @type {string} */ c) => !live.includes(c));
+
+      assertThat(
+        stray.length === 0,
+        `${worker} has no cron trigger that the config does not declare`,
+        `registered on the platform and absent from wrangler config: ` +
+          `${JSON.stringify(stray)}. A trigger nothing declares survives every deploy and ` +
+          `fires forever. Remove it, or declare it.`,
+      );
+      assertThat(
+        missing.length === 0,
+        `${worker} has every cron trigger the config declares`,
+        `declared in wrangler config and NOT registered: ${JSON.stringify(missing)}. ` +
+          `The Worker will never fire on that schedule.`,
+      );
+      console.log(`  ${worker}: ${live.length} live cron(s) ${JSON.stringify(live)}`);
+    }
+  }
+}
+
 console.log(
   `  ${site.surface.size} site binding(s): ${[...site.surface.keys()].join(", ")}`,
 );
@@ -632,7 +790,18 @@ console.log(
  * steps by two or three per binding and per var, so a single added binding
  * moves it visibly and a deleted one should be a deliberate diff.
  */
-const MINIMUM_CHECKS = 95;
+/*
+ * RE-MEASURED 2026-09-07 BY RUNNING IT, TWICE, and the second time is the
+ * lesson. After the site's `triggers` assertions landed the offline run
+ * reported 104 and this was set to 100; the watchdog's CLOUDFLARE_ACCOUNT_ID
+ * var then took it to 108, and `check:floors` failed the 100 at a gap of 8
+ * against a tolerance of 6. That is the mechanism doing its job, and it is why
+ * the number here comes from a run rather than from arithmetic on the old one.
+ * The floor tracks the OFFLINE count deliberately, because `--remote` adds
+ * assertions and a floor set to the remote count would breach on every offline
+ * run, which is the tier ship uses.
+ */
+const MINIMUM_CHECKS = 103;
 const floorBreach = assertFloor("check:config", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
 
