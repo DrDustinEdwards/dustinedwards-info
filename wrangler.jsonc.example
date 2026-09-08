@@ -91,6 +91,34 @@
 			"cache": { "enabled": true }
 		}
 	},
+	// THIS WORKER HAS NO CRON, AND THE EMPTY ARRAY IS THE STATEMENT.
+	//
+	// `triggers` was ABSENT here until 2026-09-07, and absent is not the same as
+	// empty: wrangler syncs the cron set from this key, so with the key missing
+	// it leaves whatever is already registered on the account alone. That is how
+	// the following went unnoticed for fifteen days.
+	//
+	// MEASURED 2026-09-07 from `GET /accounts/{id}/workers/scripts/dustinedwards/
+	// schedules`: an hourly cron `0 * * * *`, created 2026-08-23T06:07:53Z, was
+	// registered on this Worker. `workers/app.ts` exports no `scheduled()`
+	// handler, so every one of those firings threw. Workers Logs carried 140
+	// events reading `Handler does not export a scheduled() function` over 7.9
+	// days, and the GraphQL `workersInvocationsAdaptive` daily series puts
+	// `scriptThrewException` at ZERO on every day from 08-08 to 08-22 and at 19
+	// to 44 per day on every day from 08-23 onward. The cron's creation date and
+	// the defect's start date are the same day.
+	//
+	// Nothing caught it because nothing could: `check:config` compared this file
+	// against `wrangler.jsonc` and the two agreed, both by saying nothing. A
+	// trigger that exists only on the platform is invisible to a gate that reads
+	// only files, which is FAILURES.md's "a construct the scan does not reach is
+	// not exempt; it is a subject with no gate".
+	//
+	// So the empty array is load bearing twice. It makes this file the OWNER of
+	// the cron set, and it gives `check:config --remote` something to compare the
+	// live schedules against in both directions. The watchdog is the Worker that
+	// has a cron; this one is driven by requests and by its queue consumer.
+	"triggers": { "crons": [] },
 	// Static assets, so the Worker can read them through a binding. The Vite
 	// plugin supplies `directory` from the client build output; setting it here
 	// would fight that.
