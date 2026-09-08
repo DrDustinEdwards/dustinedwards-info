@@ -62,7 +62,30 @@
  * Anchored at the start of a line by `check:floors`, so this must never be
  * indented or prefixed at a call site.
  */
-export const FLOOR_LINE = /^floor (\S+):(\S+) executed=(\d+) minimum=(\d+)$/;
+/*
+ * THE GATE IS THE FIRST TWO SEGMENTS, NOT A GREEDY RUN.
+ *
+ * This was `/^floor (\S+):(\S+) .../`, and `\S+` is greedy, so a floor NAME
+ * containing a colon was split in the wrong place. `check:browser` names its
+ * floors `checks:preview` and `checks:deployed` (since 457d049, 2026-09-06),
+ * which parsed as gate `check:browser:checks` and name `preview`.
+ *
+ * The cost was not a wrong number. Section 1 still compared the right count
+ * against the right floor, because it only reads what the line says. What broke
+ * was section 2, the "every floored gate printed its floor" assertion: the
+ * producer set held `check:browser:checks`, so `check:browser` was reported
+ * SILENT on every run that reached it, which is the one assertion that exists
+ * to notice a floor block that stopped executing.
+ *
+ * It stayed hidden because `check:browser` is network-tiered: the offline tier
+ * `check:floors` runs standalone never reaches it, and neither CI nor ship runs
+ * `check:all`. Found 2026-09-08 when `check:all` was run end to end.
+ *
+ * Anchored to `<word>:<word>` for the gate so a name may carry colons and the
+ * split still lands after the gate. Non-greedy alone would not do: it would
+ * take `check` as the gate.
+ */
+export const FLOOR_LINE = /^floor ([a-z]+:[a-z0-9-]+):(\S+) executed=(\d+) minimum=(\d+)$/;
 
 /**
  * Compare an executed count against its floor.
