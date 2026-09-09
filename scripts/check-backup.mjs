@@ -80,6 +80,69 @@ function wrangler(args) {
 }
 
 /**
+ * The END of wrangler's output, which is where its error is.
+ *
+ * Both throws below used `stdout.slice(0, 200)`, the HEAD, which is the banner:
+ * the version line, the resource location, and on a runner an "update
+ * available" notice. Measured 2026-09-08 in `check:restore`, whose export site
+ * carried the identical bug: the 300-character cut it used landed mid-line on
+ * wrangler's non-interactive prompt and the actual error, a 7404, never
+ * reached the log. Two CI runs failed unreadably before the cut was moved.
+ *
+ * @param {string} text
+ * @param {number} [max]
+ */
+function tail(text, max = 400) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && /\w/.test(l) && !/^[⛅🌀]/u.test(l));
+  return lines.join(" | ").slice(-max) || "no output";
+}
+
+/**
+ * How this gate ADDRESSES the database, which is not always its name.
+ *
+ * `wrangler d1 export <name>` resolves the name through the `d1_databases`
+ * entry in `wrangler.jsonc` and uses that entry's `database_id`. That file is
+ * gitignored, so a clean checkout bootstraps it from `wrangler.jsonc.example`,
+ * whose `database_id` is the placeholder `00000000-0000-0000-0000-000000000000`.
+ * A `--remote` run there addresses a database that does not exist and dies as
+ * 7404. Measured in CI 2026-09-08 via `check:restore`, which hit it on the
+ * identical command shape; this gate has the same defect and has never run in
+ * CI, so it was latent rather than absent.
+ *
+ * `--local` keeps the NAME deliberately. Miniflare state is keyed by the
+ * config's `database_id` and there is no UUID to resolve; an account lookup
+ * would be answering a question about the wrong database.
+ *
+ * @param {string} target
+ * @returns {string}
+ */
+function resolveAddress(target) {
+  if (target !== "--remote") return DB_NAME;
+  const listed = wrangler("d1 list --json");
+  const start = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
+  /** @type {Array<{ uuid?: string, name?: string }>} */
+  const databases = start === -1 ? [] : JSON.parse(listed.stdout.slice(start));
+  const found = databases.find((d) => d.name === DB_NAME);
+  // FAILS CLOSED. Falling back to the name would substitute a different value
+  // for the one asked for and reintroduce the 7404 wearing a passing lookup.
+  if (typeof found?.uuid !== "string" || found.uuid.length === 0) {
+    throw new Error(
+      `could not resolve ${DB_NAME} to a UUID from d1 list` +
+        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status}: ${tail(listed.stdout)})`}. ` +
+        `Passing the NAME lets wrangler resolve it out of wrangler.jsonc, which ` +
+        `a clean checkout bootstraps from the example with a placeholder id.`,
+    );
+  }
+  return found.uuid;
+}
+
+/** Set once in `main`, before anything reads the database. */
+let DB_ADDRESS = DB_NAME;
+
+/**
  * Parses table names out of the migration files.
  *
  * Virtual tables are deliberately excluded: they cannot be exported, they are
@@ -134,12 +197,12 @@ async function actualTables(target) {
   const result = await retryRead(
     () => {
       const r = wrangler(
-        `d1 execute ${DB_NAME} ${target} --json --command ` +
+        `d1 execute ${DB_ADDRESS} ${target} --json --command ` +
           `"SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;"`,
       );
       // A non-zero status is the failure here, not a throw, so it is raised
       // deliberately: retryRead can only see a rejection.
-      if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 200));
+      if (r.status !== 0) throw new Error(tail(r.stdout));
       return r;
     },
     { label: `check:backup sqlite_master read (${target})` },
@@ -179,7 +242,11 @@ function sorted(set) {
 
 async function main() {
   const target = process.argv.includes("--remote") ? "--remote" : "--local";
-  console.log(`check:backup verifying the per-table export path against ${target.slice(2)} D1`);
+  DB_ADDRESS = resolveAddress(target);
+  console.log(
+    `check:backup verifying the per-table export path against ${target.slice(2)} D1` +
+      `${DB_ADDRESS === DB_NAME ? "" : ` (${DB_NAME} resolved to ${DB_ADDRESS})`}`,
+  );
 
   const expected = await expectedTables();
   const { real, virtual, shadow } = await actualTables(target);
@@ -281,9 +348,9 @@ async function main() {
     const exported = await retryRead(
       () => {
         const r = wrangler(
-          `d1 export ${DB_NAME} ${target} --no-schema --table ${name} --output "${out}"`,
+          `d1 export ${DB_ADDRESS} ${target} --no-schema --table ${name} --output "${out}"`,
         );
-        if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 200));
+        if (r.status !== 0) throw new Error(tail(r.stdout));
         return r;
       },
       { label: `check:backup per-table export (${name}, ${target})` },
