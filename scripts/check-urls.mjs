@@ -37,11 +37,14 @@
  * Pure: no database, no network, no build.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import matter from "gray-matter";
+
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
+import { postRedirectStatus, postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -286,6 +289,286 @@ assert(
 );
 
 /* -------------------------------------------------------------------------
+ * THE REDIRECT MAP: every old slug goes somewhere that exists, and no post
+ * claims a slug the map is still redirecting away from.
+ *
+ * Ruling 47, 2026-09-09. Nine posts were reslugged and every old URL keeps
+ * answering with a 301. Two things can go wrong with that, and neither is
+ * visible until a reader hits it:
+ *
+ *   A REDIRECT TO A 404. The gateway resolves the map without touching the
+ *   database, deliberately (the grounds are on `slug-redirect.mjs`), so it
+ *   CANNOT know whether the target exists. Nothing else looks either: a post
+ *   body's internal links are not corpus-checked, and `check:content` reads
+ *   `further_reading` only. So the target's existence is this gate's to own,
+ *   and it is a build-time property, because the corpus is on disk.
+ *
+ *   A SLUG THAT IS ALSO A SOURCE. If a post ever took the name
+ *   `letting-an-agent-publish` again, that post would be UNREACHABLE: the
+ *   redirect runs in the gateway, before the router, so the 301 fires and the
+ *   post at that slug can never be served. It is the sharper of the two,
+ *   because the post looks completely fine on disk and in D1.
+ *
+ * READ FROM `content/posts/*.md`, NOT FROM THE BUILD PRODUCT.
+ * `content/generated/posts.json` is gitignored, so a CI checkout does not have
+ * it, and a gate whose expected values come out of the pipeline it is checking
+ * is the fixture-independence failure hard rule 10 names. The frontmatter is
+ * parsed with the same `frontmatterSchema` the Worker uses, so "published"
+ * means here exactly what it means there.
+ *
+ * PAIRED WITH COUNTS, like every other section in this file: a map that parsed
+ * to nothing and a corpus that read nothing both report a clean sweep.
+ * ---------------------------------------------------------------------- */
+
+const REDIRECTS_PATH = join(root, "content", "redirects.json");
+
+if (!existsSync(REDIRECTS_PATH)) {
+  console.log("  FAIL  content/redirects.json is missing");
+  console.log("        It is this section's whole subject. Restore it from git.\n");
+  process.exit(1);
+}
+
+/** @type {{ posts: Record<string, string> }} */
+const redirects = JSON.parse(readFileSync(REDIRECTS_PATH, "utf8"));
+const redirectSources = Object.keys(redirects.posts ?? {});
+
+/*
+ * THE RETIRED SET, AND WHY IT IS A SECOND FILE.
+ *
+ * Everything below this point reads `content/redirects.json` and checks that
+ * what is IN it is coherent. That cannot catch the failure that matters most:
+ * DELETING an entry. A map with an entry removed is perfectly coherent, it just
+ * silently stops redirecting a URL that is already published, and the gate
+ * would report a clean sweep over a smaller set. Same shape as the empty-scope
+ * failure this file guards everywhere else, one level up.
+ *
+ * So the expected set comes from a file the map cannot edit, and the two are
+ * reconciled in BOTH DIRECTIONS: every retired slug has a redirect, and every
+ * redirect source is a retired slug. That is the same arrangement
+ * `check:features` uses for `content/enhancements.json`.
+ *
+ * This is not two owners of one fact (hard rule 17), because they are two
+ * different facts. `retired-slugs.json` records that a URL was ONCE PUBLIC,
+ * which is history and is append-only. `redirects.json` records WHERE IT GOES
+ * NOW, which is a current decision and can change. Retiring a tenth post edits
+ * both, in the same commit, which is what the reconciliation forces.
+ */
+const RETIRED_PATH = join(root, "scripts", "fixtures", "retired-slugs.json");
+if (!existsSync(RETIRED_PATH)) {
+  console.log("  FAIL  fixture is missing: scripts/fixtures/retired-slugs.json");
+  console.log("        Without it, deleting a redirect would pass. Restore it from git.\n");
+  process.exit(1);
+}
+/** @type {{ posts: string[] }} */
+const retired = JSON.parse(readFileSync(RETIRED_PATH, "utf8"));
+const retiredSlugs = Array.isArray(retired.posts) ? retired.posts : [];
+
+assert(
+  "redirects: the retired-slug fixture is non-empty",
+  retiredSlugs.length > 0,
+  "it parsed to 0 entries, so the both-directions reconciliation below examines nothing",
+);
+
+for (const slug of retiredSlugs) {
+  assert(
+    `redirects: retired slug ${slug} still has a redirect`,
+    Object.hasOwn(redirects.posts ?? {}, slug),
+    `/blog/${slug} was published and content/redirects.json no longer names it, so that URL ` +
+      `now 404s. Entries are append-only: if the post really is gone for good, that is a ` +
+      `decision for Dustin, not a deletion from a map.`,
+  );
+}
+for (const from of redirectSources) {
+  assert(
+    `redirects: redirect source ${from} is recorded as retired`,
+    retiredSlugs.includes(from),
+    `content/redirects.json redirects /blog/${from} and scripts/fixtures/retired-slugs.json ` +
+      `does not list it. Add it there in the same commit, or the next reader cannot tell a ` +
+      `real retired URL from a typo.`,
+  );
+}
+
+/**
+ * The corpus, as slug to frontmatter, straight off disk.
+ *
+ * A post whose frontmatter does not parse is NOT skipped, it is counted and
+ * reported. Skipping would let a malformed post drop out of the known set and
+ * turn a live redirect target into a missing one that this gate calls fine.
+ */
+const postFiles = readdirSync(join(root, "content", "posts")).filter((f) => f.endsWith(".md"));
+/** @type {Map<string, { published: boolean, file: string }>} */
+const corpus = new Map();
+let unparseable = 0;
+const today = new Date().toISOString().slice(0, 10);
+for (const file of postFiles) {
+  const parsed = matter(readFileSync(join(root, "content", "posts", file), "utf8"));
+  const result = frontmatterSchema.safeParse(parsed.data);
+  if (!result.success) {
+    unparseable += 1;
+    continue;
+  }
+  const fm = result.data;
+  /*
+   * PUBLISHED, on the same three conditions the public read applies: not a
+   * draft, dated today or earlier, and not holding a future `publish_at`. A
+   * redirect whose target is a draft is a redirect to a 404 for every reader,
+   * and hard rule 1 is why this cannot be softened to "the file exists".
+   */
+  const scheduled = fm.publish_at ? fm.publish_at.slice(0, 10) > today : false;
+  corpus.set(fm.slug, { published: fm.draft !== true && fm.date <= today && !scheduled, file });
+}
+
+assert(
+  "redirects: every post file's frontmatter parsed",
+  unparseable === 0,
+  `${unparseable} of ${postFiles.length} post file(s) did not parse, so the known-slug set is short ` +
+    `and a live redirect target could read as missing`,
+);
+assert(
+  "redirects: the corpus scope is non-empty",
+  corpus.size > 0,
+  "0 posts read from content/posts; every assertion below would sweep an empty set",
+);
+assert(
+  "redirects: the map scope is non-empty",
+  redirectSources.length > 0,
+  "content/redirects.json parsed to 0 entries, so the assertions below examine nothing",
+);
+
+for (const [from, to] of Object.entries(redirects.posts ?? {})) {
+  const target = corpus.get(to);
+  assert(
+    `redirects: /blog/${from} points at a post that exists`,
+    target !== undefined,
+    `the map sends it to /blog/${to}, and no file in content/posts declares that slug. ` +
+      `That is a 301 into a 404.`,
+  );
+  assert(
+    `redirects: /blog/${to} is published, so the 301 lands on a 200`,
+    target !== undefined && target.published,
+    target === undefined
+      ? "the target does not exist at all, which the assertion above reports"
+      : `${target.file} is a draft or is dated in the future, so a reader following this ` +
+        `redirect gets a 404. Hard rule 1.`,
+  );
+  assert(
+    `redirects: ${from} is not also a live post slug`,
+    !corpus.has(from),
+    `content/posts/${corpus.get(from)?.file ?? "?"} declares slug "${from}", which this map ` +
+      `redirects away. The gateway runs before the router, so that post would be UNREACHABLE: ` +
+      `every request for it 301s to /blog/${to}.`,
+  );
+  assert(
+    `redirects: ${from} and ${to} are different slugs`,
+    from !== to,
+    "a redirect to itself is a loop at the gateway",
+  );
+}
+
+/*
+ * THE PREDICATE ITSELF, over the real map. The loop above proves the DATA is
+ * coherent; this proves the CODE that reads it agrees, which is the same
+ * two-level split the rest of this file uses.
+ */
+for (const from of redirectSources) {
+  assert(
+    `redirects: the predicate resolves /blog/${from}`,
+    postRedirectTarget(`/blog/${from}`, redirects.posts) === `/blog/${redirects.posts[from]}`,
+    `got ${JSON.stringify(postRedirectTarget(`/blog/${from}`, redirects.posts))}`,
+  );
+  assert(
+    `redirects: the predicate resolves the markdown twin /blog/${from}.md`,
+    postRedirectTarget(`/blog/${from}.md`, redirects.posts) === `/blog/${redirects.posts[from]}.md`,
+    `got ${JSON.stringify(postRedirectTarget(`/blog/${from}.md`, redirects.posts))}`,
+  );
+}
+
+/*
+ * PERMANENT NEGATIVES for the predicate. Each is a path it must never claim:
+ * a sibling route under the same prefix, or a lookup shape that would answer
+ * from `Object.prototype` rather than from the map. Removing one is removing
+ * the check.
+ */
+for (const path of [
+  "/blog",
+  "/blog/",
+  "/blog/tags/cloudflare",
+  "/blog/series/ten-years",
+  "/blog/constructor",
+  "/blog/toString",
+  "/blog/__proto__",
+  "/blog/hasOwnProperty.md",
+  "/",
+  "/projects",
+]) {
+  assert(
+    `redirects: PERMANENT NEGATIVE, the predicate declines ${path}`,
+    postRedirectTarget(path, redirects.posts) === null,
+    `it claimed ${JSON.stringify(postRedirectTarget(path, redirects.posts))}`,
+  );
+}
+
+assert(
+  "redirects: no live post slug is claimed by the predicate",
+  [...corpus.keys()].every((slug) => postRedirectTarget(`/blog/${slug}`, redirects.posts) === null),
+  `${[...corpus.keys()]
+    .filter((slug) => postRedirectTarget(`/blog/${slug}`, redirects.posts) !== null)
+    .join(", ")} would be redirected away from its own URL`,
+);
+
+assert(
+  "redirects: 301 for GET and HEAD, 308 otherwise",
+  postRedirectStatus("GET") === 301 &&
+    postRedirectStatus("HEAD") === 301 &&
+    postRedirectStatus("POST") === 308,
+  `GET ${postRedirectStatus("GET")}, HEAD ${postRedirectStatus("HEAD")}, POST ${postRedirectStatus("POST")}`,
+);
+
+/*
+ * THE GATEWAY ACTUALLY CALLS IT, AND CALLS IT IN THE RIGHT PLACE.
+ *
+ * Everything above is about a predicate that nothing has to invoke. This is the
+ * wiring, asserted by POSITION in the gateway's own body, which is the same
+ * reasoning `check:policy` uses for the money path: asserting that a stage
+ * merely EXISTS passes on an arrangement that runs it too late. Comments are
+ * stripped first, because in this repo a comment has both satisfied and failed
+ * an assertion about code.
+ */
+{
+  const workerSource = readFileSync(join(root, "workers", "app.ts"), "utf8");
+  const workerCode = workerSource
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*\/\/.*$/gm, " ");
+  assert(
+    "redirects: the comment stripper ran on workers/app.ts",
+    workerSource.includes("THE GATEWAY. Cache disabled") &&
+      !workerCode.includes("THE GATEWAY. Cache disabled"),
+    "the docblock phrase survived stripping, so the assertions below could be reading prose",
+  );
+  const callAt = workerCode.indexOf("postRedirectTarget(");
+  const loopbackAt = workerCode.indexOf("ctx.exports.Renderer");
+  const httpsAt = workerCode.indexOf("httpsRedirectTarget(");
+  assert(
+    "redirects: the gateway calls postRedirectTarget",
+    callAt !== -1,
+    "it is not called anywhere in workers/app.ts, so the map is decoration",
+  );
+  assert("redirects: the cache loopback was located", loopbackAt !== -1, "ctx.exports.Renderer not found");
+  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "httpsRedirectTarget not found");
+  assert(
+    "redirects: THE REDIRECT IS DECIDED BEFORE THE CACHE LOOPBACK",
+    callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
+    "a redirect resolved after the loopback is one the cache can outlive, and it would have " +
+      "cost a render and a database read to discover",
+  );
+  assert(
+    "redirects: the HTTPS redirect still runs first",
+    httpsAt !== -1 && callAt !== -1 && httpsAt < callAt,
+    "a plaintext request must reach HTTPS before anything else decides anything",
+  );
+}
+
+/* -------------------------------------------------------------------------
  * Counts, so a green run cannot mean an empty one
  * ---------------------------------------------------------------------- */
 
@@ -330,10 +613,22 @@ console.log(
  * 6's enforcement.
  *
  * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 97.
- * Never summed. Floored at 92, roughly 5 percent: the count is a fixed function
- * of the fixture's case lists, so it moves only when a case is added.
+ * Never summed. The count is a fixed function of the fixture's case lists, so
+ * it moves only when a case is added.
+ *
+ * The prose here said "floored at 92" while the constant below read 97, which
+ * is hard rule 17's rot in its ordinary form: the constant was raised to the
+ * measured value and the sentence justifying it was not. Corrected 2026-09-09
+ * rather than left for the next reader to trip over.
+ *
+ * RE-MEASURED THE SAME WAY on 2026-09-09, after the redirect section landed:
+ * 197. Floored at 188, a slack of nine. The redirect half contributes six
+ * assertions per map entry plus the reconciliation's two, so the slack is
+ * deliberately smaller than one entry's worth: deleting a single redirect has
+ * to be caught by the both-directions reconciliation going RED, and it must not
+ * be able to hide inside the floor's tolerance instead.
  */
-const MINIMUM_CHECKS = 97;
+const MINIMUM_CHECKS = 188;
 const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assert("this gate executed its assertions", false, floorBreach);
 

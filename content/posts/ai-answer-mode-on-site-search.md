@@ -1,6 +1,6 @@
 ---
-title: "Cloudflare AI Search: Building a Cited RAG Answer Layer"
-slug: ai-answer-layer-ask-mode
+title: "Adding an AI answer mode to site search with Cloudflare AI Search"
+slug: ai-answer-mode-on-site-search
 description: "How to add a retrieval-augmented answer mode to a site with Cloudflare AI Search: uploaded storage versus the crawler, save-time index sync, three cost gates in front of a paying endpoint, and the Durable Objects atomicity measurement behind them."
 date: 2026-07-28
 tags: [cloudflare, ai-search, workers-ai, durable-objects, search]
@@ -8,7 +8,7 @@ draft: false
 first_published: 2026-07-30
 ---
 
-This article describes how to add a retrieval-augmented generation (RAG) answer mode to a site using Cloudflare AI Search: a public endpoint that streams a cited answer synthesized from your own content. [The previous article in this series](/blog/site-search-fts5-rank-fusion) covered the classic keyword engine underneath; this one covers the AI layer on top, and it is organized around the three requirements I set before building, because they are the requirements I would recommend to anyone adding a similar layer. The AI mode must never block or degrade the classic path. It must be removable without a trace. And because it is the one public endpoint that costs money per request, it must sit behind cost controls whose behavior is measured rather than assumed.
+This article describes how to add a retrieval-augmented generation (RAG) answer mode to a site using Cloudflare AI Search: a public endpoint that streams a cited answer synthesized from your own content. [The previous article in this series](/blog/site-search-on-d1) covered the classic keyword engine underneath; this one covers the AI layer on top, and it is organized around the three requirements I set before building, because they are the requirements I would recommend to anyone adding a similar layer. The AI mode must never block or degrade the classic path. It must be removable without a trace. And because it is the one public endpoint that costs money per request, it must sit behind cost controls whose behavior is measured rather than assumed.
 
 Prerequisites: a Workers project, content decomposable into records with stable anchors, and the willingness to probe a beta product before trusting it.
 
@@ -71,7 +71,7 @@ At the time of writing, retrieval on AI Search is free during its open beta with
 
 Measured latency, for expectation-setting: time to first token between 2.1 and 6.5 seconds warm and 7.4 cold, with retrieved sources rendered before the answer begins so the wait is visibly progress. The complementarity measurement in step 2 was run on a small corpus and query set; it is strong enough to establish that neither layer subsumes the other here and far too small to estimate rates, and it should be re-run as any corpus grows. The retrieval threshold behavior around short exact tokens is a property of this instance's configuration rather than a universal constant. And the rate limiter measurements reflect one platform's bindings at one point in time; the durable finding is the atomicity mechanism, which is not vendor-specific at all.
 
-This is the sixth post in [the series](/blog/ten-years-on-cloudflare), following [the FTS5 search engine](/blog/site-search-fts5-rank-fusion). The next two move from reading to writing: [where policy belongs when agents call your service](/blog/one-door-two-doorbells), and [the trust model for an AI agent with write access](/blog/letting-an-agent-publish).
+This is the sixth post in [the series](/blog/ten-years-on-cloudflare), following [the FTS5 search engine](/blog/site-search-on-d1). The next two move from reading to writing: [where policy belongs when agents call your service](/blog/policy-in-the-api-not-the-mcp), and [the trust model for an AI agent with write access](/blog/agent-write-access-to-a-live-site).
 
 ## Update, August 2026
 

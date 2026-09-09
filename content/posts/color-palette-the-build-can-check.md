@@ -1,6 +1,6 @@
 ---
-title: "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
-slug: a-color-palette-that-can-prove-itself
+title: "Designing a color palette the build can check"
+slug: color-palette-the-build-can-check
 description: "A method for accessible color palette design: the WCAG contrast ratio function in Python, OKLCH candidate selection, color vision deficiency simulation with the Vienot matrices, chart lightness ladders, and a build gate that recomputes every pair on every deploy."
 date: 2026-07-28
 tags: [design, accessibility, color, wcag]
@@ -92,4 +92,4 @@ Two smaller rules that earn their keep once the gate exists. Keep the palette's 
 
 What you get at the end is fifty-odd tokens per mode, every ratio recorded, a handful of binding rules, and a build that refuses to ship a regression. The method costs one evening more than picking colors by eye. The difference is that when someone asks whether your palette is accessible, you can answer with a script instead of an adjective, and when you change a color next year, the build will tell you what you broke before your readers do.
 
-This is the second post in [a series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare); the next one covers [the git-backed content pipeline](/blog/content-is-code-building-the-blog) that gates this palette's check script alongside everything else.
+This is the second post in [a series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare); the next one covers [the git-backed content pipeline](/blog/posts-in-git-served-from-d1) that gates this palette's check script alongside everything else.

@@ -6,6 +6,14 @@ import { cloudflareContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { postRedirectStatus, postRedirectTarget } from "~/lib/slug-redirect.mjs";
+/*
+ * The redirect map, imported here rather than inside the predicate. The
+ * grounds are on `slug-redirect.mjs`: a bare JSON import is what compiles in
+ * this repo and what Node ESM refuses, so the `.mjs` module that `node --test`
+ * loads directly cannot do it and this `.ts` module can.
+ */
+import redirects from "../content/redirects.json";
 import { themeFromRequest } from "~/lib/theme";
 import { serverTiming, timingsContext } from "~/lib/timing";
 import {
@@ -860,6 +868,35 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    /*
+     * RENAMED POSTS GO TO THEIR NEW URL, BEFORE ANY DATABASE READ.
+     *
+     * Ruling 47. Second in the gateway, and the position is the whole design:
+     * after the HTTPS redirect, because a plaintext request must reach HTTPS
+     * before anything else decides anything, and before the cache loopback,
+     * because everything past this line either stores a response or renders
+     * one. `blog.$slug.tsx` would answer these with a 404 out of its loader,
+     * one D1 query after this line already knew the answer.
+     *
+     * Both representations, HTML and the `.md` twin, are handled by the
+     * predicate. `no-store` for the reason the HTTPS redirect states: hard rule
+     * 8 makes an absent Cache-Control a CACHED response, and the gateway is
+     * cache disabled, so a stored redirect would be a surprise rather than a
+     * saving.
+     */
+    const renamed = postRedirectTarget(url.pathname, redirects.posts);
+    if (renamed !== null) {
+      return new Response(null, {
+        status: postRedirectStatus(request.method),
+        headers: {
+          // Resolved against this request's own origin, so the Location can
+          // never name another host.
+          Location: new URL(`${renamed}${url.search}`, url).toString(),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
 
     /*
      * THE ONE THING READ OFF THE COOKIE, and it becomes the key's one dimension.

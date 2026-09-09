@@ -22,7 +22,7 @@ import {
   divergenceMessage,
 } from "../app/lib/editor/converge.mjs";
 
-const SLUG = "letting-an-agent-publish";
+const SLUG = "agent-write-access-to-a-live-site";
 const SHA = "a1b2c3d";
 
 /** A writer that fails its first `failures` calls, then succeeds. */

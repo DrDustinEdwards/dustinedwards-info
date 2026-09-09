@@ -187,7 +187,15 @@
     // scripts/health-repair.mjs for the GitHub half, and test/. A second copy
     // of REPAIRABLE would be two answers to "may this fire an unattended write
     // against production", which is the one table where rule 17 is expensive.
-    "app/lib/health/repair.mjs"
+    "app/lib/health/repair.mjs",
+    // The renamed-post redirect predicate. The gateway resolves every request
+    // through it and check:urls asserts the map against the corpus with it, so
+    // both projects must reach the one predicate. That is the whole reason it
+    // takes the map as an argument rather than importing the JSON: a second
+    // copy of "which slug does /blog/x mean now" would be free to disagree with
+    // the Worker, and the disagreement would look like a 404 to a reader
+    // following a published URL. Dependency-free, so listing it costs nothing.
+    "app/lib/slug-redirect.mjs"
   ],
   "compilerOptions": {
     "composite": true,

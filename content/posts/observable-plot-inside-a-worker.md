@@ -1,6 +1,6 @@
 ---
-title: "Observable Plot on Cloudflare Workers: Server-Side SVG Charts"
-slug: observable-plot-cloudflare-workers
+title: "Rendering Observable Plot charts inside a Cloudflare Worker"
+slug: observable-plot-inside-a-worker
 description: "How to render Observable Plot charts inside a Cloudflare Worker: the linkedom shim that works, the domino and Vega failures that don't, byte-identical output across Node and workerd, and accessible charts enforced by the build."
 date: 2026-07-31
 draft: false
@@ -14,7 +14,7 @@ Everything below is reproducible; the chart in this article is rendered by the p
 
 ## Why render charts in the Worker at all
 
-The obvious architecture for a static blog is to render charts at build time only, and if that fits your system, you should do it and skip the hard parts of this article. The requirement here was stricter because of two standing rules on this site. First, charts are content: the data lives in the post's markdown as a fenced block inside a chart directive, and the rendered SVG is part of the stored HTML rather than an asset beside it, the same regime [all content here lives under](/blog/content-is-code-building-the-blog). Second, that render has two writers, the Node build and the Worker's save path (the browser editor, and the [agent-operated publishing API](/blog/letting-an-agent-publish) this post arrived through), and the whole design depends on both writers producing identical bytes. Together these rules mean the chart renderer must run in the Worker, produce output byte-identical to the Node build's, and do so deterministically forever. That combination, not any single requirement, is what eliminated most of the field.
+The obvious architecture for a static blog is to render charts at build time only, and if that fits your system, you should do it and skip the hard parts of this article. The requirement here was stricter because of two standing rules on this site. First, charts are content: the data lives in the post's markdown as a fenced block inside a chart directive, and the rendered SVG is part of the stored HTML rather than an asset beside it, the same regime [all content here lives under](/blog/posts-in-git-served-from-d1). Second, that render has two writers, the Node build and the Worker's save path (the browser editor, and the [agent-operated publishing API](/blog/agent-write-access-to-a-live-site) this post arrived through), and the whole design depends on both writers producing identical bytes. Together these rules mean the chart renderer must run in the Worker, produce output byte-identical to the Node build's, and do so deterministically forever. That combination, not any single requirement, is what eliminated most of the field.
 
 ## The configuration that works: Plot plus linkedom
 
@@ -39,11 +39,11 @@ const svg = chart.outerHTML;
 
 That string is the chart: static SVG, no client JavaScript, servable directly or embedded in generated HTML. Three properties of the output are worth stating precisely because each was a requirement I verified rather than assumed.
 
-Determinism. Two hundred renders in one process produced exactly one distinct output by SHA-256. Separate processes agreed. The generated-ID hazard I expected (Plot creates clip-path IDs in some configurations, the same class of nondeterminism that [broke this site's syntax highlighter](/blog/content-is-code-building-the-blog)) did not appear for standard marks: the output contained no generated IDs at all. I would still treat this as a property to verify per Plot version rather than a permanent fact, and this site's build now does, on every run.
+Determinism. Two hundred renders in one process produced exactly one distinct output by SHA-256. Separate processes agreed. The generated-ID hazard I expected (Plot creates clip-path IDs in some configurations, the same class of nondeterminism that [broke this site's syntax highlighter](/blog/posts-in-git-served-from-d1)) did not appear for standard marks: the output contained no generated IDs at all. I would still treat this as a property to verify per Plot version rather than a permanent fact, and this site's build now does, on every run.
 
 Cross-environment byte parity. The same chart rendered in Node and in workerd (via a bundled invocation under miniflare) hashed identically. This is the property the two-writer gate requires, and it held both in the initial probe and when reproduced against the production module. One subtlety from the earlier probe is worth recording: parity holds when both environments use the same DOM implementation. My first Node measurements used a different shim than the Worker and the hashes diverged, which was the shims' serialization differing, not Plot misbehaving. Standardize on one DOM implementation everywhere and the question disappears.
 
-CSS custom properties pass through. Plot accepts `var(--chart-1)` anywhere it accepts a color, and the string lands in the SVG untouched. Because the SVG is embedded inline in the page, those variables resolve against the site's stylesheet at display time, which means one stored render serves light and dark themes and the palette's [contrast gate](/blog/a-color-palette-that-can-prove-itself) governs chart colors with no additional machinery.
+CSS custom properties pass through. Plot accepts `var(--chart-1)` anywhere it accepts a color, and the string lands in the SVG untouched. Because the SVG is embedded inline in the page, those variables resolve against the site's stylesheet at display time, which means one stored render serves light and dark themes and the palette's [contrast gate](/blog/color-palette-the-build-can-check) governs chart colors with no additional machinery.
 
 ## The configuration the Plot team demonstrated, which does not transfer
 
@@ -59,7 +59,7 @@ Vega-Lite was the strongest alternative on paper: a scholarly grammar, headless 
 
 > EvalError: Code generation from strings disallowed for this context
 
-Vega's runtime compiles its expression language via dynamic code generation, and Workers forbid runtime code generation as a security policy, the same policy that [forbids runtime WebAssembly compilation](/blog/content-is-code-building-the-blog) and shaped this site's highlighter and social-card architecture. Vega ships an alternative AST interpreter for CSP-restricted environments, which I did not pursue because Plot had already passed every test. The finding stands on its own for anyone evaluating Vega on Workers: the default path cannot run there, and the error will not appear until runtime.
+Vega's runtime compiles its expression language via dynamic code generation, and Workers forbid runtime code generation as a security policy, the same policy that [forbids runtime WebAssembly compilation](/blog/posts-in-git-served-from-d1) and shaped this site's highlighter and social-card architecture. Vega ships an alternative AST interpreter for CSP-restricted environments, which I did not pursue because Plot had already passed every test. The finding stands on its own for anyone evaluating Vega on Workers: the default path cannot run there, and the error will not appear until runtime.
 
 ## The candidate that lost on the axis it was supposed to win: Apache ECharts
 
@@ -83,7 +83,7 @@ One correction from building this is worth passing along, because I wrote the wr
 
 ## Where the boundary is: charts yes, diagrams no
 
-The same probe method was applied to text-to-diagram tools (Mermaid, and the smaller Pintora), and every candidate failed under linkedom, each with a different first error and the same root cause. Mermaid fails immediately at `ReferenceError: CSSStyleSheet is not defined`, and behind that lies its documented dependence on `SVGTextElement.getBBox()`; Pintora fails at `TypeError: Cannot set properties of null (setting 'font')`, reaching for a canvas text-measurement context that does not exist. The distinction generalizes: Plot computes its layout from data, scales mapping numbers to coordinates, while diagram layout requires measuring rendered text, and text measurement requires real font metrics that no lightweight DOM shim carries. That is why charts can satisfy a two-writer byte-parity requirement on Workers today and diagrams cannot; diagrams on this site render at build time as external assets instead, under [the rule that a reproducibility gate should compare only what its inputs fully determine](/blog/bells-and-whistles-zero-js).
+The same probe method was applied to text-to-diagram tools (Mermaid, and the smaller Pintora), and every candidate failed under linkedom, each with a different first error and the same root cause. Mermaid fails immediately at `ReferenceError: CSSStyleSheet is not defined`, and behind that lies its documented dependence on `SVGTextElement.getBBox()`; Pintora fails at `TypeError: Cannot set properties of null (setting 'font')`, reaching for a canvas text-measurement context that does not exist. The distinction generalizes: Plot computes its layout from data, scales mapping numbers to coordinates, while diagram layout requires measuring rendered text, and text measurement requires real font metrics that no lightweight DOM shim carries. That is why charts can satisfy a two-writer byte-parity requirement on Workers today and diagrams cannot; diagrams on this site render at build time as external assets instead, under [the rule that a reproducibility gate should compare only what its inputs fully determine](/blog/blog-reading-without-javascript).
 
 ## Limitations
 
@@ -94,7 +94,7 @@ The measurements are dated 2026-07-31 and version-pinned (Plot 0.6.17, linkedom 
 This post describes the requirement as serving a committed artifact that a build
 gate byte-compared against a fresh generation. That artifact left git on
 2026-08-26, for reasons set out in [the content pipeline
-article](/blog/content-is-code-building-the-blog): it made every editor save
+article](/blog/posts-in-git-served-from-d1): it made every editor save
 download the whole thing from GitHub, and the check it enabled had moved into
 continuous integration anyway.
 
@@ -116,4 +116,4 @@ non-deterministic renderer used to fail a byte comparison at random; it would
 now report render drift at random, which is the same finding wearing a different
 name and reaching a reader no later.
 
-This post extends [the series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare). It was drafted by the site's operator agent, staged through [the MCP tools the series describes](/blog/the-doorbell-gets-built), and its figure was rendered by the pipeline it documents. Publication, as always here, required the human.
+This post extends [the series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare). It was drafted by the site's operator agent, staged through [the MCP tools the series describes](/blog/mcp-server-on-workers-with-oauth), and its figure was rendered by the pipeline it documents. Publication, as always here, required the human.
