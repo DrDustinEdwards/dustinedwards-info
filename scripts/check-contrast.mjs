@@ -541,6 +541,16 @@ const DECLARED_ELSEWHERE = new Map([
     "inline on the span; app.css matches it with span[style*=...] and reads it back",
   ],
   ["--shiki-dark-bg", "the dark half of the same inline background pair"],
+  [
+    "--swatch",
+    "written inline by the :swatch directive on each chip, one per chip, per post; " +
+      "prose.css reads it back as var(--swatch, transparent). Same shape as the four " +
+      "Shiki tokens above and for the same reason: the value is per instance and comes " +
+      "from the post, so there is no theme block it could live in. It is deliberately " +
+      "NOT declared, which is what keeps the participation assertion below untouched " +
+      "and its exemption map empty: the colour being SHOWN is not a colour this system " +
+      "chose, and no ratio can be asserted about it",
+  ],
 ]);
 
 {
@@ -1255,10 +1265,17 @@ const buildPresent = existsSync(assetDir);
  * absent, 642 present. Floors are those minus the check:floors tolerance at
  * each count, 26 and 33.
  *
+ * RE-MEASURED AGAIN 2026-09-08, both branches, by the same method: 520 absent,
+ * 644 present. The `:swatch` directive added ONE entry to DECLARED_ELSEWHERE
+ * and that map is self-policing, so it contributes two assertions (the token is
+ * still used, and it is still not declared) in both branches. Measured rather
+ * than added to the old figure, which is the failure the paragraph below
+ * describes.
+ *
  * When this branch's count moves, CI is the instrument that says so. Re-measure
  * it the same way rather than deriving it from the present-branch number.
  */
-const MINIMUM_CHECKS = buildPresent ? 609 : 492;
+const MINIMUM_CHECKS = buildPresent ? 611 : 494;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
