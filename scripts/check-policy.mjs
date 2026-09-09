@@ -1355,6 +1355,48 @@ refuses(
   );
 
   /*
+   * RULING 48: CONTENT-DRIFT IS DEFERRED AT READINESS AND ASSERTED AFTER THE
+   * SYNC. Both halves, because either alone is the defect: deferring without
+   * the late assertion drops the check entirely, and asserting late without
+   * deferring leaves the deadlock that forced the ruling (a drifted corpus
+   * refusing at the step that runs before its own repair, 2026-09-09).
+   */
+  const deferredAt = shipSource.indexOf("DEFERRED_CHECKS = [");
+  eq("ruling 48: ship names its deferred checks", deferredAt !== -1, true);
+  eq(
+    "ruling 48: content-drift is the deferred one",
+    /DEFERRED_CHECKS\s*=\s*\[\s*"content-drift"\s*\]/.test(shipSource),
+    true,
+  );
+  eq(
+    "ruling 48: the readiness step passes them to the verdict",
+    /readinessVerdict\([^)]*DEFERRED_CHECKS\)/.test(shipSource),
+    true,
+  );
+  eq(
+    "ruling 48: the module subtracts deferred names rather than reading ok",
+    /gatingFailed/.test(readinessSource),
+    true,
+  );
+  /*
+   * AND IT IS ASSERTED AFTER THE SYNC. Positional, on the same argument the
+   * readiness ordering assertion above makes: a check that merely EXISTS could
+   * sit before the sync and would then be the deadlock again.
+   */
+  const contentDriftAt = shipSource.indexOf("content-drift is STILL failing after the sync");
+  eq("ruling 48: the late assertion was located", contentDriftAt !== -1, true);
+  eq(
+    "ruling 48: CONTENT-DRIFT IS ASSERTED AFTER THE D1 SYNC",
+    contentDriftAt !== -1 && syncAt !== -1 && contentDriftAt > syncAt,
+    true,
+  );
+  eq(
+    "ruling 48: a still-drifted corpus reaches the exit code",
+    /contentDriftMiss\s*\)\s*\{/.test(shipSource) || /\|\|\s*contentDriftMiss/.test(shipSource),
+    true,
+  );
+
+  /*
    * THE MEDIA INDEX, THE SAME CONTRACT, ASSERTED SEPARATELY.
    *
    * Added 2026-08-24 with the media sync at ship. Deliberately not folded into

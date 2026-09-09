@@ -232,6 +232,24 @@ const POLL_GAP_MS = 10_000;
  */
 const READINESS_PATH = "/api/health";
 
+/**
+ * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON. Ruling 48.
+ *
+ * `content-drift` compares D1 against the repository, and the D1 sync three
+ * steps later is what converges it. Asserting it before the sync means a
+ * drifted corpus blocks its own repair: on 2026-09-09 a ship deployed, refused
+ * here on `expected 16, present 14`, and left production serving a build whose
+ * index nothing had updated. The drift was real and pre-existing (two posts
+ * committed by hand, never synced), which is precisely the case the sync
+ * exists for.
+ *
+ * It is asserted at the END instead, after the sync has run, where a failure
+ * carries the opposite meaning: the sync ran and did not converge. The other
+ * four checks still gate the step, so a deploy that broke the Ask index, the
+ * media index, the backup mirror or FTS still cannot reach a production write.
+ */
+const DEFERRED_CHECKS = ["content-drift"];
+
 let step = 0;
 
 /** @param {string} title */
@@ -731,14 +749,30 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
     );
   }
 
-  const verdict = readinessVerdict(status, text, READINESS_PATH);
+  const verdict = readinessVerdict(status, text, READINESS_PATH, DEFERRED_CHECKS);
 
   // Printed for BOTH outcomes, before the verdict is acted on, so a reader
   // never has to run the endpoint by hand to see which check failed.
   for (const line of readinessLines(verdict.checks)) console.log(line);
 
   if (!verdict.ok) refuse(verdict.why, verdict.remedy);
-  console.log(`  ${verdict.checks.length} check(s), all ok.`);
+
+  /*
+   * A DEFERRED CHECK THAT IS FAILING RIGHT NOW IS SAID OUT LOUD, so the table
+   * above cannot be read as a clean sweep. It is not a refusal here and it is
+   * not forgiven either: the assertion moves to after the sync, which is the
+   * step that repairs it.
+   */
+  const deferredFailing = verdict.deferredFailing ?? [];
+  if (deferredFailing.length > 0) {
+    console.log(
+      `  deferred to after the sync: ${deferredFailing.join(", ")} ` +
+        `(failing now, and the sync is what converges it)`,
+    );
+  }
+  console.log(
+    `  ${verdict.checks.length} check(s) read, ${verdict.checks.length - deferredFailing.length} gating and ok.`,
+  );
 }
 
 /* ------------------------------------------- 5c. the watchdog Worker */
@@ -1303,6 +1337,74 @@ let mediaMiss = "";
   }
 }
 
+/* ------------------------------- 8b. the check readiness deferred, asserted */
+
+/*
+ * RULING 48, THE OTHER HALF. The readiness step reported `content-drift` and
+ * did not gate on it, because the D1 sync is what converges that drift and a
+ * step that refuses before its own repair is a deadlock. The assertion is here
+ * instead, and moving it changes what a failure MEANS rather than weakening it:
+ *
+ *   - at readiness, a failing `content-drift` meant "the index is behind the
+ *     repository", which is the ordinary state of a corpus that has just been
+ *     committed and not yet synced, and is exactly what the next steps fix
+ *   - here, after `sync:content` has run and reported its own drift table, it
+ *     means THE SYNC RAN AND DID NOT CONVERGE, which is a defect
+ *
+ * A MISS, NOT A REFUSAL, on the same rule the Ask and media steps take: the
+ * deploy has landed and the sync has already written, so there is nothing left
+ * to protect by refusing, and abandoning the record would cost the reader the
+ * one report that says what happened. The exit code at the bottom carries it.
+ */
+announce("Content drift, the check readiness deferred");
+
+/** Set when content-drift is still failing after the sync has run. */
+let contentDriftMiss = "";
+{
+  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
+  /** @type {number} */
+  let status = 0;
+  /** @type {string} */
+  let text = "";
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": "ship", "cache-control": "no-cache" },
+      redirect: "manual",
+    });
+    status = res.status;
+    text = await res.text();
+  } catch (error) {
+    contentDriftMiss =
+      `${READINESS_PATH} could not be reached after the sync: ` +
+      `${error instanceof Error ? error.message : error}`;
+  }
+
+  if (!contentDriftMiss) {
+    /*
+     * Read with NO deferrals, so the row is the endpoint's own verdict. Only
+     * the content-drift row is consulted: the other four were gated at
+     * readiness, and re-refusing them here would be a second opinion on a
+     * question already answered before anything was written.
+     */
+    const verdict = readinessVerdict(status, text, READINESS_PATH);
+    const row = verdict.checks.find((check) => check.name === "content-drift");
+
+    if (!row) {
+      contentDriftMiss = `${READINESS_PATH} reported no content-drift check, so nothing was proven`;
+    } else if (row.ok !== true) {
+      const counts =
+        typeof row.expected === "number" && typeof row.present === "number"
+          ? ` (expected ${row.expected}, present ${row.present})`
+          : "";
+      contentDriftMiss = `content-drift is STILL failing after the sync${counts}`;
+    } else {
+      console.log("  content-drift ok: D1 agrees with the repository.");
+    }
+  }
+
+  if (contentDriftMiss) console.log(`  MISS: ${contentDriftMiss}`);
+}
+
 /* -------------------------------------------------------------- 9. record */
 
 announce("Shipped");
@@ -1331,18 +1433,21 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
  * defect rather than the ordering artifact, and its remedy is finding what
  * wrote the D1 hash rather than a re-run.
  */
-if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss) {
+if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || contentDriftMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",
     mediaMiss ? "THE MEDIA INDEX" : "",
     renderDriftMiss ? "THE RENDER" : "",
     watchdogMiss ? "THE WATCHDOG" : "",
     uptimeMiss ? "THE UPTIME MONITORS" : "",
+    contentDriftMiss ? "CONTENT DRIFT" : "",
   ]
     .filter(Boolean)
     .join(" AND ");
   const several =
-    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss].filter(Boolean).length > 1;
+    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, contentDriftMiss].filter(
+      Boolean,
+    ).length > 1;
   console.error(`\n${"!".repeat(64)}`);
   console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
   if (askMiss) console.error(`  ask:      ${askMiss}`);
@@ -1350,6 +1455,7 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss) {
   if (renderDriftMiss) console.error(`  render:   ${renderDriftMiss}`);
   if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
   if (uptimeMiss) console.error(`  uptime:   ${uptimeMiss}`);
+  if (contentDriftMiss) console.error(`  content:  ${contentDriftMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
