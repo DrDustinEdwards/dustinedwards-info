@@ -7,7 +7,12 @@
  * esbuild directly and does not read that mapping. A `~/` specifier here would
  * typecheck and fail at deploy.
  */
-import { failingCheckNames, watchdogActions, watchdogOutcome } from "../app/lib/health/repair.mjs";
+import {
+  failingCheckNames,
+  refusalMiss,
+  watchdogActions,
+  watchdogOutcome,
+} from "../app/lib/health/repair.mjs";
 import { alertTransition, formatDuration } from "../app/lib/health/alert-state.mjs";
 import {
   ERROR_WINDOW_MINUTES,
@@ -264,8 +269,8 @@ async function readHealth(env: WatchdogEnv): Promise<Reading> {
 }
 
 /**
- * One repair call through the operator API. Returns a miss string, empty when
- * it converged.
+ * One repair call through the operator API. `miss` is empty when it converged;
+ * `unrepairable` marks a refusal that repeating this call cannot fix.
  *
  * THE VERDICT IS READ, NEVER INFERRED FROM A 200. Same rule ship applies, and
  * the same four refusals in the same order, because this is an unattended write
@@ -274,7 +279,11 @@ async function readHealth(env: WatchdogEnv): Promise<Reading> {
  * The token goes in a header on a request this Worker builds. It is never
  * logged and never echoed into the mail body.
  */
-async function repair(env: WatchdogEnv, token: string, tool: string): Promise<string> {
+async function repair(
+  env: WatchdogEnv,
+  token: string,
+  tool: string,
+): Promise<{ miss: string; unrepairable: boolean }> {
   let response: Response;
   let payload: unknown;
   try {
@@ -289,18 +298,31 @@ async function repair(env: WatchdogEnv, token: string, tool: string): Promise<st
     });
     payload = await response.json().catch(() => null);
   } catch (error) {
-    return `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`;
+    return {
+      miss: `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`,
+      unrepairable: false,
+    };
   }
-  if (!response.ok) return `${tool} answered ${response.status}`;
+
+  // The server's own sentence and the 422 rule live in the decision module,
+  // shared with `scripts/health-repair.mjs`, which makes the identical call.
+  // Grounds on `refusalMiss`.
+  if (!response.ok) return refusalMiss(tool, response.status, payload);
 
   const report = payload && typeof payload === "object" ? ((payload as any).data ?? payload) : null;
   if (!report || typeof report.converged !== "boolean") {
-    return `${tool} answered without a converged verdict, so nothing was proven`;
+    return {
+      miss: `${tool} answered without a converged verdict, so nothing was proven`,
+      unrepairable: false,
+    };
   }
   if (report.converged !== true) {
-    return `${tool} ran and did not converge (${report.expected} expected, ${report.present} present)`;
+    return {
+      miss: `${tool} ran and did not converge (${report.expected} expected, ${report.present} present)`,
+      unrepairable: false,
+    };
   }
-  return "";
+  return { miss: "", unrepairable: false };
 }
 
 /**
@@ -502,11 +524,24 @@ export default {
            */
           const attempted: string[] = [];
           const misses: string[] = [];
+          /*
+           * A REFUSAL ABANDONS THE REST OF THE LIST. The ordering note above is
+           * the reason: the Ask corpus is read out of what the content repair
+           * rewrites, so once that repair has been REFUSED the corpus is
+           * known-stale and uploading it is a write on a premise the previous
+           * call just denied.
+           */
+          let refused = false;
           for (const action of actions) {
             if (action.type !== "repair") continue;
             attempted.push(action.tool);
-            const miss = await repair(env, token, action.tool);
-            if (miss) misses.push(miss);
+            const outcome = await repair(env, token, action.tool);
+            if (!outcome.miss) continue;
+            misses.push(outcome.miss);
+            if (outcome.unrepairable) {
+              refused = true;
+              break;
+            }
           }
 
           const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
@@ -525,9 +560,21 @@ export default {
           if (outcome.length > 0) {
             alerting = true;
             failing = failingCheckNames((recheck ?? reading).body);
-            subject = "dustinedwards.info: self-repair did not settle it";
+            subject = refused
+              ? "dustinedwards.info: self-repair was refused, a deploy is the repair"
+              : "dustinedwards.info: self-repair did not settle it";
             lines = [
               ...outcome.map((a) => (a as { reason: string }).reason),
+              ...(refused
+                ? [
+                    "",
+                    "The operator API REFUSED the content itself (422), so repeating this " +
+                      "cannot converge. That is what a repository ahead of the deployed " +
+                      "build looks like: the content is valid and the renderer in " +
+                      "production is older than it. Deploy (npm run ship), then let the " +
+                      "next poll converge it.",
+                  ]
+                : []),
               "",
               `Attempted: ${attempted.join(", ") || "(nothing)"}`,
               "",
