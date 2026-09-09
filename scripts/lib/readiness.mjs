@@ -36,7 +36,7 @@
 
 /**
  * @typedef {(
- *   | { ok: true, checks: HealthCheckRow[] }
+ *   | { ok: true, checks: HealthCheckRow[], deferredFailing?: string[] }
  *   | { ok: false, why: string, remedy: string, checks: HealthCheckRow[] }
  * )} ReadinessVerdict
  */
@@ -56,12 +56,28 @@ const NOTHING_SYNCED =
  * tell" and "it is healthy" must never take the same branch on the last step
  * before a production write.
  *
+ * ## DEFERRED CHECKS, RULING 48
+ *
+ * `deferred` names checks that this step REPORTS but does not gate on, because
+ * asserting them here would block the very step that repairs them. The case
+ * that forced it, 2026-09-09: a ship refused at readiness on `content-drift`
+ * (expected 16, present 14), and the D1 sync three steps later is exactly what
+ * converges that drift. The deploy had already landed, so the refusal left
+ * production serving a build whose index nothing had updated, and the only way
+ * forward was to run the sync by hand.
+ *
+ * A deferred check is not ignored: it is printed with everything else, and ship
+ * asserts it AFTER the sync, where a failure means the sync ran and did not
+ * work, which is a real defect rather than a stale index. The other checks
+ * still gate here, so a bad deploy still cannot reach a production write.
+ *
  * @param {number} status the HTTP status
  * @param {string} text the raw body
  * @param {string} path the path asked, for the messages
+ * @param {string[]} deferred check names this step reports but does not gate on
  * @returns {ReadinessVerdict}
  */
-export function readinessVerdict(status, text, path = "/api/health") {
+export function readinessVerdict(status, text, path = "/api/health", deferred = []) {
   /*
    * 429 IS CALLED OUT SEPARATELY. Since the per-IP limit landed on the health
    * endpoint, a burst from this address can refuse the check, and "rate
@@ -121,19 +137,41 @@ export function readinessVerdict(status, text, path = "/api/health") {
     };
   }
 
-  if (value.ok !== true) {
-    const failed = checks.filter((c) => !c.ok).map((c) => c.name ?? "(unnamed)");
+  const deferredNames = Array.isArray(deferred) ? deferred.filter((n) => typeof n === "string") : [];
+  const failed = checks.filter((c) => !c.ok).map((c) => c.name ?? "(unnamed)");
+  const gatingFailed = failed.filter((name) => !deferredNames.includes(name));
+
+  /*
+   * A GATING CHECK DECIDES THIS STEP. `value.ok` is deliberately NOT the
+   * subject: the endpoint reports `ok: false` when ANY check fails, deferred
+   * ones included, so reading it here would reinstate the refusal ruling 48
+   * removed. The deferred names are subtracted from the failures first, and
+   * what is left is what this step is entitled to refuse on.
+   */
+  if (gatingFailed.length > 0) {
     return {
       ok: false,
-      why:
-        `${path} reports the site is not healthy (${status}), failing: ` +
-        `${failed.join(", ") || "(ok is not true but no check is marked failing)"}`,
+      why: `${path} reports the site is not healthy (${status}), failing: ${gatingFailed.join(", ")}`,
       remedy: `Repair the failing check, or run the sync by hand if it is the repair. ${NOTHING_SYNCED}`,
       checks,
     };
   }
 
-  return { ok: true, checks };
+  /*
+   * `ok` IS FALSE AND NOTHING IS MARKED FAILING: an endpoint disagreeing with
+   * itself. Refused, because the two halves of a health report that do not
+   * agree cannot both be trusted, and this is the last step before a write.
+   */
+  if (value.ok !== true && failed.length === 0) {
+    return {
+      ok: false,
+      why: `${path} reports the site is not healthy (${status}), failing: (ok is not true but no check is marked failing)`,
+      remedy: `Repair the failing check, or run the sync by hand if it is the repair. ${NOTHING_SYNCED}`,
+      checks,
+    };
+  }
+
+  return { ok: true, checks, deferredFailing: failed.filter((n) => deferredNames.includes(n)) };
 }
 
 /**
