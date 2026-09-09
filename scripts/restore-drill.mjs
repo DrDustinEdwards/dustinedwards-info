@@ -184,7 +184,7 @@ async function query(db, sql) {
   const result = await retryRead(
     () => {
       const r = wrangler(`d1 execute ${db} --remote --json --command "${sql}"`);
-      if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 300));
+      if (r.status !== 0) throw new Error(tail(r.stdout));
       return r;
     },
     { label: `check:restore query (${db})` },
@@ -468,7 +468,7 @@ async function main() {
           const r = wrangler(
             `d1 export ${PRODUCTION_DB} --remote --no-schema --table ${table} --output "${out}"`,
           );
-          if (r.status !== 0) throw new Error((r.stdout || "no output").slice(0, 300));
+          if (r.status !== 0) throw new Error(tail(r.stdout));
           return r;
         },
         { label: `check:restore export (${table})` },
