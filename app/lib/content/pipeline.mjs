@@ -789,6 +789,148 @@ function remarkFigure(file) {
 }
 
 /**
+ * The colours `:swatch` accepts, and the enumeration IS the policy.
+ *
+ * `#RGB`, `#RRGGBB`, `#RRGGBBAA` and nothing else. A named colour, `rgb()`,
+ * `color-mix()` and `currentColor` are all refused, because each of them makes
+ * the rendered artifact depend on something outside the source: a name resolves
+ * through the UA's colour table, `color-mix()` through the cascade,
+ * `currentColor` through whatever the chip happens to inherit. The html this
+ * pipeline writes is a pure function of the markdown, and a chip that renders
+ * differently in two engines is a chip no gate can hold to anything.
+ *
+ * ANCHORED AT BOTH ENDS, per hard rule 10. Without `^` and `$` this accepts
+ * `#6B4FBBZZ` by matching its prefix, which is the unanchored-needle class.
+ */
+const SWATCH_HEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
+
+/**
+ * Turns `:swatch[#6B4FBB]` and `:swatch[Brand purple]{color=#6B4FBB}` into a
+ * colour chip beside its own label.
+ *
+ * ## VALIDATION IS IN REMARK, which is the placement `remarkMathValidate`
+ * states and the reason is the same: a bad colour fails the build naming the
+ * file and the line, before anything renders, rather than painting a square
+ * nobody chose onto a published page.
+ *
+ * ## IT ALSO RENDERS HERE, which is where it differs from the chart split
+ *
+ * `remarkChart` splits into a rehype half because a chart needs a MODEL built
+ * between the two. A swatch needs no model: the output is markup plus one
+ * attribute value, so this takes `remarkFigure`'s shape, validating and setting
+ * `hName` in one pass, rather than inventing a rehype half with nothing to
+ * carry across.
+ *
+ * ## THE INLINE STYLE IS THE ONLY PER-INSTANCE VALUE
+ *
+ * Size, radius and the 1px border live in `prose.css`. The colour cannot: it
+ * differs at every call site and comes from the post. `style-src-attr
+ * 'unsafe-inline'` is already the policy for exactly this shape (measured at
+ * 117 inline `--shiki-*` attributes on one post, plus the LQIP placeholder),
+ * and `workers/csp.mjs` declares it unconditionally on both planes, so this
+ * needs no CSP change.
+ *
+ * ## THE HEX IS UPPERCASED, in the attribute and in the label
+ *
+ * So `#6b4fbb` and `#6B4FBB` are the same bytes downstream. Two spellings of
+ * one colour rendering as two different pages would make the html a function of
+ * how the author held the shift key, which `check:content`'s determinism pass
+ * would be right to call drift.
+ *
+ * ## THE LABEL IS THE SECOND CHANNEL, which is why the chip is aria-hidden
+ *
+ * Binding usage rule 1 of the ratified palette: colour is never the only
+ * channel. The chip is the colour; the code span beside it is the text. A
+ * screen reader, a forced-colors reader and a reader with any CVD all get the
+ * value rather than a square they cannot price. Announcing the empty decorative
+ * square as well would be noise on top of the answer.
+ *
+ * @param {string} file
+ */
+function remarkSwatch(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
+      if (node.type !== "textDirective" || node.name !== "swatch") return;
+
+      const attrs = /** @type {Record<string, string>} */ (node.attributes ?? {});
+      /*
+       * Text children only. A swatch label is a word or a hex, and letting it
+       * carry nested markup would put an element inside the `<code>` below,
+       * which is not what a code span in this position is for.
+       */
+      const label = (node.children ?? [])
+        .map((child) => (child.type === "text" ? child.value : ""))
+        .join("")
+        .trim();
+      /*
+       * "OF THE BODY", for the reason `remarkMathValidate` records rather than
+       * as a hedge: this tree is parsed from the frontmatter-stripped content,
+       * so the number is a line of the body. Saying which it is a line OF is
+       * correct for the build and for the editor preview, which is handed a
+       * body with no file around it and cannot be given a file-absolute number.
+       */
+      const line = node.position?.start?.line;
+      const where = `:swatch${line ? ` on line ${line} of the body` : ""}`;
+
+      const raw = (attrs.color ?? label).trim();
+      if (raw.length === 0) {
+        throw new ContentError(
+          file,
+          `${where} carries no colour. Write :swatch[#RRGGBB], or ` +
+            `:swatch[a label]{color=#RRGGBB} when the label is not the hex.`,
+        );
+      }
+      if (!SWATCH_HEX.test(raw)) {
+        throw new ContentError(
+          file,
+          `${where} cannot use ${JSON.stringify(raw)} as a colour. Only #RGB, ` +
+            `#RRGGBB and #RRGGBBAA are accepted: a named colour, rgb() or ` +
+            `color-mix() would make the rendered page depend on something ` +
+            `outside this file.`,
+        );
+      }
+
+      const hex = raw.toUpperCase();
+      // Uppercased WHEREVER it is shown, so a label that IS the hex agrees with
+      // the attribute. A prose label is left exactly as the author wrote it.
+      const text = attrs.color ? label : hex;
+
+      node.data = {
+        ...node.data,
+        hName: "span",
+        hProperties: { className: ["swatch"] },
+      };
+      node.children = /** @type {any} */ ([
+        {
+          /*
+           * `emphasis` carries no meaning here and never reaches the output:
+           * `hName` replaces the tag before it is serialised. It is the inline
+           * counterpart of the `paragraph`-with-hName that `remarkFigure` uses
+           * for its `<img>`, chosen because an inline node type is what belongs
+           * inside a text directive's children.
+           */
+          type: "emphasis",
+          data: {
+            hName: "span",
+            hProperties: {
+              className: ["swatch-chip"],
+              style: `--swatch:${hex}`,
+              "aria-hidden": "true",
+            },
+          },
+          children: [],
+        },
+        {
+          type: "inlineCode",
+          value: text,
+          data: { hProperties: { className: ["swatch-label"] } },
+        },
+      ]);
+    });
+  };
+}
+
+/**
  * The media key a URL points at, or null.
  *
  * Two shapes, because the index holds two storage tiers in one key space. An R2
@@ -1003,7 +1145,7 @@ function remarkMathValidate(file, sink) {
 /**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure"];
+export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure", "swatch"];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -1733,6 +1875,11 @@ export async function renderBody({ file, body, resolveImage }) {
     // can be told apart from an ordinary markdown image.
     .use(remarkCollectMedia, mediaRefs)
     .use(remarkFigure, file)
+    // No ordering constraint of its own: `swatch` is an INLINE directive and
+    // shares no syntax with the three block ones, so nothing upstream can
+    // consume its opener and it consumes nobody else's. Placed here so the
+    // handlers read in the order KNOWN_DIRECTIVES lists them.
+    .use(remarkSwatch, file)
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)
     .use(remarkRehype)

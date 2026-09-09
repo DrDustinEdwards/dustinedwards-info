@@ -10,7 +10,7 @@ first_published: 2026-07-30
 
 This is a method for building a site palette the way you would build any other engineered artifact: requirements first, arithmetic before taste, and a check in the build so the properties you proved stay proved. I used it to build the palette this site is wearing. You need about fifteen lines of Python, a free evening, and the willingness to let a computation veto a color you like.
 
-The constraints I was working under, so you can map them to yours: one locked brand color (a deep purple, `#4F2D7F`), light and dark modes, WCAG 2.2 AA everywhere, and a regional character I wanted to keep (warm West Texas neutrals rather than the blue-gray everything defaults to). Your brand color and character will differ. The method does not.
+The constraints I was working under, so you can map them to yours: one locked brand color (a deep purple, :swatch[#4F2D7F]), light and dark modes, WCAG 2.2 AA everywhere, and a regional character I wanted to keep (warm West Texas neutrals rather than the blue-gray everything defaults to). Your brand color and character will differ. The method does not.
 
 Three of my attempts failed along the way. I have left them in as warnings at the point in the procedure where you would make the same mistake, because each one produced a rule you can apply directly.
 
@@ -52,7 +52,7 @@ When you start generating candidates, use OKLCH coordinates (lightness, chroma, 
 
 One caveat you should carry: the OKLab model's approximation is weakest in deep blues and purples. If your brand color lives there, as mine does, treat OKLCH as the drafting space and the WCAG ratio function as the verdict, and verify every pair involving the brand individually rather than trusting anything derived.
 
-A warning from my first failed attempt. I found a published palette whose violet sat sixteen degrees of hue from my brand purple and tried to adapt the whole palette by applying the full transform between the two violets, hue shift plus the saturation and lightness scaling, to every color. The result was neon: the sand tone went to pure white and the red landed on `#FF1942`. The depth of a dark brand color is a property of that color, and propagating its lightness transform destroys its neighbors. If you adapt an existing palette, rotate hue only, then re-tune each color's lightness individually against your contrast targets. Formulas draft. They do not decide.
+A warning from my first failed attempt. I found a published palette whose violet sat sixteen degrees of hue from my brand purple and tried to adapt the whole palette by applying the full transform between the two violets, hue shift plus the saturation and lightness scaling, to every color. The result was neon: the sand tone went to pure white and the red landed on :swatch[#FF1942]. The depth of a dark brand color is a property of that color, and propagating its lightness transform destroys its neighbors. If you adapt an existing palette, rotate hue only, then re-tune each color's lightness individually against your contrast targets. Formulas draft. They do not decide.
 
 ## Step 4: run the full pairwise contrast matrix, and rerun it after every change
 

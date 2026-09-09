@@ -149,6 +149,7 @@ async function main() {
 
   checkInternalFurtherReading(posts);
   checkMath(posts);
+  checkSwatches(posts);
   await checkKatexArtifact();
   await checkTemplateRefs();
   await checkAssetManifest();
@@ -335,6 +336,165 @@ function checkMath(posts) {
     `check:content ok. math outputs agree across ${posts.length} post(s): ` +
       `${withMath.length} with math (${expressions} expression(s)), ${withoutMath.length} ` +
       `without, ${records.length} search record(s) carrying TeX rather than markup.`,
+  );
+}
+
+/**
+ * The prose of a post, with every code fence and code span removed.
+ *
+ * REQUIRED, not tidiness. A post that DOCUMENTS the directive writes
+ * `:swatch[#6B4FBB]` inside a fence, where it is literal text and renders no
+ * chip. Matching the raw markdown would read that as a swatch that failed to
+ * render and fail the build on a post that is correct, which is the
+ * comment-satisfied-anchor class in hard rule 10 wearing a different syntax:
+ * strip the region that cannot mean what you are looking for, then match.
+ *
+ * The swatch fixture carries exactly that case on purpose, so this stripping is
+ * exercised by the corpus rather than only asserted here.
+ *
+ * @param {string} markdown
+ */
+function prosePart(markdown) {
+  return markdown.replace(/^```[\s\S]*?^```/gm, "").replace(/`[^`\n]*`/g, "");
+}
+
+/**
+ * THE FIFTH SUBJECT: swatches, and what each output carries of one.
+ *
+ * The claim, in one line: **the rendered chip exists in the HTML and NOWHERE
+ * ELSE.** `posts.body` is served verbatim by `/blog/:slug.md`, `llms-full.txt`,
+ * the JSON feed's `content_text` and the `Accept: text/markdown`
+ * representation, and it is what `recordsForPosts` indexes for search and Ask.
+ * All six of those carry the directive as the author typed it. If a chip's
+ * markup ever reached `posts.body`, every one of them would ship a `<span>` in
+ * place of a colour.
+ *
+ * TWO DERIVATIONS, MADE TO ARGUE, which is the shape `checkMath` uses: the
+ * source side reads the markdown for the directive, the html side reads the
+ * rendered output for the chip, and a disagreement in either direction is a
+ * failure. One derivation checked against itself would pass on a pipeline that
+ * had stopped running entirely.
+ *
+ * @param {Array<{ slug: string, markdown: string, html: string }>} posts
+ */
+function checkSwatches(posts) {
+  /** @type {string[]} */
+  const problems = [];
+
+  const withSwatch = posts.filter((post) => post.html.includes('class="swatch-chip"'));
+  const withoutSwatch = posts.filter((post) => !post.html.includes('class="swatch-chip"'));
+
+  if (withSwatch.length === 0 || withoutSwatch.length === 0) {
+    console.error(
+      `check:content failed. the corpus has ${withSwatch.length} post(s) carrying a rendered ` +
+        `swatch and ${withoutSwatch.length} without. Every assertion below passes trivially ` +
+        `over a corpus missing either side: with none, "no markdown carries chip markup" is ` +
+        `true of nothing, and with all, "a swatchless post renders no chip" is. The fixture ` +
+        `content/posts/swatches-in-prose-fixture.md exists to keep both sides populated.`,
+    );
+    process.exit(1);
+    return;
+  }
+
+  let chips = 0;
+  for (const post of posts) {
+    const htmlSaysSwatch = post.html.includes('class="swatch-chip"');
+    const sourceSaysSwatch = /:swatch\[/.test(prosePart(post.markdown));
+
+    if (sourceSaysSwatch !== htmlSaysSwatch) {
+      problems.push(
+        `${post.slug}: the markdown ${sourceSaysSwatch ? "carries" : "carries no"} :swatch ` +
+          `directive outside code, and the rendered html ${htmlSaysSwatch ? "carries" : "carries no"} ` +
+          `chip. One of the two is wrong: a directive that renders nothing is a colour the ` +
+          `reader never sees, and a chip with no directive behind it is markup from somewhere ` +
+          `this pipeline does not control.`,
+      );
+    }
+
+    /*
+     * THE MARKDOWN SIDE, which is SIX outputs at once and is why it is asserted
+     * on the record rather than per route. If `posts.body` held chip markup,
+     * all six would.
+     */
+    if (post.markdown.includes("swatch-chip") || post.markdown.includes('class="swatch"')) {
+      problems.push(
+        `${post.slug}: the stored markdown carries the rendered chip's markup. The .md twin, ` +
+          `llms-full.txt, the JSON feed, the text/markdown representation and both indexes ` +
+          `serve posts.body verbatim, so all of them would ship a <span> where the source ` +
+          `should carry :swatch[...].`,
+      );
+    }
+    if (htmlSaysSwatch && !post.markdown.includes(":swatch[")) {
+      problems.push(
+        `${post.slug}: the html carries a chip but the stored markdown has no ":swatch[" in ` +
+          `it, so the .md twin, the feeds and llms-full.txt carry no colour at all.`,
+      );
+    }
+
+    /*
+     * THE CASE FOLD, asserted on the OUTPUT rather than on the validator. The
+     * renderer uppercases every hex so two spellings of one colour produce one
+     * page; this is what makes that a property of the artifact instead of a
+     * claim in a docstring.
+     */
+    for (const match of post.html.matchAll(/--swatch:(#[0-9A-Fa-f]+)/g)) {
+      chips += 1;
+      if (match[1] !== match[1].toUpperCase()) {
+        problems.push(
+          `${post.slug}: a chip carries ${match[1]}, which is not upper case. Two spellings ` +
+            `of one colour would render as two different pages.`,
+        );
+      }
+    }
+  }
+
+  /*
+   * THE SEARCH AND ASK SIDE, through the same builder `checkMath` uses and for
+   * the same reason: both indexes are built from the MARKDOWN, so what they
+   * carry is the directive source. A record carrying chip markup would put span
+   * soup into a search snippet and into the Ask context window.
+   */
+  const records = recordsForPosts(
+    posts.map((post) => ({
+      slug: post.slug,
+      title: /** @type {any} */ (post).title,
+      markdown: post.markdown,
+      body: post.markdown,
+      toc: /** @type {any} */ (post).toc,
+      tags: /** @type {any} */ (post).tags,
+      publishAt: /** @type {any} */ (post).publishAt,
+      draft: /** @type {any} */ (post).draft,
+    })),
+  );
+  if (records.length === 0) {
+    console.error(
+      `check:content failed. recordsForPosts produced 0 record(s) over ${posts.length} ` +
+        `post(s), so the search assertion below is about an empty set.`,
+    );
+    process.exit(1);
+    return;
+  }
+  const markupRecords = records.filter((r) => String(r.body ?? "").includes("swatch-chip"));
+  if (markupRecords.length > 0) {
+    problems.push(
+      `${markupRecords.length} search record(s) carry chip markup, starting with ` +
+        `${markupRecords[0].uid}. The index is built from markdown and should carry ` +
+        `the directive source.`,
+    );
+  }
+
+  if (problems.length > 0) {
+    console.error(`check:content failed. ${problems.length} swatch output problem(s):`);
+    console.error(nameThem(problems));
+    process.exit(1);
+    return;
+  }
+
+  console.log(
+    `check:content ok. swatch outputs agree across ${posts.length} post(s): ` +
+      `${withSwatch.length} with swatches (${chips} chip(s), every hex upper case), ` +
+      `${withoutSwatch.length} without, ${records.length} search record(s) carrying the ` +
+      `directive source rather than markup.`,
   );
 }
 

@@ -289,6 +289,66 @@
   overflow-wrap: anywhere;
 }
 
+/* THE COLOUR SWATCH, from the `:swatch` directive.
+
+   THE LABEL IS NOT STYLED HERE AND THAT IS DELIBERATE. `.swatch-label` is a
+   real `<code>` whose parent is a `<span>`, so the rule above already claims it:
+   it gets the same surface, padding, radius and `overflow-wrap: anywhere` as
+   every other inline code span in prose, from one owner. A second declaration
+   here would be a copy that drifts the first time that rule is touched.
+
+   NO PER-THEME BLOCK EITHER. Both painted values are tokens: the border is
+   `--border`, which is declared in all three theme blocks and already carries a
+   measured ratio, and the fill is the post's own hex arriving on the element.
+   There is nothing left for a light or dark rule to say. */
+.prose .swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.prose .swatch-chip {
+  /* Sized in em so the chip tracks the text it sits beside rather than a fixed
+     pixel size that is wrong at one of the two type scales. */
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 0.15em;
+  /* THE BORDER IS LOAD-BEARING, not trim. A chip whose colour is at or near the
+     page surface (any near-white in light, any near-black in dark) is otherwise
+     an invisible square, and the one element on the page whose entire job is to
+     be looked at would vanish for exactly the values a palette article is most
+     likely to be discussing. */
+  border: 1px solid var(--border);
+  /* The fallback is what keeps `--swatch` OUT of the theme blocks: read with a
+     default here, the property never has to be declared as a token, so
+     check:contrast's participation assertion has nothing new to account for and
+     its exemption map stays empty. */
+  background: var(--swatch, transparent);
+  /* Never absorb the flex line's shrink: the label shrinks, the chip does not,
+     because a chip narrower than it is tall stops being a colour sample. */
+  flex: none;
+}
+
+@media (forced-colors: active) {
+  /* THE CHIP IS FLATTENED HERE, and that is the mode working rather than a
+     regression to fix. forced-colors replaces every background with a system
+     colour, so the one thing this element exists to show is precisely what the
+     mode takes away, and the ratified v3 policy is that the palette yields
+     entirely to system colours. `forced-color-adjust: none` would hold the hex
+     against that ruling and is deliberately not used.
+
+     What survives is the answer: the hex or the label is TEXT in the code span
+     beside the chip, which is why it is text and not a `title` attribute or a
+     tooltip. A reader in this mode loses the sample and keeps the value.
+
+     The border is repainted in CanvasText so the chip keeps its shape instead
+     of dissolving into the canvas, which is the same "transparent outlines on
+     every fill so controls keep shape" half of the policy. */
+  .prose .swatch-chip {
+    border-color: CanvasText;
+  }
+}
+
 .prose pre {
   margin: 1.5rem 0;
   padding: 1rem;
