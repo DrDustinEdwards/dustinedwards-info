@@ -1,18 +1,18 @@
 ---
-title: "Every Cloudflare Developer Product in 2026, and Which Ones This Site Runs On"
+title: "Ten years on Cloudflare, and what I would use again"
 slug: every-cloudflare-product-and-what-this-site-does-with-it
-description: "A complete table of Cloudflare's developer platform as of September 2026: what each product does, in plain words, and whether this site uses it, where, and why or why not. Measured from inside a working system, with dates on every number."
+description: "Every Cloudflare developer product as of September 2026 in one table: what Workers, D1, KV, R2, Queues, Durable Objects, AI Search and the rest actually do, and which ones a complete site runs on, where, and why. With the refusals and the constraints, dated."
 date: 2026-09-08
 draft: true
 featured: true
 tags: [cloudflare, workers, d1, platform, architecture]
 ---
 
-The short version, for anyone deciding whether Cloudflare's developer platform can carry a complete application in 2026: it can, and this site is the evidence. The application server, database, object storage, search engine, AI answer layer, alert mail, and publishing pipeline all run on Cloudflare, with no other provider anywhere in the stack. This post is the survey. It lists every developer product Cloudflare offers as of September 8, 2026, says what each one does in plain words, and says whether this site uses it, where, and why or why not. The refusals are in the table too, because a survey that only lists what worked is an advertisement.
+There is no server behind this site. Ten years ago I put my first domain behind Cloudflare the way everyone did then: a shared HostGator box ran the real site and Cloudflare was the DNS, the cache, and the orange cloud in front of it. It was not a place where software ran, and in 2016 it mostly wasn't. This year I rebuilt so that the cloud is the whole thing. The pages, the database, the uploads, the search, the AI answers, the alert mail, and the publishing pipeline all run on Cloudflare products, and nothing else is in the stack.
 
-Ten years ago I put my first domain behind Cloudflare the way everyone did then: a shared HostGator box ran the real site and Cloudflare was the DNS, the cache, and the orange cloud in front of it. It was not a place where software ran, and in 2016 it mostly wasn't. This year I rebuilt so that there is no host behind the cloud at all. Every product below is judged from inside that rebuild.
+So this is the post I wanted when I started: every developer product Cloudflare sells as of September 8, 2026, what each one does in plain words, and whether this site uses it, where, and why or why not. The refusals are in the table with everything else. A survey that only lists what worked is an advertisement.
 
-## The table
+## Which products this site runs on
 
 Used means a binding or a configured feature that production depends on today. Not used means considered and passed over; the reason is in the product's own entry below. The numbers are dated because every one of them moves.
 
@@ -58,13 +58,13 @@ Used means a binding or a configured feature that production depends on today. N
 | Cache Reserve | Persistent cache for static content | Not yet | Needs the zone; waits for DNS cutover |
 | Workers for Platforms | Run customers' Workers inside yours | Not used | One customer |
 
-## What each product does, and what this site does with it
+## What each one does, in the words I would use to a colleague
 
 ### Workers
 
 A Worker is a function that receives a request and returns a response, running in a V8 isolate on Cloudflare's network in whichever city is closest to the reader. No server to size, no region to choose, cold starts small enough that I have never thought about them. Everything else on this list is something a Worker can be given a binding to.
 
-This site is two Workers. The first serves every page and holds the entire markdown rendering pipeline, syntax highlighting included, because every public page works with JavaScript disabled. Its upload measured 8.4 MiB on 2026-09-08 (2.1 MiB gzipped; 3.78 MB when the first version of this post published on 2026-07-30). The second is a watchdog that reads the site's health endpoint every fifteen minutes through a service binding and repairs what it can. A client-side enhancement budget for the whole blog, progress bar, table of contents, copy buttons, footnote previews, lightbox, comes to about three kilobytes gzipped; the public plane ships no framework script at all.
+This site is two Workers. The first serves every page and holds the entire markdown rendering pipeline, syntax highlighting included, because every public page works with JavaScript disabled. Its upload measured 8.4 MiB on 2026-09-08 (2.1 MiB gzipped; 3.78 MB when the first version of this post published on 2026-07-30). The second is a watchdog that reads the site's health endpoint every fifteen minutes through a service binding and repairs what it can. The client-side enhancement budget for the whole blog, progress bar, table of contents, copy buttons, footnote previews, lightbox, comes to about three kilobytes gzipped; the public plane ships no framework script at all.
 
 ### Static Assets
 
@@ -98,7 +98,7 @@ A message queue: one Worker puts a message on it, another consumes it, with retr
 
 A single instance of a JavaScript class, addressed by name, with its own storage. Only one copy exists anywhere in the world, so it is the platform's answer to coordination. This site uses one for the two guards in front of Ask, the only public endpoint that costs money per request: a per-IP burst limit and a site-wide daily ceiling.
 
-The most transferable fact in this post came from building it: single-threaded is not transactional. A Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an `await` are not atomic. The synchronous SQLite storage API is the fix; the same object rewritten on it admitted exactly three. The measurements are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
+Building it taught me the one fact from this whole rebuild I repeat most often: single-threaded is not transactional. A Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an `await` are not atomic. The synchronous SQLite storage API is the fix; the same object rewritten on it admitted exactly three. The measurements are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
 
 ### Analytics Engine
 
@@ -164,7 +164,7 @@ Secrets Store centralises secrets across Workers; this site's nine secrets live 
 
 Turnstile is Cloudflare's bot check without a puzzle; it goes in front of the newsletter form when the newsletter exists. Cache Reserve keeps static content in a persistent cache; it needs a zone, and this site is still served from a workers.dev hostname while the old WordPress install answers at the apex. Both wait for DNS cutover.
 
-## The constraints, because a survey without them is an advertisement
+## Where the platform pushed back
 
 Workers refuse to compile WebAssembly at runtime. A security decision, and it ruled out server-side social-card rendering and complicated the fix for the strangest bug of the build: a syntax highlighter that produced different bytes for the same input across runs. The deterministic engine and the loader arrangement that satisfies both Node and the Worker are in [the content pipeline article](/blog/content-is-code-building-the-blog).
 
@@ -176,8 +176,8 @@ This site treats AI agents as an audience in both directions. Inbound, every pos
 
 The economic half is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare: managed robots.txt with machine-readable content signals, default blocking of AI training crawlers for new zones, and a pay-per-use marketplace for content that surfaces in AI answers. This site's own crawl settings get configured the day the DNS cutover lands, and that will be its own post once there is data in it.
 
-## Verdict
+## What I would use again
 
-The primitives are small enough to hold in your head. The billing has never surprised me, which I value more than any feature. A one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth, an edge-resident search engine, a hybrid AI answer layer with cost controls, external monitoring, restore drills, and a publishing path an agent can operate under enforced policy. Fourteen of Cloudflare's products carry it, twenty-four were considered and passed over for reasons stated above, and every number in this post carries the date it was measured because every one of them will move.
+All fourteen. The primitives are small enough to hold in your head. The billing has never surprised me, which I value more than any feature. A one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth, an edge-resident search engine, a hybrid AI answer layer with cost controls, external monitoring, restore drills, and a publishing path an agent can operate under enforced policy. Twenty-four products were considered and passed over for the reasons above, and every number here carries the date it was measured because every one of them will move.
 
 The series, in reading order: [the color palette built and verified with code](/blog/a-color-palette-that-can-prove-itself), [the git-backed content pipeline](/blog/content-is-code-building-the-blog), [the reading experience in a couple of kilobytes of JavaScript](/blog/bells-and-whistles-zero-js), [FTS5 search on D1](/blog/site-search-fts5-rank-fusion), [the AI answer layer](/blog/ai-answer-layer-ask-mode), [API versus MCP](/blog/one-door-two-doorbells), [the agent trust model](/blog/letting-an-agent-publish), and [the MCP server build](/blog/the-doorbell-gets-built). Every quantitative claim in the series is reproducible from the site's repository.
