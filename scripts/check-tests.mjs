@@ -118,8 +118,13 @@ const MINIMUM_FILES = 63;
    landed with eleven cases: 683 tests. check:floors had just failed the old
    638 at a gap of 45 against a tolerance of 35, which is the mechanism working:
    eleven cases arriving is what pushed that floor past it. Tolerance is 35 at
-   this count, so anything from 648 up is legal; 660 leaves the usual slack. */
-const MINIMUM_TESTS = 660;
+   this count, so anything from 648 up is legal; 660 leaves the usual slack.
+   RE-MEASURED 2026-09-09 by RUNNING this gate, after slug-redirect.test.mjs
+   landed with ten cases: 703 tests. check:floors failed the old 660 in CI at a
+   gap of 43 against a tolerance of 36, which is the same mechanism a third
+   time. Tolerance is 36 at this count, so anything from 667 up is legal; 680
+   leaves the usual slack. */
+const MINIMUM_TESTS = 680;
 
 let checks = 0;
 let failures = 0;
