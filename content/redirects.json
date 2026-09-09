@@ -1,0 +1,14 @@
+{
+  "comment": "Ruling 47, 2026-09-09. Old post slug to new post slug. Every entry is a URL that was public, so it keeps answering. The gateway turns each into a 301 before any database read; check:urls asserts every target resolves to a published post and that no post claims a slug that is a source here.",
+  "posts": {
+    "content-is-code-building-the-blog": "posts-in-git-served-from-d1",
+    "site-search-fts5-rank-fusion": "site-search-on-d1",
+    "ai-answer-layer-ask-mode": "ai-answer-mode-on-site-search",
+    "bells-and-whistles-zero-js": "blog-reading-without-javascript",
+    "a-color-palette-that-can-prove-itself": "color-palette-the-build-can-check",
+    "one-door-two-doorbells": "policy-in-the-api-not-the-mcp",
+    "letting-an-agent-publish": "agent-write-access-to-a-live-site",
+    "the-doorbell-gets-built": "mcp-server-on-workers-with-oauth",
+    "observable-plot-cloudflare-workers": "observable-plot-inside-a-worker"
+  }
+}

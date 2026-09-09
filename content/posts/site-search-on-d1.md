@@ -1,6 +1,6 @@
 ---
-title: "SQLite FTS5 Search on Cloudflare D1: 6 ms with Rank Fusion"
-slug: site-search-fts5-rank-fusion
+title: "Site search on Cloudflare D1 with SQLite full-text search"
+slug: site-search-on-d1
 description: "How to build site search on Cloudflare D1 with SQLite FTS5: two indexes for stemmed and exact matching, reciprocal rank fusion in place of raw bm25, section-level records, a browse path for filter-only queries, and the D1 export problem every FTS5 user has."
 date: 2026-07-28
 tags: [cloudflare, d1, fts5, search, sqlite]
@@ -114,7 +114,7 @@ Two adjacent facts from the same investigation, both counterintuitive. Verifying
 
 On this hardware and corpus: median 6 ms, 95th percentile 15 ms, over 25 runs against local D1, with the production numbers in the same range. **That is the query, not the page.** Requested end to end over HTTPS, the same search measured 114 to 121 ms on 2026-08-04, and a reader who does not know which of the two a benchmark reports cannot use either. The latency figures establish a floor rather than a curve; the corpus was small when measured, and I will re-measure as it grows. The two-index design is justified by a corpus that needs both stemmed and identity matching; a site with only prose could defensibly run one Porter-stemmed table and skip the fusion. The export failure is as measured on the wrangler version current at writing and may be fixed later; the per-table procedure and its check remain worthwhile regardless, because a backup that depends on a bug staying fixed is not a backup. And the general claim I would defend beyond this stack: at personal-site scale and probably well past it, hand-built search on the relational database you already operate is not the compromise option. Measured against the alternative of introducing and paying for a search service, it was the fast path in both senses.
 
-This is the fifth post in [the series](/blog/ten-years-on-cloudflare), following [the reading experience](/blog/bells-and-whistles-zero-js); the next one adds [the layer above this one](/blog/ai-answer-layer-ask-mode): a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
+This is the fifth post in [the series](/blog/ten-years-on-cloudflare), following [the reading experience](/blog/blog-reading-without-javascript); the next one adds [the layer above this one](/blog/ai-answer-mode-on-site-search): a retrieval-augmented answer mode, and the cost controls a public AI endpoint requires.
 
 ## Update, August 2026
 

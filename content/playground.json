@@ -7,7 +7,7 @@
       "lede": "Two colours in, the conformance number out. This is the same arithmetic the build gate runs over every ratified pair in the palette.",
       "realPath": "app/lib/contrast.mjs, imported by scripts/check-contrast.mjs and by this page",
       "homeArticle": {
-        "slug": "a-color-palette-that-can-prove-itself",
+        "slug": "color-palette-the-build-can-check",
         "title": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
       },
       "inputs": [
@@ -34,7 +34,7 @@
       "lede": "One query, run through the real search path, showing what each index ranked and how reciprocal rank fusion combined the two.",
       "realPath": "app/lib/search/search.server.ts and app/lib/search/query.mjs, the same code /search runs",
       "homeArticle": {
-        "slug": "site-search-fts5-rank-fusion",
+        "slug": "site-search-on-d1",
         "title": "SQLite FTS5 Search on Cloudflare D1: 6 ms with Rank Fusion"
       },
       "inputs": [
@@ -61,7 +61,7 @@
       "lede": "A fixed dataset rendered to SVG on the server by the same Observable Plot pipeline that draws the charts in the articles.",
       "realPath": "app/lib/content/chart.mjs, imported by the build, the editor preview and this page",
       "homeArticle": {
-        "slug": "observable-plot-cloudflare-workers",
+        "slug": "observable-plot-inside-a-worker",
         "title": "Observable Plot on Cloudflare Workers: Server-Side SVG Charts"
       },
       "inputs": [
@@ -118,7 +118,7 @@
       "lede": "A Cookie header in, the theme this site would serve out. This is the function the Worker calls on every single request, before it renders anything, and it is why nothing on this site flashes the wrong colours.",
       "realPath": "app/lib/theme.ts, called by workers/app.ts on every request and by root.tsx to write the first byte of HTML",
       "homeArticle": {
-        "slug": "a-color-palette-that-can-prove-itself",
+        "slug": "color-palette-the-build-can-check",
         "title": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
       },
       "inputs": [
@@ -143,7 +143,7 @@
       "lede": "A fixed snippet rendered by the same pipeline every article on this site is rendered by, showing what it collects on the way through and what it refuses. The refusals are the interesting half, and they are invisible everywhere else, because a published article is by definition one that did not trip them.",
       "realPath": "app/lib/content/pipeline.mjs, the one renderer the deploy build, the editor preview and every operator save go through",
       "homeArticle": {
-        "slug": "content-is-code-building-the-blog",
+        "slug": "posts-in-git-served-from-d1",
         "title": "Building a Git-Backed Blog on Cloudflare Workers and D1"
       },
       "inputs": [

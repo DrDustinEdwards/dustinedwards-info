@@ -40,22 +40,22 @@
       "evidence": [
         {
           "kind": "post",
-          "ref": "content-is-code-building-the-blog",
+          "ref": "posts-in-git-served-from-d1",
           "label": "Building a Git-Backed Blog on Cloudflare Workers and D1"
         },
         {
           "kind": "post",
-          "ref": "bells-and-whistles-zero-js",
+          "ref": "blog-reading-without-javascript",
           "label": "Progressive Enhancement: A Complete Blog UI in 1.6 kB of JavaScript"
         },
         {
           "kind": "post",
-          "ref": "site-search-fts5-rank-fusion",
+          "ref": "site-search-on-d1",
           "label": "SQLite FTS5 Search on Cloudflare D1: 6 ms with Rank Fusion"
         },
         {
           "kind": "post",
-          "ref": "a-color-palette-that-can-prove-itself",
+          "ref": "color-palette-the-build-can-check",
           "label": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
         },
         {
@@ -105,17 +105,17 @@
       "evidence": [
         {
           "kind": "post",
-          "ref": "one-door-two-doorbells",
+          "ref": "policy-in-the-api-not-the-mcp",
           "label": "API vs MCP: Put the Policy in the API"
         },
         {
           "kind": "post",
-          "ref": "the-doorbell-gets-built",
+          "ref": "mcp-server-on-workers-with-oauth",
           "label": "Building an MCP Server on Cloudflare Workers with OAuth 2.1"
         },
         {
           "kind": "post",
-          "ref": "letting-an-agent-publish",
+          "ref": "agent-write-access-to-a-live-site",
           "label": "Giving an AI Agent Write Access to Production: A Trust Model"
         },
         {

@@ -1,0 +1,14 @@
+{
+  "comment": "URLs that were once public and must still answer. APPEND-ONLY: an entry is never removed, because removing one deletes the evidence that the URL was ever published. This is deliberately NOT content/redirects.json: that file is the live map, this is the historical record, and check:urls reconciles the two in both directions so neither can quietly drop an entry. Ruling 47, 2026-09-09.",
+  "posts": [
+    "content-is-code-building-the-blog",
+    "site-search-fts5-rank-fusion",
+    "ai-answer-layer-ask-mode",
+    "bells-and-whistles-zero-js",
+    "a-color-palette-that-can-prove-itself",
+    "one-door-two-doorbells",
+    "letting-an-agent-publish",
+    "the-doorbell-gets-built",
+    "observable-plot-cloudflare-workers"
+  ]
+}
