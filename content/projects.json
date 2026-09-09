@@ -41,22 +41,22 @@
         {
           "kind": "post",
           "ref": "posts-in-git-served-from-d1",
-          "label": "Building a Git-Backed Blog on Cloudflare Workers and D1"
+          "label": "How this blog stores posts in git and serves them from D1"
         },
         {
           "kind": "post",
           "ref": "blog-reading-without-javascript",
-          "label": "Progressive Enhancement: A Complete Blog UI in 1.6 kB of JavaScript"
+          "label": "A blog reading experience that works without JavaScript"
         },
         {
           "kind": "post",
           "ref": "site-search-on-d1",
-          "label": "SQLite FTS5 Search on Cloudflare D1: 6 ms with Rank Fusion"
+          "label": "Site search on Cloudflare D1 with SQLite full-text search"
         },
         {
           "kind": "post",
           "ref": "color-palette-the-build-can-check",
-          "label": "WCAG 2.2 Color Palette Design: Math, CVD Tests, Build Gate"
+          "label": "Designing a color palette the build can check"
         },
         {
           "kind": "post",
@@ -106,17 +106,17 @@
         {
           "kind": "post",
           "ref": "policy-in-the-api-not-the-mcp",
-          "label": "API vs MCP: Put the Policy in the API"
+          "label": "Put the rules in the API, not in the MCP server"
         },
         {
           "kind": "post",
           "ref": "mcp-server-on-workers-with-oauth",
-          "label": "Building an MCP Server on Cloudflare Workers with OAuth 2.1"
+          "label": "Building an MCP server on Cloudflare Workers with OAuth"
         },
         {
           "kind": "post",
           "ref": "agent-write-access-to-a-live-site",
-          "label": "Giving an AI Agent Write Access to Production: A Trust Model"
+          "label": "Giving an AI agent write access to a live site"
         },
         {
           "kind": "repo",
