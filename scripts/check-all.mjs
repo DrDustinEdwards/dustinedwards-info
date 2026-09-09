@@ -40,7 +40,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
-import { killTree } from "./lib/child-processes.mjs";
+import { killTree, readProcessTable } from "./lib/child-processes.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -682,12 +682,27 @@ function main() {
    * processes belonging to his session. An absent pid is simply done, and pids
    * are reused, so anything that will not die is reported rather than chased.
    */
-  const leftovers = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
-  if (leftovers.length > 0) {
+  const recorded = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
+  if (recorded.length > 0) {
+    /*
+     * LIVENESS FIRST, IN ONE READ. Most recorded pids are already gone: a run
+     * that ended normally leaves a full window of them. Calling `killTree` on
+     * each would spawn a `taskkill` per dead pid, and a burst of dozens of
+     * process creations is the one thing this machine has just demonstrated it
+     * handles badly. Measured 2026-09-09: a preflight over 47 recorded pids ran
+     * 47 kills and every gate after it failed to start with 0xC0000142, which
+     * is Windows refusing to initialise a process.
+     *
+     * One process table read answers the question for all of them, and it is
+     * the same read `descendantPids` already uses.
+     */
+    const table = readProcessTable();
+    const leftovers = recorded.filter((pid) => table.has(pid));
     let reaped = 0;
     for (const pid of leftovers) if (killTree(pid)) reaped += 1;
     console.log(
-      `  preflight: the previous run left ${leftovers.length} process(es) recorded, ${reaped} reaped\n`,
+      `  preflight: ${recorded.length} process(es) recorded by the previous run, ` +
+        `${leftovers.length} still alive, ${reaped} reaped\n`,
     );
   }
 
@@ -716,7 +731,10 @@ function main() {
   const cleanUp = () => {
     if (cleanedUp) return;
     cleanedUp = true;
-    const alive = treeSince(RSS_FILE).filter((pid) => pid !== process.pid && pid !== sampler.pid);
+    const table = readProcessTable();
+    const alive = treeSince(RSS_FILE).filter(
+      (pid) => pid !== process.pid && pid !== sampler.pid && table.has(pid),
+    );
     for (const pid of alive) killTree(pid);
     sampler.stop();
   };

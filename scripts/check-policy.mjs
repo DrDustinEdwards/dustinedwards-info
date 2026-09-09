@@ -1863,8 +1863,18 @@ refuses(
  * floor moved with none of them. Four of those 181 are new here; the other
  * forty-two accumulated unremarked. Floor 135 to 168, about seven percent
  * under, the same proportion both earlier entries chose.
+ *
+ * RE-MEASURED 2026-09-09 by RUNNING it, after ruling 48's seven assertions:
+ * 188. All seven are new here and nothing accumulated unremarked this time,
+ * which is the first entry in this docblock able to say that.
+ *
+ * Floor 171 to 180, which is four percent under rather than the seven the
+ * three entries above chose, and the change of proportion is deliberate: the
+ * tolerance check refused 171 against 188 at `gap=17, tolerance=10`, so seven
+ * percent no longer fits inside the instrument that guards this number. The
+ * tolerance is the tighter rule and it wins.
  */
-const MINIMUM_CHECKS = 171;
+const MINIMUM_CHECKS = 180;
 const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 
