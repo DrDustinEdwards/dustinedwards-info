@@ -454,7 +454,7 @@ for (const [from, to] of Object.entries(redirects.posts ?? {})) {
   assert(
     `redirects: ${from} is not also a live post slug`,
     !corpus.has(from),
-    `content/posts/${corpus.get(from)?.file ?? "?"} declares slug "${from}", which this map ` +
+    `the post file ${corpus.get(from)?.file ?? "?"} declares slug "${from}", which this map ` +
       `redirects away. The gateway runs before the router, so that post would be UNREACHABLE: ` +
       `every request for it 301s to /blog/${to}.`,
   );
