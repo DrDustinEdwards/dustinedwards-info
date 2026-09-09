@@ -33,15 +33,38 @@
  * THIRTEEN: `check:llms` appeared in neither count.
  */
 
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
+import { killTree } from "./lib/child-processes.mjs";
+import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * WHERE THE MEMORY SAMPLES GO, and why this run keeps the previous one's file.
+ *
+ * The OS killed five `check:all` runs for low memory between 2026-09-05 and
+ * 2026-09-09 and rebooted the machine once. An OS kill under memory pressure
+ * does not take the tree: it takes the process it picked, so the runner dies
+ * and its grandchildren keep their pages. The heaviest of them is not small.
+ * Measured 2026-09-09 during `check:browser`: a `vite preview` host holding
+ * 952 MB with two `workerd` children beside it.
+ *
+ * So the previous run's file is READ BEFORE this run truncates it. It is the
+ * only record of what that run was holding when it died.
+ *
+ * The read is a UNION over the last stretch of sampling rather than the final
+ * row, and that distinction was paid for on 2026-09-09: a run exhausted the
+ * machine, 14 processes holding 1678 MB survived it, and the final row named
+ * two of them. The heavy ones came from `check:head` minutes earlier and were
+ * still resident. Grounds on `treeSince`.
+ */
+const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
 
 /**
  * The floor. Fails closed when fewer gates are discovered than this.
@@ -522,6 +545,15 @@ function runGate(name, args) {
     reason: errored ? `wrote nothing to either stream (${seen})` : "",
     ms: Date.now() - started,
     output: `${stdout}${stderr}`,
+    /*
+     * Filled in by the caller, which owns the clock: this function cannot see
+     * the sample file's window because it IS the window. Null means the
+     * sampler did not run or the gate finished inside one sampling interval,
+     * and null is deliberately not zero.
+     *
+     * @type {number | null}
+     */
+    peakRss: /** @type {number | null} */ (null),
   };
 }
 
@@ -633,6 +665,71 @@ function main() {
       `${all ? " (offline + network)" : " (offline tier)"}\n`,
   );
 
+  /*
+   * PREFLIGHT: WHAT THE LAST RUN LEFT ALIVE.
+   *
+   * Reads the previous run's final sample and tree-kills anything in it that
+   * is still running. This is the half that addresses the actual incident:
+   * gates inside one run cannot overlap (the loop below is a blocking
+   * `spawnSync`, measured, not assumed), so the memory that accumulates comes
+   * from RUNS, not from gates racing each other. A killed run's orphans are
+   * still holding their pages when the next run starts, and the next run then
+   * starts that much closer to the ceiling.
+   *
+   * BY PID, NEVER BY NAME. `killTree` is `taskkill /F /T /PID`. A name match
+   * for `node` or `chrome` on this machine reaches Dustin's own editor and
+   * browser: measured 2026-09-09, a bare name match selects 18 Chrome
+   * processes belonging to his session. An absent pid is simply done, and pids
+   * are reused, so anything that will not die is reported rather than chased.
+   */
+  const leftovers = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
+  if (leftovers.length > 0) {
+    let reaped = 0;
+    for (const pid of leftovers) if (killTree(pid)) reaped += 1;
+    console.log(
+      `  preflight: the previous run left ${leftovers.length} process(es) recorded, ${reaped} reaped\n`,
+    );
+  }
+
+  /*
+   * THE SAMPLER, and the cleanup that owns it.
+   *
+   * `spawnSync` blocks this process for the whole of every gate, so nothing in
+   * this event loop can measure anything while a gate runs. The sampler is a
+   * separate process writing to a file; grounds on `scripts/lib/rss.mjs`.
+   */
+  mkdirSync(join(root, ".gate-pids"), { recursive: true });
+  writeFileSync(RSS_FILE, "");
+  const sampler = startRssSampler(RSS_FILE);
+
+  /**
+   * KILLS THIS RUN'S OWN TREE. Registered for a normal exit and for both
+   * signals, so a Ctrl+C stops leaving the heavy children behind.
+   *
+   * It cannot cover every case and says so rather than pretending: a
+   * `taskkill /F` of this process, and an OS kill under memory pressure, run
+   * no handler at all. That is precisely why the preflight above exists, and
+   * between the two the orphan either dies now or dies at the start of the
+   * next run.
+   */
+  let cleanedUp = false;
+  const cleanUp = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    const alive = treeSince(RSS_FILE).filter((pid) => pid !== process.pid && pid !== sampler.pid);
+    for (const pid of alive) killTree(pid);
+    sampler.stop();
+  };
+  process.on("exit", cleanUp);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
+    process.on(signal, () => {
+      cleanUp();
+      // Re-raise as an exit rather than returning: a handled signal that does
+      // not exit leaves the runner alive with its work abandoned.
+      process.exit(130);
+    });
+  }
+
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
   /*
@@ -662,15 +759,24 @@ function main() {
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
     // EVERY gate runs, including after a failure. Stopping at the first red hides
     // every gate behind it, which is how one failure masks a second.
+    const from = Date.now();
     const result = runGate(name, args);
+    /*
+     * The window closes AFTER the gate returns, so a sample taken while its
+     * children were still dying belongs to the gate that spawned them rather
+     * than to whichever gate runs next. The gates cannot overlap, so the
+     * windows cannot either.
+     */
+    result.peakRss = peakBetween(RSS_FILE, from, Date.now());
     results.push(result);
     const seconds = (result.ms / 1000).toFixed(1);
+    const peak = result.peakRss === null ? "" : ` ${mb(result.peakRss)}`;
     console.log(
       result.errored
-        ? `ERRORED (${seconds}s) ${result.reason}`
+        ? `ERRORED (${seconds}s${peak}) ${result.reason}`
         : result.ok
-          ? `ok (${seconds}s)`
-          : `FAILED (${seconds}s)`,
+          ? `ok (${seconds}s${peak})`
+          : `FAILED (${seconds}s${peak})`,
     );
   }
 
@@ -712,6 +818,9 @@ function main() {
           : "",
       ms: Date.now() - started,
       output: `${stdout}${stderr}`,
+      // Measured on the same terms as every other gate: it is spawned like one,
+      // and a gate excluded from the table is a gate nobody would think to look at.
+      peakRss: peakBetween(RSS_FILE, started, Date.now()),
     };
     results.push(floorsResult);
     const seconds = (floorsResult.ms / 1000).toFixed(1);
@@ -754,7 +863,10 @@ function main() {
   console.log(`\n${"-".repeat(52)}`);
   for (const result of results) {
     const label = result.errored ? "ERR " : result.ok ? "PASS" : "FAIL";
-    console.log(`  ${label}  ${result.name.padEnd(18)} ${(result.ms / 1000).toFixed(1)}s`);
+    console.log(
+      `  ${label}  ${result.name.padEnd(18)} ${(result.ms / 1000).toFixed(1).padStart(6)}s` +
+        `${result.peakRss === null || result.peakRss === undefined ? "" : ` ${mb(result.peakRss).padStart(7)}`}`,
+    );
   }
   for (const name of skipped) {
     // Named, not omitted. A gate that silently did not run is the thing this
@@ -763,11 +875,33 @@ function main() {
   }
   console.log(`${"-".repeat(52)}`);
 
+  /*
+   * PEAK MEMORY IN THE SUMMARY LINE, because the number that matters for an
+   * out-of-memory kill is the highest point the tier reached, and which gate
+   * was holding it. A per-gate table nobody totals is a table nobody reads.
+   */
+  /** @type {{ name: string, peakRss: number } | null} */
+  let worst = null;
+  for (const result of results) {
+    if (typeof result.peakRss !== "number") continue;
+    if (worst === null || result.peakRss > worst.peakRss) {
+      worst = { name: result.name, peakRss: result.peakRss };
+    }
+  }
+
   console.log(
     `\n${results.length - failed.length - errored.length} passed, ${failed.length} failed` +
       `${errored.length > 0 ? `, ${errored.length} errored` : ""}` +
-      `${skipped.length > 0 ? `, ${skipped.length} skipped` : ""}\n`,
+      `${skipped.length > 0 ? `, ${skipped.length} skipped` : ""}` +
+      `${worst ? `, peak ${mb(worst.peakRss)} at ${worst.name}` : ", peak not measured"}\n`,
   );
+
+  if (!sampler.available) {
+    console.log(
+      "  Peak memory was NOT measured on this run: the sampler could not start.\n" +
+        "  The tier is unaffected; this is an instrument, not a gate.\n",
+    );
+  }
   if (errored.length > 0) {
     console.log(
       `  ${errored.length} gate(s) ERRORED: ${errored.map((r) => r.name).join(", ")}.\n` +
