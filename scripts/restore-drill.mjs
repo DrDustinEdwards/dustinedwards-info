@@ -68,6 +68,34 @@ import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 
 /** The database this drill READS and must never write to. */
 const PRODUCTION_DB = "dustinedwards";
+
+/**
+ * Production's UUID, resolved at runtime, because THE NAME IS NOT ADDRESSABLE
+ * FROM CI and this is measured rather than defensive.
+ *
+ * `wrangler d1 export <name>` resolves the name through the `d1_databases`
+ * entry in `wrangler.jsonc` and uses that entry's `database_id`. That file is
+ * gitignored, so CI's `postinstall` bootstraps it from `wrangler.jsonc.example`,
+ * whose `database_id` is the placeholder `00000000-0000-0000-0000-000000000000`.
+ * The first two CI runs of this drill therefore died on the first export with
+ * "The database 00000000-0000-0000-0000-000000000000 could not be found
+ * [code: 7404]", deterministically, while the identical command exited 0 on a
+ * developer machine holding the real `wrangler.jsonc`.
+ *
+ * The asymmetry is the trap: the config poisons EXACTLY the database this
+ * drill reads. `d1 list` is account-scoped and reads no binding, so the sweep
+ * works. The scratch database is in no config at all, so its create, execute
+ * and delete fall back to an account lookup by name and work. Only production
+ * has an entry, and only production gets hijacked.
+ *
+ * This is the same class as the `d1 migrations apply` note further down: a
+ * wrangler subcommand silently resolving a value out of a file this gate does
+ * not control. A UUID is resolved from `d1 list --json`, which needs only the
+ * API token, and addresses the database the account actually has.
+ *
+ * @type {string | null}
+ */
+let PRODUCTION_ID = null;
 const MIGRATIONS_DIR = "drizzle";
 const MEDIA_BUCKET = "dustinedwards-media";
 const MEDIA_BACKUP_BUCKET = "dustinedwards-media-backup";
@@ -159,6 +187,19 @@ function scratch(name) {
     throw new Error(
       `refusing to write to ${name}: this drill only ever reads production. ` +
         `Every write goes to the scratch database.`,
+    );
+  }
+  /*
+   * PRODUCTION NOW HAS TWO SPELLINGS, so the guard needs both. Before the UUID
+   * lookup above existed, refusing the name was refusing the database; now a
+   * write handed `PRODUCTION_ID` would carry no name at all and the check above
+   * would wave it through. Resolving bindings rather than spellings, on the
+   * guard whose whole job is that nothing reaches production.
+   */
+  if (PRODUCTION_ID !== null && name === PRODUCTION_ID) {
+    throw new Error(
+      `refusing to write to ${name}: that is ${PRODUCTION_DB}'s UUID. This ` +
+        `drill only ever reads production. Every write goes to the scratch database.`,
     );
   }
   if (!name.startsWith(SCRATCH_PREFIX)) {
@@ -402,10 +443,36 @@ async function main() {
    */
   const SWEEP_AFTER_MS = 2 * 60 * 60 * 1000;
   const listed = wrangler("d1 list --json");
+  /*
+   * PARSED ONCE, OUTSIDE THE SWEEP'S `if`, because two things need it and they
+   * need it with opposite tolerances. The sweep is best-effort: a failed list
+   * means nothing gets swept this run and the next run catches up. The UUID
+   * resolution below is load-bearing and fails closed, so it cannot sit inside
+   * a branch that a failed list silently skips.
+   */
+  const listedStart = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
+  /** @type {Array<{ uuid?: string, name?: string, created_at?: string }>} */
+  const databases = listedStart === -1 ? [] : JSON.parse(listed.stdout.slice(listedStart));
+
+  /*
+   * FAILS CLOSED, and loudly. Falling back to the name here would substitute a
+   * different value for the one that was asked for and reintroduce exactly the
+   * 7404 this lookup exists to remove, except now wearing a passing lookup.
+   */
+  const production = databases.find((d) => d.name === PRODUCTION_DB);
+  if (typeof production?.uuid !== "string" || production.uuid.length === 0) {
+    throw new Error(
+      `could not resolve ${PRODUCTION_DB} to a UUID from d1 list` +
+        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status}: ${tail(listed.stdout)})`}. ` +
+        `Passing the NAME to d1 export lets wrangler resolve it out of ` +
+        `wrangler.jsonc, which CI bootstraps from the example with a ` +
+        `placeholder database_id, so the read would fail as 7404.`,
+    );
+  }
+  PRODUCTION_ID = production.uuid;
+  console.log(`  ${PRODUCTION_DB} resolved to ${PRODUCTION_ID}`);
+
   if (listed.status === 0) {
-    const start = listed.stdout.indexOf("[");
-    /** @type {Array<{ name?: string, created_at?: string }>} */
-    const databases = start === -1 ? [] : JSON.parse(listed.stdout.slice(start));
     const stale = databases.filter(
       (d) =>
         typeof d.name === "string" &&
@@ -466,7 +533,7 @@ async function main() {
       const exported = await retryRead(
         () => {
           const r = wrangler(
-            `d1 export ${PRODUCTION_DB} --remote --no-schema --table ${table} --output "${out}"`,
+            `d1 export ${PRODUCTION_ID} --remote --no-schema --table ${table} --output "${out}"`,
           );
           if (r.status !== 0) throw new Error(tail(r.stdout));
           return r;
@@ -498,7 +565,7 @@ async function main() {
 
     /* ---- 2. production's own answers, READ ONLY -------------------------- */
 
-    const [live] = await query(PRODUCTION_DB, INTEGRITY_SQL);
+    const [live] = await query(String(PRODUCTION_ID), INTEGRITY_SQL);
     ok(
       "production answers the integrity query",
       live !== undefined && typeof live.posts === "number",
@@ -731,7 +798,7 @@ async function main() {
         virtual: virtual.filter((n) => !PLATFORM_TABLES.has(n)),
       };
     };
-    const liveSchema = classify(await query(PRODUCTION_DB, SCHEMA_SQL));
+    const liveSchema = classify(await query(String(PRODUCTION_ID), SCHEMA_SQL));
     const restoredSchema = classify(await query(scratch(SCRATCH_DB), SCHEMA_SQL));
 
     ok(
