@@ -384,6 +384,118 @@ console.log(`  HEAD is ${sha}`);
  * product rather than a list somebody has to remember to add to.
  */
 
+/* ------------------------------------------------- 1b. CI's verdict, early */
+
+/*
+ * **RULING 52, 2026-09-09 (Dustin). SHIP TRUSTS CI.**
+ *
+ * CI already runs the offline tier on a clean checkout of this exact sha, on a
+ * machine that has never seen this repo. When it concluded success there, the
+ * local build-for-gates and the local offline tier are a second opinion about a
+ * question already answered, and they are the expensive half of a ship: about
+ * twelve minutes falls to about four, and the local memory peak that killed
+ * five `check:all` runs goes with it.
+ *
+ * ## THIS READ DECIDES A PATH. IT NEVER DECIDES A DEPLOY.
+ *
+ * That separation is the whole safety argument and it is worth stating plainly.
+ * The verdict here chooses between the fast path and the local path, and
+ * NOTHING ELSE: a non-green answer, of any kind, takes the local path rather
+ * than refusing. The authoritative check is the unchanged step below, which
+ * runs on EVERY path and refuses on anything but success. So the worst this
+ * read can do when it is wrong is make ship do MORE work, never less.
+ *
+ * ## WHY THE SECOND READ IS NOT REDUNDANT WITH THIS ONE
+ *
+ * Because a pending run is the common case, not an edge. Push, run ship, and CI
+ * is still in flight: this read says "not green yet", ship runs the local build
+ * and tier for ten minutes, and by the time the step below reads again the run
+ * has concluded. The two reads are minutes apart on purpose, and the later one
+ * is the one with teeth. A run that was FAILED here and re-run to green in the
+ * meantime is caught by the same mechanism, in the same direction.
+ *
+ * ## WHAT IS NOT SKIPPED, AND WHY IT CANNOT BE
+ *
+ * `build:stack` and `build:enhance` run on BOTH paths. They write gitignored
+ * files that `react-router build` imports statically, so the deploy's own build
+ * fails on a missing file without them. They are not part of the gate tier's
+ * cost; they are preconditions of building at all.
+ *
+ * ## OBSERVATION BOUNDARY, INHERITED
+ *
+ * Unchanged from the step below and restated because this read now has a
+ * consequence of its own: it reads GitHub's view of a sha. It cannot see
+ * whether CI's assertions are meaningful, nor whether the workflow was edited
+ * to assert nothing in the same commit. A green CI on a commit that gutted CI
+ * would skip the local tier, and the local tier would have run that same gutted
+ * workflow's checks. The property is the same on both paths.
+ */
+
+announce("CI's verdict on this exact commit");
+
+const remote = spawnSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8" });
+const slug = ((remote.stdout ?? "").trim().match(/github\.com[/:]([^/]+)\/(.+?)(?:\.git)?$/) ?? []).slice(1, 3);
+if (slug.length !== 2) {
+  refuse(
+    "the origin remote is not a GitHub URL, so CI cannot be consulted",
+    `git remote get-url origin said ${JSON.stringify((remote.stdout ?? "").trim())}. ` +
+      "This check fails closed rather than assuming CI passed.",
+  );
+}
+const [owner, repo] = slug;
+
+/*
+ * **THE TOKEN IS REQUIRED, and the brief that specified this check assumed it
+ * was not.** The assumption was that the repository is public, so Actions runs
+ * would be readable unauthenticated. MEASURED 2026-08-23: `private=true`. An
+ * unauthenticated read answers 404, because GitHub returns 404 rather than 403
+ * for a private resource you may not see, so the fallback would refuse every
+ * ship while reporting that the repository does not exist.
+ *
+ * `gh auth token` is the token path. Ship has no token of its own: GITHUB_TOKEN
+ * is a wrangler secret and is not in this process's environment. If `gh` is
+ * absent or logged out, the step below refuses, which is the correct direction:
+ * a check that cannot read CI has not confirmed CI.
+ */
+const ghToken = (() => {
+  const t = spawnSync("gh", ["auth", "token"], { cwd: root, encoding: "utf8", shell: process.platform === "win32" });
+  return t.status === 0 ? (t.stdout ?? "").trim() : "";
+})();
+
+/**
+ * One read of GitHub's verdict on HEAD. Called twice, minutes apart.
+ *
+ * Returns rather than refusing, because the two callers want opposite things
+ * from the same failure: this one takes the slow path, the one below refuses.
+ * A single function with a `shouldRefuse` flag would be one helper with two
+ * meanings, which is the shape hard rule 10 names.
+ *
+ * @returns {Promise<{ verdict: { ok: boolean, why: string, remedy: string } | null, error: string }>}
+ */
+async function readCi() {
+  try {
+    const runs = await fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken });
+    return { verdict: ciVerdict(runs, sha), error: "" };
+  } catch (error) {
+    return { verdict: null, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
+const early = await readCi();
+
+/** Chooses the path only. The step below decides the deploy, on every path. */
+const ciGreenEarly = early.verdict?.ok === true;
+
+if (ciGreenEarly) {
+  console.log(`  ${early.verdict?.why}.`);
+  console.log(`  CI green for ${sha}, skipping local gates`);
+} else {
+  console.log(`  ${early.error ? `CI could not be read: ${early.error}` : early.verdict?.why}.`);
+  console.log("  taking the local path: the build and the offline tier run below.");
+  console.log("  CI is still REQUIRED, and is read again after them.");
+}
+
 /* ------------------------------------------ 1c. the deployed schema is current */
 
 /*
@@ -528,14 +640,33 @@ if (run("npm", ["run", "build:stack"]).code !== 0) {
 if (run("npm", ["run", "build:enhance"]).code !== 0) {
   refuse("the enhancement bundle build failed", "Fix build:enhance. Nothing was deployed.");
 }
-if (run("npm", ["run", "build"]).code !== 0) {
+/*
+ * THE APP BUILD IS THE GATE TIER'S, not the deploy's, and that is why ruling 52
+ * can skip it. `npm run deploy` is `npm run build && wrangler deploy`, so the
+ * bundle that ships is built below either way. What this call exists for is
+ * `check:page-payload`, which reads `build/client` and is in the tier that the
+ * next step runs. Skip the tier and this build has no reader.
+ */
+if (ciGreenEarly) {
+  console.log("  skipped: react-router build. Its only local reader is the tier below, which CI ran.");
+  console.log("  the deploy builds the bundle it ships, on this path and on the other one.");
+} else if (run("npm", ["run", "build"]).code !== 0) {
   refuse("the build failed", "Fix the build. Nothing was deployed.");
 }
 
 /* --------------------------------------------------------------- 3. gates */
 
 announce("Gates, offline tier");
-if (run("npm", ["run", "check"]).code !== 0) {
+if (ciGreenEarly) {
+  /*
+   * RULING 52. Not "the gates did not run": they ran, on a clean checkout of
+   * this sha, on a machine with no local node_modules and no generated types.
+   * VERIFICATION.md names those as two different instruments, and this is the
+   * stronger of the two for everything except the handful of gates CI excludes.
+   */
+  console.log(`  skipped: CI ran this tier on a clean checkout of ${sha}.`);
+  console.log("  re-read below, and a CI that is no longer green refuses there.");
+} else if (run("npm", ["run", "check"]).code !== 0) {
   refuse(
     "a gate is red",
     "Read the table above for the failing gate NAME before retrying. Nothing was deployed.",
@@ -558,13 +689,19 @@ if (run("npm", ["run", "check"]).code !== 0) {
  * The deploy is the primitive that matters, so the check belongs immediately in
  * front of it.
  *
- * ## WHY IT IS NOT REDUNDANT WITH STEP 3
+ * ## WHY IT IS NOT REDUNDANT WITH THE LOCAL TIER, WHEN THE LOCAL TIER RAN
  *
- * Step 3 runs the offline tier ON THIS DISK, with this machine's node_modules,
- * generated types and real wrangler.jsonc. CI runs it on a clean checkout that
- * has never seen the repo. They answer different questions, and VERIFICATION.md
- * names them as two of the four instruments. A dependency installed locally and
- * absent from the lockfile is invisible to step 3 and fatal in CI.
+ * The local tier runs the offline gates ON THIS DISK, with this machine's
+ * node_modules, generated types and real wrangler.jsonc. CI runs them on a
+ * clean checkout that has never seen the repo. They answer different questions,
+ * and VERIFICATION.md names them as two of the four instruments. A dependency
+ * installed locally and absent from the lockfile is invisible to the local tier
+ * and fatal in CI.
+ *
+ * Since ruling 52 the local tier runs only when CI has not already answered for
+ * this sha, so on the fast path there is no second opinion to be redundant
+ * with, and the reason above is exactly why the fast path is the safe direction
+ * to drop: it drops the WEAKER of the two instruments and keeps the stronger.
  *
  * ## FAIL CLOSED, IN EVERY DIRECTION, AND NO OVERRIDE FLAG
  *
@@ -588,51 +725,38 @@ if (run("npm", ["run", "check"]).code !== 0) {
 
 announce("CI must be green for this exact commit");
 
-const remote = spawnSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8" });
-const slug = ((remote.stdout ?? "").trim().match(/github\.com[/:]([^/]+)\/(.+?)(?:\.git)?$/) ?? []).slice(1, 3);
-if (slug.length !== 2) {
-  refuse(
-    "the origin remote is not a GitHub URL, so CI cannot be consulted",
-    `git remote get-url origin said ${JSON.stringify((remote.stdout ?? "").trim())}. ` +
-      "This check fails closed rather than assuming CI passed.",
-  );
-}
-const [owner, repo] = slug;
-
 /*
- * **THE TOKEN IS REQUIRED, and the brief that specified this check assumed it
- * was not.** The assumption was that the repository is public, so Actions runs
- * would be readable unauthenticated. MEASURED 2026-08-23: `private=true`. An
- * unauthenticated read answers 404, because GitHub returns 404 rather than 403
- * for a private resource you may not see, so the fallback would refuse every
- * ship while reporting that the repository does not exist.
+ * **THIS IS THE READ WITH TEETH, ON EVERY PATH.** Ruling 52 changed which work
+ * runs before it; it did not change this step, and that is the point. The early
+ * read at step 2 chose a path. This one decides the deploy, and refuses in the
+ * four directions `ciVerdict` names whether or not the tier ran locally.
  *
- * `gh auth token` is the token path. Ship has no token of its own: GITHUB_TOKEN
- * is a wrangler secret and is not in this process's environment. If `gh` is
- * absent or logged out, this step refuses, which is the correct direction: a
- * check that cannot read CI has not confirmed CI.
+ * It is a SECOND read rather than the early verdict reused, on BOTH paths, and
+ * the uniformity is deliberate. On the local path ten minutes have passed and a
+ * run that was pending then may have concluded in either direction; reusing the
+ * early answer would refuse a ship whose CI went green while the gates ran, and
+ * would be a stale claim besides. On the fast path the two reads are seconds
+ * apart and will agree, so the call buys no information and buys something
+ * better: this step reads fresh and decides, with no branch, so there is no
+ * arrangement of the code in which a deploy is authorised by a verdict that was
+ * not re-read here. One extra API call against eight minutes saved is not a
+ * trade worth thinking about twice.
  */
-const ghToken = (() => {
-  const t = spawnSync("gh", ["auth", "token"], { cwd: root, encoding: "utf8", shell: process.platform === "win32" });
-  return t.status === 0 ? (t.stdout ?? "").trim() : "";
-})();
 console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
+const { verdict, error: ciError } = await readCi();
 
-/** @type {unknown} */
-let runs;
-try {
-  runs = await fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken });
-} catch (error) {
+if (ciError) {
   refuse(
-    `the GitHub API could not be reached: ${error instanceof Error ? error.message : String(error)}`,
+    `the GitHub API could not be reached: ${ciError}`,
     "Ship needs the network to deploy anyway, so an unreachable API is not a reason to " +
       "skip the check and proceed. Nothing was deployed.",
   );
 }
-
-const verdict = ciVerdict(runs, sha);
-if (!verdict.ok) {
-  refuse(verdict.why, verdict.remedy);
+if (!verdict || !verdict.ok) {
+  refuse(
+    verdict?.why ?? "CI could not be read",
+    verdict?.remedy ?? "Nothing was deployed.",
+  );
 }
 console.log(`  ${verdict.why}.`);
 

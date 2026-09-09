@@ -16,10 +16,13 @@
  * answered is `verify-live`'s job and needs the wire.
  *
  * **It also inherits every excluded gate's blindness**, and the excluded set is
- * not small. Two of the offline gates cannot run in an extraction at all, for
- * reasons measured rather than assumed (see EXCLUDED below), and this gate
- * excludes itself for a third. A green check:head therefore means "the ones
- * that CAN run, do", which is a narrower claim than "HEAD is good".
+ * not small. Some offline gates cannot run in an extraction at all, for reasons
+ * measured rather than assumed; this gate excludes itself and `check:floors` to
+ * stop two kinds of recursion; and since ruling 51 one gate is excluded that
+ * COULD run, because CI already runs it against a checkout of the same sha. Each
+ * exclusion carries its own grounds at EXCLUDED below. A green check:head
+ * therefore means "the ones that CAN run and are not answered elsewhere, do",
+ * which is a narrower claim than "HEAD is good".
  *
  * The counts are DELIBERATELY not written here. They were, and they went stale:
  * this paragraph said "nineteen offline gates" and "the seventeen that CAN run"
@@ -50,6 +53,12 @@
  * slowest are `check:charts` at 64.9s and `check:types` at 35.0s. The old
  * figure is kept above rather than overwritten, because the difference is the
  * subject of the next paragraph.
+ *
+ * RE-MEASURED 2026-09-09 by RUNNING it, after ruling 51 dropped `check:worker`
+ * from the nested tier: 22 gates in 121.5s. The slowest are now `check:types`
+ * at 31.3s and `check:tests` at 25.5s. The saving is memory rather than time,
+ * and it is the whole reason for the exclusion: `check:worker` nested here ran
+ * a vitest and three workerd INSIDE the extraction, about 880MB at the peak.
  *
  * **THE TYPECHECK IS COLD HERE, ALWAYS, AND THAT IS CORRECT.** `check:types`
  * costs 35.0s in the extraction against 15s warm on the working tree. The
@@ -158,6 +167,26 @@ const EXCLUDED = {
    * Same class as check:backup: the input is state a checkout does not have.
    */
   "check:page-payload": "reads the gitignored build/client output, absent from an extraction.",
+  /*
+   * RULING 51, 2026-09-09. NOT a can-it-run exclusion like the four above: this
+   * one CAN run in an extraction and is excluded because the property it proves
+   * is already proven twice over by the time this gate runs.
+   *
+   * This gate exists to catch DISK VERSUS HEAD DIVERGENCE. Ship refuses a dirty
+   * tree at step 1, so at the moment it matters disk EQUALS HEAD and nesting a
+   * gate here answers a question that cannot have a different answer. The other
+   * half is CI, which runs check:worker on a clean checkout of the same sha, on
+   * a machine that has never seen this repo, which is strictly the stronger
+   * reading of the same property.
+   *
+   * What it buys is memory, and that is the reason it was found. check:head
+   * runs the whole tier inside a temp checkout, so check:worker's vitest plus
+   * its three workerd processes ran INSIDE this gate's extraction: 2.1GB on top
+   * of 2.0GB. Measured at ~880MB off the peak. The starve was real, not
+   * theoretical: it killed five check:all runs, which read as "killed
+   * externally" until the memory instrument landed.
+   */
+  "check:worker": "ruling 51: a clean tree makes disk == HEAD, and CI runs it on a checkout of the same sha.",
 };
 
 /** Floor. Fails closed below this; moves only by deliberate edit. */
@@ -594,6 +623,12 @@ console.log(
  * 37, with 23 gates executed. Never summed. Floored at 34, slack of three: most
  * of the count is one assertion per gate run, so it steps by one when a gate is
  * added and by more only when the tier is re-tiered.
+ *
+ * RE-MEASURED THE SAME WAY on 2026-09-09, after ruling 51 excluded
+ * `check:worker`: 36, with 22 gates executed. Both numbers fell by exactly one,
+ * which is what removing one gate from the nested tier should do and is the
+ * reason the floor did not move: 34 still bites, now with a slack of two, and
+ * lowering it to chase the count would give up the assertion.
  *
  * The prose here said 30 measured and 27 floored while the constant read 33,
  * which is rule 17's rot in its ordinary form: the constant was raised as the
