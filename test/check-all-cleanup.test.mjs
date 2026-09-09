@@ -56,6 +56,26 @@ import { lastTree, peakBetween, startRssSampler, treeSince } from "../scripts/li
 
 const isWindows = process.platform === "win32";
 
+/**
+ * SKIPPED OFF WINDOWS, AND VISIBLY.
+ *
+ * Everything below drives Windows-only machinery: the sampler is PowerShell
+ * reading `Win32_Process`, and `killTree` is `taskkill /F /T`. On Linux the
+ * sampler reports `available: false` by design and there is nothing to assert.
+ *
+ * A SKIP RATHER THAN A CONDITIONAL PASS. Wrapping the bodies in
+ * `if (isWindows)` would make CI report four green tests that examined
+ * nothing, which is the vacuity this repo names everywhere else. Skipped, the
+ * runner prints them as skipped and the count is honest.
+ *
+ * The cost is stated rather than hidden: these guards do NOT run in CI, and CI
+ * is Linux. They run where `check:all` runs, which is the machine the memory
+ * incident happened on, and that is the only place the mechanism exists.
+ */
+const NOT_WINDOWS = isWindows
+  ? false
+  : "Windows only: the sampler reads Win32_Process and the reap is taskkill /F /T";
+
 /** Is this pid still running? By pid, never by name. */
 function alive(pid) {
   if (!isWindows) {
@@ -79,7 +99,7 @@ function heavyChild() {
   );
 }
 
-test("the sampler records the tree by pid, and the runner is not in it", async () => {
+test("the sampler records the tree by pid, and the runner is not in it", { skip: NOT_WINDOWS }, async () => {
   const out = join(mkdtempSync(join(tmpdir(), "rss-")), "samples.csv");
   writeFileSync(out, "");
   const sampler = startRssSampler(out, 250);
@@ -99,7 +119,7 @@ test("the sampler records the tree by pid, and the runner is not in it", async (
   child.kill();
 });
 
-test("THE PLANT: a killed run's children are reaped, and only those", async () => {
+test("THE PLANT: a killed run's children are reaped, and only those", { skip: NOT_WINDOWS }, async () => {
   const out = join(mkdtempSync(join(tmpdir(), "rss-")), "samples.csv");
   writeFileSync(out, "");
   const sampler = startRssSampler(out, 250);
@@ -146,7 +166,7 @@ test("THE PLANT: a killed run's children are reaped, and only those", async () =
   assert.equal(alive(doomed.pid), false, "the recorded child is gone within 5 seconds");
 });
 
-test("peak memory is attributed to the window that held it", async () => {
+test("peak memory is attributed to the window that held it", { skip: NOT_WINDOWS }, async () => {
   const out = join(mkdtempSync(join(tmpdir(), "rss-")), "samples.csv");
   writeFileSync(out, "");
   const sampler = startRssSampler(out, 250);
@@ -181,7 +201,7 @@ test("peak memory is attributed to the window that held it", async () => {
   assert.equal(peakBetween(out, 1, 2), null);
 });
 
-test("THE SECOND PLANT: a process that died out of the last sample is still reaped", async () => {
+test("THE SECOND PLANT: a process that died out of the last sample is still reaped", { skip: NOT_WINDOWS }, async () => {
   /*
    * THE FLAW THE REAL INCIDENT EXPOSED, replayed.
    *
