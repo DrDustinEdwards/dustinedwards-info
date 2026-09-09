@@ -320,3 +320,55 @@ export function watchdogOutcome({ misses, recheck }) {
 
   return reasons.length > 0 ? [{ type: "notify", reason: reasons.join(" ") }] : [];
 }
+
+/**
+ * HOW A NON-OK OPERATOR RESPONSE IS REPORTED, for every repair caller.
+ *
+ * Lives here, in the decision module, because there are TWO callers and they
+ * had already drifted into holding one copy each of this logic:
+ * `scripts/health-repair.mjs` for the scheduled workflow and
+ * `workers/watchdog.ts` for the on-platform cron. Both threw the server's
+ * explanation away, so fixing one and not the other would have left the more
+ * important half (the watchdog polls every fifteen minutes) still reporting a
+ * bare status code. One owner per fact, and a third caller inherits both
+ * behaviours by construction.
+ *
+ * ## THE SERVER'S OWN SENTENCE
+ *
+ * The operator API sends `{ ok, error, detail }` on a refusal, where `error` is
+ * the gate's message and `detail` carries the field and line
+ * (`app/routes/api.operator.ts`). Reporting only the status discards the entire
+ * diagnosis. Measured 2026-09-09: a run printed `sync_posts answered 422` for a
+ * failure whose cause was an unknown `:swatch` directive on a named line, and
+ * recovering that meant reading the pipeline by hand.
+ *
+ * ## WHY 422 IS UNREPAIRABLE RATHER THAN JUST FAILED
+ *
+ * A 422 is an `EditorError`, which the API defines as "nothing happened,
+ * correct the request and retry". An unattended repair cannot correct anything:
+ * it sends the same corpus on every poll. The usual cause is the repository
+ * being AHEAD of the deployed build, where the content is valid and the
+ * renderer running in production is older than it. The repair for that is a
+ * deploy, so a caller that keeps retrying is a monitor arguing with a gate that
+ * is right, on a fifteen minute cadence, until somebody stops reading it.
+ *
+ * @param {string} tool the operator tool that was called
+ * @param {number} status the HTTP status it answered
+ * @param {unknown} payload the parsed response body, or null
+ * @returns {{ miss: string, unrepairable: boolean }}
+ */
+export function refusalMiss(tool, status, payload) {
+  const body = payload && typeof payload === "object" ? /** @type {any} */ (payload) : null;
+  const said = typeof body?.error === "string" ? body.error.trim() : "";
+  const field = typeof body?.detail?.field === "string" && body.detail.field ? body.detail.field : "";
+  const line = typeof body?.detail?.line === "number" ? body.detail.line : null;
+
+  return {
+    miss:
+      `${tool} answered ${status}` +
+      (said ? `: ${said}` : "") +
+      (field ? ` [field ${field}]` : "") +
+      (line === null ? "" : ` [line ${line}]`),
+    unrepairable: status === 422,
+  };
+}

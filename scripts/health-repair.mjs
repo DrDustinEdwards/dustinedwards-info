@@ -45,7 +45,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { failingCheckNames, repairPlan } from "../app/lib/health/repair.mjs";
+import { failingCheckNames, refusalMiss, repairPlan } from "../app/lib/health/repair.mjs";
 
 const args = process.argv.slice(2);
 const flag = (/** @type {string} */ name) => {
@@ -56,7 +56,13 @@ const flag = (/** @type {string} */ name) => {
 /** GitHub Actions renders this as an annotation, which is what reaches the email. */
 const annotate = (/** @type {string} */ message) => console.log(`::error::${message}`);
 
-/** One repair call. Returns a miss string, empty when it converged. */
+/**
+ * One repair call.
+ *
+ * @returns {Promise<{ miss: string, unrepairable: boolean }>} `miss` is empty
+ * when the tool converged. `unrepairable` marks a refusal that repeating this
+ * call cannot fix, which is a different thing from a repair that did not work.
+ */
 async function repair(/** @type {string} */ origin, /** @type {string} */ token, /** @type {string} */ tool) {
   let response = null;
   let payload = null;
@@ -72,19 +78,32 @@ async function repair(/** @type {string} */ origin, /** @type {string} */ token,
     });
     payload = await response.json().catch(() => null);
   } catch (error) {
-    return `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`;
+    return {
+      miss: `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`,
+      unrepairable: false,
+    };
   }
-  if (!response.ok) return `${tool} answered ${response.status}`;
+
+  // The server's own sentence and the 422 rule both live in the decision
+  // module, because the watchdog makes the identical call and the two copies of
+  // this had already drifted. Grounds on `refusalMiss`.
+  if (!response.ok) return refusalMiss(tool, response.status, payload);
 
   const report = payload && typeof payload === "object" ? (payload.data ?? payload) : null;
   // The same rule ship applies: the verdict is READ, never assumed from a 200.
   if (!report || typeof report.converged !== "boolean") {
-    return `${tool} answered without a converged verdict, so nothing was proven`;
+    return {
+      miss: `${tool} answered without a converged verdict, so nothing was proven`,
+      unrepairable: false,
+    };
   }
   if (report.converged !== true) {
-    return `${tool} ran and did not converge (${report.expected} expected, ${report.present} present)`;
+    return {
+      miss: `${tool} ran and did not converge (${report.expected} expected, ${report.present} present)`,
+      unrepairable: false,
+    };
   }
-  return "";
+  return { miss: "", unrepairable: false };
 }
 
 /** @returns {Promise<number>} the exit code */
@@ -121,15 +140,46 @@ async function main() {
   }
 
   const misses = [];
-  for (const tool of plan.repair) {
+  let refused = false;
+  for (const [index, tool] of plan.repair.entries()) {
     console.log(`repairing: ${tool}`);
-    const miss = await repair(origin, token, tool);
-    if (miss) misses.push(miss);
-    else console.log(`  ${tool} converged.`);
+    const outcome = await repair(origin, token, tool);
+    if (!outcome.miss) {
+      console.log(`  ${tool} converged.`);
+      continue;
+    }
+    misses.push(outcome.miss);
+
+    /*
+     * A REFUSAL ABANDONS THE REST OF THE PLAN, and the ordering argument in
+     * `REPAIRABLE` is why. `sync_ask` reads `search_docs`, which `sync_posts`
+     * rewrites; that comment already says content must land before the Ask
+     * upload reads the store it feeds from. When the content repair REFUSED,
+     * the store is not merely stale, it is known-stale, and uploading it is a
+     * write made on a premise the previous call just denied. On 2026-09-09 the
+     * loop ran `sync_ask` anyway and reported two 422s where one had any
+     * meaning.
+     */
+    if (outcome.unrepairable) {
+      refused = true;
+      const skipped = plan.repair.slice(index + 1);
+      if (skipped.length > 0) {
+        console.log(`  not attempted, the refusal stands: ${skipped.join(", ")}`);
+      }
+      break;
+    }
   }
 
   if (misses.length > 0) {
-    annotate(`Self-repair FAILED: ${misses.join("; ")}. The drift stands.`);
+    annotate(
+      refused
+        ? `Self-repair REFUSED: ${misses.join("; ")}. A repair cannot fix this and ` +
+            `repeating it cannot converge: the operator API rejected the content itself, ` +
+            `which is what a repository ahead of the deployed build looks like. Deploy ` +
+            `the build that renders this content (npm run ship), then let the next poll ` +
+            `converge it.`
+        : `Self-repair FAILED: ${misses.join("; ")}. The drift stands.`,
+    );
     return 1;
   }
 
