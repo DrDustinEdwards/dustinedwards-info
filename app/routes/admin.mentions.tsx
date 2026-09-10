@@ -1,5 +1,7 @@
 import { Form, Link, data } from "react-router";
 
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
+import { RowMenu } from "~/components/admin/row-menu";
 import { getEnv } from "~/lib/context";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
@@ -320,47 +322,6 @@ function iso(value: Date): string {
 const DECIDABLE: ReadonlyArray<Webmention["status"]> = ["pending", "approved", "rejected"];
 
 /**
- * The typed-count confirmation, server rendered.
- *
- * A SECOND STEP RATHER THAN A DEAD END: the action refused, said what was at
- * stake, and this carries the same fields back with one field added. That is
- * what gives the no-script path a real ceremony, which is the whole point of
- * the guard living in the action.
- */
-function ConfirmStep({
-  intent,
-  id,
-  prompt,
-  label,
-}: {
-  intent: Intent;
-  id?: number;
-  prompt: string;
-  label: string;
-}) {
-  return (
-    <Form method="post" className="mention-confirm">
-      <input type="hidden" name="intent" value={intent} />
-      {id === undefined ? null : <input type="hidden" name="id" value={id} />}
-      <label>
-        {prompt}{" "}
-        <input
-          type="text"
-          name={CONFIRM_FIELD}
-          inputMode="numeric"
-          autoComplete="off"
-          size={4}
-          required
-        />
-      </label>
-      <button type="submit" className="btn btn-danger">
-        {label}
-      </button>
-    </Form>
-  );
-}
-
-/**
  * One row.
  *
  * THE EXCERPT LEADS, which is the whole of ruling 21b and is a change of
@@ -403,18 +364,26 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
             (mention.failureReason ? `, reason ${mention.failureReason}` : "")}
         </p>
         {confirmDelete === mention.id ? (
-          <ConfirmStep
-            intent="delete"
-            id={mention.id}
-            prompt="Deleting removes the only copy of this mention. Type 1 to confirm:"
-            label="Delete permanently"
-          />
+          <ConfirmDialog
+            title="Delete this mention"
+            body={<p>This removes the only copy of it. Nothing else has one.</p>}
+            requireTyped="1"
+            confirmLabel="Delete permanently"
+            cancelHref="/admin/mentions"
+          >
+            <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="id" value={mention.id} />
+          </ConfirmDialog>
         ) : null}
       </div>
       <div className="mention-actions">
-        {/* Approve and reject are each hidden on the state they would produce,
-            so the pair reads as a decision that can be changed rather than as
-            two buttons one of which does nothing. */}
+        {/*
+          APPROVE STAYS ON THE ROW, because it is the decision the operator came
+          to make and burying the primary action of a queue inside a menu would
+          be the opposite of the rule. Approve and reject are each hidden on the
+          state they would produce, so the pair reads as a decision that can be
+          changed rather than as two buttons one of which does nothing.
+        */}
         {decidable && mention.status !== "approved" ? (
           <Form method="post" className="mention-approve">
             <input type="hidden" name="intent" value="approve" />
@@ -424,25 +393,33 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
             </button>
           </Form>
         ) : null}
-        {decidable && mention.status !== "rejected" ? (
-          <Form method="post">
-            <input type="hidden" name="intent" value="reject" />
+        {/*
+          REJECT AND DELETE MOVE INTO THE ROW MENU, which is the same change the
+          posts list took and for the same reason: three controls on every row
+          compete with the excerpt the reader is actually judging. Delete was
+          already the lightest thing here; a menu is lighter still and it is
+          where an irreversible action belongs beside a reversible one.
+        */}
+        <RowMenu
+          label={`Actions for the mention from ${mention.authorName ?? "an unnamed sender"}`}
+        >
+          {decidable && mention.status !== "rejected" ? (
+            <Form method="post">
+              <input type="hidden" name="intent" value="reject" />
+              <input type="hidden" name="id" value={mention.id} />
+              <button type="submit" className="row-menu-item" data-menu-item>
+                Reject
+              </button>
+            </Form>
+          ) : null}
+          <Form method="post" className="mention-delete">
+            <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={mention.id} />
-            <button type="submit" className="btn-ghost">
-              Reject
+            <button type="submit" className="row-menu-item" data-menu-item>
+              Delete
             </button>
           </Form>
-        ) : null}
-        {/* LAST, AND THE LIGHTEST THING ON THE ROW. It was a filled red button
-            competing with the decision the operator actually came here to make,
-            on every row including the ones with nothing wrong with them. */}
-        <Form method="post" className="mention-delete">
-          <input type="hidden" name="intent" value="delete" />
-          <input type="hidden" name="id" value={mention.id} />
-          <button type="submit" className="btn-text">
-            Delete
-          </button>
-        </Form>
+        </RowMenu>
       </div>
     </li>
   );
@@ -569,14 +546,21 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
             `${REJECTED_RETENTION_DAYS} days.`}
         </p>
         {confirmSweep ? (
-          <ConfirmStep
-            intent="sweep"
-            prompt={
-              `The sweep would remove ${confirmSweep.failed} failed and ` +
-              `${confirmSweep.rejected} rejected mention(s), permanently. Type 1 to confirm:`
+          <ConfirmDialog
+            title="Remove the expired mentions"
+            body={
+              <p>
+                {`This permanently removes ${confirmSweep.failed} failed and ` +
+                  `${confirmSweep.rejected} rejected mention(s). Nothing that is ` +
+                  `still waiting on a decision is touched.`}
+              </p>
             }
-            label="Sweep permanently"
-          />
+            requireTyped="1"
+            confirmLabel="Remove them"
+            cancelHref="/admin/mentions"
+          >
+            <input type="hidden" name="intent" value="sweep" />
+          </ConfirmDialog>
         ) : (
           <Form method="post">
             <input type="hidden" name="intent" value="sweep" />
@@ -584,7 +568,7 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
                 words when it has nothing to do makes the reader read it twice to
                 learn there is nothing to do; a greyed "Remove 0 expired" says it
                 once, and the count is the same fact in both states. */}
-            <button type="submit" className="btn-ghost" disabled={expired === 0}>
+            <button type="submit" className="btn-secondary" disabled={expired === 0}>
               {`Remove ${expired} expired`}
             </button>
           </Form>
