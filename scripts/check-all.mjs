@@ -74,7 +74,7 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 33;
+const MINIMUM_GATES = 34;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -248,6 +248,18 @@ export const TIERS = {
   "check:charts": "offline",
   "check:diagrams": "offline",
   "check:admin-ui": "offline",
+  /*
+   * OFFLINE, and it can be because it renders rather than fetches. It bundles
+   * the three public route components with esbuild and parses the markup with
+   * `microformats-parser`, through the same `scripts/lib/route-render.mjs`
+   * check:admin-ui uses, so it needs no D1, no bucket and no deployed site.
+   *
+   * It DOES build the corpus (`buildArtifact`), which needs
+   * `content/generated/stack.json`; the tier's preflight already builds
+   * content, so the ordering is satisfied for anyone running the tier and named
+   * in the gate's own failure text for anyone running it alone.
+   */
+  "check:microformats": "offline",
   "check:urls": "offline",
   // Reads the two media modules as source and proves every listing axis
   // `listMediaPage` declares is both READ there and FORWARDED by `listMedia`.
