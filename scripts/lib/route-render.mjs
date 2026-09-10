@@ -1,5 +1,5 @@
 /**
- * Renders admin route components to static HTML in Node, so a gate can read the
+ * Renders route components to static HTML in Node, so a gate can read the
  * markup they actually produce.
  *
  * Why this exists: /admin sits behind a real Google session, so no gate can
@@ -13,6 +13,18 @@
  * it is stubbed at resolve time rather than executed. That is a deliberate
  * limit worth stating: this harness proves things about COMPONENTS, and proves
  * nothing about loaders, actions, or anything server-side.
+ *
+ * ## TWO GATES SINCE 2026-09-10, and the header used to say "admin"
+ *
+ * `check:microformats` renders the three PUBLIC routes through the same door.
+ * It is the same problem in a different disguise: a microformats class is a
+ * fact about rendered markup, a typecheck cannot see a string in a `className`,
+ * and `check:content` renders the corpus rather than a page. The alternative
+ * was a second copy of the bundler, which is how the two would have come to
+ * disagree about what a stub is.
+ *
+ * The public routes brought one requirement the admin routes did not, and it is
+ * `URL_ASSET` below.
  */
 
 import { existsSync } from "node:fs";
@@ -22,6 +34,16 @@ import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/**
+ * What a Vite `?url` import resolves to inside this harness.
+ *
+ * Exported so a gate can ASSERT on it rather than discovering it as a
+ * surprising `src` in a diff, and so the string is stated once. It is
+ * deliberately not a plausible path: a sentinel that looked like a real asset
+ * URL is one somebody would eventually compare against a real asset URL.
+ */
+export const URL_ASSET = "asset-url-stubbed-by-route-render";
 
 /**
  * Resolves a `~/...` import the way the Vite config does, then tries the
@@ -77,6 +99,31 @@ export async function bundleRoutes(entries) {
       b.onResolve({ filter: /\+types\// }, (args) => ({ path: args.path, namespace: "stub" }));
       b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
         contents: "module.exports = new Proxy({}, { get: () => () => {} });",
+        loader: "js",
+      }));
+      /*
+       * VITE'S `?url` SUFFIX, which esbuild does not speak.
+       *
+       * The public plane loads its enhancement bundles and two lazy
+       * stylesheets by importing them with `?url` and putting the resulting
+       * string in a `src` or an `href`. esbuild reads that as part of the
+       * FILENAME and refuses: "Cannot read file: .../blog.js?url". Three of
+       * the five do not exist on disk at all until `build:enhance` has run, so
+       * even teaching it to strip the suffix would make this harness depend on
+       * a build product, and a gate that only runs after a build is a gate
+       * that does not run on a fresh checkout.
+       *
+       * So the suffix resolves to the SENTINEL below. What that costs is
+       * stated rather than left to be discovered: the rendered `src` is this
+       * string and not the hashed asset path, so NO GATE USING THIS HARNESS
+       * MAY ASSERT ANYTHING ABOUT AN ENHANCEMENT URL. `check:page-payload`
+       * owns that, against the real build, which is where the question belongs.
+       * What survives here is the script TAG's existence and every attribute
+       * the component writes itself.
+       */
+      b.onResolve({ filter: /\?url$/ }, (args) => ({ path: args.path, namespace: "urlasset" }));
+      b.onLoad({ filter: /.*/, namespace: "urlasset" }, () => ({
+        contents: `module.exports = ${JSON.stringify(URL_ASSET)};`,
         loader: "js",
       }));
       b.onResolve({ filter: /^~\// }, (args) => ({ path: resolveAppPath(args.path) }));
