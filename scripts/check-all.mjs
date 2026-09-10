@@ -74,7 +74,7 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
  */
-const MINIMUM_GATES = 34;
+const MINIMUM_GATES = 35;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -259,6 +259,12 @@ export const TIERS = {
    * content, so the ordering is satisfied for anyone running the tier and named
    * in the gate's own failure text for anyone running it alone.
    */
+  /*
+   * OFFLINE. It reads scripts/ as SOURCE and runs no wrangler command, which is
+   * the whole point: the defect it refuses is invisible until a --remote run on
+   * a runner, and a gate that had to reproduce it would need the runner.
+   */
+  "check:d1-address": "offline",
   "check:microformats": "offline",
   "check:urls": "offline",
   // Reads the two media modules as source and proves every listing axis

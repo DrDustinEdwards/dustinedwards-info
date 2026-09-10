@@ -68,7 +68,8 @@
     "test:worker": "vitest run --config vitest.config.ts",
     "ship": "node scripts/ship.mjs",
     "check:invariants": "node scripts/check-invariants.mjs",
-    "check:microformats": "node scripts/check-microformats.mjs"
+    "check:microformats": "node scripts/check-microformats.mjs",
+    "check:d1-address": "node scripts/check-d1-address.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.10.4",

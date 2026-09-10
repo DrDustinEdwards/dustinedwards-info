@@ -68,6 +68,7 @@ import { retryRead } from "./lib/retry.mjs";
 import { stripComments, stripCommentsAndStrings } from "./lib/strip-comments.mjs";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { resolveD1Address } from "./lib/d1-address.mjs";
 
 /**
  * Whole-line `#` comments out of a YAML file, replaced with a space.
@@ -955,7 +956,8 @@ try {
     const proc = await retryRead(
       () => {
         const r = spawnSync(
-          `npx wrangler d1 execute dustinedwards --remote --json --command "${command}"`,
+          `npx wrangler d1 execute ${resolveD1Address("dustinedwards", "--remote")} ` +
+            `--remote --json --command "${command}"`,
           { cwd: root, encoding: "utf8", shell: true, maxBuffer: 32 * 1024 * 1024 },
         );
         if (r.status !== 0) throw new Error((r.stderr || r.stdout || "no output").slice(0, 200));

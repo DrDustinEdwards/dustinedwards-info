@@ -101,6 +101,8 @@ import { spawnSync } from "node:child_process";
 import { ALL_WIDTHS } from "../app/lib/media/widths.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 
+import { resolveD1Address } from "./lib/d1-address.mjs";
+
 const DB_NAME = "dustinedwards";
 
 /** @param {string} flag */
@@ -125,7 +127,7 @@ const BASE = (argOf("--base") ?? process.env.PUBLIC_ORIGIN ?? SITE_ORIGIN).repla
  */
 function mediaRows(sql) {
   const result = spawnSync(
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command "${sql}"`,
+    `npx wrangler d1 execute ${resolveD1Address(DB_NAME, "--remote")} --remote --json --command "${sql}"`,
     { encoding: "utf8", shell: true, maxBuffer: 32 * 1024 * 1024 },
   );
   const out = `${result.stdout ?? ""}${result.stderr ?? ""}`;
