@@ -192,3 +192,105 @@ export function readinessLines(checks) {
     return `  ${check.ok ? "ok  " : "FAIL"}  ${check.name ?? "(unnamed)"}${counts}`;
   });
 }
+
+/**
+ * The verdict on the DEFERRED checks, read after their repair steps have run.
+ *
+ * ## WHY THIS IS HERE AND NOT INLINE IN SHIP
+ *
+ * The same reason `readinessVerdict` is: the decision is pure, `node:test` can
+ * drive every branch of it, and the alternative is a branch that can only be
+ * exercised by running a real deploy against a broken site. Ruling 56 asks for
+ * a plant proving a body with `ask-index-drift` failing passes readiness and
+ * then fails HERE by name, and that plant is only writable if this is a
+ * function rather than forty lines in the middle of a script.
+ *
+ * ## THE MEANING INVERTS BETWEEN THE TWO SITES, which is the whole design
+ *
+ * At readiness a failing deferred check means "the index is behind", the
+ * ordinary state of a corpus that has just been committed. Here, after its
+ * repair step has run, the same row means THE REPAIR RAN AND DID NOT WORK.
+ *
+ * ## A MISSING ROW IS A MISS, NOT A PASS
+ *
+ * An endpoint that stopped reporting a check proves nothing about it, and
+ * reading that as success is the "assertion that can pass by reading nothing"
+ * this repo has already been bitten by. It is named rather than skipped.
+ *
+ * ## WHY THE `detail` STRING IS NOT IN THESE MESSAGES
+ *
+ * It is not on the wire. `publicHealthBody` rebuilds every row as name, ok and
+ * the two counts, and drops each `detail` DELIBERATELY: they carry row counts
+ * and an R2 object key, and `/api/health` is unauthenticated. That decision is
+ * stated in `app/routes/api.health.ts`'s own docblock. The counts are what the
+ * wire carries and they are the triage for a drift check; the pointer to
+ * Workers Logs is where the rest lives.
+ *
+ * @param {HealthCheckRow[]} checks every row the endpoint returned
+ * @param {Record<string, string>} deferred check name to the step that repairs it
+ * @param {string} [path] for the messages
+ * @returns {{ misses: string[], converged: string[] }}
+ */
+export function deferredMisses(checks, deferred, path = "/api/health") {
+  /** @type {string[]} */
+  const misses = [];
+  /** @type {string[]} */
+  const converged = [];
+
+  for (const [name, repairedBy] of Object.entries(deferred ?? {})) {
+    const row = checks.find((check) => check.name === name);
+    if (!row) {
+      misses.push(`${path} reported no ${name} check, so nothing was proven`);
+      continue;
+    }
+    if (row.ok === true) {
+      converged.push(name);
+      continue;
+    }
+    const counts =
+      typeof row.expected === "number" && typeof row.present === "number"
+        ? ` (expected ${row.expected}, present ${row.present})`
+        : "";
+    misses.push(
+      `${name} is STILL failing after ${repairedBy}${counts}. The endpoint withholds ` +
+        `its detail on purpose; the why is in Workers Logs under alert=health-check-failed`,
+    );
+  }
+
+  return { misses, converged };
+}
+
+/**
+ * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON, each with the step
+ * that repairs it. Ruling 48, generalised by ruling 56.
+ *
+ * THE RULE: readiness gates only on checks whose repair is NOT a later ship
+ * step. A step that refuses before its own remedy is a deadlock, and the
+ * remedy is the thing the refusal prevents from running.
+ *
+ * `content-drift` was the first instance and forced ruling 48. On 2026-09-09 a
+ * ship deployed, refused at readiness on `expected 16, present 14`, and left
+ * production serving a build whose index nothing had updated. The drift was
+ * real and pre-existing, which is precisely the case the sync exists for.
+ *
+ * `ask-index-drift` was the second, and it cost two deploys on 2026-09-10.
+ * Versions 8b4f0ae4 and ad7cb0fb both landed, both refused here, and both
+ * synced nothing; the drift cleared itself within minutes each time. Its
+ * repair is the Ask converge, which runs after readiness, so it was the same
+ * deadlock wearing a different check's name. `media-index-drift` is the same
+ * shape and is included before it costs a third.
+ *
+ * A VALUE PER KEY, naming the step, because the whole point of deferring is
+ * that something later fixes it. A check with nothing to name does not belong
+ * here, which is the test to apply before adding a fourth.
+ *
+ * STILL GATING, deliberately: `media-backup-drift` and `fts-equality`. Neither
+ * has a ship step that repairs it, so under the rule above they gate. See the
+ * note at the assertion step about `fts-equality`, which is the closest call.
+ */
+/** @type {Record<string, string>} */
+export const DEFERRED_CHECKS = {
+  "content-drift": "the D1 sync",
+  "ask-index-drift": "the Ask converge",
+  "media-index-drift": "the media converge",
+};

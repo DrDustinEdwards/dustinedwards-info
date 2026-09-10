@@ -66,7 +66,12 @@ import { fileURLToPath } from "node:url";
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
-import { readinessLines, readinessVerdict } from "./lib/readiness.mjs";
+import {
+  DEFERRED_CHECKS,
+  deferredMisses,
+  readinessLines,
+  readinessVerdict,
+} from "./lib/readiness.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import {
   ASK_POLL_INTERVAL_MS,
@@ -232,23 +237,6 @@ const POLL_GAP_MS = 10_000;
  */
 const READINESS_PATH = "/api/health";
 
-/**
- * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON. Ruling 48.
- *
- * `content-drift` compares D1 against the repository, and the D1 sync three
- * steps later is what converges it. Asserting it before the sync means a
- * drifted corpus blocks its own repair: on 2026-09-09 a ship deployed, refused
- * here on `expected 16, present 14`, and left production serving a build whose
- * index nothing had updated. The drift was real and pre-existing (two posts
- * committed by hand, never synced), which is precisely the case the sync
- * exists for.
- *
- * It is asserted at the END instead, after the sync has run, where a failure
- * carries the opposite meaning: the sync ran and did not converge. The other
- * four checks still gate the step, so a deploy that broke the Ask index, the
- * media index, the backup mirror or FTS still cannot reach a production write.
- */
-const DEFERRED_CHECKS = ["content-drift"];
 
 let step = 0;
 
@@ -873,7 +861,7 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
     );
   }
 
-  const verdict = readinessVerdict(status, text, READINESS_PATH, DEFERRED_CHECKS);
+  const verdict = readinessVerdict(status, text, READINESS_PATH, Object.keys(DEFERRED_CHECKS));
 
   // Printed for BOTH outcomes, before the verdict is acted on, so a reader
   // never has to run the endpoint by hand to see which check failed.
@@ -888,10 +876,10 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
    * step that repairs it.
    */
   const deferredFailing = verdict.deferredFailing ?? [];
-  if (deferredFailing.length > 0) {
+  for (const name of deferredFailing) {
     console.log(
-      `  deferred to after the sync: ${deferredFailing.join(", ")} ` +
-        `(failing now, and the sync is what converges it)`,
+      `  deferred: ${name} is failing now, and ${DEFERRED_CHECKS[name]} is what ` +
+        `converges it. Asserted again after that step.`,
     );
   }
   console.log(
@@ -1480,11 +1468,18 @@ let mediaMiss = "";
  * to protect by refusing, and abandoning the record would cost the reader the
  * one report that says what happened. The exit code at the bottom carries it.
  */
-announce("Content drift, the check readiness deferred");
+announce("The drift checks readiness deferred, asserted");
 
-/** Set when content-drift is still failing after the sync has run. */
-let contentDriftMiss = "";
+/** Set when any deferred check is still failing after its repair step has run. */
+let deferredMiss = "";
 {
+  /*
+   * ONE READ FOR ALL THREE, not one per check. Each is asserted after ITS
+   * repair step, and this point is after all of them, so a single request
+   * satisfies every one. Three requests would also be three chances to trip
+   * the endpoint's per-IP limiter, which answers 429 and would read as a
+   * failure of the checks rather than of the reader.
+   */
   const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
   /** @type {number} */
   let status = 0;
@@ -1498,35 +1493,32 @@ let contentDriftMiss = "";
     status = res.status;
     text = await res.text();
   } catch (error) {
-    contentDriftMiss =
+    deferredMiss =
       `${READINESS_PATH} could not be reached after the sync: ` +
       `${error instanceof Error ? error.message : error}`;
   }
 
-  if (!contentDriftMiss) {
+  if (!deferredMiss) {
     /*
-     * Read with NO deferrals, so the row is the endpoint's own verdict. Only
-     * the content-drift row is consulted: the other four were gated at
-     * readiness, and re-refusing them here would be a second opinion on a
-     * question already answered before anything was written.
+     * Read with NO deferrals, so every row is the endpoint's own verdict. Only
+     * the deferred rows are consulted: the others were gated at readiness, and
+     * re-refusing them here would be a second opinion on a question already
+     * answered before anything was written.
+     *
+     * `fts-equality` IS THE CLOSEST CALL AND IS DELIBERATELY NOT HERE. The D1
+     * sync rebuilds the FTS index outright, so its repair arguably is a later
+     * ship step and the rule above would defer it. Ruling 56 names content,
+     * Ask and media, and deferring a fourth check changes what may gate a
+     * production write, which is a ruling rather than a session's call. Left
+     * gating and raised in the report.
      */
     const verdict = readinessVerdict(status, text, READINESS_PATH);
-    const row = verdict.checks.find((check) => check.name === "content-drift");
-
-    if (!row) {
-      contentDriftMiss = `${READINESS_PATH} reported no content-drift check, so nothing was proven`;
-    } else if (row.ok !== true) {
-      const counts =
-        typeof row.expected === "number" && typeof row.present === "number"
-          ? ` (expected ${row.expected}, present ${row.present})`
-          : "";
-      contentDriftMiss = `content-drift is STILL failing after the sync${counts}`;
-    } else {
-      console.log("  content-drift ok: D1 agrees with the repository.");
-    }
+    const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
+    for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
+    deferredMiss = misses.join("; ");
   }
 
-  if (contentDriftMiss) console.log(`  MISS: ${contentDriftMiss}`);
+  if (deferredMiss) console.log(`  MISS: ${deferredMiss}`);
 }
 
 /* -------------------------------------------------------------- 9. record */
@@ -1557,19 +1549,19 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
  * defect rather than the ordering artifact, and its remedy is finding what
  * wrote the D1 hash rather than a re-run.
  */
-if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || contentDriftMiss) {
+if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || deferredMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",
     mediaMiss ? "THE MEDIA INDEX" : "",
     renderDriftMiss ? "THE RENDER" : "",
     watchdogMiss ? "THE WATCHDOG" : "",
     uptimeMiss ? "THE UPTIME MONITORS" : "",
-    contentDriftMiss ? "CONTENT DRIFT" : "",
+    deferredMiss ? "DEFERRED DRIFT" : "",
   ]
     .filter(Boolean)
     .join(" AND ");
   const several =
-    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, contentDriftMiss].filter(
+    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, deferredMiss].filter(
       Boolean,
     ).length > 1;
   console.error(`\n${"!".repeat(64)}`);
@@ -1579,7 +1571,7 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || con
   if (renderDriftMiss) console.error(`  render:   ${renderDriftMiss}`);
   if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
   if (uptimeMiss) console.error(`  uptime:   ${uptimeMiss}`);
-  if (contentDriftMiss) console.error(`  content:  ${contentDriftMiss}`);
+  if (deferredMiss) console.error(`  deferred: ${deferredMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
