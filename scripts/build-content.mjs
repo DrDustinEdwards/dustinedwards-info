@@ -124,6 +124,40 @@ export function lastCommitDate(file) {
   }
 }
 
+/**
+ * The revision date a post's row carries, or null.
+ *
+ * ONE OWNER for `post.updated ?? lastCommitDate(post.sourcePath)`. That
+ * expression was written once, inline in `sync-content.mjs`, and it is what
+ * decides whether a reader sees an "Updated" line and what `dt-updated`
+ * publishes. `check:microformats` renders that markup offline and has to feed
+ * the component the value production would write; computing it there would have
+ * been a second statement of the rule, and hard rule 17 gives a measured value
+ * to one place or to nowhere.
+ *
+ * A `Date` rather than the `YYYY-MM-DD` string, because the two consumers want
+ * different shapes of it: the sync converts to epoch seconds for the column,
+ * the gate hands it to a component that calls `new Date()` on it. Returning the
+ * string would leave both of them parsing, which is where a timezone gets in.
+ *
+ * MIDNIGHT UTC, explicitly. `new Date("2026-09-09")` is already UTC by spec,
+ * but the sync spelled the time out and this keeps that spelling rather than
+ * relying on a default nobody should have to look up.
+ *
+ * NULL IS A REAL ANSWER AND NOT A FAILURE. A shallow clone has no history for
+ * most files, so CI legitimately gets null here where a full local clone gets a
+ * date. Both are correct: the row then carries no `updated_at`, the page shows
+ * no revision, and `dt-updated` is absent. The gate asserts the PAIRING rather
+ * than the presence, so it holds in both environments.
+ *
+ * @param {{ updated?: string | null, sourcePath: string }} post
+ * @returns {Date | null}
+ */
+export function revisedDate(post) {
+  const revised = post.updated ?? lastCommitDate(post.sourcePath);
+  return revised ? new Date(`${revised}T00:00:00.000Z`) : null;
+}
+
 async function main() {
   const artifact = await buildArtifact();
   await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
