@@ -17,7 +17,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { POSTS_PER_PAGE } from "../lib/blog-listing.mjs";
+import { HOME_CARDS, POSTS_PER_PAGE, startHere } from "../lib/blog-listing.mjs";
 import {
   FAILED_RETENTION_DAYS,
   REJECTED_RETENTION_DAYS,
@@ -330,6 +330,89 @@ export async function listBlogPosts(
     perPage,
     pageCount: Math.max(1, Math.ceil(total / perPage)),
   };
+}
+
+/**
+ * The home page's "Start here": the featured post, then the newest others.
+ *
+ * ## THE DEFECT THIS REPLACES, measured on production 2026-09-10
+ *
+ * Home called `listBlogPosts({ perPage: 4 })` and handed the page to
+ * `splitFeatured`, which looks for `featured` INSIDE the rows it was given. The
+ * only featured post is the flagship, which sorts fifth by `publish_at`, so
+ * `featured` came back null and the whole section is behind
+ * `{featured ? ... : null}`. The heading, four cards and the "All N posts" link
+ * rendered NOTHING on the site's front door, and had done since the home
+ * rebuild. A 200 with a correct page is what that looks like from outside.
+ *
+ * Ruling 57: the lead is FETCHED, not hoped for.
+ *
+ * ## `posts_featured_idx` ALREADY EXISTED FOR THIS
+ *
+ * `schema.ts` has carried an index on `(featured, publish_at)` since the column
+ * landed, commented "Covers the home page's featured selection". Nothing ever
+ * issued the query it covers. This is that query.
+ *
+ * ## WHAT HAPPENS WITH NO FEATURED POST
+ *
+ * The section shows the four newest, and the lead is simply the newest. That is
+ * ruling 57's own instruction rather than a fallback invented here, and it is
+ * not hard rule 13's substituted value: nothing on this page LABELS the lead as
+ * featured (unlike `/blog`, which draws a "Featured" chip), so a reader is told
+ * only "start here", which the newest post answers honestly. An empty corpus
+ * still yields null and the section stays dark, which is the correct dark.
+ *
+ * ## ONE ROUND TRIP
+ *
+ * Three statements in one `db.batch`, on `listBlogPosts`'s grounds: none reads
+ * what another writes. `total` rides along because home renders it twice, in
+ * the proof tile and in the "All N posts" link, and a second call for one
+ * integer was the other half of what this replaces.
+ *
+ * Every statement composes `isBlogPost()`, which composes `publiclyVisible()`.
+ * Hard rule 1: a draft cannot lead the front page.
+ */
+export async function listHomeStartHere(
+  env: Env,
+  options: { cards?: number; timings?: Timings } = {},
+) {
+  const db = getDb(env);
+  /** Cards the section renders in total, lead included. */
+  const cards = Math.max(1, options.cards ?? HOME_CARDS);
+
+  /*
+   * `cards` OTHERS, not `cards - 1`, and the extra row is what makes the
+   * no-featured case work: it is the one promoted to lead. Asking for exactly
+   * three would leave the section a card short on a corpus with nothing
+   * featured, which is the state the plant for this ruling exercises.
+   */
+  const [featuredRows, otherRows, countRows] = await timed(options.timings, "d1_batch", () =>
+    db.batch([
+      db
+        .select(postCard)
+        .from(posts)
+        .where(and(isBlogPost(), eq(posts.featured, true)))
+        .orderBy(desc(posts.publishAt), desc(posts.id))
+        .limit(1),
+      db
+        .select(postCard)
+        .from(posts)
+        .where(and(isBlogPost(), eq(posts.featured, false)))
+        .orderBy(desc(posts.publishAt), desc(posts.id))
+        .limit(cards),
+      db.select({ total: count() }).from(posts).where(isBlogPost()),
+    ]),
+  );
+
+  /*
+   * THE DECISION IS `startHere`'s, not this function's. The SQL above supplies
+   * the two ordered lists; which of them leads is a rule that `check:microformats`
+   * has to reproduce offline with no database, so it lives in a pure module both
+   * callers import. See its docblock for the two branches.
+   */
+  const { featured, recent } = startHere(featuredRows, otherRows, cards);
+
+  return { featured, recent, total: countRows[0]?.total ?? 0 };
 }
 
 /**

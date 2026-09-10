@@ -74,7 +74,12 @@ import { assertFloor } from "./lib/floor.mjs";
 import { bundleRoutes, importBundled, renderRoute } from "./lib/route-render.mjs";
 import { buildArtifact } from "./build-content.mjs";
 
-import { POSTS_PER_PAGE, pageCount, splitFeatured } from "../app/lib/blog-listing.mjs";
+import {
+  POSTS_PER_PAGE,
+  pageCount,
+  splitFeatured,
+  startHere,
+} from "../app/lib/blog-listing.mjs";
 import { postPath } from "../app/lib/content/pipeline.mjs";
 
 const { mf2 } = await import("microformats-parser");
@@ -700,8 +705,36 @@ assert(
 
 // --- 3. The home page carries the site author's h-card --------------------
 
-const homeFeatured = ordered.find((/** @type {any} */ p) => p.featured) ?? ordered[0];
-const homeRecent = ordered.filter((/** @type {any} */ p) => p.slug !== homeFeatured.slug).slice(0, 2);
+/*
+ * THE HOME FIXTURE IS DERIVED, NOT SUPPLIED. Ruling 57.
+ *
+ * This used to be `ordered.find(p => p.featured) ?? ordered[0]` plus two more,
+ * which is a THIRD statement of which post leads the front page, written by the
+ * gate that is supposed to be checking it. It also asserted a section that
+ * production did not render at all: the loader looked for the featured post
+ * inside the four newest, the flagship sorts fifth, and the whole block was
+ * dark on the live site while this gate reported four happy h-entries.
+ *
+ * Now the two arrays are built the way `listHomeStartHere`'s two statements
+ * build them, `featured = 1` and `featured = 0`, each newest first, and
+ * `startHere` makes the decision for both. The gate can no longer hand itself a
+ * lead, and if the rule changes in one place this fixture changes with it.
+ */
+const homeFeaturedRows = ordered.filter((/** @type {any} */ p) => p.featured);
+const homeOtherRows = ordered.filter((/** @type {any} */ p) => !p.featured);
+const { featured: homeFeatured, recent: homeRecent } = startHere(
+  homeFeaturedRows,
+  homeOtherRows,
+);
+
+assert(
+  "the home Start here section has a lead to render",
+  homeFeatured !== null,
+  `startHere returned no lead from ${homeFeaturedRows.length} featured and ` +
+    `${homeOtherRows.length} other published post(s). The section is behind ` +
+    `{featured ? ... : null}, so a null lead renders nothing and every assertion ` +
+    `below would pass over an empty page.`,
+);
 const homeHtml = await renderRoute(homeModule, {
   path: "/",
   url: "/",
@@ -857,10 +890,15 @@ await cleanup();
  * by four before the file was saved. Re-measure by RUNNING, never by arithmetic
  * on the old number.
  *
- * FLOORED AT 205, AND `check:floors` CHOSE THAT NUMBER, not taste. The first
+ * FLOORED AT 208, AND `check:floors` CHOSE THAT NUMBER, not taste. The first
  * value written here was 190, a gap of 24 against a tolerance of 11, and the
  * floors gate refused it by name: 24 assertions could have stopped running and
- * this floor would still have passed. 205 leaves a gap of 9.
+ * this floor would still have passed.
+ *
+ * RE-MEASURED 2026-09-10 at 218 when ruling 57 landed: the home section now
+ * renders four cards rather than the three this gate used to fabricate, and it
+ * gained the lead assertion. 205 was a gap of 13 against a tolerance of 11, so
+ * the floor moved with the count. 208 leaves a gap of 10.
  *
  * WHAT THAT TIGHTNESS COSTS, stated rather than discovered later: unpublishing
  * a post removes roughly thirteen assertions from this sweep and would breach
@@ -868,7 +906,7 @@ await cleanup();
  * repair is the same as everywhere else, a re-measured floor in the same commit
  * as the corpus change. Publishing a post only ever moves the count up.
  */
-const MINIMUM_CHECKS = 205;
+const MINIMUM_CHECKS = 208;
 const floorBreach = assertFloor(
   "check:microformats",
   "checks",

@@ -15,6 +15,9 @@
 /** Posts per page on /blog. */
 export const POSTS_PER_PAGE = 10;
 
+/** Cards the home "Start here" section shows, lead included. See `startHere`. */
+export const HOME_CARDS = 4;
+
 /**
  * Which page a post at a 1-based position in the ordered listing lands on.
  *
@@ -70,3 +73,51 @@ export function splitFeatured(posts, eligible) {
   if (!featured) return { featured: null, posts };
   return { featured, posts: posts.filter((post) => post.slug !== featured.slug) };
 }
+
+/**
+ * What the home page's "Start here" section shows, from two ordered lists.
+ *
+ * ## WHY THIS IS A PURE FUNCTION AND NOT THREE LINES IN THE QUERY
+ *
+ * `listHomeStartHere` fetches the featured post and the newest non-featured
+ * posts as two ordered statements, which is what the `(featured, publish_at)`
+ * index is for. Deciding which of those becomes the LEAD is a rule rather than
+ * a query, and it has two branches: `check:microformats` renders this section
+ * offline and has to produce the same fixture the loader would, and it cannot
+ * run SQL. A rule written twice is a rule that disagrees with itself the first
+ * time somebody changes one copy.
+ *
+ * So the SQL supplies the ordering and this supplies the decision. Both callers
+ * pass the same two arrays and `test/blog-listing.test.mjs` can drive every
+ * branch without a database.
+ *
+ * ## THE TWO BRANCHES, and the second is ruling 57's own instruction
+ *
+ * With a featured post it leads and the others fill in behind it. With none,
+ * the section shows the `cards` NEWEST and the newest leads. That is not a
+ * substituted value: nothing on the home page labels the lead as featured, so
+ * "start here" is answered honestly by the newest post. An empty corpus returns
+ * a null lead and the section stays dark.
+ *
+ * `others` must EXCLUDE the featured post, which is how the caller queries it
+ * (`featured = 0`). Passing a list that contains it would print it twice.
+ *
+ * @template {{ slug: string }} T
+ * @param {T[]} featuredRows at most one, the featured post
+ * @param {T[]} others newest first, none of them featured
+ * @param {number} [cards] how many the section shows in total, lead included
+ * @returns {{ featured: T | null, recent: T[] }}
+ */
+export function startHere(featuredRows, others, cards = HOME_CARDS) {
+  const lead = featuredRows[0] ?? others[0] ?? null;
+  if (lead === null) return { featured: null, recent: [] };
+  /*
+   * SLICED FROM ONE ARRAY in both branches, so the two cannot come to disagree
+   * about order, and the lead is dropped from `others` only when it CAME from
+   * there. The featured branch keeps `others` whole because the featured post
+   * is not in it.
+   */
+  const recent = featuredRows[0] ? others.slice(0, cards - 1) : others.slice(1, cards);
+  return { featured: lead, recent };
+}
+
