@@ -91,7 +91,7 @@
       "realPath": "app/lib/media/classify.mjs, imported by the Worker, by the build scripts and by check:media",
       "homeArticle": {
         "slug": "ten-years-on-cloudflare",
-        "title": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild"
+        "title": "Every Cloudflare product, and which ones this site runs on"
       },
       "inputs": [
         {
