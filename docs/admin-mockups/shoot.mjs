@@ -45,8 +45,24 @@ try {
             `${name} at ${width}: document scrollWidth is ${scrollWidth}`,
           );
         }
+        /*
+         * THE VIEWPORT IS GROWN TO THE DOCUMENT, then captured WITHOUT
+         * `fullPage`.
+         *
+         * `fullPage` captures beyond the viewport, and anything painted
+         * relative to the viewport stays the size the viewport was: a modal
+         * dialog's `::backdrop` and the drawer's scrim both stop partway down
+         * the image and leave the rest of the page undimmed. That reads as a
+         * broken design in the screenshot and is purely an artifact of how the
+         * capture works. Resizing first means the viewport IS the document, so
+         * every fixed layer covers what it covers in a browser.
+         */
+        const docHeight = await page.evaluate(
+          () => document.documentElement.scrollHeight,
+        );
+        await page.setViewport({ width, height: docHeight });
         const out = join(dir, `${name}-${width}-${theme}.png`);
-        await page.screenshot({ path: out, fullPage: true });
+        await page.screenshot({ path: out });
         written.push(out);
         await page.close();
       }
