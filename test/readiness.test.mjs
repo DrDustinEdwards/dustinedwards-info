@@ -21,7 +21,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { readinessLines, readinessVerdict } from "../scripts/lib/readiness.mjs";
+import {
+  DEFERRED_CHECKS,
+  deferredMisses,
+  readinessLines,
+  readinessVerdict,
+} from "../scripts/lib/readiness.mjs";
 
 /** What the endpoint actually answers when every check passed. */
 const HEALTHY = JSON.stringify({
@@ -203,4 +208,82 @@ test("an endpoint disagreeing with itself still refuses, even with a deferral", 
   const verdict = readinessVerdict(503, incoherent, "/api/health", ["content-drift"]);
   assert.equal(verdict.ok, false);
   assert.match(verdict.why, /no check is marked failing/);
+});
+
+/* ---------------------------------------------------------------- ruling 56 */
+
+/**
+ * THE PLANT RULING 56 ASKED FOR, and it replays what two deploys cost.
+ *
+ * On 2026-09-10 versions 8b4f0ae4 and ad7cb0fb both landed and both refused at
+ * readiness on `ask-index-drift` answering 503. The Ask converge, which is what
+ * repairs that index, runs AFTER readiness, so the step refused before its own
+ * remedy and synced nothing; the drift cleared itself within minutes both
+ * times. Ruling 48's deadlock, wearing a different check's name.
+ *
+ * The body below is that health response. It must pass readiness under ship's
+ * own deferral list, and then FAIL the post-repair assertion by name.
+ */
+const ASK_DRIFTED = JSON.stringify({
+  ok: false,
+  checks: [
+    { name: "ask-index-drift", ok: false, expected: 121, present: 120 },
+    { name: "media-index-drift", ok: true },
+    { name: "media-backup-drift", ok: true },
+    { name: "content-drift", ok: true },
+    { name: "fts-equality", ok: true },
+  ],
+});
+
+/*
+ * SHIP'S OWN TABLE, IMPORTED, NOT COPIED. A hand-written mirror here would
+ * keep passing after somebody removed a check from the real list, which is the
+ * exact anti-pattern this repo gates against elsewhere: the plant would go on
+ * proving a deferral that no longer exists.
+ */
+const SHIP_DEFERRED = DEFERRED_CHECKS;
+test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
+  // Undeferred, this is the refusal that cost two deploys.
+  const gated = readinessVerdict(503, ASK_DRIFTED);
+  assert.equal(gated.ok, false, "undeferred, this still refuses");
+  assert.match(gated.why, /ask-index-drift/);
+
+  const deferred = readinessVerdict(503, ASK_DRIFTED, "/api/health", Object.keys(SHIP_DEFERRED));
+  assert.equal(deferred.ok, true, "deferred, the ship reaches the Ask converge");
+  assert.deepEqual(
+    deferred.deferredFailing,
+    ["ask-index-drift"],
+    "reported as failing, never silently forgiven",
+  );
+});
+
+test("THE OTHER HALF: the same body fails the post-repair assertion, by name", () => {
+  const { misses, converged } = deferredMisses(JSON.parse(ASK_DRIFTED).checks, SHIP_DEFERRED);
+  assert.equal(misses.length, 1, "one deferred check is still failing");
+  assert.match(misses[0], /ask-index-drift is STILL failing after the Ask converge/);
+  assert.match(misses[0], /expected 121, present 120/, "the counts the wire carries are the triage");
+  assert.deepEqual(
+    converged.sort(),
+    ["content-drift", "media-index-drift"],
+    "the two that did converge are reported converged, not silent",
+  );
+});
+
+test("a deferred check the endpoint stopped reporting is a MISS, not a pass", () => {
+  /*
+   * The "assertion that can pass by reading nothing" shape. An endpoint that
+   * dropped a check proves nothing about it, and treating absence as success
+   * is how a deferral turns into a hole.
+   */
+  const { misses } = deferredMisses([{ name: "content-drift", ok: true }], SHIP_DEFERRED);
+  assert.equal(misses.length, 2, "the two absent checks are both named");
+  assert.match(misses.join(" "), /no ask-index-drift check, so nothing was proven/);
+  assert.match(misses.join(" "), /no media-index-drift check, so nothing was proven/);
+});
+
+test("every deferred check converging leaves no miss", () => {
+  const healthy = JSON.parse(HEALTHY).checks;
+  const { misses, converged } = deferredMisses(healthy, SHIP_DEFERRED);
+  assert.deepEqual(misses, [], "a clean run reports nothing");
+  assert.equal(converged.length, 3, "and says so for all three rather than staying quiet");
 });
