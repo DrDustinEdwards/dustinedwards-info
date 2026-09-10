@@ -44,6 +44,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertFloor } from "./lib/floor.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
+import { CHECK_COPY } from "../app/lib/admin/check-copy.mjs";
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
 // The retention windows are asserted against the CONSTANTS, not against a copy
@@ -4089,14 +4091,41 @@ structural(
  * not.
  */
 for (const state of ["overview, all healthy", "overview, one check failing"]) {
+  /*
+   * EVERY CHECK IS ON THE PAGE, NAMED IN THE OPERATOR'S WORDS. Ruling 54: the
+   * instrument ids are what the source calls these, and four of the five do not
+   * name the thing they are about. The mapping is CHECK_COPY, and asserting
+   * against it rather than against a list retyped here is what stops this gate
+   * becoming a second owner of the names.
+   */
   structural("every health check is named on the page", state, (h) =>
-    ["ask-index-drift", "media-index-drift", "media-backup-drift", "content-drift", "fts-equality"].every((name) =>
-      h.includes(name),
+    Object.values(CHECK_COPY).every((copy) => h.includes(escapeHtml(copy.name))),
+  );
+  /*
+   * AND THE INSTRUMENT IDS ARE GONE. The positive half above would pass on a
+   * page that printed both, which is the state this ruling was written against.
+   */
+  structural("no instrument id reaches the operator's page", state, (h) =>
+    !["ask-index-drift", "media-index-drift", "media-backup-drift", "content-drift", "fts-equality"].some(
+      (name) => h.includes(name),
     ),
   );
-  structural("every check renders the verdict's OWN sentence", state, (h) => {
+  /*
+   * THE FIGURES ARE STILL THE INSTRUMENT'S. check-copy.mjs owns nouns and verbs
+   * only: a failing check's sentence substitutes from the verdict's own
+   * `counts`, and a check that ships none renders its own `detail`. So this
+   * asserts the count SURVIVED the rewording, which is the half rule 17 cares
+   * about, rather than the wording itself.
+   */
+  structural("a failing check still reports the instrument's own numbers", state, (h) => {
     const checks = state === "overview, all healthy" ? HEALTH_OK : HEALTH_ONE_FAILING;
-    return checks.every((check) => h.includes(escapeHtml(check.detail)));
+    return checks
+      .filter((check) => !check.ok)
+      .every((check) =>
+        check.counts
+          ? h.includes(String(check.counts.expected)) && h.includes(String(check.counts.present))
+          : h.includes(escapeHtml(check.detail)),
+      );
   });
 }
 
@@ -4109,18 +4138,46 @@ for (const state of ["overview, all healthy", "overview, one check failing"]) {
 structural("a healthy run marks no card as failing", "overview, all healthy", (h) =>
   !h.includes("FAILING") && !/data-status="error"/.test(h),
 );
+/*
+ * ONE ROW IS MARKED FAILING AND EXACTLY ONE. The verdict is a WORD first, then
+ * a colour, then a border style, so it survives forced-colors; the check is on
+ * the word, because that is the channel that cannot be taken away.
+ */
 structural("a failing check is marked failing, and only it", "overview, one check failing", (h) =>
-  h.includes("FAILING") &&
-  (h.match(/data-status="error"/g) ?? []).length === 1 &&
-  (h.match(/FAILING/g) ?? []).length === 1,
+  (h.match(/>failing</g) ?? []).length === 1 &&
+  (h.match(/>passing</g) ?? []).length === 4,
+);
+
+/*
+ * AND ONLY THE FAILING ROW OFFERS A REPAIR. A kebab on a passing row opens onto
+ * nothing, which is the empty-Maintenance defect one level down.
+ */
+structural("only a row with a repair carries a menu", "overview, one check failing", (h) =>
+  (h.match(/class="row-menu"/g) ?? []).length === 1,
+);
+structural("a healthy overview offers no row menus at all", "overview, all healthy", (h) =>
+  !h.includes('class="row-menu"'),
 );
 
 /*
  * THE STORE COUNTS ARE THE ONES HANDED IN. A page that hard-coded a plausible
  * number would pass every assertion above.
  */
-structural("the store counts are the ones sync_status reported", "overview, all healthy", (h) =>
-  h.includes(">12<") && h.includes(">122<") && h.includes("11 publicly visible"),
+/*
+ * THE FIGURES ARE THE ONES HANDED IN. A page that hard-coded a plausible number
+ * would pass every assertion above.
+ *
+ * TWO OF THEM ARE ON THE SURFACE since ruling 54, and the other two are under a
+ * disclosure: what the repository holds and what the site is serving are the
+ * pair that can disagree, and the disagreement is why the panel exists. The
+ * search count still has to be PRESENT, which is what stops "moved it under a
+ * details" becoming "dropped it".
+ */
+structural("the two figures are the ones sync_status reported", "overview, all healthy", (h) =>
+  h.includes(">12<") && h.includes("11 of them public to readers"),
+);
+structural("the quieter counts survive under the disclosure", "overview, all healthy", (h) =>
+  /<details class="admin-explain">[\s\S]*122[\s\S]*<\/details>/.test(h),
 );
 
 /*
@@ -4141,7 +4198,7 @@ structural("no divergence panel when the list is empty", "overview, all healthy"
   !h.includes("Divergences"),
 );
 structural("a recorded divergence names its commit and its reason", "overview, one check failing", (h) =>
-  h.includes("Divergences") &&
+  h.includes("Changes the site did not pick up") &&
   h.includes("a-post-that-did-not-land") &&
   h.includes("9876543") &&
   h.includes("D1 write failed after the commit landed"),
@@ -4601,22 +4658,49 @@ structural(
  * number is not visits", and those two sentences live in different parts of the
  * page. Labels CLAIM. Prose EXPLAINS.
  *
- * So the ban now runs against the markup with `<caption>` removed. Every label
- * surface stays covered: the panel heading, the column headers, the chips, the
- * rows and the empty and error states. The caption, which is the one element
- * whose job is to say what the number is and is not, is free to name the thing
- * it is contrasting against.
+ * So the ban runs against the markup with the EXPLAINING element removed. Every
+ * label surface stays covered: the panel heading, the column headers, the chips,
+ * the rows and the empty and error states. The one element whose job is to say
+ * what the number is and is not stays free to name the thing it contrasts
+ * against.
+ *
+ * THAT ELEMENT WAS A `<caption>` AND IS NOW A `<details>`, 2026-09-10. Ruling 54
+ * took prose out of every admin table, because a caption is announced before
+ * EVERY row: this five-sentence caveat was read once per path. It moved under
+ * the table and the exemption followed it there, rather than being widened or
+ * dropped. Same scope, different element.
  *
  * The positive half below is unchanged and is what actually guarantees the
  * honest label: every state must SAY "origin requests".
  * ---------------------------------------------------------------------- */
+
+/**
+ * Whether a menu item with this label is in the markup.
+ *
+ * ATTRIBUTE ORDER IS NOT SOURCE ORDER. React reorders them, measured on this
+ * repo's own render: a button written `type`, `name`, `value`, `className`
+ * came back `type`, `value`, `class`, `name`. So the question is asked as "a
+ * button element that carries both marks and has this label", never as one
+ * literal string.
+ *
+ * @param {string} html @param {string} label
+ */
+function hasMenuItem(html, label) {
+  const buttons = html.match(/<button[^>]*>[\s\S]*?<\/button>/g) ?? [];
+  return buttons.some(
+    (button) =>
+      button.includes('class="row-menu-item"') &&
+      button.includes("data-menu-item") &&
+      button.replace(/<[^>]*>/g, "").trim() === label,
+  );
+}
 
 const FORBIDDEN_COPY = ["visits", "visitors", "traffic", "page views"];
 const TRAFFIC_STATES = ["origin requests, loaded", "origin requests, empty", "origin requests, error"];
 
 /** The rendered markup minus the one element allowed to name what this is not. */
 const withoutCaption = (/** @type {string} */ h) =>
-  h.replace(/<caption[\s\S]*?<\/caption>/gi, " ");
+  h.replace(/<details class="admin-explain origin-explain">[\s\S]*?<\/details>/gi, " ");
 
 /*
  * THE EXEMPTION IS ITSELF ASSERTED. A `<caption>` regex that matched nothing
@@ -4629,12 +4713,12 @@ const withoutCaption = (/** @type {string} */ h) =>
   const loaded = htmlFor("origin requests, loaded");
   const stripped = withoutCaption(loaded);
   assert(
-    "copy law: the caption exemption removes a caption and not the page",
-    /<caption/i.test(loaded) &&
-      !/<caption/i.test(stripped) &&
+    "copy law: the exemption removes the disclosure and not the page",
+    /class="admin-explain origin-explain"/.test(loaded) &&
+      !/class="admin-explain origin-explain"/.test(stripped) &&
       stripped.length > loaded.length * 0.5,
     `loaded state is ${loaded.length} bytes, ${stripped.length} after removing the ` +
-      `caption. Either no caption was found, or the strip took most of the page ` +
+      `disclosure. Either none was found, or the strip took most of the page ` +
       `with it and every absence check below examines nothing.`,
   );
 }
@@ -4681,10 +4765,20 @@ const READERSHIP_STATES = [
   "posts index, readership unavailable",
 ];
 
-/* The honest label, on every state, including the ones with no number to show. */
+/*
+ * The honest label, on every state, including the ones with no number to show.
+ *
+ * IT IS "Reads counted" SINCE RULING 54, and the change is the meeting point of
+ * two rulings rather than a rewording. Ruling 54 takes "origin requests" off the
+ * operator's page; the copy law below forbids "views", "visits", "visitors" and
+ * "traffic" here, because a cached read never reaches the Worker and any of
+ * those would overstate readership. The participle is what satisfies both: it
+ * claims only what was counted, and the disclosure under the table says what was
+ * not. The forbidden list is UNCHANGED, so the old overstatement is still gated.
+ */
 for (const state of READERSHIP_STATES) {
-  structural("readership: the column is labelled origin requests", state, (h) =>
-    /<th[^>]*>Origin requests<\/th>/.test(h),
+  structural("readership: the column claims only what was counted", state, (h) =>
+    /<th[^>]*>Reads counted<\/th>/.test(h),
   );
 }
 
@@ -4784,8 +4878,8 @@ for (const word of FORBIDDEN_COPY) {
   }
 }
 for (const state of READERSHIP_STATES) {
-  structural(`copy law: ${state} says origin requests`, state, (h) =>
-    /origin requests/i.test(h),
+  structural(`copy law: ${state} names the count honestly`, state, (h) =>
+    /reads counted/i.test(h),
   );
 }
 
@@ -5056,12 +5150,12 @@ structural(
 structural(
   "Reject is the secondary",
   "mentions, populated queue",
-  (h) => /<button type="submit" class="btn-ghost">\s*Reject\s*<\/button>/.test(h),
+  (h) => hasMenuItem(h, "Reject"),
 );
 structural(
   "Delete is the text weight",
   "mentions, populated queue",
-  (h) => /<button type="submit" class="btn-text">\s*Delete\s*<\/button>/.test(h),
+  (h) => hasMenuItem(h, "Delete"),
 );
 /* And nothing on a row is the danger fill any more. The confirmation step still
    is, which is why this reads the ordinary queue and not that one. */
@@ -5145,12 +5239,13 @@ structural(
 structural(
   "the sweep button is labelled with what it would remove",
   "mentions, populated queue",
-  (h) => /<button type="submit" class="btn-ghost">Remove 3 expired<\/button>/.test(h),
+  (h) => /<button type="submit" class="btn-secondary">Remove 3 expired<\/button>/.test(h),
 );
 structural(
   "with nothing expired the button is disabled and keeps its label",
   "mentions, nothing expired",
-  (h) => /<button type="submit" class="btn-ghost" disabled="">Remove 0 expired<\/button>/.test(h),
+  (h) =>
+    /<button type="submit" class="btn-secondary" disabled="">Remove 0 expired<\/button>/.test(h),
 );
 
 /*
@@ -5187,7 +5282,9 @@ structural(
 structural(
   "the delete refusal renders a typed-confirmation field",
   "mentions, delete awaiting confirmation",
-  (h) => h.includes(`name="${CONFIRM_FIELD}"`) && h.includes("Type 1 to confirm"),
+  (h) =>
+    h.includes(`name="${CONFIRM_FIELD}"`) &&
+    /Type\s*<strong>1<\/strong>\s*to confirm/.test(h),
 );
 structural(
   "the delete refusal carries the id back, so the second step names the same row",
@@ -5197,7 +5294,7 @@ structural(
 structural(
   "the sweep refusal states the quantity at stake",
   "mentions, sweep awaiting confirmation",
-  (h) => h.includes("2 failed and 1 rejected mention(s), permanently"),
+  (h) => h.includes("2 failed and 1 rejected mention(s)"),
 );
 structural(
   "the sweep refusal renders a typed-confirmation field",
@@ -5551,6 +5648,248 @@ assert(
   "no rendered state contains a GET form posting to /admin/media",
 );
 
+/* =========================================================================
+ * RULING 54. Five assertions the redesign turns on, and none of them is a
+ * restatement of the fixture: each one is a property that was FALSE before
+ * this session and would be false again if the code regressed.
+ * ====================================================================== */
+
+/*
+ * (1) THE CONFIRMATION DIALOG.
+ *
+ * Five properties, and the first is the one that makes the other four
+ * possible. A disabled submitter contributes NO name and NO value, so a
+ * confirmation whose intent rides on `<button name="intent">` sends no intent
+ * the moment that button is disabled: the posts and editor confirmations both
+ * did exactly that, which is why neither could adopt disable-until-it-matches
+ * while the media modal could. Asserting the intent is a FIELD is therefore
+ * asserting that the ceremony is implementable at all.
+ */
+const confirmState = renders["posts index, bulk delete awaiting confirmation"] ?? "";
+const confirmDialog = confirmState.slice(
+  confirmState.indexOf("<dialog"),
+  confirmState.indexOf("</dialog>") + "</dialog>".length,
+);
+
+assert(
+  "confirmation: the state renders a <dialog>, not a bare form",
+  confirmDialog.startsWith("<dialog") && confirmDialog.endsWith("</dialog>"),
+  `found ${confirmDialog.slice(0, 80) || "no dialog element"}`,
+);
+
+assert(
+  "confirmation: the intent travels as a hidden field",
+  /<input[^>]*type="hidden"[^>]*name="intent"[^>]*value="bulk-delete"/.test(confirmDialog),
+  "no hidden intent input inside the dialog; a disabled submit button would " +
+    "send no intent at all and the confirmation could never be disabled",
+);
+
+assert(
+  "confirmation: the intent is NOT on the submit button",
+  !/<button[^>]*name="intent"/.test(confirmDialog),
+  "the submitter carries the intent, which is the shape that cannot be disabled",
+);
+
+assert(
+  "confirmation: the typed field is required and named from the constant",
+  new RegExp(`<input[^>]*name="${CONFIRM_FIELD}"[^>]*required`).test(confirmDialog) ||
+    new RegExp(`<input[^>]*required[^>]*name="${CONFIRM_FIELD}"`).test(confirmDialog),
+  `no required input named ${CONFIRM_FIELD} inside the dialog`,
+);
+
+/*
+ * THE SERVER RENDERS IT ENABLED AND INLINE, which is the no-script path and is
+ * the opposite of what the design does once hydrated.
+ *
+ * `data-inline` is what gives a dialog a box at all without `showModal()`: a
+ * `<dialog>` with neither `open` nor that attribute is `display: none`, so a
+ * reader with scripting off would lose the confirmation entirely. And the
+ * button must arrive ENABLED, because `typed` never becomes anything without
+ * script and a server-disabled button would leave that reader unable to
+ * confirm at all. The action re-checks the count either way.
+ */
+assert(
+  "confirmation: renders inline on the server, so no script still reaches it",
+  /<dialog[^>]*data-inline=""/.test(confirmDialog),
+  "the dialog has no data-inline attribute, so with no script it is display:none",
+);
+
+assert(
+  "confirmation: the confirm button is ENABLED in the server render",
+  !/<button[^>]*type="submit"[^>]*disabled/.test(confirmDialog),
+  "a server-disabled button can never be enabled without script",
+);
+
+/*
+ * AND THE COMPONENT ACTUALLY MODALISES AND DISABLES. The render above cannot
+ * see either, because this harness never dispatches an effect: it reports the
+ * server pass only. So these two read the component's source with comments
+ * stripped, which is the only place the behaviour exists.
+ */
+const confirmSource = stripComments(
+  readFileSync(join(root, "app/components/admin/confirm-dialog.tsx"), "utf8"),
+);
+assert(
+  "confirmation: the component opens it with showModal()",
+  /showModal\(\)/.test(confirmSource),
+  "no showModal() call; the dialog would never become modal or draw a scrim",
+);
+assert(
+  "confirmation: the confirm button is disabled until the typed value matches",
+  /disabled=\{hydrated && !satisfied\}/.test(confirmSource) &&
+    /const satisfied = typed\.trim\(\) === requireTyped/.test(confirmSource),
+  "the button's disabled state is not bound to an exact match of the typed value",
+);
+assert(
+  "confirmation: the component focuses the typed field when it opens",
+  /fieldRef\.current\?\.focus\(\)/.test(confirmSource),
+  "nothing focuses the field, so the ceremony opens with focus nowhere useful",
+);
+
+/*
+ * (2) THE DRAWER'S OPENER EXISTS AT 375.
+ *
+ * This harness has no viewport, so "at 375" is asserted where it is decided:
+ * the opener is in the shell's markup unconditionally and the stylesheet
+ * reveals it inside the narrow breakpoint. The failure this guards is the one
+ * the mockups made first, hiding the rail with `display: none` and leaving a
+ * narrow reader with no way to reach any other section.
+ */
+const shellSource = stripComments(readFileSync(join(root, "app/routes/admin.tsx"), "utf8"));
+const shellCss = stripComments(
+  readFileSync(join(root, "app/styles/admin-shell.css"), "utf8"),
+);
+assert(
+  "drawer: the shell renders the opener, naming the sidebar it controls",
+  /className="admin-menu-button"/.test(shellSource) &&
+    /aria-controls="admin-sidebar"/.test(shellSource),
+  "no .admin-menu-button carrying aria-controls for the sidebar",
+);
+assert(
+  "drawer: the stylesheet reveals the opener at the narrow breakpoint",
+  /\.admin-menu-button\s*\{[^}]*display:\s*inline-flex/.test(shellCss),
+  "nothing gives .admin-menu-button a display, so the opener never appears",
+);
+assert(
+  "drawer: the narrow sidebar is a drawer, never display:none",
+  !/\.admin-sidebar\s*\{[^}]*display:\s*none/.test(shellCss) &&
+    /\.admin-sidebar\s*\{[^}]*z-index:\s*var\(--z-drawer\)/.test(shellCss),
+  "the sidebar is hidden rather than moved off canvas at the narrow width",
+);
+
+/*
+ * (3) THE STATUS SENTENCE AGREES WITH THE NOTICE.
+ *
+ * Ruling 54 makes this a rule because the two were separate computations and
+ * drifted: /admin/posts described itself as "Every post, drafts included"
+ * while a drift alert underneath said search was answering from stale text,
+ * and /admin said "every check the scheduled poll runs, answered here" over a
+ * failing check. Both directions are asserted, because a page that never
+ * renders a notice would satisfy the first half trivially.
+ */
+/** The one status sentence a page opens with. */
+function statusLine(html) {
+  const m = html.match(/<p class="admin-page-status">([\s\S]*?)<\/p>/);
+  return m ? m[1].replace(/<[^>]*>/g, "") : "";
+}
+/** Whether the page is showing a notice that something is wrong. */
+function hasProblemNotice(html) {
+  return /<section class="admin-notice" data-tone="(warning|error)"/.test(html);
+}
+
+for (const [state, expectProblem] of [
+  ["overview, one check failing", true],
+  ["overview, all healthy", false],
+  ["posts index, Ask drifted", true],
+  ["posts index, clean", false],
+]) {
+  const html = renders[state] ?? "";
+  const line = statusLine(html);
+  assert(
+    `${state}: the page opens with one status sentence`,
+    line.trim().length > 0,
+    "no .admin-page-status paragraph rendered",
+  );
+  assert(
+    `${state}: the notice and the status sentence agree`,
+    hasProblemNotice(html) === expectProblem,
+    `notice ${hasProblemNotice(html) ? "present" : "absent"}, expected ` +
+      `${expectProblem ? "present" : "absent"}; sentence read "${line.trim().slice(0, 90)}"`,
+  );
+  /* The sentence must not claim everything is fine while a notice says
+     otherwise. Matched on the words the clean branches use, because those are
+     the ones that would be wrong beside a problem. */
+  const claimsClean = /up to date|Everything agrees/i.test(line);
+  assert(
+    `${state}: the status sentence does not claim health under a notice`,
+    !(expectProblem && claimsClean),
+    `sentence read "${line.trim().slice(0, 120)}" while a notice was on the page`,
+  );
+}
+
+/*
+ * (4) NO PROSE INSIDE A TABLE, ON ANY ADMIN ROUTE.
+ *
+ * A `<caption>` is announced before EVERY row, so a five-sentence caveat is a
+ * five-sentence caveat once per post; a `<p>` in a cell is the same defect one
+ * level down. Both were live on /admin/posts and /admin/origin-requests.
+ *
+ * CROSS-ROUTE BY CONSTRUCTION, over every state this gate rendered, so a table
+ * added to a route tomorrow is covered on the day it is written rather than on
+ * the day somebody remembers to extend this. The failure NAMES THE ROUTE.
+ */
+for (const state of STATES) {
+  const html = renders[state.name];
+  if (!html) continue;
+  const tables = html.match(/<table[\s\S]*?<\/table>/g) ?? [];
+  if (tables.length === 0) continue;
+  const offending = tables.filter((table) => /<p[\s>]/.test(table) || /<caption/.test(table));
+  assert(
+    `${state.entry}: no paragraph or caption inside a table (${state.name})`,
+    offending.length === 0,
+    `${offending.length} of ${tables.length} table(s) carry prose; an explanation ` +
+      `belongs in a <details> under the table, where it is read once`,
+  );
+}
+
+/*
+ * (5) NO 0.375rem IN THE STYLESHEETS THIS DESIGN PASS OWNS.
+ *
+ * Two radii, 0.25rem on controls and 0.5rem on containers, and 0.375rem was a
+ * sixth of a scale nobody had written down. COMMENTS ARE STRIPPED FIRST, which
+ * is not a formality: this file's own explanation of the rule contains the
+ * literal, and a naive scan would fail on the sentence describing the check.
+ *
+ * SCOPED, and the scope is stated rather than implied. admin-editor.css,
+ * admin-media.css and the three others carry 69 more occurrences between them,
+ * a third of which are paddings and gaps rather than radii. Sweeping those
+ * blind, with no gate that can see admin layout, is the shape FAILURES.md
+ * records as "a correct rule applied to a category nobody verified".
+ */
+const OWNED_SHEETS = ["app/styles/admin-shell.css", "app/styles/admin-posts.css"];
+for (const sheet of OWNED_SHEETS) {
+  const text = stripComments(readFileSync(join(root, sheet), "utf8"));
+  const lines = text.split(/\r?\n/);
+  const hits = [];
+  lines.forEach((line, i) => {
+    if (line.includes("0.375rem")) hits.push(`${sheet}:${i + 1}`);
+  });
+  assert(
+    `${sheet}: no 0.375rem, only --r-control and --r-panel`,
+    hits.length === 0,
+    `off-scale value at ${hits.join(", ")}`,
+  );
+}
+/* The scope is proven non-empty: a search over a file that failed to load
+   reports exactly what a clean sweep reports. */
+assert(
+  "the 0.375rem scan read both owned stylesheets",
+  OWNED_SHEETS.every(
+    (sheet) => stripComments(readFileSync(join(root, sheet), "utf8")).length > 1000,
+  ),
+  "a stylesheet read empty, so its clean result means nothing",
+);
+
 /*
  * FLOOR RAISED 435 -> 591 by the webmention moderation queue's four states.
  *
@@ -5574,8 +5913,17 @@ assert(
  * states. Never summed. Slack of 28 is unchanged, and it still absorbs a state
  * being retired: dropping the whole mentions section is now 40 assertions,
  * which fails by a wide margin.
+ *
+ * RAISED 634 -> 682 by ruling 54's admin design pass, 2026-09-10.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE BY RUNNING IT: 710, over the same
+ * 94 states. Never summed, and never arrived at by adding the new block's
+ * assertions to the old floor: the redesign also RETIRED assertions (the
+ * caption exemption's shape, the two mentions button weights) and replaced
+ * others one-for-two, so arithmetic on 634 would have produced a number that
+ * was never true of any run. Slack of 28 is unchanged for the reason it has
+ * always had: it absorbs a state being retired without absorbing a section.
  */
-const MINIMUM_CHECKS = 634;
+const MINIMUM_CHECKS = 682;
 /*
  * The literal "Measured: N" that used to close this message is GONE, and its
  * removal is the point rather than tidying. It went stale here first: plant (d)

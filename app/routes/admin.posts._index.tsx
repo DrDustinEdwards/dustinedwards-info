@@ -1265,10 +1265,18 @@ export default function AdminPosts({
                   </th>
                   <th scope="col" className="posts-title-cell">Title</th>
                   <th scope="col">Published</th>
-                  {/* The operator's word. What it does and does not count is
-                      the disclosure under the table: ruling 54 keeps internal
-                      names such as "origin requests" off the page. */}
-                  <th scope="col" className="posts-readership">Views</th>
+                  {/*
+                    THE LABEL IS "Reads counted", and it is where two rulings meet.
+
+                    Ruling 54 takes "origin requests" off the operator's page. The
+                    copy law gated in check-admin-ui.mjs forbids "views", "visits",
+                    "visitors" and "traffic" here, because a cached read never
+                    reaches the Worker and any of those words would overstate
+                    readership by whatever the edge served. The participle is what
+                    satisfies both: plain words that CLAIM only what was counted.
+                    What is not counted is the disclosure under the table.
+                  */}
+                  <th scope="col" className="posts-readership">Reads counted</th>
                   <th scope="col" className="posts-row-actions">Actions</th>
                 </tr>
               </thead>
@@ -1482,7 +1490,7 @@ export default function AdminPosts({
             why the number is what it is.
           */}
           <details className="posts-explain">
-            <summary>What the view count includes</summary>
+            <summary>What the read count includes, and what it misses</summary>
             <p>
               {`Only reads that reached the server, over the last ${
                 readership.status === "live" ? readership.data.windowDays : 0

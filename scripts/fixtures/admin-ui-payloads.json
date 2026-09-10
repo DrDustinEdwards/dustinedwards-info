@@ -1,7 +1,9 @@
 {
   "posts index, clean": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -9,8 +11,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, readership live": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -18,8 +22,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, readership truncated": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -27,8 +33,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, readership unavailable": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -36,8 +44,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, Ask drifted": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -45,8 +55,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, Ask disabled": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -54,15 +66,17 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, empty corpus": [
-    "GET /admin/posts | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,tag",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
     "POST /admin/posts | intent=sync-ask | "
   ],
   "posts index, ask sync awaiting confirmation": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST  | intent=sync-ask | confirm-count",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | (none) | confirm-count,intent",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -70,9 +84,11 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, bulk delete awaiting confirmation": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST  | intent=bulk-delete | confirm-count,slug",
-    "POST /admin/posts | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | (none) | confirm-count,intent,slug",
+    "POST /admin/posts | intent=bulk-add-tag | tag",
+    "POST /admin/posts | intent=bulk-delete | tag",
+    "POST /admin/posts | intent=bulk-remove-tag | tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -80,10 +96,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, two selected": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts | intent=bulk-add-tag | confirm-count,slug,tag",
-    "POST /admin/posts | intent=bulk-delete | confirm-count,slug,tag",
-    "POST /admin/posts | intent=bulk-remove-tag | confirm-count,slug,tag",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts | intent=bulk-add-tag | slug,tag",
+    "POST /admin/posts | intent=bulk-delete | slug,tag",
+    "POST /admin/posts | intent=bulk-remove-tag | slug,tag",
     "POST /admin/posts | intent=duplicate | slug",
     "POST /admin/posts | intent=regenerate | ",
     "POST /admin/posts | intent=reset-ask-budget | ",
@@ -91,10 +107,10 @@
     "POST /admin/posts | intent=unpublish | slug"
   ],
   "posts index, filtered and selected": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts?status=published | intent=bulk-add-tag | confirm-count,slug,tag",
-    "POST /admin/posts?status=published | intent=bulk-delete | confirm-count,slug,tag",
-    "POST /admin/posts?status=published | intent=bulk-remove-tag | confirm-count,slug,tag",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts?status=published | intent=bulk-add-tag | slug,tag",
+    "POST /admin/posts?status=published | intent=bulk-delete | slug,tag",
+    "POST /admin/posts?status=published | intent=bulk-remove-tag | slug,tag",
     "POST /admin/posts?status=published | intent=duplicate | slug",
     "POST /admin/posts?status=published | intent=regenerate | ",
     "POST /admin/posts?status=published | intent=reset-ask-budget | ",
@@ -102,8 +118,10 @@
     "POST /admin/posts?status=published | intent=unpublish | slug"
   ],
   "posts index, filtered with matches": [
-    "GET /admin/posts | (none) | q,status,tag",
-    "POST /admin/posts?q=live&amp;status=published | (none) | ",
+    "GET /admin/posts | (none) | q,tag",
+    "POST /admin/posts?q=live&amp;status=published | intent=bulk-add-tag | tag",
+    "POST /admin/posts?q=live&amp;status=published | intent=bulk-delete | tag",
+    "POST /admin/posts?q=live&amp;status=published | intent=bulk-remove-tag | tag",
     "POST /admin/posts?q=live&amp;status=published | intent=duplicate | slug",
     "POST /admin/posts?q=live&amp;status=published | intent=regenerate | ",
     "POST /admin/posts?q=live&amp;status=published | intent=reset-ask-budget | ",
@@ -111,7 +129,7 @@
     "POST /admin/posts?q=live&amp;status=published | intent=unpublish | slug"
   ],
   "posts index, filtered with no matches": [
-    "GET /admin/posts | (none) | q,status,tag",
+    "GET /admin/posts | (none) | q,tag",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=regenerate | ",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=reset-ask-budget | ",
     "POST /admin/posts?q=nothing-matches-this&amp;tag=d1 | intent=sync-ask | "
@@ -619,7 +637,9 @@
     "POST /admin/mentions?status=all | (none) | intent"
   ],
   "overview, all healthy": [],
-  "overview, one check failing": [],
+  "overview, one check failing": [
+    "POST /admin/media | (none) | intent"
+  ],
   "tools, all secrets set": [],
   "tools, one secret missing": []
 }
