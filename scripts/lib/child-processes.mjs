@@ -439,3 +439,69 @@ export class ChildRegistry {
     return result;
   }
 }
+
+/**
+ * Processes matching any of `needles`, by COMMAND LINE.
+ *
+ * Ship's preflight refuses when a `check:all` run, a `check:browser` run or an
+ * orphaned `vite preview` is still alive, because all three write the build
+ * directory or the database underneath it. On 2026-09-10 a ship failed with
+ * EBUSY on build/client for exactly that reason: preview servers orphaned by
+ * killed gate runs, which `check:all`'s own reaper cannot see because a killed
+ * run records nothing.
+ *
+ * ## BY COMMAND LINE, BY PID, NEVER BY NAME
+ *
+ * Every one of these is `node` or a child of it. A name match would refuse on
+ * ship's own process and on every unrelated editor, and this repo already has a
+ * standing rule that the reaper works by PID and never by name.
+ *
+ * `self` is excluded so a caller cannot refuse on itself, which is not a
+ * hypothetical: ship is a node script and would match a needle the moment one
+ * got looser.
+ *
+ * ## AN UNREADABLE COMMAND LINE CAN NEVER MATCH, AND THAT IS THE SAFE WAY ROUND
+ *
+ * `readProcessTable` still gives such a process an entry, so it is visible as
+ * EXISTING, but it satisfies no needle. The caller refuses on what it can name
+ * and leaves what it cannot alone.
+ *
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {Array<{ needle: string, what: string }>} needles
+ * @param {number} [self] a pid to exclude, normally `process.pid`
+ * @returns {Array<{ pid: number, what: string }>}
+ */
+export function busyProcesses(table, needles, self = 0) {
+  /** @type {Array<{ pid: number, what: string }>} */
+  const found = [];
+  for (const [pid, entry] of table) {
+    if (pid === self) continue;
+    for (const { needle, what } of needles) {
+      if (entry.command.includes(normaliseCommand(needle))) {
+        found.push({ pid, what });
+        break;
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * What ship's preflight refuses to run alongside, and what each one is.
+ *
+ * HERE RATHER THAN IN `ship.mjs` so `test/ship-preflight.test.mjs` can import
+ * the real list. A copy in the test would keep passing after somebody removed a
+ * needle from ship, which is the mirror this repo has already been bitten by
+ * more than once: the plant would go on proving a refusal that no longer exists.
+ * `ship.mjs` cannot be imported by a test, because importing it RUNS a ship.
+ *
+ * `preview --port 4173` and not `vite preview --port 4173`: the process that
+ * actually binds the port is `node .../vite/bin/vite.js preview --port 4173`,
+ * measured against the real holder and recorded at `check-browser.mjs:145`. The
+ * longer needle matched nothing, and the test above is what caught it.
+ */
+export const SHIP_BUSY_NEEDLES = [
+  { needle: "scripts/check-all.mjs", what: "a check:all run" },
+  { needle: "scripts/check-browser.mjs", what: "a check:browser run" },
+  { needle: "preview --port 4173", what: "an orphaned preview server" },
+];
