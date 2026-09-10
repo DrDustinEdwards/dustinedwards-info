@@ -48,10 +48,26 @@ export function pageCount(total, perPage = POSTS_PER_PAGE) {
  * reads as a duplicate", which was the argument against the behaviour the next
  * three lines introduced.
  *
- * HERE RATHER THAN INLINE IN THE LOADER, because the condition cannot be reached
- * from the current corpus: measured 2026-08-21, 0 of 12 posts carry
- * `featured: true`, so the duplicate was LATENT and a rendered page proves
- * nothing either way. Extracted so `test/blog-listing.test.mjs` can prove it.
+ * HERE RATHER THAN INLINE IN THE LOADER, so `test/blog-listing.test.mjs` can
+ * prove it. That was originally justified by the branch being UNREACHABLE:
+ * "measured 2026-08-21, 0 of 12 posts carry `featured: true`, so the duplicate
+ * was LATENT and a rendered page proves nothing either way."
+ *
+ * **That measurement is no longer true and the conclusion has inverted.**
+ * Re-measured 2026-09-10: 1 of 11 published posts is featured
+ * (`ten-years-on-cloudflare`), it sits on `/blog` page 1, and `splitFeatured`
+ * finds it there on every unfiltered first-page request. The branch runs in
+ * production now, so a rendered page WOULD prove something. The extraction is
+ * still right, for the ordinary reason rather than the original one: a test can
+ * drive the empty, the found and the ineligible cases in a millisecond each,
+ * and a page can only ever show whichever one today's corpus produces.
+ *
+ * Kept as a dated pair rather than overwritten, because the old number is what
+ * makes the reversal legible. This comment went stale the day the flagship was
+ * featured and nothing noticed for three weeks; a count in prose is exactly
+ * what hard rule 17 says belongs to a gate or to nowhere, and the only reason
+ * these survive is that they are DATED observations about a corpus rather than
+ * standing claims about the code.
  *
  * MATCHED BY SLUG, not by object identity. The two arrays hold the same objects
  * today, but identity is not a property this should rest on: a serialisation
