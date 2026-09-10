@@ -860,7 +860,13 @@
 /* It is always in the document now. `:has()` asks the browser about its own
    checkboxes, which is the one way this can work with no script; the previous
    `chosen.length > 0` guard was client state and rendered nothing at all. */
-.posts-bulk {
+/* SPECIFICITY MATCHED TO THE REVEAL, deliberately. The bar's own rule earlier
+   in this file is a bare `.posts-bulk` carrying `display: flex`, so a bare
+   `.posts-bulk { display: none }` here wins only by source order, and source
+   order in this repo is the cascade: moving one import would put the bar back
+   on screen with nothing selected and nothing would report it. Both halves are
+   scoped to the card, so the pair decides it between themselves. */
+.posts-card .posts-bulk {
   display: none;
 }
 
