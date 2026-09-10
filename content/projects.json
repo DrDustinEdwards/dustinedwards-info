@@ -61,7 +61,7 @@
         {
           "kind": "post",
           "ref": "ten-years-on-cloudflare",
-          "label": "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild"
+          "label": "Every Cloudflare product, and which ones this site runs on"
         },
         { "kind": "page", "ref": "/colophon", "label": "Colophon: the stack, reconciled against the repository" },
         { "kind": "page", "ref": "/playground", "label": "Playground: the machinery, running" }

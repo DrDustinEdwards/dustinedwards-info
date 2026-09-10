@@ -45,7 +45,7 @@ import { fileURLToPath } from "node:url";
 
 import { assertFloor } from "./lib/floor.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
-import { CHECK_COPY } from "../app/lib/admin/check-copy.mjs";
+
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
 // The retention windows are asserted against the CONSTANTS, not against a copy
@@ -85,6 +85,18 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "admin-ui-payloads.json");
 const update = process.argv.includes("--update");
+
+/*
+ * THE OPERATOR'S NAMES FOR THE HEALTH CHECKS, read from the module that owns
+ * them rather than retyped here. A list of five strings in this file would be a
+ * second owner of the mapping, and the two would agree with each other while
+ * both drifted from the page.
+ *
+ * Dynamically imported because this script's tsconfig project does not include
+ * the app tree, and a static import would have to be added to that project's
+ * file list to typecheck.
+ */
+const { CHECK_COPY: checkCopy } = await import("../app/lib/admin/check-copy.mjs");
 
 let checks = 0;
 let failures = 0;
@@ -4099,7 +4111,7 @@ for (const state of ["overview, all healthy", "overview, one check failing"]) {
    * becoming a second owner of the names.
    */
   structural("every health check is named on the page", state, (h) =>
-    Object.values(CHECK_COPY).every((copy) => h.includes(escapeHtml(copy.name))),
+    Object.values(checkCopy).every((copy) => h.includes(escapeHtml(copy.name))),
   );
   /*
    * AND THE INSTRUMENT IDS ARE GONE. The positive half above would pass on a
@@ -4118,14 +4130,16 @@ for (const state of ["overview, all healthy", "overview, one check failing"]) {
    * about, rather than the wording itself.
    */
   structural("a failing check still reports the instrument's own numbers", state, (h) => {
+    /** @type {Array<{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }>} */
     const checks = state === "overview, all healthy" ? HEALTH_OK : HEALTH_ONE_FAILING;
     return checks
       .filter((check) => !check.ok)
-      .every((check) =>
-        check.counts
-          ? h.includes(String(check.counts.expected)) && h.includes(String(check.counts.present))
-          : h.includes(escapeHtml(check.detail)),
-      );
+      .every((check) => {
+        const counts = check.counts;
+        return counts
+          ? h.includes(String(counts.expected)) && h.includes(String(counts.present))
+          : h.includes(escapeHtml(check.detail));
+      });
   });
 }
 
@@ -5787,22 +5801,24 @@ assert(
  * failing check. Both directions are asserted, because a page that never
  * renders a notice would satisfy the first half trivially.
  */
-/** The one status sentence a page opens with. */
+/** The one status sentence a page opens with. @param {string} html */
 function statusLine(html) {
   const m = html.match(/<p class="admin-page-status">([\s\S]*?)<\/p>/);
   return m ? m[1].replace(/<[^>]*>/g, "") : "";
 }
-/** Whether the page is showing a notice that something is wrong. */
+/** Whether the page is showing a notice that something is wrong. @param {string} html */
 function hasProblemNotice(html) {
   return /<section class="admin-notice" data-tone="(warning|error)"/.test(html);
 }
 
-for (const [state, expectProblem] of [
+/** @type {Array<[string, boolean]>} */
+const STATUS_AGREEMENT = [
   ["overview, one check failing", true],
   ["overview, all healthy", false],
   ["posts index, Ask drifted", true],
   ["posts index, clean", false],
-]) {
+];
+for (const [state, expectProblem] of STATUS_AGREEMENT) {
   const html = renders[state] ?? "";
   const line = statusLine(html);
   assert(
@@ -5870,6 +5886,7 @@ const OWNED_SHEETS = ["app/styles/admin-shell.css", "app/styles/admin-posts.css"
 for (const sheet of OWNED_SHEETS) {
   const text = stripComments(readFileSync(join(root, sheet), "utf8"));
   const lines = text.split(/\r?\n/);
+  /** @type {string[]} */
   const hits = [];
   lines.forEach((line, i) => {
     if (line.includes("0.375rem")) hits.push(`${sheet}:${i + 1}`);

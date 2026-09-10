@@ -22,6 +22,11 @@
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
+    // The operator's words for the five health checks. check:admin-ui asserts
+    // the overview names every check, and it reads the mapping from here
+    // rather than retyping five strings: a copy in the gate would agree with
+    // itself while both drifted from the page.
+    "app/lib/admin/check-copy.mjs",
     // The KaTeX options and the html-side `hasMath` reader. Three callers, which
     // is why it is its own module and why it is listed here: the pipeline passes
     // KATEX_OPTIONS to both the validator and rehype-katex, blog-view.ts asks
