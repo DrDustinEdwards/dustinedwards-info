@@ -1,7 +1,7 @@
 ---
-title: "Cloudflare Developer Platform in 2026: Notes from a Full Rebuild"
+title: "Every Cloudflare product, and which ones this site runs on"
 slug: ten-years-on-cloudflare
-description: "A ten-year Cloudflare customer rebuilds a complete site on Workers, D1, R2, Durable Objects, and AI Search, and reports the measurements: bundle sizes, query latency, rate limiter behavior, and the platform's real constraints."
+description: "Every Cloudflare developer product as of September 2026 in one table: what Workers, D1, KV, R2, Queues, Durable Objects, AI Search and the rest actually do, and which ones a complete site runs on, where, and why. With the refusals and the constraints, dated."
 date: 2026-07-30
 draft: false
 featured: true
@@ -9,111 +9,182 @@ tags: [cloudflare, workers, d1, platform, architecture]
 first_published: 2026-07-30
 ---
 
-The short version, for anyone deciding whether Cloudflare's developer platform can carry a complete application in 2026: it can, and this site is the evidence. The application server, database, object storage, search engine, AI answer layer, and publishing pipeline here all run on Workers, D1, R2, Durable Objects, and AI Search, with no other provider anywhere in the stack. The measurements that summarize the experience, each carrying the date it was taken, because every one of them moves: pages served by a Worker whose upload measured 8.22 MiB on 2026-08-28 (4.87 MB on 2026-08-04, 3.78 MB when this published), full-text search answering from D1 with a median of 64 ms warm on 2026-08-28 (6 ms on 2026-07-30, against a smaller corpus and a different instrument), a reading page whose whole script payload measured 3.0 kB gzipped on 2026-08-28 (1.59 kB on 2026-07-30), an AI answer layer streaming its first token in 2.1 to 6.5 seconds warm as measured on 2026-07-30, and a monthly bill that rounds to a few dollars. The three that were re-measured are re-measured in full at the end of this post, with the conditions each was taken under. The platform's real constraints are equally concrete: no runtime WebAssembly compilation, a database export command that fails on FTS5 tables, and a built-in rate limiter that sheds load rather than counting. This post is the survey of all of it, from inside a working system, with the ones likely to rot carrying their dates; platform facts were checked against Cloudflare's documentation and announcements on July 30, 2026.
+There is no server behind this site. Ten years ago I put my first domain behind Cloudflare the way everyone did then: a shared HostGator box ran the real site and Cloudflare was the DNS, the cache, and the orange cloud in front of it. It was not a place where software ran, and in 2016 it mostly wasn't. This year I rebuilt so that the cloud is the whole thing. The pages, the database, the uploads, the search, the AI answers, the alert mail, and the publishing pipeline all run on Cloudflare products, and nothing else is in the stack.
 
-The personal context, briefly, because it explains the vantage point. Ten years ago I put my first domain behind Cloudflare the way everyone did then: a shared HostGator box ran the real site, and Cloudflare was the DNS, the cache, and the orange cloud in front of it. I did not think of it as a place where software ran, and in 2016 it mostly wasn't. This year I rebuilt so that there is no host behind the cloud at all. The old WordPress install still answers at my apex domain while a DNS cutover waits, a detail that returns later in this post for an unexpected reason.
+So this is the post I wanted when I started: every developer product Cloudflare sells as of September 8, 2026, what each one does in plain words, and whether this site uses it, where, and why or why not. The refusals are in the table with everything else. A survey that only lists what worked is an advertisement. This post replaced an earlier version, published 2026-07-30, that surveyed the same rebuild before the table existed; its dated measurements are carried forward below.
 
-This is also the first post in a series of nine. Each section below compresses a full article, and where a section summarizes a finding, the link goes to the article that owns it in full, including how it was found and how to reproduce it.
+## Which products this site runs on
 
-## Cloudflare Workers, D1, R2, KV, and Durable Objects: the primitives
+Used means a binding or a configured feature that production depends on today. Not used means considered and passed over; the reason is in the product's own entry below. The numbers are dated because every one of them moves.
 
-The center of the developer platform is Workers. Your code runs in V8 isolates distributed across Cloudflare's network, which means no servers to size, no regions to choose, and cold starts small enough that I have never once thought about them, which was not my experience with container-based serverless. The programming model is a fetch handler: a request comes in, your function returns a response, and the platform handles where and how.
+| Product | What it does | This site | Where |
+|---|---|---|---|
+| Workers | Runs your code on Cloudflare's network | Used | Everything: two Workers, the site and a watchdog |
+| Static Assets | Serves files from a Worker with no invocation | Used | `public/`, through the `ASSETS` binding |
+| Workers Cache | Caches a Worker's responses at the edge | Used | The renderer entrypoint; the gateway is deliberately uncached |
+| D1 | SQLite database, managed | Used | Posts, tags, search index, media index |
+| KV | Fast key-value store, eventually consistent | Used | Login sessions, the Ask answer cache, watchdog state |
+| R2 | Object storage, no egress fees | Used | Three buckets: uploads, social cards, a mirror of uploads |
+| Queues | Message queue between Workers | Used | R2 upload events feeding the media index |
+| Durable Objects | A single-instance object with its own storage | Used | The rate limiter and daily budget for Ask |
+| Analytics Engine | Time-series data you write from a Worker | Used | Per-page traffic counts, no cookies, no IPs |
+| Images | Resize and convert images on request | Used | Every thumbnail and content width |
+| AI Search | Retrieval and cited answers over your content | Used | The Ask endpoint, above classic search |
+| Email Service | Send email from a Worker | Used | The watchdog's alert mail |
+| Email Routing | Receive mail on your domain and forward it | Used | Inbound mail on the domain |
+| Workers Observability | Logs and traces for Workers | Used, logs only | Traces are off on purpose (see the entry) |
+| Cron Triggers | Run a Worker on a schedule | Used | The watchdog, every 15 minutes |
+| Workers AI | Run AI models on Cloudflare GPUs | Indirect | Only through AI Search; no direct binding |
+| Rate Limiting binding | A built-in per-key rate limiter | Refused | Measured: it sheds load, it does not count |
+| Vectorize | Vector database for embeddings | Refused | Two FTS5 indexes answer this corpus |
+| Pages | Hosting for static and framework sites | Not used | Workers with static assets does the same job |
+| Workers Builds | Build and deploy from a git push | Not used | Deploys go through a gated ship script |
+| Hyperdrive | Connection pooling to an external Postgres or MySQL | Not used | There is no external database |
+| Workflows | Durable multi-step jobs with retries | Not used | Nothing here runs long enough |
+| Containers | Run any container next to a Worker | Not used | Nothing needs a runtime beyond V8 |
+| Sandboxes | Isolated code execution for agents | Not used | Agents write through an API, not by running code |
+| Browser Run | Headless browser as a service | Not used | Charts and diagrams render at build time |
+| Workers Agents SDK | Framework for stateful AI agents | Not used | The agent surface is an MCP server on plain Workers |
+| AI Gateway | Proxy and observability for model calls | Not used | Ask's one model call is metered by a Durable Object |
+| Stream | Video hosting and playback | Not used | No video |
+| RealtimeKit | Live audio and video | Not used | No live features |
+| Pipelines | Streaming ingestion into R2 | Not used | Analytics Engine covers the one stream |
+| Data Platform | Catalog and query data in R2 | Not used | Nothing to catalog |
+| Artifacts | Git-native versioned storage | Not used | GitHub is the repository |
+| Secrets Store | Account-level secret storage | Not used | Nine `wrangler secret` values, gated |
+| Turnstile | Bot check without a captcha | Not yet | Planned for the newsletter form |
+| Web Analytics | Client-side analytics beacon | Refused | Blocked by this site's CSP, and not needed |
+| Zaraz | Third-party tag loading at the edge | Not used | There are no third-party tags |
+| Access | Login in front of an application | Not used | The admin plane uses Better Auth |
+| Cache Reserve | Persistent cache for static content | Not yet | Needs the zone; waits for DNS cutover |
+| Workers for Platforms | Run customers' Workers inside yours | Not used | One customer |
 
-Around Workers sits a family of storage and compute primitives. D1 is a relational database, which is to say SQLite, replicated and managed. R2 is object storage with an S3-compatible API and no egress charges. KV is an eventually consistent key-value store built for read-heavy configuration. Durable Objects give you single-instance coordination points with their own storage, which turns out to be the answer to a category of problem I will get to below. Workers AI runs inference on Cloudflare's GPUs. AI Search, still in beta, is a managed retrieval product: you give it a corpus, it handles chunking, embedding, hybrid retrieval, and answer generation with citations.
+## What each one does, in the words I would use to a colleague
 
-The pitch is that these compose into complete applications with no infrastructure to operate. That pitch is broadly true, and this site is an existence proof. What the pitch omits is the texture: which primitives are mature, which are beta in ways that bite, and what the constraints cost in practice. The rest of this post is that texture.
+### Workers
 
-## Measured performance and cost of an all-Cloudflare stack
+A Worker is a function that receives a request and returns a response, running in a V8 isolate on Cloudflare's network in whichever city is closest to the reader. No server to size, no region to choose, cold starts small enough that I have never thought about them. Everything else on this list is something a Worker can be given a binding to.
 
-The Worker that serves every page uploaded at 8413 KiB on 2026-08-28, 2047 KiB of that gzipped, as reported by `wrangler deploy --dry-run`; it was 4.87 MB on 2026-08-04 and 3.78 MB when this published. That number moves with every feature, which is why it carries a date and why the date matters more than the figure. The largest single expense inside it is a complete markdown rendering pipeline, including syntax highlighting, run server-side because every public page of this site works with JavaScript disabled. Holding that constraint meant the client-side enhancement budget for the entire blog, progress bar, scroll-spy table of contents, copy buttons, footnote previews, lightbox, came to 1.59 kB gzipped on 2026-07-30 and 2.03 kB on 2026-08-28; [the progressive enhancement article](/blog/bells-and-whistles-zero-js) covers how, including the measurement mistakes that nearly reported a different number.
+This site is two Workers. The first serves every page and holds the entire markdown rendering pipeline, syntax highlighting included, because every public page works with JavaScript disabled. Its upload measured 8.4 MiB on 2026-09-08 (2.1 MiB gzipped; 3.78 MB when the first version of this post published on 2026-07-30). The second is a watchdog that reads the site's health endpoint every fifteen minutes through a service binding and repairs what it can. The client-side enhancement budget for the whole blog, progress bar, table of contents, copy buttons, footnote previews, lightbox, comes to about three kilobytes gzipped; the public plane ships no framework script at all.
 
-Site search answers from D1 with a median of 64 ms and a 95th percentile of 80 ms, measured on 2026-08-28 over 25 runs against production, on a hand-built engine described in [the FTS5 search article](/blog/site-search-fts5-rank-fusion). The figure at publication, 2026-07-30, was 6 milliseconds at the median with a 95th percentile of 15, and that figure is kept rather than deleted because the two were not taken the same way; the end of this post says how they differ. Both are the DATABASE query and not the page: end to end over HTTPS the same search measured 114 to 121 ms on 2026-08-04, dominated by network round trip. The AI answer layer streams its first token in between 2.1 and 6.5 seconds warm, 7.4 cold. A publish is a single git commit that lands in the database and both search indexes within seconds of the commit returning; [the content pipeline article](/blog/content-is-code-building-the-blog) covers that machinery.
+### Static Assets
 
-The monthly cost of running all of this rounds to a few dollars. I want to be careful with that fact, because cost claims from personal-scale projects generalize badly, but the architectural version of the claim holds at any scale: nothing in this system required capacity planning, and there is no idle infrastructure anywhere in it.
+A Worker can serve a directory of files directly from the edge with no code running, through a binding with exactly one method, `fetch()`. That method is the whole interface: a Worker can serve any path it is given and discover none of them, which is why this site's media index reads a committed manifest of what is in `public/` instead of asking the binding.
 
-## Cloudflare D1 in production: real SQLite, FTS5 search, and the export failure
+### Workers Cache
 
-D1 spent its early life with a reputation for being a toy, and I think that reputation is now mostly stale. It is real SQLite, and real SQLite is a serious database with decades of documented behavior. For a content site, the practical consequence is that FTS5 full-text search comes with the database. I built this site's search directly on it: two FTS5 indexes over the same corpus, one unstemmed for names and identifiers, one Porter-stemmed for prose, merged with reciprocal rank fusion, because the tokenizer is a property of the table rather than the query and a corpus needing both behaviors needs two tables. The result embarrassed my assumption that search means a search service: single-digit milliseconds at publication and tens of milliseconds against production today, section-level results with deep links, zero external dependencies. The schema, the fusion method, and the production bug that taught me search has two entry modes are all in [the search article](/blog/site-search-fts5-rank-fusion).
+Cloudflare can store a Worker's responses at the edge and answer repeat requests without running the code. This site turns it on for the renderer and off for the gateway that sits in front of it. The gateway does three things that must never be skipped, the HTTPS redirect, the theme cookie read, and the traffic count, and a cached gateway would skip all three. Every response without an explicit `Cache-Control` defaults to `private, no-store`, because the platform would otherwise cache a logged-in admin page for two hours under standard heuristics and serve it to anyone. That default is the one line of configuration I would tell every Workers user to check first.
 
-The edge every D1 user should know before trusting their backups: the platform's export command fails outright on any database containing FTS5 virtual tables, which is exactly the database a search feature produces. The working per-table procedure, plus two adjacent findings about verifying and repairing FTS5 indexes, are documented in full in [the same article](/blog/site-search-fts5-rank-fusion); if you run FTS5 on D1, test an export today rather than during a recovery.
+### D1
 
-## Durable Objects: single-threaded is not transactional
+A relational database, which is to say SQLite, replicated and managed by Cloudflare. D1 spent its early life with a reputation for being a toy and that reputation is stale. It is real SQLite, and real SQLite ships FTS5 full-text search with the database. This site's search is two FTS5 indexes over the same corpus, one unstemmed for names and identifiers and one Porter-stemmed for prose, merged with reciprocal rank fusion. Measured 2026-08-28 against production: median 64 ms warm, 145 ms cold, for the database query alone (6 ms at publication on 2026-07-30, against a smaller corpus with the query timed in isolation; the two were not taken the same way, which is the argument for dating a number). The schema and the fusion method are in [the search article](/blog/site-search-on-d1).
 
-This site's AI answer layer is the only public endpoint that costs money per request, so it sits behind rate limiting, and building that rate limiting produced the most transferable single fact in this post: a Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an await are not atomic even in a single-threaded object. The synchronous SQLite storage API is the fix, and the same object rewritten on it admitted exactly three. The platform's built-in rate-limiting binding, tested alongside, sheds sustained load with eventual consistency rather than counting, which its documentation states and which matters when the limiter is guarding a budget. The full measurements, including the test-harness mistake that briefly made a working limiter look dead, are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
+D1 also holds the media index, and that is a capability decision rather than a scale one: R2 lists objects in key order and promises nothing else, so "sort by date, filter unused, count by type" each need a query, and a database is where queries live.
 
-## Cloudflare Workers limitations: no runtime WebAssembly compilation
+The constraint every D1 user should know: the platform's export command fails outright on any database containing FTS5 tables. The working per-table procedure is documented in the search article, and as of 2026-09-08 a weekly job restores that export into a scratch database and compares it against production, because a backup that has never been restored is a hope. That drill found three bugs in the documented restore path on its first run.
 
-Workers refuse to compile WebAssembly at runtime. This is a security decision, and I am not arguing with it, but it has consequences that only appear when a dependency assumes otherwise. It ruled out server-side social-card rendering entirely, moving card generation to build time, a trade covered in [the progressive enhancement article](/blog/bells-and-whistles-zero-js). And it complicated the fix for the strangest bug of the whole build: a syntax highlighter that produced different output bytes for the same input across runs, fatal for a pipeline that byte-compares its rendered artifact. The diagnosis, the deterministic engine that replaced it, and the loader arrangement that satisfies both Node and the Worker are in [the content pipeline article](/blog/content-is-code-building-the-blog), along with a second reproducibility bug involving git line endings that I would now call a certainty for any cross-platform pipeline rather than a risk.
+### KV
 
-I list these not as complaints but because a survey that omits the constraints is an advertisement. Every platform has a shape, and the cost of a platform is learning where its shape and your assumptions disagree. Mine disagreed in the places above, the disagreements were all resolvable, and each one is now a check script or a documented rule rather than a memory.
+A key-value store that reads fast anywhere in the world and accepts that a write takes a moment to be seen everywhere. Right for configuration and caches, wrong for counters. This site keeps login sessions in it, the watchdog's alert state, and the Ask answer cache, keyed by a hash of the normalised question. The cache sits in front of the daily spending ceiling rather than behind it, so a repeated question reaches no model and costs nothing.
 
-## Cloudflare AI Search results: hybrid retrieval measured against keyword search
+### R2
 
-AI Search gave this site a streaming, cited answer mode over its own content in about a day of work, which is a remarkable sentence to be able to write. The retrieval is hybrid, keyword and vector fused, with a reranking pass, and I measured it against my classic engine on a shared query set rather than trusting either: classic search found two results the AI retrieval missed, all exact-token queries, and the AI retrieval found three the classic engine missed, all natural-language questions. Neither subsumes the other, which is the empirical argument for running both. The measurement method, the ingestion decisions, and the three cost gates in front of the paying endpoint are in [the AI answer layer article](/blog/ai-answer-layer-ask-mode).
+Object storage with an S3-compatible API and no charge to read the data back out. This site runs three buckets, split on lifecycle rather than on what the admin UI calls them. Uploads are content-addressed: the key is a hash of the bytes, which was decided on security rather than tidiness, because the old key was guessable from a slug the sitemap publishes. Social cards are derived and regenerable, so they get their own bucket that may be emptied. The third bucket is a mirror of uploads that no code path on this site can delete from; a gate fails the build if one appears, and the health endpoint compares every object against its twin.
 
-It is a beta product with beta pricing, and I treated it accordingly: bounded exposure, a daily spend ceiling I chose, and a dated note in the project's decision log to re-run the economics when beta pricing ends. The habit matters more than the numbers: using a moving product is fine if the exposure is bounded and the re-evaluation is scheduled, and it is the scheduling that people skip.
+### Queues
 
-## AI crawlers, llms.txt, and Cloudflare's September 2026 crawler defaults
+A message queue: one Worker puts a message on it, another consumes it, with retries and a dead-letter queue for permanent failures. This site's media index is written this way. An upload writes only to R2; R2 emits an event; the consumer derives the database row from the object as it is now, never from what the message claimed. That is what makes replay and out-of-order delivery converge, and it is why the Worker never does a dual write.
 
-The strangest part of this rebuild is that the most consequential platform developments had nothing to do with hosting my pages. They are about who, or what, reads them.
+### Durable Objects
 
-This site treats AI agents as a first-class audience in both directions. Inbound, every post serves a markdown twin at a predictable URL, the search endpoint returns JSON to any client that asks for it via content negotiation, an llms.txt file maps the site, and the search engine is exposed over the Model Context Protocol so an assistant can query it conversationally. Outbound, the site is operated by an agent: an authenticated publishing API whose rules are enforced server-side, an MCP layer over it, and the AI assistant that helped build this system drafts and stages posts through it, including this series. Exactly one act is reserved for me by a policy the agent cannot alter. The architecture question of where such rules belong is [the API versus MCP article](/blog/one-door-two-doorbells); the trust model itself, including the one incident where drafts leaked through a surface nobody had wired into the visibility rules, is [the agent write access article](/blog/letting-an-agent-publish); and the protocol server, built the week the MCP specification went stable, is [the MCP server article](/blog/the-doorbell-gets-built).
+A single instance of a JavaScript class, addressed by name, with its own storage. Only one copy exists anywhere in the world, so it is the platform's answer to coordination. This site uses one for the two guards in front of Ask, the only public endpoint that costs money per request: a per-IP burst limit and a site-wide daily ceiling.
 
-The economic half of the renegotiation is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare. On July 1, 2026 the company announced that from September 15, its defaults will block AI training and agent crawlers on ad-supported pages for new customers, new sites, and free-tier accounts, while search crawlers remain allowed by default, and that its Pay Per Crawl marketplace is becoming a broader Pay Per Use model that pays publishers when content surfaces in an AI answer rather than only when a bot fetches a page. The company's stated numbers include that the majority of its traffic is now non-human and that more than half of AI crawl traffic re-fetches pages that have not changed. I have no settled opinion yet on how well the mechanics will work. I do think the direction is unambiguous, and I notice that my ten-year-old decision about where to put my DNS has quietly become a decision about my position in that negotiation. This site's own crawl and monetization settings get configured the day the DNS cutover lands, and that will be its own post once there is data rather than speculation in it.
+Building it taught me the one fact from this whole rebuild I repeat most often: single-threaded is not transactional. A Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an `await` are not atomic. The synchronous SQLite storage API is the fix; the same object rewritten on it admitted exactly three. The measurements are in [the AI answer layer article](/blog/ai-answer-mode-on-site-search).
 
-## Verdict: the Cloudflare developer platform in 2026
+### Analytics Engine
 
-Familiarity, mostly, compounding into leverage. The primitives are small enough to hold in your head. The billing has never once surprised me, which I have come to value more than any feature. The distance from an idea to code running worldwide is one command, and after ten years the command is reflex.
+A write-only time-series store you append to from a Worker and query later with SQL. This site writes one row per HTML response: path, referrer host, country, and a coarse mobile flag. No cookie, no IP address, no identifier of any kind, so nothing joins two requests together. It is here because the alternative, Cloudflare's own Web Analytics beacon, is a third-party script, and this site's Content Security Policy would have to be loosened to admit it.
 
-The honest summary of the rebuild is that a one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth and the database serves, an edge-resident search engine, a hybrid AI answer layer with cost controls, and a publishing path that an AI agent can operate under enforced policy. The platform is most of the reason that was feasible in evenings and weekends.
+### Images
 
-## Update, 28 August 2026: the three headline numbers, re-measured
+Resize, crop and convert images on request, from an original you keep in R2. This site derives every thumbnail and every content width from one uploaded original through the binding, and the results are cached by the Workers Cache above. The binding rather than the URL syntax, and that is forced: the URL interface answers 404 on a workers.dev hostname because it needs a customer zone. A detail that stops mattering at DNS cutover.
 
-Every figure in this post was true when it was taken and three of them are the
-kind that rot, so they were re-taken. The old figures are kept beside the new
-ones rather than replaced, because a number without the conditions it was
-measured under is not a measurement, and the difference between two dated
-measurements is usually more informative than either one.
+### AI Search
 
-**The Worker.** `wrangler deploy --dry-run` reports 8413 KiB total upload,
-2047 KiB gzipped, of which one server bundle is 5424 KiB. It was 4.87 MB on
-2026-08-04 and 3.78 MB at publication. Nothing was optimized away and nothing
-regressed; the site grew a media library, an admin plane, a chart renderer and a
-diagram pipeline in between, and all of that ships in one Worker by design.
+You give it a corpus; it handles chunking, embedding, hybrid retrieval, reranking, and answer generation with citations. This site's Ask mode is built on it, above classic search rather than instead of it, because the two fail on opposite inputs. Measured on a shared query set: classic search found two results the AI retrieval missed, all exact tokens, and the AI retrieval found three the classic engine missed, all natural-language questions. Neither subsumes the other. It is a metered product, so it sits behind the Durable Object above and a daily ceiling I chose. Its first token arrived in 2.1 to 6.5 seconds warm when measured on 2026-07-30; that figure has not been re-taken because probing it costs money per request.
 
-**Search.** The figure this post published, 6 ms at the median, was taken
-against a smaller corpus with the query timed in isolation. Re-measured on
-2026-08-28 against production, reading the server's own `tookMs` (which spans
-the two FTS5 reads and nothing else), 25 runs on one warm query key: median
-64 ms, 95th percentile 80 ms, minimum 57 ms. Repeating with 25 DISTINCT cache
-keys, which forces a cold path each time, moves it to a median of 145 ms and a
-95th percentile of 201 ms. The distribution is visibly bimodal, warm requests
-clustering in the sixties and cold ones in the one-fifties, which is the shape
-of connection reuse rather than of query cost.
+### Email Service
 
-The honest summary is that the original figure measured the query and the new
-one measures the query in production, and I would not have caught the difference
-without re-running it. That is the argument for dating a number rather than
-publishing it.
+Send email from a Worker through a binding, from an address on a domain you have onboarded. The watchdog uses it to mail me once when the site goes unhealthy and once when it recovers, with the state kept in KV so a bad afternoon sends one message rather than twelve. Sending to a verified destination address is free.
 
-**Client JavaScript.** A post page now ships two prebuilt enhancement bundles:
-the blog enhancements at 2082 bytes gzipped, 1788 brotli, and the theme toggle
-at 968 gzipped, 795 brotli. Three kilobytes gzipped for a reading page, against
-1.59 kB at publication for the blog half alone. Most pages on the site ship only
-the theme bundle. Since 2026-08-26 the public plane also ships no framework
-script at all: public routes are server-rendered and not hydrated, so what a
-reader downloads is those bundles and the stylesheet, and nothing else.
+### Email Routing
 
-**Not re-measured:** the AI answer layer's time to first token, because probing
-it costs money per request and the figure in this post is dated. Treat it as a
-2026-07-30 observation.
+Receive mail on your domain and forward it wherever you like. Inbound mail for dustinedwards.info lands here and forwards to my mailbox. Both halves of the email story share one set of SPF and DKIM records that Cloudflare manages, and DMARC on the domain is set to reject.
 
-The series, in reading order: [the color palette built and verified with code](/blog/a-color-palette-that-can-prove-itself), [the git-backed content pipeline](/blog/content-is-code-building-the-blog), [the reading experience in a couple of kilobytes of JavaScript](/blog/bells-and-whistles-zero-js), [FTS5 search on D1](/blog/site-search-fts5-rank-fusion), [the AI answer layer](/blog/ai-answer-layer-ask-mode), [API versus MCP](/blog/one-door-two-doorbells), [the agent trust model](/blog/letting-an-agent-publish), and [the MCP server build](/blog/the-doorbell-gets-built). Every quantitative claim in the series is reproducible from the site's repository. That policy cost me more time than any feature described above, and it is the part of the project I am least willing to give up.
+### Workers Observability
 
-## Update, August 2026
+Logs and traces from your Workers, kept in the dashboard and exportable elsewhere. This site keeps logs on and traces off, and the off is a ruling rather than a default. A trace span carries the full request URL, and this site puts a capability token in the path of every draft preview link, so exporting traces would ship preview access to a third party. Invocation logs are off for a related reason: they recorded the reader's IP and session cookie for seven days with no field-level redaction available.
 
-August was the month this system got audited from outside, twice, by a different AI model with read access to the repository and the wire, and the month most of what the audits found got fixed. The honest scoreboard: the audits caught three real holes that had shipped past every gate, an unauthenticated delete on a media route, a draft leak on the same route, and preview links with no rate limit, all live for 39 days before anyone noticed, and all closed the day they were reported, with the object store reconciled against the database and the repository to prove nothing had been deleted in the window. The audits were also wrong a lot: measured claim by claim against the code, roughly half their findings were stale, false, or cited numbers that did not exist, which sharpened a rule this series already carried into one sentence: an external audit is a list of claims to verify, not a list of facts.
+### Cron Triggers
 
-The fixes that changed the system's shape rather than patching it: deploys now refuse unless continuous integration has concluded green for the exact commit being shipped, so the laptop can no longer outrun the checks. A scheduled workflow polls a health endpoint every fifteen minutes and a failing run is itself the alert, which replaced a three-week human-glances-at-a-badge detection story with a fifteen-minute one. The publish path compensates its one remaining failure window instead of hoping. And a write-quality pass deleted the second copies of facts that had accumulated, counts restated in prose, a regex restated in the editor, a limit that existed as 160 in one file and 155 in another, on the principle that ended up governing the whole month: one owner per fact, and every count lives in the gate that measures it or nowhere.
+Run a Worker on a schedule. The watchdog runs every fifteen minutes. The site Worker has no cron, and the empty array in its config is the statement: an hourly trigger that nothing handled sat on the platform for fifteen days in August, throwing 24 times a day, invisible to a gate that only read files. The gate now reads the platform too.
 
-The one thing the audits asked for that this site refused, deliberately: switching frameworks. The analysis is in the repository's decision log, and the short form is that the missing conveniences were on generic surfaces while the defaults that matter here, a cache that fails toward privacy, a public plane that works without script, real bindings instead of an adapter, are all on the side the site is already standing on.
+### Workers AI
+
+Run open models on Cloudflare's GPUs from a Worker. This site never calls it directly; AI Search does the model work for Ask on its own. If Ask ever needs a model the retrieval product does not offer, this is where it would come from.
+
+### Rate Limiting binding, refused
+
+A built-in per-key limiter you declare in config. Measured on 2026-07-30 with a limit of five per sixty seconds and twelve concurrent requests: it refused one, then two, then nine, then zero across four runs. Its documentation says it sheds sustained load with eventual consistency, and that is true; it does not count, and a limiter guarding a budget has to count. The Durable Object replaced it.
+
+### Vectorize, refused
+
+A vector database for embeddings, the usual foundation for semantic search. Rank fusion over two FTS5 indexes answers this corpus in about fifteen lines with no vectors, and zero-result searches are the cheapest signal this site has for what to write next. That is the only evidence that would reopen the question.
+
+### Pages and Workers Builds, not used
+
+Pages hosts static and framework sites with a build on every push; Workers Builds does the same for Workers. Workers with static assets now does everything Pages did for this site, and Cloudflare's own direction has been to fold Pages into Workers. Deploys here go through a ship script that refuses unless the working tree is clean, CI is green for that exact commit, and every offline gate passes; a build on push would skip all of that.
+
+### Hyperdrive, Workflows, Containers, Sandboxes, Browser Run, not used
+
+Hyperdrive pools connections to a Postgres or MySQL you already run somewhere; there is no such database here. Workflows runs multi-step jobs that survive failures and can wait for a human; nothing here runs longer than a request. Containers runs any Docker image next to a Worker; nothing here needs a runtime beyond V8. Sandboxes gives an agent an isolated place to execute code; this site's agents write through an API with policy enforced server-side, and never run code. Browser Run is a headless browser you can drive from a Worker; charts and diagrams here render to SVG at build time, on purpose, so the page carries no work.
+
+### Agents SDK and AI Gateway, not used
+
+The Agents SDK is a framework for long-lived stateful agents on Durable Objects. This site's agent surface is the other direction: an MCP server that lets an outside agent read and write posts, with exactly one act, first publication, reserved to me in code. AI Gateway proxies model calls for logging, caching and cost control; Ask makes one model call per uncached question and a Durable Object already meters it.
+
+### Stream, RealtimeKit, Pipelines, Data Platform, Artifacts, not used
+
+Video hosting, live audio and video, streaming ingestion, data catalogs, and git-native storage. A text site with a media library of a few dozen images has no use for any of them, and I would rather say so than pad the used column.
+
+### Secrets Store, Access, Zaraz, Web Analytics, Workers for Platforms
+
+Secrets Store centralises secrets across Workers; this site's nine secrets live in `wrangler secret` and a gate asserts every one is set and none is in git. Access puts a login page in front of any application; the admin plane runs its own login on Better Auth because the policy it enforces lives in the application, not in front of it. Zaraz loads third-party tags at the edge; there are none. Web Analytics is the beacon the Analytics Engine entry above explains. Workers for Platforms runs other people's Workers inside yours; I have one customer.
+
+### Turnstile and Cache Reserve, not yet
+
+Turnstile is Cloudflare's bot check without a puzzle; it goes in front of the newsletter form when the newsletter exists. Cache Reserve keeps static content in a persistent cache; it needs a zone, and this site is still served from a workers.dev hostname while the old WordPress install answers at the apex. Both wait for DNS cutover.
+
+## Where the platform pushed back
+
+Workers refuse to compile WebAssembly at runtime. A security decision, and it ruled out server-side social-card rendering and complicated the fix for the strangest bug of the build: a syntax highlighter that produced different bytes for the same input across runs. The deterministic engine and the loader arrangement that satisfies both Node and the Worker are in [the content pipeline article](/blog/posts-in-git-served-from-d1).
+
+D1's export fails on FTS5 tables, as above. The rate limiting binding does not count, as above. A Durable Object's async storage is not transactional, as above. Each of these is now a check script or a documented rule rather than a memory, which is the only form a platform lesson is worth keeping in.
+
+## Who reads this site, and what Cloudflare is doing about it
+
+This site treats AI agents as an audience in both directions. Inbound, every post serves a markdown twin at a predictable URL, an llms.txt file maps the site, the search endpoint answers in JSON to any client that asks, and the search engine is exposed over the Model Context Protocol. Outbound, the site is operated by agents: an authenticated publishing API whose rules are enforced server-side, an MCP layer over it, and the assistants that helped build this system draft and edit posts through it, including this one. One act is reserved for me by a policy they cannot alter. The trust model, the incident that shaped it, and the protocol server are in [the agent write access article](/blog/agent-write-access-to-a-live-site), [the API versus MCP article](/blog/policy-in-the-api-not-the-mcp), and [the MCP server article](/blog/mcp-server-on-workers-with-oauth).
+
+The economic half is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare: managed robots.txt with machine-readable content signals, default blocking of AI training crawlers for new zones from September 15, 2026, and a pay-per-use marketplace for content that surfaces in AI answers. This site's own crawl settings get configured the day the DNS cutover lands, and that will be its own post once there is data in it.
+
+## What August taught, kept from the first version
+
+August was the month this system got audited from outside, twice, by a different AI model with read access to the repository and the wire. The audits caught three real holes that had shipped past every gate, an unauthenticated delete on a media route, a draft leak on the same route, and preview links with no rate limit, all live for 39 days before anyone noticed, and all closed the day they were reported. The audits were also wrong a lot: measured claim by claim against the code, roughly half their findings were stale, false, or cited numbers that did not exist. The rule that came out of it: an external audit is a list of claims to verify, not a list of facts.
+
+The one thing the audits asked for that this site refused, deliberately: switching frameworks. The missing conveniences were on generic surfaces, while the defaults that matter here, a cache that fails toward privacy, a public plane that works without script, real bindings instead of an adapter, are all on the side the site is already standing on.
+
+## What I would use again
+
+All fourteen. The primitives are small enough to hold in your head. The billing has never surprised me, which I value more than any feature. A one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth, an edge-resident search engine, a hybrid AI answer layer with cost controls, external monitoring, restore drills, and a publishing path an agent can operate under enforced policy. Twenty-four products were considered and passed over for the reasons above, and every number here carries the date it was measured because every one of them will move.
+
+The series, in reading order: [the color palette built and verified with code](/blog/color-palette-the-build-can-check), [the git-backed content pipeline](/blog/posts-in-git-served-from-d1), [the reading experience in a couple of kilobytes of JavaScript](/blog/blog-reading-without-javascript), [FTS5 search on D1](/blog/site-search-on-d1), [the AI answer layer](/blog/ai-answer-mode-on-site-search), [API versus MCP](/blog/policy-in-the-api-not-the-mcp), [the agent trust model](/blog/agent-write-access-to-a-live-site), and [the MCP server build](/blog/mcp-server-on-workers-with-oauth). Every quantitative claim in the series is reproducible from the site's repository.
