@@ -3,8 +3,7 @@ import { Link } from "react-router";
 import stack from "../../content/generated/stack.json";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { listBlogPosts } from "~/db";
-import { splitFeatured } from "~/lib/blog-listing.mjs";
+import { listHomeStartHere } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { formatAge } from "~/lib/health/snapshot.mjs";
@@ -65,8 +64,8 @@ export function meta() {
  *              copy of a number a gate already owns. Rule 17.
  *   health     the SNAPSHOT `/api/health` last wrote to KV, read here and never
  *              recomputed. One KV read. See the correction below.
- *   writing    `total` from `listBlogPosts`, the same query and the same
- *              `publiclyVisible()` predicate the blog index counts with.
+ *   writing    `total` from `listHomeStartHere`, the same `publiclyVisible()`
+ *              predicate the blog index counts with, in the same batch.
  *
  * ## THE HEALTH TILE AND THE SHARED CACHE, and this is the decision the ruling
  * ## asked to see stated
@@ -149,24 +148,31 @@ export async function loader({ context }: Route.LoaderArgs) {
    * number is a legible before and after, where a renamed mark would look
    * like the instrument was removed.
    */
-  const [listing, tile] = await Promise.all([
-    timed(timings, "home_posts", () => listBlogPosts(env, { perPage: 4, timings })),
+  const [start, tile] = await Promise.all([
+    timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_health", () => readHealthTile(env)),
   ]);
 
   /*
-   * THE SAME SPLIT THE BLOG INDEX USES, imported rather than repeated, so
-   * "which post leads" is one decision made in one place: the `featured` flag
-   * in the post's own frontmatter. This page and /blog cannot disagree about
-   * it, and moving the lead is a content edit rather than a code change.
+   * `splitFeatured` IS GONE FROM THIS ROUTE, and that is ruling 57.
+   *
+   * It searched for the featured post inside the four rows this loader had
+   * already fetched, so the lead was only ever found when it happened to be
+   * among the four newest. The flagship sorts fifth, so the section was dark in
+   * production: no heading, no cards, no "All N posts" link, on the page people
+   * paste. `listHomeStartHere` asks for the featured post by name.
+   *
+   * `/blog` KEEPS `splitFeatured`, and the two are not disagreeing. There the
+   * question really is "is the hero on the page I just fetched", because the
+   * hero is drawn above a list it must then be removed from and only the
+   * unfiltered first page may show one. Here the question is "what leads", and
+   * that is a different query rather than a different answer.
    */
-  const { featured, posts } = splitFeatured(listing.posts, true);
-
   return {
     gates: stack.gates.length,
-    posts: listing.total,
-    featured,
-    recent: posts.slice(0, 3),
+    posts: start.total,
+    featured: start.featured,
+    recent: start.recent,
     /*
      * HANDED STRAIGHT THROUGH. The classification, the age and the refusal to
      * present an uncertain snapshot as a verdict all happened in `healthTile`,

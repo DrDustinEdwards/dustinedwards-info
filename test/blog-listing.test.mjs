@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { splitFeatured } from "../app/lib/blog-listing.mjs";
+import { splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
 
 /*
  * The defect this covers was LATENT, which is why it is tested rather than
@@ -84,5 +84,68 @@ test("the input array is not mutated", () => {
     input.map((p) => p.slug),
     ["a", "b", "c"],
     "the loader spreads this array elsewhere; mutating it would act at a distance",
+  );
+});
+
+/*
+ * `startHere`, both branches. Ruling 57.
+ *
+ * The defect it replaces was NOT latent: the home page's whole "Start here"
+ * section was dark in production, because the loader looked for the featured
+ * post inside the four newest and the flagship sorts fifth. These cases are the
+ * two arrays `listHomeStartHere` fetches, so they exercise the decision without
+ * a database, which is the reason the decision is a pure function at all.
+ */
+
+const flagship = { slug: "flagship" };
+const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }];
+
+test("the featured post leads and the others fill in behind it", () => {
+  const { featured, recent } = startHere([flagship], others);
+  assert.equal(featured.slug, "flagship");
+  assert.deepEqual(
+    recent.map((p) => p.slug),
+    ["n1", "n2", "n3"],
+    "four cards in total, so three follow the lead",
+  );
+});
+
+test("the featured post is never also one of the others", () => {
+  const { featured, recent } = startHere([flagship], others);
+  assert.ok(
+    !recent.some((p) => p.slug === featured.slug),
+    "the caller queries others as featured = 0, and printing the lead twice is the " +
+      "defect splitFeatured exists to prevent on /blog",
+  );
+});
+
+test("with nothing featured the newest leads and the section still shows four", () => {
+  const { featured, recent } = startHere([], others);
+  assert.equal(featured.slug, "n1", "ruling 57: the newest leads");
+  assert.deepEqual(
+    recent.map((p) => p.slug),
+    ["n2", "n3", "n4"],
+    "four cards, not three: the section must not shrink because nothing is featured",
+  );
+});
+
+test("an empty corpus yields a null lead, which renders the section dark", () => {
+  const { featured, recent } = startHere([], []);
+  assert.equal(featured, null, "home guards on {featured ? ... : null}");
+  assert.deepEqual(recent, []);
+});
+
+test("a short corpus returns what it has rather than padding", () => {
+  const { featured, recent } = startHere([], [{ slug: "only" }]);
+  assert.equal(featured.slug, "only");
+  assert.deepEqual(recent, [], "one post is one card, not one card and three holes");
+});
+
+test("cards is honoured, so the count has one owner", () => {
+  const { recent } = startHere([flagship], others, 2);
+  assert.deepEqual(
+    recent.map((p) => p.slug),
+    ["n1"],
+    "HOME_CARDS is the default and the section's size is not written twice",
   );
 });
