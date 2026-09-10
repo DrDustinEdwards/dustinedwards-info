@@ -75,6 +75,8 @@ import { walkPublic } from "./build-assets.mjs";
 import { bucketNames } from "./lib/wrangler-config.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+import { resolveD1Address } from "./lib/d1-address.mjs";
+
 const DB_NAME = "dustinedwards";
 // DERIVED from the wrangler config, never restated. Two buckets split on
 // lifecycle, and both are indexed: an OG card that existed but appeared in no
@@ -105,7 +107,7 @@ function wrangler(args) {
  */
 function mediaRows(target) {
   const result = wrangler(
-    `d1 execute ${DB_NAME} ${target} --json --command ` +
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       // alt joins the projection so the roster comparison below has an index
       // side to compare against. It was absent on the first run of that
       // assertion, which read every row's alt as "" and reported nine

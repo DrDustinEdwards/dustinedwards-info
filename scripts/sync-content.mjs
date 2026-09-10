@@ -48,6 +48,8 @@ import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 
+import { resolveD1Address } from "./lib/d1-address.mjs";
+
 const DB_NAME = "dustinedwards";
 
 /** The tracked source of the `llms.txt` settings row. */
@@ -355,7 +357,7 @@ async function main() {
   const renderDrift = [];
   {
     const read = wrangler(
-      `d1 execute ${DB_NAME} ${target} --json --command ` +
+      `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
         '"SELECT slug, source_blob_sha, render_hash FROM posts WHERE source_path IS NOT NULL;"',
     );
     if (read.status !== 0) {
@@ -410,7 +412,7 @@ async function main() {
 
   console.log(`sync:content applying ${posts.length} posts to ${target.slice(2)} D1`);
   const applied = await wranglerImport(
-    `d1 execute ${DB_NAME} ${target} --file "${sqlPath}" --yes`,
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${sqlPath}" --yes`,
     `sync:content posts import (${target})`,
   );
   if (applied.status !== 0) {
@@ -445,7 +447,7 @@ async function main() {
   );
   console.log(`sync:content applying llms.txt (${Buffer.byteLength(llms)} bytes)`);
   const settingsApplied = await wranglerImport(
-    `d1 execute ${DB_NAME} ${target} --file "${settingsPath}" --yes`,
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${settingsPath}" --yes`,
     `sync:content llms.txt import (${target})`,
   );
   if (settingsApplied.status !== 0) {
@@ -461,7 +463,7 @@ async function main() {
 
   console.log(`sync:content applying ${records.length} search records`);
   const indexed = await wranglerImport(
-    `d1 execute ${DB_NAME} ${target} --file "${searchPath}" --yes`,
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${searchPath}" --yes`,
     `sync:content search index import (${target})`,
   );
   if (indexed.status !== 0) {
@@ -478,7 +480,7 @@ async function main() {
   // nothing. posts_fts_docsize holds one row per indexed document and went to 0,
   // so it is the only one of the three that can actually fail.
   const verify = wrangler(
-    `d1 execute ${DB_NAME} ${target} --json --command ` +
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
       '(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, ' +
       '(SELECT COUNT(*) FROM search_docs) AS docs, ' +

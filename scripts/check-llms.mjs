@@ -41,6 +41,8 @@ import { assertFloor } from "./lib/floor.mjs";
 
 const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
+import { resolveD1Address } from "./lib/d1-address.mjs";
+
 const DB_NAME = "dustinedwards";
 
 let checks = 0;
@@ -126,7 +128,7 @@ if (target) {
   const result = await retryRead(
     () => {
       const r = spawnSync(
-        `npx wrangler d1 execute ${DB_NAME} ${target} --json --command ` +
+        `npx wrangler d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
           `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
         { encoding: "utf8", shell: true },
       );
