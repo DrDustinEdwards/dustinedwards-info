@@ -1505,7 +1505,7 @@ export default function AdminPosts({
             <p className="posts-meta">
               {/* Only when filtered. Unfiltered, "31 of 31" is noise. */}
               {filtered ? `Showing ${posts.length} of ${total} posts. ` : null}
-              {ask ? `Ask index: ${ask.present} of ${ask.expected} records indexed.` : null}
+              {ask ? `Search has read ${ask.present} of ${ask.expected} posts.` : null}
               {ask && budget ? " " : null}
               {budget
                 ? `Budget ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
