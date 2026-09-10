@@ -345,7 +345,16 @@ async function main() {
      * The throw is load-bearing: wrangler RETURNS on a failed command rather
      * than rejecting, so without it retryRead has nothing to catch.
      */
-    const exported = await retryRead(
+    /*
+     * NO STATUS CHECK AFTER THIS. There was one, and it could not fire:
+     * `retryRead` hands back what the callback RETURNED, the callback throws on
+     * a non-zero status, so anything reaching the next line already has
+     * `status === 0`. Hard rule 10's first class. It also printed
+     * `exported.stdout` on the way out, which read as the diagnostic for a
+     * failed export and was the one branch that never ran; the callback's own
+     * `tail(r.stdout)` is where that output actually reaches a reader.
+     */
+    await retryRead(
       () => {
         const r = wrangler(
           `d1 export ${DB_ADDRESS} ${target} --no-schema --table ${name} --output "${out}"`,
@@ -355,10 +364,6 @@ async function main() {
       },
       { label: `check:backup per-table export (${name}, ${target})` },
     );
-    if (exported.status !== 0) {
-      console.error(exported.stdout);
-      throw new Error(`per-table export failed for ${name}`);
-    }
     const body = await readFile(out, "utf8");
     const bytes = (await stat(out)).size;
     // An export that wrote a file but no INSERTs is a pass that backed up
