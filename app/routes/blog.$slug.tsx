@@ -432,9 +432,26 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           }}
         />
 
-        <article className="post">
+        {/*
+          THE h-entry, and every microformats2 class on this page is a CLASS on
+          markup that was already here. Item I, ruling 50 as amended:
+          microformats only, no `rel="me"`, no social links.
+
+          WHY CLASSES AND NOT A SECOND REPRESENTATION. This page already emits
+          Article JSON-LD a few lines up, and the two are not redundant with
+          each other: JSON-LD is a separate document a crawler reads, and mf2 is
+          an annotation of the markup a reader is already being served, which is
+          what a webmention sender, a feed reader and an IndieWeb consumer parse.
+          Adding a third copy of the same facts would be a third thing to keep
+          true; annotating the first copy cannot go out of step with itself.
+
+          `check:microformats` renders this component and parses the result with
+          `microformats-parser`, and it compares `dt-published` against the
+          FRONTMATTER date rather than against anything this route computed.
+        */}
+        <article className="post h-entry">
           <header className="post-head">
-            <h1>{post.title}</h1>
+            <h1 className="p-name">{post.title}</h1>
             {/*
               THE DEK, and it is the SAME STRING the meta tag carries.
 
@@ -449,12 +466,65 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             <p className="post-dek">{dek}</p>
             <p className="post-card-meta">
               {post.publishAt && (
-                <time dateTime={new Date(post.publishAt).toISOString()}>
+                <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
                   {longDateUTC(post.publishAt)}
                 </time>
               )}
               {post.readingTimeMinutes && <> · {post.readingTimeMinutes} min read</>}
-              {revisedLabel && <> · Updated {revisedLabel}</>}
+              {/*
+                THE UPDATED DATE GAINED AN ELEMENT, and it is the one element
+                this arc adds. It was bare text: the label was rendered and the
+                machine-readable timestamp behind it was not, so `dt-updated`
+                had nothing to take a class from.
+
+                Rendered text is UNCHANGED. `<time>` has no default styling and
+                `revisedLabel` is the same string it was, so the only difference
+                on the wire is the element and its `datetime`.
+
+                STILL CONDITIONAL, and deliberately: `revisedLabel` is null
+                unless the revision is further from publication than
+                `REVISED_THRESHOLD_MS`, so most posts carry no `dt-updated` at
+                all. That is the correct reading of "when the post has one": a
+                post nobody has revised has no updated date, and emitting the
+                row's `updatedAt` regardless would publish a sync timestamp as
+                if it were an edit.
+              */}
+              {revisedLabel && (
+                <>
+                  {" "}
+                  · Updated{" "}
+                  <time className="dt-updated" dateTime={new Date(post.updatedAt!).toISOString()}>
+                    {revisedLabel}
+                  </time>
+                </>
+              )}
+            </p>
+            {/*
+              THE AUTHOR, and it is HIDDEN, which is a real cost and is stated
+              rather than glossed.
+
+              This page has never carried a byline. Every post here is Dustin's,
+              the footer says so on every page and the Person JSON-LD says so to
+              a machine, so a visible byline would be new furniture on a page
+              whose design nobody asked to change; the constraint on this arc is
+              that nothing visual moves. `p-author` is not optional in an
+              h-entry that wants to be consumed, so the h-card goes in `hidden`.
+
+              `hidden` and not `.sr-only`: `.sr-only` is still announced, and a
+              screen reader gaining a name and a link on every post IS a change
+              to the page, just not one a screenshot catches. `hidden` removes
+              it from the render AND from the accessibility tree, and every mf2
+              parser reads the markup rather than the computed style, which is
+              the same reason the JSON-LD above works.
+
+              WHAT WOULD RETIRE THIS: a visible byline. If one ever lands, move
+              these two classes onto it and delete this block, because a hidden
+              copy beside a visible one is two owners of the same fact.
+            */}
+            <p className="p-author h-card" hidden>
+              <a className="p-name u-url" href="/">
+                {SITE.name}
+              </a>
             </p>
             {post.tags.length > 0 && (
               <p className="post-card-tags">
@@ -584,7 +654,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             it can be injected directly.
           */}
           <div
-            className="prose"
+            className="prose e-content"
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
 
@@ -656,22 +726,29 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             works without script; adding bytes to reimplement what the browser
             already does would trade both away for nothing.
 
-            The two intents are plain GET links to the services' own share
-            endpoints. `rel="noopener noreferrer"` on both, and no `target`, so
-            they behave like every other outbound link on the page.
+            The remaining intent is a plain GET link to LinkedIn's own share
+            endpoint, with `rel="noopener noreferrer"` and no `target`, so it
+            behaves like every other outbound link on the page. It read "the two
+            intents" until 2026-09-10, when the Bluesky one left under ruling 50
+            and the sentence describing it would have gone on being read as a
+            statement about a link that was not there.
           */}
           <nav className="post-actions post-share" aria-label="Share this post">
-            <a className="post-action" href={canonical}>
+            {/*
+              THE PERMALINK IS ALSO THE h-entry's `u-url`, and that is why the
+              class landed here rather than on a new hidden element: this anchor
+              already holds the canonical absolute URL, it is visible, and it is
+              the one a reader copies. A microformats consumer and a human now
+              read the same element.
+
+              SHARE ON BLUESKY LEFT ON 2026-09-10, ruling 50: no Mastodon, no
+              Bluesky, ever. It was a share intent rather than a profile link,
+              which is why it survived the ruling's first pass, but the ruling's
+              subject is the site's relationship with those networks and an
+              intent button is this site inviting readers into one.
+            */}
+            <a className="post-action u-url" href={canonical}>
               Permalink
-            </a>
-            <a
-              className="post-action"
-              href={`https://bsky.app/intent/compose?text=${encodeURIComponent(
-                `${post.title} ${canonical}`,
-              )}`}
-              rel="noopener noreferrer"
-            >
-              Share on Bluesky
             </a>
             <a
               className="post-action"

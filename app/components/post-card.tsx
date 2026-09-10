@@ -28,13 +28,32 @@ export type CardPost = {
 
 export function PostCard({ post }: { post: CardPost }) {
   return (
-    <li className="post-card">
-      <h2 className="post-card-title">
-        <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+    /*
+     * THE SUMMARY h-entry, and it rides HERE for the same reason the card
+     * itself was extracted: three routes render this component (`/blog`, the
+     * tag archive and the series page), so one set of classes marks all three
+     * and there is no second copy to forget.
+     *
+     * A SUMMARY ENTRY, not a truncated full one. It carries `p-name`, `u-url`,
+     * `dt-published` and `p-summary` and deliberately no `e-content`: a
+     * consumer that finds content on a listing entry has been handed a summary
+     * labelled as the article, and the honest signal for "the body is at the
+     * url" is the absence of a content property.
+     *
+     * `u-url` is on the anchor rather than on the `<li>`, because the anchor is
+     * where the address actually is. It renders relative, and a parser resolves
+     * it against the page it was served from, which is what
+     * `check:microformats` asserts by handing the parser the page's own URL.
+     */
+    <li className="post-card h-entry">
+      <h2 className="post-card-title p-name">
+        <Link className="u-url" to={`/blog/${post.slug}`}>
+          {post.title}
+        </Link>
       </h2>
       <p className="post-card-meta">
         {post.publishAt && (
-          <time dateTime={new Date(post.publishAt).toISOString()}>
+          <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
             {longDateUTC(post.publishAt)}
           </time>
         )}
@@ -45,7 +64,7 @@ export function PostCard({ post }: { post: CardPost }) {
           {post.series}, part {post.part}
         </p>
       )}
-      {post.description && <p>{post.description}</p>}
+      {post.description && <p className="p-summary">{post.description}</p>}
       {post.tags.length > 0 && (
         <p className="post-card-tags">
           {/*
