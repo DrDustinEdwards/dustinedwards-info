@@ -25,10 +25,12 @@
  * file existing in the matcher list. A hook unregistered in settings would pass
  * every case here and protect nothing.
  *
- * THE LAST TWO CASES ARE A PAIR and are read as one: a dry run allowed, and the
- * same command without the flag still refused. Either alone would pass on a
- * hook that had simply stopped blocking deploys, which is the failure a
- * loosening introduces and the one that is silent.
+ * THREE CASES ARE PAIRED WITH A CONTROL and are read together: a dry run allowed
+ * beside the same deploy still refused; a SELECT ending in a semicolon allowed
+ * beside an UPDATE still blocked; a tilde path resolved beside an unresolvable
+ * variable still failing closed. Each loosening alone would pass on a hook that
+ * had simply stopped checking, which is the failure a loosening introduces and
+ * the one that is silent.
  *
  * FAILS CLOSED. An unreadable hook, a missing interpreter or an unexpected exit
  * code is a failure, never a skip.
@@ -126,7 +128,7 @@ function runHook(command, cwd) {
 }
 
 /*
- * THE EIGHT CASES, and each one names the defect it would catch.
+ * THE THIRTEEN CASES, and each one names the defect it would catch.
  *
  * The parent directory is derived rather than written, so this reads correctly
  * from any clone path. `../dustinedwards-mcp` is a real sibling on the machine
@@ -234,6 +236,94 @@ const CASES = [
       "without --dry-run this is the act hard rule 16 reserves to ship. If " +
       "this allows, the flag check is matching something other than the flag.",
   },
+  {
+    label: "a d1 SELECT whose SQL ends in a semicolon is allowed",
+    /*
+     * THE SEMICOLON IS THE WHOLE CASE. The hook cuts each wrangler invocation
+     * out of the command with a segment regex, and that regex stopped at the
+     * first `;` ANYWHERE, including one inside the quoted SQL. The tail then
+     * held an unterminated quote, no `--command` could be read off it, and the
+     * arm exited 9: "SQL this check cannot read". A read was refused for
+     * ending the way SQL normally ends.
+     *
+     * The split on `;` inside the SQL was never the problem and is unchanged;
+     * it already skips the empty trailing statement.
+     */
+    command: `npx wrangler d1 execute dustinedwards --remote --command "SELECT count(*) FROM posts;"`,
+    cwd: root,
+    expect: 0,
+    why:
+      "a read is allowed, and a trailing semicolon is not a second statement. " +
+      "If this blocks, the segment regex is splitting inside a quoted string.",
+  },
+  {
+    label: "a d1 UPDATE ending in a semicolon is STILL blocked",
+    /*
+     * THE PAIR, on the dry-run pair's grounds. The case above alone would pass
+     * on a hook that had simply stopped reading d1 statements at all, which is
+     * exactly what a widened segment regex could cause and is the silent
+     * direction. Same shape, same semicolon, one verb different.
+     */
+    command: `npx wrangler d1 execute dustinedwards --remote --command "UPDATE posts SET title = 'x';"`,
+    cwd: root,
+    expect: 2,
+    why:
+      "hard rule 18: D1 is derived and is repaired through its derivation, " +
+      "never by a hand-written statement. If this allows, widening the segment " +
+      "regex has cost the guard the write it exists to refuse.",
+  },
+  {
+    label: "wrangler d1 execute --help is allowed",
+    /*
+     * USAGE TEXT IS NOT A STATEMENT. It carries no SQL, which is precisely why
+     * it hit the unverifiable arm and exited 9. Same class as --dry-run above
+     * and ruled on the same grounds: refusing a read is the safe direction and
+     * is still wrong, because the workaround is a session running d1 commands
+     * outside the guard.
+     */
+    command: "npx wrangler d1 execute --help",
+    cwd: root,
+    expect: 0,
+    why:
+      "printing usage changes nothing. If this blocks, a session learning the " +
+      "command has to leave the guarded directory to read its own help text.",
+  },
+  {
+    label: "a tilde path is expanded, so a deploy at home is allowed",
+    /*
+     * `cd ~` USED TO BE UNRESOLVABLE. The hook returned None for it, the caller
+     * reads None as INSIDE this repo, and a deploy anywhere reachable only by a
+     * tilde was refused for a rule that has nothing to say about it. That is
+     * ruling 20 again, one spelling of the path along.
+     *
+     * HOME, NOT A SIBLING PATH, deliberately: it is somewhere this gate can
+     * name from any clone without assuming where the checkout sits relative to
+     * it. The sibling case above already covers the relative form.
+     */
+    command: "cd ~ && npm run deploy",
+    cwd: root,
+    expect: 0,
+    why:
+      "home is not this repo, so hard rule 16 does not reach it. If this " +
+      "blocks, expanduser is not being applied before the comparison.",
+  },
+  {
+    label: "an UNRESOLVABLE variable still fails closed",
+    /*
+     * THE PAIR FOR THE TILDE CASE, and it is the one that matters. Accepting
+     * `$` and `%` is a loosening, and the unsafe way to implement it is to let
+     * an unresolved `$NOPE` normalise into a path that is not this repo, read
+     * as OUTSIDE, and unblock a deploy. Expanding first and testing the RESULT
+     * is what prevents that, and this is what proves it.
+     */
+    command: "cd $DUSTINEDWARDS_NO_SUCH_VARIABLE/x && npm run deploy",
+    cwd: root,
+    expect: 2,
+    why:
+      "an unresolved variable leaves the directory unknown, and unknown must " +
+      "read as inside. If this allows, the guard has a bypass that is one " +
+      "undefined environment variable wide.",
+  },
 ];
 
 for (const { label, command, cwd, expect, why } of CASES) {
@@ -265,7 +355,7 @@ console.log("");
  * Slack of zero, because the set is a fixed enumeration of the ruling's own
  * cases and a drop is a removed case rather than natural movement.
  */
-const MINIMUM_CHECKS = 8;
+const MINIMUM_CHECKS = 13;
 const floorBreach = assertFloor(
   "check:hook-scope",
   "checks",

@@ -47,10 +47,11 @@
 # runs in, so a `cd` elsewhere does not make them somebody else's business.
 #
 # Replayed both directions by `scripts/check-hook-deploy-scope.mjs`, which is in
-# the offline tier. Eight cases: the block inside, the allow outside, the
+# the offline tier. Thirteen cases: the block inside, the allow outside, the
 # last-cd rule, an absolute path, a d1 delete still refused outside, a bare
-# `cd`, a `--dry-run` allowed inside, and a deploy with no such flag still
-# refused beside it.
+# `cd`, a `--dry-run` allowed inside, a deploy with no such flag still refused
+# beside it, a SELECT ending in a semicolon, a `--help`, a tilde path, and an
+# unresolvable variable still failing closed.
 #
 # ## `wrangler deploy --dry-run` IS ALLOWED, 2026-09-06
 #
@@ -163,8 +164,8 @@ def effective_dir(command, cwd):
         if not re.match(r"^cd(\s|$)", stripped):
             continue
         arg = stripped[2:].strip()
-        # A bare `cd`, a `cd -`, or anything that reads a variable.
-        if not arg or arg.startswith("-") or "$" in arg or "%" in arg:
+        # A bare `cd` (goes home) or a `cd -` (goes wherever the shell was).
+        if not arg or arg.startswith("-"):
             return None
         # QUOTE CHARACTERS BY CODE POINT, never written literally. This whole
         # block is inside a single-quoted bash string, so one apostrophe here
@@ -176,6 +177,35 @@ def effective_dir(command, cwd):
         quotes = (chr(34), chr(39))
         if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quotes:
             arg = arg[1:-1]
+        # `~` AND `~/...` ARE EXPANDED. `cd ~/dev/dustinedwards-mcp && npm run
+        # deploy` used to return None, which the caller reads as INSIDE this
+        # repo, so the documented deploy of the admin MCP was refused for a rule
+        # that has nothing to say about it. That is the defect ruling 20 fixed,
+        # wearing a different spelling of the same path.
+        #
+        # NO APOSTROPHE APPEARS IN ANY COMMENT BELOW, and that is not style.
+        # This whole program is one single-quoted bash string: an apostrophe
+        # here ends it and hands the remainder to bash. The comment forty lines
+        # up says so, it happened while that comment was being written, and it
+        # happened AGAIN on 2026-09-10 to the session adding these lines.
+        arg = os.path.expanduser(arg)
+        # A VARIABLE IS RESOLVED IF IT CAN BE, AND FAILS CLOSED IF IT CANNOT.
+        #
+        # This used to `return None` on the mere PRESENCE of `$` or `%`, which
+        # is safe but wrong twice over: a directory may legitimately contain
+        # either character, and a resolvable `$HOME` or `%USERPROFILE%` names a
+        # real place this can check.
+        #
+        # The order matters. Expanding FIRST and testing the RESULT is what
+        # keeps this safe: `expandvars` leaves an unset variable in place, so a
+        # leftover `$` or `%` means the path is still unknown, and unknown
+        # returns None, which the caller treats as inside this repo and blocks.
+        # Testing before expanding would have refused every real path; not
+        # testing after would have let an unresolved `cd $NOPE` resolve to a
+        # nonexistent directory, read as OUTSIDE, and unblock a deploy.
+        arg = os.path.expandvars(arg)
+        if "$" in arg or "%" in arg:
+            return None
         target = arg
     if target is None:
         return cwd or None
@@ -231,7 +261,8 @@ if not outside_site and re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd
 # the next command separator. Whole-string, not command-position anchored, for
 # the reason scoped-git-add.sh records: the anchored form let three real
 # bypasses through.
-for m in re.finditer(r"\bwrangler\b([^|;&]*)", cmd):
+SEGMENT = r"\bwrangler\b((?:[^|;&\x22\x27]|\x22[^\x22]*\x22|\x27[^\x27]*\x27)*)"
+for m in re.finditer(SEGMENT, cmd):
     flags = [a for a in m.group(1).split() if a.startswith("-")]
     args = [a for a in m.group(1).split() if not a.startswith("-")]
     if not args:
@@ -261,6 +292,14 @@ for m in re.finditer(r"\bwrangler\b([^|;&]*)", cmd):
     # the verb slot against the database name and never matched.
     if args[0] == "d1" and len(args) > 1 and args[1] == "execute":
         tail = m.group(1)
+        # `--help` PRINTS USAGE AND RUNS NOTHING, so it is not the act this arm
+        # refuses. It carries no SQL, which is exactly why it hit exit 9: an
+        # unverifiable statement is refused, and usage text is not a statement.
+        # Same class as `--dry-run` above, ruled on the same grounds: blocking a
+        # read is the safe direction and is still wrong, because the workaround
+        # it forces is a session running d1 commands outside the guard.
+        if "--help" in flags or "-h" in flags:
+            continue
         if re.search(r"--file\b|-f\b", tail):
             sys.exit(9)
         # The SQL, from --command / -c, in either quoting style.
