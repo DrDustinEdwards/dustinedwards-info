@@ -67,6 +67,11 @@ import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
+  SHIP_BUSY_NEEDLES,
+  busyProcesses,
+  readProcessTable,
+} from "./lib/child-processes.mjs";
+import {
   DEFERRED_CHECKS,
   deferredMisses,
   readinessLines,
@@ -324,8 +329,104 @@ if (OPERATOR_TOKEN.length < 32) {
   );
 }
 
+/* ------------------------------------------------------------ 0. preflight */
+
+/*
+ * PULL FIRST, AND REFUSE IF ANYTHING IS STILL RUNNING.
+ *
+ * Two failures, both measured, both cheap to prevent and expensive to find:
+ *
+ *   THE PULL. Ship deploys LOCAL HEAD. A seat-side commit this clone does not
+ *   have is a deploy of code nobody asked for, and the `ship` skill has said
+ *   "git pull --ff-only" as its step 1 since it was written, which means it was
+ *   a human's job to remember. `--ff-only` and never a merge: a merge commit
+ *   created here would be a commit CI has never seen, and the CI gate three
+ *   steps down would then refuse the very thing this step just made.
+ *
+ *   THE ORPHANS. On 2026-09-10 ship failed with EBUSY on build/client because
+ *   `vite preview --port 4173` processes, orphaned by killed `check:all` runs,
+ *   still held the directory. `check:all`'s preflight reaper only knows runs it
+ *   recorded, and a killed run records nothing. A live `check:all` or
+ *   `check:browser` is the same hazard from the other end: it rewrites
+ *   build/client under a ship that is reading it.
+ *
+ * BY COMMAND LINE, BY PID, NEVER BY NAME. Every one of these is `node` or a
+ * child of it, so a name match would refuse on this ship's own process and on
+ * every unrelated editor. `readProcessTable` supplies the command line, and a
+ * process it cannot read a command line for can never satisfy a needle, which
+ * is the fail-closed direction: it is left alone rather than killed.
+ *
+ * REPORTED AND REFUSED, NEVER KILLED. Ship does not know whose run that is.
+ */
+announce("Preflight: up to date, and nothing else holding the tree");
+
+{
+  const beforePull = spawnSync("git", ["status", "--porcelain"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (beforePull.status !== 0) refuse("git status failed", "Is this a git repository?");
+  const dirtyNow = (beforePull.stdout ?? "").trim();
+  if (dirtyNow.length > 0) {
+    console.error(dirtyNow);
+    refuse(
+      "the working tree is not clean, so it cannot be fast-forwarded",
+      "Commit or stash first. Nothing has been pulled, built or deployed.",
+    );
+  }
+
+  const pulled = spawnSync("git", ["pull", "--ff-only"], { cwd: root, encoding: "utf8" });
+  const pullOut = `${pulled.stdout ?? ""}${pulled.stderr ?? ""}`.trim();
+  if (pulled.status !== 0) {
+    console.error(pullOut);
+    refuse(
+      "git pull --ff-only refused",
+      "The branch is not a fast-forward of its upstream, so somebody has landed " +
+        "work this clone cannot reach by moving forward. Rebase or merge by hand " +
+        "and run ship again. Nothing has been built or deployed.",
+    );
+  }
+  console.log(`  ${pullOut.split("\n")[0] || "already up to date"}`);
+
+  /*
+   * THE NEEDLES LIVE IN `child-processes.mjs`, not here, so the test can import
+   * the list ship actually uses rather than a copy of it. `normaliseCommand`
+   * lower-cases and turns every backslash into a forward slash, so one needle
+   * matches on both platforms without a second spelling.
+   */
+  const table = readProcessTable();
+  if (table.size === 0) {
+    /*
+     * CANNOT VERIFY IS NOT CLEAR. The listing failed, so this step proved
+     * nothing; said out loud rather than passed over, because a silent skip
+     * here is the "zero from a search over an empty scope" shape.
+     */
+    console.log("  could not read the process table, so nothing was proven about orphans.");
+  } else {
+    const busy = busyProcesses(table, SHIP_BUSY_NEEDLES, process.pid);
+    if (busy.length > 0) {
+      console.error(busy.map(({ pid, what }) => `    pid ${pid}  ${what}`).join("\n"));
+      refuse(
+        `${busy.length} process(es) that write the build or the database are still alive`,
+        "Ship reads build/client and writes production D1; a gate run doing the same " +
+          "thing underneath it is how EBUSY and a half-written build happen. These are " +
+          "REPORTED rather than killed, because ship does not know whose run they are. " +
+          "Stop them, or wait, then run ship again. Nothing has been built or deployed.",
+      );
+    }
+    console.log(`  ${table.size} process(es) scanned, none of them a gate run or a preview.`);
+  }
+}
+
 announce("Working tree must be clean");
 
+/*
+ * A SECOND DIRTY CHECK, AFTER THE PULL RATHER THAN INSTEAD OF IT. Step 0
+ * refuses a dirty tree so the fast-forward is safe to attempt; this one is
+ * about what will be BUILT, and the pull between them can fail in ways that
+ * leave files behind. Two cheap `git status` calls are worth less than one
+ * unreproducible deploy.
+ */
 const porcelain = spawnSync("git", ["status", "--porcelain"], {
   cwd: root,
   encoding: "utf8",
@@ -462,7 +563,24 @@ const ghToken = (() => {
  */
 async function readCi() {
   try {
-    const runs = await fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken });
+    /*
+     * THROUGH `retryRead`, AND THE THROW INSIDE IS WHAT MAKES THAT WORK.
+     *
+     * Ruling 52 doubled the number of CI reads a ship makes, and the new early
+     * one refused on a transient TWICE in one day. A GitHub API read is the
+     * textbook case this helper exists for: it is idempotent, it writes
+     * nothing, and a single failed request is not evidence about CI.
+     *
+     * The failure still lands in the `catch` below rather than throwing out of
+     * ship, because both callers want to DECIDE on it: the early one takes the
+     * local path, the authoritative one refuses. `retryRead` gives them one
+     * more chance to get a real answer first, and prints the transient it
+     * swallowed so a retry is never invisible.
+     */
+    const runs = await retryRead(
+      () => fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken }),
+      { label: `ship CI read for ${sha}` },
+    );
     return { verdict: ciVerdict(runs, sha), error: "" };
   } catch (error) {
     return { verdict: null, error: error instanceof Error ? error.message : String(error) };
