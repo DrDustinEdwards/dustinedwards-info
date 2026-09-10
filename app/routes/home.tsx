@@ -247,9 +247,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       <main className="home" id="main">
-        <div className="home-intro">
+        {/*
+          THE SITE AUTHOR'S h-card, on the hero that already says who this is.
+          Item I, ruling 50 as amended: microformats only. No `rel="me"`, no
+          social links; social presence lives with germomics.
+
+          MOSTLY VISIBLE, unlike the post page's author card. The name is the
+          `<h1>` a reader already sees, so `p-name` needed no new markup and no
+          hiding. Only `u-url` had nowhere to go: nothing in this hero links to
+          the site's own root, and the one element that does, the header
+          wordmark, is on every page rather than this one. So the anchor is
+          hidden, and it is the ONE hidden element here.
+
+          NO `u-photo`. There is no photograph of Dustin on this page or in the
+          Person JSON-LD beside it, and a card claiming a photo the site does
+          not publish would be the h-card version of a substituted value.
+        */}
+        <div className="home-intro h-card">
           <p className="eyebrow">{SITE.eyebrow}</p>
-          <h1 className="hero-name">{SITE.name}</h1>
+          <h1 className="hero-name p-name">{SITE.name}</h1>
+          <a className="u-url" href="/" hidden>
+            {SITE.name}
+          </a>
           {/*
             ONE SENTENCE OF WHO AND WHAT, and it is `SITE.tagline`, the string
             the Person record and the meta description already derive from.
@@ -291,26 +310,68 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <h2 id="featured-heading" className="home-section-heading">
               Start here
             </h2>
+            {/*
+              THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not
+              `PostCard`.
+
+              This list has never used that component and this arc is not the
+              place to make it: the cards here are `h3` under a section heading
+              rather than `h2`, and the recent ones deliberately show no
+              description. Marking them by hand is three lines; unifying the
+              two card shapes is a design change nobody asked for. It IS a
+              second place the property set is written down, which is the cost,
+              and `check:microformats` reads both surfaces so the two cannot
+              quietly diverge.
+
+              `dt-published` NEEDED AN ELEMENT. The date here was bare text,
+              formatted and then thrown away, so unlike the blog index there was
+              no `<time>` to take the class. The rendered string is unchanged;
+              what is new is the element around it and its machine-readable
+              `datetime`, which this list should have had anyway.
+
+              NO h-feed. This is a hand-picked three, not the blog's feed, and
+              `/blog` is the page that says it is one.
+            */}
             <ul className="post-list">
-              <li className="post-card">
-                <h3 className="post-card-title">
-                  <Link to={`/blog/${featured.slug}`}>{featured.title}</Link>
+              <li className="post-card h-entry">
+                <h3 className="post-card-title p-name">
+                  <Link className="u-url" to={`/blog/${featured.slug}`}>
+                    {featured.title}
+                  </Link>
                 </h3>
                 <p className="post-card-meta">
-                  {featured.publishAt ? longDateUTC(featured.publishAt) : null}
+                  {featured.publishAt ? (
+                    <time
+                      className="dt-published"
+                      dateTime={new Date(featured.publishAt).toISOString()}
+                    >
+                      {longDateUTC(featured.publishAt)}
+                    </time>
+                  ) : null}
                   {featured.readingTimeMinutes
                     ? ` · ${featured.readingTimeMinutes} min read`
                     : null}
                 </p>
-                {featured.description ? <p>{featured.description}</p> : null}
+                {featured.description ? (
+                  <p className="p-summary">{featured.description}</p>
+                ) : null}
               </li>
               {recent.map((post) => (
-                <li key={post.slug} className="post-card">
-                  <h3 className="post-card-title">
-                    <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+                <li key={post.slug} className="post-card h-entry">
+                  <h3 className="post-card-title p-name">
+                    <Link className="u-url" to={`/blog/${post.slug}`}>
+                      {post.title}
+                    </Link>
                   </h3>
                   <p className="post-card-meta">
-                    {post.publishAt ? longDateUTC(post.publishAt) : null}
+                    {post.publishAt ? (
+                      <time
+                        className="dt-published"
+                        dateTime={new Date(post.publishAt).toISOString()}
+                      >
+                        {longDateUTC(post.publishAt)}
+                      </time>
+                    ) : null}
                     {post.readingTimeMinutes ? ` · ${post.readingTimeMinutes} min read` : null}
                   </p>
                 </li>

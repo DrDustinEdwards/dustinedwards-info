@@ -274,7 +274,27 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main className="page" id="main">
+      {/*
+        THE h-feed IS THE `<main>` ITSELF, and that is a deliberate refusal to
+        add a wrapper. The feed has to contain BOTH the featured section and the
+        list, and those are siblings; a `<div class="h-feed">` around the pair
+        would be a new element introduced for a class, on a page whose whole
+        constraint this arc is that nothing visual moves. `.page` is a plain
+        block with padding and both children centre themselves with `margin:
+        0 auto`, so a wrapper would almost certainly have been harmless, and
+        "almost certainly harmless" is not a reason to add markup.
+
+        WHAT ELSE FALLS INSIDE THE FEED: the search form, the tag chips, the
+        year archive and the pagination. None of them carries a microformats
+        class, so a parser reads past them; a feed's properties are the
+        annotated descendants, not everything in the subtree.
+
+        NOT ON THE TAG ARCHIVE OR THE SERIES PAGE. Those render the same cards,
+        so their entries parse as top-level h-entries, which is valid and is
+        what they are: a filtered view is not this blog's feed. If either ever
+        wants to BE a feed, it says so itself rather than inheriting it here.
+      */}
+      <main className="page h-feed" id="main">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -288,7 +308,16 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         />
 
         <header className="page-head">
-          <h1>Blog</h1>
+          {/* The feed's own name, on the heading that already is it.
+
+              MEASURED, because the first version of this comment guessed and
+              was wrong. It claimed that without an explicit `p-name` a parser
+              would imply one from the page text. It does not: implied
+              properties are skipped for a root that contains nested
+              microformats, and this feed contains an h-entry per card, so the
+              feed's properties parse as `{}` with the class absent. The class
+              is not preventing a bad name, it is supplying the only one. */}
+          <h1 className="p-name">Blog</h1>
           <p className="muted">Writing on building for the web, mostly on Cloudflare.</p>
         </header>
 
@@ -357,15 +386,41 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </nav>
         )}
 
+        {/*
+          THE FEATURED POST IS AN ENTRY IN THE FEED, which is the whole reason
+          the feed is the `<main>`. `splitFeatured` REMOVES this post from the
+          list below, so a feed scoped to the `<ul>` alone would silently omit
+          the one post the page is pushing hardest. That omission is invisible
+          from the page: the reader sees it, and only a parser notices it gone.
+
+          IT CARRIES THE SAME FOUR PROPERTIES AS A CARD, so every entry in this
+          feed has one shape and `check:microformats` needs no special case for
+          this one. A special case is where a gate stops biting.
+
+          `dt-published` IS HIDDEN HERE and visible on a card, because this
+          section renders no date and never has. Showing one would change the
+          page; the alternative is a feed whose first entry has no date, which
+          is the property a reader sorts by. The hidden `<time>` carries the
+          same value the card below would have rendered for this post.
+        */}
         {featured && (
-          <section className="featured-post" aria-labelledby="featured-heading">
+          <section className="featured-post h-entry" aria-labelledby="featured-heading">
             <p className="featured-label" id="featured-heading">
               Featured
             </p>
-            <h2 className="post-card-title">
-              <Link to={`/blog/${featured.slug}`}>{featured.title}</Link>
+            <h2 className="post-card-title p-name">
+              <Link className="u-url" to={`/blog/${featured.slug}`}>
+                {featured.title}
+              </Link>
             </h2>
-            {featured.description && <p>{featured.description}</p>}
+            {featured.publishAt && (
+              <time
+                className="dt-published"
+                dateTime={new Date(featured.publishAt).toISOString()}
+                hidden
+              />
+            )}
+            {featured.description && <p className="p-summary">{featured.description}</p>}
           </section>
         )}
 
