@@ -530,7 +530,22 @@ async function main() {
     const dumps = [];
     for (const table of tables) {
       const out = path.join(dir, `${table}.sql`);
-      const exported = await retryRead(
+      /*
+       * NO STATUS CHECK AFTER THIS, and the absence is deliberate.
+       *
+       * There was one: `if (exported.status !== 0) throw`. It could not fire.
+       * `retryRead` returns whatever the inner function RETURNED, and that
+       * function throws on a non-zero status, so the only value that can reach
+       * a caller here already has `status === 0`; every other path rejects out
+       * of `retryRead` and never reaches the next line. Hard rule 10's first
+       * class, an unfailable condition, and the second reader of this file
+       * would have taken it for the failure handling.
+       *
+       * The throw INSIDE the callback is the load-bearing one: wrangler returns
+       * on a failed command rather than rejecting, so without it `retryRead`
+       * would have nothing to catch and would retry nothing.
+       */
+      await retryRead(
         () => {
           const r = wrangler(
             `d1 export ${PRODUCTION_ID} --remote --no-schema --table ${table} --output "${out}"`,
@@ -540,7 +555,6 @@ async function main() {
         },
         { label: `check:restore export (${table})` },
       );
-      if (exported.status !== 0) throw new Error(`per-table export failed for ${table}`);
       const body = await readFile(out, "utf8");
       dumps.push({ name: table, inserts: (body.match(/^INSERT INTO/gim) ?? []).length });
     }
