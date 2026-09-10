@@ -69,7 +69,7 @@
   height: var(--admin-control-h);
   padding: 0 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -143,11 +143,11 @@
 .overflow-menu-button {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   min-height: 2.25rem;
   padding: 0.4rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   color: var(--text-muted);
   font-size: 0.9375rem;
   cursor: pointer;
@@ -176,7 +176,7 @@
 
 .overflow-menu-panel {
   position: absolute;
-  top: calc(100% + 0.375rem);
+  top: calc(100% + 0.25rem);
   right: 0;
   z-index: var(--z-dropdown);
   min-width: 17rem;
@@ -192,7 +192,7 @@
   width: 100%;
   padding: 0.5rem 0.625rem;
   border: 1px solid transparent;
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -234,7 +234,7 @@
   min-height: 2.25rem;
   padding: 0.4rem 0.9rem;
   border: 1px solid var(--brand);
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   background: var(--brand);
   color: var(--on-brand);
   font-size: 0.9375rem;
@@ -318,6 +318,7 @@
 .btn:disabled,
 .btn-brand:disabled,
 .btn-danger:disabled,
+.btn-secondary:disabled,
 .btn-ghost:disabled,
 .md-tool:disabled,
 .md-tool-text:disabled,
@@ -330,15 +331,20 @@
 /* Hover must not promise anything to a control that will not act. */
 .btn:disabled:hover,
 .btn-danger:disabled:hover,
+.btn-secondary:disabled:hover,
 .btn-ghost:disabled:hover,
 .overflow-menu-item:disabled:hover {
   border-color: inherit;
   background: inherit;
 }
 
+.btn-secondary,
 .btn-ghost,
+.btn-secondary:visited,
 .btn-ghost:visited,
+.btn-secondary:hover,
 .btn-ghost:hover,
+.btn-secondary:active,
 .btn-ghost:active {
   color: var(--text);
   /* Exempt from rule 2 for the same reason .btn is: the border is already a
@@ -388,7 +394,7 @@
 .posts-bulk-tag {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   font-size: 0.8125rem;
   color: var(--text-muted);
 }
@@ -397,7 +403,7 @@
   min-height: 1.75rem;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--border-strong);
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -656,7 +662,7 @@
   min-height: 1.75rem;
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--border-strong);
-  border-radius: 0.375rem;
+  border-radius: var(--r-control);
   color: var(--text);
   font-size: 0.8125rem;
   /* Exempt from rule 2: the border is the non-colour affordance. */
@@ -758,4 +764,380 @@
   font-size: 0.8125rem;
   text-align: left;
   white-space: normal;
+}
+
+/* ============================================================================
+   RULING 54. The posts list rebuilt to docs/ADMIN-DESIGN.md, plus the two
+   components the mentions page shares with it.
+
+   Two radii and nothing else: --r-control on anything you press, --r-panel on
+   anything that contains. Both are declared on .admin in admin-shell.css.
+   ========================================================================= */
+
+/* ---- One filter row: search on the left, then the status tabs ------------ */
+.posts-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.posts-filter-input {
+  min-height: var(--admin-control-h);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  width: 16rem;
+  max-width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.posts-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+/* The active tab's 2px rule sits ON the row's own hairline, which is why the
+   negative margin is exactly the border it overlaps. */
+.posts-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-height: var(--admin-control-h);
+  padding: 0.5rem 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  /* Exempt from rule 2: aria-current plus a 2px rule is the non-colour
+     channel, and a row of underlines under an underline reads as nothing. */
+  text-decoration: none;
+}
+
+.posts-tab:visited {
+  color: var(--text-muted);
+}
+
+.posts-tab:hover {
+  color: var(--text);
+}
+
+.posts-tab[aria-current="page"],
+.posts-tab[aria-current="page"]:visited {
+  border-bottom-color: var(--brand);
+  color: var(--text-heading);
+  font-weight: 600;
+}
+
+.posts-tab-count {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.posts-filter-select {
+  min-height: var(--admin-control-h);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  margin-left: auto;
+}
+
+/* ---- The bulk bar is revealed by the browser, not by React --------------- */
+
+/* It is always in the document now. `:has()` asks the browser about its own
+   checkboxes, which is the one way this can work with no script; the previous
+   `chosen.length > 0` guard was client state and rendered nothing at all. */
+.posts-bulk {
+  display: none;
+}
+
+.posts-card:has(.posts-check input:checked) .posts-bulk {
+  display: flex;
+}
+
+/* ---- Title first, with the state on the title row ------------------------ */
+.posts-title-cell {
+  width: 100%;
+  white-space: normal;
+}
+
+.posts-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.posts-row-actions {
+  width: 3rem;
+  text-align: right;
+}
+
+/* ---- The caveat, as a disclosure rather than a caption ------------------- */
+.posts-explain {
+  margin-top: 1rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.posts-explain > summary {
+  min-height: 1.5rem;
+  padding: 0.25rem 0;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.posts-explain p {
+  margin: 0.5rem 0 0;
+  max-width: 72ch;
+}
+
+/* ---- RowMenu: one borderless kebab per row ------------------------------- */
+
+/* Borderless at rest. A bordered box on every row is fifteen more rectangles
+   between the reader and the fifteen names they came for; the affordance
+   arrives on hover and on focus, where it is asked for. */
+.row-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.row-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--admin-control-h);
+  min-height: var(--admin-control-h);
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.row-menu-button::-webkit-details-marker {
+  display: none;
+}
+
+.row-menu-button:hover {
+  border-color: var(--border);
+  background: var(--surface-popover);
+  color: var(--text);
+}
+
+/* Rule 5: popover elevation takes --border-strong, never --border. */
+.row-menu-panel {
+  position: absolute;
+  right: 0;
+  z-index: var(--z-popover);
+  width: 14rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel);
+  background: var(--surface-popover);
+}
+
+.row-menu-item {
+  display: block;
+  width: 100%;
+  min-height: var(--admin-control-h);
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  /* Exempt from rule 2: the panel is the affordance, and every item in it is a
+     control rather than prose with a link in it. */
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.row-menu-item:visited {
+  color: var(--text);
+}
+
+.row-menu-item:hover {
+  background: var(--surface);
+}
+
+/* ---- ConfirmDialog: a real modal, and an inline step without script ------ */
+.confirm-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel);
+  background: var(--surface-popover);
+  color: var(--text);
+}
+
+/* The platform scrim. --scrim is the ratified dark neutral and nothing is
+   drawn on this layer, so dimming the whole element is what is wanted; an
+   rgba() token is unparseable to check:contrast, which is why it is opacity. */
+.confirm-dialog::backdrop {
+  background: var(--scrim);
+  opacity: 0.45;
+}
+
+/* THE NO-SCRIPT STEP. `data-inline` is present on the server render and the
+   effect removes it in the same pass that calls showModal(). A dialog with
+   neither `open` nor this rule is display:none, which is exactly how a
+   scriptless reader would lose the confirmation entirely. */
+.confirm-dialog[data-inline] {
+  display: block;
+  position: static;
+  margin: 0 0 1.5rem;
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 0.5rem;
+  color: var(--text-heading);
+  font-size: 1.125rem;
+}
+
+.confirm-dialog-body p {
+  margin: 0 0 1rem;
+  max-width: 72ch;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.confirm-dialog-stake {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.confirm-dialog-typed {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+}
+
+.confirm-dialog-typed input {
+  display: block;
+  width: 6rem;
+  min-height: var(--admin-control-h);
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+/* A DISABLED DANGER BUTTON KEEPS ITS FILL. Ruling 54: the reader has to see
+   that the red button is the one they are being stopped from pressing, and a
+   greyed outline reads as a different control. This overrides the shared
+   0.55 disabled opacity for this one weight. */
+.btn-danger:disabled,
+.btn-danger:disabled:hover {
+  opacity: 0.4;
+  border-color: var(--border-danger);
+  background: var(--fill-danger);
+  color: var(--on-fill-danger);
+}
+
+/* ---- 375: rows stack, the kebab stays in the thumb column ---------------- */
+@media (max-width: 60rem) {
+  .posts-filter-select {
+    margin-left: 0;
+  }
+
+  .posts-table-scroll {
+    overflow-x: visible;
+  }
+
+  .posts-table,
+  .posts-table tbody,
+  .posts-table tr,
+  .posts-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .posts-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .posts-table tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.5rem 1fr 2rem;
+    gap: 0 0.5rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .posts-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .posts-table td {
+    height: auto;
+    padding: 0;
+    border-bottom: 0;
+    white-space: normal;
+  }
+
+  .posts-table td.posts-check {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .posts-table td.posts-title-cell {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .posts-table td.posts-date,
+  .posts-table td.posts-readership {
+    grid-column: 2;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    text-align: left;
+  }
+
+  /* Sticky in its own column so the one control per row stays under the thumb
+     while the text beside it scrolls. --surface behind it, because it is
+     pinned over content. */
+  .posts-table td.posts-row-actions {
+    position: sticky;
+    top: 0.75rem;
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    width: auto;
+    align-self: start;
+    border-radius: var(--r-control);
+    background: var(--surface);
+  }
 }

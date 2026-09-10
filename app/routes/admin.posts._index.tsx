@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Form, Link, data, redirect, useNavigation } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
+import { RowMenu } from "~/components/admin/row-menu";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
@@ -261,6 +263,21 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * must not disappear because the author happened to be searching.
      */
     scheduledTotal: all.filter((post) => post.state === "scheduled").length,
+    /**
+     * THE TAB COUNTS, off the SAME array the list is drawn from.
+     *
+     * Not a second query, which is the media library's recorded defect: its
+     * Unused chip counted with one predicate and filtered with another, so the
+     * chip and the grid disagreed. Counted over `all` rather than `posts`,
+     * because a tab's job is to say how many are behind it, and a count that
+     * shrank to the current filter would say nothing.
+     */
+    statusCounts: {
+      all: all.length,
+      published: all.filter((post) => post.state === "published").length,
+      draft: all.filter((post) => post.state === "draft").length,
+      scheduled: all.filter((post) => post.state === "scheduled").length,
+    },
     /** Every tag in use, drafts included, for the filter's options. */
     tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
     /**
@@ -633,6 +650,20 @@ export async function action({ request, context }: Route.ActionArgs) {
   return { message: null };
 }
 
+/**
+ * The status facet, which is FIXED and therefore tabs rather than a select.
+ *
+ * `key` indexes the loader's counts and `value` is the URL parameter. "All" is
+ * the ABSENCE of the parameter rather than a fifth value, so the unfiltered
+ * list and the All tab are one URL by construction.
+ */
+const STATUS_TABS = [
+  { key: "all", value: "", label: "All" },
+  { key: "published", value: "published", label: "Published" },
+  { key: "draft", value: "draft", label: "Drafts" },
+  { key: "scheduled", value: "scheduled", label: "Scheduled" },
+] as const;
+
 export default function AdminPosts({
   loaderData,
   actionData,
@@ -652,6 +683,15 @@ export default function AdminPosts({
 }: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
+  /* Defaulted for the same reason `readership` is: check:admin-ui renders this
+     component against fabricated loader data, and a fixture written before this
+     field existed must render zeros rather than throw. */
+  const statusCounts = loaderData.statusCounts ?? {
+    all: total,
+    published: 0,
+    draft: 0,
+    scheduled: scheduledTotal,
+  };
 
   /**
    * Origin requests for one post's public route, or the reason there is none.
@@ -718,53 +758,28 @@ export default function AdminPosts({
     );
 
   /**
-   * TYPE THE COUNT. Bulk delete alone sits at this rung of the friction ladder.
+   * WHERE CANCEL GOES, and it carries the filter the operator was looking at.
    *
-   * The disaster this guards is a select-all reflex deleting the corpus in one
-   * gesture, and the operative variable in that disaster is N. So the friction
-   * must VERIFY N rather than merely pause: a confirm() is dismissed by the
-   * same reflex that armed it, while typing the number cannot be satisfied
-   * without reading it.
-   *
-   * Deliberately NOT escalated elsewhere. Single delete keeps its plain
-   * confirm, and so do both retag intents, because a ladder whose every rung is
-   * the same height has no rungs: confirmation used everywhere becomes
-   * background noise and stops being read. Retag is reversible by its own
-   * inverse; a delete is recoverable only through git.
-   *
-   * The count is read from `chosen` INSIDE the handler. React reattaches this
-   * handler on every render, so the closure is current, but reading it here
-   * rather than hoisting it keeps that true if the button is ever memoized.
-   *
-   * **THIS IS NO LONGER THE GATE, AND MUST NOT BECOME ONE AGAIN.** The action
-   * checks the same count server-side, because a handler does not run for a
-   * reader without JavaScript and the destruction did. What this function now
-   * does is CARRY what the operator typed into the request, so a scripted
-   * operator is asked once rather than twice; the server is what decides.
+   * The confirmation used to send Cancel to a bare `/admin/posts`, which
+   * silently dropped a status or tag filter the reader had set: they backed out
+   * of one delete and lost the view they were working in.
    */
-  const confirmDelete = () => {
-    const n = chosen.length;
-    const shown = chosen.slice(0, 5);
-    const rest = n - shown.length;
-    const list = shown.join(", ") + (rest > 0 ? `, and ${rest} more` : "");
-    const typed = prompt(
-      `Delete ${n} post${n === 1 ? "" : "s"}? This removes each file and its rows.\n\n` +
-        `${list}\n\nType ${n} to confirm.`,
-    );
-    // Cancel returns null; a mismatch returns the wrong string. Both abort here
-    // as earlier feedback. A miss that DID reach the action would be refused
-    // there too, which is the property that matters.
-    if (typed === null) return null;
-    return typed.trim();
-  };
+  const cancelParams = new URLSearchParams();
+  if (filters.q) cancelParams.set("q", filters.q);
+  if (filters.status) cancelParams.set("status", filters.status);
+  if (filters.tag) cancelParams.set("tag", filters.tag);
+  const cancelQuery = cancelParams.toString();
+  const cancelHref = cancelQuery ? `/admin/posts?${cancelQuery}` : "/admin/posts";
 
-  /*
-   * What the handler typed, carried in a hidden field so the ONE submission a
-   * scripted operator makes already satisfies the server check. With scripting
-   * off this stays empty, the action refuses, and the page renders the
-   * server-side confirmation step below.
+  /**
+   * Whether the client is running, for the two controls that must differ.
+   *
+   * Initialised false so the hydration render matches the server's. The bulk
+   * bar's count is meaningless without script (nothing updates it) and the
+   * server is the only thing that knows how many slugs a submission carried.
    */
-  const [typedCount, setTypedCount] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   /** What the author actually asked for, in words, for the empty state. */
   const askedFor = [
@@ -848,67 +863,97 @@ export default function AdminPosts({
         check:admin-ui's fixture. Regenerated deliberately, with the before and
         after triples reported, per the queue's standing rule.
       */}
+      {/*
+        ONE FILTER ROW: the search box on the left, then the status tabs.
+
+        THE STATUS SELECT BECAME TABS because status is a FIXED vocabulary of
+        four, and a select hides three of them behind a click while a tab row
+        shows all four and how many are behind each. Tag stays a select: its
+        vocabulary is whatever the corpus happens to contain, so it is not a
+        fixed facet and a tab per tag would grow without limit.
+
+        NO "Filter" BUTTON. The text input submits on Enter, the tabs are links,
+        and the tag select carries the visually hidden submit below, which is
+        what keeps the tag facet usable with scripting off: a select cannot
+        submit its own form without either a button or script, and dropping the
+        button entirely would have taken the tag filter with it.
+      */}
       <Form method="get" action="/admin/posts" className="posts-filters" role="search">
-        <div className="posts-filter-field">
-          <label htmlFor="posts-q">Search</label>
-          <input
-            id="posts-q"
-            type="search"
-            name={FILTER_KEYS.q}
-            defaultValue={filters.q}
-            placeholder="Title or slug"
-            className="posts-filter-input"
-          />
-        </div>
+        <label className="sr-only" htmlFor="posts-q">
+          Search titles and slugs
+        </label>
+        <input
+          id="posts-q"
+          type="search"
+          name={FILTER_KEYS.q}
+          defaultValue={filters.q}
+          placeholder="Search titles and slugs"
+          className="posts-filter-input"
+        />
 
-        <div className="posts-filter-field">
-          <label htmlFor="posts-status">Status</label>
-          <select
-            id="posts-status"
-            name={FILTER_KEYS.status}
-            defaultValue={filters.status}
-            className="posts-filter-select"
-          >
-            <option value="">Any status</option>
-            <option value="published">Published</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
+        {/* Links, so the filtered view is a URL: it survives a reload, it is
+            linkable, the back button restores it, and it needs no script.
+            `aria-current` is what announces which one is on. */}
+        <nav className="posts-tabs" aria-label="Filter by status">
+          {STATUS_TABS.map((tab) => {
+            const on = filters.status === tab.value;
+            const params = new URLSearchParams();
+            if (filters.q) params.set(FILTER_KEYS.q, filters.q);
+            if (filters.tag) params.set(FILTER_KEYS.tag, filters.tag);
+            if (tab.value) params.set(FILTER_KEYS.status, tab.value);
+            const query = params.toString();
+            return (
+              <Link
+                key={tab.label}
+                to={query ? `/admin/posts?${query}` : "/admin/posts"}
+                aria-current={on ? "page" : undefined}
+                className="posts-tab"
+              >
+                {tab.label}
+                {/* A count of ZERO renders. "Scheduled 0" is a real answer to
+                    the question the tab poses; hiding it would make an empty
+                    facet look like a missing one. Announced as words, because
+                    a bare numeral beside a label reads as a position. */}
+                <span className="posts-tab-count" aria-hidden="true">
+                  {statusCounts[tab.key]}
+                </span>
+                <span className="sr-only">
+                  {`, ${statusCounts[tab.key]} post${statusCounts[tab.key] === 1 ? "" : "s"}`}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
 
-        <div className="posts-filter-field">
-          <label htmlFor="posts-tag">Tag</label>
-          <select
-            id="posts-tag"
-            name={FILTER_KEYS.tag}
-            defaultValue={filters.tag}
-            className="posts-filter-select"
-          >
-            <option value="">Any tag</option>
-            {tagOptions.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button type="submit" className="btn-ghost posts-filter-submit">
-          Filter
+        <label className="sr-only" htmlFor="posts-tag">
+          Tag
+        </label>
+        <select
+          id="posts-tag"
+          name={FILTER_KEYS.tag}
+          defaultValue={filters.tag}
+          className="posts-filter-select"
+        >
+          <option value="">Any tag</option>
+          {tagOptions.map((tag) => (
+            <option key={tag} value={tag}>
+              {tag}
+            </option>
+          ))}
+        </select>
+        {/* Visually hidden, never removed. Without it a scriptless reader can
+            choose a tag and has no way to apply it. It carries no name, so the
+            request it makes is the one this form always made. */}
+        <button type="submit" className="sr-only posts-filter-submit">
+          Apply the tag filter
         </button>
+
         {/* A LINK, not a reset button: clearing means going to the unfiltered
             URL, and a link says that and is bookmarkable. `reset` would restore
             the form's defaults, which are the CURRENT filters, so it would
             appear to do nothing. */}
-        {/* `.btn-ghost`, matching the empty state's Clear, and that settles the
-            fourth appearance of the a:visited specificity rule at the DESIGN
-            level rather than with another `:visited` selector. A bare text link
-            to an already-visited URL correctly turns claret, so the two Clears
-            did not match. A ghost button carries a border, which is a
-            non-colour affordance, so rule 2 exempts it from the underline and
-            from visited styling and the two controls now agree. */}
         {filtered ? (
-          <Link to="/admin/posts" className="btn-ghost posts-filter-clear">
+          <Link to="/admin/posts" className="btn-secondary posts-filter-clear">
             Clear
           </Link>
         ) : null}
@@ -973,64 +1018,48 @@ export default function AdminPosts({
         renders it as an ordinary form so the no-script path reaches it too.
       */}
       {actionData?.confirmSyncAsk !== undefined ? (
-        <form method="post" className="posts-confirm-delete">
-          <h2>Re-sync the Ask corpus?</h2>
-          <p>
-            Every record whose key is not in this run is REMOVED from the AI
-            index, and cached answers are dropped. A sync against a partial
-            corpus prunes the index to whatever that corpus held. The corpus
-            currently has <strong>{actionData.confirmSyncAsk}</strong> post(s).
-          </p>
-          <label>
-            <span>
-              Type <strong>1</strong> to confirm
-            </span>
-            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
-          </label>
-          <div className="posts-confirm-actions">
-            <Link to="/admin/posts" className="btn-ghost">
-              Cancel
-            </Link>
-            <button type="submit" name="intent" value="sync-ask" className="btn-danger">
-              Sync the corpus
-            </button>
-          </div>
-        </form>
+        <ConfirmDialog
+          title="Rebuild the search answer index?"
+          body={
+            <p>
+              Every record not in this run is removed from the index, and saved
+              answers are dropped. The site currently has{" "}
+              <strong>{actionData.confirmSyncAsk}</strong> post(s), so that is
+              what the index will hold afterwards.
+            </p>
+          }
+          requireTyped="1"
+          confirmLabel="Rebuild the index"
+          cancelHref={cancelHref}
+        >
+          <input type="hidden" name="intent" value="sync-ask" />
+        </ConfirmDialog>
       ) : null}
 
       {actionData?.confirmDelete ? (
-        <form method="post" className="posts-confirm-delete">
-          <h2>
-            Delete {actionData.confirmDelete.count} post
-            {actionData.confirmDelete.count === 1 ? "" : "s"}?
-          </h2>
-          <p>
-            This removes each file and its rows. It is recoverable only through
-            git.
-          </p>
-          <ul>
-            {actionData.confirmDelete.slugs.map((slug) => (
-              <li key={slug}>
-                <code>{slug}</code>
-                <input type="hidden" name="slug" value={slug} />
-              </li>
-            ))}
-          </ul>
-          <label>
-            <span>
-              Type <strong>{actionData.confirmDelete.count}</strong> to confirm
-            </span>
-            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
-          </label>
-          <div className="posts-confirm-actions">
-            <Link to="/admin/posts" className="btn-ghost">
-              Cancel
-            </Link>
-            <button type="submit" name="intent" value="bulk-delete" className="btn-danger">
-              Delete permanently
-            </button>
-          </div>
-        </form>
+        <ConfirmDialog
+          title={`Delete ${actionData.confirmDelete.count} post${
+            actionData.confirmDelete.count === 1 ? "" : "s"
+          }`}
+          body={
+            <p>
+              This removes each markdown file and its rows. Git still has them;
+              nothing else does.
+            </p>
+          }
+          stake={actionData.confirmDelete.slugs}
+          requireTyped={String(actionData.confirmDelete.count)}
+          confirmLabel="Delete permanently"
+          cancelHref={cancelHref}
+        >
+          {/* THE INTENT IS A FIELD, not the submitter's value. The button is
+              disabled until the count matches, and a disabled submitter sends
+              neither its name nor its value. */}
+          <input type="hidden" name="intent" value="bulk-delete" />
+          {actionData.confirmDelete.slugs.map((slug) => (
+            <input key={slug} type="hidden" name="slug" value={slug} />
+          ))}
+        </ConfirmDialog>
       ) : null}
 
       {/* Ask index drift. Surfaced here because a save is allowed to succeed
@@ -1083,10 +1112,34 @@ export default function AdminPosts({
               own controls. Nesting a form inside another is invalid, which is
               why this sits here rather than wrapping the toolbar above. */}
           <Form method="post">
-            {chosen.length > 0 ? (
-              <div className="posts-bulk" role="group" aria-label="Bulk actions">
+            {/*
+              ALWAYS IN THE DOCUMENT, revealed by CSS. Ruling 54, and it closes
+              a measured defect rather than a preference.
+
+              It used to render only when `chosen.length > 0`, which is CLIENT
+              state. With scripting off `onChange` never runs, `chosen` stays
+              empty, and the bar never rendered at all: measured 2026-09-09 on
+              the server render, `posts-bulk` absent, `bulk-delete` absent. So a
+              scriptless operator could tick every checkbox and had no control
+              to act on them, and the server-rendered confirmation step behind
+              that control was unreachable from this page.
+
+              `:has(.posts-check input:checked)` in admin-posts.css reveals it
+              instead, which is the browser answering a question about its own
+              checkboxes with no script involved. The row still submits `slug`
+              per ticked box exactly as before.
+            */}
+              <div className="posts-bulk" role="group" aria-label="Actions for the selected posts">
+                {/*
+                  THE COUNT IS SCRIPT-ONLY, and says so by not appearing.
+                  Nothing updates it without script, and a bar reading
+                  "0 selected" above two ticked boxes is worse than a bar that
+                  does not claim a number. The heading names the group either
+                  way; the server counts the slugs the submission actually
+                  carried, and the confirmation states that count.
+                */}
                 <p className="posts-bulk-count" aria-live="polite">
-                  {chosen.length} selected
+                  {hydrated ? `${chosen.length} selected` : "With the selected posts"}
                 </p>
 
                 <label className="posts-bulk-tag">
@@ -1107,14 +1160,6 @@ export default function AdminPosts({
                   ))}
                 </datalist>
 
-                {/*
-                  THE CONFIRMATION, CARRIED. Hidden because a scripted operator
-                  already answered the prompt; the server reads this name either
-                  way, and with scripting off it arrives empty and the action
-                  refuses rather than deleting.
-                */}
-                <input type="hidden" name={CONFIRM_FIELD} defaultValue={typedCount} />
-
                 <button type="submit" name="intent" value="bulk-add-tag" className="btn">
                   Add tag
                 </button>
@@ -1125,26 +1170,11 @@ export default function AdminPosts({
                   type="submit"
                   name="intent"
                   value="bulk-delete"
-                  className="btn-danger"
-                  onClick={(event) => {
-                    const typed = confirmDelete();
-                    if (typed === null) {
-                      event.preventDefault();
-                      return;
-                    }
-                    // Set it on the DOM node directly: React state written here
-                    // does not reach the form before this same event submits it.
-                    const field = event.currentTarget.form?.elements.namedItem(
-                      CONFIRM_FIELD,
-                    );
-                    if (field instanceof HTMLInputElement) field.value = typed;
-                    setTypedCount(typed);
-                  }}
+                  className="btn-secondary"
                 >
                   Delete
                 </button>
               </div>
-            ) : null}
 
             {/*
               THE SCROLLPORT, and the table scrolls inside it so the DOCUMENT
@@ -1179,11 +1209,6 @@ export default function AdminPosts({
                 comment nodes between adjacent text nodes and anything reading
                 the markup back would have to strip them first.
               */}
-              <caption>
-                {`Origin requests per post over the last ${
-                  readership.status === "live" ? readership.data.windowDays : 0
-                } days, sampling weighted. ` + CACHE_SENTENCE}
-              </caption>
               <thead>
                 <tr>
                   <th scope="col" className="posts-check">
@@ -1202,14 +1227,13 @@ export default function AdminPosts({
                       </span>
                     </label>
                   </th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Title</th>
-                  <th scope="col">Publish date</th>
-                  {/* The honest label, matching the panel that owns this data.
-                      It says what the number IS, and the caption under the
-                      table says what it is not. */}
-                  <th scope="col">Origin requests</th>
-                  <th scope="col">Actions</th>
+                  <th scope="col" className="posts-title-cell">Title</th>
+                  <th scope="col">Published</th>
+                  {/* The operator's word. What it does and does not count is
+                      the disclosure under the table: ruling 54 keeps internal
+                      names such as "origin requests" off the page. */}
+                  <th scope="col" className="posts-readership">Views</th>
+                  <th scope="col" className="posts-row-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1227,32 +1251,37 @@ export default function AdminPosts({
                         <span className="sr-only">Select {post.title}</span>
                       </label>
                     </td>
-                    <td>
-                    {/* Rule 1: the state is a WORD first. Colour separates the
-                        three at a glance and border-style separates them again,
-                        so the pill still says three different things once
-                        forced-colors has taken the fill and the tint away. */}
-                    <span className="status-pill" data-state={post.state}>
-                      {post.state}
-                    </span>
-                  </td>
-                  <td>
-                    <Link to={`/admin/posts/${post.slug}/edit`} className="posts-title">
-                      {post.title}
-                    </Link>
-                    {/*
-                      THE HERO, MARKED. The public index promotes one featured
-                      post above the others and this list could not say which,
-                      so the only way to find it was to read the markdown.
+                    <td className="posts-title-cell">
+                    <span className="posts-title-row">
+                      <Link to={`/admin/posts/${post.slug}/edit`} className="posts-title">
+                        {post.title}
+                      </Link>
+                      {/* Rule 1: the state is a WORD first. Colour separates the
+                          three at a glance and border-style separates them again,
+                          so the pill still says three different things once
+                          forced-colors has taken the fill and the tint away.
 
-                      A WORD, for the same reason the status pill is a word:
-                      rule 1, and a mark carried only by colour or an icon says
-                      nothing under forced-colors and nothing to a screen
-                      reader. It sits next to the title rather than in the
-                      status column because it is orthogonal to state: a
-                      featured post can be draft, scheduled or published.
-                    */}
-                    {post.featured ? <span className="posts-featured">Featured</span> : null}
+                          ON the title row since ruling 54, rather than in a
+                          column of its own. The reader scans titles; the state
+                          they want is the state of the title they just found,
+                          and a column two cells away makes them track back. */}
+                      <span className="status-pill" data-state={post.state}>
+                        {post.state}
+                      </span>
+                      {/*
+                        THE HERO, MARKED. The public index promotes one featured
+                        post above the others and this list could not say which,
+                        so the only way to find it was to read the markdown.
+
+                        A WORD, for the same reason the status pill is a word:
+                        rule 1, and a mark carried only by colour or an icon says
+                        nothing under forced-colors and nothing to a screen
+                        reader. It sits beside the state rather than in it,
+                        because it is orthogonal: a featured post can be draft,
+                        scheduled or published.
+                      */}
+                      {post.featured ? <span className="posts-featured">Featured</span> : null}
+                    </span>
                     <span className="posts-slug">/{post.slug}</span>
                   </td>
                   <td className="posts-date">
@@ -1290,51 +1319,44 @@ export default function AdminPosts({
                       );
                     })()}
                   </td>
-                  <td>
-                    <div className="posts-actions">
-                      <Link to={`/admin/posts/${post.slug}/edit`} className="row-action">
+                  <td className="posts-row-actions">
+                    {/*
+                      ONE MENU PER ROW. It used to be up to four loose buttons
+                      per row, which across fifteen rows is fifty-odd controls
+                      competing with the fifteen names the reader came to find.
+
+                      Every item still submits exactly what it submitted before:
+                      same method, same intent value, same form. The buttons are
+                      associated by the `form` ATTRIBUTE because this cell sits
+                      inside the bulk selection form and forms cannot nest; the
+                      row forms themselves sit below the table.
+                    */}
+                    <RowMenu label={`Actions for ${post.title}`}>
+                      <Link
+                        to={`/admin/posts/${post.slug}/edit`}
+                        className="row-menu-item"
+                        data-menu-item
+                      >
                         Edit
                       </Link>
-                      {/* Only a post the public query would actually return.
-                          A scheduled post is published in the database and 404s
-                          on the site, so offering View for it sends the author
-                          to a dead page. */}
                       {post.state === "published" ? (
                         <a
                           href={`/blog/${post.slug}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="row-action"
+                          className="row-menu-item"
+                          data-menu-item
                         >
-                          View
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M15 3h6v6" />
-                            <path d="M10 14 21 3" />
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          </svg>
+                          View on the site
                           <span className="sr-only">(opens in a new tab)</span>
                         </a>
                       ) : null}
                       {/*
-                        UNPUBLISH, on the rows where it is a real transition.
-                        A draft has nothing to withdraw, and a never-published
+                        UNPUBLISH, on the rows where it is a real transition. A
+                        draft has nothing to withdraw, and a never-published
                         draft must not be offered anything that changes public
-                        state from here at all: first publication has a ceremony
-                        and it lives in the editor.
-
-                        Associated by the `form` ATTRIBUTE, because this cell is
-                        inside the bulk selection form and forms cannot nest.
-                        The form itself sits below the table.
+                        state from here: first publication has a ceremony and it
+                        lives in the editor.
                       */}
                       {post.state === "published" || post.state === "scheduled" ? (
                         <button
@@ -1342,7 +1364,8 @@ export default function AdminPosts({
                           form={rowFormId("unpublish", post.slug)}
                           name="intent"
                           value="unpublish"
-                          className="row-action"
+                          className="row-menu-item"
+                          data-menu-item
                         >
                           Unpublish
                         </button>
@@ -1354,11 +1377,12 @@ export default function AdminPosts({
                         form={rowFormId("duplicate", post.slug)}
                         name="intent"
                         value="duplicate"
-                        className="row-action"
+                        className="row-menu-item"
+                        data-menu-item
                       >
                         Duplicate
                       </button>
-                    </div>
+                    </RowMenu>
                   </td>
                 </tr>
               ))}
@@ -1413,6 +1437,22 @@ export default function AdminPosts({
                 <input type="hidden" name="slug" value={post.slug} />
               </Form>
             ))}
+
+          {/*
+            THE CAVEAT, AS A DISCLOSURE. It was the table's `<caption>`, which a
+            screen reader announces before every row and which spent five
+            sentences at the top of the page explaining a column. The closed
+            summary is enough to act on; the body is for whoever wants to know
+            why the number is what it is.
+          */}
+          <details className="posts-explain">
+            <summary>What the view count includes</summary>
+            <p>
+              {`Only reads that reached the server, over the last ${
+                readership.status === "live" ? readership.data.windowDays : 0
+              } days, sampling weighted. ` + CACHE_SENTENCE}
+            </p>
+          </details>
 
           {/* Reference, not a demand: the numbers that describe the AI layer's
               condition sit under the thing they describe, quiet, and only the
