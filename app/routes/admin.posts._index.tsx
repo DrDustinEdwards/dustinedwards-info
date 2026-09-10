@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { Form, Link, data, redirect, useNavigation } from "react-router";
 
-import { AdminAlert } from "~/components/admin/alert";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
-import { Panel } from "~/components/admin/panel";
 import { RowMenu } from "~/components/admin/row-menu";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
@@ -789,10 +787,25 @@ export default function AdminPosts({
   ].filter(Boolean);
 
   return (
-    <Panel
-      title="Posts"
-      description="Every post, drafts included. Saving commits a markdown file to main and then syncs D1."
-    >
+    <>
+      <div className="admin-page-head">
+        <h1>Posts</h1>
+        {/*
+          THE ONE STATUS SENTENCE, and it AGREES WITH THE NOTICE below it.
+
+          Ruling 54 makes that a rule because the two drifted: the panel's
+          description read "Every post, drafts included" while a drift alert
+          under it said search was answering from stale text. The description
+          was about the page; this is about the site right now.
+        */}
+        <p className="admin-page-status">
+          {`${statusCounts.all} post${statusCounts.all === 1 ? "" : "s"}, ` +
+            `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
+            (askDrifted && ask
+              ? ` ${ask.missing.length + ask.stale.length} of them have changed since search last read them.`
+              : " Search is up to date with all of them.")}
+        </p>
+      </div>
       {/* New post is the only thing in this row that CREATES. The other three
           intents repair, so they sit behind the overflow on the far side
           rather than beside the primary action wearing the same weight. Every
@@ -969,7 +982,7 @@ export default function AdminPosts({
         spends the one tint per view on the drift alert.
       */}
       {scheduledTotal > 0 ? (
-        <p className="posts-scheduled-note">
+        <p className="admin-notice posts-scheduled-note">
           <svg
             width="14"
             height="14"
@@ -994,7 +1007,7 @@ export default function AdminPosts({
           submit the operator just pressed did. Unlike the drift region below,
           it is news. */}
       {actionData?.message ? (
-        <p className="editor-notice" role="status">
+        <p className="admin-notice" role="status">
           {actionData.message}
         </p>
       ) : null}
@@ -1068,23 +1081,46 @@ export default function AdminPosts({
           when the index is clean; the count still reaches the meta line under
           the table, where it is reference rather than a demand. */}
       {askDrifted && ask ? (
-        <AdminAlert
-          title="Ask index drifted"
-          headingId="ask-drift"
-          action={
-            <Form method="post">
-              <button type="submit" name="intent" value="sync-ask" className="btn">
-                Sync Ask corpus
-              </button>
-            </Form>
-          }
-        >
-          <p>
-            {ask.missing.length} record(s) missing from the index, {ask.stale.length} stale
-            item(s) left in it. Ask is answering from a corpus that no longer matches the
-            site.
-          </p>
-        </AdminAlert>
+        /*
+          A STANDING CONDITION, so a named region and never a live one. It is
+          rendered into the first byte of HTML on every visit; announcing it as
+          news each time would interrupt a reader who came to do something else,
+          and it is not news, it is a state the site is in.
+
+          The words say what it means for a READER of the site rather than what
+          it means for the index: ruling 54 keeps "Ask index" and "corpus" off
+          the operator's page.
+        */
+        <section className="admin-notice" data-tone="warning" aria-labelledby="ask-drift">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+          <div className="admin-notice-body">
+            <h2 id="ask-drift">Search is answering from older text</h2>
+            <p>
+              {`${ask.missing.length} post(s) are missing from the answer index and ` +
+                `${ask.stale.length} record(s) in it no longer match the site, so an ` +
+                `answer may quote text that has changed.`}
+            </p>
+          </div>
+          <Form method="post" className="admin-notice-action">
+            <button type="submit" name="intent" value="sync-ask" className="btn">
+              Rebuild the answer index
+            </button>
+          </Form>
+        </section>
       ) : null}
 
       {posts.length === 0 ? (
@@ -1099,7 +1135,7 @@ export default function AdminPosts({
               No posts match {askedFor.join(", ")}. Searched {total} post
               {total === 1 ? "" : "s"} by title and slug.
             </p>
-            <Link to="/admin/posts" className="btn-ghost">
+            <Link to="/admin/posts" className="btn-secondary">
               Clear filters
             </Link>
           </div>
@@ -1470,6 +1506,6 @@ export default function AdminPosts({
           ) : null}
         </div>
       )}
-    </Panel>
+    </>
   );
 }
