@@ -86,19 +86,6 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
         <>
           <div className="origin-table-scroll">
             <table className="origin-table">
-              {/* Assembled in JS for the same reason as the remainder line: one
-                  text node, no spliced SSR comments to strip. */}
-              <caption>
-                {`Origin requests over ${formatWindow(report?.windowDays ?? 0)}, ` +
-                  `sampling weighted. Analytics Engine samples under load, so each ` +
-                  `figure is the sum of the sampling interval rather than a row count. ` +
-                  (sampling
-                    ? "Sampling is active in this window, so these are estimates. "
-                    : "Sampling is not active at this volume, so these are exact counts; " +
-                      "under heavier load they become estimates and this panel looks " +
-                      "exactly the same. ") +
-                  CACHE_SENTENCE}
-              </caption>
               <thead>
                 <tr>
                   <th scope="col">Path</th>
@@ -137,6 +124,31 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
             reading the markup has to strip them first. Building it in JS keeps
             it one text node.
           */}
+          {/*
+            THE CAVEAT, AS A DISCLOSURE. It was this table's `<caption>`, which
+            a screen reader announces before EVERY row: five sentences about
+            what the number is not, repeated once per path. The closed summary
+            is enough to act on and the body is for whoever wants to know why
+            the number is what it is.
+
+            Assembled in JS for the same reason as the remainder line below:
+            one text node, so no spliced SSR comments for a reader of the
+            markup to strip.
+          */}
+          <details className="admin-explain origin-explain">
+            <summary>What these counts include, and what they miss</summary>
+            <p>
+              {`Origin requests over ${formatWindow(report?.windowDays ?? 0)}, ` +
+                `sampling weighted. Analytics Engine samples under load, so each ` +
+                `figure is the sum of the sampling interval rather than a row count. ` +
+                (sampling
+                  ? "Sampling is active in this window, so these are estimates. "
+                  : "Sampling is not active at this volume, so these are exact counts; " +
+                    "under heavier load they become estimates and this panel looks " +
+                    "exactly the same. ") +
+                CACHE_SENTENCE}
+            </p>
+          </details>
           <p className="muted origin-remainder">
             {report && report.pathsReturned > rows.length
               ? `Top ${Math.min(TOP_N, rows.length)} of ${report.pathsReturned} paths. ` +
