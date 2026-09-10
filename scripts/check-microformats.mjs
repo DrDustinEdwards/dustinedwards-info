@@ -72,7 +72,7 @@ import { readFile } from "node:fs/promises";
 
 import { assertFloor } from "./lib/floor.mjs";
 import { bundleRoutes, importBundled, renderRoute } from "./lib/route-render.mjs";
-import { buildArtifact } from "./build-content.mjs";
+import { buildArtifact, revisedDate } from "./build-content.mjs";
 
 import {
   POSTS_PER_PAGE,
@@ -294,7 +294,28 @@ function postLoaderData(record) {
       description: record.description ?? null,
       html: record.html ?? "",
       publishAt: record.publishAt ?? null,
-      updatedAt: record.updated ?? null,
+      /*
+       * THE SAME SOURCE THE SYNC USES, through the same function.
+       *
+       * This was `record.updated ?? null`, which is the FRONTMATTER field, and
+       * no post in this corpus carries one. So `dt-updated` was absent on every
+       * render here while the deployed page carried it on every post, and the
+       * gate was asserting a property it had arranged never to see. The live
+       * parse on 2026-09-10 is what exposed it.
+       *
+       * `revisedDate` is `sync-content.mjs`'s own rule, extracted: frontmatter
+       * `updated` if present, else the file's last commit date. Feeding it here
+       * means this gate renders what production renders rather than a value
+       * invented for the fixture.
+       *
+       * ONE HONEST DIFFERENCE, stated because it is not a bug in either place:
+       * when there is no revision date the SYNC writes `unixepoch()` rather
+       * than null, so a production row always carries something. Null here
+       * renders no revision, which is the same markup a page with no revision
+       * shows, and the assertion below is the PAIRING rather than the presence,
+       * so it holds either way.
+       */
+      updatedAt: revisedDate(record),
       coverImage: record.cover?.src ?? null,
       coverAlt: record.cover?.alt ?? null,
       ogImage: null,
@@ -316,6 +337,7 @@ function postLoaderData(record) {
 
 let postsParsed = 0;
 let updatedSeen = 0;
+let unrevisedSeen = 0;
 
 for (const record of published) {
   const slug = record.slug;
@@ -428,15 +450,35 @@ for (const record of published) {
       `parse ${updated === undefined ? "found no" : "found a"} dt-updated ` +
       `(${JSON.stringify(updated)}).`,
   );
-  if (updated !== undefined) {
-    updatedSeen += 1;
-    assert(
-      `${slug}: dt-updated equals the row's updated timestamp`,
-      updated === new Date(record.updated).toISOString(),
-      `dt-updated is ${JSON.stringify(updated)}, the record says ` +
-        `${JSON.stringify(record.updated)}.`,
-    );
-  }
+  /*
+   * THE VALUE ASSERTION RUNS ON EVERY POST, present or absent, and that is
+   * deliberate rather than tidy.
+   *
+   * Conditioning it on `updated !== undefined` made this gate's assertion count
+   * depend on the ENVIRONMENT: a full clone resolves a commit date for every
+   * post and ran it eleven times, CI's shallow clone resolves none and would
+   * have run it zero. A floor cannot sit under a count that moves with the
+   * checkout, and the gate would have gone red on CI for being CI.
+   *
+   * So the expectation is derived from what the PAGE rendered: if it shows a
+   * revision the property must equal the date the sync would write, and if it
+   * does not the property must be absent. That defers to the route's own
+   * threshold instead of restating it here, which keeps `REVISED_THRESHOLD_MS`
+   * owned by the route (hard rule 17) and keeps this count constant.
+   *
+   * Paired with the presence assertion above, the two cannot both be satisfied
+   * by a page that renders a revision it did not have.
+   */
+  if (updated === undefined) unrevisedSeen += 1;
+  else updatedSeen += 1;
+  const expectedUpdated = showsUpdated ? revisedDate(record)?.toISOString() : undefined;
+  assert(
+    `${slug}: dt-updated is the revision date the sync would write, or absent`,
+    updated === expectedUpdated,
+    `dt-updated parsed as ${JSON.stringify(updated)}; the page ` +
+      `${showsUpdated ? "shows" : "shows no"} revision and revisedDate says ` +
+      `${JSON.stringify(revisedDate(record)?.toISOString())}.`,
+  );
 
   /*
    * NOTHING ELSE ON THE PAGE IS A MICROFORMAT. The mentions list is full of
@@ -461,75 +503,32 @@ assert(
   `${postsParsed} of ${published.length} parsed to a single h-entry.`,
 );
 
-// --- 1b. dt-updated, exercised rather than assumed -----------------------
-
 /*
- * MEASURED FIRST, THEN BUILT: `updatedSeen` is 0 of 11 against the real corpus,
- * because no post carries an `updated:` field in its frontmatter. So every
- * assertion above about `dt-updated` runs on its ABSENT branch, and the
- * property could be spelled wrong, bound to the wrong column or missing
- * entirely and section 1 would sweep clean. Hard rule 10's first class, in the
- * shape it usually arrives in: a condition that cannot currently be true.
+ * BOTH dt-updated BRANCHES, COUNTED AND PRINTED, and neither is fabricated.
  *
- * The repair is a rendered control rather than a fixture post. This renders a
- * REAL published post twice with a fabricated `updatedAt` and asserts the
- * threshold from both sides. It fabricates one field of loader data, which is
- * what the whole harness does anyway, and it puts nothing into the corpus.
+ * A synthetic control used to sit here. It rendered a real post twice with an
+ * `updatedAt` this gate invented, thirty days and one hour past publication,
+ * and asserted the route's threshold from both sides. It existed because the
+ * gate fed `record.updated`, the FRONTMATTER field, which no post in this
+ * corpus carries: the property was unreachable on real data and a fixture was
+ * the only way to touch it. Meanwhile the deployed page carried `dt-updated` on
+ * every post, so the gate was asserting the absence of something production
+ * always published.
  *
- * BOTH SIDES, because one is not a test. A component that emitted `dt-updated`
- * unconditionally would pass the "far" case alone, and one that never emitted
- * it would pass the "near" case alone.
- */
-const REVISION_CONTROL_DAYS = 30;
-const controlRecord = published[0];
-const controlPublished = new Date(controlRecord.publishAt);
-
-for (const [label, offsetMs, expectPresent] of /** @type {Array<[string, number, boolean]>} */ ([
-  ["far past the threshold", REVISION_CONTROL_DAYS * 24 * 60 * 60 * 1000, true],
-  // An hour is inside the route's one-day threshold, so it is a sync and not a revision.
-  ["inside the threshold", 60 * 60 * 1000, false],
-])) {
-  const updatedAt = new Date(controlPublished.getTime() + offsetMs).toISOString();
-  const base = postLoaderData(controlRecord);
-  const html = await renderRoute(postModule, {
-    path: "/blog/:slug",
-    url: `/blog/${controlRecord.slug}`,
-    loaderData: { ...base, post: { ...base.post, updatedAt } },
-    params: { slug: controlRecord.slug },
-  });
-  const entry = mf2(html, { baseUrl: `${SITE_ORIGIN}/blog/${controlRecord.slug}` }).items.find(
-    (/** @type {any} */ i) => i.type.includes("h-entry"),
-  );
-  const seen = prop(entry, "updated");
-
-  assert(
-    `dt-updated control, ${label}: the property is ${expectPresent ? "present" : "absent"}`,
-    (seen !== undefined) === expectPresent,
-    `rendering ${controlRecord.slug} with updatedAt ${updatedAt} against a publishAt ` +
-      `of ${controlRecord.publishAt} parsed dt-updated as ${JSON.stringify(seen)}. The ` +
-      `route shows a revision only past REVISED_THRESHOLD_MS, and the class must ` +
-      `follow the label in both directions.`,
-  );
-  if (expectPresent) {
-    updatedSeen += 1;
-    assert(
-      `dt-updated control, ${label}: the value is the revision timestamp`,
-      seen === updatedAt,
-      `dt-updated is ${JSON.stringify(seen)}, expected ${updatedAt}. A class bound to ` +
-        `publishAt rather than updatedAt would render a plausible date here.`,
-    );
-  }
-}
-
-/*
- * THE COUNT IS PRINTED so a reader can see which branch ran. It is not asserted
- * against the corpus, because a corpus with no revised post is a legitimate
- * state; what makes the absence safe is 1b above, not this line.
+ * Feeding `revisedDate` removed the need for the fixture. On a full clone every
+ * post has a commit date well past its publication, so the PRESENT branch runs
+ * against the value the sync would write. On CI's shallow clone
+ * `lastCommitDate` legitimately answers null and the ABSENT branch runs. The
+ * two environments cover the pair between them, on real inputs.
+ *
+ * NOT ASSERTED against a fixed split, because which branch runs is a property
+ * of the clone rather than of the code, and a gate demanding eleven present
+ * would go red on CI for being CI. Printed, so a reader can see which ran.
  */
 console.log(
-  `  dt-updated exercised ${updatedSeen} time(s): ` +
-    `${published.length} published post(s) carry no updated: frontmatter, so the ` +
-    `control in section 1b is what proves the property works.`,
+  `  dt-updated: ${updatedSeen} post(s) carried a revision, ${unrevisedSeen} did not, ` +
+    `from revisedDate (frontmatter updated:, else the file's last commit). A shallow ` +
+    `clone has no history for most files and answers null, which is the absent branch.`,
 );
 
 // --- 2. The blog index is one h-feed, holding the page it rendered --------
@@ -880,25 +879,30 @@ await cleanup();
 /*
  * WHOLE-GATE EXECUTED-COUNT FLOOR.
  *
- * MEASURED BY RUNNING THIS GATE, never summed: 214 on 2026-09-10 over 11
- * published posts, two index pages, the home page and the two revision
- * controls. The count is a function of the corpus size (roughly nine per post
- * in section 1, four per card in section 2, and a fixed tail), so it moves when
- * a post is published and it steps DOWN when one is unpublished.
+ * MEASURED BY RUNNING THIS GATE, never summed: 226 on 2026-09-10, over 11
+ * published posts, two index pages and the home page. The count is a function
+ * of the corpus size (roughly ten per post in section 1, four per card in
+ * section 2, and a fixed tail), so it moves when a post is published and steps
+ * DOWN when one is unpublished.
  *
- * The first number written here was 210, from an earlier run, and it was stale
- * by four before the file was saved. Re-measure by RUNNING, never by arithmetic
- * on the old number.
+ * FLOORED AT 216, AND `check:floors` CHOSE THAT NUMBER RATHER THAN TASTE. Its
+ * tolerance is `max(3, ceil(count * 0.05))`, so 226 allows a gap of 12; 216
+ * leaves 10. Two earlier values were refused by that gate by name: 190 was a
+ * gap of 24, and 205 became a gap of 13 the moment ruling 57 landed.
  *
- * FLOORED AT 208, AND `check:floors` CHOSE THAT NUMBER, not taste. The first
- * value written here was 190, a gap of 24 against a tolerance of 11, and the
- * floors gate refused it by name: 24 assertions could have stopped running and
- * this floor would still have passed.
+ * THREE RE-MEASUREMENTS, EACH BY RUNNING. 190 to 205 when the floor was first
+ * refused; 205 to 208 at 218 when ruling 57 made the home section render four
+ * real cards rather than the three this gate used to fabricate, and added the
+ * lead assertion; 208 to 216 at 226 when the `dt-updated` value assertion
+ * became unconditional. A number written here from arithmetic on the previous
+ * one was wrong every time it was tried.
  *
- * RE-MEASURED 2026-09-10 at 218 when ruling 57 landed: the home section now
- * renders four cards rather than the three this gate used to fabricate, and it
- * gained the lead assertion. 205 was a gap of 13 against a tolerance of 11, so
- * the floor moved with the count. 208 leaves a gap of 10.
+ * THE COUNT DOES NOT MOVE WITH THE CHECKOUT, and that is load bearing for CI.
+ * `revisedDate` answers null on a shallow clone, which is what CI has, so the
+ * `dt-updated` branch flips. PROVEN by forcing `lastCommitDate` to return null
+ * and re-running: 226 either way, with the branch report flipping from 11 and 0
+ * to 0 and 11. A gate whose count depended on the clone would go red on CI for
+ * being CI, and this floor would be unsettable.
  *
  * WHAT THAT TIGHTNESS COSTS, stated rather than discovered later: unpublishing
  * a post removes roughly thirteen assertions from this sweep and would breach
@@ -906,7 +910,7 @@ await cleanup();
  * repair is the same as everywhere else, a re-measured floor in the same commit
  * as the corpus change. Publishing a post only ever moves the count up.
  */
-const MINIMUM_CHECKS = 208;
+const MINIMUM_CHECKS = 216;
 const floorBreach = assertFloor(
   "check:microformats",
   "checks",

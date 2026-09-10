@@ -46,7 +46,7 @@ import os from "node:os";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
-import { ARTIFACT_PATH, lastCommitDate } from "./build-content.mjs";
+import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 
 const DB_NAME = "dustinedwards";
 
@@ -112,10 +112,14 @@ function buildSql(posts) {
       !post.cover &&
       isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt });
     const ogImage = hasCard ? `/media/${ogImageKey(post)}` : null;
-    const revised = post.updated ?? lastCommitDate(post.sourcePath);
-    const updatedAt = revised
-      ? Math.floor(Date.parse(`${revised}T00:00:00.000Z`) / 1000)
-      : null;
+    /*
+     * `revisedDate` OWNS THE RULE, and this call is what makes
+     * `check:microformats` able to feed a component the same value without
+     * restating it. The conversion to epoch seconds stays here, because that is
+     * this file's column format rather than the rule.
+     */
+    const revised = revisedDate(post);
+    const updatedAt = revised ? Math.floor(revised.getTime() / 1000) : null;
     out.push(
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
