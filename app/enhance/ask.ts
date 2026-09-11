@@ -83,7 +83,21 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   body.setAttribute("aria-live", "polite");
   body.setAttribute("aria-busy", "true");
 
-  const status = el("p", "ask-status", "Thinking...");
+  /*
+   * `Looking it up.` and not `Thinking...`, which is what this said until
+   * 2026-09-11. Two reasons and the second is the one that decided it.
+   *
+   * It is not thinking; it is retrieving. The request in flight is an AI
+   * Search query over this site's own chunks, and the answer that comes back
+   * is grounded in them, which is the entire claim the badge and the source
+   * list beside this line make. "Thinking" describes a different product.
+   *
+   * And it is every chatbot's placeholder, three dots included. A reader who
+   * has seen it a hundred times reads it as the interface stalling rather than
+   * as this site saying what it is doing. A full stop instead of an ellipsis
+   * for the same reason: the sentence is a statement, not a trailing-off.
+   */
+  const status = el("p", "ask-status", "Looking it up.");
   const sources = el("ul", "ask-sources");
   sources.hidden = true;
 
