@@ -71,11 +71,6 @@
       "name": "Single-flight on Ask",
       "status": "refused",
       "reason": "Declined with the bound written into the route. Deduplicating identical questions does not lower the worst case: N addresses spend the same N units asking N DIFFERENT questions. The 200 per day ceiling is the real bound and it is exact."
-    },
-    {
-      "name": "Continuous integration",
-      "status": "accepted-gap",
-      "reason": "Not a refusal so much as an accepted gap, recorded because it has already cost something: with no CI, any gate can be skipped indefinitely, and check:admin-ui was red and unrun for two sessions. The repair built instead was one command that runs every gate and derives the list, so nobody has to remember which ones a change touches."
     }
   ]
 }
