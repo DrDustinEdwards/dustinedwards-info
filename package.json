@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "react-router build",
-    "dev": "npm run build:stack && npm run build:enhance && react-router dev",
+    "dev": "npm run build:stack && npm run build:content && npm run build:enhance && react-router dev",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "predeploy": "node scripts/require-clean-tree.mjs",
     "deploy": "npm run build && wrangler deploy",

@@ -30,6 +30,7 @@ import type { Route } from "./+types/sitemap";
  */
 const STATIC_PATHS = [
   "/",
+  "/about",
   "/blog",
   "/phage-discovery",
   "/colophon",

@@ -282,6 +282,29 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             question the whole page exists to answer once.
           */}
           <p className="hero-role">{SITE.tagline}</p>
+          {/*
+            **THE UNIVERSITY, IN TEXT A PERSON CAN READ.**
+
+            It was in `personJsonLd` and nowhere else. The pre-cutover audit's
+            fourth part put it plainly: a stranger could read this whole site
+            and never learn where the author works, because the only place it
+            was written was a script element addressed to machines.
+
+            `SITE.affiliation`, the SAME constant the Person record takes its
+            `worksFor` from, so the page and the graph cannot come to name
+            different employers. And it is `p-org` on the h-card this block
+            already is, which is the property that was missing from it: a card
+            with a name and no organisation is the half a reader wanted.
+
+            The JOB TITLE is deliberately not repeated here. `SITE.tagline`
+            one line up already says "Professor by training", and `/about`
+            carries the current title in prose; three statements of one job
+            across two pages is the mirror this file's own comments keep
+            arguing against.
+          */}
+          <p className="hero-affiliation">
+            <span className="p-org">{SITE.affiliation}</span>
+          </p>
         </div>
 
         <section className="home-proof" aria-labelledby="proof-heading">

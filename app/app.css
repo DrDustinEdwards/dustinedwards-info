@@ -939,6 +939,15 @@ a:hover {
   color: var(--text);
 }
 
+/* The affiliation sits under the role as a quieter line: it answers "where do
+   they work", which is a fact a reader wants available rather than announced,
+   and giving it the role's weight would make the hero two headlines. */
+.hero-affiliation {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
 /* ------------------------------------------------------------- The front door
 
    IN app.css AND NOT A ROUTE-SPLIT SHEET, deliberately, and the trade is the

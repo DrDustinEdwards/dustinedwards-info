@@ -36,6 +36,7 @@ export function SiteFooter() {
           navigation. Do not normalise these to match each other in either
           direction. */}
       <nav className="footer-colophon" aria-label="Colophon">
+        <Link to="/about">About</Link>
         <Link to="/colophon">Colophon</Link>
         {/* WCAG 2.2 3.2.6, consistent help: the same mechanism, in the same
             relative order, on every page that has a footer, which is every
