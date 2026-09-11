@@ -370,10 +370,30 @@ test("an unreadable body notifies rather than writing", () => {
   }
 });
 
-test("a total outage (no body at all) notifies", () => {
+test("a total outage (no body at all) notifies, and says the cause is missing", () => {
+  /*
+   * THE REASON MOVED 2026-09-11 and this assertion moved with it.
+   *
+   * A status of 0 is a TRANSPORT failure, and `watchdogActions` now branches
+   * on it ahead of `repairPlan` so the mail can name what went wrong: DNS
+   * failure, a timeout and a Cloudflare 1042 used to arrive here
+   * indistinguishable, and the page somebody got at 2am said only that no
+   * failing check was named, about a request that never happened.
+   *
+   * This case constructs the reading BY HAND, so it carries no `error`, which
+   * is the arm that reports the cause as missing. `test/worker/watchdog.test.ts`
+   * covers the arm where `readHealth` supplies one.
+   *
+   * The claim that matters is unchanged and is still asserted first: a total
+   * outage NOTIFIES and repairs nothing. `repairPlan([])` keeps its own
+   * "nothing to repair" wording and its own case above, because that function
+   * did not change.
+   */
   const actions = watchdogActions({ status: 0, body: null }, WITH);
   assert.deepEqual(actions.map((a) => a.type), ["notify"]);
-  assert.match(reasonOf(actions[0]), /nothing to repair/);
+  assert.match(reasonOf(actions[0]), /could not be reached/);
+  assert.match(reasonOf(actions[0]), /Nothing was repaired/);
+  assert.match(reasonOf(actions[0]), /carried no cause/);
 });
 
 test("a clean outcome is NO action", () => {
