@@ -434,15 +434,30 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  /*
+   * THE COPY, and all four strings are deliberate rather than scaffold.
+   *
+   * `Oops!` and `An unexpected error occurred.` were the Remix template's, and
+   * they survived every pass over this file because nothing renders them on a
+   * healthy site: the 404 branch below overwrites both, so the only reader who
+   * ever sees them is one whose page has just failed. That is the worst moment
+   * to sound like a starter kit.
+   *
+   * `The page failed to render.` says what happened. `Something broke.` is an
+   * admission rather than an interjection. And `This page is not here.` is the
+   * 404 in the voice the rest of the site uses, where "The requested page
+   * could not be found." is three passives about a request the reader did not
+   * know they were making.
+   */
+  let message = "Something broke.";
+  let details = "The page failed to render.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "This page is not here."
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
