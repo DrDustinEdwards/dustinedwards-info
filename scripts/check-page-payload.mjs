@@ -840,6 +840,17 @@ const ROUTE_CEILINGS = {
   "/playground": { id: "routes/playground", css: 6600, total: 7500 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 5700, total: 6600 },
   "/privacy": { id: "routes/privacy", css: 5700, total: 6600 },
+  /*
+   * MEASURED 2026-09-11 through this gate on a fresh build: css 4976 over two
+   * sheets, 5794 total. That is /privacy and /colophon to the BYTE, which is
+   * the whole argument for these ceilings being theirs rather than a fresh
+   * margin drawn around this one page: it is the same page shape, app.css
+   * plus prose.css, serving the same single enhancement bundle. One bar for
+   * one kind of page, rather than three that drift apart by whichever
+   * happened to be measured last, which is the reasoning the tag and series
+   * archives above are already on.
+   */
+  "/about": { id: "routes/about", css: 5700, total: 6600 },
 };
 
 /**
