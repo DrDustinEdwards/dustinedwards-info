@@ -3039,9 +3039,21 @@ console.log(
  * seventy assertions and still pass, which is the exact shape FAILURES.md
  * calls a limit positioned where it cannot bite.
  *
- * Six percent under 936, the convention the preview-route floor set.
+ * Executed 936, tolerance 47, so the lowest legal floor is 889. This sits at
+ * 913, about half the tolerance under the count.
+ *
+ * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
+ * first attempt.** That attempt read "six percent under" out of a comment in
+ * check-headers.mjs and applied it to four gates. The rule is
+ * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
+ * the gate that enforces it. Prose about a gate ages; the gate does not.
+ *
+ * It went undetected locally because check:floors runs the whole offline tier
+ * and therefore runs LAST, and the tier hangs before it on this host
+ * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
+ * work and is proven so by differential). CI reached it on the first push.
  */
-const MINIMUM_CHECKS = 880;
+const MINIMUM_CHECKS = 913;
 const floorBreach = assertFloor(
   "check:features",
   "checks",

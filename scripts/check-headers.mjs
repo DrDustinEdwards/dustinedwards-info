@@ -1662,8 +1662,23 @@ console.log("  public HTML routes share one headers()");
  * above describes. The value is six percent under the 211 actually observed,
  * which is the convention the preview-route floor set, and it is arithmetic on
  * a MEASUREMENT rather than on the old number plus the new block.
+ *
+ * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
+ * first attempt.** That attempt read "six percent under" out of a comment in
+ * check-headers.mjs and applied it to four gates. The rule is
+ * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
+ * the gate that enforces it. Prose about a gate ages; the gate does not.
+ *
+ * It went undetected locally because check:floors runs the whole offline tier
+ * and therefore runs LAST, and the tier hangs before it on this host
+ * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
+ * work and is proven so by differential). CI reached it on the first push.
+ *
+ * Executed 211, tolerance 11, so the lowest legal floor is 200. This sits at
+ * 206, about half the tolerance under the count: far enough to absorb an added
+ * block, close enough that a gate which has quietly halved cannot pass.
  */
-const MINIMUM_CHECKS = 198;
+const MINIMUM_CHECKS = 206;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
