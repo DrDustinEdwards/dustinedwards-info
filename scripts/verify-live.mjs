@@ -1838,7 +1838,7 @@ const ASK_PROBE_LIMIT = 3;
     "the preview 404 is the post route's boring one",
     // Delimited by the element boundaries the error boundary renders it inside,
     // so a match cannot come from prose elsewhere on the document.
-    preview.text.includes(">The requested page could not be found.<"),
+    preview.text.includes(">This page is not here.<"),
     "a distinguishable 404 tells a caller whether a token ever existed",
   );
   check(
