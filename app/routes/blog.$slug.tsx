@@ -16,7 +16,7 @@ import { blogPostView } from "~/lib/blog-view";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { CONTENT_SIZES, contentSrcSet } from "~/lib/media/widths.mjs";
+import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
@@ -264,27 +264,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
  * an "Updated" line from the moment it shipped, which tells a reader nothing.
  */
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
-
-/**
- * `srcset` and `sizes` for a cover, or nothing at all.
- *
- * THE SAME TEST AND THE SAME LADDER the markdown pipeline applies to a body
- * image, reached through the same two exports rather than restated: a width the
- * page advertises and the transform route refuses is a broken image in the
- * header. `contentSrcSet` and `CONTENT_SIZES` are the one owner of both.
- *
- * A `/media/` key is an R2 object the transform route will serve at the closed
- * content ladder. Anything else is a static asset under `public/`, served
- * straight from the assets host, and gets a plain `src`: correct rather than
- * degraded, since the file is already the only size it has.
- *
- * Returns a spreadable object so the caller has no branch in its markup, and
- * the empty case spreads to nothing rather than to `undefined` attributes.
- */
-function coverResponsive(src: string): { srcSet?: string; sizes?: string } {
-  if (!src.startsWith("/media/")) return {};
-  return { srcSet: contentSrcSet(src.slice("/media/".length)), sizes: CONTENT_SIZES };
-}
 
 /**
  * THE ONE PLACE ON THIS PAGE WHERE THE TEXT IS NOT OURS.
@@ -562,11 +541,14 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             lazy-loading it would defer the very paint the metric measures.
             Every image inside the body keeps the pipeline's own loading rules.
 
-            NO WIDTH OR HEIGHT, and that is a gap rather than a decision. D1
-            stores `cover_image` and `cover_alt` and no dimensions, so nothing
-            here can state an intrinsic size without a schema change and a
-            second read. The CSS gives the figure a stable width so the shift is
-            bounded to height alone.
+            WIDTH AND HEIGHT COME FROM THE KEY, since 2026-09-11. This block
+            used to say they could not: "D1 stores `cover_image` and
+            `cover_alt` and no dimensions, so nothing here can state an
+            intrinsic size without a schema change and a second read." The
+            premise was right and the conclusion was not, because an uploaded
+            object's key spells its own dimensions and `coverDimensions` reads
+            them back out of the string D1 already holds. See that function for
+            what it still cannot do, which is a static cover under `public/`.
           */}
           {post.coverImage && (
             <figure className="post-cover">
@@ -576,6 +558,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
+                {...coverDimensions(post.coverImage)}
                 {...coverResponsive(post.coverImage)}
               />
             </figure>

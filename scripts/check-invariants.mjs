@@ -5533,6 +5533,193 @@ console.log("\n  27. the runbook exists and names every secret");
   }
 }
 
+console.log("\n  28. every rendered <img> states an intrinsic size, or its class fixes the box");
+
+/*
+ * **AN IMAGE WITH NO `width`/`height` IS A LAYOUT SHIFT, AND THE ONE THAT HAD
+ * NONE WAS THE LCP ELEMENT.**
+ *
+ * Measured in the pre-cutover audit 2026-09-11 (P1-16): the cover `<img>` in
+ * `app/routes/blog.$slug.tsx` carried `src`, `alt`, `loading`,
+ * `fetchPriority`, `decoding`, `srcset` and `sizes`, and no intrinsic size.
+ * The comment beside it called that an unavoidable gap because D1 stores no
+ * dimensions, which was true of D1 and false of the KEY: an uploaded object is
+ * `<digest>-<width>x<height>.<ext>` and the prose pipeline had been reading
+ * that back for every body image since it was written.
+ *
+ * ## WHY A SOURCE SCAN, when this repo prefers to call the function
+ *
+ * `test/cover-dimensions.test.mjs` CALLS `coverDimensions` and asserts the
+ * numbers it returns, in both directions, over four kinds of src. That is the
+ * behaviour, and it is the stronger half. What a test on a pure function
+ * cannot see is whether the ROUTE still spreads it onto the element, which is
+ * precisely the edit that would reintroduce the defect while every test stayed
+ * green. So the two halves are deliberately different instruments: the test
+ * owns "the function is right", this owns "the markup still uses it".
+ *
+ * ## THE SCOPE IS EVERY JSX `<img` UNDER `app/`, NOT JUST THE COVER
+ *
+ * Naming the cover would be a gate that catches the defect already fixed and
+ * nothing else. The audit's finding was one instance of a class, so the scan
+ * reads the class and carries a NAMED exemption list, which is the shape rule
+ * 10 asks for: an exemption is a decision somebody wrote down, not a silence.
+ *
+ * Comments are stripped first. This file's own prose, and the route's, discuss
+ * `<img>` at length, and a needle satisfied by a sentence about the needle is
+ * a shape this repo has hit twice.
+ */
+{
+  /**
+   * Directories walked. `app/enhance/` is OUT: those modules build DOM with
+   * `createElement`, so there is no JSX `<img` in them to read, and including
+   * them would put an empty scope inside a non-empty one where it cannot be
+   * seen.
+   */
+  const IMG_ROOTS = [join(root, "app", "routes"), join(root, "app", "components")];
+
+  /**
+   * THE EXEMPTION IS DERIVED, NOT A LIST OF NAMES, and that is the whole
+   * design of this section.
+   *
+   * A hand-kept permission list is the mirror anti-pattern hard rule 5 names:
+   * it has to be maintained, it goes stale silently, and a reader cannot tell
+   * a live entry from one whose subject moved two refactors ago. The FIRST
+   * draft of this gate was exactly that list, and running it found the list
+   * naming a file that does not exist while missing both images that really
+   * are exempt. The list was wrong in both directions on its first run.
+   *
+   * So the reason an image may omit its intrinsic size is READ OUT OF THE
+   * STYLESHEET: an element whose class rule declares BOTH `width` and
+   * `height` already reserves an exact box, and its object's own dimensions
+   * are the wrong number for that box anyway. Both admin thumbnails are this
+   * case, each `5rem` by `3.25rem` with `object-fit: cover`.
+   *
+   * BOTH PROPERTIES, never one. A rule setting only `width` leaves the height
+   * to the intrinsic ratio, which is precisely the shift this section exists
+   * to refuse, and it is the shape a half-finished style has.
+   *
+   * @type {Map<string, string>} class name -> the declaration block
+   */
+  const cssRules = new Map();
+  {
+    const stylesDir = join(root, "app", "styles");
+    const sheets = existsSync(stylesDir)
+      ? readdirSync(stylesDir).filter((f) => f.endsWith(".css"))
+      : [];
+    for (const sheet of sheets) {
+      const css = readFileSync(join(stylesDir, sheet), "utf8");
+      for (const rule of css.matchAll(/\.([a-zA-Z][\w-]*)\s*\{([^}]*)\}/g)) {
+        // First declaration wins; a later one for the same class is a
+        // different selector context this scan cannot resolve, and taking it
+        // would let an unrelated block satisfy the test.
+        if (!cssRules.has(rule[1])) cssRules.set(rule[1], rule[2]);
+      }
+    }
+    ok(
+      "[scope] the stylesheet scan found class rules to read",
+      cssRules.size > 0,
+      "parsed no rules out of app/styles/*.css, so the exemption below can " +
+        "never apply and this section would report failures it cannot justify.",
+    );
+  }
+
+  /** @param {string} element @returns {boolean} */
+  const sizedByCss = (element) => {
+    const className = element.match(/className="([^"]+)"/);
+    if (!className) return false;
+    return className[1].split(/\s+/).some((name) => {
+      const block = cssRules.get(name);
+      if (block === undefined) return false;
+      return /(^|[;{\s])width\s*:/.test(block) && /(^|[;{\s])height\s*:/.test(block);
+    });
+  };
+
+  /** @param {string} dir @returns {string[]} */
+  const walkTsx = (dir) => {
+    if (!existsSync(dir)) return [];
+    /** @type {string[]} */
+    const found = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) found.push(...walkTsx(full));
+      else if (entry.name.endsWith(".tsx")) found.push(full);
+    }
+    return found;
+  };
+
+  const files = IMG_ROOTS.flatMap(walkTsx);
+  ok(
+    "[scope] the img scan found .tsx files to read",
+    files.length > 0,
+    "walked app/routes and app/components and found no .tsx at all, so every " +
+      "assertion below sweeps nothing and reports clean.",
+  );
+
+  /** @type {string[]} */
+  const unsized = [];
+  let imgElements = 0;
+  let exemptByCss = 0;
+  for (const file of files) {
+    const source = stripComments(readFileSync(file, "utf8"));
+    /*
+     * Each `<img` up to its closing `>`, non-greedy. JSX has no `<img>...`
+     * children, so the first `>` after the tag name ends the element, and an
+     * attribute value containing `>` would have to be a string literal, which
+     * none of these are.
+     */
+    for (const match of source.matchAll(/<img\b[\s\S]*?\/?>/g)) {
+      imgElements += 1;
+      const element = match[0];
+      /*
+       * SATISFIED BY THE SPREAD AS WELL AS BY THE LITERAL. `coverDimensions`
+       * returns `{ width, height }` and is spread onto the element, so a scan
+       * for a literal `width=` would fail on the correct code. The spread is
+       * accepted BY NAME rather than as any spread at all, because `{...rest}`
+       * would otherwise satisfy this for an element that states nothing.
+       */
+      const states =
+        (/\bwidth=/.test(element) && /\bheight=/.test(element)) ||
+        /\{\.\.\.coverDimensions\(/.test(element) ||
+        /\{\.\.\.dimensionsFromKey\(/.test(element);
+      if (states) continue;
+      // Counted BEFORE the CSS exemption is applied, so a stylesheet that
+      // stopped parsing shows up as failures rather than as silence.
+      if (sizedByCss(element)) {
+        exemptByCss += 1;
+        continue;
+      }
+      const relative = file.slice(root.length + 1);
+      unsized.push(`${relative}: ${element.replace(/\s+/g, " ").slice(0, 120)}`);
+    }
+  }
+
+  /*
+   * FLOORED, not zero-checked. A regex that stopped matching `<img` finds no
+   * offenders and reports exactly what a clean sweep reports, which is this
+   * gate's own vacuity class and the reason every scan here carries one.
+   * MEASURED THROUGH THIS LOOP 2026-09-11.
+   */
+  ok(
+    "[scope] the img scan matched elements",
+    imgElements >= 2,
+    `matched ${imgElements} <img> element(s), floor 2. Below that the pattern ` +
+      `has stopped reading JSX and the result below means nothing.`,
+  );
+  ok(
+    "every rendered <img> states an intrinsic size, or its class fixes the box",
+    unsized.length === 0,
+    `${unsized.length} element(s) render without width and height and without a ` +
+      `class rule that declares both. An image with no intrinsic size reserves ` +
+      `no space, and the one this section was written for was the post cover, ` +
+      `which is the LCP element. Either state the size, or give the element a ` +
+      `class whose rule fixes the box:\n      ${unsized.join("\n      ")}`,
+  );
+  console.log(
+    `     ${imgElements} <img> element(s), ${exemptByCss} sized by a class rule, ` +
+      `${cssRules.size} class rule(s) read`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-09-08 BY RUNNING BOTH BRANCHES after section 27 (the runbook
  * is bound to the ratified secret list): 326 offline, 365 remote, against 305
