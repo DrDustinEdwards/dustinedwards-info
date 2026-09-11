@@ -36,7 +36,7 @@ import {
   type Actor,
 } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
-import { SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
 import { listWebmentionsForAdmin } from "~/db";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
@@ -78,6 +78,18 @@ function readSlug(args: Record<string, unknown>, tool: string) {
   if (!slug) return { slug: "", error: `${tool} requires a slug.` };
   if (!SLUG_PATTERN.test(slug)) {
     return { slug: "", error: `${tool} requires a lowercase kebab-case slug.` };
+  }
+  /*
+   * THE LENGTH BOUND IS APPLIED HERE TOO, and for the reason the pattern is:
+   * a read path that accepts what the write schema refuses interpolates a
+   * slug the repository can never hold into a GitHub API path. Same constant,
+   * imported, never a second number.
+   */
+  if (slug.length > SLUG_MAX_LENGTH) {
+    return {
+      slug: "",
+      error: `${tool} requires a slug of at most ${SLUG_MAX_LENGTH} characters.`,
+    };
   }
   return { slug, error: "" };
 }

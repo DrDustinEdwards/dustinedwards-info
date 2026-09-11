@@ -147,6 +147,37 @@ const isoDateTime = z.preprocess(
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
+ * The longest a slug may be, in characters.
+ *
+ * **A SECOND RULE RATHER THAN A LONGER PATTERN, deliberately.** A length bound
+ * inside `SLUG_PATTERN` would need a lookahead carrying its own end anchor,
+ * and `SLUG_ATTRIBUTE_PATTERN` below builds the HTML `pattern` attribute by
+ * stripping the anchors off this source. It would strip the wrong one. Two
+ * constants, each with one owner, applied wherever the shape rule is applied.
+ *
+ * ## WHY 120, AND WHY IT IS NOT THIS REPOSITORY'S NUMBER ALONE
+ *
+ * The MCP wrapper's `slugSchema` (`DrDustinEdwards/dustinedwards-mcp`,
+ * `src/tools.ts`) has been `.min(1).max(120).regex(...)` since it was
+ * written, and this side had no cap at all. Measured in the pre-cutover audit
+ * 2026-09-11 (P2-02b): the admin UI could save a post whose slug the operator
+ * tools could not name, so `get_post` and `save_post` would refuse at the
+ * wrapper's schema before any request went out, and the only surface left that
+ * could touch the post would be the one that created it.
+ *
+ * The site moved to the wrapper's number rather than the other way round,
+ * because 120 is already the smaller bound and shrinking a surface nothing has
+ * used is cheaper to reason about than widening a published one.
+ *
+ * NO GATE HERE CAN SEE THE WRAPPER'S COPY: it is a different repository with a
+ * different build, and a restatement of its regex in a test would be a test of
+ * the restatement. What `test/slug-length.test.mjs` does instead is pin THIS
+ * side exactly at the boundary in both directions, so the cap cannot be
+ * widened, narrowed or dropped without a failing test naming the number.
+ */
+export const SLUG_MAX_LENGTH = 120;
+
+/**
  * The same rule in the shape an HTML `pattern` attribute takes.
  *
  * The attribute ANCHORS IMPLICITLY: the browser compiles it as `^(?:...)$`,
@@ -209,7 +240,10 @@ export const postPath = (slug) => `content/posts/${slug}.md`;
 
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),
-  slug: z.string().regex(SLUG_PATTERN, "must be lowercase kebab-case"),
+  slug: z
+    .string()
+    .regex(SLUG_PATTERN, "must be lowercase kebab-case")
+    .max(SLUG_MAX_LENGTH, `must be at most ${SLUG_MAX_LENGTH} characters`),
   date: isoDate,
   tags: z.array(z.string().min(1)).default([]),
   description: z.string().min(1, "must not be empty"),

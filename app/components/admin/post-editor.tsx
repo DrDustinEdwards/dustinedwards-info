@@ -1,7 +1,11 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link, useBlocker } from "react-router";
 
-import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import {
+  SLUG_ATTRIBUTE_PATTERN,
+  SLUG_MAX_LENGTH,
+  SLUG_PATTERN,
+} from "~/lib/content/pipeline.mjs";
 import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
 
 import {
@@ -975,6 +979,12 @@ export function PostEditor({
                      * whole story.
                      */
                     pattern={SLUG_ATTRIBUTE_PATTERN}
+                    /* The other half of the rule, from the same module. An
+                     * HTML pattern cannot carry a length without a lookahead
+                     * whose anchors the attribute strips, so the bound is its
+                     * own attribute, which is also what makes it work with
+                     * scripting off. */
+                    maxLength={SLUG_MAX_LENGTH}
                     aria-invalid={slugProblem !== null}
                     aria-describedby={slugProblem ? "slug-problem" : undefined}
                     autoComplete="off"
