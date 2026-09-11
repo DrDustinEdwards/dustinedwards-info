@@ -102,6 +102,15 @@ type Anchor = {
   gate?: string;
   text?: string;
   id?: string;
+  /**
+   * False when an anonymous GET of this route does not produce a page. The
+   * anchor still NAMES the route; it just stops pretending it is a
+   * destination. Absent means it is one, which is the common case.
+   *
+   * `check:features` derives the same answer from the route module and
+   * refuses a declaration that disagrees, so this is not a hand-kept flag.
+   */
+  anonymousGet?: boolean;
 };
 
 /**
@@ -137,9 +146,28 @@ function byComponent() {
  */
 function AnchorItem({ anchor }: { anchor: Anchor }) {
   if (anchor.kind === "route" && anchor.path) {
-    // Only a path with no parameter segment is a URL a reader can follow.
-    // `/blog/:slug` is a declaration, not a destination.
-    const followable = !anchor.path.includes(":") && !anchor.path.includes("*");
+    /*
+     * TWO REASONS A ROUTE IS NOT A DESTINATION, and both make it plain text.
+     *
+     * A PARAMETER SEGMENT. `/blog/:slug` is a declaration, and there is no
+     * one URL it stands for.
+     *
+     * AN ANONYMOUS GET THAT IS NOT A PAGE, `anonymousGet: false`. Measured in
+     * the pre-cutover audit 2026-09-11 (P1-22): of 203 internal URLs swept,
+     * the only non-200s on the whole site were `/api/operator` (401) and
+     * `/search/ask` (405), and both were reached as `href`s FROM THIS PAGE.
+     * The colophon's best property is that every claim links to its evidence,
+     * and two of those links were the only broken links a crawler could find.
+     *
+     * A link a reader cannot follow is worse than no link: it reads as
+     * evidence until you click it. The path is still NAMED, in the same
+     * `<code>` a gate anchor gets, because the name is what makes the claim
+     * checkable and the anchor never needed to be clickable to do that.
+     */
+    const followable =
+      !anchor.path.includes(":") &&
+      !anchor.path.includes("*") &&
+      anchor.anonymousGet !== false;
     return (
       <li>
         <span className="muted">route </span>

@@ -157,7 +157,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/search/ask"
+          "path": "/search/ask",
+          "anonymousGet": false
         }
       ]
     },
@@ -168,7 +169,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/search/ask"
+          "path": "/search/ask",
+          "anonymousGet": false
         },
         {
           "kind": "route",
@@ -183,7 +185,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/search/ask"
+          "path": "/search/ask",
+          "anonymousGet": false
         }
       ]
     },
@@ -210,7 +213,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/search/ask"
+          "path": "/search/ask",
+          "anonymousGet": false
         },
         {
           "kind": "gate",
@@ -292,7 +296,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/api/operator"
+          "path": "/api/operator",
+          "anonymousGet": false
         },
         {
           "kind": "gate",
@@ -307,7 +312,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/api/operator"
+          "path": "/api/operator",
+          "anonymousGet": false
         },
         {
           "kind": "assertion",
