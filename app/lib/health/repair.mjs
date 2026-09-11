@@ -237,7 +237,14 @@ export function failingCheckNames(body) {
  */
 
 /**
- * @typedef {{ status: number, body: unknown }} HealthReading
+ * One reading of `/api/health`.
+ *
+ * `error` is the TRANSPORT failure's message, present only when the fetch
+ * itself did not complete, which is also the only case `status` is 0. It is
+ * optional rather than nullable because a reading that reached the endpoint
+ * has no cause to carry, and `undefined` says that more plainly than a null.
+ *
+ * @typedef {{ status: number, body: unknown, error?: string }} HealthReading
  */
 
 /**
@@ -267,6 +274,40 @@ export function watchdogActions(reading, { hasToken }) {
     status === 200 && !!body && typeof body === "object" && /** @type {any} */ (body).ok === true;
 
   if (healthy) return [];
+
+  /*
+   * **A TRANSPORT FAILURE IS REPORTED WITH ITS CAUSE, not as a silent zero.**
+   *
+   * Measured in the pre-cutover audit 2026-09-11 (P2-07): `readHealth` caught
+   * every transport error as `catch { return { status: 0, body: null } }`, so
+   * DNS failure, a timeout, and Cloudflare 1042 all arrived here identical.
+   * The reading then named no failing check, `repairPlan` correctly refused
+   * to repair, and the mail that woke somebody at 2am said "no failing check
+   * was named" about a fetch that never happened.
+   *
+   * Those are different pages. A timeout says the site is slow or wedged; a
+   * 1042 says this Worker's binding is pointed somewhere it may not go, which
+   * is a deploy problem and not a site problem. The repair path one function
+   * down has kept `error.message` since it was written, which is what made
+   * the omission here visible as an inconsistency rather than a decision.
+   *
+   * BEFORE `repairPlan`, because there is nothing to plan: a reading with no
+   * body names no check, and the transport cause is strictly more information
+   * than the empty-list reason would give. It is still alert-only, and for the
+   * same reason `repairPlan` would have been.
+   */
+  if (status === 0) {
+    const cause = typeof reading?.error === "string" && reading.error ? reading.error : "";
+    return [
+      {
+        type: "notify",
+        reason:
+          `the health endpoint could not be reached at all${cause ? `: ${cause}` : `, and the ` +
+            `reading carried no cause, which is itself a defect in the reader`}. Nothing was ` +
+          `repaired, because a reading that never happened names no drift.`,
+      },
+    ];
+  }
 
   const plan = repairPlan(failingCheckNames(body), { hasToken });
 
