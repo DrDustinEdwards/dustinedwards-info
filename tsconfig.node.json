@@ -163,6 +163,14 @@
     // second copy of the policy it is checking. It is under workers/ rather
     // than app/ because it is response policy, not routing.
     "workers/csp.mjs",
+    // Which content types are served WITHOUT a policy. Same principle and the
+    // same directory as csp.mjs: the Worker decides with it and check:headers
+    // CALLS it against the content-type each feed route declares, rather than
+    // reading the list's spelling out of app.ts. It is a separate module from
+    // csp.mjs because the exemption is a property of the RESPONSE TYPE and not
+    // of the policy, and because the drift it exists to catch is between the
+    // list and the routes.
+    "workers/feed-types.mjs",
     // The ONE JavaScript owner of "is this post publicly visible". build:og
     // decides which posts get a social card with it and check:media reconciles
     // the live bucket against it, so both reach the same predicate. A second
