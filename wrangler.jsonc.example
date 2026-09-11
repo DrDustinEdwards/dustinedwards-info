@@ -273,13 +273,51 @@
 			"instance_name": "dustinedwards"
 		}
 	],
-	// Both Ask guards: the exact per-IP burst limit (one instance per IP) and
-	// the exact daily spend ceiling (one instance, "global"). A Durable Object
-	// rather than the `ratelimit` binding or a KV counter because neither of
-	// those counts: measured across four runs, the binding refused 1, 2, 9 and
-	// then 0 of twelve concurrent requests against a limit of five. Removing
-	// this block DISABLES Ask rather than un-protecting it: an unprotected
-	// metered endpoint must not serve.
+	// **THIS IS THE WHOLE SITE'S RATE LIMITER. THE NAME SAYS ASK AND THE NAME
+	// IS WRONG.** Read this before touching either line below.
+	//
+	// It began as the two Ask guards, which is where the name comes from: the
+	// exact per-IP burst limit (one instance per IP) and the exact daily spend
+	// ceiling (one instance, "global"). A Durable Object rather than the
+	// `ratelimit` binding or a KV counter because neither of those counts:
+	// measured across four runs, the binding refused 1, 2, 9 and then 0 of
+	// twelve concurrent requests against a limit of five.
+	//
+	// EIGHT SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
+	// prefix: `auth:` (sign-in and /api/auth/*), `op:` (the operator API),
+	// `wm:` (webmention), `health:` (/api/health), `csp:` (/api/csp-report),
+	// plus the smoke actor, preview links and Ask itself. So deleting this
+	// block does not "disable Ask": it disables SIGN-IN, and it makes
+	// /api/health answer 503 by design, because a route that cannot reach its
+	// limiter must not serve.
+	//
+	// ## WHY IT IS NOT BEING RENAMED, ruled 2026-09-11
+	//
+	// The pre-cutover audit raised the name (P2-09) and the honest answer is
+	// that renaming it costs far more than the misunderstanding does. Per
+	// Cloudflare's own guidance a Durable Object class rename is a
+	// THREE-DEPLOY rollout, because the namespace's class pointer and the
+	// Worker code that exports the class are not updated atomically. In this
+	// repository a deploy is a full `npm run ship` run that refuses without a
+	// green CI run for its exact sha, so that is three ship windows.
+	//
+	// And the non-atomic window is the worst one this site has. During it the
+	// binding may not resolve, which means sign-in fails, /api/health answers
+	// 503, the watchdog wakes on that 503, and the watchdog's own repair call
+	// is metered through the same object and cannot get through either. A
+	// cosmetic change whose failure mode is a paging storm with the repair
+	// door shut is not a change to make in the week before a DNS cutover.
+	//
+	// There is also no correctness defect to fix. Nothing behaves wrongly; a
+	// reader misunderstands. That is what this comment is for.
+	//
+	// IF IT IS EVER RENAMED, it should move to the declarative `exports` field
+	// at the same time, which has replaced the legacy `migrations` array below
+	// and expresses a rename as a tombstone rather than an ordered step. That
+	// makes it a larger and more deliberate piece of work, not a smaller one.
+	// The three-deploy sequence is: alias the new class name to the old in
+	// code, deploy; apply the rename while the alias stands, deploy; remove
+	// the alias, deploy.
 	"durable_objects": {
 		"bindings": [
 			{

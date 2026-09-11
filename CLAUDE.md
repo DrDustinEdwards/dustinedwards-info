@@ -205,6 +205,18 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
     DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET  ANALYTICS
 
+**`ASK_BUDGET` IS THE WHOLE SITE'S RATE LIMITER, not an Ask-only budget.** The
+name is where it started and is now wrong: `auth:`, `op:`, `wm:`, `health:`
+and `csp:` instances all meter through the same Durable Object class, so
+removing it disables sign-in rather than Ask. **It is deliberately NOT being
+renamed before the cutover**, ruled 2026-09-11 after the pre-cutover audit
+raised it: a DO class rename is a three-deploy rollout with a non-atomic
+window, every deploy here is a ship run gated on green CI for its exact sha,
+and during that window sign-in fails, `/api/health` answers 503, and the
+watchdog that wakes on the 503 cannot repair because its own call is metered
+by the same object. The grounds, and the three-deploy sequence if it is ever
+done, are in `wrangler.jsonc.example` beside the binding.
+
 What each one is, and the queue consumer and cache flag beside them, is `wrangler.jsonc.example`, which `check:invariants` section 26 binds to this list in both directions.
 
 **`wrangler.jsonc` is gitignored and `wrangler.jsonc.example` is tracked.** A PORTFOLIO rule, not this repo's choice: do not "fix" it by committing the real file. **Adding a binding means editing BOTH files in the same commit**; `check:config` compares them in both directions and CI cannot run it, because a checkout bootstraps the example into place and the two are then equal by construction.
