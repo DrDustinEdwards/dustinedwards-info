@@ -165,39 +165,6 @@ async function main() {
 }
 
 /**
- * THE FOURTH SUBJECT: math, and what each output carries of it.
- *
- * The determinism pass above already covers KaTeX for free, because a
- * nondeterministic renderer would move the bytes between two runs. What it
- * cannot see is the thing the math arc actually decided, which is that ONE
- * output carries the rendered form and every other one carries the TeX an
- * author typed. That distinction lives in five different modules and nothing
- * else compares them.
- *
- * ## THE SCOPE CONTROL COMES FIRST, and it is the assertion that matters most
- *
- * Every claim below is of the form "no post's markdown carries KaTeX markup",
- * and a corpus with no math in it satisfies every one of them perfectly. That
- * is the clean-sweep-over-an-empty-scope shape this file already guards against
- * for `further_reading`. So the first thing asserted is that the corpus
- * contains at least one post WITH math and at least one WITHOUT: the fixture
- * `math-typesetting-fixture` provides the first and the other twelve the
- * second. Delete the fixture and this gate fails rather than going quietly
- * vacuous.
- *
- * ## TWO DERIVATIONS OF `hasMath`, MADE TO ARGUE
- *
- * `remarkMathValidate` sets the flag from the mdast, before anything is
- * rendered. `htmlHasMath` reads it back off the rendered html, and is what the
- * ROUTE uses to decide whether to link the stylesheet. They are computed at
- * different times from different artifacts by different code, and if they ever
- * disagree the page is either downloading 3 kB it does not need or rendering
- * math with no stylesheet. Comparing them is the only thing that can notice.
- *
- * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
- *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
- */
-/**
  * The About page renders, renders the same way twice, and says something.
  *
  * ## THE SAME CLAIMS THE CORPUS GETS, AND ONE MORE
@@ -261,6 +228,39 @@ async function checkAbout() {
   );
 }
 
+/**
+ * THE FOURTH SUBJECT: math, and what each output carries of it.
+ *
+ * The determinism pass above already covers KaTeX for free, because a
+ * nondeterministic renderer would move the bytes between two runs. What it
+ * cannot see is the thing the math arc actually decided, which is that ONE
+ * output carries the rendered form and every other one carries the TeX an
+ * author typed. That distinction lives in five different modules and nothing
+ * else compares them.
+ *
+ * ## THE SCOPE CONTROL COMES FIRST, and it is the assertion that matters most
+ *
+ * Every claim below is of the form "no post's markdown carries KaTeX markup",
+ * and a corpus with no math in it satisfies every one of them perfectly. That
+ * is the clean-sweep-over-an-empty-scope shape this file already guards against
+ * for `further_reading`. So the first thing asserted is that the corpus
+ * contains at least one post WITH math and at least one WITHOUT: the fixture
+ * `math-typesetting-fixture` provides the first and the other twelve the
+ * second. Delete the fixture and this gate fails rather than going quietly
+ * vacuous.
+ *
+ * ## TWO DERIVATIONS OF `hasMath`, MADE TO ARGUE
+ *
+ * `remarkMathValidate` sets the flag from the mdast, before anything is
+ * rendered. `htmlHasMath` reads it back off the rendered html, and is what the
+ * ROUTE uses to decide whether to link the stylesheet. They are computed at
+ * different times from different artifacts by different code, and if they ever
+ * disagree the page is either downloading 3 kB it does not need or rendering
+ * math with no stylesheet. Comparing them is the only thing that can notice.
+ *
+ * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
+ *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
+ */
 function checkMath(posts) {
   /** @type {string[]} */
   const problems = [];
