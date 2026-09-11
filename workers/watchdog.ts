@@ -242,7 +242,7 @@ async function writeState(
 const ALERT_FROM = { email: "watchdog@dustinedwards.info", name: "dustinedwards.info watchdog" };
 
 /** One reading of the health endpoint. */
-type Reading = { status: number; body: unknown };
+type Reading = { status: number; body: unknown; error?: string };
 
 /**
  * Reads `/api/health` through the service binding.
@@ -252,19 +252,39 @@ type Reading = { status: number; body: unknown };
  * reached is a reason to wake somebody, and it must not be a reason for this
  * handler to die before it can send the mail saying so.
  *
+ * **AND IT KEEPS THE CAUSE**, since 2026-09-11. The catch was
+ * `catch { return { status: 0, body: null } }`, which collapsed DNS failure, a
+ * timeout and a 1042 into one indistinguishable reading, and the mail that
+ * woke somebody said only that no failing check was named. Those are different
+ * pages: a timeout is a site problem, a 1042 is this Worker's binding pointed
+ * somewhere it may not go, which is a deploy problem. `repair` below has kept
+ * `error.message` since it was written; this is the same discipline applied to
+ * the read.
+ *
  * `cache-control: no-cache` is belt only. The route declares `no-store` and a
  * service binding does not go through the edge cache at all, but a reading that
  * could be served from anywhere is not a health check, and stating it costs a
  * header.
+ *
+ * EXPORTED FOR ONE REASON: `test/worker/watchdog.test.ts` drives it with a
+ * `SITE` binding whose `fetch` throws, which is the only way to observe the
+ * catch. A thrown transport error is not something a live probe can arrange
+ * on demand, so the alternative to exporting it is not covering it at all.
+ * The `scheduled` handler below is still the only caller in the deployed
+ * Worker.
  */
-async function readHealth(env: WatchdogEnv): Promise<Reading> {
+export async function readHealth(env: WatchdogEnv): Promise<Reading> {
   try {
     const response = await env.SITE.fetch(`${SITE_ORIGIN}/api/health`, {
       headers: { "user-agent": "watchdog", "cache-control": "no-cache" },
     });
     return { status: response.status, body: await response.json().catch(() => null) };
-  } catch {
-    return { status: 0, body: null };
+  } catch (error) {
+    return {
+      status: 0,
+      body: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -470,7 +490,11 @@ async function readErrorRate(
 const renderBody = (reading: Reading | null): string =>
   reading === null
     ? "(no reading was taken)"
-    : `HTTP ${reading.status}\n${JSON.stringify(reading.body, null, 2)}`;
+    : reading.status === 0
+      ? // A reading that never reached the endpoint has no body worth printing
+        // and one thing worth printing, so it prints that instead of "null".
+        `HTTP 0 (the request did not complete)\n${reading.error ?? "(no cause was recorded)"}`
+      : `HTTP ${reading.status}\n${JSON.stringify(reading.body, null, 2)}`;
 
 export default {
   /**
