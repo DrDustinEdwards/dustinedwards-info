@@ -163,3 +163,6 @@ wrangler.watchdog.jsonc
 # a hidden test set in the repo is one the attempt path can read, which defeats the
 # measurement entirely.
 .improve-holdout/
+
+# Project MCP config: carries a driver bearer token
+.mcp.json
