@@ -74,7 +74,26 @@ const MINIMUM_FILES = 8;
    (it trips on a single case leaving) and it also went stale silently, because
    by today the layer had grown to 118 cases against a floor written for a
    112-case run. Re-run, never adjusted by arithmetic. */
-const MINIMUM_CASES = 114;
+/*
+ * RE-MEASURED 2026-09-11 BY RUNNING THE GATE: 127 cases, confirmed identically
+ * by CI on a clean checkout. The floor of 114 predates this session; the two
+ * test files added to test/worker/ raised the count and pushed the existing gap
+ * past what check:floors allows.
+ *
+ * Executed 127, tolerance 7, lowest legal 120, set to 124.
+ *
+ * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
+ * first attempt.** That attempt read "six percent under" out of a comment in
+ * check-headers.mjs and applied it to four gates. The rule is
+ * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
+ * the gate that enforces it. Prose about a gate ages; the gate does not.
+ *
+ * It went undetected locally because check:floors runs the whole offline tier
+ * and therefore runs LAST, and the tier hangs before it on this host
+ * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
+ * work and is proven so by differential). CI reached it on the first push.
+ */
+const MINIMUM_CASES = 124;
 
 let checks = 0;
 let failures = 0;

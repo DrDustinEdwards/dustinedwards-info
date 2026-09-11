@@ -5733,7 +5733,32 @@ console.log("\n  28. every rendered <img> states an intrinsic size, or its class
  * stale reading before anything touched it, which is why every one of these is
  * taken by running the gate.
  */
-const MINIMUM_CHECKS = wantsRemote ? 346 : 309;
+/*
+ * RE-MEASURED 2026-09-11 BY RUNNING THE GATE: 330 offline, against a floor of
+ * 309 that predates this session. Section 28 raised the count and pushed an
+ * already-wide gap past what check:floors allows, which is the gate working as
+ * designed rather than a new defect: a floor 21 under its count can lose
+ * twenty-one assertions and still pass.
+ *
+ * Offline: executed 330, tolerance 17, lowest legal 313, set to 322.
+ *
+ * THE REMOTE FLOOR IS LEFT ALONE, deliberately. It was not measured in this
+ * session (the remote branch needs the network), CI reported no breach on it,
+ * and moving a number nobody re-ran is the exact habit the paragraph below
+ * argues against.
+ *
+ * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
+ * first attempt.** That attempt read "six percent under" out of a comment in
+ * check-headers.mjs and applied it to four gates. The rule is
+ * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
+ * the gate that enforces it. Prose about a gate ages; the gate does not.
+ *
+ * It went undetected locally because check:floors runs the whole offline tier
+ * and therefore runs LAST, and the tier hangs before it on this host
+ * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
+ * work and is proven so by differential). CI reached it on the first push.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 346 : 322;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
