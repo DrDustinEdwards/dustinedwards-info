@@ -740,6 +740,21 @@ announce("Build");
 if (run("npm", ["run", "build:stack"]).code !== 0) {
   refuse("the stack artifact build failed", "Fix build:stack. Nothing was deployed.");
 }
+/*
+ * THE ABOUT ARTIFACT, for exactly the reason the stack artifact is above it.
+ * content/generated/about.json is gitignored and app/routes/about.tsx imports
+ * it statically, so the Worker bundle carries its bytes and a clean clone
+ * fails the build without this. It reads content/generated/stack.json, so it
+ * goes after build:stack and not before it.
+ *
+ * This also writes content/generated/posts.json, which step 12 re-derives
+ * before the sync. Running it twice is a few seconds and is the honest
+ * ordering: the deploy needs the About bytes now, and the sync needs a corpus
+ * built from the tree that was actually deployed.
+ */
+if (run("npm", ["run", "build:content"]).code !== 0) {
+  refuse("the content build failed", "Fix build:content. Nothing was deployed.");
+}
 // The enhancement bundles next: the app build's ?url imports name files under
 // the gitignored app/enhance/dist/, so a build without this step fails on a
 // missing file that is not the tree's fault.

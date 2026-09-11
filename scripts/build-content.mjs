@@ -14,15 +14,21 @@ import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import matter from "gray-matter";
+
 import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
-import { withRelated } from "../app/lib/content/pipeline.mjs";
+import { renderBody, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
 export const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
+
+/** The About page's prose. Markdown, so it edits the way a post does. */
+export const ABOUT_SOURCE = path.join("content", "about.md");
+export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json");
 
 /**
  * Renders every post and returns the artifact exactly as it should sit on disk.
@@ -158,12 +164,88 @@ export function revisedDate(post) {
   return revised ? new Date(`${revised}T00:00:00.000Z`) : null;
 }
 
+/**
+ * The About page, rendered from markdown into the shape its route imports.
+ *
+ * ## WHY IT IS MARKDOWN AND NOT JSX
+ *
+ * `/privacy` and `/colophon` are prose in JSX, which is fine for pages whose
+ * sentences are each tied to a file the reader can go and check. About is not
+ * that: it is one person's description of themselves, it will be revised on
+ * taste rather than on a code change, and the person revising it should not
+ * have to edit a component to move a comma. So it edits the way a post does.
+ *
+ * ## WHY IT IS RENDERED HERE AND NOT IN THE WORKER
+ *
+ * The public plane must not grow a second markdown renderer, and it must not
+ * pay for the first one on a static page: `renderBody` pulls shiki, KaTeX and
+ * the directive plugins, which is most of the build's weight for four
+ * paragraphs that contain none of them. Rendering at build time means the
+ * route imports a string.
+ *
+ * THE SAME `renderBody` THE CORPUS USES, never a lighter second pass. A page
+ * rendered by a different pipeline would drift from the posts beside it in
+ * exactly the ways nobody checks: heading ids, link handling, the URL
+ * allowlist. The mailto in the contact line is live because `isAllowedUrl`
+ * permits `mailto:`, which is a property of the shared renderer and not of a
+ * special case written here.
+ *
+ * `resolveImage` REFUSES. This page has no images and must not acquire one by
+ * accident: an image here would need a build-time measurement this function
+ * does not do, and would render without `width` and `height` (check:invariants
+ * section 28). A named throw is a better answer than a silent unsized image.
+ *
+ * @returns {Promise<string>} the artifact exactly as it should sit on disk
+ */
+export async function buildAbout() {
+  const raw = await readFile(ABOUT_SOURCE, "utf8");
+  const parsed = matter(raw);
+  const title = String(parsed.data.title ?? "");
+  const description = String(parsed.data.description ?? "");
+  if (!title || !description) {
+    throw new ContentError(
+      ABOUT_SOURCE,
+      "must carry a title and a description in its frontmatter. They are the " +
+        "page's <title> and its meta description, and a missing one would ship " +
+        "as an empty tag rather than as a build failure.",
+    );
+  }
+
+  const rendered = await renderBody({
+    file: ABOUT_SOURCE,
+    body: parsed.content,
+    resolveImage: async (src) => {
+      throw new ContentError(
+        ABOUT_SOURCE,
+        `references an image ("${src}") and this page has no image pipeline. Put ` +
+          `the picture in a post, or give this build a real resolver.`,
+      );
+    },
+  });
+
+  if (rendered.blockedUrls.length > 0) {
+    throw new ContentError(
+      ABOUT_SOURCE,
+      `carries ${rendered.blockedUrls.length} link(s) the URL allowlist refused: ` +
+        `${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
+    );
+  }
+
+  return `${JSON.stringify({ title, description, html: rendered.html }, null, 2)}\n`;
+}
+
 async function main() {
   const artifact = await buildArtifact();
   await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
   await writeFile(ARTIFACT_PATH, artifact, "utf8");
   const { posts } = JSON.parse(artifact);
-  console.log(`build:content wrote ${ARTIFACT_PATH} (${posts.length} posts)`);
+
+  const about = await buildAbout();
+  await writeFile(ABOUT_ARTIFACT_PATH, about, "utf8");
+
+  console.log(
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts) and ${ABOUT_ARTIFACT_PATH}`,
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

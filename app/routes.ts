@@ -54,6 +54,12 @@ export default [
   // /phage-hunters/*, which is a static prefix and not a route; the page prefix
   // and the asset prefix differ on purpose. See the route file.
   route("phage-discovery", "routes/phage-discovery.tsx"),
+  // Who this is, in the first person, from content/about.md. FIRST among the
+  // hand-written pages here and FIRST in the header nav, because the audit's
+  // fourth part found that the first three questions a stranger has off the
+  // home page are who is this, where do they work, and how do I reach them,
+  // and nothing on the site answered any of them in visible text.
+  route("about", "routes/about.tsx"),
   // The colophon. `/colophon` is the IndieWeb convention and is what tooling
   // expects; the page TITLE carries the legibility ("How this site is built")
   // because the word is not universally known. Ruled, do not swap them.

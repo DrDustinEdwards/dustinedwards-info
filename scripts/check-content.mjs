@@ -19,6 +19,13 @@
  *      the Node build. A slug whose two renders differ is named. Rendering at
  *      all is also the validation half: a post the pipeline refuses fails
  *      here, offline, before any writer meets it.
+ *   1b. THE ABOUT PAGE, on the corpus's footing: rendered twice and
+ *      byte-compared, and the render is the validation. It is a build
+ *      product, gitignored like `posts.json` and `stack.json`, but unlike
+ *      those two its bytes go into the WORKER BUNDLE, because
+ *      `app/routes/about.tsx` imports it statically. A nondeterministic
+ *      render of it is therefore a deploy that differs from the one before
+ *      it for no reason anybody wrote down.
  *   2. `template-refs.json`, byte-compared against a fresh scan. STILL
  *      COMMITTED, deliberately: it is a repo fact with no database owner.
  *   3. `assets.json`, byte-compared against a walk of `public/`, with the
@@ -39,7 +46,7 @@ import { spawnSync } from "node:child_process";
 import path, { join } from "node:path";
 import { createHash } from "node:crypto";
 
-import { buildArtifact } from "./build-content.mjs";
+import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, placeholderPaths, walkPublic } from "./build-assets.mjs";
 /* The one statement of what a stored placeholder IS, imported rather than
@@ -147,6 +154,8 @@ async function main() {
       `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, rendered twice).`,
   );
 
+  await checkAbout();
+
   checkInternalFurtherReading(posts);
   checkMath(posts);
   checkSwatches(posts);
@@ -188,6 +197,70 @@ async function main() {
  * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
  *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
  */
+/**
+ * The About page renders, renders the same way twice, and says something.
+ *
+ * ## THE SAME CLAIMS THE CORPUS GETS, AND ONE MORE
+ *
+ * RENDERING AT ALL IS THE VALIDATION. `buildAbout` throws on missing
+ * frontmatter, on an image (there is no resolver on this page), and on a link
+ * the URL allowlist demoted. A page that cannot be built fails here, offline,
+ * rather than shipping with a dead anchor or an empty title tag.
+ *
+ * TWICE, BYTE-COMPARED, for the corpus's reason and one of its own. The
+ * general reason is that a clock, a counter or an iteration order in the
+ * pipeline shows up as a difference between two back-to-back runs. The
+ * specific one is that `content/generated/about.json` is imported STATICALLY
+ * by `app/routes/about.tsx`, so its bytes sit inside the Worker bundle: a
+ * nondeterministic render here makes two deploys of one commit differ, which
+ * is the property blocking `npm run deploy` from a dirty tree exists to
+ * protect.
+ *
+ * NOT EMPTY, and this is the extra claim. `renderBody` over an empty body
+ * returns an empty string and throws nothing, so a truncated or mis-parsed
+ * `content/about.md` produces a perfectly valid artifact describing a blank
+ * page. That is the failure here that looks most like success.
+ *
+ * THE FLOOR IS DELIBERATELY LOW. It is a scope check against nothing at all,
+ * not a word count: a page whose length a gate polices is a page nobody can
+ * edit, and this one exists to be edited on taste.
+ *
+ * WHAT IT DOES NOT CHECK: whether a single sentence is true. Nothing can.
+ */
+async function checkAbout() {
+  const first = await buildAbout();
+  const second = await buildAbout();
+
+  if (first !== second) {
+    console.error(
+      `check:content failed. Two back-to-back renders of ${ABOUT_SOURCE} differ, so the ` +
+        `render is NOT deterministic, and its bytes go into the Worker bundle.`,
+    );
+    const diff = firstDifference(first, second);
+    if (diff) {
+      console.error(`  first difference at line ${diff.line}`);
+      console.error(`  run 1: ${diff.committed.trim().slice(0, 200)}`);
+      console.error(`  run 2: ${diff.fresh.trim().slice(0, 200)}`);
+    }
+    process.exit(1);
+  }
+
+  const about = JSON.parse(first);
+  if (about.html.length < 200) {
+    console.error(
+      `check:content failed. ${ABOUT_SOURCE} rendered ${about.html.length} character(s) of ` +
+        `HTML, floor 200. An empty or near-empty render is a valid artifact describing a ` +
+        `blank page, which is the one failure here that looks like success.`,
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    `check:content ok. ${ABOUT_ARTIFACT_PATH} renders deterministically ` +
+      `(${about.html.length} bytes of HTML, rendered twice).`,
+  );
+}
+
 function checkMath(posts) {
   /** @type {string[]} */
   const problems = [];

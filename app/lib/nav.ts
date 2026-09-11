@@ -21,6 +21,15 @@
  * Roster's LABEL and its PATH deliberately disagree; see site-header.tsx.
  */
 export const NAV = [
+  /*
+   * ABOUT IS FIRST, and the position is the decision rather than the link.
+   *
+   * A reader who has just arrived wants to know whose site this is before
+   * they want a post list, and the audit measured the alternative: with the
+   * university named only inside the home page's Person JSON-LD, a stranger
+   * could read the whole site and never learn where the author works.
+   */
+  { to: "/about", label: "About", end: false },
   { to: "/blog", label: "Blog", end: true },
   { to: "/projects", label: "Projects", end: false },
   { to: "/playground", label: "Playground", end: false },
