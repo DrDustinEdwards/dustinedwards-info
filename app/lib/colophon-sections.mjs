@@ -130,11 +130,20 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
   {
     id: "not-adopted",
     title: "What was not adopted",
+    /*
+     * THE LEAD NAMED TWO KINDS AND ONLY ONE IS LEFT, 2026-09-11.
+     *
+     * "Two different things are listed here" is a tense-bound state claim
+     * about a list that changes, which hard rule 17 gives to a gate or to
+     * nobody, and it went false the moment the last accepted gap left. So the
+     * sentence describes what IS here rather than promising a second category
+     * the vocabulary no longer carries. See STATUS_LABEL below for where the
+     * other one went and what bringing it back costs.
+     */
     lead:
-      "Anyone can list what they shipped. Two different things are listed " +
-      "here: a refusal is a decision that was made and recorded, and an " +
-      "accepted gap is something missing that nobody ruled on, written down so " +
-      "it is not mistaken for a choice.",
+      "Anyone can list what they shipped. A refusal is a decision that was " +
+      "made and recorded: not a thing nobody got to, but a thing somebody " +
+      "ruled out, with the reason beside it.",
   },
 ]);
 
@@ -225,9 +234,26 @@ export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
  *
  * @type {Record<string, string>}
  */
+/*
+ * `accepted-gap` WAS HERE AND IS NOT, removed 2026-09-11 with its last member.
+ *
+ * The one entry carrying it was "Continuous integration", whose reason read
+ * "with no CI, any gate can be skipped indefinitely". `.github/workflows/ci.yml`
+ * has run on every push to main since 2026-08-20 and `scripts/ship.mjs` refuses
+ * a HEAD without a green run for that exact sha, so the colophon was printing a
+ * false sentence on the page whose whole claim is that its sentences are
+ * checked against the repository.
+ *
+ * THE VOCABULARY SHRANK WITH IT RATHER THAN OUTLIVING IT, because
+ * `check:features` asserts both directions over this map: a label no entry uses
+ * is the mirror-going-stale shape, caught here before it is the one that
+ * matters. `STATUSES` in `scripts/check-stack.mjs` is the other owner of this
+ * vocabulary and moved in the same commit. Writing down the next real accepted
+ * gap means re-adding the value in both places, which is the two-sided edit
+ * this repo wants rather than friction.
+ */
 export const STATUS_LABEL = {
   refused: "Refused",
-  "accepted-gap": "Accepted gap",
 };
 
 /**

@@ -32,8 +32,12 @@
  * only as far as someone remembered to run `check:config` on the machine that
  * holds the real config.
  *
- * That is the same accepted gap this page lists under `notAdopted`, reaching
- * the gate that describes it.
+ * That gap is real and it is recorded HERE, in the gate it is about, rather
+ * than on the page. It used to be described as "the same accepted gap this
+ * page lists under `notAdopted`", which stopped being true on 2026-09-11 when
+ * the one entry under that status was deleted for being false about CI. A
+ * cross-reference to a list is a claim that ages; a gate's own boundary note
+ * is the place a boundary belongs.
  *
  * Pure: no network, no database, no bindings.
  *
@@ -283,10 +287,18 @@ ok(
  * something. Calling it a refusal would have published a decision nobody made,
  * on the one page whose whole subject is what was decided.
  *
- * The status is closed rather than free text, because two values a reader can
- * rely on are worth more than an open vocabulary that drifts into synonyms.
+ * The status is closed rather than free text, because values a reader can rely
+ * on are worth more than an open vocabulary that drifts into synonyms.
+ *
+ * ONE VALUE SINCE 2026-09-11, and this list is the SECOND owner of that
+ * vocabulary rather than the first: `STATUS_LABEL` in
+ * `app/lib/colophon-sections.mjs` is what the page renders through, and
+ * `check:features` asserts in both directions that the labels and the statuses
+ * in use are the same set. `accepted-gap` left both in the same commit with its
+ * last member, the false "Continuous integration" entry. Adding the next
+ * accepted gap means editing both, which is the point.
  */
-const STATUSES = ["refused", "accepted-gap"];
+const STATUSES = ["refused"];
 const badStatus = (artifact.notAdopted ?? []).filter(
   (/** @type {any} */ n) => !STATUSES.includes(n.status),
 );
