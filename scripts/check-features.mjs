@@ -3030,7 +3030,18 @@ console.log(
  * because this count moves with the CORPUS: posts, tags, projects and demos all
  * feed it, so ordinary content work shifts it by tens.
  */
-const MINIMUM_CHECKS = 864;
+/*
+ * RE-MEASURED 2026-09-11 BY RUNNING THE GATE, never by adding this session's
+ * new assertions to the old number. 909 before the anonymousGet
+ * reconciliation and the continuous-integration assertion landed, 936 after.
+ * The floor stood at 864, which was 45 under its own count BEFORE either of
+ * them and 72 under after: a floor that far below what it measures can lose
+ * seventy assertions and still pass, which is the exact shape FAILURES.md
+ * calls a limit positioned where it cannot bite.
+ *
+ * Six percent under 936, the convention the preview-route floor set.
+ */
+const MINIMUM_CHECKS = 880;
 const floorBreach = assertFloor(
   "check:features",
   "checks",

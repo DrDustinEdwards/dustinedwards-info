@@ -1441,6 +1441,10 @@ console.log("  public HTML routes share one headers()");
 {
   const PUBLIC_HTML = [
     "home.tsx",
+    // The About page. Shared-cached like every other hand-written page, and
+    // it carries no reader-specific anything: the prose is a build artifact
+    // and the only per-request value on it is the CSP nonce every page has.
+    "about.tsx",
     "colophon.tsx",
     "phage-discovery.tsx",
     "playground.tsx",
@@ -1652,13 +1656,14 @@ console.log("  public HTML routes share one headers()");
  *
  * **RE-MEASURED 2026-09-11, BY RUNNING BOTH SIDES.** HEAD's copy of this file,
  * extracted and executed against the current tree: 197. This tree, with the
- * feed-exemption block: 208. So 187 had drifted ten under its own count before
- * this commit, by the same ordinary work the paragraph above describes. The
- * new value is six percent under 208, which is the convention the preview-route
- * floor set, and it is arithmetic on a MEASUREMENT rather than on the old
- * number plus the new block.
+ * feed-exemption block: 208, and 211 once `about.tsx` joined PUBLIC_HTML and
+ * brought its three per-route assertions with it. So 187 had drifted ten under
+ * its own count before that commit, by the same ordinary work the paragraph
+ * above describes. The value is six percent under the 211 actually observed,
+ * which is the convention the preview-route floor set, and it is arithmetic on
+ * a MEASUREMENT rather than on the old number plus the new block.
  */
-const MINIMUM_CHECKS = 195;
+const MINIMUM_CHECKS = 198;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
