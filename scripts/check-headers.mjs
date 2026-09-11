@@ -49,6 +49,7 @@ import { fileURLToPath } from "node:url";
 
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
+import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
@@ -386,6 +387,81 @@ for (const name of [
           .join(", ") || "(none)"),
     );
   }
+}
+
+/* ------------------------------------ the feeds get NO policy at all ------ */
+
+/*
+ * **EVERY FEED ROUTE'S DECLARED CONTENT-TYPE IS ONE `isFeed()` EXEMPTS.**
+ *
+ * The exemption list and the routes are two owners of one fact, and they had
+ * already drifted. Measured on the live host 2026-09-11: `/blog/atom.xml`
+ * served a full CSP carrying a per-request nonce on a body stored with
+ * `s-maxage=600`, because `isFeed()` listed `application/rss+xml` and
+ * `application/json` while a comment beside it called that "the two feeds".
+ * Atom arrived later and nothing compared the two sides. `/sitemap.xml` had
+ * the same shape for the same reason.
+ *
+ * THE TYPES ARE READ OUT OF THE ROUTE FILES, not restated here. That is what
+ * makes this an argument between two independent sources rather than a mirror:
+ * a route that starts declaring a different type moves the ACTUAL side, and a
+ * shortened exemption list moves the EXPECTED side. Either one fails.
+ *
+ * `isFeed` is IMPORTED and CALLED, on the same reasoning `contentSecurityPolicy`
+ * is: a regex over the list in the Worker reads its spelling, not its answer.
+ */
+{
+  /**
+   * The three feeds, by route file. Named rather than globbed, because the
+   * assertion is about THESE THREE documents being exempt and a glob would
+   * quietly shrink to whatever still matches.
+   */
+  const FEED_ROUTES = [
+    "blog.rss[.xml].ts",
+    "blog.atom[.xml].ts",
+    "blog.feed[.json].ts",
+  ];
+
+  for (const file of FEED_ROUTES) {
+    const routePath = join(root, "app", "routes", file);
+    if (!existsSync(routePath)) {
+      ok(`the feed route ${file} exists`, false, "not on disk");
+      continue;
+    }
+    // Comments stripped first: this repo has had a needle satisfied by a
+    // sentence and a needle failed by one, in the same week.
+    const source = stripComments(readFileSync(routePath, "utf8"));
+    const declared = source.match(/"content-type":\s*"([^"]+)"/);
+    ok(
+      `${file} declares a content-type this gate can read`,
+      Boolean(declared),
+      "no `\"content-type\": \"...\"` literal found, so the next assertion would " +
+        "have nothing to test and would pass",
+    );
+    if (!declared) continue;
+    ok(
+      `${file} serves "${declared[1]}", which isFeed() exempts from the CSP`,
+      isFeed(declared[1]),
+      `isFeed("${declared[1]}") is false, so this feed is served a policy with a ` +
+        `per-request nonce on a shared-cached body. Exempt types: ` +
+        `${[...UNPOLICED_TYPES].join(", ")}`,
+    );
+  }
+
+  /*
+   * THE NEGATIVE, so the three assertions above cannot pass by `isFeed()`
+   * having become `() => true`. A document type must still be policed; that is
+   * the entire reason the list is named types rather than a negation of
+   * `text/html`.
+   */
+  for (const type of ["text/html", "text/html; charset=utf-8", "image/svg+xml", ""]) {
+    ok(
+      `isFeed(${JSON.stringify(type)}) is false, so a document still gets a policy`,
+      !isFeed(type),
+      "isFeed() exempts a type a browser renders as a browsing context",
+    );
+  }
+  ok("isFeed(null) is false", !isFeed(null));
 }
 
 /* ------------------------------------ the style nonce is ADMIN ONLY ------- */
@@ -1573,8 +1649,16 @@ console.log("  public HTML routes share one headers()");
  * ordinary commits doing ordinary work, which is the whole argument for the
  * floor being a floor rather than an equality. The delta is stated as a
  * measurement of two runs, never as arithmetic on the new block.
+ *
+ * **RE-MEASURED 2026-09-11, BY RUNNING BOTH SIDES.** HEAD's copy of this file,
+ * extracted and executed against the current tree: 197. This tree, with the
+ * feed-exemption block: 208. So 187 had drifted ten under its own count before
+ * this commit, by the same ordinary work the paragraph above describes. The
+ * new value is six percent under 208, which is the convention the preview-route
+ * floor set, and it is arithmetic on a MEASUREMENT rather than on the old
+ * number plus the new block.
  */
-const MINIMUM_CHECKS = 187;
+const MINIMUM_CHECKS = 195;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
