@@ -16,8 +16,14 @@
  * It is not emptied, because these photos are half the page's content rather
  * than decoration, and `alt=""` on a content image is a WCAG failure.
  *
- * TODO: "Matthew Bristerpostma" (2018) is likely "Brister-Postma", pending
- * confirmation.
+ * THE NAMES ARE AS GIVEN, and there is no open question about any of them.
+ *
+ * A TODO stood here guessing that the 2018 entry "Matthew Bristerpostma" was
+ * "likely Brister-Postma, pending confirmation". Removed 2026-09-11 by
+ * Dustin's ruling: the name is the name. A speculative respelling of a real
+ * person's name, published on the page that lists them, is a worse error than
+ * an unhyphenated one, and a comment inviting the next reader to make that
+ * edit is the same error with a delay on it.
  */
 
 export type PhageYear = {
