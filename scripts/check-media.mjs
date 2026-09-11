@@ -5,10 +5,20 @@
  * of its sentences went false when the manifest half moved out. A boundary note
  * is a claim that ages (hard rule 7), and this file has now aged one twice.
  *
- * It reconciles KEYS. It lists R2, walks public/ and diffs both against D1, and
- * it never FETCHES a single one of those URLs. An object that exists with a row
- * and 404s through the serving route passes, which is exactly how 58 static rows
- * carried broken /media//path thumbnails while this gate was green.
+ * It reconciles KEYS. It lists R2, walks public/ and diffs both against D1. For
+ * everything except the social cards it still never FETCHES one of those URLs,
+ * and an object that exists with a row and 404s through the serving route
+ * passes, which is exactly how 58 static rows carried broken /media//path
+ * thumbnails while this gate was green.
+ *
+ * **THE SOCIAL CARDS ARE THE ONE EXCEPTION, and they are the exception because
+ * the key-only reading is what let them break.** Added 2026-09-11 after ten of
+ * eleven published posts served a 404 `og:image` for an unknown number of days:
+ * the bucket held cards under the posts' OLD slugs, D1 held the new ones, and
+ * every reconciliation any gate performed was internally consistent. The OG
+ * block below therefore asserts BOTH directions, and one of them leaves this
+ * file's usual boundary on purpose. See it for what each half can and cannot
+ * see.
  *
  * **IT NO LONGER READS content/generated/assets.json AT ALL.** That comparison
  * was pure filesystem, so it was the one offline-capable assertion in a gate
@@ -68,6 +78,7 @@ import { fileURLToPath } from "node:url";
 
 import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { listAllObjects } from "./lib/r2.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { retryRead } from "./lib/retry.mjs";
@@ -404,10 +415,16 @@ async function main() {
    * owner of it; a second copy here is the shape that put five drafts into Ask
    * in July.
    *
-   * Direction: cards that must NOT exist. The other direction, every visible
-   * post HAVING a card, is deliberately not asserted here, because cards are
-   * written by a manual `build:og --remote` and a missing one is a cosmetic
-   * gap, not a disclosure. This gate is the security half.
+   * Direction: cards that must NOT exist. This is the SECURITY half.
+   *
+   * **THE OTHER DIRECTION IS NOW ASSERTED TOO, in the block after this one.**
+   * It used to be skipped on the reasoning that "cards are written by a manual
+   * `build:og --remote` and a missing one is a cosmetic gap, not a disclosure".
+   * The first clause is still true and is exactly why the second one failed:
+   * nothing runs `build:og`, ship does not call it, and the key is a hash of
+   * the slug, title and description, so a rename or a retitle silently moves
+   * every card. Measured 2026-09-11: ten of eleven published posts served a
+   * 404 og:image, and every unfurler got a broken card.
    */
   {
     const artifactPath = join(root, "content", "generated", "posts.json");
@@ -450,6 +467,115 @@ async function main() {
         `${exposed.length} social card(s) are PUBLIC for post(s) that are not. The card ` +
           `renders the title, so this discloses an unpublished headline. Repair: ` +
           `npm run build:og -- --remote, whose prune deletes them.\n${sample(exposed)}`,
+      );
+    }
+
+    /*
+     * EVERY PUBLICLY VISIBLE POST HAS A CARD, in the bucket and on the wire.
+     *
+     * TWO ASSERTIONS OVER ONE EXPECTED SET, and they are separate because they
+     * fail for different reasons and neither implies the other.
+     *
+     *   KEY RECONCILIATION reads the R2 listing this gate already has. It is
+     *   the half that names the DEFECT: `build:og` has not been run since the
+     *   slug or the title moved, and the card the site advertises was never
+     *   generated. It needs no HTTP request of its own.
+     *
+     *   THE WIRE READ fetches each card through the deployed serving route.
+     *   It is the half that can see what the key comparison cannot: a bucket
+     *   the route is not bound to, a cache rule swallowing `/media/og/`, a
+     *   deploy that never happened. It is the 58-broken-thumbnails lesson at
+     *   the top of this file applied to the one class of object where a 404 is
+     *   visible to every stranger who shares a link.
+     *
+     * Neither half is a substitute for the other, and the plant that proved
+     * these two assertions MEASURED that rather than arguing it. On
+     * 2026-09-11 one card key was deleted from the live bucket and the gate
+     * re-run: the key reconciliation named the slug immediately, and the wire
+     * read still reported 11 of 11 answering 200. Cards are served
+     * `max-age=31536000, immutable`, so the edge kept serving an object that
+     * no longer existed.
+     *
+     * Read that in both directions, because it is the whole argument for
+     * running both. The KEY half sees a missing card the wire cannot see for
+     * up to a year. The WIRE half sees a bucket the route is not bound to, a
+     * cache rule swallowing `/media/og/`, or a deploy that never happened,
+     * none of which a key comparison can reach. The repair for either is the
+     * same one command.
+     *
+     * THE EXPECTED SET IS THE SAME `cards` DERIVATION `build-og.mjs` USES,
+     * spelled through the same two imported predicates rather than restated:
+     * publicly visible, and no cover of its own. A post with a cover uses the
+     * cover as its og:image and has no generated card, which is why it is not
+     * in this set and why asserting over every post would fail on it forever.
+     */
+    /** @type {Array<{ slug: string, key: string }>} */
+    const expected = [];
+    for (const post of artifactPosts) {
+      if (post.cover) continue;
+      if (!isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt })) {
+        continue;
+      }
+      expected.push({ slug: post.slug, key: ogImageKey(post) });
+    }
+
+    /*
+     * SCOPE, PROVEN NON-EMPTY. An artifact whose posts are all drafts, or a
+     * `cover` field that started arriving on everything, empties this set, and
+     * both loops below then sweep clean over nothing. The floor is a floor and
+     * not a zero-check for the reason every floor in this repo is: 11 was
+     * measured on 2026-09-11 and a set that has fallen to one is a scan that
+     * has stopped finding posts, not a blog that lost ten.
+     */
+    if (expected.length < 8) {
+      problems.push(
+        `the OG coverage scan expected ${expected.length} card(s), floor 8, measured 11 on ` +
+          `2026-09-11. Below the floor this comparison covered less than it reports, and at ` +
+          `zero it proved nothing at all.`,
+      );
+    }
+
+    const uncovered = expected.filter((e) => !liveOg.has(e.key)).map((e) => `${e.key}  (post "${e.slug}")`);
+    console.log(`  OG coverage: ${expected.length - uncovered.length}/${expected.length} card(s) in the bucket`);
+    if (uncovered.length > 0) {
+      problems.push(
+        `${uncovered.length} publicly visible post(s) have NO card in the OG bucket, so ` +
+          `their og:image is a 404 for every unfurler. The key is a hash of the slug, ` +
+          `title and description, so a rename or a retitle moves it and nothing ` +
+          `regenerates on its own. Repair: npm run build:og -- ${target}.\n${sample(uncovered)}`,
+      );
+    }
+
+    /*
+     * THE WIRE. Fetched from SITE_ORIGIN, which is the deployed host and NOT
+     * whatever `--local` points at, because a local miniflare bucket has no
+     * bearing on what a scraper gets. GET rather than HEAD: the serving route
+     * is allowed to answer a HEAD differently and a 404 body is what the
+     * audit actually observed.
+     */
+    /** @type {string[]} */
+    const unreachable = [];
+    for (const { slug, key } of expected) {
+      const url = `${SITE_ORIGIN}/media/${key}`;
+      let status = 0;
+      let note = "";
+      try {
+        const response = await fetch(url, { redirect: "manual" });
+        status = response.status;
+        // Drain it. An undrained body on a keep-alive socket is what makes a
+        // loop of fetches hang at the end of a Node script.
+        await response.arrayBuffer();
+      } catch (error) {
+        note = ` (${error instanceof Error ? error.message : String(error)})`;
+      }
+      if (status !== 200) unreachable.push(`${status || "no response"} ${url}  (post "${slug}")${note}`);
+    }
+    console.log(`  OG on the wire: ${expected.length - unreachable.length}/${expected.length} card(s) answer 200 at ${SITE_ORIGIN}`);
+    if (unreachable.length > 0) {
+      problems.push(
+        `${unreachable.length} published post(s) advertise an og:image that does not answer ` +
+          `200 on the deployed host. This is what a stranger sharing the link gets, and no ` +
+          `key comparison can see it.\n${sample(unreachable)}`,
       );
     }
   }
