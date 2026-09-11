@@ -1361,16 +1361,46 @@ refuses(
    * deferring leaves the deadlock that forced the ruling (a drifted corpus
    * refusing at the step that runs before its own repair, 2026-09-09).
    */
-  const deferredAt = shipSource.indexOf("DEFERRED_CHECKS = [");
-  eq("ruling 48: ship names its deferred checks", deferredAt !== -1, true);
+  /*
+   * WHAT CHANGED AND WHY THESE MOVED WITH IT. Ruling 48 had ONE deferred check
+   * and this block pinned it as a literal array in ship.mjs. Ruling 56 added
+   * `ask-index-drift` and `media-index-drift`, after the Ask one cost two
+   * deploys on 2026-09-10, and moved the table into `readiness.mjs` so
+   * `test/readiness.test.mjs` imports the real list rather than mirroring it.
+   * The shape read here is now a MAP keyed by check name and valued by the step
+   * that repairs it. What the assertions MEAN is unchanged.
+   */
+  const deferredAt = readinessSource.indexOf("DEFERRED_CHECKS = {");
+  eq("ruling 56: the deferred checks are named in one place", deferredAt !== -1, true);
+  /*
+   * ALL THREE, ENUMERATED. A regex for content-drift alone would pass on a
+   * table that had lost the other two, which is how the Ask deadlock would
+   * return without a single assertion moving.
+   */
+  for (const name of ["content-drift", "ask-index-drift", "media-index-drift"]) {
+    eq(
+      `ruling 56: ${name} is deferred`,
+      // `[A-Za-z0-9 ]`, not `[a-z0-9 ]`: the values are "the D1 sync" and "the
+      // Ask converge". A lower-case-only class matched only "the media
+      // converge" and reported the other two as undeferred, which is a needle
+      // failing on correct code rather than a defect in the code.
+      new RegExp(`"${name}":\\s*"the [A-Za-z0-9 ]+"`).test(readinessSource),
+      true,
+    );
+  }
+  /*
+   * EACH NAMES THE STEP THAT REPAIRS IT, and that value is the test for whether
+   * a fourth check belongs: one with nothing to name has no later repair, so
+   * deferring it would DROP it rather than move it.
+   */
   eq(
-    "ruling 48: content-drift is the deferred one",
-    /DEFERRED_CHECKS\s*=\s*\[\s*"content-drift"\s*\]/.test(shipSource),
+    "ruling 56: every deferred check names the step that repairs it",
+    !/"[a-z-]+":\s*"",?\s*$/m.test(readinessSource),
     true,
   );
   eq(
     "ruling 48: the readiness step passes them to the verdict",
-    /readinessVerdict\([^)]*DEFERRED_CHECKS\)/.test(shipSource),
+    /readinessVerdict\([^)]*Object\.keys\(DEFERRED_CHECKS\)\)/.test(shipSource),
     true,
   );
   eq(
@@ -1383,16 +1413,16 @@ refuses(
    * readiness ordering assertion above makes: a check that merely EXISTS could
    * sit before the sync and would then be the deadlock again.
    */
-  const contentDriftAt = shipSource.indexOf("content-drift is STILL failing after the sync");
-  eq("ruling 48: the late assertion was located", contentDriftAt !== -1, true);
+  const contentDriftAt = shipSource.indexOf("deferredMisses(verdict.checks, DEFERRED_CHECKS");
+  eq("ruling 56: the late assertion was located", contentDriftAt !== -1, true);
   eq(
-    "ruling 48: CONTENT-DRIFT IS ASSERTED AFTER THE D1 SYNC",
+    "ruling 56: THE DEFERRED CHECKS ARE ASSERTED AFTER THE D1 SYNC",
     contentDriftAt !== -1 && syncAt !== -1 && contentDriftAt > syncAt,
     true,
   );
   eq(
     "ruling 48: a still-drifted corpus reaches the exit code",
-    /contentDriftMiss\s*\)\s*\{/.test(shipSource) || /\|\|\s*contentDriftMiss/.test(shipSource),
+    /deferredMiss\s*\)\s*\{/.test(shipSource) || /\|\|\s*deferredMiss/.test(shipSource),
     true,
   );
 
@@ -1873,8 +1903,14 @@ refuses(
  * tolerance check refused 171 against 188 at `gap=17, tolerance=10`, so seven
  * percent no longer fits inside the instrument that guards this number. The
  * tolerance is the tighter rule and it wins.
+ *
+ * RE-MEASURED 2026-09-10 by RUNNING it, after ruling 56 turned ruling 48's four
+ * assertions into seven (the deferred table is now a map of three checks, each
+ * enumerated, each required to name the step that repairs it): 191. Tolerance
+ * is 10 at that count, so anything from 181 up is legal; 184 leaves the slack
+ * the entries above chose.
  */
-const MINIMUM_CHECKS = 180;
+const MINIMUM_CHECKS = 184;
 const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 

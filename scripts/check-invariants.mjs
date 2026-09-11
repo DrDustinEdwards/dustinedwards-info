@@ -4735,9 +4735,31 @@ console.log("\n  21. savePost commits before it touches D1");
       "measured 2026-08-26, that call cost this page 1.07 to 3.48 s at origin " +
       "against 0.32 to 0.90 s for /blog. Read the snapshot instead.",
   );
+  /*
+   * THE COUNT COMES FROM A COUNTING QUERY, and this needle moved with ruling 57.
+   *
+   * It was `/listing\.total/`, which named the variable `listBlogPosts` was
+   * assigned to. Ruling 57 replaced that call: home no longer pages four posts
+   * and hopes the featured one is among them, it asks `listHomeStartHere` for
+   * the featured post, the newest others and the total in one batch, so the
+   * binding is now `start.total`.
+   *
+   * WHAT IS BEING ASSERTED is unchanged, and restating it matters because the
+   * old needle read like a claim about a variable name: the tile must count
+   * through a QUERY that composes `publiclyVisible()`, never from a literal and
+   * never from the length of whatever page happened to be fetched.
+   * `listHomeStartHere` composes `isBlogPost()`, which composes
+   * `publiclyVisible()`, in all three of its statements.
+   *
+   * Both spellings are accepted rather than only the new one, because this is a
+   * property of where the number comes from; pinning it to one variable name is
+   * what made a correct change read as a violation.
+   */
   ok(
-    "the post count is read from the listing, not written",
-    /listing\.total/.test(home),
+    "the post count is read from a counting query, not written",
+    /\b(listing|start)\.total\b/.test(home) &&
+      /listHomeStartHere|listBlogPosts/.test(home) &&
+      !/\bposts:\s*\d/.test(home),
     "the tile must count through the same query, and therefore the same " +
       "publiclyVisible() predicate, that /blog counts with.",
   );
