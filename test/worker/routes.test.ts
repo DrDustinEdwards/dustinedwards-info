@@ -7,7 +7,7 @@ import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
-import { loader as healthLoader } from "~/routes/api.health";
+import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
 
 /**
  * Two route modules driven DIRECTLY: `/theme` and `/api/health`.
@@ -478,5 +478,38 @@ describe("/api/health", () => {
         }
       }
     }
+  });
+
+  it("answers a non-GET as a METHOD error, not as a framework crash", async () => {
+    /*
+     * REPLAYS WHAT PRODUCTION DID, measured 2026-09-11:
+     * `curl -X POST /api/health` returned 405 with `Content-Type:
+     * application/json` and the body `{"message":"Unexpected Server Error"}`,
+     * and no `Allow` header. That is React Router's default for a route with
+     * a loader and no action, and it tells the caller the server broke when
+     * the caller simply used the wrong verb.
+     *
+     * Four claims, because the old behaviour already satisfied one of them:
+     * the status was ALREADY 405, so a test asserting only the status would
+     * have passed against the defect. The `Allow` header, the body shape and
+     * the `no-store` are the three that discriminate.
+     */
+    const response = await healthAction();
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+    /* The SAME contract every other answer here uses, so the health workflow's
+     * parse succeeds and names a cause rather than falling into its "body did
+     * not parse" branch. */
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-type")).toContain("application/json");
+
+    const body = (await response.json()) as { ok: boolean; checks: Array<{ name: string; ok: boolean }> };
+    expect(body.ok).toBe(false);
+    expect(body.checks).toEqual([{ name: "method-not-allowed", ok: false }]);
+    /* The scaffold string is gone, and it is asserted by absence rather than
+     * by the presence of its replacement: the defect was a body carrying a
+     * `message` field this route never produces. */
+    expect(body).not.toHaveProperty("message");
   });
 });

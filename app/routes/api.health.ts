@@ -265,3 +265,45 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return healthJson({ ok: false, checks: [{ name: "health-run", ok: false }] }, 503);
   }
 }
+
+/**
+ * Every method that is not GET, answered as a METHOD error rather than as a
+ * framework crash.
+ *
+ * MEASURED ON THE LIVE HOST 2026-09-11: `curl -X POST /api/health` returned
+ * `405 Method Not Allowed` with `Content-Type: application/json` and the body
+ * `{"message":"Unexpected Server Error"}`, and no `Allow` header. Every part
+ * of that is React Router's default for a route with a loader and no action,
+ * and every part of it is wrong for this endpoint:
+ *
+ *   - "Unexpected Server Error" on a 405 says the server broke. It did not.
+ *     The caller used the wrong verb, which is the one error a monitor can fix
+ *     by itself, and the body is what a person reads first.
+ *   - No `Allow` header, which RFC 9110 requires on a 405. A client has to
+ *     guess which method to retry with.
+ *   - A body shape nothing else on this route produces, so the health
+ *     workflow's parse falls into its "body did not parse" branch and reports
+ *     a failure whose cause it cannot name.
+ *
+ * **THE SHAPE IS THE SAME ONE EVERY OTHER ANSWER HERE USES**, through the same
+ * `healthJson` helper and therefore the same `no-store`. That is the whole
+ * point: a caller that POSTs by mistake gets a parseable verdict naming
+ * `method-not-allowed`, not a different contract.
+ *
+ * NO RATE LIMIT, and that is deliberate rather than an omission. The loader's
+ * limiter guards five checks against D1, R2 and AI Search; this function
+ * allocates one object and returns. Metering it would mean a Durable Object
+ * round trip to refuse a request that costs less than the refusal, and it
+ * would make a broken limiter turn a 405 into a 503.
+ *
+ * `Allow: GET` and not `GET, HEAD`: the platform answers HEAD by running the
+ * loader and dropping the body, so HEAD never reaches here, and advertising a
+ * method this function does not see is a claim about someone else's behaviour.
+ */
+export async function action() {
+  return healthJson(
+    { ok: false, checks: [{ name: "method-not-allowed", ok: false }] },
+    405,
+    { Allow: "GET" },
+  );
+}
