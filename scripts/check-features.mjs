@@ -238,6 +238,32 @@ function declaredRoutes() {
   return paths;
 }
 
+/**
+ * The same declarations, keyed path -> module file on disk.
+ *
+ * A SECOND PASS OVER THE SAME SOURCE rather than a second return value from
+ * `declaredRoutes`, so that function's callers and its floor are untouched.
+ * The two-argument form is what carries the module: `route("api/operator",
+ * "routes/api.operator.ts")`, and `index()` names one too. A route declared
+ * with no module, or with one this cannot resolve, is simply absent from the
+ * map, and the caller treats an absence as a FAILURE rather than as a skip.
+ *
+ * @returns {Map<string, string>}
+ */
+function declaredRouteModules() {
+  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
+  /** @type {Map<string, string>} */
+  const out = new Map();
+  const index = source.match(/\bindex\s*\(\s*["'`]([^"'`]+)["'`]/);
+  if (index) out.set("/", join(root, "app", index[1]));
+  for (const [, path, module] of source.matchAll(
+    /\broute\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/g,
+  )) {
+    out.set(path.startsWith("/") ? path : `/${path}`, join(root, "app", module));
+  }
+  return out;
+}
+
 /** Every gate package.json declares, minus the aggregate runners. */
 function declaredGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -269,6 +295,7 @@ const artifactRecords =
     readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
   ).records ?? [];
 const routes = declaredRoutes();
+const routeModules = declaredRouteModules();
 const gates = declaredGates();
 
 /* --------------------------------------------------------- fail closed first */
@@ -355,6 +382,91 @@ for (const feature of features) {
         routes.has(anchor.path),
         `routes.ts declares no ${anchor.path}`,
       );
+
+      /*
+       * **A ROUTE ANCHOR THAT RENDERS AS A LINK MUST ANSWER AN ANONYMOUS GET.**
+       *
+       * The colophon's best property, per the ruling, is that every claim
+       * links to its evidence. Measured in the pre-cutover audit 2026-09-11
+       * (P1-22): a sweep of 203 internal URLs found exactly two non-200s on
+       * the whole site, `/api/operator` (401) and `/search/ask` (405), and
+       * both were reached as hrefs FROM THIS PAGE. The page's one distinctive
+       * feature was also the only source of broken links on the site.
+       *
+       * So an anchor may carry `anonymousGet: false`, and the page renders
+       * that one as `<code>` rather than as a `<Link>`.
+       *
+       * ## THE FLAG IS ARGUED, NOT TRUSTED
+       *
+       * A hand-set boolean in a data file is a claim about a route, and a
+       * claim about a route ages exactly as fast as the route. So the answer
+       * is DERIVED here from the route module and compared, which is the same
+       * two-independent-sources shape the assertion anchors above use: the
+       * JSON declares, the module decides, and a disagreement fails.
+       *
+       * THE SIGNALS ARE NAMED rather than inferred, because a general "does
+       * this render" predicate is not something a source scan can honestly
+       * claim:
+       *
+       *   A DEFAULT EXPORT IS A PAGE, and it settles the question by itself.
+       *   A document route renders its component for a GET whether or not it
+       *   has a loader, which `/colophon` demonstrates: it has no loader at
+       *   all and renders from imported artifacts. The first draft of this
+       *   derivation read "no loader" as "no page" and failed on exactly that
+       *   route, which is why the signal is stated this way round.
+       *
+       *   OTHERWISE IT IS A RESOURCE ROUTE, and then the loader decides. No
+       *   loader means nothing answers a GET. A loader returning `status: 405`
+       *   refuses the method, which is `/search/ask`. A loader calling
+       *   `authenticateOperator` demands a credential a reader does not have,
+       *   which is `/api/operator`. None of those is a page.
+       *
+       * BOTH DIRECTIONS. A page route that starts requiring a credential and
+       * keeps its link fails, and so does a flag left on a route that became
+       * public, which is the direction a stale exemption always takes.
+       *
+       * Comments stripped first: this file, and the routes, discuss 405 and
+       * authentication in prose.
+       */
+      const routeFile = routeModules.get(anchor.path);
+      if (routeFile && existsSync(routeFile)) {
+        const routeSource = stripComments(readFileSync(routeFile, "utf8"));
+        const isPage = /export\s+default\s+function\b/.test(routeSource);
+        const hasLoader = /export\s+(?:async\s+)?function\s+loader\b/.test(routeSource);
+        const loaderRefuses = /status:\s*405/.test(routeSource);
+        const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(routeSource);
+        const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates);
+        const declared = anchor.anonymousGet !== false;
+        const why = !hasLoader
+          ? "exports neither a component nor a loader"
+          : loaderRefuses
+            ? "returns 405 from its loader"
+            : "authenticates in its loader";
+        ok(
+          `${label}: the anonymousGet flag on ${anchor.path} matches the route`,
+          declared === derived,
+          declared
+            ? `the anchor renders as a link, but ${routeFile.slice(root.length + 1)} ` +
+                `${why}, so a reader following it gets an error rather than a page. ` +
+                `Add "anonymousGet": false.`
+            : `the anchor is marked not-followable, but ${routeFile.slice(root.length + 1)} ` +
+                `${isPage ? "exports a component" : "has a loader that neither refuses nor authenticates"}. ` +
+                `The route became a page and the flag outlived it. Remove "anonymousGet": false.`,
+        );
+      } else {
+        /*
+         * A route declared in routes.ts whose module this gate cannot find is
+         * not a pass. The assertion above would otherwise be skipped silently,
+         * which is the construct-the-scan-does-not-reach class: the subject
+         * has no gate and the absence reads as compliance.
+         */
+        ok(
+          `${label}: the module for ${anchor.path} is on disk`,
+          false,
+          `routes.ts declares ${anchor.path} and this gate could not resolve it to ` +
+            `a file, so its followability was never checked.`,
+        );
+      }
     } else if (anchor.kind === "gate") {
       verified += 1;
       referencedGates.add(anchor.gate);
@@ -848,6 +960,61 @@ for (const status of usedStatuses) {
     occurrences === 1,
     `found ${occurrences}. One is the STATUS_LABEL map; a second is a restatement that will drift.`,
   );
+}
+
+/*
+ * **NO ENTRY CALLS CONTINUOUS INTEGRATION A GAP, IN EITHER DIRECTION.**
+ *
+ * Until 2026-09-11 the colophon's "What was not adopted" section printed
+ * "Continuous integration (Accepted gap)" with the reason "with no CI, any
+ * gate can be skipped indefinitely". `.github/workflows/ci.yml` had been
+ * running on every push to main since 2026-08-20 and `scripts/ship.mjs`
+ * refuses a HEAD without a green run for that exact sha, so the page whose
+ * whole claim is that its sentences are checked against the repository was
+ * printing one the repository refutes.
+ *
+ * NOTHING COULD SEE IT, and that is the reason this exists as an assertion
+ * rather than as a one-line deletion. `check:stack` reconciles the entries
+ * against the bindings and the gate list; `check:features` reconciles ids and
+ * labels. Neither has any way to ask whether a hand-written REASON is true,
+ * and in general neither can. This one specific claim is checkable, because
+ * the workflow file either exists or it does not.
+ *
+ * SO IT IS ASSERTED AGAINST THE WORKFLOW RATHER THAN AS A BANNED WORD. A scan
+ * for the phrase alone would be a lint that fires on a future entry about
+ * something CI genuinely does not cover. The shape is: while a CI workflow
+ * runs on main, no not-adopted entry may name continuous integration. Remove
+ * `ci.yml` and this assertion stops applying, which is correct.
+ *
+ * BOTH FIELDS, because the pair can be split. The defect was a `name` of
+ * "Continuous integration"; a reason saying "there is no CI" under some other
+ * name is the same false sentence with the heading changed.
+ */
+{
+  const ciWorkflow = join(root, ".github", "workflows", "ci.yml");
+  const ciRuns = existsSync(ciWorkflow);
+  ok(
+    "there is a CI workflow for the next assertion to be about",
+    ciRuns,
+    ".github/workflows/ci.yml is absent, so the CI claim below proved nothing. " +
+      "If CI really is gone, this assertion and the colophon both need a decision.",
+  );
+  if (ciRuns) {
+    /** @param {string} text */
+    const namesCi = (text) =>
+      /\bcontinuous integration\b/i.test(text) || /\bno CI\b/i.test(text) || /\bCI\b/.test(text);
+    for (const entry of notAdopted) {
+      const name = String(entry.name ?? "");
+      const reason = String(entry.reason ?? "");
+      ok(
+        `not-adopted entry "${name}" does not call CI missing`,
+        !namesCi(name) && !namesCi(reason),
+        `ci.yml runs on every push to main and ship refuses a HEAD without a green ` +
+          `run for its sha, so an entry under "What was not adopted" naming continuous ` +
+          `integration is a false sentence on the page. Entry: ${JSON.stringify({ name, status: entry.status })}`,
+      );
+    }
+  }
 }
 
 console.log(
