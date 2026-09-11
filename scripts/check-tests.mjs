@@ -123,8 +123,15 @@ const MINIMUM_FILES = 63;
    landed with ten cases: 703 tests. check:floors failed the old 660 in CI at a
    gap of 43 against a tolerance of 36, which is the same mechanism a third
    time. Tolerance is 36 at this count, so anything from 667 up is legal; 680
+   leaves the usual slack.
+   RE-MEASURED 2026-09-10 by RUNNING this gate, after the small-items session
+   added seventeen cases across three files (startHere's two branches, ruling
+   56's deferred plant, and ship's preflight scan): 720 tests. check:floors
+   failed the old 680 in CI at a gap of 40 against a tolerance of 36, the same
+   mechanism a FOURTH time, which is the argument for it rather than against
+   it. Tolerance is 36 at this count, so anything from 684 up is legal; 700
    leaves the usual slack. */
-const MINIMUM_TESTS = 680;
+const MINIMUM_TESTS = 700;
 
 let checks = 0;
 let failures = 0;
