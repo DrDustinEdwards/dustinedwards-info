@@ -55,13 +55,85 @@ const arr = (items) =>
 /** @param {any} value */
 const first = (value) => (Array.isArray(value) ? (value[0] ?? null) : (value ?? null));
 
+/** The date fields CSL may carry, in the order of authority this corpus uses. */
+const DATE_KEYS = ["published-print", "issued", "published"];
+
 /** @param {any} record @returns {number | null} */
 function cslYear(record) {
-  for (const key of ["published-print", "issued", "published"]) {
+  for (const key of DATE_KEYS) {
     const parts = record[key]?.["date-parts"]?.[0];
     if (parts && parts[0]) return Number(parts[0]);
   }
   return null;
+}
+
+/**
+ * The publication date at WHATEVER PRECISION the registry deposited, as
+ * `YYYY-MM-DD`, `YYYY-MM` or `YYYY`.
+ *
+ * Separate from `year`, which stays a number and stays the thing the page
+ * groups and sorts by. This exists for `citation_publication_date`, which
+ * Google Scholar treats as one of the three fields whose absence stops a paper
+ * being indexed at all, and which is better served by a real date than by a
+ * year when a real date exists.
+ *
+ * MEASURED across this corpus: 28 of 36 carry a full date, 6 carry year and
+ * month, 2 carry only a year. So padding everything to `YYYY-01-01` would
+ * invent a day for eight records, and taking the year for all of them would
+ * throw away a month and a day for 28. Emitting the precision on deposit is the
+ * only option that asserts nothing the registry did not.
+ *
+ * @param {any} record @returns {string | null}
+ */
+function cslDate(record) {
+  for (const key of DATE_KEYS) {
+    const parts = record[key]?.["date-parts"]?.[0];
+    if (!parts || !parts[0]) continue;
+    const [y, m, d] = parts;
+    const pad = (/** @type {number} */ n) => String(n).padStart(2, "0");
+    if (d) return `${y}-${pad(m)}-${pad(d)}`;
+    if (m) return `${y}-${pad(m)}`;
+    return String(y);
+  }
+  return null;
+}
+
+/*
+ * A page range, written as an escape rather than as the characters.
+ *
+ * Crossref deposits both a plain hyphen and U+2013 as the separator. The wide
+ * one is in a `\u` escape because this repo's hook refuses the literal
+ * character in source, and because an invisible-width character in a character
+ * class is unreviewable: a reader cannot tell a correct en dash from whatever a
+ * copy and paste turned it into. Same treatment `fold()` in the route gives the
+ * dash family.
+ */
+const PAGE_RANGE = new RegExp("^(\\d+)\\s*[-\\u2013]\\s*(\\d+)$");
+
+/**
+ * A CSL `page` split into first and last, ONLY when it really is a page range.
+ *
+ * ## THE TRAP, AND IT IS IN THIS CORPUS
+ *
+ * The obvious implementation splits on a hyphen. MEASURED across the 36
+ * records, `page` takes four shapes: absent on 24, a range on 7, a bare number
+ * on 3, and an ARTICLE NUMBER on 2, which are `e1004454` and `e42123`. PLoS
+ * numbers articles rather than paginating them.
+ *
+ * A split is safe on those two only because they happen to contain no
+ * separator. The rule is written as a positive match on the shape rather than
+ * as a split, so a future article number carrying one cannot be read as a range,
+ * and so `citation_firstpage` is emitted only where a first page exists.
+ *
+ * @param {string | null | undefined} page
+ * @returns {{ first: string | null, last: string | null }}
+ */
+function pageRange(page) {
+  const value = (page ?? "").trim();
+  const range = PAGE_RANGE.exec(value);
+  if (range) return { first: range[1] ?? null, last: range[2] ?? null };
+  if (/^\d+$/.test(value)) return { first: value, last: null };
+  return { first: null, last: null };
 }
 
 /** @param {any} record @returns {string[]} */
@@ -114,9 +186,18 @@ export type Publication = {
   authors: string[];
   journal: string | null;
   year: number;
+  /**
+   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY.
+   * \`year\` stays the grouping key; this is what \`citation_publication_date\`
+   * needs, and 28 of the 36 records carry a day.
+   */
+  publishedDate: string | null;
   volume: string | null;
   issue: string | null;
   pages: string | null;
+  /** Set only where \`pages\` is genuinely a range or a first page. */
+  firstPage: string | null;
+  lastPage: string | null;
   doi: string;
   pmid: string | null;
   pmcid: string | null;
@@ -132,6 +213,13 @@ export type Publication = {
   preprintDoi: string | null;
   isOpenAccess: boolean;
   license: string | null;
+  /**
+   * WHICH registry said so, and at what content-version. \`crossref:tdm-only\`
+   * is a measured answer and not an absence: it means the publisher deposited
+   * terms and they were text-mining terms, which license redistribution to
+   * nobody. A null means no terms were found at either registry.
+   */
+  licenseSource: string | null;
   selected: boolean;
   abstract: string | null;
 };
@@ -194,9 +282,14 @@ export function generate() {
       authors: cslAuthors(record),
       journal: clean(first(record["container-title"])) || null,
       year: cslYear(record),
+      publishedDate: cslDate(record),
       volume: record.volume ?? null,
       issue: record.issue ?? null,
       pages: record.page ?? null,
+      ...(() => {
+        const { first, last } = pageRange(record.page);
+        return { firstPage: first, lastPage: last };
+      })(),
       abstract: record.abstract ?? null,
       ...siteFields,
     });
@@ -228,9 +321,12 @@ export function generate() {
     lines.push(`    authors: ${arr(r.authors)},`);
     lines.push(`    journal: ${str(r.journal)},`);
     lines.push(`    year: ${r.year === null ? "null" : String(r.year)},`);
+    lines.push(`    publishedDate: ${str(r.publishedDate)},`);
     lines.push(`    volume: ${str(r.volume)},`);
     lines.push(`    issue: ${str(r.issue)},`);
     lines.push(`    pages: ${str(r.pages)},`);
+    lines.push(`    firstPage: ${str(r.firstPage)},`);
+    lines.push(`    lastPage: ${str(r.lastPage)},`);
     lines.push(`    doi: ${str(r.doi)},`);
     lines.push(`    pmid: ${str(r.pmid)},`);
     lines.push(`    pmcid: ${str(r.pmcid)},`);
@@ -243,6 +339,7 @@ export function generate() {
     lines.push(`    preprintDoi: ${str(r.preprintDoi)},`);
     lines.push(`    isOpenAccess: ${r.isOpenAccess ? "true" : "false"},`);
     lines.push(`    license: ${str(r.license)},`);
+    lines.push(`    licenseSource: ${str(r.licenseSource)},`);
     lines.push(`    selected: ${r.selected ? "true" : "false"},`);
     lines.push(`    abstract: ${str(r.abstract)},`);
     lines.push("  },");
