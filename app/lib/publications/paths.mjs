@@ -121,24 +121,38 @@ export function paperMarkdownPath(slug) {
  * keyword results for this paper; scripting on, the same page offers to ask.
  * Rule 9's shape, with no second implementation of anything.
  *
- * ## THE QUESTION NAMES THE PAPER, BECAUSE `q` IS BOTH THINGS
+ * ## IT IS THE QUOTED TITLE AND NOTHING ELSE, WHICH WAS MEASURED THE HARD WAY
  *
- * `/search?q=` is the keyword query AND the question Ask is given. "What does
- * this paper find?" is a question with no subject: Ask retrieves over the whole
- * site and cannot know which page the reader came from, and the keyword index
- * would match "paper" and "find" across the blog.
+ * `/search?q=` is the keyword query AND the question Ask is given, so the one
+ * string has to serve both. This was written as
+ * `What does "<title>" find?`, on the reasoning that a bare "What does this
+ * paper find?" is a question with no subject: Ask retrieves over the whole site
+ * and cannot know which page the reader came from.
  *
- * The title in double quotes serves both readings at once. `query.mjs` reads a
- * quoted run as an exact phrase, which is the most precise keyword query
- * available for a paper whose search record carries its title; and the model
- * gets a question naming the work. No title in this corpus contains a quotation
- * mark, and `check:publications` asserts that rather than trusting it, because
- * one arriving would break the phrase for the classic index.
+ * That reasoning is right and the string was wrong. MEASURED against the local
+ * index, one paper, three shapes:
+ *
+ *     What does "<title>" find?     0 results
+ *     "<title>"                     1, the paper
+ *     <title>                       1, the paper
+ *
+ * The classic index ANDs its terms, so "what", "does" and "find" are three
+ * words that appear nowhere in the record and the whole query matches nothing.
+ * The scriptless half of this link, which is the half rule 9 exists for, landed
+ * a reader on a zero-result page.
+ *
+ * So the query is the title, quoted, and nothing else. `query.mjs` reads a
+ * quoted run as one exact phrase, which is the most precise query available for
+ * a record that carries its own title, and the model receives the paper's name
+ * as its subject, which is what the surrounding words were there to supply.
+ * No title in this corpus contains a quotation mark, and `check:publications`
+ * asserts that rather than trusting it, because one arriving would split the
+ * phrase in two.
  *
  * @param {string} title DECODED, the way a reader sees it
  */
 export function paperAskUrl(title) {
-  return `/search?q=${encodeURIComponent(`What does "${title}" find?`)}`;
+  return `/search?q=${encodeURIComponent(`"${title}"`)}`;
 }
 
 /**

@@ -1502,8 +1502,35 @@ assertThat(
   })).filter(({ url }) => !url.startsWith("/search?q=") || url.length > 600);
   assertThat(
     badAskUrls.length === 0,
-    `paperAskUrl builds a /search question for every paper (${PUBLICATIONS.length})`,
+    `paperAskUrl builds a /search query for every paper (${PUBLICATIONS.length})`,
     badAskUrls.length ? badAskUrls.map((b) => `${b.id}: ${b.url.slice(0, 80)}`).join("; ") : "",
+  );
+
+  /*
+   * THE QUERY IS THE QUOTED TITLE AND NOTHING ELSE, which is the property that
+   * makes the scriptless half of the link work at all.
+   *
+   * MEASURED against the local index before this assertion existed: the classic
+   * index ANDs its terms, so the first version of this URL, `What does "<title>"
+   * find?`, returned ZERO results, because "what", "does" and "find" appear in
+   * no record. A reader with scripting off followed the link to an empty page.
+   *
+   * Asserted by DECODING the query back and comparing it to the title, rather
+   * than by matching a shape: a shape test would pass on any quoted string, and
+   * the failure to catch is a word creeping back in beside the phrase.
+   */
+  const notJustTheTitle = PUBLICATIONS.filter((paper) => {
+    const title = decodeEntities(paper.title);
+    const q = new URL(paperAskUrl(title), "https://example.invalid").searchParams.get("q");
+    return q !== `"${title}"`;
+  }).map((p) => p.id);
+  assertThat(
+    notJustTheTitle.length === 0,
+    `the Ask query is the quoted title alone (${PUBLICATIONS.length} papers)`,
+    notJustTheTitle.length
+      ? `a term the record does not carry makes the classic half return nothing: ` +
+          notJustTheTitle.join(", ")
+      : "",
   );
 
   /*
@@ -1703,7 +1730,8 @@ assertThat(
  *
  * 69 with the extracted-text artifact's assertions, 78 with the markdown twins,
  * 89 with the search, MCP and Ask wiring and 96 with the retraction path and
- * the accessions. Every number from a run. The twin block's llms.txt
+ * the accessions, 97 when the Ask query was measured rather than reasoned
+ * about. Every number from a run. The twin block's llms.txt
  * reconciliation is the one that has to be read in both directions to mean
  * anything: a twin nothing advertises and a URL with no twin behind it are
  * different failures and neither is visible from the other side.
@@ -1715,7 +1743,7 @@ assertThat(
  * outbreak's DQ387450, and Tripl3t gains Wheeler's NC_022070. Each would have
  * been published here as the data behind a paper it has nothing to do with.
  */
-const MINIMUM_CHECKS = 96;
+const MINIMUM_CHECKS = 97;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);
