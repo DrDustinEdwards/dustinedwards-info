@@ -41,6 +41,15 @@ import { fileURLToPath } from "node:url";
 
 import { generate } from "./build-publications.mjs";
 import { doiSlug, paperPdfPath } from "../app/lib/publications/paths.mjs";
+import { PUBLICATIONS } from "../app/data/publications.ts";
+import { SHOWCASE_TYPES } from "../app/lib/publications/export-response.mjs";
+import {
+  organismsIn,
+  toBibtex,
+  toBibtexAll,
+  toCslJson,
+  toRisAll,
+} from "../app/lib/publications/exports.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -463,6 +472,162 @@ assertThat(
     : "",
 );
 
+/* ------------------------------------------------------------------ exports */
+
+/*
+ * THE EXPORTS ARE BYTE-GATED, which means two things and both are asserted.
+ *
+ * DETERMINISTIC: generated twice in one process, compared. An export that
+ * differed between two downloads of an unchanged corpus would be a citation
+ * file that looks modified when nothing about the work changed, and it would
+ * defeat every byte comparison downstream. The commonest cause is a generation
+ * timestamp, which is why the header deliberately carries none.
+ *
+ * COMPLETE: every record the export claims to carry is in it. A format writer
+ * that silently dropped a record would produce a file that parses, imports, and
+ * is missing a paper, which nobody notices until a bibliography is short.
+ */
+/*
+ * Read as DATA, by importing the generated module, not by parsing its source
+ * text for `type: "..."` lines. That was the first draft and it is the
+ * four-space-indent trap archive/publications.md records twice: a line matcher
+ * anchored on indentation matches whatever else happens to sit at that indent,
+ * and it goes wrong silently by counting too much.
+ */
+const showcase = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
+
+assertThat(
+  showcase.length > 0,
+  `the showcase set is non-empty (${showcase.length} of ${siteEntries.length})`,
+  "every export assertion below iterates it",
+);
+
+/*
+ * THE SHOWCASE SET IS STATED TWICE AND THIS IS WHAT KEEPS THEM EQUAL.
+ *
+ * `publications.tsx` declares it for the page and `export-response.mjs`
+ * declares it for the exports, because importing a route module into an export
+ * route would drag React and a loader along with it. Two statements of one
+ * decision is exactly the drift this repo gates elsewhere, so it is gated here:
+ * the route's literal is parsed out of its source and compared against the
+ * imported set.
+ */
+{
+  const routeSource = readFileSync(
+    join(root, "app", "routes", "publications.tsx"),
+    "utf8",
+  );
+  const block = /const SHOWCASE_TYPES = new Set<PublicationType>\(\[([\s\S]*?)\]\)/.exec(
+    routeSource,
+  );
+  const routeTypes = new Set(
+    [...(block?.[1] ?? "").matchAll(/"([a-z-]+)"/g)].map((m) => m[1]),
+  );
+  assertThat(
+    routeTypes.size > 0,
+    `the route's SHOWCASE_TYPES literal is parseable (${routeTypes.size} types)`,
+    "a failed parse would make the comparison below vacuous",
+  );
+  const onlyRoute = [...routeTypes].filter((t) => !SHOWCASE_TYPES.has(t));
+  const onlyExport = [...SHOWCASE_TYPES].filter((t) => !routeTypes.has(t));
+  assertThat(
+    onlyRoute.length === 0 && onlyExport.length === 0,
+    "the page and the exports agree about which types are shown",
+    `only in the route: ${onlyRoute.join(", ") || "none"}; ` +
+      `only in export-response.mjs: ${onlyExport.join(", ") || "none"}`,
+  );
+}
+
+{
+  const papers = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
+  const bib = toBibtexAll(papers);
+  const ris = toRisAll(papers);
+  const csl = toCslJson(JSON.parse(readFileSync(CSL_PATH, "utf8")));
+
+  assertThat(
+    toBibtexAll(papers) === bib && toRisAll(papers) === ris,
+    "the exports are byte-identical across two generations",
+    "an export that changes without the corpus changing cannot be cited",
+  );
+
+  const bibEntries = (bib.match(/^@/gm) ?? []).length;
+  assertThat(
+    bibEntries === papers.length,
+    `the BibTeX export carries one entry per shown record (${bibEntries})`,
+    `${papers.length} records, ${bibEntries} entries`,
+  );
+  const risRecords = (ris.match(/^TY {2}- /gm) ?? []).length;
+  const risTerminators = (ris.match(/^ER {2}- $/gm) ?? []).length;
+  assertThat(
+    risRecords === papers.length && risTerminators === papers.length,
+    `the RIS export carries one terminated record per shown record (${risRecords})`,
+    `${papers.length} records, ${risRecords} TY tags, ${risTerminators} ER tags. ` +
+      "An unterminated record swallows the next one on import.",
+  );
+
+  const missingDoi = papers.filter((p) => !bib.includes(p.doi) || !ris.includes(p.doi));
+  assertThat(
+    missingDoi.length === 0,
+    "every shown record's DOI appears in both text exports",
+    missingDoi.map((p) => p.id).join(", "),
+  );
+
+  /*
+   * NO CHARACTER REFERENCE SURVIVES. The stored corpus keeps them escaped on
+   * purpose; an export is read by a reference manager, which would show a
+   * reader `p &lt; 0.05`. Paired with the count above so the sweep cannot pass
+   * by reading an empty file.
+   */
+  const leaked = /&(amp|lt|gt|quot|apos|#\d+);/.exec(bib + ris + csl);
+  assertThat(
+    leaked === null,
+    "no character reference survives into any export",
+    leaked ? `found ${leaked[0]}` : "",
+  );
+
+  /*
+   * BRACE PROTECTION, asserted where it MATTERS rather than in general. Many
+   * BibTeX styles lowercase a title, and a lowercased genus is wrong under the
+   * nomenclature codes rather than merely ugly.
+   */
+  const withOrganism = papers.filter((p) => organismsIn(p.title).length > 0);
+  assertThat(
+    withOrganism.length > 0,
+    `some shown titles carry an organism name (${withOrganism.length})`,
+    "a zero would make the brace assertion below vacuous",
+  );
+  /*
+   * ASKED THROUGH `organismsIn`, which is the matcher the code uses, NOT
+   * through `ORGANISMS.some((o) => title.includes(o))`.
+   *
+   * The substring form was the first draft and it failed five records whose
+   * output was correct: a title carrying "Mycobacterium smegmatis" also
+   * contains "Mycobacterium", so it demanded a brace the longest-first matcher
+   * rightly never emits. A gate that asks a different question from the one the
+   * code answers reports a defect that is its own.
+   */
+  const unprotected = withOrganism.filter((p) => {
+    const entry = toBibtex(p);
+    return organismsIn(p.title).some((o) => !entry.includes(`{${o}}`));
+  });
+  assertThat(
+    unprotected.length === 0,
+    "every organism name in a title is brace-protected in BibTeX",
+    unprotected.map((p) => p.id).join(", "),
+  );
+
+  /* DOIs AS DEPOSITED. Six of the 36 are mixed case; a lowercasing export would
+     disagree with the registry it came from. */
+  const folded = papers.filter(
+    (p) => p.doi !== p.doi.toLowerCase() && !bib.includes(`doi = {${p.doi}}`),
+  );
+  assertThat(
+    folded.length === 0,
+    "mixed-case DOIs are exported as deposited",
+    folded.map((p) => p.id).join(", "),
+  );
+}
+
 /* -------------------------------------------------------------------- preprint */
 
 /*
@@ -490,10 +655,13 @@ assertThat(
  *
  * 21 on 2026-09-12 at the restore. RE-MEASURED the same day at 29, when the
  * slug, PDF-location and redirect-map assertions landed with the per-paper
- * pages. The arithmetic answer would have been 29 either way; the number below
- * comes from the run.
+ * pages, and again at 40 when the citation exports did. Each number comes from
+ * a run. The export block earned its keep on that run: its brace-protection
+ * assertion failed five records whose output was correct, because it asked
+ * `title.includes(organism)` where the code asks a longest-first matcher, and
+ * a title carrying "Mycobacterium smegmatis" contains "Mycobacterium" too.
  */
-const MINIMUM_CHECKS = 27;
+const MINIMUM_CHECKS = 38;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

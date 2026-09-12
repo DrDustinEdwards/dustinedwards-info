@@ -563,6 +563,17 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
             ) : null}
           </p>
 
+          {/* The whole list, as files. Under the count rather than in the
+              controls, because they describe what is listed rather than
+              changing it. Always the FULL list regardless of the current
+              filter: a citation file that silently carried only what a chip
+              happened to be showing would be a subset nobody asked for. */}
+          <p className="pub-exports muted">
+            Export all: <a href="/publications.bib">BibTeX</a>{" "}
+            <a href="/publications.ris">RIS</a>{" "}
+            <a href="/publications.json">CSL JSON</a>
+          </p>
+
           {items.length === 0 ? (
             <p className="muted">No publications match this filter.</p>
           ) : (

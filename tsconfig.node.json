@@ -29,6 +29,20 @@
     // restate it. That binding is what stops `citation_pdf_url` pointing into a
     // directory Google Scholar will not accept.
     "app/lib/publications/paths.mjs",
+    // The citation exports, and the three files they reach. `check:publications`
+    // generates BibTeX, RIS and CSL JSON twice and compares bytes, asserts one
+    // entry per shown record, and asserts that organism names are
+    // brace-protected THROUGH the matcher the writer uses rather than through a
+    // substring test. Every one of those needs the real module, so this project
+    // has to list it and everything it imports.
+    "app/lib/publications/exports.mjs",
+    "app/lib/publications/export-response.mjs",
+    // Imported by exports.mjs for the brace-protection allowlist, and by the
+    // gate through it. The page italicises from the same list.
+    "app/data/organisms.ts",
+    // The generated corpus. The gate reads it as DATA rather than re-parsing
+    // its own source, which is how the export assertions iterate real records.
+    "app/data/publications.ts",
     "app/lib/content/pipeline.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so

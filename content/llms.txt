@@ -22,6 +22,33 @@ the page was rendered from. Requesting /blog/<slug> with an
 Accept: text/markdown header returns the same markdown. The feed is at
 /blog/rss.xml and /blog/feed.json.
 
+## Publications
+
+Peer-reviewed work is listed at /publications, filterable by topic at
+/publications?topic=<topic> and searchable at /publications?q=<query>. Every
+filter and every search is an ordinary GET, so each view is a real URL.
+
+Each paper has its own page at /publications/<doi-slug>/, where the slug is the
+DOI with every run of punctuation folded to a hyphen: 10.1128/mra.00888-24
+becomes /publications/10-1128-mra-00888-24/. The page carries the title, the
+full author list, the abstract in visible text, the venue, the DOI, PMC and
+preprint links where they exist, open-access status, and a citation count from
+OpenAlex labelled with the date it was read. Where the licence permits and the
+file is hosted here, the PDF sits beside the page at
+/publications/<doi-slug>/<doi-slug>.pdf.
+
+Citations export as files rather than as a copy button:
+
+  /publications.bib          BibTeX, the whole list
+  /publications.ris          RIS, the whole list
+  /publications.json         CSL JSON, every record including the three
+                             conference abstracts the page does not show
+  /publications/<slug>.bib   one paper
+  /publications/<slug>.ris   one paper
+
+The bibliographic data is from Crossref and DataCite, with abstracts backfilled
+from Europe PMC where a publisher deposited none. Counts are OpenAlex.
+
 ## Search
 
 /search?q=<query> searches the whole site and returns a normal HTML page.

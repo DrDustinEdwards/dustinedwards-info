@@ -71,6 +71,25 @@ export default [
    * cannot collide. The PDFs themselves are static assets under the same
    * prefix and are served by the asset handler ahead of the Worker.
    */
+  /*
+   * THE CITATION EXPORTS, BEFORE THE PAGE ROUTES THEY BELONG TO.
+   *
+   * `publications.bib` and `publications/<slug>.bib` are one segment and two
+   * segments respectively, exactly like the index and the paper page, so each
+   * pair could collide on a slug that happened to end in `.bib`. They are
+   * declared FIRST for the same reason the blog feeds precede `blog/:slug`:
+   * "more specific first" should be true by eye as well as by the matcher.
+   *
+   * `doiSlug` cannot produce a slug containing a dot (it folds every
+   * non-alphanumeric run to a hyphen), so the collision is impossible today.
+   * The ordering is what keeps that a fact about the matcher rather than a fact
+   * about the slug function, which somebody could change.
+   */
+  route("publications.bib", "routes/publications[.bib].ts"),
+  route("publications.ris", "routes/publications[.ris].ts"),
+  route("publications.json", "routes/publications[.json].ts"),
+  route("publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
+  route("publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
   route("publications/:slug", "routes/publications.$slug.tsx"),
   // Who this is, in the first person, from content/about.md. FIRST among the
   // hand-written pages here and FIRST in the header nav, because the audit's
