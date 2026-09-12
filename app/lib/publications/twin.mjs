@@ -80,6 +80,29 @@ const line = (key, value) =>
     : [`${key}: ${typeof value === "string" ? yamlString(value) : String(value)}`];
 
 /**
+ * Text with the C0 control characters removed, keeping tab, newline and return.
+ *
+ * A CODE POINT TEST RATHER THAN A REGEX, and not as a style preference: a
+ * character class holding \u0000 to \u001f is exactly what lint's
+ * no-control-regex refuses, and it is right to. Those characters are invisible
+ * in a diff and in most editors, so a class that matched one more or one fewer
+ * than intended would read identically. The comparison below is a number a
+ * reader can check.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function stripControls(value) {
+  let out = "";
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    const isControl = point < 0x20 && point !== 0x09 && point !== 0x0a && point !== 0x0d;
+    if (!isControl) out += character;
+  }
+  return out;
+}
+
+/**
  * The fields of a record this builder reads. Spelled out rather than typed as
  * `object`, for the reason `article-json-ld.mjs` states at its own copy:
  * `checkJs` is on and an `object` parameter makes every property access an
@@ -206,7 +229,33 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
    * is costs one line.
    */
   if (pages !== null) {
-    const text = pages.map((page) => page.trim()).filter(Boolean).join("\n\n");
+    /*
+     * C0 CONTROL CHARACTERS ARE STRIPPED HERE, AND ONLY HERE.
+     *
+     * MEASURED: 267 of them across 11 of the 36 twins, code points 1 through 8.
+     * They come from PDFs whose symbol font is mapped to low code points, so
+     * the prime in `5'-GCAGAGCATATAAAATGAGG` extracts as 0x03. They are not
+     * text; they are what a glyph lookup produced when it had nowhere to go.
+     *
+     * This is the presentation boundary, which is where a repair like this
+     * belongs. `extract-publication-text.mjs` keeps the artifact faithful to
+     * the PDF on purpose, so the bytes stay available to anything that wants
+     * them; what a SERVED document should not contain is unprintable control
+     * characters, which display as nothing, break XML consumers, and mean
+     * nothing to a retrieval model.
+     *
+     * They cost something real before this: `check:secrets` matched three of
+     * them in the artifact, because JSON escapes 0x03 as a backslash-u form and
+     * a `u`, four digits, a hyphen and a long run of DNA is the shape of an
+     * UptimeRobot key. That was a scanner reading an encoding, and it is fixed
+     * in the scanner. This is the other half: the reader's copy.
+     *
+     * Tab and newline are kept, because those are text.
+     */
+    const text = pages
+      .map((page) => stripControls(page).trim())
+      .filter(Boolean)
+      .join("\n\n");
     body.push("## Full text", "");
     if (text.length === 0) {
       /*

@@ -354,6 +354,21 @@
   color: var(--text);
 }
 
+/* The deposits behind a paper. Same shape as .paper-citedby above, because it
+   is the same kind of block: a short heading and a row of links, under the
+   abstract rather than in the link row, since checking a paper is a different
+   errand from reading it. */
+.paper-data {
+  margin-top: 2rem;
+  max-width: 46rem;
+}
+
+.paper-data h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
 /* A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN.
 
    Tinted rather than merely spaced, which is the opposite of the choice made
