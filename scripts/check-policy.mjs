@@ -1785,10 +1785,33 @@ refuses(
     true,
   );
 
+  /*
+   * WIDENED 2026-09-12, when the papers entered the index, and widened in the
+   * direction the note above already argues for.
+   *
+   * The needle required the `keyForUrl` map to be the WHOLE argument to
+   * `new Set(...)`, by pinning the closing parenthesis right after it. The
+   * expected set is now the posts from D1 plus the papers from the committed
+   * corpus, so the map is one element of a spread and the old needle failed on
+   * an arrangement whose binding is intact. Same finding as last time: the
+   * assertion could not tell "the post half comes from askExpectedUrls" from
+   * "askExpectedUrls is the only thing on the line", and only the first is the
+   * policy.
+   *
+   * The property is now asserted in two halves, and the second is the one that
+   * keeps the widening honest: the paper half comes from the module and NOT
+   * from a query this function grew.
+   */
   eq(
     "askIndexStatus takes its expected set from askExpectedUrls",
     /askExpectedUrls\(env\)/.test(statusBody) &&
-      /const expected = new Set\([\s\S]{0,80}\.map\(\(u\) => keyForUrl\(u\)\)\)/.test(statusBody),
+      /const expected = new Set\([\s\S]{0,200}\.map\(\(u\) => keyForUrl\(u\)\)/.test(statusBody),
+    true,
+  );
+  eq(
+    "askIndexStatus adds the papers from the corpus module, not from a query",
+    /const expected = new Set\([\s\S]{0,200}paperItemKeys\(\)/.test(statusBody) &&
+      !/DB\.prepare|search_docs/.test(statusBody),
     true,
   );
 

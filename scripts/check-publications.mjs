@@ -42,7 +42,17 @@ import { fileURLToPath } from "node:url";
 
 import { generate } from "./build-publications.mjs";
 import { generateTwins } from "./build-publication-twins.mjs";
-import { doiSlug, paperPath, paperPdfPath } from "../app/lib/publications/paths.mjs";
+import {
+  doiSlug,
+  paperAskUrl,
+  paperMarkdownPath,
+  paperPath,
+  paperPdfPath,
+} from "../app/lib/publications/paths.mjs";
+import { decodeEntities } from "../app/lib/publications/entities.mjs";
+import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
+import { recordsForPapers } from "../app/lib/search/records.mjs";
+import { keyForUrl, urlForKey } from "../app/lib/search/ask-keys.mjs";
 import {
   buildCitationTags,
   REQUIRED_CITATION_TAGS,
@@ -339,7 +349,7 @@ assertThat(
 const inconsistentText = Object.entries(extractedPapers)
   .filter(([, entry]) => {
     const pages = Array.isArray(entry.text) ? entry.text : [];
-    const chars = pages.reduce((sum, page) => sum + String(page).length, 0);
+    const chars = pages.reduce((/** @type {number} */ sum, /** @type {unknown} */ page) => sum + String(page).length, 0);
     return pages.length !== entry.pages || chars !== entry.chars;
   })
   .map(([doi]) => doi);
@@ -1338,6 +1348,201 @@ assertThat(
   entityTwins.length ? `still escaped in: ${entityTwins.join(", ")}` : "",
 );
 
+/* ------------------------------------- search, the MCP and Ask, all three */
+
+/*
+ * ONE SEARCH RECORD PER PAPER, IN THE ARTIFACT THAT BECOMES `search_docs`.
+ *
+ * The records are built here from the same two modules the build uses, and then
+ * compared against `content/generated/posts.json`, which is what `sync:content`
+ * materialises into D1. Building them without reading the artifact would assert
+ * that the builders work; reading the artifact without building them would
+ * assert that a file has 36 lines in it. The pair is what says the papers this
+ * corpus carries are the papers the site's own search will serve.
+ */
+const paperRecords = recordsForPapers(paperSearchInputs(PUBLICATIONS));
+
+assertThat(
+  paperRecords.length === PUBLICATIONS.length,
+  `one search record per paper (${paperRecords.length} of ${PUBLICATIONS.length})`,
+  "every assertion below iterates this list",
+);
+
+{
+  const ARTIFACT_PATH = join(root, "content", "generated", "posts.json");
+  if (!existsSync(ARTIFACT_PATH)) {
+    assertThat(
+      false,
+      "content/generated/posts.json exists, so the paper records can be compared",
+      "run npm run build:content. check-all's preflight does this before any gate.",
+    );
+  } else {
+    const artifact = JSON.parse(readFileSync(ARTIFACT_PATH, "utf8"));
+    const inArtifact = new Map(
+      (artifact.records ?? [])
+        .filter((/** @type {any} */ r) => String(r.uid).startsWith("paper:"))
+        .map((/** @type {any} */ r) => [r.uid, r]),
+    );
+    const expected = new Map(paperRecords.map((r) => [r.uid, r]));
+
+    const missingRecords = [...expected.keys()].filter((uid) => !inArtifact.has(uid));
+    assertThat(
+      missingRecords.length === 0,
+      `every paper has a record in the content artifact (${expected.size} papers)`,
+      missingRecords.length
+        ? `absent from posts.json, run npm run build:content: ${missingRecords.join(", ")}`
+        : "",
+    );
+
+    const strayRecords = [...inArtifact.keys()].filter((uid) => !expected.has(uid));
+    assertThat(
+      strayRecords.length === 0,
+      "the artifact carries no paper record this corpus does not produce",
+      strayRecords.length ? `stray: ${strayRecords.join(", ")}` : "",
+    );
+
+    // The URL is the half a reader lands on, so it is compared rather than
+    // assumed equal because the uids matched.
+    const wrongUrls = [...expected.entries()]
+      .filter(([uid, record]) => inArtifact.has(uid) && inArtifact.get(uid).url !== record.url)
+      .map(([uid]) => uid);
+    assertThat(
+      wrongUrls.length === 0,
+      "every paper record in the artifact points at the paper's page",
+      wrongUrls.length ? `url mismatch: ${wrongUrls.join(", ")}` : "",
+    );
+  }
+}
+
+/*
+ * NO PAPER RECORD CARRIES THE EXTRACTED TEXT, which is the other half of ruling
+ * 63's split and the half that would rot quietly.
+ *
+ * Classic search shows the line it matched. 1.13 MB of machine-read two-column
+ * text in the FTS index would match on running heads and reference lists and
+ * would snippet the mangled line the term fell on. The full text belongs to the
+ * twins, which Ask and the MCP read. Asserted by SIZE against the artifact's own
+ * measurement rather than by looking for a marker: a body carrying a paper's
+ * extracted text is necessarily longer than its abstract, and no threshold has
+ * to be invented for that comparison.
+ */
+{
+  const oversized = paperRecords
+    .filter((record) => {
+      const doi = PUBLICATIONS.find((p) => record.uid === `paper:${doiSlug(p.doi)}`)?.doi;
+      const entry = doi ? (extractedPapers[doi] ?? extractedPapers[doiKey(doi)]) : null;
+      return entry ? record.body.length > entry.chars / 2 : false;
+    })
+    .map((record) => record.uid);
+  assertThat(
+    oversized.length === 0,
+    `no paper search record carries the PDF text (${hosted.length} hosted compared)`,
+    oversized.length ? `body is full-text sized: ${oversized.join(", ")}` : "",
+  );
+}
+
+/*
+ * THE ASK KEY ROUND-TRIPS, for every paper, through the module both the upload
+ * path and the citation renderer use.
+ *
+ * `keyForUrl` turns the page URL into the twin's own path, and `urlForKey`
+ * turns it back into the page. The asymmetry is deliberate and is exactly why
+ * it is asserted here over the real corpus: a key that did not round-trip would
+ * upload fine and cite a URL that 404s, which is a failure only a reader who
+ * clicked a citation would ever see.
+ */
+{
+  const brokenKeys = PUBLICATIONS.map((paper) => {
+    const slug = doiSlug(paper.doi);
+    const key = keyForUrl(paperPath(slug));
+    return { slug, key, back: urlForKey(key) };
+  }).filter(
+    ({ slug, key, back }) => key !== `publications/${slug}.md` || back !== paperPath(slug),
+  );
+  assertThat(
+    brokenKeys.length === 0,
+    `every paper's Ask key is its twin and maps back to its page (${PUBLICATIONS.length} papers)`,
+    brokenKeys.length
+      ? brokenKeys.map((b) => `${b.slug}: key ${b.key}, back ${b.back}`).join("; ")
+      : "",
+  );
+
+  /*
+   * AND THE KEY IS THE TWIN'S ACTUAL PATH. The assertion above compares against
+   * a literal spelling of the key; this one compares against `paperMarkdownPath`,
+   * which is what the build writes and what llms.txt advertises. Two spellings
+   * of one path is the drift, and the uploader fetches through the second one.
+   */
+  const keyPathMismatch = PUBLICATIONS.map((paper) => doiSlug(paper.doi)).filter(
+    (slug) => `/${keyForUrl(paperPath(slug))}` !== paperMarkdownPath(slug),
+  );
+  assertThat(
+    keyPathMismatch.length === 0,
+    "every Ask key names the file the twin build writes",
+    keyPathMismatch.length ? `key and twin path disagree: ${keyPathMismatch.join(", ")}` : "",
+  );
+}
+
+/*
+ * THE ASK LINK: the URL builder is exercised over the whole corpus, and the
+ * route is asserted to call it.
+ *
+ * Same two-part shape as the Highwire tag set above, and for a related reason:
+ * this is a value the route interpolates, so the only ways to check it are to
+ * render the route or to read its source. What is checked here is that the one
+ * owner produces a usable URL for every record, and that the page has not grown
+ * a second hand-built copy of it.
+ */
+{
+  const badAskUrls = PUBLICATIONS.map((paper) => ({
+    id: paper.id,
+    url: paperAskUrl(decodeEntities(paper.title)),
+  })).filter(({ url }) => !url.startsWith("/search?q=") || url.length > 600);
+  assertThat(
+    badAskUrls.length === 0,
+    `paperAskUrl builds a /search question for every paper (${PUBLICATIONS.length})`,
+    badAskUrls.length ? badAskUrls.map((b) => `${b.id}: ${b.url.slice(0, 80)}`).join("; ") : "",
+  );
+
+  /*
+   * NO TITLE CARRIES A QUOTATION MARK, which is what lets the question quote
+   * the title at all. `query.mjs` reads a quoted run as an exact phrase, so a
+   * title containing its own quote would split the phrase in two and the
+   * classic half of that link would search for something else. Measured today:
+   * none of the 36. This is the assertion that says so tomorrow.
+   */
+  const quotedTitles = PUBLICATIONS.filter((p) => /["']/.test(p.title)).map((p) => p.id);
+  assertThat(
+    quotedTitles.length === 0,
+    `no title contains a quotation mark (${PUBLICATIONS.length} read)`,
+    quotedTitles.length
+      ? `paperAskUrl quotes the title, so these would break the phrase: ${quotedTitles.join(", ")}`
+      : "",
+  );
+
+  /*
+   * COMMENTS STRIPPED BEFORE MATCHING. The route's own comment beside the link
+   * names `paperAskUrl`, and check:policy records the day a gate went green on
+   * prose that explained what the code used to do. Whole-line and block
+   * comments only, which is the limit `check:policy` states for the same
+   * stripper: a trailing comment could still satisfy this.
+   */
+  const routeSource = readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assertThat(
+    /paperAskUrl\(/.test(routeSource) &&
+      /from "~\/lib\/publications\/paths\.mjs"/.test(routeSource),
+    "the paper page calls paperAskUrl and imports it from paths.mjs",
+    "a hand-built /search URL on the page would be a second owner of the question",
+  );
+  assertThat(
+    !/href=\{`\/search\?q=/.test(routeSource),
+    "the paper page builds no /search URL of its own",
+    "found an interpolated /search href beside the one the module owns",
+  );
+}
+
 /* ----------------------------------------------------------------------- done */
 
 /*
@@ -1363,13 +1568,13 @@ assertThat(
  * decides whether a hosting decision was made or merely inherited. The pipeline
  * now writes `none-deposited` and null means one thing.
  *
- * 69 with the extracted-text artifact's assertions and 78 with the markdown
- * twins, from a run. The twin block's llms.txt reconciliation is the one that
- * has to be read in both directions to mean anything: a twin nothing advertises
- * and a URL with no twin behind it are different failures and neither is
- * visible from the other side.
+ * 69 with the extracted-text artifact's assertions, 78 with the markdown twins
+ * and 89 with the search, MCP and Ask wiring, every number from a run. The twin
+ * block's llms.txt reconciliation is the one that has to be read in both
+ * directions to mean anything: a twin nothing advertises and a URL with no twin
+ * behind it are different failures and neither is visible from the other side.
  */
-const MINIMUM_CHECKS = 78;
+const MINIMUM_CHECKS = 89;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

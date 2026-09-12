@@ -20,6 +20,8 @@ import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
+import { PUBLICATIONS } from "../app/data/publications.ts";
+import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
@@ -96,11 +98,23 @@ export async function buildArtifact() {
     await readFile(path.join("content", "playground.json"), "utf8"),
   );
 
-  return serializeArtifact(withRelated(posts), [
-    ...colophonPages(stack, features),
-    ...projectsPages(projects),
-    ...playgroundPages(playground),
-  ]);
+  /*
+   * THE PAPERS COME FROM A COMMITTED MODULE, not from a JSON file read above.
+   * `app/data/publications.ts` is generated from the two data files and
+   * byte-gated against them by `check:publications`, so it is the corpus by the
+   * time anything here can see it. Reading the JSON again would be a second
+   * assembly of the same records, which is what the generated module exists to
+   * prevent.
+   */
+  return serializeArtifact(
+    withRelated(posts),
+    [
+      ...colophonPages(stack, features),
+      ...projectsPages(projects),
+      ...playgroundPages(playground),
+    ],
+    paperSearchInputs(PUBLICATIONS),
+  );
 }
 
 /**

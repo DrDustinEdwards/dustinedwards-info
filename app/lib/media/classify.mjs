@@ -150,6 +150,49 @@ const NOT_ASSETS = new Map([
 ]);
 
 /**
+ * The ONE generated family under `public/`, excluded by pattern rather than by
+ * name, because naming 36 files here would be a mirror of the corpus.
+ *
+ * ## WHY A PATTERN IS ALLOWED HERE WHEN THE MAP ABOVE REFUSES ONE
+ *
+ * The argument against a rule up there is that a catch-all fails OPEN: the next
+ * unrecognised file disappears from the manifest silently instead of stopping a
+ * build. This is not a catch-all. It names one directory, one extension and one
+ * slug shape, and it is the shape `paths.mjs` generates. A stray
+ * `public/publications/notes.md` written by hand would not match (the slug
+ * pattern requires the DOI fold's alphabet), reaches `classify()`, and fails
+ * loudly, which is what it should do.
+ *
+ * ## WHY THE TWINS ARE NOT ASSETS THE INDEX CARRIES
+ *
+ * Two reasons and either would do.
+ *
+ * The manifest is COMMITTED and the twins are gitignored build product. A
+ * committed list of generated filenames disagrees with disk on every clean
+ * clone until the build runs, which makes the reconciliation depend on the
+ * order two unrelated steps happened to run in.
+ *
+ * And the manifest's consumer is `rebuildMediaIndex`, which writes a row per
+ * static asset for the admin media library. A markdown twin is not media: it is
+ * the machine-readable representation of a page, the same class of thing as
+ * `/blog/<slug>.md`, which is a route and has never been in this manifest
+ * either. Indexing them would put 36 text files in a picture library.
+ *
+ * Nothing needs to discover them. `llms.txt` lists all 36 by URL and
+ * `check:publications` reconciles that list against the generated set in both
+ * directions, which is a stronger guarantee than the manifest gives anything.
+ */
+const NOT_ASSET_PATTERNS = [
+  {
+    test: /^\/publications\/[a-z0-9-]+\.md$/,
+    why:
+      "A generated markdown twin of a paper, gitignored build product served " +
+      "as an asset. Listed in llms.txt and reconciled by check:publications; " +
+      "not media, and not committed, so not in this manifest.",
+  },
+];
+
+/**
  * Why this path is not an asset, or null if it is one.
  *
  * Lives here rather than in the walk because this module is the single answer
@@ -162,7 +205,9 @@ const NOT_ASSETS = new Map([
  * @returns {string | null}
  */
 export function excludedFromAssets(pathOrKey) {
-  return NOT_ASSETS.get(pathOrKey) ?? null;
+  const named = NOT_ASSETS.get(pathOrKey);
+  if (named) return named;
+  return NOT_ASSET_PATTERNS.find((rule) => rule.test.test(pathOrKey))?.why ?? null;
 }
 
 /**

@@ -40,6 +40,19 @@
     // output is not in the markup a component render produces, so the tag set
     // cannot be checked against rendered HTML offline.
     "app/lib/publications/citation-tags.mjs",
+    // The markdown twin builder and the cited-by reader it takes its count
+    // from. `build:publication-twins` writes the 36 twins with them and
+    // `check:publications` imports the SAME generator to compare what is on
+    // disk byte for byte, which is the whole reason the writing lives behind a
+    // direct-run guard: one owner of what a twin says, reachable by both.
+    "app/lib/publications/twin.mjs",
+    "app/lib/publications/cited-by.mjs",
+    // How a paper's indexable text is assembled. build-content.mjs emits the
+    // paper search records from it, on exactly the footing colophon-sections
+    // and projects-page are listed on below: records.mjs is the one indexer and
+    // must not learn a corpus's field names, so the assembly is a module and
+    // both projects reach it.
+    "app/lib/publications/search-inputs.mjs",
     "app/lib/publications/exports.mjs",
     "app/lib/publications/export-response.mjs",
     // Imported by exports.mjs for the brace-protection allowlist, and by the
@@ -125,6 +138,13 @@
     // route renders from it and check:admin-ui asserts against it.
     "app/lib/media/usage.mjs",
     "app/lib/search/records.mjs",
+    // The Ask item key mapping. check:publications round-trips every paper's
+    // page URL through it, because the key is the citation: AI Search carries
+    // nothing else about where a chunk came from, so a key that does not map
+    // back to the page cites a URL that 404s, and only a reader who clicked
+    // would ever find out. The uploader and the client chunk both import it,
+    // which is why there is one module to reach.
+    "app/lib/search/ask-keys.mjs",
     // The colophon's section descriptor. build-content.mjs reads it to emit the
     // page's search records, and app/routes/colophon.tsx renders from the same
     // list, which is what stops an anchor existing in two places.
