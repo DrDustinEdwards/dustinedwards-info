@@ -46,6 +46,19 @@
 # exclude this directory by path for the same reason they skip build/.
 /app/enhance/dist/
 
+# The markdown twin of every paper, written by build:publication-twins. Same
+# class as posts.json above and the same argument: derived entirely from
+# tracked sources (app/data/publications.ts, data/publications.text.json,
+# data/publications.cited-by.json), so committing it would make every corpus
+# change a two-file change that only a machine running the build could
+# complete. It is 1.2 MB of it, too, most of that extracted PDF text that is
+# already in git once as data/publications.text.json.
+#
+# The PDFs in the per-paper subdirectories beside these ARE tracked. Only the
+# .md files directly under public/publications/ are generated, which is why
+# this line is not a directory.
+/public/publications/*.md
+
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json
 
