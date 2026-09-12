@@ -239,10 +239,13 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
             <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
             {/* ASK, AS A LINK. The URL is built by `paperAskUrl`, which carries
-                the reasoning: /search renders keyword results from its loader
-                and mounts the Ask affordance as an enhancement, so a link with
-                the question already in `q` works both with scripting and
-                without it, and nothing here is a second implementation of Ask.
+                the reasoning and the measurement: /search renders keyword
+                results from its loader and mounts the Ask affordance as an
+                enhancement, so a link with the query already in `q` works both
+                with scripting and without it, and nothing here is a second
+                implementation of Ask. The query is the quoted title alone,
+                because the classic index ANDs its terms and an interrogative
+                wrapped around the title returned zero results.
                 check:publications exercises that function over every record and
                 asserts this route calls it. */}
             <a href={paperAskUrl(decodeEntities(paper.title))}>Ask about this paper</a>
