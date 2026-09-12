@@ -72,9 +72,11 @@ which is what repeats across people and sessions.
 - **An instrument only sees what it was threaded through. Prefer structure.** A
   timing instrument threaded through one call site proved nothing about the
   other. `5940242`
-- **A mark count is not a read count.** One `artifact_load` mark was reported
-  while two reads were happening. `scripts/check-invariants.mjs`, retired
-  section 10, in git history since the artifact arc
+- **A proxy is not the property, and it passes while the property fails.**
+  One `artifact_load` mark was reported while two reads happened; a headless
+  render check read a non-empty root as clean while the summary text was
+  invisible against its background.
+  `scripts/check-invariants.mjs` `.design-sync/previews/PostCard.tsx`
 - **A simulated element is not the element.** An injected probe anchor measured
   10px and gave a wrapping threshold 10px wrong.
   `app/components/site-header.tsx`
