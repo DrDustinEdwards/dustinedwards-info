@@ -630,7 +630,13 @@ console.log(
    32 at a gap of 7 against a tolerance of 3. Tolerance is 3 at this count, so
    36 is the slackest legal value and is what the slack-of-two convention above
    gives. */
-const MINIMUM_CHECKS = 36;
+/* RE-MEASURED 2026-09-12 by RUNNING this gate, after OPENALEX_API_KEY became
+   the tenth ratified secret: 41 checks. The step is the one this comment
+   predicted, and the arithmetic answer would have been wrong in the direction
+   that matters, so the number below comes from the run. check:floors failed 36
+   at a gap of 5 against a tolerance of 3; 41 is the count and 38 is the
+   slackest legal value, and the slack-of-two convention gives 39. */
+const MINIMUM_CHECKS = 39;
 const floorBreach = assertFloor("check:secrets", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 

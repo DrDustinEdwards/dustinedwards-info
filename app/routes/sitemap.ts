@@ -33,6 +33,7 @@ const STATIC_PATHS = [
   "/about",
   "/blog",
   "/phage-discovery",
+  "/publications",
   "/colophon",
   "/projects",
   "/playground",

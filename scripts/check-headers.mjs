@@ -1449,6 +1449,17 @@ console.log("  public HTML routes share one headers()");
     "phage-discovery.tsx",
     "playground.tsx",
     "projects.tsx",
+    /*
+     * The publication index, back on the site 2026-09-12 under ruling 63.
+     *
+     * Shared-cached, and the interesting part is that its QUERY STRING is part
+     * of the cache key rather than a reason to refuse caching: the topic chips,
+     * the search box and the sort are all GET parameters, so one reader's
+     * `?topic=bacteriophages` is a different entry from another's bare URL and
+     * neither can be served to the other. Nothing on it is reader-specific; the
+     * citation counts come from KV and are the same for everybody.
+     */
+    "publications.tsx",
     "privacy.tsx",
     // The tag archive. It calls `publicHtmlHeaders()` and negotiates nothing:
     // its feeds are separate URLs rather than representations of this one, so

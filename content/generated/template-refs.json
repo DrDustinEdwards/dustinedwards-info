@@ -1,5 +1,5 @@
 {
-  "generated": 17,
+  "generated": 48,
   "refs": {
     "/android-chrome-192x192.png": [
       "public/site.webmanifest"
@@ -49,10 +49,103 @@
     "/phage-hunters/2025.webp": [
       "app/data/phage-hunters.ts"
     ],
+    "/publications/edwards-2007-rna-tumour.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2008-tax-repression.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2011-geranylgeranyl.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2011-orf-encoded.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2012-epidemiology-database.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2014-codependence.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2014-p30-tlr3.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2014-palmitoylation.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2015-simian-lymphotropic.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2018-arlo.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2019-finny.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2019-ryadel.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2019-texas-survey.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2020-muscovy-ducks.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2021-indylu.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2021-joy99.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2021-tripl3t-zeuska.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-fizzles.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-fowlpox.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-instructional-models.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-loca.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-lymphoproliferative.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2022-prairie-chicken.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2023-classroom-assessment.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2023-mraaronian.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2024-faculty-identity.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2024-irec.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2025-covid-vaccines.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2025-godfather.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2025-phage-therapy.pdf": [
+      "app/data/publications.ts"
+    ],
+    "/publications/edwards-2026-communication-rubrics.pdf": [
+      "app/data/publications.ts"
+    ],
     "/site.webmanifest": [
       "app/root.tsx"
     ]
   },
-  "filesRead": 245,
+  "filesRead": 251,
   "assetsConsidered": 59
 }

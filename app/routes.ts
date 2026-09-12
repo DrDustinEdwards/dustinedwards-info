@@ -54,6 +54,10 @@ export default [
   // /phage-hunters/*, which is a static prefix and not a route; the page prefix
   // and the asset prefix differ on purpose. See the route file.
   route("phage-discovery", "routes/phage-discovery.tsx"),
+  // The publication list. Restored 2026-09-12 under ruling 63, at the URL it
+  // held from 2026-07-26 until PR #3 retired it, because that URL was published
+  // and a published URL is a promise. The per-paper pages live under it.
+  route("publications", "routes/publications.tsx"),
   // Who this is, in the first person, from content/about.md. FIRST among the
   // hand-written pages here and FIRST in the header nav, because the audit's
   // fourth part found that the first three questions a stranger has off the

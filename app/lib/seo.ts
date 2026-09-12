@@ -516,3 +516,119 @@ export function webSiteJsonLd(origin: string) {
     url: origin,
   };
 }
+
+/* --------------------------------------------------------------- Publications
+ *
+ * RESTORED 2026-09-12. These left the file at `70dbedc` when PR #3 retired the
+ * academic routes, and come back unchanged in behaviour. Ruling 63 is why.
+ */
+
+/** The route. `pageMeta` builds the absolute form from `SITE_ORIGIN`. */
+export const PUBLICATIONS_URL = "/publications";
+
+export const PUBLICATIONS_DESCRIPTION =
+  "Peer-reviewed work by Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
+
+/**
+ * Authority records that identify the site owner, for schema.org sameAs.
+ *
+ * These were deleted at `f6bf2ac` as orphaned by the route removals, which was
+ * true at the time and stopped being true the moment a per-paper page needed to
+ * say which Dustin Edwards wrote the paper.
+ */
+export const OWNER_ORCID = "https://orcid.org/0000-0001-6409-8041";
+export const OWNER_SCHOLAR =
+  "https://scholar.google.com/citations?user=Ej1nNAEAAAAJ";
+export const OWNER_FACULTY_PAGE =
+  "https://www.tarleton.edu/directory/dustin-edwards/";
+
+/** Stable `@id` for the owner's Person node, so it is described once per page. */
+export function personId(origin: string) {
+  return `${origin}/#person`;
+}
+
+/**
+ * schema.org Person for the site owner, carrying the authority links.
+ *
+ * The sameAs array is the point of this node. There is another academic named
+ * Dustin Edwards working in writing and rhetoric, and OpenAlex has already
+ * merged seven of his works into this author record. Naming the ORCID, the
+ * Scholar profile and the faculty page gives a consumer three ways to tell the
+ * two apart without guessing from a name string.
+ *
+ * `personJsonLd` above is the HOME PAGE's Person and carries no `@id` and no
+ * sameAs. The two are not a duplication to collapse: that one describes the
+ * site owner to a reader arriving at the site, this one exists so a citation
+ * graph can join a paper's author to a specific human being.
+ */
+export function personNode(origin: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": personId(origin),
+    name: SITE.name,
+    jobTitle: SITE.role,
+    url: origin,
+    worksFor: {
+      "@type": "CollegeOrUniversity",
+      name: SITE.affiliation,
+    },
+    sameAs: [OWNER_ORCID, OWNER_SCHOLAR, OWNER_FACULTY_PAGE],
+  };
+}
+
+/**
+ * Match the site owner in an author list.
+ *
+ * He is last author on some papers and 14th of 108 on others, and the
+ * registries return three spellings of his name, so this keys on surname plus
+ * a D initial rather than an exact string.
+ */
+export function isSiteOwner(name: string) {
+  const parts = name.trim().split(/\s+/);
+  const surname = parts[parts.length - 1] ?? "";
+  const given = parts[0] ?? "";
+  return surname.toLowerCase() === "edwards" && given.toUpperCase().startsWith("D");
+}
+
+/**
+ * One Person node followed by a ScholarlyArticle per publication.
+ *
+ * Co-authors stay as plain Person objects; only the owner's entry becomes an
+ * `@id` reference to the Person node. Replacing the whole author array with a
+ * single reference would drop 107 co-authors from one record and misstate
+ * authorship on every other.
+ *
+ * Built from the filtered list, so the structured data always describes what
+ * the page actually renders.
+ */
+export function publicationsJsonLd(
+  origin: string,
+  items: {
+    title: string;
+    authors: string[];
+    year: number;
+    journal: string | null;
+    doi: string;
+    pdfPath: string | null;
+  }[],
+) {
+  const id = personId(origin);
+  return [
+    personNode(origin),
+    ...items.map((p) => ({
+      "@context": "https://schema.org",
+      "@type": "ScholarlyArticle",
+      headline: p.title,
+      author: p.authors.map((name) =>
+        isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name },
+      ),
+      datePublished: String(p.year),
+      ...(p.journal
+        ? { isPartOf: { "@type": "Periodical", name: p.journal } }
+        : {}),
+      sameAs: `https://doi.org/${p.doi}`,
+      ...(p.pdfPath ? { url: origin + p.pdfPath } : {}),
+    })),
+  ];
+}

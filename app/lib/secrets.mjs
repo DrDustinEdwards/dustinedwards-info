@@ -47,6 +47,14 @@
  * in: the audit reports it absent until Dustin runs `wrangler secret put`, and
  * absent is a state this list is supposed to be able to show.
  *
+ * NINE BECAME TEN on 2026-09-12 with `OPENALEX_API_KEY`, when `/publications`
+ * came back under ruling 63. Same order again, typed and guarded before it is
+ * provisioned. It is the first entry on this list whose absence degrades a
+ * PUBLIC page rather than an admin one, and the degradation is deliberately
+ * invisible: cached counts keep serving and no refresh is scheduled, so the
+ * audit reporting it absent is the only place the gap is visible. That is the
+ * argument for listing it rather than treating it as an optional extra.
+ *
  * NOT ON THIS LIST: `CLOUDFLARE_ACCOUNT_ID`. It is a plain var in
  * `wrangler.jsonc` and an identifier rather than a credential, so guarding it
  * would spend the gate's signal on a value already published in the core doc.
@@ -64,4 +72,5 @@ export const REQUIRED_SECRETS = [
   "OPERATOR_TOKEN",
   "ANALYTICS_READ_TOKEN",
   "SMOKE_TOKEN",
+  "OPENALEX_API_KEY",
 ];

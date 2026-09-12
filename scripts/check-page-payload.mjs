@@ -851,6 +851,27 @@ const ROUTE_CEILINGS = {
    * archives above are already on.
    */
   "/about": { id: "routes/about", css: 5700, total: 6600 },
+  /*
+   * MEASURED 2026-09-12 through this gate on a fresh build: css 4666 over two
+   * sheets (root plus publications.css), 5484 total, serving the one bundle
+   * every page on the site serves.
+   *
+   * THE CEILINGS ARE `/projects`', WHICH MEASURES 4667 AND 5485. One byte apart
+   * on each figure, and not by coincidence: both are app.css plus a single route
+   * stylesheet plus theme.js, which is the same page shape and should be graded
+   * against the same bar rather than two that drift apart by whichever was
+   * measured later. That is the reasoning the tag archive, the series archive
+   * and /about are already on.
+   *
+   * WHAT THIS ROUTE DOES NOT PAY FOR, and the reason it is the leanest page on
+   * the site rather than the heaviest: 36 publication records, 33 abstracts and
+   * a 75 KB data module reach the client as exactly nothing. Only the loader
+   * touches `PUBLICATIONS`, and the public plane does not hydrate, so the
+   * corpus is rendered to HTML and never serialised into a payload. The filter
+   * chips are links and the search is a GET form, so the interactive half costs
+   * no script either. A hydrating version of this page would ship the corpus.
+   */
+  "/publications": { id: "routes/publications", css: 5300, total: 6300 },
 };
 
 /**

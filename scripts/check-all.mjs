@@ -73,8 +73,15 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  * gate deleted, a script renamed out of the `check:` namespace, or a glob that
  * quietly stops matching all show up as a smaller number. It only ever moves UP,
  * and moving it is a deliberate edit in the same commit as the gate.
+ *
+ * MEASURED BY RUNNING, 2026-09-12, which is the only way this number is allowed
+ * to move. It read 35 against a discovered 36, so one gate could already have
+ * been deleted and the floor would have held: exactly the shape FAILURES.md
+ * records as "a limit positioned where it cannot bite". Adding
+ * `check:publications` took the count to 37 and the arithmetic answer would
+ * have been 36, preserving the gap. The run said 37, so it is 37.
  */
-const MINIMUM_GATES = 35;
+const MINIMUM_GATES = 37;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -240,6 +247,15 @@ export const TIERS = {
    */
   "check:types": "offline",
   "check:content": "offline",
+  /*
+   * OFFLINE, and it is the purest offline gate here: it reads two committed
+   * JSON files, regenerates `app/data/publications.ts` in memory and compares.
+   * No network, no binding, no clock. The network half of the publication
+   * pipeline is `pubs-pipeline`, which lives outside this repo on purpose and
+   * is never a gate, because a gate that fetches Crossref fails on Crossref's
+   * bad day rather than on ours.
+   */
+  "check:publications": "offline",
   "check:config": "offline",
   "check:search": "offline",
   "check:policy": "offline",
