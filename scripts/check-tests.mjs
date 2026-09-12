@@ -138,8 +138,15 @@ const MINIMUM_FILES = 63;
    before the push was a set of targeted gates rather than the tier, and
    check:floors is a meta-gate that reads the tier's own output, so it was the
    one gate a targeted run could not include. CI is what saw it. Tolerance is 37
-   at this count, so anything from 702 up is legal; 720 leaves the usual slack. */
-const MINIMUM_TESTS = 720;
+   at this count, so anything from 702 up is legal; 720 leaves the usual slack.
+   RE-MEASURED 2026-09-12 by RUNNING this gate, after the publications session
+   added sixteen cases across two files (the Ask key mapping for papers, and the
+   retraction path's Lancet fixture): 766 tests. The tier caught the old 720 at
+   a gap of 46 against a tolerance of 39, the same mechanism a SIXTH time, and
+   this time locally rather than in CI, because the run was the tier rather than
+   a set of targeted gates. Tolerance is 39 at this count, so anything from 727
+   up is legal; 745 leaves the usual slack. */
+const MINIMUM_TESTS = 745;
 
 let checks = 0;
 let failures = 0;

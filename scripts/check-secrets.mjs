@@ -553,7 +553,26 @@ if (existsSync(examplePath)) {
    * to twelve digits, a dash, then at least sixteen alphanumerics. Verified
    * against all 548 tracked files with zero false positives.
    */
-  const UPTIMEROBOT_SHAPE = /u\d{4,12}-[A-Za-z0-9]{16,64}/;
+  /*
+   * A `\uXXXX` JSON ESCAPE IS NOT A `u` IN THE TEXT, and the difference cost a
+   * false positive on 2026-09-12.
+   *
+   * `data/publications.text.json` carries the extracted text of 31 PDFs, and 11
+   * of them contain C0 control characters where a symbol font was mapped to low
+   * code points: the prime mark in `5'-GCAGAGCATATAAAATGAGG` comes out as 0x03.
+   * JSON escapes that, the DNA that follows is alphanumeric and long, and the
+   * needle matched three of them. That is a scanner reading a file's ENCODING
+   * rather than its content, and it would fire on any JSON file carrying a
+   * control character before a hyphen.
+   *
+   * The lookbehind refuses exactly that and nothing else. A real key in a
+   * tracked file is preceded by a quote, a space, an equals sign, a newline or
+   * a word character, never by a backslash: a JSON string holding a genuine key
+   * reads `"u1234567-..."`. The `_PLANT_u1234567-...` case the paragraph above
+   * records still fires, and both directions are replayed as plants rather
+   * than reasoned about.
+   */
+  const UPTIMEROBOT_SHAPE = /(?<!\\)u\d{4,12}-[A-Za-z0-9]{16,64}/;
 
   /** Files that legitimately DISCUSS these names. The VALUE is what is banned. */
   const scanned = tracked.filter((rel) => {

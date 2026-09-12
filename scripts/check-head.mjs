@@ -513,6 +513,27 @@ try {
   if (bc.status !== 0) throw new Error("the worktree build failed; the tier has no subject");
 
   /*
+   * THE PUBLICATION TWINS, built in the worktree for the same reason and found
+   * by this gate on the day they landed: public/publications/*.md is gitignored
+   * build product, so an extraction of HEAD has 36 PDFs and no twins, and
+   * `check:publications` compares what is on disk against a fresh generation.
+   * It reported "run npm run build:publication-twins" against a checkout where
+   * nothing had, which is a missing build step rather than anything about HEAD.
+   */
+  const bt = spawnSync("npm run build:publication-twins", {
+    cwd: worktree,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  ok(
+    "build:publication-twins produced the worktree's markdown twins",
+    bt.status === 0,
+    `${(bt.stdout ?? "")}${(bt.stderr ?? "")}`.trim().slice(-200),
+  );
+  if (bt.status !== 0) throw new Error("the worktree twin build failed; the tier has no subject");
+
+  /*
    * THE ENHANCEMENT BUNDLES, built in the worktree for the same reason:
    * app/enhance/dist/ is gitignored, so an extraction has the enhancement
    * source and no bundles, and HEAD's ?url imports name files that would not
