@@ -61,6 +61,49 @@ declare global {
      * `smoke` row of `WRITE_CAPABILITIES`.
      */
     SMOKE_TOKEN?: string;
+    /**
+     * API key for OpenAlex, which is where the per-paper citation counts on
+     * `/publications` come from.
+     *
+     * OPTIONAL BY CONTRACT, the fourth on the `OPERATOR_TOKEN` precedent, and
+     * the degradation is the gentlest of the four: `citations.server.ts` serves
+     * whatever APP_KV already holds and simply does not schedule a refresh, so
+     * an unset key means counts stop ageing forward rather than disappearing.
+     * Nothing 503s and nothing renders a zero.
+     *
+     * It became REQUIRED-to-fetch on 2026-02-13, when OpenAlex made keys
+     * mandatory and removed the `mailto` polite pool in the same release. Before
+     * that date a keyless request worked, which is why the July code treated the
+     * key as a nicety; a keyless request now spends a shared allowance of about
+     * 100 credits and is refused after it.
+     *
+     * Set with `wrangler secret put OPENALEX_API_KEY`. The BUILD side reads the
+     * same credential from the gitignored `.dev.vars`, through
+     * `scripts/lib/dev-vars.mjs`, because `pubs-pipeline` and the build-time
+     * cited-by fetch run on a machine rather than in the Worker. Two holders,
+     * one credential: rotate both or neither.
+     *
+     * ## WHY THIS ONE IS NOT MARKED OPTIONAL, WHEN ITS CONTRACT IS
+     *
+     * Because `.dev.vars` is also where the build reads it, `wrangler types`
+     * SEES IT and generates `OPENALEX_API_KEY: string` into
+     * `__BaseEnv_Env`, required. Declaring it `?: string` here widens the
+     * merged `Env` and it stops being assignable to `Cloudflare.Env`, which
+     * broke `workers/ask-budget.ts` on the first attempt. The three other
+     * optional secrets above are never in `.dev.vars`, so none of them collides.
+     *
+     * The declaration is therefore the one the generator forces, and the
+     * OPTIONALITY IS ENFORCED IN CODE INSTEAD: `citations.server.ts` reads the
+     * value and checks it for truthiness before spending a request, because an
+     * unset secret is `undefined` at runtime whatever the type says. The type is
+     * not the contract here; that comment is.
+     *
+     * On a clean CI checkout there is no `.dev.vars`, wrangler generates
+     * nothing, and this line is the only declaration. Same shape either way,
+     * which is what stops the two environments disagreeing about whether the
+     * Worker compiles.
+     */
+    OPENALEX_API_KEY: string;
 
   }
 }
