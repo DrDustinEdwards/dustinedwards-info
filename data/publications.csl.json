@@ -4,13 +4,13 @@
       "date-parts": [
         [
           2026,
-          5,
-          4
+          7,
+          30
         ]
       ],
-      "date-time": "2026-05-04T04:30:32Z",
-      "timestamp": 1777869032778,
-      "version": "3.51.4"
+      "date-time": "2026-07-30T18:40:27Z",
+      "timestamp": 1785436827392,
+      "version": "3.56.0"
     },
     "reference-count": 7,
     "publisher": "American Society for Microbiology",
@@ -108,8 +108,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -134,8 +134,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -160,8 +160,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -179,8 +179,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -207,8 +207,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -233,8 +233,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -259,8 +259,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -287,8 +287,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -313,8 +313,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -341,8 +341,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -369,8 +369,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -397,8 +397,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -423,8 +423,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -442,8 +442,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -461,8 +461,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -487,8 +487,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -513,8 +513,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -541,8 +541,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -567,8 +567,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -593,8 +593,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -621,8 +621,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -649,8 +649,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -675,8 +675,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -703,8 +703,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -729,8 +729,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -750,8 +750,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -776,8 +776,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -804,8 +804,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -830,8 +830,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -858,8 +858,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -886,8 +886,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -914,8 +914,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -940,8 +940,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -966,8 +966,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -994,8 +994,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1020,8 +1020,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1046,8 +1046,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1074,8 +1074,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1100,8 +1100,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1126,8 +1126,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1152,8 +1152,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1178,8 +1178,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1206,8 +1206,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1232,8 +1232,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1260,8 +1260,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1286,8 +1286,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1305,8 +1305,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1331,8 +1331,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1357,8 +1357,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1385,8 +1385,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1413,8 +1413,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1432,8 +1432,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1460,8 +1460,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1486,8 +1486,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1512,8 +1512,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1540,8 +1540,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1566,8 +1566,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1592,8 +1592,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1620,8 +1620,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1648,8 +1648,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1674,8 +1674,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1700,8 +1700,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1728,8 +1728,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1754,8 +1754,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1780,8 +1780,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1808,8 +1808,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1834,8 +1834,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1860,8 +1860,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1888,8 +1888,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1916,8 +1916,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1944,8 +1944,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1970,8 +1970,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -1998,8 +1998,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2026,8 +2026,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2052,8 +2052,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2080,8 +2080,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2106,8 +2106,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2132,8 +2132,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2158,8 +2158,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2186,8 +2186,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2214,8 +2214,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2240,8 +2240,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2266,8 +2266,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2292,8 +2292,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2311,8 +2311,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2337,8 +2337,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2363,8 +2363,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2391,8 +2391,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2417,8 +2417,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2443,8 +2443,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2469,8 +2469,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2495,8 +2495,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2523,8 +2523,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2551,8 +2551,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2577,8 +2577,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2603,8 +2603,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2631,8 +2631,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2657,8 +2657,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -2678,8 +2678,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
@@ -2728,8 +2728,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "editor",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "editor"
           }
         ]
       }
@@ -3674,14 +3674,14 @@
     "indexed": {
       "date-parts": [
         [
-          2025,
-          7,
-          30
+          2026,
+          9,
+          8
         ]
       ],
-      "date-time": "2025-07-30T15:51:16Z",
-      "timestamp": 1753890676655,
-      "version": "3.41.2"
+      "date-time": "2026-09-08T15:57:34Z",
+      "timestamp": 1788883054109,
+      "version": "build-2803163510"
     },
     "reference-count": 38,
     "publisher": "Frontiers Media SA",
@@ -3725,7 +3725,7 @@
     },
     "update-policy": "https://doi.org/10.3389/crossmark-policy",
     "source": "Crossref",
-    "is-referenced-by-count": 0,
+    "is-referenced-by-count": 1,
     "title": "An inclusive Research and Education Community (iREC) model to facilitate undergraduate science education reform",
     "prefix": "10.3389",
     "volume": "9",
@@ -3737,8 +3737,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3749,8 +3749,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3761,8 +3761,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3773,8 +3773,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3785,8 +3785,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3797,8 +3797,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3809,8 +3809,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3821,8 +3821,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3833,8 +3833,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3845,8 +3845,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3857,8 +3857,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3869,8 +3869,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3881,8 +3881,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3893,8 +3893,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3905,8 +3905,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3917,8 +3917,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3929,8 +3929,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3941,8 +3941,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3953,8 +3953,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3965,8 +3965,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3977,8 +3977,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -3989,8 +3989,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4001,8 +4001,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4013,8 +4013,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4025,8 +4025,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4037,8 +4037,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4049,8 +4049,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4061,8 +4061,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4073,8 +4073,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4085,8 +4085,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4097,8 +4097,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4109,8 +4109,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4121,8 +4121,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4133,8 +4133,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4145,8 +4145,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4157,8 +4157,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4169,8 +4169,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4181,8 +4181,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4193,8 +4193,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4205,8 +4205,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4217,8 +4217,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4229,8 +4229,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4241,8 +4241,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4253,8 +4253,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4265,8 +4265,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4277,8 +4277,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4289,8 +4289,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4301,8 +4301,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4313,8 +4313,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4325,8 +4325,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4337,8 +4337,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4349,8 +4349,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4361,8 +4361,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4373,8 +4373,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4385,8 +4385,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4397,8 +4397,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4409,8 +4409,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4421,8 +4421,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4433,8 +4433,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4445,8 +4445,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4457,8 +4457,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4469,8 +4469,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4481,8 +4481,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4493,8 +4493,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4505,8 +4505,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4517,8 +4517,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4529,8 +4529,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4541,8 +4541,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4553,8 +4553,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4565,8 +4565,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4577,8 +4577,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4589,8 +4589,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4601,8 +4601,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4613,8 +4613,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4625,8 +4625,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4637,8 +4637,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4649,8 +4649,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4661,8 +4661,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4673,8 +4673,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4685,8 +4685,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4697,8 +4697,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4709,8 +4709,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4721,8 +4721,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4733,8 +4733,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4745,8 +4745,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4757,8 +4757,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4769,8 +4769,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4781,8 +4781,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4793,8 +4793,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4805,8 +4805,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4817,8 +4817,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4829,8 +4829,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4841,8 +4841,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4853,8 +4853,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4865,8 +4865,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4877,8 +4877,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4889,8 +4889,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4901,8 +4901,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4913,8 +4913,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4925,8 +4925,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4937,8 +4937,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4949,8 +4949,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4961,8 +4961,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4973,8 +4973,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4985,8 +4985,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -4997,8 +4997,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5009,8 +5009,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5021,8 +5021,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5033,8 +5033,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5045,8 +5045,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5057,8 +5057,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5069,8 +5069,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5081,8 +5081,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5093,8 +5093,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5105,8 +5105,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5117,8 +5117,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
@@ -5198,13 +5198,13 @@
       "date-parts": [
         [
           2026,
-          5,
-          16
+          9,
+          8
         ]
       ],
-      "date-time": "2026-05-16T13:26:58Z",
-      "timestamp": 1778938018122,
-      "version": "3.51.4"
+      "date-time": "2026-09-08T15:57:37Z",
+      "timestamp": 1788883057219,
+      "version": "build-2803163510"
     },
     "reference-count": 46,
     "publisher": "Frontiers Media SA",
@@ -5248,7 +5248,7 @@
     },
     "update-policy": "https://doi.org/10.3389/crossmark-policy",
     "source": "Crossref",
-    "is-referenced-by-count": 9,
+    "is-referenced-by-count": 10,
     "title": "The professional identity of STEM faculty as instructors of course-based research experiences",
     "prefix": "10.3389",
     "volume": "9",
@@ -5260,8 +5260,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5272,8 +5272,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5284,8 +5284,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5296,8 +5296,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5308,8 +5308,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5320,8 +5320,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5332,8 +5332,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5344,8 +5344,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5356,8 +5356,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5368,8 +5368,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5380,8 +5380,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5392,8 +5392,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5404,8 +5404,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5416,8 +5416,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5428,8 +5428,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5440,8 +5440,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5452,8 +5452,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5464,8 +5464,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5476,8 +5476,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5488,8 +5488,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5500,8 +5500,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5512,8 +5512,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5524,8 +5524,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5536,8 +5536,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5548,8 +5548,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5560,8 +5560,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5572,8 +5572,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5584,8 +5584,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5596,8 +5596,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5608,8 +5608,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5620,8 +5620,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5632,8 +5632,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5644,8 +5644,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5656,8 +5656,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5668,8 +5668,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5680,8 +5680,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5692,8 +5692,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5704,8 +5704,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5716,8 +5716,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5728,8 +5728,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5740,8 +5740,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5752,8 +5752,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5764,8 +5764,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5776,8 +5776,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5788,8 +5788,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5800,8 +5800,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5812,8 +5812,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5824,8 +5824,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5836,8 +5836,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5848,8 +5848,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5860,8 +5860,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5872,8 +5872,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5884,8 +5884,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5896,8 +5896,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5908,8 +5908,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5920,8 +5920,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5932,8 +5932,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5944,8 +5944,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5956,8 +5956,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5968,8 +5968,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5980,8 +5980,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -5992,8 +5992,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6004,8 +6004,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6016,8 +6016,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6028,8 +6028,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6040,8 +6040,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6052,8 +6052,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6064,8 +6064,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6076,8 +6076,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6088,8 +6088,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6100,8 +6100,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6112,8 +6112,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6124,8 +6124,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6136,8 +6136,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6148,8 +6148,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6160,8 +6160,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6172,8 +6172,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6184,8 +6184,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6196,8 +6196,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6208,8 +6208,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6220,8 +6220,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6232,8 +6232,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6244,8 +6244,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6256,8 +6256,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6268,8 +6268,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6280,8 +6280,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6292,8 +6292,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6304,8 +6304,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -6316,8 +6316,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
@@ -10644,13 +10644,13 @@
       "date-parts": [
         [
           2026,
-          3,
-          9
+          9,
+          10
         ]
       ],
-      "date-time": "2026-03-09T03:58:15Z",
-      "timestamp": 1773028695780,
-      "version": "3.50.1"
+      "date-time": "2026-09-10T23:01:30Z",
+      "timestamp": 1789081290231,
+      "version": "build-2803163510"
     },
     "reference-count": 34,
     "publisher": "American Society for Cell Biology (ASCB)",
@@ -10682,7 +10682,7 @@
       "timestamp": 1641243325000
     },
     "source": "Crossref",
-    "is-referenced-by-count": 22,
+    "is-referenced-by-count": 24,
     "title": "Instructional Models for Course-Based Research Experience (CRE) Teaching",
     "prefix": "10.1187",
     "volume": "21",
@@ -10698,8 +10698,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10714,8 +10714,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10730,8 +10730,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10746,8 +10746,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10762,8 +10762,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10778,8 +10778,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10794,8 +10794,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10810,8 +10810,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10826,8 +10826,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10842,8 +10842,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10858,8 +10858,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10874,8 +10874,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10890,8 +10890,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10906,8 +10906,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10922,8 +10922,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10938,8 +10938,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10954,8 +10954,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10970,8 +10970,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -10986,8 +10986,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11002,8 +11002,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11018,8 +11018,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11034,8 +11034,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11050,8 +11050,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11066,8 +11066,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11082,8 +11082,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11098,8 +11098,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11114,8 +11114,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11130,8 +11130,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11146,8 +11146,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11162,8 +11162,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11178,8 +11178,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11194,8 +11194,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11210,8 +11210,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11226,8 +11226,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11242,8 +11242,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11258,8 +11258,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11274,8 +11274,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11290,8 +11290,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11306,8 +11306,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11322,8 +11322,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11338,8 +11338,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11354,8 +11354,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11370,8 +11370,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11386,8 +11386,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11402,8 +11402,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11418,8 +11418,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11434,8 +11434,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11450,8 +11450,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11466,8 +11466,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11482,8 +11482,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11498,8 +11498,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11514,8 +11514,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11530,8 +11530,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11546,8 +11546,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11562,8 +11562,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11578,8 +11578,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11594,8 +11594,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11610,8 +11610,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11626,8 +11626,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11642,8 +11642,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11658,8 +11658,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11674,8 +11674,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11690,8 +11690,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11706,8 +11706,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11722,8 +11722,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11738,8 +11738,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11754,8 +11754,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11770,8 +11770,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11786,8 +11786,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11802,8 +11802,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11818,8 +11818,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11834,8 +11834,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11850,8 +11850,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11866,8 +11866,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11882,8 +11882,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11898,8 +11898,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11914,8 +11914,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11930,8 +11930,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11946,8 +11946,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11962,8 +11962,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -11978,8 +11978,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
@@ -12014,8 +12014,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "editor",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "editor"
           }
         ]
       }
@@ -17809,13 +17809,14 @@
     "indexed": {
       "date-parts": [
         [
-          2025,
-          10,
-          27
+          2026,
+          8,
+          30
         ]
       ],
-      "date-time": "2025-10-27T16:03:43Z",
-      "timestamp": 1761581023101
+      "date-time": "2026-08-30T01:08:30Z",
+      "timestamp": 1788052110247,
+      "version": "build-2784847793"
     },
     "reference-count": 0,
     "publisher": "Public Library of Science (PLoS)",
@@ -17858,9 +17859,9 @@
       "timestamp": 1347311288000
     },
     "page": "e42123",
-    "update-policy": "http://dx.doi.org/10.1371/journal.pone.corrections_policy",
+    "update-policy": "https://doi.org/10.1371/journal.pone.corrections_policy",
     "source": "Crossref",
-    "is-referenced-by-count": 15,
+    "is-referenced-by-count": 16,
     "title": "A Public HTLV-1 Molecular Epidemiology Database for Sequence Management and Data Mining",
     "prefix": "10.1371",
     "volume": "7",
@@ -17872,8 +17873,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17884,8 +17885,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17896,8 +17897,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17908,8 +17909,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17920,8 +17921,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17932,8 +17933,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17944,8 +17945,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17956,8 +17957,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -17968,8 +17969,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
@@ -18013,8 +18014,8 @@
         "affiliation": [],
         "role": [
           {
-            "role": "editor",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "editor"
           }
         ]
       }
@@ -18303,13 +18304,13 @@
       "date-parts": [
         [
           2026,
-          5,
-          20
+          8,
+          26
         ]
       ],
-      "date-time": "2026-05-20T15:30:33Z",
-      "timestamp": 1779291033305,
-      "version": "3.51.4"
+      "date-time": "2026-08-26T04:06:14Z",
+      "timestamp": 1787717174367,
+      "version": "build-2784847793"
     },
     "reference-count": 118,
     "publisher": "MDPI AG",
@@ -18369,8 +18370,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18385,8 +18386,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18401,8 +18402,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18417,8 +18418,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18433,8 +18434,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18449,8 +18450,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       },
@@ -18465,8 +18466,8 @@
         ],
         "role": [
           {
-            "role": "author",
-            "vocabulary": "crossref"
+            "vocabulary": "crossref",
+            "role": "author"
           }
         ]
       }
