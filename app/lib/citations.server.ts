@@ -17,7 +17,25 @@ import type { RouterContextProvider } from "react-router";
  */
 
 const TTL_SECONDS = 7 * 24 * 60 * 60;
-const EMAIL = "emaildustinedwards@gmail.com";
+/*
+ * THE CALLER'S NAME, AND DELIBERATELY NOT AN ADDRESS.
+ *
+ * This carried a `mailto:` with a real address until 2026-09-12, on the old
+ * convention that a scholarly API caller identifies itself by email. TWO things
+ * made that wrong here. OpenAlex removed the `mailto` polite pool on
+ * 2026-02-13, so the address bought nothing from the vendor: the API key is the
+ * identification now. And `check:config` refuses a real configured value
+ * appearing in a tracked file, which that address was, because it is also the
+ * watchdog's ALERT_EMAIL. The gate found it on the restore.
+ *
+ * The address is not written out here either, for the reason it was removed:
+ * that gate reads the WHOLE file and does not strip comments, which is correct.
+ * A value quoted in a comment is still the value, sitting in git.
+ *
+ * A URL identifies the caller at least as well, is already public, and is not a
+ * value any config holds.
+ */
+const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 export type CitationEntry = {
   /** OpenAlex cited_by_count at fetch time. */
@@ -81,7 +99,7 @@ async function fetchOne(apiKey: string, doi: string): Promise<CitationEntry | nu
 
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": `dustinedwards.info (mailto:${EMAIL})` },
+      headers: { "user-agent": USER_AGENT },
     });
     if (!res.ok) return null;
     const body = (await res.json()) as { cited_by_count?: number; id?: string };
