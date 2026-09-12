@@ -145,6 +145,98 @@ function ok(label, condition, detail = "") {
   }
 }
 
+/**
+ * Kill any `node --test` runner this gate left behind, and report what it took.
+ *
+ * BY COMMAND LINE, NEVER BY IMAGE NAME. `node.exe` on this host selects this
+ * gate itself, the editor's language server and the agent harness; the
+ * cleanup work in `check-all.mjs` records that mistake being made and
+ * corrected. The needle is the runner's own argv, which nothing else carries.
+ *
+ * Windows only, because that is where the leak was measured and where
+ * `Get-CimInstance` exists. On other platforms it reports nothing and the gate
+ * is unchanged, which is honest: the guard is not claiming coverage it has no
+ * mechanism for.
+ *
+ * @returns {number[]} the pids killed
+ */
+function reapTestRunners() {
+  if (process.platform !== "win32") return [];
+  const script =
+    "Get-CimInstance Win32_Process | " +
+    "Where-Object { $_.CommandLine -match '--test' -and $_.CommandLine -match 'test/\\*\\*' } | " +
+    "ForEach-Object { $_.ProcessId; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }";
+  const found = spawnSync(
+    "powershell",
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    { encoding: "utf8", timeout: 30_000 },
+  );
+  return `${found.stdout ?? ""}`
+    .split("\n")
+    .map((line) => Number(line.trim()))
+    .filter((pid) => Number.isInteger(pid) && pid > 0);
+}
+
+/**
+ * The five slowest tests in the run, so a creeping hang is visible BEFORE it
+ * becomes a timeout.
+ *
+ * The suite went from minutes to never in one commit, and nothing printed a
+ * duration, so there was no gradient to notice. This prints one every run.
+ *
+ * READS WHATEVER REPORTER RAN. `spawnSync` is not a TTY, so node picks the tap
+ * reporter and emits `duration_ms:` under each `ok`/`not ok`; a TTY run picks
+ * spec and puts `(1234.5ms)` on the line itself. Both are parsed rather than
+ * one being assumed, because the reporter is chosen by something this gate
+ * does not control.
+ *
+ * @param {string} text the runner's combined output
+ * @returns {Array<{ ms: number, name: string }>}
+ */
+function slowestTests(text) {
+  /** @type {Array<{ ms: number, name: string }>} */
+  const timed = [];
+
+  // tap: `ok 3 - the name` then, a line or two later, `  duration_ms: 1234.5`
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const head = lines[i].match(/^(?:not )?ok \d+ - (.+?)\s*$/);
+    if (!head) continue;
+    for (let j = i + 1; j < Math.min(i + 5, lines.length); j += 1) {
+      const dur = lines[j].match(/^\s*duration_ms:\s*([\d.]+)/);
+      if (dur) {
+        timed.push({ ms: Number(dur[1]), name: head[1] });
+        break;
+      }
+    }
+  }
+
+  // spec: `✔ the name (1234.5678ms)`
+  if (timed.length === 0) {
+    for (const line of lines) {
+      const m = line.match(/^\s*[✔✖]\s+(.*?)\s+\(([\d.]+)ms\)\s*$/);
+      if (m) timed.push({ ms: Number(m[2]), name: m[1] });
+    }
+  }
+
+  /*
+   * DEDUPED BY NAME, keeping the longest reading.
+   *
+   * A FAILING test appears twice in tap output, once in the stream and once in
+   * the failure summary, so the first version of this list printed the same
+   * 30.4s test in two of its five slots and pushed a real entry off the end.
+   * Measured on the proof run that caught the ordering race, where the list
+   * was the instrument being read to diagnose it.
+   */
+  const longest = new Map();
+  for (const t of timed) {
+    const seen = longest.get(t.name);
+    if (!seen || t.ms > seen.ms) longest.set(t.name, t);
+  }
+
+  return [...longest.values()].sort((a, b) => b.ms - a.ms).slice(0, 5);
+}
+
 /** @param {string} dir @param {string[]} out */
 function testFiles(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -176,13 +268,121 @@ ok(
     `deleted or renamed out of the *.test.mjs pattern.`,
 );
 
-const run = spawnSync("npm", ["test", "--silent"], {
-  cwd: root,
-  encoding: "utf8",
-  shell: true,
-  maxBuffer: 64 * 1024 * 1024,
-});
+/**
+ * THE RUN IS BOUNDED, TWICE, AND IT REAPS WHAT IT STARTED.
+ *
+ * ## The defect this closes, measured 2026-09-11
+ *
+ * `node --test` over the whole suite sat resident on this host and never
+ * exited. `test/check-all-cleanup.test.mjs` leaked a PowerShell sampler whose
+ * ChildProcess handle never closes, so the runner had nothing left to do and
+ * still could not leave. This gate called `spawnSync` with NO timeout, so it
+ * waited with it, forever, and took `check:head` and `check:floors` down too,
+ * because both run the offline tier and the tier runs this.
+ *
+ * Three sessions lost a local tier to it, and three orphans accumulated in one
+ * session. The leak itself is fixed in that file. This is the GUARD, and it is
+ * here because the next leak will be in a different file.
+ *
+ * ## Two bounds, because they catch different things
+ *
+ * `--test-timeout` is the runner's own per-test bound: a test that hangs is
+ * reported as a FAILING TEST, by name, in the summary this gate already parses.
+ * That is the outcome worth having, because it names the culprit.
+ *
+ * `timeout` on the spawn is the backstop for everything the runner's bound
+ * cannot see, which is the case that actually happened: the tests all finished
+ * and the PROCESS would not exit. A per-test timeout never fires on that.
+ *
+ * The gate's bound is comfortably above the runner's so the runner reports
+ * first when it can. `SIGKILL` rather than the default `SIGTERM`: the thing
+ * being killed is a process that has already demonstrated it will not leave.
+ */
+const TEST_TIMEOUT_MS = 60_000;
+
+/*
+ * THE SPAWN BOUND IS LOAD-BEARING, NOT BELT AND BRACES, and the plant proved
+ * it rather than the comment asserting it.
+ *
+ * MEASURED 2026-09-11 with an unbounded wait planted in one subtest:
+ *
+ *   node --test <that file alone>, --test-timeout=10000
+ *     the test is CANCELLED at 10s, the other three run, and the process
+ *     EXITS at 24s. Per-file, the runner's own bound is sufficient.
+ *
+ *   npm test (the whole suite), --test-timeout=60000
+ *     903s, ending at THIS bound, with two wedged runners for the reaper to
+ *     take. The per-test cancellation did not get the suite out.
+ *
+ * The difference is the leak. A cancelled test's `finally` never runs, because
+ * the promise it is suspended on never settles, so the sampler survives and
+ * that forked child cannot exit; the parent waits on its children. Alone, the
+ * later tests in the same file reach their own teardown and reap the earlier
+ * leak, which is why the single-file case gets out. In the suite it did not.
+ *
+ * So `--test-timeout` names the culprit and this bound is what ends the run.
+ * Both are needed and neither is decoration.
+ *
+ * SIX MINUTES, against a clean run measured three times at 27, 27 and 28
+ * seconds: roughly twelve times the observed cost. Low enough that a wedge
+ * costs minutes instead of a quarter of an hour, high enough that a loaded
+ * machine or a slower host is nowhere near it.
+ */
+const RUN_TIMEOUT_MS = 6 * 60_000;
+
+const run = spawnSync(
+  "npm",
+  ["test", "--silent", "--", `--test-timeout=${TEST_TIMEOUT_MS}`],
+  {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: RUN_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+  },
+);
 const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+
+/*
+ * WHATEVER THE RUN LEFT BEHIND, taken down before this gate returns.
+ *
+ * `spawnSync`'s own timeout kills the shell it started and nothing below it,
+ * which on Windows is the npm wrapper and not the node that holds the leak.
+ * So the sweep is by COMMAND LINE against the runner's own signature, never by
+ * image name: matching `node.exe` here would select this gate, the editor and
+ * every other tool on the machine, which is the mistake the cleanup work in
+ * `check-all.mjs` already records.
+ *
+ * It runs on EVERY path, not just the timeout path, because a run that
+ * finished can still have leaked: that is precisely what the suite did for two
+ * days while reporting failures and then hanging.
+ */
+const leaked = reapTestRunners();
+if (leaked.length > 0) {
+  console.log(`  reaped ${leaked.length} leftover runner process(es): ${leaked.join(", ")}`);
+}
+
+/*
+ * TYPED READ OF THE TIMEOUT. `spawnSync`'s `error` is declared as `Error`,
+ * and the `ETIMEDOUT` that a timeout sets lives on `code`, which only
+ * `ErrnoException` declares. The cast is the honest narrowing rather than a
+ * cast to `any`: this is exactly the shape node documents for a timed-out
+ * spawn, and naming the type says so.
+ */
+/** @type {NodeJS.ErrnoException | undefined} */
+const runError = run.error;
+const timedOut = Boolean(runError && /ETIMEDOUT/i.test(String(runError.code ?? runError.message)));
+
+ok(
+  "the test run completed within its bound",
+  !timedOut,
+  `the suite did not finish inside ${RUN_TIMEOUT_MS / 60_000} minutes and was killed. ` +
+    `A test that hangs is reported by --test-timeout and named in the summary; ` +
+    `reaching THIS bound instead means the tests finished and the process would ` +
+    `not exit, which is a leaked handle rather than a slow test. ` +
+    `Run: node --test <file> and read process._getActiveHandles().`,
+);
 
 /** node --test prints `# tests 43` / `ℹ tests 43` depending on reporter. */
 const read = (/** @type {string} */ key) => {
@@ -195,6 +395,21 @@ const passed = read("pass");
 const failed = read("fail");
 
 console.log(`  node --test reported: tests ${total}, pass ${passed}, fail ${failed}`);
+
+const slowest = slowestTests(output);
+if (slowest.length > 0) {
+  console.log("  slowest five:");
+  for (const t of slowest) {
+    console.log(`    ${(t.ms / 1000).toFixed(1).padStart(6)}s  ${t.name}`);
+  }
+} else {
+  /*
+   * NOT SILENT. A reporter whose durations this cannot read is a reporter
+   * change, and the whole point of the list is to make a creeping hang
+   * visible, so its absence has to be visible too.
+   */
+  console.log("  slowest five: unavailable, no durations parsed from this reporter");
+}
 
 ok(
   "the runner's summary was parseable",
