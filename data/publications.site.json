@@ -33,7 +33,7 @@
     "preprintDoi": null,
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
@@ -129,7 +129,7 @@
     "preprintDoi": null,
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
@@ -262,7 +262,7 @@
     "preprintDoi": null,
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
@@ -357,7 +357,7 @@
     "preprintDoi": null,
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
@@ -376,7 +376,7 @@
     "preprintDoi": "10.1101/698985",
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
@@ -433,7 +433,7 @@
     "preprintDoi": null,
     "isOpenAccess": false,
     "license": null,
-    "licenseSource": null,
+    "licenseSource": "none-deposited",
     "summary": null,
     "selected": false
   },
