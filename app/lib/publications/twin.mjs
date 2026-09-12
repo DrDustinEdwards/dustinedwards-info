@@ -80,6 +80,31 @@ const line = (key, value) =>
     : [`${key}: ${typeof value === "string" ? yamlString(value) : String(value)}`];
 
 /**
+ * The fields of a record this builder reads. Spelled out rather than typed as
+ * `object`, for the reason `article-json-ld.mjs` states at its own copy:
+ * `checkJs` is on and an `object` parameter makes every property access an
+ * error, and spelling the shape here rather than importing `Publication` keeps
+ * this module `.mjs` and importable by the build scripts without dragging a
+ * `.ts` type graph behind it.
+ *
+ * @typedef {object} TwinFacts
+ * @property {string} id
+ * @property {string} title
+ * @property {string[]} authors
+ * @property {number | null} year
+ * @property {string | null} [publishedDate]
+ * @property {string | null} [journal]
+ * @property {string | null} [abstract]
+ * @property {string | null} [summary]
+ * @property {string | null} [pmcUrl]
+ * @property {string | null} [preprintDoi]
+ * @property {string | null} [externalUrl]
+ * @property {string} doi
+ * @property {boolean} [isOpenAccess]
+ * @property {string | null} [license]
+ */
+
+/**
  * The markdown twin of one paper.
  *
  * PURE. No clock, no filesystem, no network: every input is passed in, so the
@@ -87,7 +112,7 @@ const line = (key, value) =>
  * regenerates all 36 and compares them byte for byte against what is on disk,
  * which is only a meaningful comparison because of that.
  *
- * @param {object} paper a record from app/data/publications.ts
+ * @param {TwinFacts} paper a record from app/data/publications.ts
  * @param {object} options
  * @param {string[] | null} options.pages extracted PDF text, one string per
  *   page, or null when this site does not host the PDF
@@ -115,7 +140,7 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
     ...line("id", paper.id),
     ...line("title", title),
     "authors:",
-    ...paper.authors.map((/** @type {string} */ name) => `  - ${yamlString(decodeEntities(name))}`),
+    ...paper.authors.map((name) => `  - ${yamlString(decodeEntities(name))}`),
     ...line("venue", paper.journal ? decodeEntities(paper.journal) : null),
     ...line("year", paper.year),
     ...line("date", paper.publishedDate),

@@ -9,14 +9,19 @@
  * Worker imports nothing from it any more.
  */
 
-import { recordsForPages, recordsForPosts } from "../../app/lib/search/records.mjs";
+import {
+  recordsForPages,
+  recordsForPapers,
+  recordsForPosts,
+} from "../../app/lib/search/records.mjs";
 
 /**
  * @param {any[]} posts already ordered and with cross-post data applied
  * @param {any[]} pages hand-authored page inputs, from `colophonPages()`
+ * @param {any[]} papers publication inputs, from `paperSearchInputs()`
  * @returns {string}
  */
-export function serializeArtifact(posts, pages) {
+export function serializeArtifact(posts, pages, papers) {
   /*
    * `pages` is REQUIRED, and the throw is the point.
    *
@@ -39,15 +44,35 @@ export function serializeArtifact(posts, pages) {
     );
   }
 
+  /*
+   * `papers` IS REQUIRED FOR THE SAME REASON, and it is required rather than
+   * defaulted to an empty array on purpose. A default is the exact failure the
+   * paragraph above describes, reintroduced: a caller that forgot it would
+   * produce an artifact missing 36 records, internally consistent, passing
+   * every shape check, and red on the next unrelated build.
+   */
+  if (!Array.isArray(papers)) {
+    throw new Error(
+      "serializeArtifact needs the publication inputs as its third argument. " +
+        "Pass paperSearchInputs(PUBLICATIONS); without them the artifact would " +
+        "silently omit every paper record.",
+    );
+  }
+
   // Records are derived here rather than stored per post so that adding a post
   // cannot leave another post's records stale. They are a pure function of the
-  // post list and the page inputs, so the gate compares them like everything
-  // else. Posts first, then pages, each internally sorted, so the order is
-  // stable across writers and `check:content` never fails on ordering alone.
+  // post list, the page inputs and the paper inputs, so the gate compares them
+  // like everything else. Posts, then pages, then papers, each internally
+  // sorted, so the order is stable across writers and `check:content` never
+  // fails on ordering alone.
   return `${JSON.stringify(
     {
       posts,
-      records: [...recordsForPosts(posts), ...recordsForPages(pages)],
+      records: [
+        ...recordsForPosts(posts),
+        ...recordsForPages(pages),
+        ...recordsForPapers(papers),
+      ],
     },
     null,
     2,

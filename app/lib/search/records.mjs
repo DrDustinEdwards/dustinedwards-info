@@ -349,3 +349,76 @@ export function recordsForPages(pages) {
     .sort((a, b) => String(a.uid).localeCompare(String(b.uid)))
     .flatMap((page) => recordsForPage(page));
 }
+
+/**
+ * Every search record for the publication corpus: ONE PER PAPER, no sections.
+ *
+ * ## WHY IT IS NOT `recordsForPage`
+ *
+ * That builder THROWS on a page with no sections, and it is right to: a page
+ * indexed without them loses every deep link, which is a wrong result rather
+ * than an empty one. A paper has no deep links to lose. Its page is one
+ * bibliographic record and one abstract under one heading, so the honest
+ * decomposition is one document, and three of the 36 have no abstract at all,
+ * which under the page builder would be an exception rather than a record.
+ *
+ * It lives HERE, beside the other two, because this module's rule is that there
+ * is not a second indexer. What lives outside it is how a paper's indexable
+ * text is assembled, exactly as `colophon-sections.mjs` owns the colophon's:
+ * this function must not learn the corpus's field names.
+ *
+ * ## `type: "page"`, WHICH IS NOT QUITE WHAT A PAPER IS
+ *
+ * `search_docs.type` is `'post' | 'page'`, enforced by a CHECK constraint in
+ * SQLite, so a third value is a table rebuild and a migration. A facet label is
+ * not worth one. `page` is the closer of the two: a paper page is a document
+ * this site serves that is not a blog post, which is what the value has always
+ * meant here. The reader still sees "page" beside a paper in the type facet,
+ * and that is the honest cost of not migrating.
+ *
+ * ## VISIBILITY
+ *
+ * `status: "published"` and `publishAt: null`, for the reason `recordsForPage`
+ * states and not as a shortcut: the predicate is
+ * `status = 'published' AND (publish_at IS NULL OR publish_at <= ?)`, so a null
+ * date is visible by design. A paper has no draft state and no schedule; it is
+ * published by being in the corpus, and inventing a date would put a fact in
+ * the index that is not true of the record.
+ *
+ * @param {Array<{ uid: string, url: string, title: string, body: string }>} papers
+ * @returns {Array<Record<string, any>>}
+ */
+export function recordsForPapers(papers) {
+  for (const paper of papers) {
+    // Fail closed. An empty body would index a title with nothing behind it,
+    // matching only its own words and reporting as a healthy record.
+    if (!paper.body || paper.body.trim().length === 0) {
+      throw new Error(
+        `paper ${paper.url} produced an empty search body. A record with no ` +
+          `text is not a small record, it is one that cannot be found by ` +
+          `anything except its own title.`,
+      );
+    }
+  }
+  return [...papers]
+    .sort((a, b) => String(a.uid).localeCompare(String(b.uid)))
+    .map((paper) => ({
+      uid: paper.uid,
+      url: paper.url,
+      type: "page",
+      title: paper.title,
+      body: paper.body,
+      // No tags, for the reason a page carries none: the tag facet is the blog's
+      // and a paper appearing under one would link to an archive that does not
+      // list it. Topics are the publication index's own filter and stay there.
+      tags: "",
+      docTags: "",
+      docUid: paper.uid,
+      docTitle: paper.title,
+      docUrl: paper.url,
+      anchor: null,
+      ordinal: 0,
+      status: "published",
+      publishAt: null,
+    }));
+}

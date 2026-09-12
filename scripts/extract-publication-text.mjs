@@ -87,7 +87,7 @@ async function main() {
     );
   }
 
-  /** @type {Record<string, unknown>} */
+  /** @type {Record<string, { id: string, sha256: string, pages: number, chars: number, text: string[] }>} */
   const papers = {};
 
   // Sorted by the casefolded DOI so the file's key order is a property of the

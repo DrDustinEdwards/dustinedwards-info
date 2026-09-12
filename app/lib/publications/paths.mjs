@@ -110,6 +110,38 @@ export function paperMarkdownPath(slug) {
 }
 
 /**
+ * The /search URL that asks this paper's question.
+ *
+ * ## IT IS A LINK, AND THAT IS THE PROGRESSIVE ENHANCEMENT
+ *
+ * Ask lives on /search, where the classic keyword results render first from the
+ * loader and the AI affordance is a nonced module script that unhides itself.
+ * So a paper page does not need a button of its own: it needs a link that
+ * arrives with the question already typed. Scripting off, the reader gets real
+ * keyword results for this paper; scripting on, the same page offers to ask.
+ * Rule 9's shape, with no second implementation of anything.
+ *
+ * ## THE QUESTION NAMES THE PAPER, BECAUSE `q` IS BOTH THINGS
+ *
+ * `/search?q=` is the keyword query AND the question Ask is given. "What does
+ * this paper find?" is a question with no subject: Ask retrieves over the whole
+ * site and cannot know which page the reader came from, and the keyword index
+ * would match "paper" and "find" across the blog.
+ *
+ * The title in double quotes serves both readings at once. `query.mjs` reads a
+ * quoted run as an exact phrase, which is the most precise keyword query
+ * available for a paper whose search record carries its title; and the model
+ * gets a question naming the work. No title in this corpus contains a quotation
+ * mark, and `check:publications` asserts that rather than trusting it, because
+ * one arriving would break the phrase for the classic index.
+ *
+ * @param {string} title DECODED, the way a reader sees it
+ */
+export function paperAskUrl(title) {
+  return `/search?q=${encodeURIComponent(`What does "${title}" find?`)}`;
+}
+
+/**
  * Where the PDF sits on disk, relative to the repository root.
  *
  * The one statement of the `public/` half. `build-publications.mjs` copies into

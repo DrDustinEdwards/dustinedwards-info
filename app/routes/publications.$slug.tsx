@@ -8,7 +8,13 @@ import { jsonLd } from "~/lib/json-ld.mjs";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { doiSlug, paperPath, paperPdfPath, PUBLICATIONS_PATH } from "~/lib/publications/paths.mjs";
+import {
+  doiSlug,
+  paperAskUrl,
+  paperPath,
+  paperPdfPath,
+  PUBLICATIONS_PATH,
+} from "~/lib/publications/paths.mjs";
 import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
 import citedByArtifact from "../../data/publications.cited-by.json";
 import { italicizeOrganisms } from "~/lib/scientific-names";
@@ -230,6 +236,14 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 pointed at one and a reader can see what they are getting. */}
             <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
             <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
+            {/* ASK, AS A LINK. The URL is built by `paperAskUrl`, which carries
+                the reasoning: /search renders keyword results from its loader
+                and mounts the Ask affordance as an enhancement, so a link with
+                the question already in `q` works both with scripting and
+                without it, and nothing here is a second implementation of Ask.
+                check:publications exercises that function over every record and
+                asserts this route calls it. */}
+            <a href={paperAskUrl(decodeEntities(paper.title))}>Ask about this paper</a>
           </p>
 
           {/* The count, LABELLED with its source and the date it was read.

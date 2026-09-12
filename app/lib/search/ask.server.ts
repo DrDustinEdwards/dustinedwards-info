@@ -25,6 +25,12 @@ import {
 import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
+import { PUBLICATIONS } from "~/data/publications";
+import {
+  doiSlug,
+  paperMarkdownPath,
+  paperPath,
+} from "~/lib/publications/paths.mjs";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 /*
@@ -353,6 +359,25 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
     keys.push(key);
   }
 
+  /*
+   * THE PAPERS, FROM THEIR TWINS RATHER THAN FROM `search_docs`.
+   *
+   * The records above are posts: `askCorpusRecords` scopes to `type = 'post'`,
+   * so the 36 paper records in `search_docs` never reach the loop. That is not
+   * an oversight being worked around here, it is the split ruling 63 draws.
+   *
+   * The paper record in `search_docs` carries the abstract, which is what
+   * keyword search should match and snippet. What Ask should retrieve over is
+   * the PAPER, and the twin is the document that has it: the record, the
+   * abstract and the extracted text of the PDF, which is 1.13 MB across the
+   * corpus and has no business in an FTS5 index that shows the line it matched.
+   *
+   * Uploading both would put two documents about one paper in the retrieval
+   * index, and the shorter one would sometimes win a question the full text
+   * answers better.
+   */
+  for (const key of await uploadPaperTwins(env)) keys.push(key);
+
   // The corpus just changed, so every cached answer was written against content
   // that may no longer be true. Dropping them here is what stops a stale answer
   // outliving the post it was drawn from. It happens on publish, which is the
@@ -363,6 +388,70 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   await dropCachedDrift(env);
 
   return { uploaded: keys.length, keys, cacheDropped: dropped };
+}
+
+/**
+ * Every paper's Ask item key, derived from the committed corpus.
+ *
+ * FROM THE MODULE, NOT FROM D1, and the reason is hard rule 1 rather than
+ * convenience. Every `search_docs` reader has to compose `visibilityClause`
+ * (check:invariants section 8 binds them), and composing it here would be
+ * asking a visibility question about a corpus that has no visibility: a paper
+ * is committed data, published by existing, with no draft state and no
+ * schedule. Reading the module instead adds no reader to that surface and
+ * points the index at the repository, which is the direction rule 18 requires.
+ */
+function paperItemKeys(): string[] {
+  return PUBLICATIONS.map((paper) => keyForUrl(paperPath(doiSlug(paper.doi))));
+}
+
+/**
+ * Uploads every paper's markdown twin, and returns the keys it wrote.
+ *
+ * ## THE TWIN IS FETCHED THROUGH `ASSETS`, WHICH LOOKS INDIRECT AND IS NOT
+ *
+ * The twins are static assets, generated at build and gitignored, precisely so
+ * that 1.13 MB of extracted PDF text stays out of the Worker bundle (the trade
+ * is argued in full on `twin.mjs`). A Worker cannot read a file from its own
+ * bundle that is not imported into it, so the way to the bytes is the assets
+ * binding, and the binding has exactly one method: `fetch`.
+ *
+ * That has a property worth having anyway. What gets indexed is the document
+ * the site actually serves at that URL, on this deployment, rather than a
+ * second copy assembled from the same inputs. Hard rule 7's shape: the live
+ * claim is verified on the live path.
+ *
+ * The origin in the URL is arbitrary and never leaves the isolate; the assets
+ * binding routes on the path.
+ *
+ * ## A MISSING TWIN IS REPORTED, NOT INVENTED
+ *
+ * If the build step did not run, the fetch answers 404 and this uploads
+ * nothing for that paper rather than an empty document. The key is still
+ * returned, for the reason a failed upload still joins `live` in `syncAskPost`:
+ * the caller's prune deletes every key it is not given, so omitting it would
+ * turn a missing build into a DELETION of the copy already in the index.
+ */
+async function uploadPaperTwins(env: Env): Promise<string[]> {
+  const keys: string[] = [];
+  for (const paper of PUBLICATIONS) {
+    const slug = doiSlug(paper.doi);
+    const key = keyForUrl(paperPath(slug));
+    keys.push(key);
+    const url = new URL(paperMarkdownPath(slug), "https://assets.invalid");
+    const response = await env.ASSETS.fetch(new Request(url));
+    if (!response.ok) {
+      console.error("ask twin fetch failed", paperMarkdownPath(slug), response.status);
+      continue;
+    }
+    const body = await response.text();
+    try {
+      await env.AI_SEARCH.items.upload(key, body);
+    } catch (error) {
+      console.error("ask twin upload failed", key, error);
+    }
+  }
+  return keys;
 }
 
 /**
@@ -531,7 +620,18 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
     askExpectedUrls(env),
     listAllAskItems(env, timings),
   ]);
-  const expected = new Set(expectedUrls.map((u) => keyForUrl(u)));
+  /*
+   * THE PAPERS ARE PART OF WHAT THE INDEX SHOULD HOLD, so they are part of what
+   * is expected. `askExpectedUrls` is `type = 'post'` and stays that way: the
+   * paper half of the index is the twins, which are uploaded from the committed
+   * corpus rather than from `search_docs`, and the same list is what says they
+   * should be there.
+   *
+   * Without this the badge would report 36 permanently stale items and the
+   * repair button would delete them, which is the failure the page-record
+   * exclusion note in `askExpectedUrls` already describes for pages.
+   */
+  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperItemKeys()]);
   const present = new Set(listed.map((item) => item.key));
 
   return {
