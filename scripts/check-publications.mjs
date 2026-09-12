@@ -49,22 +49,31 @@ let checks = 0;
 const failures = [];
 
 /**
- * `assertThat(condition, label, detail)`.
+ * `assertThat(ok, label, detail)`, the condition FIRST.
  *
- * The argument order is deliberately NOT `check-urls`' `assert(label, ok)` or
- * `check-search`'s `ok(label, condition)`. Three shapes coexist across the
- * gates on purpose, so a call copied from one gate into another is a
- * ReferenceError rather than a silent pass with the label sitting in the
- * condition slot, truthy, incrementing the count. Hard rule 10's "one helper
- * name, one argument order", which `check:invariants` section 17 enforces.
+ * ## THE PARAMETER IS NAMED `ok` BECAUSE FIVE OTHER GATES NAME IT `ok`
  *
- * @param {boolean} condition
+ * Three reporter shapes coexist across the gates on purpose, so a call copied
+ * from one gate into another is a ReferenceError rather than a silent pass with
+ * the label sitting in the condition slot, truthy, incrementing the count:
+ * `assert(label, ok)` in check-urls, `ok(label, condition)` in check-search,
+ * and `assertThat(ok, label)` here and in five others.
+ *
+ * This was written as `assertThat(condition, ...)`, which is the SAME ORDER and
+ * still failed `check:invariants` section 17, correctly. That gate compares the
+ * first parameter's NAME across every definition of a given helper name,
+ * because a name is all a static scan can compare: it cannot know that
+ * `condition` and `ok` mean the same thing, and the day they do not mean the
+ * same thing is the day the gate has to be able to say so. Two spellings of one
+ * helper is the drift it refuses, whether or not this instance was harmless.
+ *
+ * @param {boolean} ok
  * @param {string} label
  * @param {string} [detail]
  */
-function assertThat(condition, label, detail = "") {
+function assertThat(ok, label, detail = "") {
   checks += 1;
-  if (condition) {
+  if (ok) {
     console.log(`  ok    ${label}`);
     return;
   }
