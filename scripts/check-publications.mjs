@@ -35,6 +35,7 @@
  * would have passed with an undeclared topic in the file.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -246,6 +247,124 @@ assertThat(
   emptyPdfs.length === 0,
   "no hosted PDF is a zero-byte file",
   emptyPdfs.length ? `empty: ${emptyPdfs.join(", ")}` : "",
+);
+
+/* -------------------------------------------- the extracted text, and its bytes */
+
+/*
+ * THE TEXT ARTIFACT IS BOUND TO THE PDF IT CAME FROM BY HASH.
+ *
+ * `data/publications.text.json` is committed rather than built, because
+ * extracting it parses 27 MB of PDF (the grounds are on
+ * scripts/extract-publication-text.mjs). A committed derivative of a committed
+ * binary can go stale in exactly one way: the binary is replaced and nothing
+ * re-runs the extractor. So the assertion is not "the file exists" but "the
+ * bytes it claims to describe are the bytes on disk", which is the only form
+ * that can see that happen.
+ *
+ * This is also what makes the markdown twins gateable at all. The twin carries
+ * this text, `check:publications` regenerates the twins and compares them byte
+ * for byte, and that comparison is only worth anything if the text underneath
+ * it is known to belong to the PDF the page links to.
+ */
+const TEXT_PATH = join(root, "data", "publications.text.json");
+assertThat(
+  existsSync(TEXT_PATH),
+  "data/publications.text.json exists",
+  "run node scripts/extract-publication-text.mjs; every assertion below reads it",
+);
+
+const extracted = existsSync(TEXT_PATH)
+  ? JSON.parse(readFileSync(TEXT_PATH, "utf8"))
+  : { papers: {} };
+const extractedPapers = extracted.papers ?? {};
+const extractedKeys = new Set(Object.keys(extractedPapers).map((d) => doiKey(d)));
+
+assertThat(
+  Object.keys(extractedPapers).length > 0,
+  `the extracted-text artifact is non-empty (${Object.keys(extractedPapers).length} PDFs)`,
+  "an empty artifact would make every sweep below vacuous",
+);
+
+/* One entry per hosted record, and no entry for anything else. Both directions:
+ * a hosted PDF with no text is a twin that silently loses its full text, and an
+ * entry for a record that is no longer hosted is text this site no longer
+ * serves the source of. */
+const untexted = hosted.filter(([doi]) => !extractedKeys.has(doiKey(doi))).map(([doi]) => doi);
+assertThat(
+  untexted.length === 0,
+  `every hosted PDF has extracted text (${hosted.length} hosted)`,
+  untexted.length ? `no text for: ${untexted.join(", ")}` : "",
+);
+
+const hostedKeys = new Set(hosted.map(([doi]) => doiKey(doi)));
+const orphanText = [...extractedKeys].filter((key) => !hostedKeys.has(key));
+assertThat(
+  orphanText.length === 0,
+  "the extracted-text artifact carries no entry this site does not host",
+  orphanText.length ? `orphaned: ${orphanText.join(", ")}` : "",
+);
+
+/*
+ * THE HASH COMPARISON, which is the one that can actually go red.
+ *
+ * Read as BYTES and hashed, never compared by size or mtime: a re-exported PDF
+ * of the same length is the case that would slip through, and it is the likely
+ * one, because these files are replaced by re-running the pipeline rather than
+ * by hand.
+ */
+const staleText = [];
+for (const [doi, fields] of hosted) {
+  const entry = extractedPapers[doi] ?? extractedPapers[doiKey(doi)];
+  if (!entry) continue;
+  const diskPath = join(root, "public", fields.pdfPath.replace(/^\//, ""));
+  if (!existsSync(diskPath)) continue;
+  const sha = createHash("sha256").update(readFileSync(diskPath)).digest("hex");
+  if (sha !== entry.sha256) staleText.push(`${doi} (pdf ${sha.slice(0, 12)}, text says ${String(entry.sha256).slice(0, 12)})`);
+}
+assertThat(
+  staleText.length === 0,
+  "every extracted text matches the sha256 of the PDF on disk",
+  staleText.length
+    ? `re-run scripts/extract-publication-text.mjs. Stale: ${staleText.join("; ")}`
+    : "",
+);
+
+/*
+ * The entry is INTERNALLY consistent: the page count matches the array it
+ * carries and the char count matches the text. Cheap, and it is what catches a
+ * hand-edit of this file, which is the other way a derived artifact goes wrong.
+ */
+const inconsistentText = Object.entries(extractedPapers)
+  .filter(([, entry]) => {
+    const pages = Array.isArray(entry.text) ? entry.text : [];
+    const chars = pages.reduce((sum, page) => sum + String(page).length, 0);
+    return pages.length !== entry.pages || chars !== entry.chars;
+  })
+  .map(([doi]) => doi);
+assertThat(
+  inconsistentText.length === 0,
+  "every extracted entry's page and character counts match its own text",
+  inconsistentText.length ? `inconsistent: ${inconsistentText.join(", ")}` : "",
+);
+
+/*
+ * NO SILENTLY EMPTY EXTRACTION. A scanned PDF with no text layer extracts to
+ * nothing, the twin would carry a heading with no body under it, and every
+ * assertion above would still pass. The threshold is deliberately low: it is
+ * looking for a failed extraction, not judging length. Measured across this
+ * corpus the smallest real one is 7,976 characters.
+ */
+const emptyText = Object.entries(extractedPapers)
+  .filter(([, entry]) => (entry.chars ?? 0) < 500)
+  .map(([doi, entry]) => `${doi} (${entry.chars})`);
+assertThat(
+  emptyText.length === 0,
+  "no extracted text is empty or near-empty",
+  emptyText.length
+    ? `extraction produced almost nothing for: ${emptyText.join(", ")}. ` +
+        "A scanned PDF with no text layer looks exactly like this."
+    : "",
 );
 
 /*
@@ -1089,8 +1208,10 @@ assertThat(
  * and never-checked, on exactly the four closed records where the difference
  * decides whether a hosting decision was made or merely inherited. The pipeline
  * now writes `none-deposited` and null means one thing.
+ *
+ * 69 with the extracted-text artifact's assertions, from a run.
  */
-const MINIMUM_CHECKS = 62;
+const MINIMUM_CHECKS = 69;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);
