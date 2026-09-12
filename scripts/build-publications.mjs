@@ -271,6 +271,37 @@ export type Publication = {
    * house dash rule; it cannot enforce that the sentence is any good.
    */
   summary: string | null;
+  /**
+   * A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN, or null.
+   *
+   * Null on every record, and measured rather than assumed: no \`updated-by\`
+   * and no \`relation\` on any of the 34 Crossref DOIs, read 2026-09-12. The
+   * field exists so that the day one arrives is a data change and not a code
+   * change, which is the day nobody wants to be writing this. \`doi\` is the
+   * NOTICE's DOI: a paper carries \`updated-by\` pointing at the notice, and
+   * the notice carries \`update-to\` pointing back.
+   *
+   * The shape and the sentence belong to \`app/lib/publications/update-notice.mjs\`,
+   * which \`check:publications\` validates every record through and
+   * \`test/publication-update-notice.test.mjs\` drives with a real retracted DOI.
+   */
+  updateNotice: {
+    type: "retraction" | "correction" | "expression-of-concern";
+    doi: string;
+    date: string | null;
+  } | null;
+  /**
+   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own
+   * data-availability statement and from nowhere else.
+   *
+   * Empty on every record whose journal requires no such statement. A bare
+   * accession regex over a PDF returns the COMPARISON organisms' deposits, which
+   * is a wrong citation rather than a missing one: the grounds, and the three
+   * measured cases, are on \`app/lib/publications/accessions.mjs\`.
+   * \`check:publications\` reconciles this against the extracted text in both
+   * directions.
+   */
+  accessions: { kind: string; id: string }[];
   selected: boolean;
   abstract: string | null;
 };
@@ -392,6 +423,17 @@ export function generate() {
     lines.push(`    license: ${str(r.license)},`);
     lines.push(`    licenseSource: ${str(r.licenseSource)},`);
     lines.push(`    summary: ${str(r.summary)},`);
+    /*
+     * EMITTED AS JSON, not field by field, because it is a small closed record
+     * and a per-field emitter here would be a second statement of the shape
+     * that update-notice.mjs owns. JSON string syntax is valid TS.
+     */
+    lines.push(
+      `    updateNotice: ${r.updateNotice ? JSON.stringify(r.updateNotice) : "null"},`,
+    );
+    lines.push(
+      `    accessions: ${r.accessions ? JSON.stringify(r.accessions) : "[]"},`,
+    );
     lines.push(`    selected: ${r.selected ? "true" : "false"},`);
     lines.push(`    abstract: ${str(r.abstract)},`);
     lines.push("  },");

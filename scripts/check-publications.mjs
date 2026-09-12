@@ -50,6 +50,8 @@ import {
   paperPdfPath,
 } from "../app/lib/publications/paths.mjs";
 import { decodeEntities } from "../app/lib/publications/entities.mjs";
+import { accessionUrl, accessionsInText } from "../app/lib/publications/accessions.mjs";
+import { updateNoticeProblem } from "../app/lib/publications/update-notice.mjs";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { recordsForPapers } from "../app/lib/search/records.mjs";
 import { keyForUrl, urlForKey } from "../app/lib/search/ask-keys.mjs";
@@ -1543,6 +1545,137 @@ assertThat(
   );
 }
 
+/* ------------------------------------ retractions, corrections, versions */
+
+/*
+ * THE DARK PATH IS ASSERTED DARK, WITH THE COUNT BESIDE IT.
+ *
+ * No record carries a retraction or correction, and that is a measurement
+ * rather than an assumption: the same sweep found no `updated-by` and no
+ * `relation` on any of the 34 Crossref DOIs. A bare "none of them" from a scan
+ * that read nothing looks exactly like this, which is why the count of records
+ * READ is printed in the label. The other half of the proof is
+ * `test/publication-update-notice.test.mjs`, which drives the render path with
+ * a real retracted DOI, because a path with no data behind it is a path nothing
+ * exercises.
+ */
+{
+  const noticed = PUBLICATIONS.filter((p) => p.updateNotice);
+  assertThat(
+    noticed.length === 0,
+    `no record carries a retraction or correction (${PUBLICATIONS.length} read)`,
+    noticed.length
+      ? `notices on: ${noticed.map((p) => `${p.id} (${p.updateNotice?.type})`).join(", ")}`
+      : "",
+  );
+
+  /*
+   * AND EVERY ONE THAT DOES IS USABLE. Vacuous today by construction, which is
+   * the point of pairing it with the count above: the day a notice arrives,
+   * this is what refuses a malformed one before it renders
+   * `https://doi.org/undefined` on the most serious sentence this site prints.
+   */
+  const malformed = PUBLICATIONS.map((p) => ({
+    id: p.id,
+    problem: updateNoticeProblem(p.updateNotice),
+  })).filter(({ problem }) => problem !== null);
+  assertThat(
+    malformed.length === 0,
+    "every update notice present is well formed",
+    malformed.map((m) => `${m.id}: ${m.problem}`).join("; "),
+  );
+
+  const routeSource = readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assertThat(
+    /updateNoticeText\(/.test(routeSource),
+    "the paper page renders the notice through updateNoticeText",
+    "a sentence written into the route would be a second owner of what a " +
+      "retraction says, on the one page where that has to be right",
+  );
+}
+
+/* --------------------------------------------- accessions, from the PDFs */
+
+/*
+ * THE CURATED ACCESSIONS ARE THE ONES THE DATA-AVAILABILITY STATEMENT NAMES.
+ *
+ * Ruling 63 asked for GenBank accessions and the first attempt was refuted: the
+ * accessions are in the PDFs rather than the abstracts, and a plain regex over
+ * a PDF pulls in the COMPARISON phages' accessions. Godfather's paper yields
+ * seven that way, one of which is its own; the 2022 REV announcement names the
+ * previous isolate's DQ387450 in its introduction, which is another paper's
+ * deposit for another outbreak.
+ *
+ * The context anchor is the data-availability statement, which is where a
+ * journal requires the authors to name what THIS work deposited.
+ * `accessions.mjs` owns that reading, and both directions are reconciled here:
+ * an accession in the text and not in the corpus is a deposit the site does not
+ * link, and one in the corpus that the statement does not name is a claim the
+ * PDF does not support.
+ */
+{
+  const derived = new Map();
+  for (const [doi, entry] of Object.entries(extractedPapers)) {
+    const found = accessionsInText(entry.text ?? []);
+    if (found.length > 0) derived.set(doiKey(doi), found);
+  }
+
+  assertThat(
+    derived.size > 0,
+    `the data-availability sweep found accessions (${derived.size} papers)`,
+    "a zero here would make both directions below vacuous",
+  );
+
+  const curated = new Map(
+    siteEntries
+      .filter(([, f]) => Array.isArray(f.accessions) && f.accessions.length > 0)
+      .map(([doi, f]) => [doiKey(doi), f.accessions]),
+  );
+
+  const flat = (/** @type {any[]} */ list) =>
+    list.map((a) => `${a.kind}:${a.id}`).sort().join(",");
+
+  const unrecorded = [...derived.entries()]
+    .filter(([key, found]) => flat(curated.get(key) ?? []) !== flat(found))
+    .map(([key]) => key);
+  assertThat(
+    unrecorded.length === 0,
+    `every accession the PDFs name is in the corpus (${derived.size} papers with one)`,
+    unrecorded.length
+      ? unrecorded
+          .map(
+            (key) =>
+              `${key}: text says ${flat(derived.get(key) ?? [])}, corpus says ${flat(curated.get(key) ?? [])}`,
+          )
+          .join("; ")
+      : "",
+  );
+
+  const unsupported = [...curated.keys()].filter((key) => !derived.has(key));
+  assertThat(
+    unsupported.length === 0,
+    "no record claims an accession its PDF does not name",
+    unsupported.length ? `unsupported: ${unsupported.join(", ")}` : "",
+  );
+
+  /*
+   * THE LINK RESOLVES TO THE RIGHT REGISTRY. An SRA run number under a nuccore
+   * URL is a 404 that looks like a working link, and the two id grammars are
+   * close enough that a single URL builder would be the obvious mistake.
+   */
+  const badLinks = [...curated.values()]
+    .flat()
+    .map((a) => ({ a, url: accessionUrl(a) }))
+    .filter(({ a, url }) => !url.startsWith("https://www.ncbi.nlm.nih.gov/") || !url.endsWith(a.id));
+  assertThat(
+    badLinks.length === 0,
+    `every accession builds an NCBI URL ending in its own id (${[...curated.values()].flat().length} accessions)`,
+    badLinks.map(({ a, url }) => `${a.kind}:${a.id} -> ${url}`).join("; "),
+  );
+}
+
 /* ----------------------------------------------------------------------- done */
 
 /*
@@ -1568,13 +1701,21 @@ assertThat(
  * decides whether a hosting decision was made or merely inherited. The pipeline
  * now writes `none-deposited` and null means one thing.
  *
- * 69 with the extracted-text artifact's assertions, 78 with the markdown twins
- * and 89 with the search, MCP and Ask wiring, every number from a run. The twin
- * block's llms.txt reconciliation is the one that has to be read in both
- * directions to mean anything: a twin nothing advertises and a URL with no twin
- * behind it are different failures and neither is visible from the other side.
+ * 69 with the extracted-text artifact's assertions, 78 with the markdown twins,
+ * 89 with the search, MCP and Ask wiring and 96 with the retraction path and
+ * the accessions. Every number from a run. The twin block's llms.txt
+ * reconciliation is the one that has to be read in both directions to mean
+ * anything: a twin nothing advertises and a URL with no twin behind it are
+ * different failures and neither is visible from the other side.
+ *
+ * The accession block earned its place the way the rights block did. Its plant,
+ * which removes the data-availability anchor and sweeps the whole paper, reds
+ * 18 papers instead of 12 and reproduces every refuted case by name: Godfather
+ * gains its six comparison phages, the 2022 REV announcement gains the previous
+ * outbreak's DQ387450, and Tripl3t gains Wheeler's NC_022070. Each would have
+ * been published here as the data behind a paper it has nothing to do with.
  */
-const MINIMUM_CHECKS = 89;
+const MINIMUM_CHECKS = 96;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

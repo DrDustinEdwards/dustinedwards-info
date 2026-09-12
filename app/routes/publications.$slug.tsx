@@ -7,7 +7,9 @@ import { getCitationCounts } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
+import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { updateNoticeText } from "~/lib/publications/update-notice.mjs";
 import {
   doiSlug,
   paperAskUrl,
@@ -300,6 +302,30 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {/*
+            A RETRACTION OR CORRECTION, ABOVE EVERYTHING IT APPLIES TO.
+
+            Above the plain-language line, the abstract and the PDF link,
+            because a reader who stops after the first paragraph must not stop
+            before this one. Rendered only when the record carries a notice, and
+            no record does today: the field is dark on purpose, and
+            `update-notice.mjs` carries the reason for building a dark path
+            cold rather than on the day it is needed.
+
+            `role="status"` rather than `alert`: an alert interrupts a screen
+            reader mid-sentence, and this is part of the document rather than
+            something that just happened. The link goes to the NOTICE, which has
+            its own DOI and its own authors, and not to the paper's landing
+            page.
+          */}
+          {paper.updateNotice ? (
+            <aside className="paper-update-notice" role="status">
+              <strong>{updateNoticeText(paper.updateNotice).label}.</strong>{" "}
+              {updateNoticeText(paper.updateNotice).sentence}{" "}
+              <a href={updateNoticeText(paper.updateNotice).url}>Read the notice</a>
+            </aside>
+          ) : null}
+
+          {/*
             THE PLAIN-LANGUAGE LINE, ABOVE THE ABSTRACT.
 
             Above rather than below, because it is for the reader who will not
@@ -323,6 +349,34 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             <section className="paper-abstract" aria-labelledby="abstract-heading">
               <h2 id="abstract-heading">Abstract</h2>
               <p>{italicizeOrganisms(decodeEntities(paper.abstract))}</p>
+            </section>
+          ) : null}
+
+          {/*
+            THE DATA BEHIND THE PAPER, under the abstract rather than in the
+            link row above it.
+
+            The link row is where a reader goes to READ the paper; this is where
+            they go to check it, which is a different errand and belongs after
+            the abstract has said what there is to check. Rendered only for the
+            papers whose journal made the authors say what they deposited, which
+            is the twelve announcements.
+
+            Each accession is labelled with its registry and links there
+            directly. `accessionUrl` refuses a kind it has no registry for
+            rather than guessing one, because an SRA run under a nuccore URL is
+            a 404 that looks like a working link.
+          */}
+          {paper.accessions.length > 0 ? (
+            <section className="paper-data" aria-labelledby="data-heading">
+              <h2 id="data-heading">Data</h2>
+              <p className="pub-links">
+                {paper.accessions.map((accession) => (
+                  <a key={accession.id} href={accessionUrl(accession)}>
+                    {accessionLabel(accession.kind)} {accession.id}
+                  </a>
+                ))}
+              </p>
             </section>
           ) : null}
 

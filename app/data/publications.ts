@@ -87,6 +87,37 @@ export type Publication = {
    * house dash rule; it cannot enforce that the sentence is any good.
    */
   summary: string | null;
+  /**
+   * A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN, or null.
+   *
+   * Null on every record, and measured rather than assumed: no `updated-by`
+   * and no `relation` on any of the 34 Crossref DOIs, read 2026-09-12. The
+   * field exists so that the day one arrives is a data change and not a code
+   * change, which is the day nobody wants to be writing this. `doi` is the
+   * NOTICE's DOI: a paper carries `updated-by` pointing at the notice, and
+   * the notice carries `update-to` pointing back.
+   *
+   * The shape and the sentence belong to `app/lib/publications/update-notice.mjs`,
+   * which `check:publications` validates every record through and
+   * `test/publication-update-notice.test.mjs` drives with a real retracted DOI.
+   */
+  updateNotice: {
+    type: "retraction" | "correction" | "expression-of-concern";
+    doi: string;
+    date: string | null;
+  } | null;
+  /**
+   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own
+   * data-availability statement and from nowhere else.
+   *
+   * Empty on every record whose journal requires no such statement. A bare
+   * accession regex over a PDF returns the COMPARISON organisms' deposits, which
+   * is a wrong citation rather than a missing one: the grounds, and the three
+   * measured cases, are on `app/lib/publications/accessions.mjs`.
+   * `check:publications` reconciles this against the extracted text in both
+   * directions.
+   */
+  accessions: { kind: string; id: string }[];
   selected: boolean;
   abstract: string | null;
 };
@@ -142,6 +173,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by-nc-nd",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Traditional undergraduate science courses often prioritize content mastery over authentic engagement with the scientific process. Course-based research, also referred to as course-based undergraduate research experiences (CUREs), addresses this limitation by immersing students in authentic scientific practice. In course-based research, assessment practices can also mirror the authentic scientific practice, where extensive formative feedback supports refinement of skills and understanding. Here, we present two rubrics designed to support the teaching and assessment of science communication in a way that reflects how scientists prepare to disseminate their research findings. One rubric is for creating scientific posters and another for writing short-format manuscripts. Developed by approximately 100 faculty members who collaboratively implement CUREs through the Howard Hughes Medical Institute (HHMI) Science Education Alliance (SEA) program, these rubrics outline the authentic steps scientists take when preparing to communicate their research and provide performance levels that clarify expectations for both students and instructors. Together, these tools aim to further align undergraduate science education and authentic scientific practice.",
   },
@@ -171,6 +204,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Objective: The purpose of this study was to examine the factors associated with vaccine compliance and the effectiveness of short-term video interventions on COVID-19 vaccine perceptions among students attending a state university located in rural Texas. Participants: A total of 298 students participated in an online survey. Methods: Students completed the COVID-19 Vaccine Acceptance Scale (COVID-VAC) and Perceptions of Vaccines Scale before and after watching one of three videos (neutral, educational, or disease effects). Results: Differences in vaccination status were observed for ethnicity and political leanings ( p p > 0.05). Conclusions: Short-term video interventions were ineffective in altering vaccine perceptions and improving acceptance of the COVID-19 vaccine in our study population. Impact of the type and duration of educational videos should be explored by future studies to combat vaccine hesitancy in future population-based studies.",
   },
@@ -200,6 +235,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"PP725414"},{"kind":"sra","id":"SRX24892095"}],
     selected: false,
     abstract: "Microbacteriophage Godfather was collected from a soil sample in Stephenville, Texas. The 17,452-bp double-stranded genome contains 24 protein-coding genes. The genome shares &gt;99% nucleotide sequence identity with cluster EE microbacteriophages Scamander, Danno, Kojax4, and Burgy.",
   },
@@ -229,6 +266,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Antibiotic resistance presents a global threat, making the swift development of alternative treatments essential. Phage therapy, which employs bacterial viruses that specifically target bacteria, shows promise. Although this method has been utilized for over a century, primarily in Eastern Europe, its use in the US remains limited. This study aimed to assess the awareness and willingness of US healthcare providers to adopt phage therapy in response to the growing issue of antibiotic resistance. A survey of 196 healthcare providers, primarily MDs and DOs, found that while 99% were aware of antimicrobial resistance, only 49% were knowledgeable about phage therapy as a treatment for resistant bacterial infections. Nonetheless, 56% were open to considering phage therapy, and this willingness was associated with prior knowledge, concerns about antibiotic resistance, previous training, and confidence in recommending it (p &lt; 0.05). Our study of U.S. healthcare providers revealed key findings about their views on phage therapy as a potential alternative for treating bacterial infections. Credible information is essential to promoting phage therapy use among U.S. providers via educational initiatives, clinical guidance, and research dissemination to promote phage therapy use among U.S. providers. Evidence-based education and clinical guidance help providers make sound decisions on the appropriate and safe use of phage therapy.",
   },
@@ -258,6 +297,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Over the last two decades, there have been numerous initiatives to improve undergraduate student outcomes in STEM. One model for scalable reform is the inclusive Research Education Community (iREC). In an iREC, STEM faculty from colleges and universities across the nation are supported to adopt and sustainably implement course-based research – a form of science pedagogy that enhances student learning and persistence in science. In this study, we used pathway modeling to develop a qualitative description that explicates the HHMI Science Education Alliance (SEA) iREC as a model for facilitating the successful adoption and continued advancement of new curricular content and pedagogy. In particular, outcomes that faculty realize through their participation in the SEA iREC were identified, organized by time, and functionally linked. The resulting pathway model was then revised and refined based on several rounds of feedback from over 100 faculty members in the SEA iREC who participated in the study. Our results show that in an iREC, STEM faculty organized as a long-standing community of practice leverage one another, outside expertise, and data to adopt, implement, and iteratively advance their pedagogy. The opportunity to collaborate in this manner and, additionally, to be recognized for pedagogical contributions sustainably engages STEM faculty in the advancement of their pedagogy. Here, we present a detailed pathway model of SEA that, together with underpinning features of an iREC identified in this study, offers a framework to facilitate transformations in undergraduate science education.",
   },
@@ -287,6 +328,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "The professional identity of scientists has historically been cultivated to value research over teaching, which can undermine initiatives that aim to reform science education. Course-Based Research Experiences (CRE) and the inclusive Research and Education Communities (iREC) are two successful and impactful reform efforts that integrate research and teaching. The aim of this study is to explicate the professional identity of instructors who implement a CRE within an established iREC and to explore how this identity contributes to the success of these programs. 97 CRE instructors from the Science Education Alliance (SEA) iREC participated in a 2-year, multi-stage, qualitative research project that involved weekly reflective journaling, autoethnographic description, small group evaluation and writing, and large-scale community checking. The resulting description of professional identity consisted of shared values (inclusivity, student success, community membership, ownership/agency, science, overcoming failure, and persistence), specified roles (mentor, advocate, scientist, educator, motivator, collaborator, community builder, learner, evaluator and project manager) and a stated sense of self (dedicated, resilient, pride in students, multiskilled, valued, community member, responsible and overworked). Analysis of individual reflective diary entries revealed how a professional identity underpinned and facilitated the ways in which faculty addressed challenges that arose and worked toward the success of every student. It is the self-concept of the professional identity of the instructor in the context of the CRE classroom that directed the extended commitment and effort that these instructors evidently put into their work with students, which facilitated student engagement, student persistence, and their collective scientific output. The study concludes that a professional identity of STEM faculty in the context of a CRE and iREC combines being a researcher and educator, and that this integrated identity is central for current initiatives aimed at transforming undergraduate STEM education.",
   },
@@ -316,6 +359,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "This resources provides a framework for students to write a Microbiology Resource Announcement, collaboratively.",
   },
@@ -345,6 +390,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"OR159662"},{"kind":"sra","id":"SRX21368075"}],
     selected: false,
     abstract: "Arthrobacteriophage MrAaronian contains a 54,509 bp DNA genome with 87 predicted protein-coding genes. MrAaronian has siphovirus morphology and was collected from a flowerbed soil sample in Poughkeepsie, NY, and isolated on an Arthrobacter globiformis B-2979 culture. MrAaronian has &gt; 99% nucleotide identity with cluster AW arthrobacteriophages Michelle, Stayer, Sloopyjoe, and StarLord.",
   },
@@ -374,6 +421,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Course-based research pedagogy involves positioning students as contributors to authentic research projects as part of an engaging educational experience that promotes their learning and persistence in science. To develop a model for assessing and grading students engaged in this type of learning experience, the assessment aims and practices of a community of experienced course-based research instructors were collected and analyzed. This approach defines four aims of course-based research assessment—(1) Assessing Laboratory Work and Scientific Thinking; (2) Evaluating Mastery of Concepts, Quantitative Thinking and Skills; (3) Appraising Forms of Scientific Communication; and (4) Metacognition of Learning—along with a set of practices for each aim. These aims and practices of assessment were then integrated with previously developed models of course-based research instruction to reveal an assessment program in which instructors provide extensive feedback to support productive student engagement in research while grading those aspects of research that are necessary for the student to succeed. Assessment conducted in this way delicately balances the need to facilitate students’ ongoing research with the requirement of a final grade without undercutting the important aims of a CRE education.",
   },
@@ -403,6 +452,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MW924638"},{"kind":"sra","id":"SRX11067172"}],
     selected: false,
     abstract: "Microbacteriophage Fizzles has a 62,078-bp linear double-stranded DNA genome sequence, predicted to contain 104 protein-coding genes. Fizzles is a Siphoviridae actinobacteriophage isolated from an ant hill soil sample collected in Stephenville, TX. Microbacteriophage Fizzles has &gt;83.6% nucleotide identity with microbacteriophages Squash and Nike.",
   },
@@ -432,6 +483,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"ON260814"},{"kind":"sra","id":"SRX14483214"}],
     selected: false,
     abstract: "Microbacteriophage Loca was extracted from a shopping cart handle swab sample in Stephenville, TX, and isolated on a Microbacterium foliorum NRRL-24224 culture. The 17,475-bp double-stranded DNA genome contains 25 predicted protein-coding genes and has &gt;96% nucleotide identity to bacteriophages Quaker and Livingwater.",
   },
@@ -461,6 +514,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"OL857287"},{"kind":"sra","id":"SRX11820217"}],
     selected: false,
     abstract: "We report the genome sequence of a nearly intact reticuloendotheliosis virus (REV) insertion within a field strain of fowlpox virus from a Rio Grande wild turkey in Gillespie County, TX. The proviral REV genome comprises 7,943 bp and contains partial long terminal repeats.",
   },
@@ -490,6 +545,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by-nc-sa",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "A report on research that explicates three models of pedagogical practice that underpin and characterize inquiry instruction in a course-based research experience.",
   },
@@ -519,6 +576,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV) are avian retroviruses that can cause neoplastic disease and present with similar pathologies. Lymphoproliferative disease virus has been reported in the Eastern US and states bordering Texas, USA, but has not been previously detected within the state. In a prior study, we detected REV in native Rio Grande Wild Turkeys (Meleagris gallopavo intermedia) and an Eastern Wild Turkey (Meleagris gallopavo silvestris) originating from West Virginia. Given LPDV detection in states bordering Texas and our finding of an REV-positive Eastern Wild Turkey imported from a LPDV endemic region, we sought to determine LPDV prevalence in Texas and continue surveillance for REV. During 2018-20, dried blood spots from 373 individual Rio Grande Wild Turkeys from 20 different counties were tested for the presence of proviral REV or LPDV DNA. In affected counties, approximately 4% of individuals were infected with REV (7/197) or LPDV (10/273) and one bird was coinfected with both viruses. Phylogenetic analysis indicated a close relationship of the LPDV isolates to variants from other Southern and Central states. This study provides molecular evidence of LPDV in Texas, and continued surveillance is necessary to determine the potential effects of the virus on reproductive success, coinfections, and overall health of Wild Turkey populations.",
   },
@@ -548,6 +607,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"OL857288"},{"kind":"sra","id":"SRX11820216"},{"kind":"sra","id":"SRX13461851"}],
     selected: false,
     abstract: "We report the near-complete proviral genome sequence of a reticuloendotheliosis virus isolated and propagated from an endangered Attwater’s prairie chicken (Tympanuchus cupido attwateri) during a 2016–2017 outbreak at a captive breeding facility.",
   },
@@ -577,6 +638,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"OK318958"},{"kind":"sra","id":"SRX12683423"}],
     selected: false,
     abstract: "Microbacteriophage IndyLu was isolated from Microbacterium foliorum NRRL B-24224. The 41,958-bp double-stranded DNA genome has 71 predicted protein coding genes and 1 tRNA. The lytic actinobacteriophage was extracted from soil samples collected in Stephenville, TX, and is related to cluster EB bacteriophages Didgeridoo and Lahqtemish.",
   },
@@ -606,6 +669,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MH536822"},{"kind":"sra","id":"SRX4721439"}],
     selected: false,
     abstract: "Joy99 is a siphoviral mycobacteriophage with a 59,837-base pair double-stranded DNA genome and is predicted to contain 97 protein-coding genes and a single tRNA gene. Joy99 was isolated in Saint Louis, MO, and annotated by students at Bluff Dale High School in community engagement with Tarleton State University.",
   },
@@ -635,6 +700,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MK524499"},{"kind":"genbank","id":"MK524506"},{"kind":"sra","id":"SRX4721438"},{"kind":"sra","id":"SRX4721441"}],
     selected: false,
     abstract: "Tripl3t and Zeuska are siphoviral bacteriophages that were isolated from Mycobacterium smegmatis mc 2 155 and contain double-stranded DNA genomes 53,565 bp and 53,598 bp in length, respectively. Tripl3t and Zeuska were annotated by students at Bluff Dale High School (Bluff Dale, TX) and Tolar High School (Tolar, TX) in community engagement with Tarleton State University.",
   },
@@ -664,6 +731,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Prior to submitting genomic DNA for sequencing, SEA students perform a restriction endonuclease digest with several enzymes, which provides a fast and cost-effective way of quickly screening isolated phages. The pattern of bands on the gel should be unique except for very closely related or identical phages, which is useful when trying to identify novel bacteriophages to send for sequencing and ultimately for annotation. Students often struggle with understanding what restriction enzymes are, how they work, and why this is an important step in phage characterization. The ‘Restriction Enzyme Digests’ set of teaching resources provides four active learning exercises that introduce students to restriction enzymes, demonstrate how they work, and why they are a useful tool in the lab and for bacteriophage identification.",
   },
@@ -693,6 +762,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Reticuloendotheliosis viruses (REVs) are known to cause immunosuppressive and oncogenic disease that affects numerous avian species. Reticuloendotheliosis viruses are present worldwide and recently have been reported in South America with cases of infected commercial flocks in Argentina. We surveyed for the presence of REV in birds from a state in the northern region of Brazil using real-time PCR. We report here the presence of REV in Brazil, detected in Muscovy Ducks ( Cairina moschata ), Wild Turkeys ( Meleagris gallopavo ), and chickens ( Gallus gallus ) at a relatively high prevalence (16.8%). Phylogenetic analysis indicated a close relationship of these strains to variants in the US. This study provides evidence of REV in the Amazon biome and provides a baseline for future surveillance of the virus in the region and throughout Brazil.",
   },
@@ -722,6 +793,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MK894432"},{"kind":"sra","id":"SRX6700907"}],
     selected: false,
     abstract: "Actinobacteriophage Finny contains a circularly permuted 40,313-bp double-stranded DNA genome with 63 predicted protein-coding genes. Finny was directly isolated from a soil sample collected in New Braunfels, Texas, that was incubated with Microbacterium foliorum SEA B-24224. Finny is closely related to bacteriophages MCubed, Andromedas, ColaCorta, Eleri, and Sansa.",
   },
@@ -751,6 +824,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MH590592"},{"kind":"sra","id":"SRX4721442"}],
     selected: false,
     abstract: "Mycobacteriophage Ryadel is a newly isolated cluster O Siphoviridae bacteriophage, characterized by an unusual prolate capsid, containing a 72,658-base-pair double-stranded DNA genome with 132 predicted protein-coding genes. Conserved among cluster O bacteriophages, the Ryadel genome contains 31 copies of a unique 17-bp sequence with dyad symmetry.",
   },
@@ -780,6 +855,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "none-deposited",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Reticuloendotheliosis virus (REV) is an immunosuppressive and sometimes oncogenic avian retrovirus that establishes lifelong infection in a wide range of avian species. REV-infected wild birds roaming near at-risk captive flocks, such as is the case for the highly endangered Attwater's Prairie Chicken (APC; Tympanuchus cupido attwateri ), could act as a reservoir for viral transmission. In wild birds, prevalence rates of REV are low and appearance of associated disease is uncommon. During 2016-17, nearly half of all captive adult APC mortality at Fossil Rim Wildlife Center captive breeding facility in Glen Rose, Texas, US was attributed to REV infection. The unusually high REV prevalence rate prompted us to survey for this virus in wild galliforms throughout the region. From 2016-17, 393 blood samples collected from two subspecies of Wild Turkeys ( Meleagris gallopavo ) were tested for REV proviral DNA through amplification of the viral 3' long terminal repeat and segments of the viral pol gene. In REV-affected counties, 5% (5/98) of native Rio Grande Wild Turkeys ( Meleagris gallopavo intermedia ) were identified as REV-positive. In addition, we detected REV in one of 62 Eastern Wild Turkeys ( Meleagris gallopavo silvestris ) that had been imported during conservation efforts. To better determine protective measures, continued surveillance, including collection and genetic analysis of REV-infected samples, is necessary to identify sources of REV outbreaks in captive APC flocks.",
   },
@@ -809,6 +886,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [{"kind":"genbank","id":"MH576971"},{"kind":"sra","id":"SRX4721440"}],
     selected: false,
     abstract: "Mycobacteriophage Arlo is a newly isolated Siphoviridae bacteriophage isolated from soil samples collected in Bluff Dale, Texas. Mycobacteriophage Arlo has a 52,960 base-pair double-stranded DNA genome that is predicted to contain 96 protein-coding genes.",
   },
@@ -838,6 +917,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "crossref:tdm-only",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Human T-cell lymphotropic virus type 1 (HTLV-1) and HTLV-2 encode auxiliary proteins that play important roles in viral replication, viral latency, and immune escape. The presence of auxiliary protein-encoding open reading frames (ORFs) in HTLV-3, the latest HTLV to be discovered, is unknown. Simian T-cell lymphotropic virus type 3 (STLV-3) is almost identical to HTLV-3. Given the lack of HTLV-3-infected cell lines, we took advantage of STLV-3-infected cells and of an STLV-3 molecular clone to search for the presence of auxiliary transcripts. Using reverse transcriptase PCR (RT-PCR), we first uncovered the presence of three unknown viral mRNAs encoding putative proteins of 5, 8, and 9 kDa and confirmed the presence of the previously reported RorfII transcript. The existence of these viral mRNAs was confirmed by using splice site-specific RT-PCR with ex vivo samples. We showed that p5 is distributed throughout the cell and does not colocalize with a specific organelle. The p9 localization is similar to that of HTLV-1 p12 and induced a strong decrease in the calreticulin signal, similarly to HTLV-1 p12. Although p8, RorfII, and Rex-3 share an N-terminal sequence that is predicted to contain a nucleolar localization signal (NoLS), only p8 is found in the nucleolus. The p8 location in the nucleolus is linked to a bipartite NoLS. p8 and, to a lesser extent, p9 repressed viral expression but did not alter Rex-3-dependent mRNA export. Using a transformation assay, we finally showed that none of the STLV-3 auxiliary proteins had the ability to induce colony formation, while both Tax-3 and antisense protein of HTLV-3 (APH-3) promoted cellular transformation. Altogether, these results complete the characterization of the newly described primate T-lymphotropic virus type 3 (PTLV-3). IMPORTANCE Together with their simian counterparts, HTLVs form the primate T-lymphotropic viruses. HTLVs arose from interspecies transmission between nonhuman primates and humans. HTLV-1 and HTLV-2 encode auxiliary proteins that play important roles in viral replication, viral latency, and immune escape. The presence of ORFs encoding auxiliary proteins in HTLV-3 or STLV-3 genomes was unknown. Using in silico analyses, ex vivo samples, or in vitro experiments, we have uncovered the presence of 3 previously unknown viral mRNAs encoding putative proteins and confirmed the presence of a previously reported viral transcript. We characterized the intracellular localization of the four proteins. We showed that two of these proteins repress viral expression but that none of them have the ability to induce colony formation. However, both Tax and the antisense protein APH-3 promote cell transformation. Our results allowed us to characterize 4 new retroviral proteins for the first time.",
   },
@@ -867,6 +948,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: null,
   },
@@ -896,6 +979,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "public-domain",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "HTLV-1 orf-I is linked to immune evasion, viral replication and persistence. Examining the orf-I sequence of 160 HTLV-1-infected individuals; we found polymorphism of orf-I that alters the relative amounts of p12 and its cleavage product p8. Three groups were identified on the basis of p12 and p8 expression: predominantly p12, predominantly p8 and balanced expression of p12 and p8. We found a significant association between balanced expression of p12 and p8 with high viral DNA loads, a correlate of disease development. To determine the individual roles of p12 and p8 in viral persistence, we constructed infectious molecular clones expressing p12 and p8 (D26), predominantly p12 (G29S) or predominantly p8 (N26). As we previously showed, cells expressing N26 had a higher level of virus transmission in vitro. However, when inoculated into Rhesus macaques, cells producing N26 virus caused only a partial seroconversion in 3 of 4 animals and only 1 of those animals was HTLV-1 DNA positive by PCR. None of the animals exposed to G29S virus seroconverted or had detectable viral DNA. In contrast, 3 of 4 animals exposed to D26 virus seroconverted and were HTLV-1 positive by PCR. In vitro studies in THP-1 cells suggested that expression of p8 was sufficient for productive infection of monocytes. Since orf-I plays a role in T-cell activation and recognition; we compared the CTL response elicited by CD4+ T-cells infected with the different HTLV-1 clones. Although supernatant p19 levels and viral DNA loads for all four infected lines were similar, a significant difference in Tax-specific HLA.A2-restricted killing was observed. Cells infected with Orf-I-knockout virus (12KO), G29S or N26 were killed by CTLs, whereas cells infected with D26 virus were resistant to CTL killing. These results indicate that efficient viral persistence and spread require the combined functions of p12 and p8.",
   },
@@ -925,6 +1010,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "crossref:tdm-only",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "The human T-cell leukemia/lymphoma virus type 1 (HTLV-1) p30 protein, essential for virus infectivity in vivo, is required for efficient infection of human dendritic cells (DCs) but not B and T cells in vitro. We used a human monocytic cell line, THP-1, and dendritic cells to study the mechanism of p30 and p12/p8 requirements in these cell types. p30 inhibited the expression of interferon (IFN)-responsive genes (ISG) following stimulation by lipopolysaccharide (LPS) of Toll-like receptor 4 (TLR4) and by poly(I·C) of TLR3 but not of TLR7/8 with imiquimod. Results with THP-1 mirrored those for ex vivo human primary monocytes and monocyte-derived dendritic cells (Mo-mDC). The effect of p30 on TLR signaling was also demonstrated by ablating its expression within a molecular clone of HTLV-1. HTLV-1 infection of monocytes inhibited TLR3- and TLR4-induced ISG expression by 50 to 90% depending on the genes, whereas the isogenic clone p30 knockout virus was less effective at inhibiting TLR3 and TRL4 signaling and displayed lower infectivity. Viral expression and inhibition of ISG transcription was, however, rescued by restoration of p30 expression. A chromatin immunoprecipitation assay demonstrated that p30 inhibits initiation and elongation of PU.1-dependent transcription of IFN-α1, IFN-β, and TLR4 genes upon TLR stimulation. In contrast, experiments conducted with p12/p8 did not demonstrate an effect on ISG expression. These results provide a mechanistic explanation of the requirement of p30 for HTLV-1 infectivity in vivo, suggest that dampening interferon responses in monocytes and DCs is specific for p30, and represent an essential early step for permissive HTLV-1 infection and persistence.",
   },
@@ -954,6 +1041,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "crossref:tdm-only",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "The orf-I gene of human T-cell leukemia type 1 (HTLV-1) encodes p8 and p12 and has a conserved cysteine at position 39. p8 and p12 form disulfide-linked dimers, and only the monomeric forms of p8 and p12 are palmitoylated. Mutation of cysteine 39 to alanine (C39A) abrogated dimerization and palmitoylation of both proteins. However, the ability of p8 to localize to the cell surface and to increase cell adhesion and viral transmission was not affected by the C39A mutation.",
   },
@@ -983,6 +1072,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: null,
   },
@@ -1012,6 +1103,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Background: It is estimated that 15 to 20 million people are infected with the human T-cell lymphotropic virus type 1 (HTLV-1). At present, there are more than 2,000 unique HTLV-1 isolate sequences published. A central database to aggregate sequence information from a range of epidemiological aspects including HTLV-1 infections, pathogenesis, origins, and evolutionary dynamics would be useful to scientists and physicians worldwide. Described here, we have developed a database that collects and annotates sequence data and can be accessed through a user-friendly search interface. The HTLV-1 Molecular Epidemiology Database website is available at http://htlv1db.bahia.fiocruz.br/. Methodology/principal findings: All data was obtained from publications available at GenBank or through contact with the authors. The database was developed using Apache Webserver 2.1.6 and SGBD MySQL. The webpage interfaces were developed in HTML and sever-side scripting written in PHP. The HTLV-1 Molecular Epidemiology Database is hosted on the Gonçalo Moniz/FIOCRUZ Research Center server. There are currently 2,457 registered sequences with 2,024 (82.37%) of those sequences representing unique isolates. Of these sequences, 803 (39.67%) contain information about clinical status (TSP/HAM, 17.19%; ATL, 7.41%; asymptomatic, 12.89%; other diseases, 2.17%; and no information, 60.32%). Further, 7.26% of sequences contain information on patient gender while 5.23% of sequences provide the age of the patient. Conclusions/significance: The HTLV-1 Molecular Epidemiology Database retrieves and stores annotated HTLV-1 proviral sequences from clinical, epidemiological, and geographical studies. The collected sequences and related information are now accessible on a publically available and user-friendly website. This open-access database will support clinical research and vaccine development related to viral genotype.",
   },
@@ -1041,6 +1134,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Human T-cell leukemia virus type-1 (HTLV-1) is the etiological agent of adult T-cell leukemia (ATL), an aggressive and highly chemoresistant malignancy. Rho family GTPases regulate multiple signaling pathways in tumorigenesis: cytoskeletal organization, transcription, cell cycle progression, and cell proliferation. Geranylgeranylation of Rho family GTPases is essential for cell membrane localization and activation of these proteins. It is currently unknown whether HTLV-1-transformed cells are preferentially sensitive to geranylgeranylation inhibitors, such as GGTI-298. In this report, we demonstrate that GGTI-298 decreased cell viability and induced G2/M phase accumulation of HTLV-1-transformed cells, independent of p53 reactivation. HTLV-1-LTR transcriptional activity was inhibited and Tax protein levels decreased following treatment with GGTI-298. Furthermore, GGTI-298 decreased activation of NF-κB, a downstream target of Rho family GTPases. These studies suggest that protein geranylgeranylation contributes to dysregulation of cell survival pathways in HTLV-1-transformed cells.",
   },
@@ -1070,6 +1165,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "The 3' end of the human T-cell leukemia/lymphoma virus type-1 (HTLV-1) genome contains four overlapping open reading frames (ORF) that encode regulatory proteins. Here, we review current knowledge of HTLV-1 orf-I and orf-II protein products. Singly spliced mRNA from orf-I encodes p12, which can be proteolytically cleaved to generate p8, while differential splicing of mRNA from orf-II results in production of p13 and p30. These proteins have been demonstrated to modulate transcription, apoptosis, host cell activation and proliferation, virus infectivity and transmission, and host immune responses. Though these proteins are not essential for virus replication in vitro, p8, p12, p13, and p30 have an important role in the establishment and maintenance of HTLV-1 infection in vivo.",
   },
@@ -1099,6 +1196,8 @@ export const PUBLICATIONS: Publication[] = [
     license: "cc-by",
     licenseSource: "unpaywall:best_oa_location",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: null,
   },
@@ -1128,6 +1227,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "crossref:tdm-only",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "Human T-cell leukemia virus type 1 (HTLV-1) is the etiological agent of adult T-cell leukemia. The transforming ability of Tax, the viral oncoprotein, is believed to depend on interactions with cell cycle regulators and on transactivation of genes that control cellular proliferation, including proliferating cell nuclear antigen (PCNA), a cofactor associated with DNA replication and repair. Tax associates with cellular transcription factors to alter their affinity for cognate DNA elements, leading to increased or decreased transcription from that promoter. Although it has been demonstrated that Tax transactivates the PCNA promoter, the mechanism of transcriptional activation is unknown. Here we report a cellular complex that binds specifically to a novel site within the minimal Tax-responsive element of the TATAA-less PCNA promoter. Mutation at this binding site or Tax expression inhibited complex formation and increased promoter activity, suggesting that the complex is a transcriptional repressor. The activation of PCNA gene expression by Tax and consequential decrease in nucleotide excision repair mediated by PCNA overexpression could contribute to the reduced DNA repair capacity and genomic instability observed in HTLV-1-infected cells.",
   },
@@ -1157,6 +1258,8 @@ export const PUBLICATIONS: Publication[] = [
     license: null,
     licenseSource: "crossref:tdm-only",
     summary: null,
+    updateNotice: null,
+    accessions: [],
     selected: false,
     abstract: "It is estimated that 15% of all cancer cases are aetiologically linked to viral infection. In these cancers, genomic instability and subsequent multi‐step tumourigenesis is associated with the expression of viral oncoproteins. Human T‐cell leukaemia virus type‐I (HTLV‐I), a prototypic representative of the RNA tumour viruses, is linked to the development of adult T‐cell leukaemia. The HTLV‐I oncoprotein, Tax, targets the regulators of cell cycle progression and DNA repair, leading to cellular transformation.",
   },

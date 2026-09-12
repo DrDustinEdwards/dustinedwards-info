@@ -743,9 +743,56 @@ ok(
   `found ${colophonRecords.filter((/** @type {any} */ r) => r.anchor === null).length}`,
 );
 
-// Every page record must live at a route that exists. A record pointing at a
-// removed route returns a hit that 404s, which is worse than no hit.
-for (const record of pageRecords) {
+/*
+ * Every page record must live at a route that exists. A record pointing at a
+ * removed route returns a hit that 404s, which is worse than no hit.
+ *
+ * ## THE PAPERS ARE ASSERTED AGAINST THE PARAMETERISED ROUTE, ONCE
+ *
+ * `declaredRoutes()` reads literal path strings out of routes.ts, which is what
+ * makes it honest about the hand-authored pages: each is its own `route()` call
+ * and its own record. The 36 paper records are served by ONE declaration,
+ * `publications/:slug`, so a literal lookup would demand 36 route lines that
+ * cannot exist, and the obvious repair, dropping them from the sweep, would
+ * leave the site's largest set of page records unchecked.
+ *
+ * So the papers are separated by uid and checked against the declaration that
+ * actually serves them, with the count of what was separated printed beside it.
+ * That keeps the property the sweep exists for: delete
+ * `route("publications/:slug", ...)` and every paper record reds here. What it
+ * does NOT check is that a given slug resolves, and that is not a gap:
+ * `check:publications` reconciles the record set against the corpus in both
+ * directions and the sitemap against the same list.
+ */
+const PAPER_ROUTE = "/publications/:slug";
+const paperRecords = pageRecords.filter((/** @type {any} */ r) =>
+  String(r.uid).startsWith("paper:"),
+);
+const otherPageRecords = pageRecords.filter(
+  (/** @type {any} */ r) => !String(r.uid).startsWith("paper:"),
+);
+
+ok(
+  `the paper records are served by ${PAPER_ROUTE} (${paperRecords.length} record(s))`,
+  paperRecords.length > 0 && routes.has(PAPER_ROUTE),
+  paperRecords.length === 0
+    ? "no paper records in the artifact, so this assertion read nothing"
+    : `routes.ts declares no ${PAPER_ROUTE}`,
+);
+ok(
+  `every paper record is under the paper route (${paperRecords.length} checked)`,
+  paperRecords.every((/** @type {any} */ r) =>
+    /^\/publications\/[a-z0-9-]+\/$/.test(String(r.url)),
+  ),
+  `a paper record whose URL is not /publications/<slug>/ is not served by ` +
+    `${PAPER_ROUTE}: ` +
+    paperRecords
+      .filter((/** @type {any} */ r) => !/^\/publications\/[a-z0-9-]+\/$/.test(String(r.url)))
+      .map((/** @type {any} */ r) => r.url)
+      .join(", "),
+);
+
+for (const record of otherPageRecords) {
   const path = String(record.url).split("#")[0];
   ok(
     `page record ${record.uid} resolves to a declared route: ${path}`,

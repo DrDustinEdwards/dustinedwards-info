@@ -353,3 +353,26 @@
   line-height: 1.6;
   color: var(--text);
 }
+
+/* A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN.
+
+   Tinted rather than merely spaced, which is the opposite of the choice made
+   for .paper-summary two rules above, and deliberately: that one is the author
+   speaking and should read as prose, this one is the publisher contradicting
+   the document under it and has to be seen before the abstract is read.
+
+   The warning trio rather than a colour picked here. --tint-warning,
+   --on-tint-warning and --border-warning are declared in app.css with both
+   themes and are already a measured contrast pair, so this rule adds a use of
+   an existing pair rather than a new colour to check. No record carries a
+   notice today; the styling ships with the path. */
+.paper-update-notice {
+  margin: 1.5rem 0 0;
+  max-width: 42rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-warning);
+  border-radius: 0.5rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+  line-height: 1.6;
+}

@@ -54,7 +54,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "PP725414"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX24892095"
+      }
+    ]
   },
   "10.3390/ijerph22071139": {
     "id": "edwards-2025-phage-therapy",
@@ -150,7 +160,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "OR159662"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX21368075"
+      }
+    ]
   },
   "10.3389/feduc.2023.1279921": {
     "id": "edwards-2023-classroom-assessment",
@@ -188,7 +208,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MW924638"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX11067172"
+      }
+    ]
   },
   "10.1128/mra.00783-22": {
     "id": "edwards-2022-loca",
@@ -207,7 +237,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "ON260814"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX14483214"
+      }
+    ]
   },
   "10.1128/mra.00174-22": {
     "id": "edwards-2022-fowlpox",
@@ -226,7 +266,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "OL857287"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX11820217"
+      }
+    ]
   },
   "10.1187/cbe.21-03-0057": {
     "id": "edwards-2022-instructional-models",
@@ -283,7 +333,21 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "OL857288"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX11820216"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX13461851"
+      }
+    ]
   },
   "10.1128/MRA.01079-21": {
     "id": "edwards-2021-indylu",
@@ -302,7 +366,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "OK318958"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX12683423"
+      }
+    ]
   },
   "10.1128/mra.00556-21": {
     "id": "edwards-2021-joy99",
@@ -321,7 +395,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MH536822"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX4721439"
+      }
+    ]
   },
   "10.1128/mra.00558-21": {
     "id": "edwards-2021-tripl3t-zeuska",
@@ -340,7 +424,25 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MK524499"
+      },
+      {
+        "kind": "genbank",
+        "id": "MK524506"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX4721438"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX4721441"
+      }
+    ]
   },
   "10.25334/8CXE-6883": {
     "id": "edwards-2021-understanding-restriction-enzyme",
@@ -397,7 +499,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MK894432"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX6700907"
+      }
+    ]
   },
   "10.1128/mra.01594-18": {
     "id": "edwards-2019-ryadel",
@@ -416,7 +528,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MH590592"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX4721442"
+      }
+    ]
   },
   "10.7589/2018-08-187": {
     "id": "edwards-2019-texas-survey",
@@ -454,7 +576,17 @@
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
     "summary": null,
-    "selected": false
+    "selected": false,
+    "accessions": [
+      {
+        "kind": "genbank",
+        "id": "MH576971"
+      },
+      {
+        "kind": "sra",
+        "id": "SRX4721440"
+      }
+    ]
   },
   "10.1128/jvi.02150-14": {
     "id": "edwards-2015-simian-lymphotropic",
