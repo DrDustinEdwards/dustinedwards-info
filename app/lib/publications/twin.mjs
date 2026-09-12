@@ -102,6 +102,7 @@ const line = (key, value) =>
  * @property {string} doi
  * @property {boolean} [isOpenAccess]
  * @property {string | null} [license]
+ * @property {{ kind: string, id: string }[]} [accessions]
  */
 
 /**
@@ -161,6 +162,24 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
      * artifact carries the date it was read, so the twin can carry both. Rule
      * 17's exception for dated evidence.
      */
+    /*
+     * THE DEPOSITS, because the twin is the record and this is part of it. An
+     * agent asked what data backs a paper should not have to fetch the PDF and
+     * find the data-availability statement itself, which is the reading
+     * `accessions.mjs` already did once at build.
+     *
+     * Absent rather than empty for a paper with none: an empty list invites a
+     * reader to conclude the paper deposited nothing, when what happened is
+     * that its journal required no statement.
+     */
+    ...(paper.accessions && paper.accessions.length > 0
+      ? [
+          "accessions:",
+          ...paper.accessions.map(
+            (a) => `  - ${yamlString(`${a.kind}:${a.id}`)}`,
+          ),
+        ]
+      : []),
     ...line("citedBy", citedBy ? citedBy.total : null),
     ...line("citedBySource", citedBy && citedByFetchedAt ? `OpenAlex, read ${citedByFetchedAt}` : null),
     "---",

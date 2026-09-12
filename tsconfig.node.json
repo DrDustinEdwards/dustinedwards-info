@@ -40,6 +40,14 @@
     // output is not in the markup a component render produces, so the tag set
     // cannot be checked against rendered HTML offline.
     "app/lib/publications/citation-tags.mjs",
+    // The accession reader and the retraction notice. check:publications
+    // reconciles the corpus against what the data-availability statements name,
+    // through the same function the page links from, and validates every
+    // notice through the same one the page renders. Both are the shape this
+    // project lists everything for: a gate must not check against a second
+    // implementation of what it is checking.
+    "app/lib/publications/accessions.mjs",
+    "app/lib/publications/update-notice.mjs",
     // The markdown twin builder and the cited-by reader it takes its count
     // from. `build:publication-twins` writes the 36 twins with them and
     // `check:publications` imports the SAME generator to compare what is on
