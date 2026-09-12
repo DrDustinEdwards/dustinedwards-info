@@ -11,6 +11,7 @@ import {
 } from "~/data/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
+import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
@@ -101,9 +102,17 @@ function fold(value: string) {
     .trim();
 }
 
-/** Fields the text query runs against. Abstract is deliberately not included. */
+/**
+ * Fields the text query runs against. Abstract is deliberately not included.
+ *
+ * DECODED FIRST, so the haystack is the text on the page rather than the text
+ * in the file. Without it a search for `Microbiology & Biology Education`
+ * cannot reach a journal stored as `Microbiology &amp; Biology Education`, and
+ * the one place a reader would copy that string from is the page, where it now
+ * renders with the ampersand.
+ */
 function haystack(p: Publication) {
-  return fold([p.title, p.journal ?? "", ...p.authors].join(" "));
+  return fold(decodeEntities([p.title, p.journal ?? "", ...p.authors].join(" ")));
 }
 
 function sortItems(items: Publication[], sort: SortKey) {
@@ -377,14 +386,16 @@ function AuthorList({ authors }: { authors: string[] }) {
 }
 
 function citation(p: Publication) {
-  return [p.journal, String(p.year), p.volume, p.pages].filter(Boolean).join(", ");
+  return decodeEntities(
+    [p.journal, String(p.year), p.volume, p.pages].filter(Boolean).join(", "),
+  );
 }
 
 function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   return (
     <article className="pub-entry">
       {/* Display only. The stored title stays plain for search and JSON-LD. */}
-      <h3 className="pub-title">{italicizeOrganisms(p.title)}</h3>
+      <h3 className="pub-title">{italicizeOrganisms(decodeEntities(p.title))}</h3>
       <AuthorList authors={p.authors} />
       <p className="pub-meta">
         {citation(p)}
@@ -421,7 +432,7 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
       {p.abstract ? (
         <details className="pub-abstract">
           <summary>Abstract</summary>
-          <p>{italicizeOrganisms(p.abstract)}</p>
+          <p>{italicizeOrganisms(decodeEntities(p.abstract))}</p>
         </details>
       ) : null}
     </article>

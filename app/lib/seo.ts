@@ -1,3 +1,25 @@
+/*
+ * THE ONE IMPORT IN THIS FILE, and it is worth a line saying why.
+ *
+ * `seo.ts` was import-free: a leaf every public route and several build scripts
+ * pull from. `publicationsJsonLd` below needs to decode character references so
+ * the emitted schema.org `headline` and `name` are the strings a human reads
+ * rather than the escaped forms the corpus stores, and a builder that leaves
+ * that to its callers emits a wrong VALUE the first time one forgets.
+ *
+ * The alternative considered and not taken was moving `publicationsJsonLd` out
+ * of this file, which is probably where it belongs. That is a bigger change
+ * than the bug it would be riding along with.
+ */
+/*
+ * RELATIVE, not the `~/` alias every route uses. `tsconfig.node.json` carries
+ * no path mapping, and it has to compile this file because `ship.mjs` imports
+ * SITE_ORIGIN from it, so an aliased import here fails the build scripts'
+ * project while compiling fine for the Worker. Same spelling the other modules
+ * that straddle both projects use.
+ */
+import { decodeEntities } from "./publications/entities.mjs";
+
 /**
  * The canonical public origin. Every absolute URL the site emits (canonical,
  * OG, JSON-LD, RSS, sitemap, robots) derives from this and never from
@@ -619,13 +641,26 @@ export function publicationsJsonLd(
     ...items.map((p) => ({
       "@context": "https://schema.org",
       "@type": "ScholarlyArticle",
-      headline: p.title,
+      /*
+       * DECODED HERE RATHER THAN AT THE CALL SITE, because this function is the
+       * one owner of the node shape and a caller that forgot would emit
+       * `Journal of Microbiology &amp; Biology Education` as a schema.org
+       * `name`, which is a wrong VALUE rather than a display glitch: a
+       * consumer reading this graph has no reason to suspect the string needs
+       * unescaping, and nothing downstream would ever tell it.
+       *
+       * Safe with respect to the invariant it looks like it breaks. Decoding
+       * can produce a literal `<`, and `jsonLd()` escapes `<` and `>` on the
+       * way into the script element, so the element still cannot be closed
+       * early. The stored corpus keeps its escapes either way.
+       */
+      headline: decodeEntities(p.title),
       author: p.authors.map((name) =>
         isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name },
       ),
       datePublished: String(p.year),
       ...(p.journal
-        ? { isPartOf: { "@type": "Periodical", name: p.journal } }
+        ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
         : {}),
       sameAs: `https://doi.org/${p.doi}`,
       ...(p.pdfPath ? { url: origin + p.pdfPath } : {}),
