@@ -130,8 +130,16 @@ const MINIMUM_FILES = 63;
    failed the old 680 in CI at a gap of 40 against a tolerance of 36, the same
    mechanism a FOURTH time, which is the argument for it rather than against
    it. Tolerance is 36 at this count, so anything from 684 up is legal; 700
-   leaves the usual slack. */
-const MINIMUM_TESTS = 700;
+   leaves the usual slack.
+   RE-MEASURED 2026-09-12 by RUNNING this gate, after publication-entities
+   .test.mjs landed with eight cases: 739 tests. check:floors failed the old 700
+   in CI at a gap of 39 against a tolerance of 37, the same mechanism a FIFTH
+   time, and this one is worth a line about HOW it was caught: the local run
+   before the push was a set of targeted gates rather than the tier, and
+   check:floors is a meta-gate that reads the tier's own output, so it was the
+   one gate a targeted run could not include. CI is what saw it. Tolerance is 37
+   at this count, so anything from 702 up is legal; 720 leaves the usual slack. */
+const MINIMUM_TESTS = 720;
 
 let checks = 0;
 let failures = 0;
