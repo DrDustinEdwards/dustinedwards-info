@@ -32,11 +32,48 @@ const OUT_PATH = join(ROOT, "app", "data", "publications.ts");
 /** @param {string | null | undefined} doi */
 const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
-/** @param {string | null | undefined} value */
+/*
+ * Punctuation that never takes a space BEFORE it, and brackets that never take
+ * one after. Listed as two explicit classes rather than one clever pattern,
+ * because the two rules are different facts about typography and a combined
+ * regex would be unreadable at exactly the point somebody needs to check it.
+ */
+const SPACE_BEFORE_PUNCTUATION = /\s+([,;:.)\]])/g;
+const SPACE_AFTER_OPENING = /([([])\s+/g;
+
+/**
+ * Registry markup reduced to plain text.
+ *
+ * ## THE SPACE IS NOT OPTIONAL AND NEITHER IS CLEANING UP AFTER IT
+ *
+ * Tags are replaced with a SPACE rather than with nothing, and that rule is
+ * load-bearing: the July import replaced them with nothing and turned
+ * `<scp>RNA</scp>Tumour Viruses` into `RNATumour`. It is recorded as one of the
+ * reasons PDF text was never trusted.
+ *
+ * The cost is that a tag sitting against punctuation leaves a space that was
+ * never in the rendered text. MEASURED in this corpus: three TITLES and several
+ * abstracts carry it, because italicised organism names are wrapped in `<i>`
+ * inside parentheses. The Texas survey's title read
+ *
+ *     Survey of Reticuloendotheliosis Virus in Wild Turkeys ( Meleagris gallopavo) in Texas, USA
+ *
+ * and `citation_title` is the single field Google Scholar matches a paper on.
+ * A title that differs from the published one by a space is a title that may
+ * not match, and a correction takes six to nine months.
+ *
+ * So the space is inserted, whitespace is collapsed, and then the space is
+ * removed from the two places typography never puts one. The order matters:
+ * collapsing first means the cleanup sees a single space rather than a run.
+ *
+ * @param {string | null | undefined} value
+ */
 const clean = (value) =>
   (value ?? "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
+    .replace(SPACE_BEFORE_PUNCTUATION, "$1")
+    .replace(SPACE_AFTER_OPENING, "$1")
     .trim();
 
 /** TS string literal or null. JSON string syntax is valid TS. */

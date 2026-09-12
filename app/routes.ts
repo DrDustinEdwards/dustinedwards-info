@@ -58,6 +58,20 @@ export default [
   // held from 2026-07-26 until PR #3 retired it, because that URL was published
   // and a published URL is a promise. The per-paper pages live under it.
   route("publications", "routes/publications.tsx"),
+  /*
+   * ONE PAGE PER PAPER, at a DOI-derived slug, WITH A TRAILING SLASH.
+   *
+   * React Router matches `/publications/x` and `/publications/x/` with the same
+   * params (measured, not assumed), and the gateway redirects the slashless
+   * form to the slash form so only one is canonical. The slash is what puts the
+   * page and its PDF in one subdirectory, which is Google Scholar's stated
+   * condition for honouring `citation_pdf_url`.
+   *
+   * AFTER the index route, which is one segment where this is two, so they
+   * cannot collide. The PDFs themselves are static assets under the same
+   * prefix and are served by the asset handler ahead of the Worker.
+   */
+  route("publications/:slug", "routes/publications.$slug.tsx"),
   // Who this is, in the first person, from content/about.md. FIRST among the
   // hand-written pages here and FIRST in the header nav, because the audit's
   // fourth part found that the first three questions a stranger has off the

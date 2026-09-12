@@ -167,6 +167,21 @@ export function pageMeta(page: {
   description: string;
   path: string;
   image?: string;
+  /**
+   * The Open Graph type. `website` for every hand-written page, which is what
+   * they are, and `article` for a page that IS a work.
+   *
+   * Added 2026-09-12 for the per-paper publication pages. Those were written
+   * with a hand-assembled tag array first, because they need a repeated
+   * `citation_author` tag that this helper has no business knowing about, and
+   * `check:invariants` section 13 refused it: five pages once ended up with
+   * five different partial social sets, and "this page is special" is exactly
+   * how the sixth would. The section is right and the repair is to teach the
+   * helper the one thing the page actually needed differently, not to exempt
+   * it. The citation tags are still appended by the route, which is correct:
+   * they are not social metadata and no other page has them.
+   */
+  ogType?: "website" | "article";
 }) {
   const url = `${SITE_ORIGIN}${page.path}`;
   const image = page.image ?? DEFAULT_OG_IMAGE;
@@ -177,7 +192,7 @@ export function pageMeta(page: {
     { property: "og:title", content: page.title },
     { property: "og:description", content: page.description },
     { property: "og:url", content: url },
-    { property: "og:type", content: "website" },
+    { property: "og:type", content: page.ogType ?? "website" },
     { property: "og:image", content: image },
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:image", content: image },

@@ -7,6 +7,11 @@ import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.m
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { postRedirectStatus, postRedirectTarget } from "~/lib/slug-redirect.mjs";
+import {
+  paperSlashTarget,
+  pdfRedirectStatus,
+  pdfRedirectTarget,
+} from "~/lib/publications/pdf-redirect.mjs";
 /*
  * The redirect map, imported here rather than inside the predicate. The
  * grounds are on `slug-redirect.mjs`: a bare JSON import is what compiles in
@@ -863,6 +868,52 @@ export default {
           // Resolved against this request's own origin, so the Location can
           // never name another host.
           Location: new URL(`${renamed}${url.search}`, url).toString(),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    /*
+     * THE PUBLICATION PDFs, WHICH ALL MOVED, AND THE PAPER PAGE'S TRAILING
+     * SLASH. Third and fourth in the gateway, beside the post redirects and for
+     * the same reasons: before the cache loopback, cache disabled, and resolved
+     * against this request's own origin.
+     *
+     * ORDER MATTERS BETWEEN THESE TWO. The PDF map is consulted FIRST because
+     * its keys end in `.pdf`, and `paperSlashTarget` refuses anything with a
+     * dot in the final segment precisely so it can never claim an asset path.
+     * Checking the map first means that refusal is a second line of defence
+     * rather than the only one.
+     *
+     * Neither fires on a file that still exists: static assets are served by
+     * the asset handler ahead of this Worker, so a request for a PDF at its
+     * CURRENT path never reaches here.
+     */
+    const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
+    if (movedPdf !== null) {
+      return new Response(null, {
+        status: pdfRedirectStatus(request.method),
+        headers: {
+          Location: new URL(`${movedPdf}${url.search}`, url).toString(),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    /*
+     * `/publications/<slug>` to `/publications/<slug>/`.
+     *
+     * Both spellings match the route and both would render, which is two URLs
+     * for one document. The slash form is canonical because it is the one that
+     * puts the page in the same subdirectory as its PDF, which is Scholar's
+     * stated condition for honouring `citation_pdf_url`.
+     */
+    const slashed = paperSlashTarget(url.pathname);
+    if (slashed !== null) {
+      return new Response(null, {
+        status: pdfRedirectStatus(request.method),
+        headers: {
+          Location: new URL(`${slashed}${url.search}`, url).toString(),
           "Cache-Control": "no-store",
         },
       });
