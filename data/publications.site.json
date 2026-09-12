@@ -15,7 +15,7 @@
     "isOpenAccess": true,
     "license": "cc-by-nc-nd",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Two rubrics for grading student posters and short papers in research courses, written by about 100 SEA-PHAGES faculty.",
     "selected": false
   },
   "10.1080/07448481.2025.2472184": {
@@ -34,7 +34,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "Short videos did not change COVID-19 vaccine attitudes among 298 students at a rural Texas university.",
     "selected": false
   },
   "10.1128/mra.00888-24": {
@@ -53,7 +53,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Godfather, isolated from Stephenville soil; 17,452 bp, 24 genes, cluster EE.",
     "selected": false,
     "accessions": [
       {
@@ -83,7 +83,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Survey of 196 US clinicians: 49 percent knew about phage therapy, 56 percent would consider using it.",
     "selected": false
   },
   "10.3389/feduc.2024.1442318": {
@@ -102,7 +102,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "How the SEA-PHAGES faculty community adopts and improves research courses over time, from interviews with over 100 members.",
     "selected": false
   },
   "10.3389/feduc.2024.1442306": {
@@ -121,7 +121,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "What 97 instructors of research courses say about being a scientist and a teacher at the same time.",
     "selected": false
   },
   "10.25334/B5BS-F125": {
@@ -140,7 +140,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "A classroom guide for writing a genome announcement as a group.",
     "selected": false
   },
   "10.1128/MRA.00778-23": {
@@ -159,7 +159,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage MrAaronian, isolated from flowerbed soil in Poughkeepsie; 54,509 bp, 87 genes, cluster AW.",
     "selected": false,
     "accessions": [
       {
@@ -188,7 +188,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "How experienced instructors assess and grade students in research courses.",
     "selected": false
   },
   "10.1128/MRA.01077-21": {
@@ -207,7 +207,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Fizzles, isolated from an ant hill in Stephenville; 62,078 bp, 104 genes, only 84 percent similar to its nearest relatives.",
     "selected": false,
     "accessions": [
       {
@@ -236,7 +236,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Loca, swabbed from a shopping cart handle in Stephenville; 17,475 bp, 25 genes.",
     "selected": false,
     "accessions": [
       {
@@ -265,7 +265,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "A reticuloendotheliosis virus genome found inserted inside a fowlpox virus from a wild turkey in Gillespie County, Texas.",
     "selected": false,
     "accessions": [
       {
@@ -294,7 +294,7 @@
     "isOpenAccess": true,
     "license": "cc-by-nc-sa",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Three models for how instructors teach research courses.",
     "selected": false
   },
   "10.7589/JWD-D-22-00023": {
@@ -313,7 +313,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "First detection of lymphoproliferative disease virus in Texas wild turkeys; 373 birds tested, about 4 percent positive in affected counties.",
     "selected": false
   },
   "10.1128/mra.00173-22": {
@@ -332,7 +332,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of the reticuloendotheliosis virus from the 2016 to 2017 outbreak in captive Attwater's prairie chickens.",
     "selected": false,
     "accessions": [
       {
@@ -365,7 +365,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage IndyLu, isolated from Stephenville soil; 41,958 bp, 71 genes, one tRNA.",
     "selected": false,
     "accessions": [
       {
@@ -394,7 +394,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Joy99, annotated by Bluff Dale High School students; 59,837 bp, 97 genes.",
     "selected": false,
     "accessions": [
       {
@@ -423,7 +423,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genomes of phages Tripl3t and Zeuska, annotated by Bluff Dale and Tolar high school students; about 53,600 bp each.",
     "selected": false,
     "accessions": [
       {
@@ -460,7 +460,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "Four classroom exercises on restriction enzyme digests and why they are used to screen phage DNA.",
     "selected": false
   },
   "10.7589/2019-04-088": {
@@ -479,7 +479,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "First report of reticuloendotheliosis virus in Brazil; 16.8 percent of ducks, turkeys and chickens tested were positive.",
     "selected": false
   },
   "10.1128/mra.01039-19": {
@@ -498,7 +498,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Finny, isolated from New Braunfels soil; 40,313 bp, 63 genes.",
     "selected": false,
     "accessions": [
       {
@@ -527,7 +527,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Ryadel, a cluster O phage with an elongated head; 72,658 bp, 132 genes.",
     "selected": false,
     "accessions": [
       {
@@ -556,7 +556,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "none-deposited",
-    "summary": null,
+    "summary": "Survey of 393 wild turkeys in Texas for reticuloendotheliosis virus after an outbreak at Fossil Rim; 5 percent positive in affected counties.",
     "selected": false
   },
   "10.1128/mra.01242-18": {
@@ -575,7 +575,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Genome of phage Arlo, isolated from Bluff Dale soil; 52,960 bp, 96 genes, cluster A1.",
     "selected": false,
     "accessions": [
       {
@@ -604,7 +604,7 @@
     "isOpenAccess": true,
     "license": null,
     "licenseSource": "crossref:tdm-only",
-    "summary": null,
+    "summary": "Three new accessory proteins found in simian T-cell lymphotropic virus type 3 and where each goes in the cell.",
     "selected": false
   },
   "10.1186/1742-4690-11-s1-o13": {
@@ -623,7 +623,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Conference talk: HTLV-1 needs both p12 and p8 to infect and persist.",
     "selected": false
   },
   "10.1371/journal.ppat.1004454": {
@@ -642,7 +642,7 @@
     "isOpenAccess": true,
     "license": "public-domain",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "HTLV-1 established infection in macaques only when it made both p12 and p8; making mostly one or the other failed.",
     "selected": false
   },
   "10.1128/jvi.01788-13": {
@@ -661,7 +661,7 @@
     "isOpenAccess": true,
     "license": null,
     "licenseSource": "crossref:tdm-only",
-    "summary": null,
+    "summary": "HTLV-1 p30 suppresses the interferon response in monocytes and dendritic cells; p12 and p8 do not.",
     "selected": false
   },
   "10.1128/jvi.03444-13": {
@@ -680,7 +680,7 @@
     "isOpenAccess": true,
     "license": null,
     "licenseSource": "crossref:tdm-only",
-    "summary": null,
+    "summary": "Mutating cysteine 39 stops HTLV-1 p8 and p12 from dimerizing and being palmitoylated, but p8 still reaches the cell surface and spreads the virus.",
     "selected": false
   },
   "10.1186/1742-4690-11-s1-p122": {
@@ -699,7 +699,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Conference poster on how HIV-1 and HTLV-1 regulatory proteins interact in coinfection.",
     "selected": false
   },
   "10.1371/journal.pone.0042123": {
@@ -718,7 +718,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "A public online database of 2,457 HTLV-1 sequences.",
     "selected": false
   },
   "10.3390/v3101815": {
@@ -737,7 +737,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "A geranylgeranyl transferase inhibitor reduces viability of HTLV-1-transformed cells and lowers Tax.",
     "selected": false
   },
   "10.3390/v3060861": {
@@ -756,7 +756,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Review of the HTLV-1 orf-I and orf-II proteins p12, p8, p13 and p30.",
     "selected": false
   },
   "10.1186/1742-4690-8-s1-a124": {
@@ -775,7 +775,7 @@
     "isOpenAccess": true,
     "license": "cc-by",
     "licenseSource": "unpaywall:best_oa_location",
-    "summary": null,
+    "summary": "Conference abstract on dimerization and palmitoylation of HTLV-1 p12 and p8.",
     "selected": false
   },
   "10.1128/jvi.00356-08": {
@@ -794,7 +794,7 @@
     "isOpenAccess": true,
     "license": null,
     "licenseSource": "crossref:tdm-only",
-    "summary": null,
+    "summary": "HTLV-1 Tax relieves a repressor on the PCNA promoter, raising PCNA expression.",
     "selected": false
   },
   "10.1002/9780470025079.chap06.pub2": {
@@ -813,7 +813,7 @@
     "isOpenAccess": false,
     "license": null,
     "licenseSource": "crossref:tdm-only",
-    "summary": null,
+    "summary": "Textbook chapter on RNA tumour viruses, focused on HTLV-1 Tax.",
     "selected": false
   }
 }
