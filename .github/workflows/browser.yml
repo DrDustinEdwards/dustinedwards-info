@@ -126,8 +126,27 @@ jobs:
       #
       # `build:enhance` rides along on the same footing: `app/enhance/dist/` is
       # gitignored too, and the enhancement cases assert against those bundles.
-      - name: Content and enhancement bundles
+      #
+      # AND IT WENT RED AGAIN ON 2026-09-09, THE SAME WAY, FOR THE ARTIFACT
+      # RULING 39a MOVED NEXT. `content/generated/stack.json` became gitignored
+      # on 2026-09-08 and `build:content` reads it, so this step failed at its
+      # first line with "ENOENT ... content/generated/stack.json" on every
+      # scheduled run for four days. Nothing said so, for the reason recorded
+      # above: this job runs on a schedule, so its failures are only ever seen
+      # by somebody who goes looking.
+      #
+      # `build:stack` therefore runs FIRST here, as it does in ci.yml and in
+      # check-all's preflight. The lesson is the paragraph's, not the line's: an
+      # artifact that becomes a build product needs the build step added in
+      # every place that reads it, and the places that do not run on push are
+      # the ones that will be missed.
+      #
+      # `build:publication-twins` is deliberately NOT here. It is the same class
+      # of artifact, but this job drives the DEPLOYED site and reads nothing
+      # from public/; the twins it would care about are the ones that shipped.
+      - name: Stack, content and enhancement bundles
         run: |
+          npm run build:stack
           npm run build:content
           npm run build:enhance
 
