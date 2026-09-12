@@ -169,7 +169,7 @@ function Authors({ authors }: { authors: string[] }) {
 }
 
 export default function Paper({ loaderData }: Route.ComponentProps) {
-  const { paper, hosted, pagePath, pdfPath, cited, topics } = loaderData;
+  const { paper, slug, hosted, pagePath, pdfPath, cited, topics } = loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
   const citation = [
     decodeEntities(paper.journal ?? ""),
@@ -210,6 +210,11 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
               <a href={`https://doi.org/${paper.preprintDoi}`}>Preprint</a>
             ) : null}
             {paper.externalUrl ? <a href={paper.externalUrl}>Resource</a> : null}
+            {/* The citation exports, beside the links rather than behind a
+                button, because they are URLs: a reference manager can be
+                pointed at one and a reader can see what they are getting. */}
+            <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
+            <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
           </p>
 
           {/* The count, LABELLED with its source and the date it was read.

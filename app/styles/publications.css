@@ -302,3 +302,13 @@
   gap: 0.5rem;
   margin: 2rem 0 0;
 }
+
+/* The export row. Sits with the result count and reads as a caption, not as a
+   control: these describe the list rather than changing it. */
+.pub-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+}
