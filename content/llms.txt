@@ -49,6 +49,56 @@ Citations export as files rather than as a copy button:
 The bibliographic data is from Crossref and DataCite, with abstracts backfilled
 from Europe PMC where a publisher deposited none. Counts are OpenAlex.
 
+Every paper also has a markdown twin at /publications/<slug>.md. It carries the
+record as YAML frontmatter, the abstract, and, where the PDF is hosted here,
+the machine-extracted text of that PDF. That is the form to read if you are a
+program: the page says those things across HTML, meta tags and a JSON-LD block,
+and the twin says them once. The twins are kept out of the search index, like
+this file, so the paper's own page is the one that gets indexed.
+
+The full set, which is every paper on the index plus the conference abstracts
+the index does not show:
+
+  /publications/10-1002-9780470025079-chap06-pub2.md
+  /publications/10-1080-07448481-2025-2472184.md
+  /publications/10-1128-jmbe-00313-25.md
+  /publications/10-1128-jvi-00356-08.md
+  /publications/10-1128-jvi-01788-13.md
+  /publications/10-1128-jvi-02150-14.md
+  /publications/10-1128-jvi-03444-13.md
+  /publications/10-1128-mra-00173-22.md
+  /publications/10-1128-mra-00174-22.md
+  /publications/10-1128-mra-00556-21.md
+  /publications/10-1128-mra-00558-21.md
+  /publications/10-1128-mra-00778-23.md
+  /publications/10-1128-mra-00783-22.md
+  /publications/10-1128-mra-00888-24.md
+  /publications/10-1128-mra-01039-19.md
+  /publications/10-1128-mra-01077-21.md
+  /publications/10-1128-mra-01079-21.md
+  /publications/10-1128-mra-01242-18.md
+  /publications/10-1128-mra-01594-18.md
+  /publications/10-1186-1742-4690-11-s1-o13.md
+  /publications/10-1186-1742-4690-11-s1-p122.md
+  /publications/10-1186-1742-4690-8-s1-a124.md
+  /publications/10-1187-cbe-21-03-0057.md
+  /publications/10-1371-journal-pone-0042123.md
+  /publications/10-1371-journal-ppat-1004454.md
+  /publications/10-25334-8cxe-6883.md
+  /publications/10-25334-b5bs-f125.md
+  /publications/10-3389-feduc-2023-1279921.md
+  /publications/10-3389-feduc-2024-1442306.md
+  /publications/10-3389-feduc-2024-1442318.md
+  /publications/10-3390-ijerph22071139.md
+  /publications/10-3390-v3060861.md
+  /publications/10-3390-v3101815.md
+  /publications/10-7589-2018-08-187.md
+  /publications/10-7589-2019-04-088.md
+  /publications/10-7589-jwd-d-22-00023.md
+
+/publications.json carries the bibliographic record for all of them in CSL JSON,
+if one fetch is better than one per paper.
+
 ## Search
 
 /search?q=<query> searches the whole site and returns a normal HTML page.

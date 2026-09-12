@@ -755,6 +755,22 @@ if (run("npm", ["run", "build:stack"]).code !== 0) {
 if (run("npm", ["run", "build:content"]).code !== 0) {
   refuse("the content build failed", "Fix build:content. Nothing was deployed.");
 }
+/*
+ * THE PUBLICATION TWINS, and this one is different from its neighbours in a way
+ * worth stating: nothing imports them, so the build does not fail without them.
+ * They are gitignored files under public/, which Vite copies into build/client,
+ * so a run that skipped this step would deploy a site whose llms.txt advertises
+ * 36 markdown twins that answer 404, and every gate would stay green because
+ * every gate reads disk. The tier at step 3 does catch it, since
+ * check:publications compares the twins on disk against a fresh generation, but
+ * only on the path where the tier runs.
+ */
+if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
+  refuse(
+    "the publication twin build failed",
+    "Fix build:publication-twins. Nothing was deployed.",
+  );
+}
 // The enhancement bundles next: the app build's ?url imports name files under
 // the gitignored app/enhance/dist/, so a build without this step fails on a
 // missing file that is not the tree's fault.

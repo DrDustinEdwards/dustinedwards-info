@@ -105,11 +105,17 @@ jobs:
       # run a build, opened three PRs that were red on check:stack with no
       # defect in them. Deriving it here is what lets a dependency PR be
       # judged on its dependency.
-      - name: Migrations, stack and content build, enhancement bundles, local sync
+      #
+      # build:publication-twins is here for the plainest reason of the four:
+      # check:publications compares the twins on disk against a fresh
+      # generation, and a checkout has no twins at all, so without this step
+      # that comparison reads an empty directory.
+      - name: Migrations, stack and content build, publication twins, enhancement bundles, local sync
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:stack
           npm run build:content
+          npm run build:publication-twins
           npm run build:enhance
           npm run sync:content -- --local
 

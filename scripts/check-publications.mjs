@@ -36,11 +36,12 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { generate } from "./build-publications.mjs";
+import { generateTwins } from "./build-publication-twins.mjs";
 import { doiSlug, paperPath, paperPdfPath } from "../app/lib/publications/paths.mjs";
 import {
   buildCitationTags,
@@ -1184,6 +1185,159 @@ assertThat(
   preprints.map(([, f]) => `${f.id} -> ${f.preprintDoi}`).join(", "),
 );
 
+/* ------------------------------------------------------- the markdown twins */
+
+/*
+ * THE TWINS ON DISK ARE THE TWINS THIS CORPUS PRODUCES, BYTE FOR BYTE.
+ *
+ * They are gitignored build product served as static assets, which is the
+ * combination that needs this comparison most: nothing imports them, so a build
+ * that never ran breaks no build and fails no type check, and the deploy would
+ * simply upload a site whose llms.txt advertises 36 URLs that answer 404. The
+ * comparison is what turns that into a red gate.
+ *
+ * GENERATED IN THIS PROCESS AND COMPARED, never regenerated onto disk first.
+ * `generateTwins()` returns the bytes and writes nothing; the writing lives
+ * behind `build-publication-twins.mjs`'s direct-run guard, for the reason
+ * `build-publications.mjs` carries in full: a gate that repairs its subject
+ * before reading it cannot fail.
+ */
+const twins = await generateTwins();
+
+assertThat(
+  twins.size === PUBLICATIONS.length,
+  `one twin generated per record (${twins.size} of ${PUBLICATIONS.length})`,
+  "every assertion below iterates this map, so a short map is a quiet pass",
+);
+
+const TWIN_DIR = join(root, "public", "publications");
+const missingTwins = [...twins.keys()].filter((name) => !existsSync(join(TWIN_DIR, name)));
+assertThat(
+  missingTwins.length === 0,
+  "every twin exists on disk",
+  missingTwins.length
+    ? `run npm run build:publication-twins. Missing: ${missingTwins.join(", ")}`
+    : "",
+);
+
+const driftedTwins = [...twins.entries()]
+  .filter(([name, body]) => {
+    const path = join(TWIN_DIR, name);
+    return existsSync(path) && readFileSync(path, "utf8") !== body;
+  })
+  .map(([name]) => name);
+assertThat(
+  driftedTwins.length === 0,
+  "every twin on disk matches a fresh generation",
+  driftedTwins.length
+    ? `stale, run npm run build:publication-twins: ${driftedTwins.join(", ")}`
+    : "",
+);
+
+/*
+ * NO TWIN THIS CORPUS DOES NOT PRODUCE. The build prunes, so this asserts the
+ * prune ran: a DOI corrected leaves a file behind that nothing overwrites,
+ * nothing compares, and the next deploy uploads. Directly under the directory
+ * only, never recursive; the per-paper subdirectories hold the PDFs.
+ */
+const strayTwins = readdirSync(TWIN_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+  .map((entry) => entry.name)
+  .filter((name) => !twins.has(name));
+assertThat(
+  strayTwins.length === 0,
+  "no twin on disk belongs to a record this corpus no longer carries",
+  strayTwins.length ? `stray: ${strayTwins.join(", ")}` : "",
+);
+
+/*
+ * EVERY TWIN IS ADVERTISED, AND EVERYTHING ADVERTISED EXISTS.
+ *
+ * `content/llms.txt` lists the twins by URL, which is the only reason an agent
+ * that reads that file knows they are there. A hand-maintained list of 36 URLs
+ * beside a generated set of 36 files is exactly the mirror this repo refuses
+ * everywhere else, so it is reconciled in BOTH directions, the way
+ * `check:features` reconciles content/enhancements.json: a twin absent from
+ * llms.txt is a file nothing points at, and a line in llms.txt with no file
+ * behind it is this site telling an agent to fetch a 404.
+ *
+ * Matched on the URL, not on a count. A count would pass on a list of the right
+ * length naming the wrong papers, which is what a corrected DOI produces.
+ */
+const llms = readFileSync(join(root, "content", "llms.txt"), "utf8");
+const advertised = new Set(
+  [...llms.matchAll(/^\s{2}(\/publications\/[a-z0-9-]+\.md)$/gm)].map((m) => m[1]),
+);
+assertThat(
+  advertised.size > 0,
+  `llms.txt lists markdown twins (${advertised.size} found)`,
+  "an empty set here would make both directions below vacuous",
+);
+
+const expectedTwinUrls = new Set([...twins.keys()].map((name) => `/publications/${name}`));
+const unadvertised = [...expectedTwinUrls].filter((url) => !advertised.has(url));
+assertThat(
+  unadvertised.length === 0,
+  `every twin is listed in llms.txt (${expectedTwinUrls.size} twins)`,
+  unadvertised.length ? `absent from llms.txt: ${unadvertised.join(", ")}` : "",
+);
+
+const overAdvertised = [...advertised].filter((url) => !expectedTwinUrls.has(url));
+assertThat(
+  overAdvertised.length === 0,
+  "llms.txt lists no twin this corpus does not produce",
+  overAdvertised.length ? `advertised with no file: ${overAdvertised.join(", ")}` : "",
+);
+
+/*
+ * THE FULL TEXT REACHES THE TWIN, which is the assertion the whole extracted
+ * artifact exists for. Every hosted paper's twin carries the section and a
+ * substantial body under it; a twin that quietly lost its text would still
+ * generate, still match on disk, and still be advertised.
+ *
+ * Compared against the artifact's own character count rather than a fixed
+ * threshold: the claim is that this paper's text is in this paper's twin, not
+ * that the twin is long.
+ */
+const textless = [];
+for (const [doi, fields] of hosted) {
+  const entry = extractedPapers[doi] ?? extractedPapers[doiKey(doi)];
+  const body = twins.get(`${doiSlug(doi)}.md`) ?? "";
+  if (!entry) continue;
+  const marker = "## Full text";
+  const at = body.indexOf(marker);
+  // Half the extracted length, because the twin joins pages on a blank line and
+  // trims each: it can be a little shorter than the artifact and never half.
+  if (at === -1 || body.length - at < entry.chars / 2) {
+    textless.push(`${fields.id} (${at === -1 ? "no section" : "short"})`);
+  }
+}
+assertThat(
+  textless.length === 0,
+  `every hosted paper's twin carries its extracted text (${hosted.length} hosted)`,
+  textless.length ? `missing or truncated: ${textless.join(", ")}` : "",
+);
+
+/*
+ * NO TWIN CARRIES A CHARACTER REFERENCE. The stored corpus keeps `&lt;` on
+ * purpose (the abstract invariant above), and every boundary where text becomes
+ * something a reader reads decodes it. The twin is one of those boundaries and
+ * this is what says so: a twin handing an agent `p &lt; 0.05` is handing it the
+ * markup instead of the sentence.
+ *
+ * The needle is the ampersand form, anchored to the named references this
+ * corpus actually carries, rather than a bare `&`: URLs in the frontmatter
+ * carry query strings and a bare ampersand would match those.
+ */
+const entityTwins = [...twins.entries()]
+  .filter(([, body]) => /&(?:amp|lt|gt|quot|apos|#\d+);/.test(body))
+  .map(([name]) => name);
+assertThat(
+  entityTwins.length === 0,
+  "no twin carries an undecoded character reference",
+  entityTwins.length ? `still escaped in: ${entityTwins.join(", ")}` : "",
+);
+
 /* ----------------------------------------------------------------------- done */
 
 /*
@@ -1209,9 +1363,13 @@ assertThat(
  * decides whether a hosting decision was made or merely inherited. The pipeline
  * now writes `none-deposited` and null means one thing.
  *
- * 69 with the extracted-text artifact's assertions, from a run.
+ * 69 with the extracted-text artifact's assertions and 78 with the markdown
+ * twins, from a run. The twin block's llms.txt reconciliation is the one that
+ * has to be read in both directions to mean anything: a twin nothing advertises
+ * and a URL with no twin behind it are different failures and neither is
+ * visible from the other side.
  */
-const MINIMUM_CHECKS = 69;
+const MINIMUM_CHECKS = 78;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

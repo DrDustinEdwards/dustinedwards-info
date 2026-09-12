@@ -643,6 +643,26 @@ function main() {
   }
   console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
   /*
+   * THE PUBLICATION TWINS, same class again: public/publications/*.md is
+   * gitignored build product, and `check:publications` compares what is on disk
+   * against a fresh generation. Without this step that comparison reads
+   * whatever the last run left, which on a fresh clone is nothing and on a
+   * stale tree is the previous corpus. Both are the drift the comparison exists
+   * to find, arriving as the comparison's own input. Not a gate: no table row,
+   * no floor.
+   */
+  process.stdout.write("  build:publication-twins (the twins check:publications compares) ... ");
+  const twinned = runGate("build:publication-twins", []);
+  if (!twinned.ok) {
+    console.log("FAILED");
+    console.log(twinned.output.trimEnd());
+    throw new Error(
+      "build:publication-twins failed, so the markdown twins do not exist on " +
+        "disk. Nothing below ran; fix the twin build first.",
+    );
+  }
+  console.log(`ok (${(twinned.ms / 1000).toFixed(1)}s)`);
+  /*
    * THE ENHANCEMENT BUNDLES, same class as build:content: app/enhance/dist/ is
    * gitignored build product, the app build's ?url imports refuse to resolve
    * without it, and a stale bundle on disk would be certified as itself by any

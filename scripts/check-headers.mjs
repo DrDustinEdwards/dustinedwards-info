@@ -1133,11 +1133,35 @@ console.log(
  * (transferSize 300 against encoded bodies up to 60 kB, so a 304 with the body
  * already on disk), median 689ms and 1204ms for the slowest.
  *
- * The rule is scoped to `/assets/*`, whose filenames carry their content hash,
- * so a year is safe by construction. THE DANGER IS THE GLOB WIDENING. A rule
- * over `/*` would pin `favicon.ico`, `logo.svg` and the icon suite for a year
- * at stable paths, and this repo has already recorded a browser holding a stale
- * favicon hard enough to look like a failed deploy. That is what this asserts.
+ * The immutable year is scoped to `/assets/*`, whose filenames carry their
+ * content hash, so a year is safe by construction. THE DANGER IS THE GLOB
+ * WIDENING. A rule over `/*` would pin `favicon.ico`, `logo.svg` and the icon
+ * suite for a year at stable paths, and this repo has already recorded a
+ * browser holding a stale favicon hard enough to look like a failed deploy.
+ * That is what this asserts.
+ *
+ * ## IT USED TO ASSERT "`/assets/*` IS THE ONLY PATH", WHICH IS NOT THE RULE
+ *
+ * That was a proxy for the property, and it was a fair proxy while `/assets/*`
+ * was the only path anybody wanted. It stopped being one on 2026-09-12, when
+ * the markdown twins arrived: `public/publications/*.md` are assets rather than
+ * route output, so the two headers a route would have set (a ten-minute shared
+ * cache and `X-Robots-Tag: noindex`) can only be set here. Under the old
+ * assertion, adding a NOINDEX rule to an unhashed path failed a check about
+ * long-lived caching, which is a gate refusing something its own reasoning
+ * permits.
+ *
+ * So the assertion is now the property: no path outside `/assets/*` is
+ * immutable or fresh for longer than `MAX_UNHASHED_FRESHNESS`. Read PER BLOCK
+ * rather than over the whole file, because the file-wide reading could not tell
+ * which path a directive belonged to, and would have passed a year on
+ * `/logo.svg` beside a short rule somewhere else.
+ *
+ * `stale-while-revalidate` is deliberately NOT bounded. It is not a freshness
+ * lifetime: the body is revalidated in the background and replaced, which is
+ * the opposite of the un-revokable state this guards against, and every HTML
+ * route on this site already sends `stale-while-revalidate=86400` through
+ * `SHARED_CACHE_CONTROL`.
  *
  * OBSERVATION BOUNDARY: this reads the tracked FILE. It does not fetch an
  * asset, so it cannot see Workers Assets failing to apply a rule it parsed.
@@ -1150,29 +1174,92 @@ const headersPath = join(root, HEADERS_FILE);
 ok(`${HEADERS_FILE} exists`, existsSync(headersPath),
   "Workers Assets falls back to max-age=0 for every asset without it");
 
+/**
+ * The longest freshness an UNHASHED path may declare, in seconds.
+ *
+ * One hour. The hazard is a path whose bytes can change under a stable URL: once
+ * a browser has stored it as fresh, nothing on the server can recall it, and
+ * there is no purge door here (hard rule 20 records why: `workers.dev` has no
+ * zone). An hour is short enough that a bad deploy is corrected within one, and
+ * long enough to be worth declaring at all.
+ *
+ * `/assets/*` is exempt because its filenames carry a content hash, so its URL
+ * changes whenever its bytes do and the question cannot arise.
+ */
+const MAX_UNHASHED_FRESHNESS = 3600;
+
 if (existsSync(headersPath)) {
   const raw = readFileSync(headersPath, "utf8");
   // Path lines start at column 0; header lines are indented. Comments are '#'.
   const lines = raw
     .split(/\r?\n/)
     .filter((l) => l.trim() && !l.trim().startsWith("#"));
-  const paths = lines.filter((l) => !/^\s/.test(l)).map((l) => l.trim());
-  const directives = lines.filter((l) => /^\s/.test(l)).map((l) => l.trim());
 
-  ok("the rule file declares at least one path", paths.length > 0,
-    `parsed ${paths.length} path line(s) from ${HEADERS_FILE}`);
+  /*
+   * PARSED INTO BLOCKS, so every directive is attributed to the path it sits
+   * under. The flat split this replaced read all the directives in the file as
+   * one list, which cannot answer "is anything unhashed pinned for a year" the
+   * moment the file has two paths in it.
+   */
+  /** @type {Array<{ path: string, directives: string[] }>} */
+  const blocks = [];
+  for (const raw_line of lines) {
+    const line = raw_line.trim();
+    if (/^\s/.test(raw_line)) {
+      // A directive before any path line is malformed; counted so it cannot be
+      // silently dropped into nothing.
+      if (blocks.length === 0) blocks.push({ path: "(no path line)", directives: [] });
+      blocks[blocks.length - 1].directives.push(line);
+    } else {
+      blocks.push({ path: line, directives: [] });
+    }
+  }
+  const paths = blocks.map((b) => b.path);
 
-  ok("every declared path is scoped to the hashed build output",
-    paths.every((p) => p === "/assets/*"),
-    `only /assets/* carries a content hash in its filename. Found: ${paths.join(", ")}`);
+  ok("the rule file declares at least one path", blocks.length > 0,
+    `parsed ${blocks.length} block(s) from ${HEADERS_FILE}`);
 
-  const immutable = directives.filter((d) => /immutable|max-age=\d{5,}/i.test(d));
+  ok("every declared block carries at least one header",
+    blocks.every((b) => b.directives.length > 0),
+    `a path with no directives under it sets nothing. Found: ` +
+      `${blocks.filter((b) => b.directives.length === 0).map((b) => b.path).join(", ")}`);
+
+  const hashed = blocks.filter((b) => b.path === "/assets/*");
+  ok("the hashed build output has a rule", hashed.length === 1,
+    `expected exactly one /assets/* block, found ${hashed.length}. ` +
+      `Without it every asset revalidates on every load.`);
+
+  const immutable = hashed.flatMap((b) =>
+    b.directives.filter((d) => /immutable|max-age=\d{5,}/i.test(d)),
+  );
   ok("an immutable rule is declared", immutable.length > 0,
     "the file exists but pins nothing, so every asset still revalidates");
 
-  ok("nothing outside /assets/* is given a long max-age",
-    !paths.some((p) => p !== "/assets/*") || immutable.length === 0,
-    `a long-lived rule on an unhashed path cannot be revoked before it expires`);
+  /*
+   * THE PROPERTY, per block. `max-age` and `s-maxage` are both read, because
+   * `s-maxage` overrides `max-age` for the shared cache and a year there is the
+   * same un-revokable state at the edge instead of in a browser.
+   */
+  const unhashed = blocks.filter((b) => b.path !== "/assets/*");
+  const overFresh = unhashed.flatMap((b) =>
+    b.directives.flatMap((d) => {
+      if (/immutable/i.test(d)) return [`${b.path}: ${d} (immutable)`];
+      return [...d.matchAll(/\b(?:s-maxage|max-age)=(\d+)/gi)]
+        .filter((m) => Number(m[1]) > MAX_UNHASHED_FRESHNESS)
+        .map((m) => `${b.path}: ${m[0]}`);
+    }),
+  );
+  ok(
+    `no unhashed path is fresh for more than ${MAX_UNHASHED_FRESHNESS}s ` +
+      `(${unhashed.length} unhashed block(s) read)`,
+    overFresh.length === 0,
+    `a long-lived rule on an unhashed path cannot be revoked before it ` +
+      `expires: ${overFresh.join("; ")}`,
+  );
+
+  ok("the paths declared here are the ones this site means to declare",
+    paths.every((p) => p === "/assets/*" || p === "/publications/*.md"),
+    `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
 }
 
 /* --------------------------------- the health endpoint's own headers ------ */
@@ -1692,11 +1779,15 @@ console.log("  public HTML routes share one headers()");
  * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
  * work and is proven so by differential). CI reached it on the first push.
  *
- * Executed 211, tolerance 11, so the lowest legal floor is 200. This sits at
+ * Executed 211, tolerance 11, so the lowest legal floor is 200. This sat at
  * 206, about half the tolerance under the count: far enough to absorb an added
  * block, close enough that a gate which has quietly halved cannot pass.
+ *
+ * RE-MEASURED at 219 on 2026-09-12, when the `_headers` block was rewritten to
+ * read per path rather than per file. Same reasoning, same fraction: tolerance
+ * 11, lowest legal floor 208, this sits at 213.
  */
-const MINIMUM_CHECKS = 206;
+const MINIMUM_CHECKS = 213;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
