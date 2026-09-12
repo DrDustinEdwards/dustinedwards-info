@@ -312,3 +312,33 @@
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
 }
+
+/* Who cites this paper. A list of sentences, so it reads rather than tabulates:
+   each entry is a title, a venue and a year, and the longest here runs to 50
+   entries. Numbered because the order is meaningful (newest first). */
+.paper-citedby {
+  margin-top: 2rem;
+  max-width: 46rem;
+}
+
+.paper-citedby h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.paper-citedby-source {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.paper-citedby-list {
+  margin: 0;
+  padding-left: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.paper-citedby-list li {
+  margin-top: 0.375rem;
+}
