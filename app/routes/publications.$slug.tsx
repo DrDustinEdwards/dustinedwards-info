@@ -9,6 +9,8 @@ import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug, paperPath, paperPdfPath, PUBLICATIONS_PATH } from "~/lib/publications/paths.mjs";
+import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
+import citedByArtifact from "../../data/publications.cited-by.json";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
@@ -84,6 +86,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     pagePath: paperPath(slug),
     pdfPath: hosted ? paperPdfPath(slug) : null,
     cited: citations[paper.doi] ?? null,
+    /*
+     * WHO CITES THIS, from the committed artifact rather than from OpenAlex at
+     * request time. The grounds are in scripts/fetch-cited-by.mjs: the list is
+     * 55 KB across the corpus, it needs a 10-credit filter query where a count
+     * needs a 1-credit lookup, and it is evidence, so it carries the date it was
+     * read rather than pretending to be current.
+     *
+     * `total` and the list length are BOTH carried, because one paper here has
+     * 52 citing works against a cap of 50 and the page has to be able to say so.
+     */
+    citedBy: citedByFor(citedByArtifact, paper.doi),
+    citedByFetchedAt: citedByFetchedAt(citedByArtifact),
     topics: paper.topics.map((id) => ({ id, label: TOPIC_LABEL.get(id) ?? id })),
   };
 }
@@ -169,7 +183,8 @@ function Authors({ authors }: { authors: string[] }) {
 }
 
 export default function Paper({ loaderData }: Route.ComponentProps) {
-  const { paper, slug, hosted, pagePath, pdfPath, cited, topics } = loaderData;
+  const { paper, slug, hosted, pagePath, pdfPath, cited, citedBy, citedByFetchedAt, topics } =
+    loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
   const citation = [
     decodeEntities(paper.journal ?? ""),
@@ -230,6 +245,44 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
               )}{" "}
               <span className="muted">OpenAlex, read {cited.fetchedAt}</span>
             </p>
+          ) : null}
+
+          {/*
+            WHO CITES THIS, under the count, which is where ruling 63 puts it.
+
+            Newest first and capped, and the cap is STATED when it bites: one
+            paper here has 52 citing works against a cap of 50, and a list that
+            silently showed 50 would be claiming completeness it does not have.
+
+            A plain list rather than a table. Each entry is a sentence (title,
+            venue, year) and a link where a DOI exists; three of the 263 have no
+            DOI, which is why the link is conditional rather than assumed.
+          */}
+          {citedBy && citedBy.citing.length > 0 ? (
+            <section className="paper-citedby" aria-labelledby="citedby-heading">
+              <h2 id="citedby-heading">
+                Cited by{" "}
+                {citedBy.total > citedBy.citing.length
+                  ? `${citedBy.citing.length} of ${citedBy.total}`
+                  : citedBy.total}
+              </h2>
+              <p className="muted paper-citedby-source">
+                OpenAlex, read {citedByFetchedAt ?? "an unrecorded date"}. Newest first.
+              </p>
+              <ol className="paper-citedby-list">
+                {citedBy.citing.map((w, i) => (
+                  <li key={`${w.doi ?? w.title}-${i}`}>
+                    {w.doi ? (
+                      <a href={`https://doi.org/${w.doi}`}>{w.title ?? w.doi}</a>
+                    ) : (
+                      (w.title ?? "Untitled")
+                    )}
+                    {w.venue ? <span className="muted">, {w.venue}</span> : null}
+                    {w.year ? <span className="muted">, {w.year}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
           ) : null}
 
           {/* VISIBLE, never inside a details element. The index collapses

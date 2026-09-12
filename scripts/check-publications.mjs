@@ -472,6 +472,104 @@ assertThat(
     : "",
 );
 
+/* ---------------------------------------------------------------- cited by */
+
+/*
+ * THE CITED-BY ARTIFACT IS DATED EVIDENCE, and these assertions are about the
+ * ways a dated artifact goes wrong rather than about the numbers in it. The
+ * numbers are OpenAlex's and this gate has no way to check them; what it can
+ * check is that the file describes THIS corpus, that it is not silently
+ * truncated, and that it says when it was read.
+ */
+{
+  const citedByPath = join(root, "data", "publications.cited-by.json");
+  assertThat(
+    existsSync(citedByPath),
+    "the cited-by artifact exists",
+    "regenerate with `node scripts/fetch-cited-by.mjs --write`",
+  );
+  if (existsSync(citedByPath)) {
+    const artifact = JSON.parse(readFileSync(citedByPath, "utf8"));
+    const works = artifact.works ?? {};
+    const keys = Object.keys(works);
+
+    assertThat(
+      keys.length > 0,
+      `the cited-by artifact carries records (${keys.length})`,
+      "every assertion below iterates it",
+    );
+    assertThat(
+      /^\d{4}-\d{2}-\d{2}$/.test(String(artifact.fetchedAt ?? "")),
+      `the artifact records the date it was read (${artifact.fetchedAt})`,
+      "the page prints this date beside the list; an absent one would print a " +
+        "list with no provenance, which is a claim with no age",
+    );
+
+    const strays = keys.filter((doi) => !Object.hasOwn(site, doi));
+    assertThat(
+      strays.length === 0,
+      "every cited-by key is a DOI this corpus carries",
+      strays.join(", "),
+    );
+    const uncovered = siteEntries.filter(([doi]) => !Object.hasOwn(works, doi));
+    assertThat(
+      uncovered.length === 0,
+      `every corpus record has a cited-by entry (${keys.length} of ${siteEntries.length})`,
+      uncovered.length
+        ? `${uncovered.map(([, f]) => f.id).join(", ")}. A missing entry and a zero ` +
+            "entry are different facts, and the page renders them differently."
+        : "",
+    );
+
+    /*
+     * THE CAP IS RESPECTED AND THE TRUE TOTAL SURVIVES IT. One record has 52
+     * citing works against a cap of 50, and the page says "50 of 52" only
+     * because both numbers are in the file. A list longer than the cap would
+     * mean the fetcher stopped honouring it; a `total` below the list length
+     * would mean the two came from different reads.
+     */
+    const cap = Number(artifact.maxCiting ?? 0);
+    assertThat(cap > 0, `the artifact records its own cap (${cap})`);
+    const overCap = keys.filter((d) => (works[d].citing?.length ?? 0) > cap);
+    assertThat(
+      overCap.length === 0,
+      `no entry exceeds the cap (${cap})`,
+      overCap.join(", "),
+    );
+    const totalBelowList = keys.filter(
+      (d) => Number(works[d].total ?? 0) < (works[d].citing?.length ?? 0),
+    );
+    assertThat(
+      totalBelowList.length === 0,
+      "no entry's total is below the number of works listed under it",
+      totalBelowList.length
+        ? `${totalBelowList.join(", ")}. The two came from different reads.`
+        : "",
+    );
+
+    const citingCount = keys.reduce((n, d) => n + (works[d].citing?.length ?? 0), 0);
+    assertThat(
+      citingCount > 0,
+      `the artifact lists citing works (${citingCount})`,
+      "a zero would make the shape assertions below vacuous",
+    );
+    /*
+     * A DOI HERE IS A BARE NAME, NOT A URL. OpenAlex returns
+     * `https://doi.org/10.x/y` and the fetcher strips the prefix, because the
+     * page builds its own link. A URL that slipped through would render as
+     * `https://doi.org/https://doi.org/...`.
+     */
+    const urlShaped = keys.flatMap((d) =>
+      (works[d].citing ?? []).filter((/** @type {any} */ w) => w.doi?.startsWith("http")),
+    );
+    assertThat(
+      urlShaped.length === 0,
+      "every citing DOI is a bare name rather than a URL",
+      urlShaped.slice(0, 3).map((/** @type {any} */ w) => w.doi).join(", "),
+    );
+  }
+}
+
 /* ------------------------------------------------------------------ exports */
 
 /*
@@ -660,8 +758,9 @@ assertThat(
  * assertion failed five records whose output was correct, because it asked
  * `title.includes(organism)` where the code asks a longest-first matcher, and
  * a title carrying "Mycobacterium smegmatis" contains "Mycobacterium" too.
+ * 50 when the cited-by artifact's assertions landed. Every number from a run.
  */
-const MINIMUM_CHECKS = 38;
+const MINIMUM_CHECKS = 48;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

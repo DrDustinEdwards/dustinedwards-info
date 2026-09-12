@@ -11,6 +11,7 @@ import {
 } from "~/data/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
+import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
@@ -444,6 +445,21 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           </a>
         ) : null}
       </p>
+      {/*
+        COinS, one per row, INDEX ONLY.
+
+        An empty span whose title is an OpenURL ContextObject. Zotero and its
+        relatives scan for `.Z3988` and offer to save what they find, which is
+        the only machine-readable citation a LIST page can carry: Highwire
+        `citation_*` tags describe the document they sit in, and a page is one
+        document, so 33 records cannot each have a citation_title. That is the
+        same limit that stops Scholar indexing a list page, and this is the
+        thing that fills it: a reader can save one row without opening it.
+
+        The per-paper pages carry the citation tags and JSON-LD instead, so
+        this is deliberately not repeated there. Ruling 63.
+      */}
+      <span className="Z3988" title={coinsTitle(p)} />
       {p.abstract ? (
         <details className="pub-abstract">
           <summary>Abstract</summary>
