@@ -3,6 +3,8 @@ import { getEnv } from "~/lib/context";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
+import { PUBLICATIONS } from "~/data/publications";
+import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -85,6 +87,31 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   const urls = [
     ...STATIC_PATHS.map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
+    /*
+     * ONE ENTRY PER PAPER, from the committed corpus rather than a query.
+     *
+     * These are the only sitemap entries on the site that come from a build
+     * artifact instead of from D1, and that is what they are: `publications.ts`
+     * is generated, gated and committed, so this list is as reproducible as the
+     * static paths above and needs no read.
+     *
+     * NO `lastmod`, deliberately. The obvious candidate is the file's commit
+     * date, which would mark all 36 as changing together every time the
+     * registry refresh touches one field, and a lastmod that moves for reasons
+     * unrelated to the content is worse than none: it teaches a crawler to stop
+     * believing the field.
+     *
+     * The SHOWCASE filter is NOT applied here, and the reason is worth stating:
+     * the index hides three conference abstracts because showing both a meeting
+     * abstract and the paper it became repeats the same work to a reader. A
+     * crawler has no such problem, each is a real page with its own DOI, and a
+     * page that exists and is absent from the sitemap is the gap
+     * `check:invariants` section 14 exists to refuse.
+     */
+    ...PUBLICATIONS.map((p) => ({
+      loc: `${origin}${paperPath(doiSlug(p.doi))}`,
+      lastmod: null as Date | null,
+    })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/blog/${p.slug}`,
       lastmod: p.updatedAt,

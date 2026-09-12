@@ -872,6 +872,31 @@ const ROUTE_CEILINGS = {
    * no script either. A hydrating version of this page would ship the corpus.
    */
   "/publications": { id: "routes/publications", css: 5300, total: 6300 },
+  /*
+   * ONE PAPER'S PAGE. MEASURED 2026-09-12 through this gate on a fresh build:
+   * css 4768 over two sheets, 5586 total.
+   *
+   * IDENTICAL TO THE INDEX, TO THE BYTE, because it is the same two
+   * stylesheets: `publications.css` carries both pages and the paper rules were
+   * appended to it rather than split into a third sheet. Two sheets for two
+   * pages that share a visual language would be two places for one decision,
+   * and the split would cost a second request to save nothing.
+   *
+   * So it takes the index's ceiling, which is `/projects`', which is the bar
+   * every "app.css plus one route sheet plus theme.js" page on this site is
+   * graded against.
+   *
+   * WHAT THIS PAGE DOES NOT PAY FOR, and it is the interesting number: the
+   * abstract is rendered VISIBLE rather than inside a disclosure, every author
+   * is listed rather than collapsed, and the JSON-LD carries the full author
+   * array. The 144-author record therefore renders 144 names and 144
+   * `citation_author` tags. None of it reaches the ceiling below, because the
+   * ceiling measures the SHARED cold load, the stylesheets and bundles a
+   * browser caches once, and this page's own HTML is the variable part. That is
+   * the right split: a long author list is content, and content is not a
+   * payload regression.
+   */
+  "/publications/:slug": { id: "routes/publications.$slug", css: 5300, total: 6300 },
 };
 
 /**

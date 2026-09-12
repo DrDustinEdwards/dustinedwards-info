@@ -12,6 +12,7 @@ import {
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
@@ -395,7 +396,21 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   return (
     <article className="pub-entry">
       {/* Display only. The stored title stays plain for search and JSON-LD. */}
-      <h3 className="pub-title">{italicizeOrganisms(decodeEntities(p.title))}</h3>
+      {/*
+        THE TITLE IS THE LINK TO THE PAPER'S OWN PAGE.
+        Every row leads somewhere now. Before the per-paper pages existed this
+        was plain text and the only outbound links were the DOI and the PDF, so
+        the index was a leaf: a reader who wanted one paper had to leave the
+        site to read anything more about it. It is also what makes the paper
+        pages reachable by a crawler, which Scholar requires (every article URL
+        "reachable from the homepage by following at most ten simple HTML
+        links"); a sitemap entry alone is a weaker signal than a real link.
+      */}
+      <h3 className="pub-title">
+        <Link to={paperPath(doiSlug(p.doi))}>
+          {italicizeOrganisms(decodeEntities(p.title))}
+        </Link>
+      </h3>
       <AuthorList authors={p.authors} />
       <p className="pub-meta">
         {citation(p)}

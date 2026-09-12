@@ -1460,6 +1460,13 @@ console.log("  public HTML routes share one headers()");
      * citation counts come from KV and are the same for everybody.
      */
     "publications.tsx",
+    /*
+     * One paper's page. Same policy as the index and for the same reason:
+     * every byte of it is a function of the committed corpus, so one reader's
+     * copy is every reader's copy. The citation counts come from KV and are
+     * identical for everybody.
+     */
+    "publications.$slug.tsx",
     "privacy.tsx",
     // The tag archive. It calls `publicHtmlHeaders()` and negotiates nothing:
     // its feeds are separate URLs rather than representations of this one, so

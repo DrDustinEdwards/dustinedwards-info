@@ -23,6 +23,12 @@
     // the escaped form the corpus stores, and this project must reach every
     // file a listed file reaches. Dependency-free, so it costs nothing.
     "app/lib/publications/entities.mjs",
+    // Every publication URL and file path, stated once. `check:publications`
+    // asserts that each hosted `pdfPath` is the path `paperPdfPath` derives, so
+    // the gate has to reach the one function that owns the rule rather than
+    // restate it. That binding is what stops `citation_pdf_url` pointing into a
+    // directory Google Scholar will not accept.
+    "app/lib/publications/paths.mjs",
     "app/lib/content/pipeline.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so

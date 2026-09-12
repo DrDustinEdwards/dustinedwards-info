@@ -40,6 +40,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { generate } from "./build-publications.mjs";
+import { doiSlug, paperPdfPath } from "../app/lib/publications/paths.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -348,6 +349,120 @@ assertThat(
   untopiced.length ? untopiced.map(([, f]) => f.id).join(", ") : "",
 );
 
+/* ----------------------------------------------------- slugs, pages and PDFs */
+
+/*
+ * THE SLUG IS LOSSY AND THIS IS WHERE THAT IS MADE SAFE.
+ *
+ * `doiSlug` collapses every run of non-alphanumerics to one hyphen, so
+ * `10.1234/ab-cd` and `10.1234/ab.cd` produce the same slug. No such pair is in
+ * this corpus. A collision would mean two papers sharing a URL, one of them
+ * unreachable, and the unreachable one would still be in the sitemap.
+ */
+const slugs = siteEntries.map(([doi]) => doiSlug(doi));
+const slugCounts = new Map();
+for (const slug of slugs) slugCounts.set(slug, (slugCounts.get(slug) ?? 0) + 1);
+const collided = [...slugCounts.entries()].filter(([, n]) => n > 1).map(([s]) => s);
+assertThat(
+  collided.length === 0,
+  `every DOI produces a distinct page slug (${slugCounts.size} of ${slugs.length})`,
+  collided.length
+    ? `these slugs are claimed by more than one DOI: ${collided.join(", ")}. ` +
+        "doiSlug collapses punctuation, so two DOIs differing only in punctuation collide."
+    : "",
+);
+assertThat(
+  slugs.every((s) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s)),
+  "every slug is a single lower-case path segment",
+  slugs.filter((s) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s)).join(", "),
+);
+
+/*
+ * THE PDF SITS WHERE THE PAGE CLAIMS IT DOES, AND `paperPdfPath` IS THE OWNER.
+ *
+ * `pdfPath` stays a LITERAL in the data file rather than being derived at
+ * render time, for one measured reason: `build:template-refs` matches asset
+ * references as literal strings in source, and a path built from a template
+ * would make all 31 PDFs read as unreferenced next to a delete button in the
+ * media library. So the literal is kept for the scanner and this assertion
+ * binds it to the one function that owns the rule.
+ *
+ * Without this, the two could drift and the symptom would be the quiet one:
+ * `citation_pdf_url` pointing into a directory that is not the page's, which
+ * Scholar declines silently and which takes six to nine months to correct.
+ */
+const pathMismatch = siteEntries
+  .filter(([doi, f]) => f.pdfPath && f.pdfPath !== paperPdfPath(doiSlug(doi)))
+  .map(([doi, f]) => `${f.id}: ${f.pdfPath} should be ${paperPdfPath(doiSlug(doi))}`);
+assertThat(
+  pathMismatch.length === 0,
+  `every hosted pdfPath is the path paperPdfPath derives (${hosted.length} checked)`,
+  pathMismatch.join("; "),
+);
+
+/*
+ * EVERY PDF IS INSIDE ITS OWN PAPER'S DIRECTORY. Stated separately from the
+ * equality above because it is the PROPERTY Scholar cares about, and the
+ * equality is only the mechanism that currently delivers it. If
+ * `paperPdfPath` were ever changed to put files somewhere else, the assertion
+ * above would still pass and this one would not.
+ */
+const outsideOwnDirectory = siteEntries
+  .filter(([doi, f]) => f.pdfPath && !f.pdfPath.startsWith(`/publications/${doiSlug(doi)}/`))
+  .map(([, f]) => f.id);
+assertThat(
+  outsideOwnDirectory.length === 0,
+  "every hosted PDF is in the same subdirectory as its paper's page",
+  outsideOwnDirectory.length
+    ? `${outsideOwnDirectory.join(", ")}. Google Scholar only honours ` +
+        "citation_pdf_url when the file is in the abstract page's own subdirectory."
+    : "",
+);
+
+/* ------------------------------------------------------- the redirect map */
+
+/*
+ * BOTH DIRECTIONS. Every moved PDF has a redirect from its old URL, and every
+ * redirect names a PDF that exists. A one-way check would pass on a map that
+ * had grown an entry pointing at nothing, which is a 301 into a 404.
+ */
+const redirects = JSON.parse(readFileSync(join(root, "content", "redirects.json"), "utf8"));
+const pdfRedirects = redirects.pdfs ?? {};
+const redirectTargets = new Set(Object.values(pdfRedirects));
+const hostedPaths = new Set(hosted.map(([, f]) => f.pdfPath));
+
+assertThat(
+  Object.keys(pdfRedirects).length > 0,
+  `the PDF redirect map is populated (${Object.keys(pdfRedirects).length} entries)`,
+  "an empty map would make both directions below vacuous",
+);
+const unredirected = [...hostedPaths].filter((p) => !redirectTargets.has(p));
+assertThat(
+  unredirected.length === 0,
+  `every hosted PDF is the target of a redirect from its old URL (${hostedPaths.size} hosted)`,
+  unredirected.length
+    ? `no old URL redirects to: ${unredirected.join(", ")}. Every one of these ` +
+        "was published at a flat path for seven weeks and that URL is a promise."
+    : "",
+);
+const danglingTargets = [...redirectTargets].filter((p) => !hostedPaths.has(p));
+assertThat(
+  danglingTargets.length === 0,
+  "every redirect target is a PDF the corpus actually hosts",
+  danglingTargets.length ? `301 into nothing: ${danglingTargets.join(", ")}` : "",
+);
+const sourcesStillOnDisk = Object.keys(pdfRedirects).filter((p) =>
+  existsSync(join(root, "public", p.replace(/^\//, ""))),
+);
+assertThat(
+  sourcesStillOnDisk.length === 0,
+  "no redirect source is also a file on disk",
+  sourcesStillOnDisk.length
+    ? `${sourcesStillOnDisk.join(", ")} exist as assets, and the static handler runs ` +
+        "ahead of the Worker, so the redirect would never fire."
+    : "",
+);
+
 /* -------------------------------------------------------------------- preprint */
 
 /*
@@ -368,12 +483,17 @@ assertThat(
 /* ----------------------------------------------------------------------- done */
 
 /*
- * EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE on 2026-09-12, never
- * summed from the assertion list above. Slack of two, the convention
- * `check:secrets` records: this gate's count moves only when an assertion is
- * written, so it does not need room to breathe.
+ * EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE, never summed from the
+ * assertion list above. Slack of two, the convention `check:secrets` records:
+ * this gate's count moves only when an assertion is written, so it does not
+ * need room to breathe.
+ *
+ * 21 on 2026-09-12 at the restore. RE-MEASURED the same day at 29, when the
+ * slug, PDF-location and redirect-map assertions landed with the per-paper
+ * pages. The arithmetic answer would have been 29 either way; the number below
+ * comes from the run.
  */
-const MINIMUM_CHECKS = 20;
+const MINIMUM_CHECKS = 27;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);
