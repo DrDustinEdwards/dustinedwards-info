@@ -188,3 +188,22 @@ wrangler.watchdog.jsonc
 
 # Project MCP config: carries a driver bearer token
 .mcp.json
+
+# THE DESIGN-SYNC WORKING SET, for the /design-sync skill that exports this
+# site's tokens and its four presentational components to claude.ai/design.
+#
+# What IS committed is the sync's INPUTS, under .design-sync/: config.json, the
+# generator, the bundle entry, the authored previews, the conventions header and
+# NOTES.md. Everything below is either a staged copy of the skill's own scripts,
+# regenerated build output, or machine-local verification state, and a committed
+# copy of any of them would be a second owner of something already owned
+# elsewhere (hard rule 17).
+/.ds-sync/
+/ds-bundle/
+/.design-sync/.cache/
+/.design-sync/learnings/
+/.design-sync/node_modules
+# Derived by .design-sync/build-inputs.mjs from app/**/*.css and
+# tsconfig.cloudflare.json, which stay the only owners of their content.
+/.design-sync/ds-styles.css
+/.design-sync/tsconfig.paths.json

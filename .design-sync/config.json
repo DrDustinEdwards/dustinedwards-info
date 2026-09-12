@@ -1,0 +1,21 @@
+{
+  "pkg": "dustinedwards-info",
+  "globalName": "DustinEdwards",
+  "shape": "package",
+  "buildCmd": "node .design-sync/build-inputs.mjs",
+  "srcDir": "app/components",
+  "tsconfig": ".design-sync/tsconfig.paths.json",
+  "cssEntry": ".design-sync/ds-styles.css",
+  "guidelinesGlob": [],
+  "componentSrcMap": {
+    "PostCard": "app/components/post-card.tsx",
+    "Pagination": "app/components/post-card.tsx",
+    "SiteLogo": "app/components/site-logo.tsx",
+    "SiteLogoHeader": "app/components/site-logo.tsx",
+    "MemoryRouter": null
+  },
+  "provider": {
+    "component": "MemoryRouter"
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
