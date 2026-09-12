@@ -35,6 +35,11 @@
     // brace-protected THROUGH the matcher the writer uses rather than through a
     // substring test. Every one of those needs the real module, so this project
     // has to list it and everything it imports.
+    // The Highwire tag builder. `check:publications` exercises it over every
+    // record and asserts the route calls it, because React Router's meta()
+    // output is not in the markup a component render produces, so the tag set
+    // cannot be checked against rendered HTML offline.
+    "app/lib/publications/citation-tags.mjs",
     "app/lib/publications/exports.mjs",
     "app/lib/publications/export-response.mjs",
     // Imported by exports.mjs for the brace-protection allowlist, and by the

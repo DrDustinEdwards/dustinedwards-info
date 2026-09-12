@@ -40,7 +40,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { generate } from "./build-publications.mjs";
-import { doiSlug, paperPdfPath } from "../app/lib/publications/paths.mjs";
+import { doiSlug, paperPath, paperPdfPath } from "../app/lib/publications/paths.mjs";
+import {
+  buildCitationTags,
+  REQUIRED_CITATION_TAGS,
+} from "../app/lib/publications/citation-tags.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { SHOWCASE_TYPES } from "../app/lib/publications/export-response.mjs";
 import {
@@ -472,6 +476,324 @@ assertThat(
     : "",
 );
 
+/* ------------------------------------------------------------------ rights */
+
+/*
+ * WHICH PDFs MAY BE HOSTED, AND WHY THIS IS AN ALLOWLIST RATHER THAN A RULE.
+ *
+ * Ruling 63 and Grok's review said: host and tag only papers whose licence
+ * permits redistribution, and link the rest. Dustin ruled otherwise on
+ * 2026-09-12, after being shown which four were closed and which registries
+ * said so: ALL 31 STAY UP. That is his call on his own work and this gate does
+ * not relitigate it.
+ *
+ * What a gate can still do is make sure the decision stays DELIBERATE. So the
+ * records hosted WITHOUT a redistribution licence are named here, individually,
+ * with the licence state measured at the time of the ruling. A new hosted PDF
+ * that has no licence and is not on this list is a NEW instance of a decision
+ * somebody made once, and it reds naming the DOI.
+ *
+ * The list is therefore not "these are fine". It is "these were looked at".
+ *
+ * ## THE THREE STATES, WHICH IS WHY `licenseSource` EXISTS
+ *
+ *   a licence          the record carries redistribution terms
+ *   crossref:tdm-only  terms WERE deposited and they are text-mining terms,
+ *                      which licence redistribution to nobody
+ *   null               neither registry recorded any terms
+ *
+ * Collapsing the middle into the last would hide that those five were checked
+ * and found wanting, which is exactly the distinction a future reader needs.
+ */
+const HOSTED_WITHOUT_LICENCE = new Map([
+  // Open access per Unpaywall, no licence recorded. Four ASM papers: one green,
+  // three bronze. Bronze means free to read on the publisher's site with no
+  // licence at all, which is a decision the publisher can reverse.
+  ["10.1128/jvi.00356-08", "ASM, green OA, crossref:tdm-only"],
+  ["10.1128/jvi.01788-13", "ASM, bronze OA, crossref:tdm-only"],
+  ["10.1128/jvi.03444-13", "ASM, bronze OA, crossref:tdm-only"],
+  ["10.1128/jvi.02150-14", "ASM, bronze OA, crossref:tdm-only"],
+  // Not open access at all. These are the four ruling 63 asked to stop hosting.
+  ["10.1002/9780470025079.chap06.pub2", "Wiley chapter, closed, crossref:tdm-only"],
+  ["10.1080/07448481.2025.2472184", "Taylor and Francis, closed"],
+  ["10.7589/2018-08-187", "Journal of Wildlife Diseases, closed"],
+  ["10.7589/2019-04-088", "Journal of Wildlife Diseases, closed since July"],
+  ["10.7589/JWD-D-22-00023", "Journal of Wildlife Diseases, closed"],
+]);
+
+{
+  /** A licence that permits redistribution, by the shape the registries return. */
+  const permitsRedistribution = (/** @type {string | null} */ licence) =>
+    typeof licence === "string" &&
+    (licence.startsWith("cc-by") || licence === "cc0" || licence === "public-domain");
+
+  const hostedRecords = siteEntries.filter(([, f]) => f.pdfPath);
+  const licensed = hostedRecords.filter(([, f]) => permitsRedistribution(f.license));
+  const unlicensed = hostedRecords.filter(([, f]) => !permitsRedistribution(f.license));
+
+  console.log(
+    `        (${licensed.length} hosted with a redistribution licence, ` +
+      `${unlicensed.length} hosted without one and named below)`,
+  );
+
+  assertThat(
+    hostedRecords.length > 0,
+    `the hosted set is non-empty (${hostedRecords.length})`,
+    "every rights assertion below iterates it",
+  );
+  assertThat(
+    licensed.length > 0,
+    `some hosted PDFs carry a redistribution licence (${licensed.length})`,
+    "a zero would mean the licence predicate matches nothing and the split below is fake",
+  );
+
+  const undeclared = unlicensed.filter(([doi]) => !HOSTED_WITHOUT_LICENCE.has(doi));
+  assertThat(
+    undeclared.length === 0,
+    `every PDF hosted without a licence is named in this gate (${unlicensed.length})`,
+    undeclared.length
+      ? undeclared
+          .map(([doi, f]) => `${f.id} (${doi}), licence ${f.license ?? "none"}, ` +
+            `source ${f.licenseSource ?? "none"}`)
+          .join("; ") +
+          ". Hosting a paper whose licence does not permit it is Dustin's call to " +
+          "make and is recorded per DOI, so a NEW one is a new decision rather " +
+          "than a precedent."
+      : "",
+  );
+
+  /*
+   * THE OTHER DIRECTION. A DOI on the list that is no longer hosted without a
+   * licence means either the file went away or the registry now records terms,
+   * and both make the entry a stale note about a decision nobody is taking any
+   * more. Stale exemptions are how an allowlist stops meaning anything.
+   */
+  const stale = [...HOSTED_WITHOUT_LICENCE.keys()].filter(
+    (doi) => !unlicensed.some(([d]) => d === doi),
+  );
+  assertThat(
+    stale.length === 0,
+    "every DOI named here is still a PDF hosted without a licence",
+    stale.length
+      ? `${stale.join(", ")}. Either the file is gone or a registry now records ` +
+          "terms; check which, then remove the entry."
+      : "",
+  );
+
+  /*
+   * `licenseSource` IS RECORDED FOR EVERY HOSTED RECORD, including the ones with
+   * no licence. A null source on an unlicensed record would mean nobody has
+   * looked, and that is the state this whole block exists to make impossible.
+   */
+  const unchecked = unlicensed.filter(([, f]) => !f.licenseSource && f.license === null);
+  assertThat(
+    unchecked.length === 0,
+    `every unlicensed hosted record records what the registries said (${unlicensed.length})`,
+    unchecked.length
+      ? `${unchecked.map(([, f]) => f.id).join(", ")} carry neither a licence nor a ` +
+          "licenseSource, so it is not possible to tell a closed paper from an " +
+          "unchecked one. Re-run pubs-pipeline/refresh.py."
+      : "",
+  );
+}
+
+/* --------------------------------------------------- the Highwire tag set */
+
+/*
+ * THE CITATION TAGS, PER RECORD, THROUGH THE BUILDER THE ROUTE CALLS.
+ *
+ * ## WHY NOT AGAINST RENDERED MARKUP
+ *
+ * The obvious check is to render the page and read its `<head>`. It cannot be
+ * done offline here: `scripts/lib/route-render.mjs` renders a route's COMPONENT
+ * through `createRoutesStub`, and React Router's `meta()` output is assembled by
+ * `<Meta />` in the root layout, which that stub does not mount. So a render
+ * would return a page with no meta tags at all and an assertion over it would
+ * pass by finding nothing, which is the vacuity this repo gates against
+ * everywhere else.
+ *
+ * So this is a two-part check and both parts are needed. The BUILDER is
+ * exercised over every record, and the ROUTE is asserted to call it, comments
+ * stripped. Either half alone is a gate that can be satisfied while the page is
+ * wrong: a correct builder nobody calls, or a call to a builder that emits
+ * nothing.
+ *
+ * The wire itself belongs to `check:browser`, which drives a real preview and
+ * is on the network tier. That is the one place the actual head can be read,
+ * and it is named here so the boundary is recorded rather than implied.
+ *
+ * ## THE THREE THAT ARE HARD FAILURES
+ *
+ * Google Scholar's guidelines name the minimum: the title, the full name of at
+ * least the first author, and the year. A page missing any of them is not
+ * indexed badly, it is not indexed. `buildCitationTags` THROWS rather than
+ * emitting a partial set, so this block catches the throw and reports it as the
+ * record's failure rather than taking the gate down.
+ */
+{
+  const ORIGIN = "https://example.invalid";
+  /** @type {string[]} */
+  const tagFailures = [];
+  let tagged = 0;
+  let authorTags = 0;
+  let pdfTags = 0;
+
+  for (const paper of PUBLICATIONS) {
+    const slug = doiSlug(paper.doi);
+    const hosted = paper.access === "self-hosted" && paper.pdfPath !== null;
+    let tags;
+    try {
+      tags = buildCitationTags(paper, {
+        abstractUrl: `${ORIGIN}${paperPath(slug)}`,
+        pdfUrl: hosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
+      });
+    } catch (error) {
+      tagFailures.push(`${paper.id}: ${error instanceof Error ? error.message : error}`);
+      continue;
+    }
+    tagged += 1;
+    const names = tags.map((t) => t.name);
+    for (const required of REQUIRED_CITATION_TAGS) {
+      if (!names.includes(required)) tagFailures.push(`${paper.id}: no ${required}`);
+    }
+    const authors = tags.filter((t) => t.name === "citation_author");
+    authorTags += authors.length;
+    /*
+     * ONE TAG PER AUTHOR, not one joined string. The commonest way to get this
+     * wrong produces a single author whose name is the whole list, and this
+     * corpus makes that vivid: one record has 100 names and another 144.
+     */
+    if (authors.length !== paper.authors.length) {
+      tagFailures.push(
+        `${paper.id}: ${authors.length} citation_author tags for ${paper.authors.length} authors`,
+      );
+    }
+    const pdf = tags.find((t) => t.name === "citation_pdf_url");
+    if (hosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
+    if (!hosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
+    if (pdf) {
+      pdfTags += 1;
+      /*
+       * SAME SUBDIRECTORY AS THE ABSTRACT PAGE. Scholar: "For security reasons,
+       * it must refer to a file in the same subdirectory as the HTML abstract."
+       * Asserted on the tag rather than on the path helper, because this is the
+       * string that ships.
+       */
+      const dir = `${ORIGIN}${paperPath(slug)}`;
+      if (!pdf.content.startsWith(dir)) {
+        tagFailures.push(`${paper.id}: citation_pdf_url is not under ${dir}`);
+      }
+    }
+  }
+
+  assertThat(
+    tagged === PUBLICATIONS.length,
+    `every record produces a citation tag set (${tagged} of ${PUBLICATIONS.length})`,
+    "a zero here would make every assertion in this block vacuous",
+  );
+  assertThat(
+    authorTags > 0 && pdfTags > 0,
+    `the tag sets carry authors and PDFs (${authorTags} author tags, ${pdfTags} pdf tags)`,
+    "both counts must be non-zero or the shape checks above read nothing",
+  );
+  assertThat(
+    tagFailures.length === 0,
+    "every record's citation tags carry the required set and one tag per author",
+    tagFailures.slice(0, 6).join("; "),
+  );
+
+  /*
+   * AND THE ROUTE ACTUALLY CALLS IT. Comments stripped first, because this file
+   * and the route both discuss the builder in prose and a raw match would read
+   * the explanation as the code.
+   */
+  const routeSource = readFileSync(
+    join(root, "app", "routes", "publications.$slug.tsx"),
+    "utf8",
+  )
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/\/\/[^\n]*/g, " ");
+  assertThat(
+    /buildCitationTags\s*\(/.test(routeSource),
+    "the paper route calls buildCitationTags",
+    "a correct builder nobody calls is a page with no citation tags",
+  );
+  assertThat(
+    /import\s*\{[^}]*buildCitationTags[^}]*\}\s*from\s*"~\/lib\/publications\/citation-tags\.mjs"/.test(
+      routeSource,
+    ),
+    "the paper route imports buildCitationTags from the gated module",
+    "a locally defined builder would satisfy the call check above and be unchecked",
+  );
+}
+
+/* ------------------------------------------------------ the plain-language line */
+
+/*
+ * `summary` is hand-written and is null on every record until somebody writes
+ * one. These assertions are about SHAPE, and they are deliberately the only
+ * thing gated here: a gate can check that a sentence is one sentence and short
+ * enough, and it cannot check that it is any good or that it is true of the
+ * paper. Saying so is the point, because a green gate on this field must not
+ * read as "the summaries are fine".
+ *
+ * THE PAIRED COUNT MATTERS MORE THAN USUAL HERE. Today every record is null, so
+ * every "no summary does X" assertion below passes over an empty set. That is
+ * the vacuity case in its purest form, so the count of non-null summaries is
+ * reported rather than assumed, and it will read 0 until the field is filled.
+ */
+{
+  const summaries = siteEntries
+    .map(([, f]) => [f.id, f.summary])
+    .filter(([, value]) => value !== null && value !== undefined);
+
+  console.log(
+    `        (${summaries.length} of ${siteEntries.length} records carry a ` +
+      "plain-language line; the assertions below are vacuous at zero, by design)",
+  );
+
+  const tooLong = summaries.filter(([, v]) => String(v).length > 200);
+  assertThat(
+    tooLong.length === 0,
+    `no plain-language line exceeds 200 characters (${summaries.length} checked)`,
+    tooLong.map(([id, v]) => `${id} is ${String(v).length}`).join(", "),
+  );
+
+  /*
+   * ONE SENTENCE. Counted as terminal punctuation followed by a space and a
+   * capital, which is what a second sentence looks like; a trailing full stop
+   * is not a second sentence and "p < 0.05. The" is. Deliberately loose: this
+   * is a nudge toward the format, not a grammar checker.
+   */
+  const multiSentence = summaries.filter(([, v]) => /[.!?]\s+[A-Z]/.test(String(v)));
+  assertThat(
+    multiSentence.length === 0,
+    "every plain-language line is a single sentence",
+    multiSentence.map(([id]) => id).join(", "),
+  );
+
+  /*
+   * THE HOUSE DASH RULE, which the PreToolUse hook cannot reach here: these
+   * strings live in a JSON data file that a person edits, and the hook guards
+   * writes made through the agent's tools. Written as escapes so this file
+   * stays clean and greppable, per the portfolio rule.
+   */
+  const WIDE_DASH = new RegExp("[\\u2013\\u2014]");
+  const dashed = summaries.filter(([, v]) => WIDE_DASH.test(String(v)));
+  assertThat(
+    dashed.length === 0,
+    "no plain-language line carries an em dash or en dash",
+    dashed.map(([id]) => id).join(", "),
+  );
+
+  const empty = summaries.filter(([, v]) => String(v).trim().length === 0);
+  assertThat(
+    empty.length === 0,
+    "no plain-language line is present but blank",
+    `${empty.map(([id]) => id).join(", ")}. Absent is a state; empty is a mistake.`,
+  );
+}
+
 /* ---------------------------------------------------------------- cited by */
 
 /*
@@ -758,9 +1080,17 @@ assertThat(
  * assertion failed five records whose output was correct, because it asked
  * `title.includes(organism)` where the code asks a longest-first matcher, and
  * a title carrying "Mycobacterium smegmatis" contains "Mycobacterium" too.
- * 50 when the cited-by artifact's assertions landed. Every number from a run.
+ * 50 when the cited-by artifact's assertions landed, and 64 with the rights
+ * allowlist, the Highwire tag set and the plain-language line. Every number
+ * from a run.
+ *
+ * The rights block also earned its place on its first run, by finding that
+ * `licenseSource: null` was carrying two meanings at once, checked-and-empty
+ * and never-checked, on exactly the four closed records where the difference
+ * decides whether a hosting decision was made or merely inherited. The pipeline
+ * now writes `none-deposited` and null means one thing.
  */
-const MINIMUM_CHECKS = 48;
+const MINIMUM_CHECKS = 62;
 const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) {
   console.error(`\ncheck:publications failed. ${floorBreach}`);

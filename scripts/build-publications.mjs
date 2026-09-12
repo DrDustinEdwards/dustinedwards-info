@@ -257,6 +257,20 @@ export type Publication = {
    * nobody. A null means no terms were found at either registry.
    */
   licenseSource: string | null;
+  /**
+   * A PLAIN-LANGUAGE LINE, written by hand, or null.
+   *
+   * One sentence, under 200 characters, saying what the paper found in words a
+   * non-specialist reads. NOT a summary of the abstract: the abstract is already
+   * on the page, and a shorter paraphrase of it in the same voice would be
+   * noise. This is the sentence somebody would say out loud.
+   *
+   * Null on every record until Dustin writes one. The page renders it only
+   * where it exists, which is why an empty field is a state rather than a gap.
+   * \`check:publications\` enforces the length, the single sentence and the
+   * house dash rule; it cannot enforce that the sentence is any good.
+   */
+  summary: string | null;
   selected: boolean;
   abstract: string | null;
 };
@@ -377,6 +391,7 @@ export function generate() {
     lines.push(`    isOpenAccess: ${r.isOpenAccess ? "true" : "false"},`);
     lines.push(`    license: ${str(r.license)},`);
     lines.push(`    licenseSource: ${str(r.licenseSource)},`);
+    lines.push(`    summary: ${str(r.summary)},`);
     lines.push(`    selected: ${r.selected ? "true" : "false"},`);
     lines.push(`    abstract: ${str(r.abstract)},`);
     lines.push("  },");

@@ -285,6 +285,22 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             </section>
           ) : null}
 
+          {/*
+            THE PLAIN-LANGUAGE LINE, ABOVE THE ABSTRACT.
+
+            Above rather than below, because it is for the reader who will not
+            read the abstract: a sentence saying what the paper found, in words
+            that do not assume the field. Rendered only where one exists, which
+            is why an absent summary leaves no empty heading behind.
+
+            Not styled as a quotation or a callout. It is the author speaking
+            plainly about his own work, and a decorative frame would make it
+            look like something lifted from somewhere else.
+          */}
+          {paper.summary ? (
+            <p className="paper-summary">{italicizeOrganisms(paper.summary)}</p>
+          ) : null}
+
           {/* VISIBLE, never inside a details element. The index collapses
               abstracts because it lists 33 of them; this page exists to BE the
               abstract, and a crawler that has to open a disclosure to find the
