@@ -16,6 +16,13 @@
     // healthy site nobody is looking at. It imports the constant rather than
     // restating it, so this project has to reach the module.
     "app/lib/seo.ts",
+    // Listed because `app/lib/seo.ts` IMPORTS it, not because a script here
+    // calls it, which is the same reason `app/lib/media/byte-size.mjs` is
+    // listed below. `publicationsJsonLd` decodes character references so the
+    // schema.org `headline` it emits is the string a human reads rather than
+    // the escaped form the corpus stores, and this project must reach every
+    // file a listed file reaches. Dependency-free, so it costs nothing.
+    "app/lib/publications/entities.mjs",
     "app/lib/content/pipeline.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so
