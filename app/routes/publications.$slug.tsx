@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { PUBLICATIONS, TOPICS, type Publication } from "~/data/publications";
 import { getCitationCounts } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
@@ -206,8 +206,8 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
-      <main id="main" className="page">
+      <ShellHeader />
+      <main id="main" className="page site-shell-main" tabIndex={-1}>
         <div className="page-inner">
           <p className="paper-breadcrumb">
             <Link to={PUBLICATIONS_PATH}>Publications</Link>
@@ -411,7 +411,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           }}
         />
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }

@@ -1,0 +1,580 @@
+/*
+ * THE PAPER, GLASS, LIGHT SHELL: the track grid, the fixed bar, the overflow
+ * menu and the footer. Ruling 65, Part A steps 3 and 6b, build 2 of four.
+ *
+ * IMPORTED LAST in root.tsx's stylesheet list, deliberately. That list is the
+ * cascade and its own comment says not to sort it; this sheet is new rather
+ * than cut out of the original app.css, so it goes at the end where it wins
+ * against the sheets it is replacing rather than racing them by specificity.
+ * The old `.site-header` rules in public-chrome.css and chrome-nav.css are
+ * still live for the routes that have not moved over yet.
+ */
+
+/* --------------------------------------------------------------------------
+ * 1 · THE TRACK GRID
+ *
+ * NAMED `.tracks`, NOT `.page`. Part A calls it `.page`, and this repo already
+ * has a `.page`: `padding: 2rem` with a `.page-inner` at `max-width: 48rem`,
+ * with live consumers on every public route. Two classes with one name doing
+ * different jobs is the drift the gates exist to catch, so the new grid takes a
+ * distinct name and the old one is retired page by page as Part B lands rather
+ * than converted underneath every route at once.
+ *
+ * THE TRACK IS THE MEASURE, not a max-width on the child, so a full-bleed
+ * figure and a paragraph share one source of truth. At 375 the two `1fr` tracks
+ * compute to zero and `text`, `wide` and `full` resolve to the same column,
+ * which is why the narrow case needs no media query of its own.
+ * ------------------------------------------------------------------------ */
+.tracks {
+  display: grid;
+  grid-template-columns:
+    [full-start] var(--gutter)
+    [wide-start] minmax(0, 1fr)
+    [text-start] min(var(--measure), 100%) [text-end]
+    minmax(0, 1fr) [wide-end]
+    var(--gutter) [full-end];
+}
+
+.tracks > * {
+  grid-column: text;
+}
+
+.tracks > .u-wide {
+  grid-column: wide;
+}
+
+.tracks > .u-full {
+  grid-column: full;
+}
+
+/*
+ * FLOW SPACING IS SINGLE-DIRECTION, because a grid does not collapse margins.
+ * Part A's first pass claimed it did, which is exactly what would have let two
+ * `--s-7` blocks add to 96px. Only start margins exist, so no two margins ever
+ * meet and the two-`--s-7` case cannot arise.
+ *
+ * A heading BINDS to whatever follows it, including a figure, and it wins on
+ * specificity rather than order: `.tracks > h2 + *` is (0,1,2) against
+ * `.tracks > figure` at (0,1,1).
+ */
+.tracks > * + * {
+  margin-block-start: var(--s-6);
+}
+
+.tracks > h2 {
+  margin-block-start: var(--s-7);
+}
+
+.tracks > h3 {
+  margin-block-start: var(--s-6);
+}
+
+.tracks > figure {
+  margin-block-start: var(--s-7);
+}
+
+.tracks > h1 + *,
+.tracks > h2 + *,
+.tracks > h3 + * {
+  margin-block-start: var(--s-5);
+}
+
+/* --------------------------------------------------------------------------
+ * 2 · THE FIXED BAR
+ *
+ * Solid brand purple in BOTH themes, fixed, always visible. `overflow: visible`
+ * is load-bearing and not a default worth losing: the overlay panel is
+ * positioned past the bar's own 60px block-size, so any ancestor that hides
+ * overflow clips it out of existence.
+ * ------------------------------------------------------------------------ */
+.site-shell-header {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-pinned-bar);
+  block-size: var(--bar-h);
+  background: var(--bar-fill);
+  overflow: visible;
+}
+
+.site-shell-header-in {
+  block-size: 100%;
+  max-inline-size: var(--col-full);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  display: flex;
+  align-items: center;
+  /*
+   * --s-2 BELOW 64rem, AND IT IS LOAD-BEARING RATHER THAN A STYLE PREFERENCE.
+   *
+   * Part A step 3 specified --s-3 and never measured it against a four-element
+   * bar. MEASURED 2026-09-13 at 375, inner width 335 after the two 20px
+   * gutters, with the theme control at "Light" (57.44) which is the WIDER of
+   * its two labels and therefore the case that matters:
+   *
+   *   logo 120.39 + Menu 61.59 + Search 70.16 + Light 57.44 + 3 gaps at 12
+   *     = 345.58 into 335, OVER by 10.58
+   *   the same row with 8px gaps and 8px control padding
+   *     = 309.58 into 335, FITS by 25.42
+   *
+   * So --s-3 overflows the bar at 375 before any search field is discussed.
+   * Do not restore it.
+   */
+  gap: var(--s-2);
+}
+
+@media (min-width: 64rem) {
+  .site-shell-header-in {
+    gap: var(--s-3);
+  }
+}
+
+/*
+ * THE LOGO TRUNCATES rather than letting the bar overflow. RULED 2026-09-13.
+ *
+ * The bar is fixed-height and cannot reflow the way the old header did, so
+ * something has to give below about 355px, and the logo is the only element
+ * whose loss costs nothing: it links to `/` beside a Menu that already works.
+ * MEASURED at 320 it renders 90.8 against its natural 120.4, and the row still
+ * fits with no overflow at any width.
+ *
+ * `min-inline-size: 0` is what allows it: a flex item's default minimum is its
+ * content size, so without this the logo refuses to shrink and pushes the
+ * controls off the edge instead. The FULL NAME stays the accessible name, so
+ * the ellipsis is visual only and a screen reader is unaffected.
+ */
+.site-shell-logo {
+  color: var(--on-brand);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-inline-end: auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--t-nav-family);
+  font-size: 1rem;
+  font-weight: var(--t-nav-strong);
+  font-variation-settings: var(--t-nav-strong-vars);
+  font-optical-sizing: none;
+}
+
+/* The six destinations, at 64rem and up only. */
+.site-shell-nav {
+  display: none;
+}
+
+.site-shell-nav a {
+  color: var(--on-brand);
+  text-decoration: none;
+  white-space: nowrap;
+  padding-block: var(--s-2);
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  line-height: var(--t-nav-leading);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+  font-optical-sizing: none;
+  transition: text-decoration-color var(--motion-state) var(--ease-state);
+}
+
+.site-shell-nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+}
+
+/*
+ * THE ACTIVE DESTINATION IS NEVER COLOUR ALONE: aria-current plus the strong
+ * weight plus an underline. Inside the bar there is no second colour available
+ * anyway, since everything on it is --on-brand.
+ */
+.site-shell-nav a[aria-current="page"] {
+  font-weight: var(--t-nav-strong);
+  font-variation-settings: var(--t-nav-strong-vars);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+  text-decoration-thickness: var(--line-w-thick);
+}
+
+/* The three bar controls share one shape. */
+.bar-ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-block-size: var(--control-min);
+  padding-inline: var(--s-2);
+  color: var(--on-brand);
+  background: none;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  border: var(--line-w) solid var(--line-on-brand);
+  border-radius: var(--radius-control);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-leading);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  transition:
+    background-color var(--motion-instant) var(--ease-state),
+    border-color var(--motion-state) var(--ease-state);
+}
+
+/*
+ * ICON-ONLY BELOW 64rem. RULED 2026-09-13, and it is an exception to step 6a
+ * rather than a repeal of it: the three universally understood marks, a
+ * magnifying glass, a hamburger and a sun/moon, are read correctly without a
+ * label. Every one still carries an aria-label and a visually hidden label, so
+ * the accessible name is unchanged; only the paint is.
+ *
+ * The control becomes SQUARE at --control-min rather than keeping word padding,
+ * which is what frees the width. MEASURED: it takes the 375 row from 309.58
+ * with words to 235.19 with icons.
+ */
+.bar-ctrl {
+  min-inline-size: var(--control-min);
+  padding-inline: 0;
+  gap: var(--s-2);
+}
+
+/*
+ * THE THEME CONTROL IS THE ONE THAT KEEPS ITS WORD AT 64rem AND UP, and the
+ * reason is ambiguity rather than space. A sun or a moon does not say whether
+ * it shows the CURRENT theme or the one it will switch to, which is why the
+ * control has always needed an aria-label to be honest. At 375 the icon is a
+ * width necessity; at 1024 it is not, so the word is shown and the icon is
+ * dropped rather than doubled up.
+ *
+ * Menu is gone at that width (the six destinations are shown) and Search keeps
+ * its magnifying glass, because there the field beside it says what it does.
+ */
+.bar-ctrl-label {
+  position: absolute;
+  inline-size: var(--line-w);
+  block-size: var(--line-w);
+  margin: calc(var(--line-w) * -1);
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@media (min-width: 64rem) {
+  .bar-theme .bar-ctrl {
+    min-inline-size: 0;
+    padding-inline: var(--s-3);
+  }
+
+  .bar-theme .icon {
+    display: none;
+  }
+
+  .bar-ctrl-label {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    margin: 0;
+    clip-path: none;
+  }
+}
+
+.bar-ctrl:hover {
+  background: var(--glass-fill-bar);
+}
+
+@media (min-width: 64rem) {
+  .bar-ctrl {
+    padding-inline: var(--s-3);
+  }
+}
+
+/* The summary is a control, not a disclosure triangle. */
+.site-shell-overflow > summary {
+  list-style: none;
+}
+
+.site-shell-overflow > summary::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * ONE SEARCH FORM AT EVERY WIDTH. RULED 2026-09-13.
+ *
+ * Part A asked the server to emit a link below 64rem and this form above it,
+ * "chosen by width class on the request". A SERVER HAS NO VIEWPORT WIDTH, this
+ * repo carries no width or device signal, and rule 20 says a new input to the
+ * body goes in the cache key, so branching on width would have put a width
+ * dimension into the themed `caches.default` entry.
+ *
+ * So there is one `role="search"` landmark and one `id="bar-q"` at every width.
+ * Below 64rem the INPUT alone is `display: none`, which takes it out of the tab
+ * order and the accessibility tree while leaving the form, the label and the
+ * submit; the reader gets a labelled Search button that lands them on /search,
+ * which carries the real field. No duplicate landmark, no server branch, no
+ * script.
+ */
+.bar-search {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--s-2);
+}
+
+.bar-search-input {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .site-shell-nav {
+    display: flex;
+    gap: var(--s-5);
+    margin-inline-end: auto;
+  }
+
+  .site-shell-logo {
+    margin-inline-end: var(--s-5);
+  }
+
+  .site-shell-overflow {
+    display: none;
+  }
+
+  .bar-search {
+    gap: var(--s-3);
+  }
+
+  /*
+   * 8rem, NOT THE HANDOFF'S 10rem. RULED 2026-09-13 after measuring.
+   *
+   * Step 3 predicted the 1024 row needs 884 into a 928 column "with real
+   * slack". MEASURED it needs 954.9, and the logo is what pays: at 10rem it
+   * renders 93.5 against its natural 120.4, so the wordmark is clipped at
+   * exactly the width where the six destinations first appear. That is the
+   * second time this row's arithmetic has been wrong in the same direction;
+   * the 768 row was out by 64.
+   *
+   * At 8rem, MEASURED: the logo is full at 1024, 1120 and 1280, and the row
+   * still fits with no overflow. The field shows about 11 characters instead
+   * of 14, and the logo is identity on every page.
+   */
+  .bar-search-input {
+    display: block;
+    inline-size: var(--bar-field-w);
+    min-inline-size: 0;
+    min-block-size: var(--control-min);
+    padding-inline: var(--s-3);
+    color: var(--text);
+    background: var(--raised);
+    border: var(--line-w) solid var(--line-on-brand);
+    border-radius: var(--radius-control);
+    font-family: var(--t-body-family);
+    font-size: var(--t-nav-size);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 3 · THE OVERLAY MENU
+ *
+ * It OVERLAYS and never pushes, because the header is fixed and out of flow.
+ * Solid --raised, never glass: it sits over running text and a photograph on
+ * /phage-discovery, and anything translucent there is unreadable.
+ * ------------------------------------------------------------------------ */
+.site-shell-overflow {
+  position: static;
+}
+
+.site-shell-menu {
+  position: absolute;
+  inset-block-start: var(--bar-h);
+  inset-inline: 0;
+  /*
+   * --z-overlay, NOT --z-dropdown. Carried from build 1, where the three
+   * layers were decided and written into app.css beside the stacking scale.
+   * --z-dropdown is 200 and sits BELOW the bar at 600; the panel hangs past
+   * the bar and must clear it. The name reads like the right one and is the
+   * trap.
+   */
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-3) var(--gutter) var(--s-5);
+  background: var(--raised);
+  border-block-end: var(--line-w) solid var(--line-strong);
+  max-block-size: calc(100dvh - var(--bar-h));
+  overflow-y: auto;
+  opacity: 1;
+  transition:
+    opacity var(--motion-panel) var(--ease-enter),
+    visibility var(--motion-panel) var(--ease-enter) allow-discrete;
+}
+
+/*
+ * opacity 0 IS ALWAYS PAIRED WITH visibility hidden. The panel holds six
+ * focusable links: an opacity-only hidden state leaves them in the tab order
+ * while invisible, so a missed selector degrades to six invisible tab stops on
+ * every page rather than to a cosmetic bug.
+ */
+@starting-style {
+  [open] > .site-shell-menu {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.site-shell-menu a {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--control-min);
+  color: var(--text);
+  text-decoration: none;
+  border-block-end: var(--line-w) solid var(--dust);
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+  font-optical-sizing: none;
+}
+
+.site-shell-menu a:last-child {
+  border-block-end: 0;
+}
+
+.site-shell-menu a[aria-current="page"] {
+  font-weight: var(--t-nav-strong);
+  font-variation-settings: var(--t-nav-strong-vars);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+/* --------------------------------------------------------------------------
+ * 4 · WHAT THE FIXED BAR COSTS EVERY OTHER ELEMENT
+ *
+ * Scroll-margin uses the CLOSED bar height only. An open menu is a state the
+ * reader dismisses in a second or two, and sizing every anchor for it would
+ * push every heading down permanently to serve a state that is almost never
+ * active when a jump lands.
+ * ------------------------------------------------------------------------ */
+.site-shell-main {
+  padding-block-start: calc(var(--bar-h) + var(--s-7));
+}
+
+.site-shell-main [id],
+.site-shell-main:target {
+  scroll-margin-block-start: calc(var(--bar-h) + var(--s-3));
+}
+
+/* --------------------------------------------------------------------------
+ * 5 · THE FOOTER
+ *
+ * Tonal. Limestone ground, one dust rule above it, sentence-case purple links.
+ * No purple fill, no logo repeat, no social row, no tracked caps.
+ * ------------------------------------------------------------------------ */
+.site-shell-footer {
+  margin-block-start: var(--s-8);
+  border-block-start: var(--line-w) solid var(--dust);
+  padding-block: var(--s-7);
+  background: var(--paper);
+}
+
+@media (min-width: 48rem) {
+  .site-shell-footer {
+    margin-block-start: var(--s-9);
+  }
+}
+
+.site-shell-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+}
+
+.site-shell-footer-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min);
+  color: var(--brand);
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+  font-optical-sizing: none;
+}
+
+.site-shell-footer-nav a:visited {
+  color: var(--visited);
+}
+
+.site-shell-footer-note {
+  margin-block-start: var(--s-3);
+  color: var(--text-secondary);
+  font-family: var(--t-small-family);
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-leading);
+  font-weight: var(--t-small-weight);
+  font-variation-settings: var(--t-small-vars);
+  font-optical-sizing: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 6 · THE THEME CONTROL PICKS ITSELF
+ *
+ * Both buttons ship and the cascade chooses, in three layers. The server cannot
+ * choose: "system" is the ABSENCE of the cookie, so a reader who has never
+ * chosen has no cookie and the server does not know what their machine reports.
+ * That reader is the default case, not an edge one.
+ *
+ * Same mechanism as the older icon control in chrome-nav.css, deliberately: it
+ * is already correct, and a second way of answering one question is a second
+ * thing to keep true.
+ * ------------------------------------------------------------------------ */
+.bar-theme {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+/* The default layer: no cookie, so light is assumed, which is what a browser
+   reporting no preference falls to and what the palette defaults to. */
+.bar-theme-option[data-when="dark"] {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bar-theme-option[data-when="light"] {
+    display: none;
+  }
+
+  .bar-theme-option[data-when="dark"] {
+    display: inline-flex;
+  }
+}
+
+/* The explicit layer, outranking the media query so a chosen theme beats a
+   machine preference that disagrees with it. */
+html[data-theme="light"] .bar-theme-option[data-when="light"],
+html[data-theme="dark"] .bar-theme-option[data-when="dark"] {
+  display: inline-flex;
+}
+
+html[data-theme="light"] .bar-theme-option[data-when="dark"],
+html[data-theme="dark"] .bar-theme-option[data-when="light"] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 7 · THE ONE UTILITY THIS SHELL NEEDS
+ *
+ * `clip-path` and a 1px box, NOT `display: none` and NOT `width: 0`. Both of
+ * those remove the element from the accessibility tree, which defeats the
+ * entire purpose: this class exists to keep a label announced while hiding it.
+ * ------------------------------------------------------------------------ */
+.u-visually-hidden {
+  position: absolute;
+  inline-size: var(--line-w);
+  block-size: var(--line-w);
+  margin: calc(var(--line-w) * -1);
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}

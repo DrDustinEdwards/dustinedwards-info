@@ -1,8 +1,8 @@
 import { Form, Link, data, redirect } from "react-router";
 
 import { PostCard, Pagination } from "~/components/post-card";
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
 import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
 import { jsonLd } from "~/lib/json-ld.mjs";
@@ -273,7 +273,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
+      <ShellHeader />
       {/*
         THE h-feed IS THE `<main>` ITSELF, and that is a deliberate refusal to
         add a wrapper. The feed has to contain BOTH the featured section and the
@@ -294,7 +294,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         what they are: a filtered view is not this blog's feed. If either ever
         wants to BE a feed, it says so itself rather than inheriting it here.
       */}
-      <main className="page h-feed" id="main">
+      <main className="page h-feed site-shell-main" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -436,7 +436,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
 
         <Pagination page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
-      <SiteFooter />
+      <ShellFooter />
       {/* NO BlogEnhancements HERE, since 2026-08-27. Every one of that bundle's
           seven enhancements targets markup the post PIPELINE renders inside
           `.prose`: the reading bar wants `.post .prose`, the scrollspy wants

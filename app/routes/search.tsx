@@ -1,8 +1,8 @@
 import { Form, Link } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { getEnv } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
@@ -318,8 +318,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
-      <main className="search-page" id="main">
+      <ShellHeader />
+      <main className="search-page site-shell-main" id="main" tabIndex={-1}>
         <h1 className="search-heading">Search</h1>
 
         {/* A plain GET form. No client script is involved in producing results:
@@ -547,7 +547,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </nav>
         ) : null}
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }

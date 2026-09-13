@@ -12,8 +12,8 @@ import {
   COLOPHON_URL,
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { publicHtmlHeaders, SITE,
   pageMeta,
 } from "~/lib/seo";
@@ -210,8 +210,8 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
 export default function Colophon() {
   return (
     <>
-      <SiteHeader />
-      <main className="page" id="main">
+      <ShellHeader />
+      <main className="page site-shell-main" id="main" tabIndex={-1}>
         <div className="page-inner">
           {/* THE TITLE IS READ, NOT TYPED. meta() and recordsForPage both use
               COLOPHON_TITLE, and this h1 was the one place it was a literal, so
@@ -360,7 +360,7 @@ export default function Colophon() {
           </p>
         </div>
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }

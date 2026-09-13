@@ -1,8 +1,8 @@
 import { Link, data } from "react-router";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import {
   approvedMentionsFor,
   getBlogPost,
@@ -386,8 +386,8 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
-      <main className="page" id="main">
+      <ShellHeader />
+      <main className="page site-shell-main" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -847,7 +847,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           )}
         </nav>
       </main>
-      <SiteFooter />
+      <ShellFooter />
       <BlogEnhancements />
     </>
   );

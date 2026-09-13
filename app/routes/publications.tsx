@@ -1,7 +1,7 @@
 import { Form, Link } from "react-router";
 
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import {
   PUBLICATIONS,
   TOPICS,
@@ -498,11 +498,11 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
+      <ShellHeader />
       {/* `id="main"` is root's unconditional skip-link target. Without it the
           skip link moves focus nowhere, which is what `check:invariants`
           section 12 refuses. The July markup predates that gate. */}
-      <main id="main" className="page">
+      <main id="main" className="page site-shell-main" tabIndex={-1}>
         <div className="page-inner">
           <h1 className="page-title">Publications</h1>
           <p className="page-intro">
@@ -630,7 +630,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           dangerouslySetInnerHTML={{ __html: jsonLd(publicationsJsonLd(origin, items)) }}
         />
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }
