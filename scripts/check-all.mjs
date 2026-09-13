@@ -1004,7 +1004,34 @@ function main() {
   // An errored run exits nonzero too. It did not prove the tier green, and the
   // one thing that must never happen is a ship reading "0 failed" off a tier
   // where three gates never started.
-  process.exit(failed.length > 0 || errored.length > 0 ? 1 : 0);
+  /*
+   * THE EXIT CODE IS SET, NOT TAKEN, on the precedent check-config.mjs records.
+   *
+   * That gate measured process.exit() tearing its process down while sockets
+   * were still closing: it printed a clean table and then exited 127, and its
+   * own comment names the consequence, that "check-all.mjs reads exit codes and
+   * cannot see the clean table above one". It and check:uptime were converted
+   * to process.exitCode for that reason, and check:fonts was written that way.
+   * This process writes the tier report every ship reads, and it was the last
+   * one still tearing itself down at the end of writing it.
+   *
+   * NOT CLAIMED TO FIX ANYTHING OBSERVED. Three runs on 2026-09-13 ended after
+   * the banner with a partial report and exit 1, and that symptom was NEVER
+   * REPRODUCED: not by the tier under the same redirect, not by a controlled
+   * 2000-line process.exit() reproduction, and no resource-exhaustion event
+   * backs the alternative reading. This change is precedent conformance and
+   * hang safety, and nothing more. The symptom is QUEUED rather than diagnosed,
+   * with three preserved logs: before-fix.log, check-g3b.log and check-g3c.log.
+   *
+   * cleanUp() IS CALLED EXPLICITLY, and that is what makes this safe rather
+   * than a hang. The sampler is spawned with detached:false and is never
+   * unref()d, so the event loop cannot drain while it lives, and the
+   * process.on("exit") handler that would stop it never runs, because the
+   * process never reaches exiting. The cleanedUp guard makes the later call
+   * from that handler a no-op.
+   */
+  cleanUp();
+  process.exitCode = failed.length > 0 || errored.length > 0 ? 1 : 0;
 }
 
 /*
