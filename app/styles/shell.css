@@ -87,7 +87,7 @@
  * positioned past the bar's own 60px block-size, so any ancestor that hides
  * overflow clips it out of existence.
  * ------------------------------------------------------------------------ */
-.site-shell-header {
+.site-header {
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
@@ -97,7 +97,7 @@
   overflow: visible;
 }
 
-.site-shell-header-in {
+.site-header-in {
   block-size: 100%;
   max-inline-size: var(--col-full);
   margin-inline: auto;
@@ -124,33 +124,61 @@
 }
 
 @media (min-width: 64rem) {
-  .site-shell-header-in {
+  .site-header-in {
     gap: var(--s-3);
   }
 }
 
 /*
- * THE LOGO TRUNCATES rather than letting the bar overflow. RULED 2026-09-13.
+ * Rule 2 identity-block exemption, EXTENDED by Dustin's ruling 2026-07-30: an
+ * identity element must not take :visited styling either.
  *
- * The bar is fixed-height and cannot reflow the way the old header did, so
- * something has to give below about 355px, and the logo is the only element
- * whose loss costs nothing: it links to `/` beside a Menu that already works.
- * MEASURED at 320 it renders 90.8 against its natural 120.4, and the row still
- * fits with no overflow at any width.
+ * The bug this fixes was a SPECIFICITY one, and it was invisible in review
+ * because it only appears once "/" is in history, which for a returning reader
+ * is always. `.site-header-brand` is (0,1,0) and the base `a:visited` is (0,1,1),
+ * so the base rule WON and the wordmark turned visited claret. The site's own
+ * name is not somewhere the reader has been, it is who the site is, so a visited
+ * state is a category error rather than a cosmetic slip.
  *
- * `min-inline-size: 0` is what allows it: a flex item's default minimum is its
- * content size, so without this the logo refuses to shrink and pushes the
- * controls off the edge instead. The FULL NAME stays the accessible name, so
- * the ellipsis is visual only and a screen reader is unaffected.
+ * The `:visited` and `:hover` selectors are (0,2,0) and outrank the base
+ * pseudo-class rules deliberately. Do not "simplify" them away.
+ *
+ * ## THEY WERE SIMPLIFIED AWAY, 2026-09-13, AND THE COMMENT WAS RIGHT
+ *
+ * Build 2 replaced this with a single `.site-header-brand`-equivalent at
+ * (0,1,0) carrying only `color`. The global `a:visited` at (0,1,1) beat it, so
+ * every reader who had been to "/" saw the site name in `--visited` plum on the
+ * purple bar. Restored at the original specificity, with the original comment,
+ * because the comment named the exact failure in advance.
+ *
+ * ## THE COLOUR CHANGED, AND THAT IS NOT A SIMPLIFICATION
+ *
+ * The old rules bound `--on-chrome` and `--mark-on-chrome`, both measured
+ * against `--surface-chrome` (#4f2d7f light, #3d2a5c dark). That is NOT the
+ * surface any more: build 2 made the bar `--bar-fill`, which is #b7a5e0 in
+ * dark. MEASURED against the bar that actually ships:
+ *
+ *   --on-chrome on --bar-fill, dark        1.79:1
+ *   --on-chrome-muted on --bar-fill, dark  1.23:1
+ *   --mark-on-chrome on --bar-fill, dark   1.00:1   the mark IS the bar
+ *   --on-brand on --bar-fill               10.43:1 light, 8.10:1 dark
+ *
+ * So the chrome tokens would have restored the mark and made it invisible. The
+ * binding is `--on-brand`, which is the token the bar's own contrast row was
+ * measured with and which the brief names for everything inside the bar.
  */
-.site-shell-logo {
+.site-header-brand,
+.site-header-brand:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-inline-size: 0;
   color: var(--on-brand);
   text-decoration: none;
   white-space: nowrap;
-  margin-inline-end: auto;
-  min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-inline-end: auto;
   font-family: var(--t-nav-family);
   font-size: 1rem;
   font-weight: var(--t-nav-strong);
@@ -158,12 +186,39 @@
   font-optical-sizing: none;
 }
 
+.site-header-brand:hover {
+  color: var(--on-brand);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+}
+
+/*
+ * The MARK is the one exception to "needs no rule of its own". No colour
+ * pseudo-class can reach it, and it takes a fill rather than a colour.
+ * `--on-brand` for the reason recorded above: `--mark-on-chrome` is #b7a5e0 in
+ * both themes and the dark bar is #b7a5e0, so the old binding is a 1.00:1
+ * silhouette of the bar. (0,2,0) beats `.site-logo-brand` at (0,1,0), so the
+ * login card and the admin shell keep their `--brand` mark untouched.
+ */
+.site-header .site-logo-brand {
+  fill: var(--on-brand);
+}
+
+/* 2rem keeps the brand row inside the bar's --control-min, so the mark adds no
+   height. Width follows the 36x50 ratio the SVG carries. */
+.site-header-mark {
+  display: block;
+  block-size: 2rem;
+  inline-size: auto;
+  flex: 0 0 auto;
+}
+
 /* The six destinations, at 64rem and up only. */
-.site-shell-nav {
+.site-header-nav {
   display: none;
 }
 
-.site-shell-nav a {
+.site-header-nav a {
   color: var(--on-brand);
   text-decoration: none;
   white-space: nowrap;
@@ -177,7 +232,7 @@
   transition: text-decoration-color var(--motion-state) var(--ease-state);
 }
 
-.site-shell-nav a:hover {
+.site-header-nav a:hover {
   text-decoration: underline;
   text-underline-offset: var(--s-1);
 }
@@ -187,7 +242,7 @@
  * weight plus an underline. Inside the bar there is no second colour available
  * anyway, since everything on it is --on-brand.
  */
-.site-shell-nav a[aria-current="page"] {
+.site-header-nav a[aria-current="page"] {
   font-weight: var(--t-nav-strong);
   font-variation-settings: var(--t-nav-strong-vars);
   text-decoration: underline;
@@ -222,64 +277,15 @@
 }
 
 /*
- * ICON-ONLY BELOW 64rem. RULED 2026-09-13, and it is an exception to step 6a
- * rather than a repeal of it: the three universally understood marks, a
- * magnifying glass, a hamburger and a sun/moon, are read correctly without a
- * label. Every one still carries an aria-label and a visually hidden label, so
- * the accessible name is unchanged; only the paint is.
+ * THE THEME CONTROL IS ICON-ONLY AT EVERY WIDTH, restored 2026-09-13.
  *
- * The control becomes SQUARE at --control-min rather than keeping word padding,
- * which is what frees the width. MEASURED: it takes the 375 row from 309.58
- * with words to 235.19 with icons.
+ * Build 2 added a word at 64rem and up, arguing that a sun or moon does not say
+ * whether it shows the current theme or the one it switches to. That ambiguity
+ * is real and it is answered where it has always been answered: the control
+ * carries an aria-label AND a title, so a pointer user gets the sentence on
+ * hover and a screen reader gets it as the name. The word was new in build 2
+ * and is gone.
  */
-.bar-ctrl {
-  min-inline-size: var(--control-min);
-  padding-inline: 0;
-  gap: var(--s-2);
-}
-
-/*
- * THE THEME CONTROL IS THE ONE THAT KEEPS ITS WORD AT 64rem AND UP, and the
- * reason is ambiguity rather than space. A sun or a moon does not say whether
- * it shows the CURRENT theme or the one it will switch to, which is why the
- * control has always needed an aria-label to be honest. At 375 the icon is a
- * width necessity; at 1024 it is not, so the word is shown and the icon is
- * dropped rather than doubled up.
- *
- * Menu is gone at that width (the six destinations are shown) and Search keeps
- * its magnifying glass, because there the field beside it says what it does.
- */
-.bar-ctrl-label {
-  position: absolute;
-  inline-size: var(--line-w);
-  block-size: var(--line-w);
-  margin: calc(var(--line-w) * -1);
-  padding: 0;
-  border: 0;
-  clip-path: inset(50%);
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-@media (min-width: 64rem) {
-  .bar-theme .bar-ctrl {
-    min-inline-size: 0;
-    padding-inline: var(--s-3);
-  }
-
-  .bar-theme .icon {
-    display: none;
-  }
-
-  .bar-ctrl-label {
-    position: static;
-    inline-size: auto;
-    block-size: auto;
-    margin: 0;
-    clip-path: none;
-  }
-}
-
 .bar-ctrl:hover {
   background: var(--glass-fill-bar);
 }
@@ -297,80 +303,6 @@
 
 .site-shell-overflow > summary::-webkit-details-marker {
   display: none;
-}
-
-/*
- * ONE SEARCH FORM AT EVERY WIDTH. RULED 2026-09-13.
- *
- * Part A asked the server to emit a link below 64rem and this form above it,
- * "chosen by width class on the request". A SERVER HAS NO VIEWPORT WIDTH, this
- * repo carries no width or device signal, and rule 20 says a new input to the
- * body goes in the cache key, so branching on width would have put a width
- * dimension into the themed `caches.default` entry.
- *
- * So there is one `role="search"` landmark and one `id="bar-q"` at every width.
- * Below 64rem the INPUT alone is `display: none`, which takes it out of the tab
- * order and the accessibility tree while leaving the form, the label and the
- * submit; the reader gets a labelled Search button that lands them on /search,
- * which carries the real field. No duplicate landmark, no server branch, no
- * script.
- */
-.bar-search {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--s-2);
-}
-
-.bar-search-input {
-  display: none;
-}
-
-@media (min-width: 64rem) {
-  .site-shell-nav {
-    display: flex;
-    gap: var(--s-5);
-    margin-inline-end: auto;
-  }
-
-  .site-shell-logo {
-    margin-inline-end: var(--s-5);
-  }
-
-  .site-shell-overflow {
-    display: none;
-  }
-
-  .bar-search {
-    gap: var(--s-3);
-  }
-
-  /*
-   * 8rem, NOT THE HANDOFF'S 10rem. RULED 2026-09-13 after measuring.
-   *
-   * Step 3 predicted the 1024 row needs 884 into a 928 column "with real
-   * slack". MEASURED it needs 954.9, and the logo is what pays: at 10rem it
-   * renders 93.5 against its natural 120.4, so the wordmark is clipped at
-   * exactly the width where the six destinations first appear. That is the
-   * second time this row's arithmetic has been wrong in the same direction;
-   * the 768 row was out by 64.
-   *
-   * At 8rem, MEASURED: the logo is full at 1024, 1120 and 1280, and the row
-   * still fits with no overflow. The field shows about 11 characters instead
-   * of 14, and the logo is identity on every page.
-   */
-  .bar-search-input {
-    display: block;
-    inline-size: var(--bar-field-w);
-    min-inline-size: 0;
-    min-block-size: var(--control-min);
-    padding-inline: var(--s-3);
-    color: var(--text);
-    background: var(--raised);
-    border: var(--line-w) solid var(--line-on-brand);
-    border-radius: var(--radius-control);
-    font-family: var(--t-body-family);
-    font-size: var(--t-nav-size);
-  }
 }
 
 /* --------------------------------------------------------------------------

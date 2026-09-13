@@ -1,0 +1,54 @@
+/*
+ * The command palette, and Ask inside it.
+ *
+ * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
+ * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
+ * app.css imports them in the order they were cut, which is the order they
+ * sat in the original file, so a rule that won by source position still wins.
+ * Moving an import, or moving a rule between files, can change what renders.
+ */
+
+/* Command palette -----------------------------------------------------------
+   Enhancement only. Every rule here styles markup created by
+   app/enhance/palette.ts, so a reader without script never sees any of it. */
+
+/* Search entry point: ONE control, an icon and nothing else.
+ *
+ * THE VISIBLE "/" IS GONE, ordered by Dustin on aesthetics 2026-08-29. It had
+ * already moved twice chasing a shape that did not read as a stray character
+ * parked beside an icon; the ruling is that it should not be painted at all.
+ * The shortcut still works and is now told through the control's `title` and
+ * an `aria-describedby` region, neither of which occupies a pixel. Both are
+ * written by the enhancement, so the promise is still made only once the
+ * listener exists.
+ *
+ * Rule 2 is satisfied on the ORIGINAL ground again: the anchor renders no text,
+ * and it carries a border besides, so it would take the .search-chip exemption
+ * either way.
+ *
+ * Height comes from --control-min, restored 2026-09-13. It used to come from
+ * --control-h (2.25rem, 36px), which was declared on .site-header-nav in
+ * chrome-nav.css and went when that sheet did. The new bar sizes every control
+ * at --control-min (2.75rem, 44px), which is the WCAG 2.5.5 enhanced target,
+ * and this control now sits between the Menu summary and the theme button:
+ * restoring 36px would have made it visibly the odd one out and a smaller
+ * target than its two neighbours. One height and one centreline was the point
+ * of the old rule and it still is; only the number moved, and it moved up.
+ */
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--control-min);
+  min-inline-size: var(--control-min);
+  padding: 0 0.5rem;
+  border: var(--line-w) solid var(--line-on-brand);
+  border-radius: 999px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.search-trigger:hover {
+  color: var(--text);
+  background: var(--tint-brand);
+}
