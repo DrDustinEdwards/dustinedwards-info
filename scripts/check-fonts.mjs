@@ -1,0 +1,412 @@
+/**
+ * Gate over the self-hosted fonts: every `@font-face` DECLARATION must be true
+ * of the BINARY it names.
+ *
+ * ## THE HOLE THIS FILLS
+ *
+ * `font-weight: 100 900` is a claim about a file. Nothing checked it. The two
+ * Inter faces under `app/fonts/` were taken from `fonts.gstatic.com` and
+ * committed, so unlike every other derived thing here they have no upstream to
+ * be compared against: a file swapped for a static build, a re-subset that
+ * narrows the weight axis, or a variable axis that quietly disappears would all
+ * have rendered wrong and failed nothing.
+ *
+ * It exists now rather than later because a type scale is about to declare
+ * `font-variation-settings: "opsz" <n>` per level. `opsz` on these files runs
+ * 14 to 32, and a browser CLAMPS an out-of-range axis value silently: no error,
+ * no console line, just a level that did not get the optical size it asked for.
+ * That is the class of defect this gate is for.
+ *
+ * ## WHAT IT ASSERTS, per `@font-face` block that names a file
+ *
+ * The declared `font-weight` range against the `wght` axis, EXACTLY rather than
+ * as a subset, so a narrowed re-subset fails. A single declared weight against
+ * `OS/2.usWeightClass`, which is the static-font form. `font-style` against the
+ * italic evidence in the file. `font-stretch` against `wdth` where declared.
+ * The declared `font-family` against the file's own name table, so a wholesale
+ * swap of a different typeface fails. And every `"opsz"`-style axis named in a
+ * `font-variation-settings` anywhere in the sheets must EXIST in that family's
+ * faces and CONTAIN the requested value.
+ *
+ * ## THE BASELINE, and why axis assertions alone are not enough
+ *
+ * Everything above is satisfied by a file that was re-subsetted while keeping
+ * its axes: same `wght`, same `opsz`, fewer glyphs. That is a real way to break
+ * a page and it is invisible to every assertion in the list. So each binary
+ * also carries a pinned SHA-256 in `scripts/fixtures/font-baseline.json`, and a
+ * changed byte is a named failure. `--update` rewrites it, deliberately loud,
+ * which is the same shape `check:admin-ui` uses for the same reason: a fixture
+ * that can be regenerated silently is not a fixture.
+ *
+ * ## OBSERVATION BOUNDARY
+ *
+ * It reads DISK, never the wire, so it says nothing about what a browser
+ * received. It asserts AGREEMENT and never judgment: whether `font-display`,
+ * the metric-adjusted fallback or a `unicode-range` are the RIGHT choices is
+ * not a thing it can know. It cannot see whether a font renders correctly, only
+ * whether the declaration and the file agree about what the file is.
+ *
+ * ## OVERLAP, stated rather than discovered
+ *
+ * The 20 KaTeX faces are included for uniformity and the protection here is the
+ * WEAKER half: `check:content` section 5 already byte-compares
+ * `katex.generated.css` AND its faces against a fresh derivation from the
+ * installed katex package, reconciled both ways, so a swapped or re-subsetted
+ * KaTeX font already fails there. A rule with an exception is a rule somebody
+ * edits, which is why they are in rather than out.
+ */
+
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import * as fontkit from "fontkit";
+
+import { assertFloor } from "./lib/floor.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const FIXTURE = join(root, "scripts", "fixtures", "font-baseline.json");
+const update = process.argv.includes("--update");
+
+let failures = 0;
+let checks = 0;
+
+/**
+ * The first argument is named `ok` because six other gates spell it that way
+ * and `check:invariants` section 17 refuses two argument orders for one helper
+ * name: an assertion copied between files would otherwise put a truthy STRING
+ * in the condition slot, never fail, and still increment the count.
+ *
+ * @param {boolean} ok
+ * @param {string} label
+ * @param {string} [detail]
+ */
+function assertThat(ok, label, detail) {
+  checks += 1;
+  if (ok) return;
+  failures += 1;
+  console.log(`\n  FAIL  ${label}`);
+  if (detail) console.log(`        ${detail}`);
+}
+
+console.log("\ncheck:fonts\n");
+
+/**
+ * The stylesheets that may declare a face. `app/app.css` holds the site's own,
+ * `app/styles/*.css` holds the generated katex sheet; both are read, so a face
+ * added to any sheet is in scope without this list being edited.
+ */
+const SHEETS = [
+  join(root, "app", "app.css"),
+  ...readdirSync(join(root, "app", "styles"))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => join(root, "app", "styles", f)),
+];
+
+/**
+ * Comments are stripped BEFORE matching, hard rule 10: prose about a face is
+ * not a face.
+ *
+ * @param {string} css
+ * @returns {string}
+ */
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string|null, raw: string}[]} */
+const blocks = [];
+/** @type {{sheet: string, axis: string, value: number}[]} */
+const variationRequests = [];
+
+for (const sheet of SHEETS) {
+  const css = stripComments(readFileSync(sheet, "utf8"));
+
+  for (const m of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+    const body = m[1];
+    /** @param {string} prop @returns {string|null} */
+    const pick = (prop) => body.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i"))?.[1].trim() ?? null;
+    const family = (pick("font-family") ?? "").replace(/^['"]|['"]$/g, "");
+    // The FIRST url() is the file this block is about. A block with none is a
+    // local()-only face and is skipped, counted, below.
+    const url = body.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? null;
+    blocks.push({
+      sheet,
+      family,
+      weight: pick("font-weight"),
+      style: pick("font-style"),
+      stretch: pick("font-stretch"),
+      file: url ? resolve(dirname(sheet), url) : null,
+      raw: body,
+    });
+  }
+
+  // Axis requests anywhere in the sheet, not only inside @font-face: this is
+  // what catches a type scale asking for an optical size the file cannot serve.
+  for (const m of css.matchAll(/font-variation-settings\s*:\s*([^;}]+)/gi)) {
+    for (const a of m[1].matchAll(/['"]([a-zA-Z]{4})['"]\s*(-?[\d.]+)/g)) {
+      variationRequests.push({ sheet, axis: a[1], value: Number(a[2]) });
+    }
+  }
+}
+
+/*
+ * SCOPE, ASSERTED BEFORE ANY PER-BLOCK ASSERTION. A regex that stopped matching
+ * would iterate nothing and every loop below would report a clean sweep, which
+ * is the tenth vacuity class. The floors are the inventory as it stands and are
+ * deliberately low bars: they exist to prove the parse happened at all.
+ */
+/*
+ * Split rather than filtered, so `file` is a string in the half that has one.
+ * `blocks.filter((b) => b.file)` leaves the type `string | null` and every use
+ * below would need a cast, which is a way of telling the typechecker to stop
+ * looking at exactly the field whose absence this gate cares about.
+ *
+ * The annotation below is a DOUBLE-STAR block on purpose. Written as a plain
+ * `/*` comment the `@type` is not JSDoc, TypeScript ignores it, and the array
+ * infers `any[]`: every null error disappears and nothing is checked, which is
+ * a silent pass wearing the costume of a fix.
+ */
+/** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string, raw: string}[]} */
+const withFile = [];
+/** @type {typeof blocks} */
+const withoutFile = [];
+for (const b of blocks) {
+  if (b.file) withFile.push({ ...b, file: b.file });
+  else withoutFile.push(b);
+}
+assertThat(blocks.length >= 20, "the sheets parsed into @font-face blocks", `${blocks.length} parsed, expected at least 20`);
+assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile.length} name a file`);
+
+/*
+ * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future
+ * file-backed block cannot fall into the skip path unnoticed. One today: the
+ * metric-adjusted "Inter Fallback", which is `src: local("Arial")`.
+ */
+assertThat(
+  withoutFile.length === 1 && withoutFile[0].family === "Inter Fallback",
+  "exactly one local()-only face, the metric-adjusted fallback",
+  `skipped ${withoutFile.length}: [${withoutFile.map((b) => b.family).join(", ")}]. A new fileless face must be ` +
+    `named here, or it is a face this gate silently does not check.`,
+);
+
+/** Every font binary that ships, so the reverse direction can be asserted. */
+const shipped = [];
+for (const dir of [join(root, "app", "fonts"), join(root, "app", "fonts", "katex")]) {
+  for (const f of readdirSync(dir, { withFileTypes: true })) {
+    if (f.isFile() && /\.(woff2?|ttf|otf)$/.test(f.name)) shipped.push(join(dir, f.name));
+  }
+}
+
+const referenced = new Set(withFile.map((b) => b.file));
+for (const file of shipped) {
+  assertThat(
+    referenced.has(file),
+    `${relative(root, file)} is referenced by an @font-face block`,
+    `the file ships and no declaration names it, so nothing asserts what it is`,
+  );
+}
+
+/** Cache: one parse per file however many blocks name it. */
+/** @type {Map<string, import("fontkit").Font>} */
+const parsed = new Map();
+/** @param {string} file */
+function fontFor(file) {
+  const hit = parsed.get(file);
+  if (hit) return hit;
+  const font = /** @type {import("fontkit").Font} */ (fontkit.openSync(file));
+  parsed.set(file, font);
+  return font;
+}
+
+for (const b of withFile) {
+  const rel = relative(root, b.file);
+  if (!existsSync(b.file)) {
+    assertThat(false, `${rel} exists`, `declared in ${relative(root, b.sheet)} and not on disk`);
+    continue;
+  }
+
+  const font = fontFor(b.file);
+  const axes = font.variationAxes ?? {};
+
+  // The family the file calls itself. KaTeX's name table carries the family
+  // without the style suffix, which is what the CSS declares too.
+  assertThat(
+    font.familyName === b.family || font.postscriptName?.startsWith(b.family.replace(/\s+/g, "")),
+    `${rel} is the family the declaration names`,
+    `css says "${b.family}", the file's name table says "${font.familyName}" (${font.postscriptName})`,
+  );
+
+  const weight = (b.weight ?? "").trim();
+  const range = weight.match(/^(\d+)\s+(\d+)$/);
+  if (range) {
+    const [, lo, hi] = range;
+    assertThat(
+      Boolean(axes.wght),
+      `${rel} carries a wght axis, as its declared range promises`,
+      `css declares "font-weight: ${weight}" and the file has axes [${Object.keys(axes).join(", ") || "none"}]`,
+    );
+    if (axes.wght) {
+      assertThat(
+        axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
+        `${rel} wght range matches the declaration exactly`,
+        `css declares ${lo} ${hi}, the file's wght is ${axes.wght.min} to ${axes.wght.max}. A narrower file means ` +
+          `weights the stylesheet asks for are synthesised rather than drawn.`,
+      );
+    }
+  } else if (/^\d+$/.test(weight)) {
+    assertThat(
+      !axes.wght,
+      `${rel} is static, as its single declared weight implies`,
+      `css declares "font-weight: ${weight}" but the file has a wght axis; declare the range instead`,
+    );
+    const us = font["OS/2"]?.usWeightClass;
+    assertThat(
+      us === Number(weight),
+      `${rel} usWeightClass matches the declared weight`,
+      `css declares ${weight}, the file's OS/2.usWeightClass is ${us}`,
+    );
+  }
+
+  if (b.style === "italic" || b.style === "normal") {
+    const italicByAngle = font.italicAngle !== 0;
+    const italicByName = /italic|oblique/i.test(font.subfamilyName ?? "") || /italic/i.test(font.postscriptName ?? "");
+    const isItalic = italicByAngle || italicByName || Boolean(axes.ital) || Boolean(axes.slnt);
+    assertThat(
+      (b.style === "italic") === isItalic,
+      `${rel} slant matches the declared font-style`,
+      `css declares "${b.style}", the file reports italicAngle=${font.italicAngle} subfamily="${font.subfamilyName}"`,
+    );
+  }
+
+  const stretch = (b.stretch ?? "").trim().match(/^([\d.]+)%\s+([\d.]+)%$/);
+  if (stretch) {
+    assertThat(
+      axes.wdth !== undefined && axes.wdth.min === Number(stretch[1]) && axes.wdth.max === Number(stretch[2]),
+      `${rel} wdth range matches the declared font-stretch`,
+      `css declares ${stretch[1]}% ${stretch[2]}%, the file's wdth is ${axes.wdth ? `${axes.wdth.min} to ${axes.wdth.max}` : "absent"}`,
+    );
+  }
+}
+
+/*
+ * AXIS REQUESTS FROM THE SHEETS. The value must be IN RANGE, because a browser
+ * clamps an out-of-range axis silently: the level renders, at the wrong optical
+ * size, with nothing anywhere reporting it.
+ */
+for (const req of variationRequests) {
+  const faces = withFile.filter((b) => existsSync(b.file)).map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
+  const carriers = faces.filter((f) => f.axes[req.axis]);
+  assertThat(
+    carriers.length > 0,
+    `the "${req.axis}" axis requested in ${relative(root, req.sheet)} exists in a shipped face`,
+    `no shipped font carries "${req.axis}"; the declaration is inert`,
+  );
+  for (const c of carriers) {
+    const a = c.axes[req.axis];
+    if (!a) continue;
+    assertThat(
+      req.value >= a.min && req.value <= a.max,
+      `"${req.axis}" ${req.value} is in range for ${relative(root, c.b.file)}`,
+      `the file supports ${a.min} to ${a.max}; a browser CLAMPS ${req.value} silently, so the level renders at the ` +
+        `wrong optical size and nothing reports it`,
+    );
+  }
+}
+
+/*
+ * THE SATORI FACES, which are not in any stylesheet.
+ *
+ * `build-og.mjs` and `check-logo.mjs` draw the social cards with the static
+ * TTFs under `assets/fonts/`. They are Inter too, and nothing reconciled them
+ * against the faces the site serves: MEASURED 2026-09-12, the TTFs are Inter
+ * 4.001 build git-9221beed3 and the served woff2 are 4.001 build git-66647c0bb,
+ * so the cards are already drawn with a different build of the same release.
+ * That is tolerable and it is not nothing, which is why it is asserted here
+ * rather than left to be discovered: the family must match what the site
+ * serves, and the weights build-og asks for must be the weights in the files.
+ */
+const OG_FACES = [
+  { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
+  { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
+];
+const servedFamily = withFile
+  .filter((b) => b.file.includes(join("app", "fonts")) && !b.file.includes("katex"))
+  .map((b) => b.family)[0];
+
+for (const face of OG_FACES) {
+  const rel = relative(root, face.file);
+  if (!existsSync(face.file)) {
+    assertThat(false, `${rel} exists`, `build-og.mjs reads it to draw every social card`);
+    continue;
+  }
+  const font = fontFor(face.file);
+  assertThat(
+    font.familyName === servedFamily,
+    `${rel} is the family the site serves`,
+    `the cards would be drawn in "${font.familyName}" while the site renders "${servedFamily}"`,
+  );
+  assertThat(
+    font["OS/2"]?.usWeightClass === face.weight,
+    `${rel} carries the weight build-og requests`,
+    `build-og draws at ${face.weight}, the file's usWeightClass is ${font["OS/2"]?.usWeightClass}`,
+  );
+}
+
+/*
+ * THE BASELINE. Every assertion above is satisfied by a file re-subsetted with
+ * its axes intact, so the bytes themselves are pinned.
+ */
+/** @param {string} file */
+const digest = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
+const allBinaries = [...shipped, ...OG_FACES.map((f) => f.file)].filter(existsSync).sort();
+const current = Object.fromEntries(allBinaries.map((f) => [relative(root, f).split("\\").join("/"), digest(f)]));
+
+if (update) {
+  writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
+  console.log(`  --update: rewrote the baseline with ${Object.keys(current).length} digest(s).`);
+  console.log("  THIS IS DELIBERATELY LOUD. Commit it only if the font change was intended.\n");
+} else {
+  assertThat(existsSync(FIXTURE), "the font baseline exists", `${relative(root, FIXTURE)} is missing; regenerate with --update`);
+  if (existsSync(FIXTURE)) {
+    /** @type {Record<string, string>} */
+    const pinned = JSON.parse(readFileSync(FIXTURE, "utf8"));
+    assertThat(
+      Object.keys(pinned).length === Object.keys(current).length,
+      "the baseline covers every shipped binary",
+      `baseline pins ${Object.keys(pinned).length}, disk has ${Object.keys(current).length}`,
+    );
+    for (const [name, sha] of Object.entries(current)) {
+      assertThat(
+        pinned[name] === sha,
+        `${name} is byte-identical to its pinned baseline`,
+        pinned[name]
+          ? `expected ${pinned[name].slice(0, 16)}, got ${sha.slice(0, 16)}. A re-subset keeps every axis and changes ` +
+            `the glyphs; if the change was intended, re-run with --update.`
+          : `not in the baseline; re-run with --update if the file is new`,
+      );
+    }
+  }
+}
+
+/*
+ * THE FLOOR. Measured by RUNNING this gate over the tree as it stands, never by
+ * summing the assertions above: a hand-counted floor is a second owner of a
+ * number the gate already knows.
+ *
+ * MEASURED ON THE DEFAULT BRANCH, and the distinction cost a wrong floor once
+ * already. `--update` SKIPS the per-binary baseline comparisons, so it executes
+ * 26 fewer checks than a plain run: 117 against 143. A floor measured from an
+ * `--update` run sits 26 under the count it is supposed to guard, which is the
+ * exact shape ruling 23 exists to catch.
+ */
+const MINIMUM_CHECKS = 138;
+const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
+if (breach) assertThat(false, "this gate executed its assertions", breach);
+
+console.log(
+  `\n  ${blocks.length} @font-face block(s), ${withFile.length} file-backed, ${withoutFile.length} local()-only, ` +
+    `${allBinaries.length} binaries pinned, ${variationRequests.length} axis request(s).`,
+);
+console.log(`  ${checks} check(s), ${failures} failure(s).\n`);
+
+process.exitCode = failures > 0 ? 1 : 0;
