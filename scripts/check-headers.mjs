@@ -751,9 +751,9 @@ ok(
   "one source in workers/app.ts, several readers; a second generator would drift",
 );
 ok(
-  "SiteHeader renders SiteSpeculation, which is what puts it on every public page",
+  "ShellHeader renders SiteSpeculation, which is what puts it on every public page",
   /<SiteSpeculation\s*\/>/.test(
-    stripComments(readFileSync(join(root, "app", "components", "site-header.tsx"), "utf8")),
+    stripComments(readFileSync(join(root, "app", "components", "shell-header.tsx"), "utf8")),
   ),
   "an imported-but-unrendered component is the shape that passes both assertions " +
     "above while shipping nothing to any reader",

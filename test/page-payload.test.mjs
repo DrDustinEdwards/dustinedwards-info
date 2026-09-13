@@ -10,7 +10,7 @@
  *
  * ## THE TWO DEFECTS, both found by running the gate and reading its output
  *
- * 1. A `?url` IMPORT IS NOT A FETCH. `search-trigger.tsx` imports the palette
+ * 1. A `?url` IMPORT IS NOT A FETCH. `bar-search-submit.tsx` imports the palette
  *    bundle's URL to put on a data attribute; the page does not fetch it, a
  *    gesture does. Counting the import made every route look like it served a
  *    search dialog, which is the exact opposite of what the split achieved, and
@@ -43,7 +43,7 @@ test("a ?url import of an enhancement bundle does NOT count as a fetch", () => {
       return <a data-palette={paletteUrl} />;
     }
   `;
-  const { assets } = importsOf(source, "/app/components/search-trigger.tsx", APP);
+  const { assets } = importsOf(source, "/app/components/bar-search-submit.tsx", APP);
   assert.deepEqual(assets, [], "the URL is carried, not fetched");
 });
 

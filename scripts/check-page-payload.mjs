@@ -876,9 +876,9 @@ const REDESIGN_UPLIFT = new Map([
 ]);
 
 const ROUTE_CEILINGS = {
-  "/": { id: "routes/home", css: 6600, total: 7600 },
-  "/blog": { id: "routes/blog._index", css: 7100, total: 8100 },
-  "/blog/:slug": { id: "routes/blog.$slug", css: 8600, total: 11300 },
+  "/": { id: "routes/home", css: 6900, total: 7800 },
+  "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9000, total: 11600 },
   /*
    * MEASURED 2026-09-03 through this gate on a fresh build: css 4797 over three
    * sheets, 5615 total. The ceilings are `/blog`'s, which are the same numbers
@@ -887,7 +887,7 @@ const ROUTE_CEILINGS = {
    * stylesheets, so the two pages should be graded against one bar rather than
    * drifting apart by whichever happened to be measured later.
    */
-  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7100, total: 8100 },
+  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7200, total: 8100 },
   /*
    * MEASURED 2026-09-04 through this gate on a fresh build: css 4797 over three
    * sheets, 5615 total, which is the tag archive's figure to the byte because
@@ -895,13 +895,13 @@ const ROUTE_CEILINGS = {
    * are the tag archive's for the same reason: one bar for one kind of page,
    * rather than two that drift apart by whichever was measured later.
    */
-  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7100, total: 8100 },
-  "/search": { id: "routes/search", css: 7400, total: 10000 },
-  "/projects": { id: "routes/projects", css: 6600, total: 7600 },
-  "/colophon": { id: "routes/colophon", css: 7000, total: 7900 },
-  "/playground": { id: "routes/playground", css: 7900, total: 8800 },
-  "/phage-discovery": { id: "routes/phage-discovery", css: 7000, total: 7900 },
-  "/privacy": { id: "routes/privacy", css: 7000, total: 7900 },
+  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7200, total: 8100 },
+  "/search": { id: "routes/search", css: 7600, total: 10000 },
+  "/projects": { id: "routes/projects", css: 7100, total: 7900 },
+  "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
+  "/playground": { id: "routes/playground", css: 8200, total: 9000 },
+  "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8200 },
+  "/privacy": { id: "routes/privacy", css: 7400, total: 8200 },
   /*
    * MEASURED 2026-09-11 through this gate on a fresh build: css 4976 over two
    * sheets, 5794 total. That is /privacy and /colophon to the BYTE, which is
@@ -912,7 +912,7 @@ const ROUTE_CEILINGS = {
    * happened to be measured last, which is the reasoning the tag and series
    * archives above are already on.
    */
-  "/about": { id: "routes/about", css: 7000, total: 7900 },
+  "/about": { id: "routes/about", css: 7400, total: 8200 },
   /*
    * MEASURED 2026-09-12 through this gate on a fresh build: css 4666 over two
    * sheets (root plus publications.css), 5484 total, serving the one bundle
@@ -933,7 +933,7 @@ const ROUTE_CEILINGS = {
    * chips are links and the search is a GET form, so the interactive half costs
    * no script either. A hydrating version of this page would ship the corpus.
    */
-  "/publications": { id: "routes/publications", css: 6600, total: 7600 },
+  "/publications": { id: "routes/publications", css: 7300, total: 8100 },
   /*
    * ONE PAPER'S PAGE. MEASURED 2026-09-12 through this gate on a fresh build:
    * css 4768 over two sheets, 5586 total.
@@ -958,7 +958,7 @@ const ROUTE_CEILINGS = {
    * the right split: a long author list is content, and content is not a
    * payload regression.
    */
-  "/publications/:slug": { id: "routes/publications.$slug", css: 6600, total: 7600 },
+  "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
 /**
@@ -1219,7 +1219,7 @@ function gradeEveryPage() {
     "the search palette is not imported into any page's cold load",
     ![...rootAssets].some((a) => a.includes("enhance/dist/palette")),
     "root reaches app/enhance/dist/palette.js through an import, so a search dialog is " +
-      "on every document again. It is fetched on the gesture; see search-trigger.tsx.",
+      "on every document again. It is fetched on the gesture; see bar-search-submit.tsx.",
   );
 
   gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile);

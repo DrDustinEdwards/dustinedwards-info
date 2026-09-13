@@ -255,10 +255,20 @@ for (const { file, purple, viewBox } of FIXTURES) {
  */
 
 /** Selector, normalised, to the fill it binds. The COMPLETE set. */
-const EXPECTED_FILL_BINDINGS = [
-  [".site-logo-brand", "var(--brand)"],
-  [".site-header .site-logo-brand", "var(--mark-on-chrome)"],
-];
+/*
+ * ONE BINDING SINCE 2026-09-13, and the second did not drift away: it was
+ * deleted with the surface it described.
+ *
+ * `.site-header .site-logo-brand` painted the mark in `--mark-on-chrome`
+ * because the old header put the phage mark on the purple bar beside the
+ * wordmark. The Paper, Glass, Light bar carries the wordmark as TEXT and no
+ * mark at all, on the brief rule that there is no crest, seal or wordmark
+ * treatment of the logo, so public-chrome.css went and the binding with it.
+ *
+ * The mark still ships: /login and the admin shell render it, and there it is
+ * `--brand` on paper, which is the binding that remains.
+ */
+const EXPECTED_FILL_BINDINGS = [[".site-logo-brand", "var(--brand)"]];
 
 {
   /*
