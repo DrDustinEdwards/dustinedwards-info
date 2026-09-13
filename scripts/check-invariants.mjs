@@ -6085,7 +6085,14 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 
   let sourceMentions = 0;
   for (const file of sourceFiles) {
-    const src = readFileSync(file, "utf8");
+    // THE CARRIED MAP BELOW NAMES EVERY TOKEN IT CARRIES, and this scan reads
+    // scripts/ too, so without this the map would mark its own entries as
+    // referenced and then fail every one of them for being referenced. The
+    // region between the sentinels is a LIST OF NAMES, not a use of them.
+    const src = readFileSync(file, "utf8").replace(
+      /\/\* carried:start \*\/[\s\S]*?\/\* carried:end \*\//g,
+      "",
+    );
     for (const m of src.matchAll(/(--[a-z][a-z0-9-]+)/g)) {
       if (!defined.has(m[1])) continue;
       referenced.add(m[1]);
@@ -6126,9 +6133,145 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
     `${undefinedRefs.length} token(s) are used and never declared. var() on an undeclared name falls back to nothing ` +
       `and paints the inherited value, which looks almost right:\n      ${undefinedRefs.join("\n      ")}`,
   );
+  /*
+   * CARRIED TOKENS: declared by one build, consumed by a later one.
+   *
+   * THIS MAP IS TEMPORARY AND IT IS NOT AN ALLOWLIST. The Paper, Glass, Light
+   * redesign lands as four builds, and build 1 is scoped to tokens alone: no
+   * components, no routes, no pages. So the type levels, the space and motion
+   * scales and the control dimensions are all declared with nothing reading
+   * them yet, which is exactly the shape this section fails on and is right to
+   * fail on in every other case.
+   *
+   * IT POLICES ITSELF IN BOTH DIRECTIONS, which is what keeps it from becoming
+   * permanent:
+   *
+   *   - an entry naming a token that is not declared FAILS. A dead entry is a
+   *     hole that outlived its reason.
+   *   - an entry naming a token that IS now referenced FAILS. The moment a
+   *     build consumes a token, the entry must go, so the map shrinks as the
+   *     redesign lands rather than being tidied up afterwards by somebody who
+   *     remembers.
+   *   - after EXPIRES it must be EMPTY, whatever is in it. The per-entry rules
+   *     above cannot see a token no build ever consumed, and a date is the only
+   *     mechanism available to this gate for "temporary": nothing on disk says
+   *     which redesign build has landed. When this fires, the answer is to
+   *     finish the build that owed the token or to delete the token, and moving
+   *     the date is a ruling rather than a repair.
+   */
+  const CARRIED_EXPIRES = "2026-11-30";
+  /* carried:start */
+  /** @type {Map<string, string>} token -> the build that consumes it */
+  const CARRIED = new Map([
+  ["--bar-h",              "build 2: skeleton, header, overflow, footer"],
+  ["--control-min-dense",  "build 2: skeleton, header, overflow, footer"],
+  ["--ease-enter",         "build 2: view transitions and the overlay menu"],
+  ["--ease-exit",          "build 2: view transitions and the overlay menu"],
+  ["--ease-state",         "build 2: view transitions and the overlay menu"],
+  ["--gutter",             "build 2: skeleton, header, overflow, footer"],
+  ["--icon-size",          "build 2: skeleton, header, overflow, footer"],
+  ["--icon-stroke",        "build 2: skeleton, header, overflow, footer"],
+  ["--line-w",             "build 2: skeleton, header, overflow, footer"],
+  ["--line-w-thick",       "build 2: skeleton, header, overflow, footer"],
+  ["--lamp-origin",        "build 3: the /playground/ui inventory page"],
+  ["--lamp-reach",         "build 3: the /playground/ui inventory page"],
+  ["--surface-catch",      "build 3: the /playground/ui inventory page"],
+  ["--measure",            "build 2: skeleton, header, overflow, footer"],
+  ["--motion-instant",     "build 2: view transitions and the overlay menu"],
+  ["--motion-page",        "build 2: view transitions and the overlay menu"],
+  ["--motion-panel",       "build 2: view transitions and the overlay menu"],
+  ["--motion-state",       "build 2: view transitions and the overlay menu"],
+  ["--radius-control",     "build 2: skeleton, header, overflow, footer"],
+  ["--s-1",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-3",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-4",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-5",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-6",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-7",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-8",                "build 2: skeleton, header, overflow, footer"],
+  ["--s-9",                "build 2: skeleton, header, overflow, footer"],
+  ["--t-body-family",      "build 3: the /playground/ui inventory page"],
+  ["--t-body-leading",     "build 3: the /playground/ui inventory page"],
+  ["--t-body-size",        "build 3: the /playground/ui inventory page"],
+  ["--t-body-vars",        "build 3: the /playground/ui inventory page"],
+  ["--t-body-weight",      "build 3: the /playground/ui inventory page"],
+  ["--t-caption-family",   "build 3: the /playground/ui inventory page"],
+  ["--t-caption-leading",  "build 3: the /playground/ui inventory page"],
+  ["--t-caption-size",     "build 3: the /playground/ui inventory page"],
+  ["--t-caption-strong",   "build 3: the /playground/ui inventory page"],
+  ["--t-caption-vars",     "build 3: the /playground/ui inventory page"],
+  ["--t-caption-weight",   "build 3: the /playground/ui inventory page"],
+  ["--t-display-family",   "build 3: the /playground/ui inventory page"],
+  ["--t-display-leading",  "build 3: the /playground/ui inventory page"],
+  ["--t-display-size",     "build 3: the /playground/ui inventory page"],
+  ["--t-display-tracking", "build 3: the /playground/ui inventory page"],
+  ["--t-display-vars",     "build 3: the /playground/ui inventory page"],
+  ["--t-display-weight",   "build 3: the /playground/ui inventory page"],
+  ["--t-h1-family",        "build 3: the /playground/ui inventory page"],
+  ["--t-h1-leading",       "build 3: the /playground/ui inventory page"],
+  ["--t-h1-size",          "build 3: the /playground/ui inventory page"],
+  ["--t-h1-tracking",      "build 3: the /playground/ui inventory page"],
+  ["--t-h1-vars",          "build 3: the /playground/ui inventory page"],
+  ["--t-h1-weight",        "build 3: the /playground/ui inventory page"],
+  ["--t-h2-family",        "build 3: the /playground/ui inventory page"],
+  ["--t-h2-leading",       "build 3: the /playground/ui inventory page"],
+  ["--t-h2-size",          "build 3: the /playground/ui inventory page"],
+  ["--t-h2-vars",          "build 3: the /playground/ui inventory page"],
+  ["--t-h2-weight",        "build 3: the /playground/ui inventory page"],
+  ["--t-h3-family",        "build 3: the /playground/ui inventory page"],
+  ["--t-h3-leading",       "build 3: the /playground/ui inventory page"],
+  ["--t-h3-size",          "build 3: the /playground/ui inventory page"],
+  ["--t-h3-tracking",      "build 3: the /playground/ui inventory page"],
+  ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
+  ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
+  ["--t-label-family",     "build 3: the /playground/ui inventory page"],
+  ["--t-label-leading",    "build 3: the /playground/ui inventory page"],
+  ["--t-label-size",       "build 3: the /playground/ui inventory page"],
+  ["--t-label-vars",       "build 3: the /playground/ui inventory page"],
+  ["--t-label-weight",     "build 3: the /playground/ui inventory page"],
+  ["--t-nav-family",       "build 3: the /playground/ui inventory page"],
+  ["--t-nav-leading",      "build 3: the /playground/ui inventory page"],
+  ["--t-nav-size",         "build 3: the /playground/ui inventory page"],
+  ["--t-nav-strong-vars",  "build 3: the /playground/ui inventory page"],
+  ["--t-nav-vars",         "build 3: the /playground/ui inventory page"],
+  ["--t-nav-weight",       "build 3: the /playground/ui inventory page"],
+  ]);
+  /* carried:end */
+
+  const stillCarried = unusedDefs.filter((t) => CARRIED.has(t));
+  const unusedNotCarried = unusedDefs.filter((t) => !CARRIED.has(t));
+  if (CARRIED.size) {
+    console.log(
+      `     ${stillCarried.length} of ${CARRIED.size} carried token(s) still unconsumed, ` +
+        `map must be empty by ${CARRIED_EXPIRES}`,
+    );
+  }
+
+  for (const [token, consumer] of CARRIED) {
+    ok(
+      `carried token ${token} is still declared`,
+      defined.has(token),
+      `the entry names a token no stylesheet declares. It was carried for "${consumer}"; either the ` +
+        `token was renamed and the entry was not, or it is gone and the entry is a hole.`,
+    );
+    ok(
+      `carried token ${token} is still unconsumed`,
+      !referenced.has(token),
+      `something now reads it, so "${consumer}" has landed. Remove the entry: the map shrinks as the ` +
+        `redesign lands, and an entry kept past its consumer is an allowlist.`,
+    );
+  }
+
+  ok(
+    `the carried-token map is empty by ${CARRIED_EXPIRES}`,
+    CARRIED.size === 0 || new Date().toISOString().slice(0, 10) <= CARRIED_EXPIRES,
+    `${CARRIED.size} token(s) are still carried past ${CARRIED_EXPIRES}. This map is temporary by ` +
+      `construction; finish the build that owed them or delete them. Moving the date is a ruling.`,
+  );
+
   ok(
     "every defined token is referenced",
-    unusedDefs.length === 0,
+    unusedNotCarried.length === 0,
     `${unusedDefs.length} token(s) are declared and never used, in CSS or in source. Either something stopped ` +
       `reading them or they are dead:\n      ${unusedDefs.join("\n      ")}`,
   );
@@ -6196,7 +6339,15 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
  * work and is proven so by differential). CI reached it on the first push.
  */
-const MINIMUM_CHECKS = wantsRemote ? 346 : 330;
+/*
+ * RE-MEASURED 2026-09-13 for the Paper, Glass, Light token layer, both branches,
+ * by RUNNING the gate: 486 offline and 525 with --remote. Section 31's carried
+ * map is most of the rise, since it asserts two things per carried token across
+ * 72 of them. Floors are those counts minus check:floors' own tolerance,
+ * max(3, ceil(n * 0.05)): 25 and 27. Taken from the printed counts, which is
+ * the correction the paragraph above records.
+ */
+const MINIMUM_CHECKS = wantsRemote ? 498 : 461;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

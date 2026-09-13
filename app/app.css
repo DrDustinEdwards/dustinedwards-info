@@ -422,6 +422,268 @@
   --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
+/* The Paper, Glass, Light type levels ----------------------------------------
+ *
+ * Ruling 65, Part A step 2. EIGHT levels, no more, and EVERY LEVEL IS FIVE
+ * PROPERTIES rather than one composite value.
+ *
+ * ## WHY FIVE PROPERTIES AND NOT A `font` SHORTHAND
+ *
+ * `font-variation-settings` CANNOT RIDE IN THE `font` SHORTHAND. A level
+ * applied as `font: var(--t-h1)` would silently lose its optical size and its
+ * variable weight, and it would still render: at the wrong `opsz`, with nothing
+ * anywhere reporting it. That is the same silent-clamp class `check:fonts`
+ * exists for, arriving by a different road.
+ *
+ * So there is no composite `--t-h1`. There is no deprecated one either, and no
+ * dummy kept for the transition: while one exists somebody will use it, and the
+ * failure is invisible. A consumer sets the five properties, or it is not using
+ * the level.
+ *
+ * NOTHING WAS DELETED TO GET HERE. The repo has never carried a `--t-*` token
+ * of either shape; checked before writing this, and the design handoff's
+ * instruction to delete rather than deprecate had nothing to act on.
+ *
+ * ## THE WEIGHT IS DECLARED TWICE, DELIBERATELY
+ *
+ * `--t-*-weight` feeds `font-weight` and the `wght` inside `--t-*-vars` feeds
+ * the axis. They are not redundant: `font-weight` is what the font-matching
+ * algorithm selects a FACE with, and `wght` is what actually positions the
+ * variable axis once a face is chosen. A level that set only the axis would
+ * match the face at weight 400 and then be told to draw at 620, and a level
+ * that set only `font-weight` would leave the axis to the browser's own
+ * interpolation. Both are set, to the same number, at every level.
+ *
+ * ## THE OPTICAL SIZE IS ALWAYS EXPLICIT
+ *
+ * `font-optical-sizing` is left OFF at every consumer, so nothing interpolates
+ * on resize; `opsz` moves at one breakpoint only, 48rem, and only for the two
+ * serif levels. Inter carries `opsz` 14 to 32 and every Inter level below sits
+ * inside it, the lowest exactly on the floor at 14. Source Serif 4 carries 8 to
+ * 60 and its two levels name 32 and 48. `check:fonts` binds each level's
+ * request to the family its own `--t-*-family` names, so an Inter level asking
+ * for 48 is a named failure rather than a silent clamp.
+ */
+:root {
+  /* Prose and UI body. 420 rather than 400: on limestone, Inter's 400 goes
+     slightly thin under greyscale antialiasing. The standfirst is this level
+     at 1.25rem, a size alias rather than a ninth level. */
+  --t-body-family: var(--font-sans);
+  --t-body-size: clamp(1rem, 0.97rem + 0.14vw, 1.0625rem);
+  --t-body-leading: 1.65;
+  --t-body-weight: 420;
+  --t-body-vars: "opsz" 17, "wght" 420;
+
+  /* Metadata, captions, machine lines, table cells, footnotes. */
+  --t-small-family: var(--font-sans);
+  --t-small-size: 0.875rem;
+  --t-small-leading: 1.5;
+  --t-small-weight: 440;
+  --t-small-vars: "opsz" 14, "wght" 440;
+
+  /* Field labels, buttons, chips.
+
+     WEIGHT 600, NOT 560. Step 2's axis table set 560 and step 6b restated the
+     level at 600 when it drew the kit; the later step wins, and the earlier
+     value is recorded in the commit rather than left as a second reading. */
+  --t-label-family: var(--font-sans);
+  --t-label-size: 0.8125rem;
+  --t-label-leading: 1.35;
+  --t-label-weight: 600;
+  --t-label-vars: "opsz" 14, "wght" 600;
+
+  /* Bar destinations and footer links. */
+  --t-nav-family: var(--font-sans);
+  --t-nav-size: 0.9375rem;
+  --t-nav-leading: 1.2;
+  --t-nav-weight: 520;
+  --t-nav-vars: "opsz" 16, "wght" 520;
+
+  /* Subheads inside posts, papers and admin. The last Inter level, and the
+     highest `opsz` any Inter level asks for. */
+  --t-h3-family: var(--font-sans);
+  --t-h3-size: clamp(1.25rem, 1.16rem + 0.39vw, 1.375rem);
+  --t-h3-leading: 1.35;
+  --t-h3-weight: 620;
+  --t-h3-vars: "opsz" 22, "wght" 620;
+
+  /* Public section headings and archive titles. THE SERIF FLOOR: 2rem fixed,
+     never fluid, because "headings 32px and up" has to stay true at 375 as
+     well as at 1280, and the face is not cut for less. */
+  --t-h2-family: var(--font-serif);
+  --t-h2-size: 2rem;
+  --t-h2-leading: 1.2;
+  --t-h2-weight: 600;
+  --t-h2-vars: "opsz" 32, "wght" 600;
+
+  /* Page and post titles. Lands on exactly 2rem at 375, so the serif never
+     sets below its floor. */
+  --t-h1-family: var(--font-serif);
+  --t-h1-size: clamp(2rem, 1.28rem + 2.25vw, 2.5rem);
+  --t-h1-leading: 1.15;
+  --t-h1-weight: 680;
+  --t-h1-vars: "opsz" 32, "wght" 680;
+
+  /* The home name line, once per site. 2rem at 375, 3.25rem at 1280. */
+  --t-display-family: var(--font-serif);
+  --t-display-size: clamp(2rem, 0.35rem + 5.15vw, 3.25rem);
+  --t-display-leading: 1.05;
+  --t-display-weight: 700;
+  --t-display-vars: "opsz" 32, "wght" 700;
+
+  /* TRACKING IS NOT ONE OF THE FIVE, and is declared apart so it cannot be
+     mistaken for part of a level. Only three levels carry any, and a level
+     with none has no token rather than a token holding zero: a `0` that every
+     consumer must remember to apply is worse than nothing to apply. */
+  --t-h3-tracking: -0.008em;
+  --t-h1-tracking: -0.012em;
+  --t-display-tracking: -0.012em;
+
+  /* THE STRONG NAV WEIGHT, in both forms, because the two properties that
+     carry it take different types: `font-weight` takes the number and
+     `font-variation-settings` takes the string. The active bar destination,
+     the current filter chip and a figure caption's lead-in all read it.
+
+     Step 2 had no strong level at all and step 6b added it at `opsz` 15 while
+     `--t-nav` sits at 16. That is the later step and it stands as written; the
+     one-step difference is 6b's, not a transcription slip.
+
+     Step 2's "selected chip 640" has NO token here. Step 6b draws the selected
+     filter with the nav strong weight instead, so a 640 would be a level
+     nothing reads, which is what section 31 refuses. */
+  --t-nav-strong: 620;
+  --t-nav-strong-vars: "opsz" 15, "wght" 620;
+
+  /* ALIASES, NOT LEVELS. A caption needed a name so a component is not reading
+     `--t-small` and hoping; it did not need a size of its own. */
+  --t-caption-family: var(--t-small-family);
+  --t-caption-size: var(--t-small-size);
+  --t-caption-leading: var(--t-small-leading);
+  --t-caption-weight: var(--t-small-weight);
+  --t-caption-vars: var(--t-small-vars);
+  --t-caption-strong: var(--t-nav-strong);
+}
+
+/* THE SECOND OPTICAL SIZE STEP, and the only breakpoint in the type scale.
+ *
+ * 48rem is where the two serif levels cross into sizes the 48 cut is for. It
+ * is one declaration per level rather than a re-statement of the level, so the
+ * size, leading and weight above stay single-owner. The Inter levels do not
+ * appear here at all: Inter's axis stops at 32 and no level asks for more. */
+@media (min-width: 48rem) {
+  :root {
+    --t-h1-vars: "opsz" 48, "wght" 680;
+    --t-display-vars: "opsz" 48, "wght" 700;
+  }
+}
+
+/* The Paper, Glass, Light space and dimension scales --------------------------
+ *
+ * Part A step 3, plus the four dimension tokens step 6a added.
+ *
+ * NOT IN THE COLOUR BLOCKS, for the reason the stacking scale and the font
+ * stacks are not: `check:contrast` walks those and requires a literal hex that
+ * participates in a measured pair. A length is neither.
+ *
+ * THE HANDOFF ASKED FOR THE DIMENSION TOKENS IN BOTH THEME BLOCKS, with
+ * identical values, so a future theme could not inherit a dimension it never
+ * declared. They are in a bare `:root` here instead, and the reason is that the
+ * gate this repo actually runs would reject them there: a dimension in a colour
+ * block fails the literal-hex assertion and then fails participation, because
+ * no contrast pair can measure a length. The protection the handoff wanted is
+ * real but it is not available on those terms; what replaces it is that there
+ * is exactly one declaration, in a block no theme overrides.
+ */
+:root {
+  /* Nine steps on a 4px base, in rem so a reader's root size scales them.
+     Nothing in the design uses a value off this scale. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+
+  /* The measure. The TRACK is the measure, not a max-width on a child, so a
+     full-bleed figure and a paragraph share one source of truth. */
+  --measure: 42rem;
+
+  /* Control dimensions are NOT spacing and do not sit on the scale above.
+
+     44px is the header hit target and is the ENHANCED target size, WCAG 2.2
+     2.5.5, which is AAA. It is not the AA floor and must not be read as one
+     anywhere: 2.5.8 asks for 24px, which is --control-min-dense. The larger
+     value is deliberate extra, chosen because this site is read on phones in
+     one hand. */
+  --control-min: 2.75rem;
+  --control-min-dense: 1.5rem;
+
+  /* The bar height is DERIVED, not invented: --control-min + 2 x --s-2. It is
+     the CLOSED bar height and the only bar figure any other rule may cite. An
+     open overflow panel is a transient state and does not resize it. */
+  --bar-h: calc(var(--control-min) + 2 * var(--s-2));
+
+  --line-w: 0.0625rem;
+  --line-w-thick: 0.125rem;
+  --radius-control: 0.125rem;
+  --icon-size: 1.25rem;
+  --icon-stroke: 1.5;
+
+  /* THE THREE GUTTERS. 64rem is also the header's one breakpoint, so the
+     header introduces no number of its own. */
+  --gutter: 1.25rem;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --gutter: 3rem;
+  }
+}
+
+/* The Paper, Glass, Light motion scale ---------------------------------------
+ *
+ * Part A step 5. Four durations, NAMED BY JOB rather than by number: there is
+ * no --motion-fast and no --motion-200, because a number name invites reuse by
+ * resemblance and a job name forces the question of what the motion is for. If
+ * a new case fits none of the four, the answer is usually that it should not be
+ * animated.
+ *
+ * All three easings END FLAT. No overshoot, no bounce, no spring.
+ */
+:root {
+  /* The answer to a pointer. Below about 100ms a change is perceived as
+     simultaneous with the input, which is what a hover tint should be. Not 0:
+     a 90ms ramp hides the one-frame repaint stutter on a slow device that an
+     instant swap shows. */
+  --motion-instant: 90ms;
+  /* A state a reader should notice: between about 120 and 200ms the eye reads
+     a change FROM one state TO another rather than simply being different. */
+  --motion-state: 160ms;
+  /* The overlay menu fade, the only panel in the foundation. Under about 220ms
+     a fade reads as a flicker; over about 300ms the reader is waiting.
+
+     It is NOT the scroll reveal. A `view()` timeline ignores animation-duration
+     entirely, so the reveal has no duration to name, which is why this token is
+     --motion-panel and not --motion-reveal. */
+  --motion-panel: 260ms;
+  /* A whole document: the cross-document view transition, the one case where
+     the browser is also doing work. */
+  --motion-page: 320ms;
+
+  --ease-enter: cubic-bezier(0.16, 0.68, 0.28, 1);
+  --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
 /* The Hill Country token system ---------------------------------------------
  *
  * Ratified 2026-07-28. The authoritative specification is
@@ -462,7 +724,7 @@
   --surface-popover: #ebe2d3;
   --surface-code: #f1ebe1;
   --surface-hero: #ede8f5;
-  --text: #2b2320;
+  --text: #241f1b;
   /* No split in light mode: halation is a light-on-dark effect, so the heading
      token exists here only so components can ask for the role unconditionally. */
   --text-heading: #2b2320;
@@ -473,11 +735,11 @@
 
   /* Brand: bluebonnet. Brand only. It never signals a state. */
   --brand: #4f2d7f;
-  --brand-hover: #3d2263;
+  --brand-hover: #412764;
   --brand-active: #2f1a4d;
   --on-brand: #ffffff;
   --tint-brand: #ede8f5;
-  --visited: #7f2651;
+  --visited: #5a2b63;
   --selection-bg: #d9ccee;
   --focus-ring: #4f2d7f;
   --focus-ring-on-brand: #f3e3b8;
@@ -592,6 +854,105 @@
   --chart-sage: #55684a;
   --chart-gold: #9a7a0e;
   --chart-rust: #8a4a1b;
+
+  /* PAPER, GLASS, LIGHT. Ruling 65, Part A. The Hill Country roles above
+     stay until builds 2 to 4 migrate their consumers; these are the
+     names the redesign uses and nothing reads them yet. */
+  /* limestone: the page ground, and the footer's */
+  --paper: #f4efe6;
+  /* one step off paper. LIGHTER in dark, darker in light */
+  --raised: #ece6da;
+  /* all muted copy. dust never sets type */
+  --text-secondary: #5b5349;
+  /* a hint below the value that will replace it, NOT --text-secondary */
+  --placeholder: #6a6359;
+  --placeholder: color-mix(in srgb, #5b5349 90%, #f4efe6);
+  /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
+  --dust: #c9c0b4;
+  /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
+  --line-strong: #8a7d6e;
+  /* control edges on the solid bar only */
+  --line-on-brand: #b9abcc;
+  --line-on-brand: color-mix(in srgb, #ffffff 60%, #4f2d7f);
+  /* the header bar. brand purple is the bar FILL and nothing else */
+  --bar-fill: #4f2d7f;
+  /* a press is not a hover and is never --visited */
+  --brand-pressed: #2f1a4d;
+  /* composite, measured. see the recipe below */
+  --glass-fill-bar: #684a91;
+  --glass-fill-bar: color-mix(in srgb, #ffffff 14%, #4f2d7f);
+  /* the same fill with the menu open */
+  --glass-fill-bar-open: #765b9b;
+  --glass-fill-bar-open: color-mix(in srgb, #ffffff 22%, #4f2d7f);
+  /* legal on /search over paper and NOWHERE else */
+  --glass-fill-paper: #e7e2ee;
+  --glass-fill-paper: color-mix(in srgb, #e2dcf2 70%, #f4efe6);
+  /* error TEXT, and the field border at --line-w-thick */
+  --error: #8e1024;
+  --error-fill: #8e1024;
+  --on-error-fill: #ffffff;
+  --error-tint: #f7e4e4;
+  --warning: #6b4f07;
+  --warning-fill: #8a4f1e;
+  --on-warning-fill: #ffffff;
+  --warning-tint: #f6eac8;
+  --success: #375445;
+  --success-fill: #375445;
+  --on-success-fill: #ffffff;
+  --success-tint: #e6ecdf;
+
+  /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
+     no semantic colour ever appears in one, because a chart series is
+     not a state. */
+  /* figures sit on paper, never on raised */
+  --fig-ground: var(--paper);
+  --fig-purple-100: #e3dcf0;
+  --fig-purple-200: #9279b9;
+  --fig-purple-300: #6b4a9b;
+  --fig-purple-400: #4f2d7f;
+  --fig-purple-500: #3a1f5e;
+  --fig-leaf-100: #dfe5e0;
+  /* leaf, the brief's primitive, is this step in light */
+  --fig-leaf-200: #9aa89c;
+  --fig-leaf-300: #6b7a70;
+  --fig-leaf-400: #5f6d63;
+  --fig-leaf-500: #3b453e;
+  --fig-oxide-100: #f0ddd4;
+  /* iron oxide's dark primitive is this step */
+  --fig-oxide-200: #c48972;
+  --fig-oxide-300: #a8604a;
+  /* iron oxide's light primitive */
+  --fig-oxide-400: #8f4e3a;
+  --fig-oxide-500: #5e3125;
+  --fig-dust-100: #ece6da;
+  --fig-dust-200: #c9c0b4;
+  --fig-dust-300: #a89d8d;
+  --fig-dust-400: #7d7263;
+  --fig-dust-500: #4e463c;
+
+  /* THE SERIES SLOTS ARE THE INTERFACE; the ramps above are primitives.
+     A chart reads --fig-s1 to --fig-s5 and never a hue name or a tint
+     index, which is what makes one piece of markup correct in both
+     themes: the slot names are stable and the ramp behind them inverts. */
+  /* purple-500 light, purple-100 dark */
+  --fig-s1: var(--fig-purple-500);
+  /* dust-500 light, leaf-200 dark */
+  --fig-s2: var(--fig-dust-500);
+  /* oxide-400 light, oxide-300 dark */
+  --fig-s3: var(--fig-oxide-400);
+  /* leaf-300 light, dust-400 dark */
+  --fig-s4: var(--fig-leaf-300);
+  /* purple-200 light, purple-300 dark */
+  --fig-s5: var(--fig-purple-200);
+
+  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
+     which is why one --lamp-chroma could not work and it splits in two.
+     Brand purple at 14% over a brand-purple bar is a zero-delta
+     composite. */
+  /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
+  --lamp-chroma-on-bar: var(--fig-oxide-200);
+  /* purple-100 light, purple-400 dark */
+  --lamp-chroma-on-paper: var(--fig-purple-100);
 }
 
 /* No attribute and a dark OS preference. This is the zero-JS path and the
@@ -608,7 +969,7 @@
     --surface-hero: #3d2a5c;
     /* v3 split: body steps one off maximum to reduce halation for astigmatic
        readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
-    --text: #e3dbd0;
+    --text: #e9e1d6;
     --text-heading: #ede6dc;
     --text-muted: #b3a99c;
     --text-disabled: #6e655b;
@@ -616,14 +977,14 @@
     --border-strong: #8a8075;
 
     --brand: #b7a5e0;
-    --brand-hover: #c9baea;
+    --brand-hover: #b9a6d9;
     --brand-active: #c9baea;
     --on-brand: #1a1614;
     --tint-brand: #2b2440;
-    --visited: #d586ac;
+    --visited: #a898cd;
     --selection-bg: #4a3a6b;
     --focus-ring: #b7a5e0;
-    --focus-ring-on-brand: #4a3d1e;
+    --focus-ring-on-brand: #2f2410;
 
     /* v4 chrome, provisional. Dark chrome is the ALREADY-RATIFIED hero surface
        #3d2a5c, so no new surface enters the palette. Pairs on it: --on-chrome
@@ -703,6 +1064,105 @@
     --chart-sage: #93b29b;
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
+
+    /* PAPER, GLASS, LIGHT. Ruling 65, Part A. The Hill Country roles above
+       stay until builds 2 to 4 migrate their consumers; these are the
+       names the redesign uses and nothing reads them yet. */
+    /* limestone: the page ground, and the footer's */
+    --paper: #1c1916;
+    /* one step off paper. LIGHTER in dark, darker in light */
+    --raised: #232019;
+    /* all muted copy. dust never sets type */
+    --text-secondary: #b2a898;
+    /* a hint below the value that will replace it, NOT --text-secondary */
+    --placeholder: #a39a8b;
+    --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
+    /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
+    --dust: #6f675c;
+    /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
+    --line-strong: #8f857a;
+    /* control edges on the solid bar only */
+    --line-on-brand: #594f66;
+    --line-on-brand: color-mix(in srgb, #1a1614 60%, #b7a5e0);
+    /* the header bar. brand purple is the bar FILL and nothing else */
+    --bar-fill: #b7a5e0;
+    /* a press is not a hover and is never --visited */
+    --brand-pressed: #a08ecd;
+    /* composite, measured. see the recipe below */
+    --glass-fill-bar: #a191c3;
+    --glass-fill-bar: color-mix(in srgb, #1a1614 14%, #b7a5e0);
+    /* the same fill with the menu open */
+    --glass-fill-bar-open: #9486b3;
+    --glass-fill-bar-open: color-mix(in srgb, #1a1614 22%, #b7a5e0);
+    /* legal on /search over paper and NOWHERE else */
+    --glass-fill-paper: #2f2a2e;
+    --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
+    /* error TEXT, and the field border at --line-w-thick */
+    --error: #f0a9b4;
+    --error-fill: #e08a98;
+    --on-error-fill: #1a1614;
+    --error-tint: #3a2226;
+    --warning: #cf9f5e;
+    --warning-fill: #a97c3f;
+    --on-warning-fill: #1a1614;
+    --warning-tint: #332619;
+    --success: #79baa8;
+    --success-fill: #8fac77;
+    --on-success-fill: #1a1614;
+    --success-tint: #1b2b28;
+
+    /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
+       no semantic colour ever appears in one, because a chart series is
+       not a state. */
+    /* figures sit on paper, never on raised */
+    --fig-ground: var(--paper);
+    --fig-purple-100: #e0d7f2;
+    --fig-purple-200: #c0aee6;
+    --fig-purple-300: #a48fd0;
+    --fig-purple-400: #7f66a8;
+    --fig-purple-500: #5a4479;
+    --fig-leaf-100: #dfe5e0;
+    /* leaf, the brief's primitive, is this step in light */
+    --fig-leaf-200: #a9b7ab;
+    --fig-leaf-300: #8b9a8e;
+    --fig-leaf-400: #6f7e73;
+    --fig-leaf-500: #4a5851;
+    --fig-oxide-100: #f0ddd4;
+    /* iron oxide's dark primitive is this step */
+    --fig-oxide-200: #d6a189;
+    --fig-oxide-300: #c07f66;
+    /* iron oxide's light primitive */
+    --fig-oxide-400: #a3654d;
+    --fig-oxide-500: #74422f;
+    --fig-dust-100: #e8e1d5;
+    --fig-dust-200: #cfc6ba;
+    --fig-dust-300: #ab9f8f;
+    --fig-dust-400: #82776a;
+    --fig-dust-500: #564e44;
+
+    /* THE SERIES SLOTS ARE THE INTERFACE; the ramps above are primitives.
+       A chart reads --fig-s1 to --fig-s5 and never a hue name or a tint
+       index, which is what makes one piece of markup correct in both
+       themes: the slot names are stable and the ramp behind them inverts. */
+    /* purple-500 light, purple-100 dark */
+    --fig-s1: var(--fig-purple-100);
+    /* dust-500 light, leaf-200 dark */
+    --fig-s2: var(--fig-leaf-200);
+    /* oxide-400 light, oxide-300 dark */
+    --fig-s3: var(--fig-oxide-300);
+    /* leaf-300 light, dust-400 dark */
+    --fig-s4: var(--fig-dust-400);
+    /* purple-200 light, purple-300 dark */
+    --fig-s5: var(--fig-purple-300);
+
+    /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
+       which is why one --lamp-chroma could not work and it splits in two.
+       Brand purple at 14% over a brand-purple bar is a zero-delta
+       composite. */
+    /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
+    --lamp-chroma-on-bar: var(--fig-purple-100);
+    /* purple-100 light, purple-400 dark */
+    --lamp-chroma-on-paper: var(--fig-purple-400);
   }
 }
 
@@ -718,7 +1178,7 @@
   --surface-popover: #322a25;
   --surface-code: #26201c;
   --surface-hero: #3d2a5c;
-  --text: #e3dbd0;
+  --text: #e9e1d6;
   --text-heading: #ede6dc;
   --text-muted: #b3a99c;
   --text-disabled: #6e655b;
@@ -726,16 +1186,16 @@
   --border-strong: #8a8075;
 
   --brand: #b7a5e0;
-  --brand-hover: #c9baea;
+  --brand-hover: #b9a6d9;
   /* The doc specifies no dark brand-active. Reusing the ratified hover hex
      keeps parity with the light block without inventing a value. */
   --brand-active: #c9baea;
   --on-brand: #1a1614;
   --tint-brand: #2b2440;
-  --visited: #d586ac;
+  --visited: #a898cd;
   --selection-bg: #4a3a6b;
   --focus-ring: #b7a5e0;
-  --focus-ring-on-brand: #4a3d1e;
+  --focus-ring-on-brand: #2f2410;
 
   /* v4 chrome, provisional. Same values as the block above, written out for the
      same reason every other token here is. */
@@ -811,6 +1271,177 @@
   --chart-sage: #93b29b;
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
+
+  /* PAPER, GLASS, LIGHT. Ruling 65, Part A. The Hill Country roles above
+     stay until builds 2 to 4 migrate their consumers; these are the
+     names the redesign uses and nothing reads them yet. */
+  /* limestone: the page ground, and the footer's */
+  --paper: #1c1916;
+  /* one step off paper. LIGHTER in dark, darker in light */
+  --raised: #232019;
+  /* all muted copy. dust never sets type */
+  --text-secondary: #b2a898;
+  /* a hint below the value that will replace it, NOT --text-secondary */
+  --placeholder: #a39a8b;
+  --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
+  /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
+  --dust: #6f675c;
+  /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
+  --line-strong: #8f857a;
+  /* control edges on the solid bar only */
+  --line-on-brand: #594f66;
+  --line-on-brand: color-mix(in srgb, #1a1614 60%, #b7a5e0);
+  /* the header bar. brand purple is the bar FILL and nothing else */
+  --bar-fill: #b7a5e0;
+  /* a press is not a hover and is never --visited */
+  --brand-pressed: #a08ecd;
+  /* composite, measured. see the recipe below */
+  --glass-fill-bar: #a191c3;
+  --glass-fill-bar: color-mix(in srgb, #1a1614 14%, #b7a5e0);
+  /* the same fill with the menu open */
+  --glass-fill-bar-open: #9486b3;
+  --glass-fill-bar-open: color-mix(in srgb, #1a1614 22%, #b7a5e0);
+  /* legal on /search over paper and NOWHERE else */
+  --glass-fill-paper: #2f2a2e;
+  --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
+  /* error TEXT, and the field border at --line-w-thick */
+  --error: #f0a9b4;
+  --error-fill: #e08a98;
+  --on-error-fill: #1a1614;
+  --error-tint: #3a2226;
+  --warning: #cf9f5e;
+  --warning-fill: #a97c3f;
+  --on-warning-fill: #1a1614;
+  --warning-tint: #332619;
+  --success: #79baa8;
+  --success-fill: #8fac77;
+  --on-success-fill: #1a1614;
+  --success-tint: #1b2b28;
+
+  /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
+     no semantic colour ever appears in one, because a chart series is
+     not a state. */
+  /* figures sit on paper, never on raised */
+  --fig-ground: var(--paper);
+  --fig-purple-100: #e0d7f2;
+  --fig-purple-200: #c0aee6;
+  --fig-purple-300: #a48fd0;
+  --fig-purple-400: #7f66a8;
+  --fig-purple-500: #5a4479;
+  --fig-leaf-100: #dfe5e0;
+  /* leaf, the brief's primitive, is this step in light */
+  --fig-leaf-200: #a9b7ab;
+  --fig-leaf-300: #8b9a8e;
+  --fig-leaf-400: #6f7e73;
+  --fig-leaf-500: #4a5851;
+  --fig-oxide-100: #f0ddd4;
+  /* iron oxide's dark primitive is this step */
+  --fig-oxide-200: #d6a189;
+  --fig-oxide-300: #c07f66;
+  /* iron oxide's light primitive */
+  --fig-oxide-400: #a3654d;
+  --fig-oxide-500: #74422f;
+  --fig-dust-100: #e8e1d5;
+  --fig-dust-200: #cfc6ba;
+  --fig-dust-300: #ab9f8f;
+  --fig-dust-400: #82776a;
+  --fig-dust-500: #564e44;
+
+  /* THE SERIES SLOTS ARE THE INTERFACE; the ramps above are primitives.
+     A chart reads --fig-s1 to --fig-s5 and never a hue name or a tint
+     index, which is what makes one piece of markup correct in both
+     themes: the slot names are stable and the ramp behind them inverts. */
+  /* purple-500 light, purple-100 dark */
+  --fig-s1: var(--fig-purple-100);
+  /* dust-500 light, leaf-200 dark */
+  --fig-s2: var(--fig-leaf-200);
+  /* oxide-400 light, oxide-300 dark */
+  --fig-s3: var(--fig-oxide-300);
+  /* leaf-300 light, dust-400 dark */
+  --fig-s4: var(--fig-dust-400);
+  /* purple-200 light, purple-300 dark */
+  --fig-s5: var(--fig-purple-300);
+
+  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
+     which is why one --lamp-chroma could not work and it splits in two.
+     Brand purple at 14% over a brand-purple bar is a zero-delta
+     composite. */
+  /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
+  --lamp-chroma-on-bar: var(--fig-purple-100);
+  /* purple-100 light, purple-400 dark */
+  --lamp-chroma-on-paper: var(--fig-purple-400);
+}
+
+/* The lamp's geometry and strength -------------------------------------------
+ *
+ * Part A step 4. The CATCH HUE is two colour tokens and lives in the palette
+ * blocks above; these three are a position and two numbers, so they are here
+ * for the reason every other non-colour token is: `check:contrast` walks the
+ * palette blocks and requires a literal hex in a measured pair, and a percent
+ * is neither.
+ *
+ * THEY ARE THEME-VARYING ALL THE SAME, which is why this is a second pair of
+ * theme blocks rather than a bare `:root`. It sits AFTER the palette blocks
+ * deliberately: the gate locates a palette block by the literal text of its
+ * selector and takes the FIRST match, so a theme block above the palette would
+ * be parsed as the palette. That is not left to ordering alone, because
+ * ordering is not a thing anyone checks while editing: `check:contrast` now
+ * asserts each block it parsed carries `--paper`, so a block that moved above
+ * this one fails loudly instead of measuring the wrong twelve tokens.
+ *
+ * `--surface-catch` is REGISTERED with `@property` and that is load-bearing
+ * rather than decoration. An unregistered custom property is a token string to
+ * the animation engine and cannot interpolate: it would jump from one value to
+ * the other at the halfway point, and the field's lamp coming up under focus
+ * would be a flicker rather than a fade. It is a bare NUMBER, not a
+ * percentage, because a number interpolates and `calc(var(--surface-catch) *
+ * 100%)` does the rest at the use site.
+ */
+@property --surface-catch {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+:root,
+[data-theme="light"] {
+  /* A percent position along the inline axis. Light sits near the leading
+     edge, where the eye enters the control, because the bar is dark and the
+     catch is high-contrast against it. */
+  --lamp-origin: 18%;
+  --lamp-reach: 62%;
+  --surface-catch: 0.14;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    /* Dark has to sit further in: the bar is already light, so a catch at the
+       very edge is lost to the bar's own value and reads as a lighter rim
+       rather than as a lamp. It also carries more, because the dark
+       composites sit on a steeper part of the transfer curve where 0.14 is
+       under two sRGB steps. */
+    --lamp-origin: 30%;
+    --lamp-reach: 58%;
+    --surface-catch: 0.22;
+  }
+}
+
+[data-theme="dark"] {
+  --lamp-origin: 30%;
+  --lamp-reach: 58%;
+  --surface-catch: 0.22;
+}
+
+/* AT ZERO THE GRADIENT STILL RENDERS, as a mix of 0%, which is the backdrop.
+   No second code path and no separate rule for the reduced case, and the glass
+   fill itself is untouched: a reduced-transparency reader loses the lamp and
+   keeps the surface. */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --surface-catch: 0;
+  }
 }
 
 /* v3 amendment 3: prefers-contrast: more ---------------------------------
