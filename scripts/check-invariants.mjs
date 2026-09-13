@@ -6170,6 +6170,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--surface-catch",      "build 3: the /playground/ui inventory page"],
   ["--motion-page",        "build 2: view transitions and the overlay menu"],
   ["--s-4",                "build 2: skeleton, header, overflow, footer"],
+  ["--t-body-family",     "build 3: the /playground/ui inventory page"],
   ["--t-body-leading",     "build 3: the /playground/ui inventory page"],
   ["--t-body-size",        "build 3: the /playground/ui inventory page"],
   ["--t-body-vars",        "build 3: the /playground/ui inventory page"],
@@ -6316,7 +6317,10 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * the correction the paragraph above records.
  *
  * RE-MEASURED AGAIN 2026-09-13 when build 2 landed the shell: 422 offline and
- * 461 with --remote, floors 400 and 438. Taken after the map had finished
+ * 461 with --remote. Then AGAIN when the header restore returned one token to
+ * the carried map: 424 and 463, floors 403 and 440. The map is the reason this
+ * moves so often, and it moves in BOTH directions: consuming a token removes
+ * two assertions, re-carrying one adds them back. Taken after the map had finished
  * shrinking for this build, not partway through it.
  *
  * **THIS FLOOR MOVES DOWN EVERY TIME THE CARRIED MAP SHRINKS, and that is the
@@ -6327,7 +6331,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * the gate in both branches and read the printed counts; that is the only
  * method that works here, and the map is designed to empty.
  */
-const MINIMUM_CHECKS = wantsRemote ? 438 : 400;
+const MINIMUM_CHECKS = wantsRemote ? 440 : 403;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

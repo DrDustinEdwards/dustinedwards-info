@@ -35,6 +35,7 @@ import "./app.css";
 import "./styles/page-shell.css";
 import "./styles/skip-link.css";
 import "./styles/motion-print.css";
+import "./styles/search-trigger.css";
 /*
  * LAST, and that is the point rather than an accident of when it was written.
  * The Paper, Glass, Light shell replaces what public-chrome.css and

@@ -655,21 +655,6 @@
   /* The full track: the widest the shell ever gets. */
   --col-full: 70rem;
 
-  /*
-   * THE BAR'S SEARCH FIELD, at 64rem and up. 8rem, not Part A's 10rem.
-   *
-   * RULED 2026-09-13 after measuring. Step 3 predicted the 1024 row needs 884
-   * into a 928 column "with real slack"; MEASURED it needs 954.9, and the logo
-   * is what pays: at 10rem the wordmark renders 93.5 against its natural 120.4,
-   * clipped at exactly the width where the six destinations first appear. That
-   * is the second time this row's arithmetic has been wrong in the same
-   * direction, the 768 row having been out by 64.
-   *
-   * At 8rem, MEASURED: the logo is full at 1024, 1120 and 1280 with no
-   * overflow. The field shows about 11 characters rather than 14, and the logo
-   * is identity on every page.
-   */
-  --bar-field-w: 8rem;
 
   /* THE THREE GUTTERS. 64rem is also the header's one breakpoint, so the
      header introduces no number of its own. */

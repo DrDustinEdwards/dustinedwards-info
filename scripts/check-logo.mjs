@@ -256,19 +256,28 @@ for (const { file, purple, viewBox } of FIXTURES) {
 
 /** Selector, normalised, to the fill it binds. The COMPLETE set. */
 /*
- * ONE BINDING SINCE 2026-09-13, and the second did not drift away: it was
- * deleted with the surface it described.
+ * TWO BINDINGS. RESTORED 2026-09-13 after build 2 cut this to one.
  *
- * `.site-header .site-logo-brand` painted the mark in `--mark-on-chrome`
- * because the old header put the phage mark on the purple bar beside the
- * wordmark. The Paper, Glass, Light bar carries the wordmark as TEXT and no
- * mark at all, on the brief rule that there is no crest, seal or wordmark
- * treatment of the logo, so public-chrome.css went and the binding with it.
+ * The second, `.site-header .site-logo-brand` -> `--mark-on-chrome`, asserts
+ * that the phage mark RENDERS ON THE BAR. Build 2 replaced the header with a
+ * text-only wordmark, this gate caught it, and the gate was cut to one binding
+ * with a justification written to fit the defect. THAT IS WORSE THAN THE
+ * DEFECT: the mark came back the moment somebody looked, but a gate narrowed
+ * to accommodate an omission lets the next omission through in silence.
  *
- * The mark still ships: /login and the admin shell render it, and there it is
- * `--brand` on paper, which is the binding that remains.
+ * Restored FIRST and watched to fail, before the header was touched, which is
+ * hard rule 12: exit 1 is not evidence until the plant is proven applied.
  */
-const EXPECTED_FILL_BINDINGS = [[".site-logo-brand", "var(--brand)"]];
+const EXPECTED_FILL_BINDINGS = [
+  [".site-logo-brand", "var(--brand)"],
+  // --on-brand, NOT --mark-on-chrome. The count is what caught the missing
+  // mark and the count is unchanged; only the token moved, and it moved on a
+  // measurement rather than to fit the code. --mark-on-chrome is #b7a5e0 in
+  // both themes and build 2 made the dark bar #b7a5e0, so the old binding
+  // renders the mark at 1.00:1 against its own background. --on-brand is
+  // 10.43:1 light and 8.10:1 dark on the bar that ships.
+  [".site-header .site-logo-brand", "var(--on-brand)"],
+];
 
 {
   /*

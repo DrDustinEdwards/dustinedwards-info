@@ -1,7 +1,8 @@
 import { Link, NavLink } from "react-router";
 
 import { MenuIcon, MoonIcon, SunIcon } from "~/components/bar-icons";
-import { BarSearchSubmit } from "~/components/bar-search-submit";
+import { SearchTrigger } from "~/components/search-trigger";
+import { SiteLogoHeader } from "~/components/site-logo";
 import { EnhancementScript } from "~/components/enhancement-script";
 import { SiteSpeculation } from "~/components/site-speculation";
 import themeEnhanceUrl from "~/enhance/dist/theme.js?url";
@@ -33,20 +34,23 @@ import { SITE } from "~/lib/seo";
  */
 export function ShellHeader() {
   return (
-    <header className="site-shell-header">
-      <div className="site-shell-header-in">
+    <header className="site-header">
+      <div className="site-header-in">
         {/*
           The logo is an `a`, not a heading. One `h1` per page and it lives in
           `main`. It truncates with an ellipsis below about 355px, and the full
           name stays its accessible name because the text node is intact: the
           clipping is `text-overflow`, which is visual only.
         */}
-        <Link to="/" className="site-shell-logo">
+        <Link to="/" className="site-header-brand">
+          {/* Decorative: the link accessible name is the wordmark beside it, so
+              naming the mark too would make a screen reader say it twice. */}
+          <SiteLogoHeader className="site-header-mark" />
           {SITE.name}
         </Link>
 
         {/* 64rem and up. */}
-        <nav className="site-shell-nav" aria-label="Main">
+        <nav className="site-header-nav" aria-label="Main">
           {SHELL_NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}>
               {item.label}
@@ -70,50 +74,19 @@ export function ShellHeader() {
         </details>
 
         {/*
-          ONE FORM AT EVERY WIDTH, one `role="search"` landmark, one `bar-q`.
+          THE SEARCH CONTROL, RESTORED. Build 2 replaced it with an inline GET
+          form whose input was hidden below 64rem, and that form NEVER WORKED
+          with script on: `data-search-trigger` sat on its submit button and
+          `enhance/theme.ts` calls `preventDefault()` on that element, which
+          cancels the submission. The typed query was discarded and the
+          no-bundle fallback navigated to /search with no `q` at all. It passed
+          every offline gate because it only worked with script OFF.
 
-          RULED 2026-09-13. Part A asked the server to emit a link below 64rem
-          and this form above it, "chosen by width class on the request". A
-          server has no viewport width, this repo carries no width or device
-          signal, and rule 20 says a new input to the body goes in the cache
-          key, so branching on width would have put a width dimension into the
-          themed `caches.default` entry.
-
-          Below 64rem CSS hides the INPUT alone, which takes it out of the tab
-          order and the accessibility tree and leaves a labelled Search button
-          that submits to /search, the page carrying the real field. The form,
-          the landmark and the label survive at every width, so nothing here is
-          duplicated and nothing is chosen on the server.
-
-          `role="search"` is the one role this shell writes, because there is no
-          element that carries it.
+          This is a LINK. With script the enhancement upgrades it into the
+          palette dialog; without script it is a plain link to /search and
+          nothing is cancelled, because a link has nothing to cancel.
         */}
-        <form className="bar-search" method="get" action="/search" role="search">
-          <label className="u-visually-hidden" htmlFor="bar-q">
-            Search
-          </label>
-          {/*
-            `bar-q`, not `q`: the home page renders its own Ask field at `q` and
-            the two would collide on a page that carries both.
-          */}
-          <input id="bar-q" className="bar-search-input" name="q" type="search" autoComplete="off" />
-          {/*
-            THE PALETTE HANGS OFF THE BUTTON THE BAR ALREADY HAS, so keeping it
-            reachable costs no bar UI at all, which is the only way build 2 can
-            keep it without building a control that belongs to Part B page 3.
-
-            With script: `enhance/theme.ts` upgrades `[data-search-trigger]`,
-            cancels the submit and opens the palette, whose bundle and
-            stylesheets it loads from the three hashed URLs below. Without
-            script: this is a plain submit and the form GETs to /search. The
-            attributes are inert to a reader who has no script to answer them.
-
-            THE BUNDLE IS NOT DELETED AND NOT REWIRED INTO NEW UI. Whether the
-            command palette survives the redesign is a product decision, and it
-            should not be settled as a side effect of retiring the old header.
-          */}
-<BarSearchSubmit />
-        </form>
+        <SearchTrigger />
 
         <ShellThemeControl />
       </div>
@@ -172,9 +145,9 @@ function ShellThemeControl() {
         className="bar-ctrl bar-theme-option"
         data-when="light"
         aria-label="Switch to dark theme"
+        title="Switch to dark theme"
       >
         <SunIcon />
-        <span className="bar-ctrl-label">Dark</span>
       </button>
       <button
         type="submit"
@@ -183,9 +156,9 @@ function ShellThemeControl() {
         className="bar-ctrl bar-theme-option"
         data-when="dark"
         aria-label="Switch to light theme"
+        title="Switch to light theme"
       >
         <MoonIcon />
-        <span className="bar-ctrl-label">Light</span>
       </button>
       {/*
         THE ENHANCEMENT, restored rather than dropped.
