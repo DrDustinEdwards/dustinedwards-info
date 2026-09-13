@@ -9,8 +9,8 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { getNonce } from "~/lib/context";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
@@ -32,12 +32,17 @@ import "./app.css";
  * THE ORDER IS LOAD-BEARING and is the order they were cut out of the original
  * 9,269-line app.css. Do not sort this list.
  */
-import "./styles/public-chrome.css";
 import "./styles/page-shell.css";
-import "./styles/chrome-nav.css";
 import "./styles/skip-link.css";
 import "./styles/motion-print.css";
-import "./styles/search-trigger.css";
+/*
+ * LAST, and that is the point rather than an accident of when it was written.
+ * The Paper, Glass, Light shell replaces what public-chrome.css and
+ * chrome-nav.css do, and both are still live for the routes Part B has not
+ * reached. Arriving last means it wins on order rather than by out-specifying
+ * them, which is the mechanism the comment above says this list IS.
+ */
+import "./styles/shell.css";
 
 /*
  * THE HASHED URL OF THE NORMAL FACE, so the preload below names the same bytes
@@ -487,8 +492,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
    */
   return (
     <>
-      <SiteHeader />
-      <main className="page" id="main">
+      <ShellHeader />
+      <main className="page site-shell-main" id="main" tabIndex={-1}>
         <div className="page-inner">
           <h1>{message}</h1>
           <p className="muted">{details}</p>
@@ -499,7 +504,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           )}
         </div>
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }

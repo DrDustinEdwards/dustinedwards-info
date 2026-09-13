@@ -165,16 +165,12 @@ function openPalette() {
   document.dispatchEvent(new Event(PALETTE_OPEN));
 }
 
-/** True when a keystroke belongs to whatever the reader is typing in. */
-function isTyping(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
-}
+/*
+ * `isTyping` WENT WITH THE BARE SLASH. It existed so a slash typed into a
+ * field stayed a slash, and Cmd/Ctrl-K needs no such guard: it collides with
+ * nothing a reader types. A helper kept past its only caller is dead code that
+ * reads as load-bearing.
+ */
 
 /**
  * Binds the two ways into search and makes the shortcut discoverable.
@@ -204,7 +200,7 @@ function enhanceSearchTrigger() {
      * description is hidden until now: a `title` the server wrote would promise
      * a shortcut to a reader who has no script to answer it.
      */
-    trigger.title = "Search. Press / to open";
+    trigger.title = "Search";
     trigger.dataset.shortcutHint = "shown";
     trigger.addEventListener("click", (event) => {
       // Let a modified click do what the browser would do with a link.
@@ -221,12 +217,14 @@ function enhanceSearchTrigger() {
       openPalette();
       return;
     }
-    // A bare slash opens search, but never while someone is typing into a
-    // field, where a slash is just a slash.
-    if (event.key === "/" && !meta && !event.altKey && !isTyping(event.target)) {
-      event.preventDefault();
-      openPalette();
-    }
+    /*
+     * THE BARE SLASH IS GONE, ruled against in the Part A review and accepted.
+     * It collides with find-in-page, which is a browser affordance readers
+     * already own, and it was borrowed from application UIs rather than earned
+     * by anything this site does. Cmd/Ctrl-K stays: it is the palette
+     * convention, it collides with nothing a browser binds, and it is not
+     * advertised to a reader who has no script to answer it.
+     */
   });
 }
 

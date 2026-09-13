@@ -1,8 +1,8 @@
 import { Link, data, redirect } from "react-router";
 
 import { PostCard, Pagination } from "~/components/post-card";
-import { SiteFooter } from "~/components/site-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ShellFooter } from "~/components/shell-footer";
+import { ShellHeader } from "~/components/shell-header";
 import { getBlogTag, listBlogPosts } from "~/db";
 import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
@@ -142,8 +142,8 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <SiteHeader />
-      <main className="page" id="main">
+      <ShellHeader />
+      <main className="page site-shell-main" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -187,7 +187,7 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
 
         <Pagination page={page} pageCount={pageCount} hrefFor={hrefFor} />
       </main>
-      <SiteFooter />
+      <ShellFooter />
     </>
   );
 }
