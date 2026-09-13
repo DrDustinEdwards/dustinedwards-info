@@ -433,7 +433,11 @@ for (const [text, bg, expected] of APCA_KEYSTONE) {
 // those rows below are what verify it.
 const TEXT = 4.5; // WCAG 1.4.3 AA, normal text
 const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
-const DISABLED = 3.0; // House floor. WCAG exempts disabled controls entirely.
+// DISABLED, a 3.0 house floor, is GONE as of 2026-09-13 and is not coming back
+// as an unused constant. WCAG exempts an inactive component outright, and the
+// only row that used it has been replaced by a named exemption; see the comment
+// where that row was. A threshold nothing applies is a threshold somebody
+// re-applies by accident.
 
 /** @type {Array<[string, string, number, string]>} fg, bg, min, note */
 const MATRIX = [
@@ -468,7 +472,23 @@ const MATRIX = [
   ["--text-muted", "--bg", TEXT, "muted text"],
   ["--text-muted", "--surface", TEXT, "muted on surface"],
   ["--text-muted", "--surface-popover", TEXT, "muted on popover"],
-  ["--text-disabled", "--bg", DISABLED, "disabled text (house floor)"],
+  // THE DISABLED ROW IS GONE, and its house floor with it. RULED 2026-09-13.
+  //
+  // It asserted --text-disabled on --bg at a 3.0 house floor, which WCAG does
+  // not ask for: 1.4.3 and 1.4.11 both exempt an inactive component outright.
+  // Part A step 6a set the disabled pair deliberately faint and this repo's
+  // floor was the only thing arguing with it. The floor lost, because a
+  // disabled control that meets 4.5:1 reads as available, which is the failure
+  // the faintness exists to avoid.
+  //
+  // What identifies a disabled control instead is the `disabled` attribute,
+  // which takes it out of the tab order and marks it inactive in the
+  // accessibility tree; the recess to --paper, below its own page ground; and
+  // visible text beside it saying why. None of those is a contrast ratio, and
+  // `cursor: not-allowed` is not a cue at all.
+  //
+  // The two tokens are named in NON_PARTICIPATING with their measured ratios,
+  // so they are recorded as failing rather than quietly unmeasured.
 
   // Borders are non-text UI
   ["--border", "--bg", UI, "border on page"],
@@ -699,17 +719,17 @@ const MATRIX = [
   ["--fig-s3", "--fig-ground", UI, "figure series 3 stroke"],
   ["--fig-s4", "--fig-ground", UI, "figure series 4 stroke"],
   ["--fig-s5", "--fig-ground", UI, "figure series 5 stroke"],
-  // There is deliberately NO --fig-dust-300 axis-and-grid row, and it is a
-  // FINDING rather than an omission. Step 4 sets `.fig-axis,.fig-grid` to
-  // --fig-dust-300 and separately rules that a figure's strokes must clear
-  // 3:1; MEASURED 2026-09-13, that stroke is 2.33:1 on limestone (#a89d8d on
-  // #f4efe6) and 6.74:1 in dark (#ab9f8f on #1c1916), so the LIGHT theme alone
-  // does not satisfy step 4's own rule and a single row would fail for one
-  // mode. Asserting the pair would red this gate forever over a stroke
-  // nothing draws yet, which is the same call the --border-on-popover comment
-  // above records. The axis colour needs a ruling before build 3 draws its
-  // first chart: --fig-dust-400 clears it, and so does moving the rule to
-  // "an axis is a reading aid, not an information-carrying boundary".
+  // THE AXIS AND GRID STROKE IS --fig-dust-400, NOT -300. RULED 2026-09-13.
+  //
+  // Step 4 set `.fig-axis,.fig-grid` to --fig-dust-300 and separately ruled
+  // that a figure's strokes must clear 3:1. MEASURED, -300 is 2.33:1 on
+  // limestone (#a89d8d on #f4efe6) and 6.74:1 in dark, so the light theme
+  // missed step 4's own rule. An axis is a graphical object carrying meaning
+  // rather than decoration, so 1.4.11 applies and the stroke moves one step
+  // darker: --fig-dust-400 measures 4.11:1 light (#7d7263) and 4.00:1 dark
+  // (#82776a). Both themes clear it, so this is one row rather than a comment
+  // explaining why there is no row.
+  ["--fig-dust-400", "--fig-ground", UI, "figure axis and grid stroke"],
   ["--text-secondary", "--fig-ground", TEXT, "figure label"],
   ["--text", "--fig-ground", TEXT, "figure key label"],
 ];
@@ -889,10 +909,15 @@ const NON_PARTICIPATING = new Map([
       "--line-strong exists, and --line-strong carries the rows",
   ],
   [
-    "--fig-dust-300",
-    "step 4's axis and grid stroke, which MEASURES 2.33:1 on limestone against step 4's own 3:1 rule " +
-      "for figure strokes. Asserting it would red this gate over a stroke nothing draws until build 3; " +
-      "the colour needs a ruling first, and the matrix comment carries the numbers",
+    "--text-disabled",
+    "an INACTIVE component, which WCAG 1.4.3 exempts outright. MEASURED 2.46:1 on limestone and " +
+      "recorded as failing rather than quietly unmeasured: a disabled control that met 4.5:1 would " +
+      "read as available. It is identified by the disabled attribute, the recess, and text beside it",
+  ],
+  [
+    "--line-disabled",
+    "the same, for the edge: 1.64:1 on limestone. WCAG 1.4.11 exempts an inactive component's " +
+      "boundary for the same reason 1.4.3 exempts its text",
   ],
   [
     "--lamp-chroma-on-bar",
@@ -912,6 +937,7 @@ const NON_PARTICIPATING = new Map([
   ...(/** @type {Array<[string, string]>} */ (
     [
       "--fig-purple-400",
+      "--fig-dust-300",
       "--fig-leaf-100",
       "--fig-leaf-400",
       "--fig-leaf-500",
@@ -1596,17 +1622,20 @@ const buildPresent = existsSync(assetDir);
  * it the same way rather than deriving it from the present-branch number.
  *
  * RE-MEASURED 2026-09-13 for the Paper, Glass, Light token layer, by the same
- * method and in both branches: build/ renamed away gives 774, build/ in place
- * gives 1002. The jump is the new palette's matrix rows, the mix-composites
+ * method and in both branches: build/ renamed away gives 792, build/ in place
+ * gives 1022, after the disabled exemption and the axis-stroke row. The jump is the new palette's matrix rows, the mix-composites
  * pass and the var()-resolution pass, and it is why the floors below moved by
  * hundreds rather than by a handful.
  *
- * Floors are those counts MINUS the check:floors tolerance at each count,
- * max(3, ceil(n * 0.05)): 39 and 51. Taken from the printed counts, never by
- * arithmetic on the old floors, which is what the paragraphs above record
- * going wrong twice.
+ * Floors are those counts minus ONE UNDER check:floors' own tolerance at each
+ * count, max(3, ceil(n * 0.05)) being 40 and 52: 753 and 971, so each floor
+ * sits 39 and 51 under its count. One tighter than the maximum slack allowed,
+ * deliberately, because the tolerance is the point at which the gate starts
+ * complaining and there is no reason to sit exactly on it. Taken from the
+ * printed counts, never by arithmetic on the old floors, which is what the
+ * paragraphs above record going wrong twice.
  */
-const MINIMUM_CHECKS = buildPresent ? 951 : 735;
+const MINIMUM_CHECKS = buildPresent ? 971 : 753;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
