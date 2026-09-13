@@ -179,15 +179,23 @@ assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile
 
 /*
  * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future
- * file-backed block cannot fall into the skip path unnoticed. One today: the
- * metric-adjusted "Inter Fallback", which is `src: local("Arial")`.
+ * file-backed block cannot fall into the skip path unnoticed. Two today, both
+ * metric-adjusted fallbacks: "Inter Fallback" over `local("Arial")` and
+ * "Source Serif 4 Web Fallback" over `local("Georgia")`.
+ *
+ * The list is exact rather than a count, because a count is satisfied by any
+ * two fileless faces and the thing worth asserting is WHICH two.
  */
-assertThat(
-  withoutFile.length === 1 && withoutFile[0].family === "Inter Fallback",
-  "exactly one local()-only face, the metric-adjusted fallback",
-  `skipped ${withoutFile.length}: [${withoutFile.map((b) => b.family).join(", ")}]. A new fileless face must be ` +
-    `named here, or it is a face this gate silently does not check.`,
-);
+const FILELESS = ["Inter Fallback", "Source Serif 4 Web Fallback"];
+{
+  const got = withoutFile.map((b) => b.family).sort();
+  assertThat(
+    got.length === FILELESS.length && got.every((f, i) => f === [...FILELESS].sort()[i]),
+    `the local()-only faces are exactly the ${FILELESS.length} metric-adjusted fallbacks`,
+    `skipped [${got.join(", ")}], expected [${[...FILELESS].sort().join(", ")}]. A new fileless face must be ` +
+      `named here, or it is a face this gate silently does not check.`,
+  );
+}
 
 /** Every font binary that ships, so the reverse direction can be asserted. */
 const shipped = [];
@@ -218,6 +226,20 @@ function fontFor(file) {
   return font;
 }
 
+// NAMESPACED FAMILIES are the one case where the declared family and the
+// binary's own name table legitimately differ. app.css declares the serif as
+// "Source Serif 4 Web" so that a reader with the retail family installed cannot
+// put a different file in the resolution path for the same name. This map is
+// what keeps that from being a licence: the declaration is still pinned to ONE
+// binary family, so swapping the typeface behind the namespaced name fails
+// exactly as it would without one.
+//
+// It polices itself below, in both directions, for the reason the exemption
+// maps in check:contrast do: an entry naming a family app.css no longer
+// declares is a hole nobody would notice.
+/** @type {Map<string, string>} declared family -> the family its file must report */
+const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
+
 for (const b of withFile) {
   const rel = relative(root, b.file);
   if (!existsSync(b.file)) {
@@ -230,10 +252,15 @@ for (const b of withFile) {
 
   // The family the file calls itself. KaTeX's name table carries the family
   // without the style suffix, which is what the CSS declares too.
+  //
+  // A namespaced declaration is still pinned to one binary family; see the map.
+  const expected = NAMESPACED.get(b.family) ?? b.family;
   assertThat(
-    font.familyName === b.family || font.postscriptName?.startsWith(b.family.replace(/\s+/g, "")),
+    font.familyName === expected || font.postscriptName?.startsWith(expected.replace(/\s+/g, "")),
     `${rel} is the family the declaration names`,
-    `css says "${b.family}", the file's name table says "${font.familyName}" (${font.postscriptName})`,
+    `css says "${b.family}"${
+      expected === b.family ? "" : ` (namespaced, and must be "${expected}")`
+    }, the file's name table says "${font.familyName}" (${font.postscriptName})`,
   );
 
   const weight = (b.weight ?? "").trim();
@@ -286,6 +313,22 @@ for (const b of withFile) {
       `css declares ${stretch[1]}% ${stretch[2]}%, the file's wdth is ${axes.wdth ? `${axes.wdth.min} to ${axes.wdth.max}` : "absent"}`,
     );
   }
+}
+
+// The namespace map polices itself: an entry naming a family no sheet declares
+// any more is a widened comparison nobody would notice, and an entry whose
+// declared and binary names are equal is not a namespace at all.
+for (const [declared, binary] of NAMESPACED) {
+  assertThat(
+    withFile.some((b) => b.family === declared),
+    `namespace entry "${declared}" names a family a sheet still declares`,
+    `no @font-face declares it; the entry is dead and should be removed`,
+  );
+  assertThat(
+    declared !== binary,
+    `namespace entry "${declared}" actually renames something`,
+    `declared and binary family are identical, so the entry does nothing`,
+  );
 }
 
 /*
@@ -357,9 +400,35 @@ const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
   { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
 ];
-const servedFamily = withFile
-  .filter((b) => b.file.includes(join("app", "fonts")) && !b.file.includes("katex"))
-  .map((b) => b.family)[0];
+/*
+ * THE FAMILY THE SITE SERVES, read from `--font-sans` rather than from the
+ * FIRST `@font-face` block under app/fonts/.
+ *
+ * It was the first block, which was true for exactly as long as Inter was the
+ * only family there. The serif landed under app/fonts/ on 2026-09-13 and made
+ * the old selector a statement about source ORDER: moving the serif's face
+ * above Inter's would have silently re-pointed this comparison at the serif and
+ * the cards would have been checked against the wrong typeface, passing.
+ *
+ * `--font-sans` is an independent declaration and the right source anyway: the
+ * cards draw body-weight text, and the body's family is what that token says.
+ * The serif sets headings and never appears on a card.
+ */
+const servedFamily = (() => {
+  const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
+  const decl = /--font-sans:\s*([^;]+);/.exec(sheet);
+  assertThat(Boolean(decl), "app.css declares --font-sans", "the served family cannot be read without it");
+  if (!decl) return null;
+  return decl[1].trim().split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+})();
+
+assertThat(
+  withFile.some(
+    (b) => b.family === servedFamily && b.file.includes(join("app", "fonts")) && !b.file.includes("katex"),
+  ),
+  `--font-sans names a family app/fonts/ actually serves ("${servedFamily}")`,
+  `the stack's first family is not backed by any self-hosted face, so the cards are compared against a name nothing ships`,
+);
 
 for (const face of OG_FACES) {
   const rel = relative(root, face.file);
