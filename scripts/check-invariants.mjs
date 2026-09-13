@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Gate over rules this repo states TWICE and cannot merge into one.
  *
  *   npm run check:invariants
@@ -5720,12 +5720,144 @@ console.log("\n  28. every rendered <img> states an intrinsic size, or its class
   );
 }
 
+console.log("\n  29. no tracked text file carries a raw control or invisible character");
+
+/*
+ * **AN ESCAPE IN PROSE CAN REACH DISK AS A CONTROL BYTE AND STILL LOOK RIGHT.**
+ *
+ * Three instances before this section existed, all authored through a shell
+ * that expanded a backslash escape inside a comment:
+ *
+ *   `\f` became 0x0C in app/app.css, so `font-display` read `ont-display`
+ *   `\b` became 0x08, which is the case hard rule 10 records
+ *   `\a` became 0x07 in scripts/check-browser.mjs, so libuv's `src\win\async.c`
+ *        read `src\winsync.c`, a plausible path that does not exist
+ *
+ * Every one of them rendered close enough to correct to survive review, which
+ * is the whole reason a person cannot be the instrument here.
+ *
+ * ## NO STRING-LITERAL PARSING, AND THAT IS NOT A SHORTCUT
+ *
+ * The tempting shape is "no control characters outside string literals", which
+ * needs a parser per language. It is unnecessary: a control character that is
+ * MEANT is written as an escape, and a backslash-u escape is six ASCII
+ * characters rather than one byte 0x08. So a RAW control byte is a defect wherever it lands,
+ * including inside a literal, and the rule needs no idea what language it is
+ * reading.
+ *
+ * ## WHAT COUNTS
+ *
+ * Everything below 0x20 except tab, LF and CR, plus 0x7F, plus the invisibles
+ * that are not control codes but are just as unreadable: the BOM and the
+ * zero-width family. They cost nothing to include and they fail the same way,
+ * by being absent from the render and present in the bytes.
+ *
+ * ## SCOPE
+ *
+ * Tracked files only, via `git ls-files`, so nothing generated or ignored is
+ * judged. Binaries are excluded by extension and the count of both halves is
+ * asserted, because a scan that skipped everything reports what a clean tree
+ * reports. The allowlist is EMPTY and should stay that way: a deliberate raw
+ * control byte in this repository has not existed yet.
+ */
+{
+  const BINARY = /\.(woff2?|ttf|otf|png|jpe?g|gif|webp|avif|ico|pdf|zip|wasm|mp4|mp3|sqlite|db)$/i;
+  /** Named so a failure says what the byte IS rather than only where it is. */
+  const NAMES = new Map([
+    [0x00, "NUL"], [0x07, "BEL"], [0x08, "BACKSPACE"], [0x0b, "VERTICAL TAB"],
+    [0x0c, "FORM FEED"], [0x1b, "ESC"], [0x7f, "DEL"],
+  ]);
+  /** Invisible but not control codes: BOM and the zero-width family. */
+  const INVISIBLE = new Map([
+    ["\uFEFF", "U+FEFF BYTE ORDER MARK"],
+    ["\u200B", "U+200B ZERO WIDTH SPACE"],
+    ["\u200C", "U+200C ZERO WIDTH NON-JOINER"],
+    ["\u200D", "U+200D ZERO WIDTH JOINER"],
+    ["\u2060", "U+2060 WORD JOINER"],
+  ]);
+
+  /*
+   * No `shell: true`. On Windows that joins argv unquoted, which is the shape
+   * FAILURES.md records for a seed SQL string becoming a program name.
+   */
+  const listed = spawnSync("git", ["ls-files"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  ok(
+    "[scope] git ls-files answered",
+    listed.status === 0 && typeof listed.stdout === "string",
+    `git ls-files exited ${listed.status}. A scan over no files reports what a clean tree reports.`,
+  );
+  const tracked = (listed.stdout ?? "").split(String.fromCharCode(10)).filter(Boolean);
+
+  let scanned = 0;
+  let skipped = 0;
+  /** @type {string[]} */
+  const offences = [];
+
+  for (const rel of tracked) {
+    if (BINARY.test(rel)) {
+      skipped += 1;
+      continue;
+    }
+    let buf;
+    try {
+      buf = readFileSync(join(root, rel));
+    } catch {
+      continue;
+    }
+    scanned += 1;
+
+    for (let i = 0; i < buf.length; i += 1) {
+      const v = buf[i];
+      if ((v < 0x20 && v !== 0x09 && v !== 0x0a && v !== 0x0d) || v === 0x7f) {
+        const line = buf.subarray(0, i).toString("utf8").split("\n").length;
+        offences.push(`${rel}:${line} 0x${v.toString(16).padStart(2, "0")} ${NAMES.get(v) ?? "control"}`);
+        break;
+      }
+    }
+
+    const text = buf.toString("utf8");
+    for (const [ch, name] of INVISIBLE) {
+      const at = text.indexOf(ch);
+      if (at === -1) continue;
+      offences.push(`${rel}:${text.slice(0, at).split("\n").length} ${name}`);
+      break;
+    }
+  }
+
+  /*
+   * SCOPE, BOTH HALVES. A glob that matched nothing, or a binary rule that
+   * swallowed the tree, each report a clean sweep. The floors are the inventory
+   * as it stands, measured by running.
+   */
+  ok(
+    "[scope] the control-character scan read the tracked tree",
+    scanned >= 400 && skipped >= 50,
+    `scanned ${scanned} text file(s) and skipped ${skipped} binary file(s). Below either floor the ` +
+      `scan has stopped reading the repository and the result below means nothing.`,
+  );
+  ok(
+    "no tracked text file carries a raw control or invisible character",
+    offences.length === 0,
+    `${offences.length} file(s) carry one. An escape written in prose can reach disk as a control ` +
+      `byte, render close enough to correct to survive review, and sit there: this section exists ` +
+      `because that happened three times. Write the escape so the shell cannot expand it, or use ` +
+      `the literal character:\n      ${offences.join("\n      ")}`,
+  );
+  console.log(`     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offence(s)`);
+}
+
 /*
  * RE-MEASURED 2026-09-08 BY RUNNING BOTH BRANCHES after section 27 (the runbook
  * is bound to the ratified secret list): 326 offline, 365 remote, against 305
  * and 344 before it. Section 27 is 21 assertions, two of them scope checks, and
  * eighteen of them one per secret in each direction, so the count moves with
  * `REQUIRED_SECRETS` and will move again the next time a secret is added.
+ *
+ * RE-MEASURED 2026-09-12 BY RUNNING THE OFFLINE BRANCH after section 29 (no
+ * raw control or invisible characters in a tracked text file): 335, against 330
+ * before it. The floor of 322 is 13 under that and the tolerance at 335 is 17,
+ * so it still holds and is left alone rather than nudged: a floor moved without
+ * a breach is a number nobody needed to change.
  *
  * Floors 290 to 309 and 328 to 346, each its measured count minus the
  * `check:floors` tolerance at that count. Not adjusted by arithmetic from the

@@ -37,35 +37,29 @@ which is what repeats across people and sessions.
 
 ## Proving
 
-- **A plant must be proven APPLIED before any result is read, and must produce
-  the NAMED failure.** Exit 1 only proves something failed. `VERIFICATION.md`
-- **A zero from a search proves nothing until the scope is proven non-empty.** A
-  search that examined no files reports what a clean sweep reports.
-  `VERIFICATION.md`
-- **An empty needle matches every line and returns a plausible number.** Two
-  files reported "436 CRLF lines" and "521 CRLF lines". Those are their total
-  line counts. `VERIFICATION.md`
+- **A plant is proven APPLIED, in the ARTIFACT THE GATE READS, before any
+  result is read, and must produce the NAMED failure.** Exit 1 only proves
+  something failed. A 30 KB constant planted in source was folded to 3e4 by the
+  minifier: the gated chunk grew 17 bytes and the plant never applied.
+  `VERIFICATION.md` `scripts/check-page-payload.mjs`
+- **A search with an empty scope or an empty needle returns a plausible
+  number.** A scan that examined no files reports what a clean sweep reports;
+  an empty needle matched every line and two files reported "436 CRLF lines"
+  and "521 CRLF lines", which are their line counts. `VERIFICATION.md`
 - **A limit positioned where it cannot bite is not a limit, and it drifts there
   quietly.** Three forms: a 10,000-character ceiling over an 8,479-character
   file; a floor 54 under its own count, so 54 assertions could stop running and
   still pass; and a breach that set `process.exitCode = 1` one line above an
   unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
   old number. `VERIFICATION.md` `scripts/check-floors.mjs`
-- **A plant is proven in the ARTIFACT THE GATE READS, not in the source.** A
-  30 KB constant planted in source was folded to 3e4 by the minifier; the
-  gated chunk grew 17 bytes and the plant was never applied.
-  `scripts/check-page-payload.mjs`
 - **A replay aimed at wall-clock time measures the instrument's own latency
   first.** A loop aimed 300 ms before a minute boundary started 39 s later, at
   a random phase; 0 of 3 reproduced a failure that was real. `1748513`
-- **On Windows, `spawnSync` with `shell: true` joins argv unquoted.** A seed
-  SQL string became a program named after its first word, and the seed the
-  plant depended on never ran. `scripts/check-browser.mjs`
-- **A gate that spawns a tool by bare name is green in the shell it was written
-  in and absent in the one that ships.** `check:hook-scope` spawned `bash`,
-  passed every session because the agent harness runs git bash, and refused six
-  times with ENOENT at ship step 4 in PowerShell, where it is not on PATH.
-  Resolve the binary once and prove it runs. `scripts/lib/bash.mjs`
+- **A spawned process behaves differently in the shell that ships.** A bare
+  `bash` passed every session under git bash and refused six times with ENOENT
+  at ship step 4 in PowerShell; `shell: true` on Windows joined argv unquoted,
+  so a seed SQL string became a program named after its first word. Resolve the
+  binary, skip the shell. `scripts/lib/bash.mjs` `scripts/check-browser.mjs`
 
 ## Measuring the wrong thing
 
@@ -100,3 +94,7 @@ which is what repeats across people and sessions.
   surface spelled its verbs with a different noun. Teach the gate the other
   spelling, then prove it bites. `app/db/index.ts`
   `app/routes/admin.mentions.tsx` `scripts/check-destructive.mjs`
+- **A backslash escape in prose can reach disk as a control byte and still
+  render close enough to survive review.** Three: backslash-f left
+  `ont-display` in app.css, backslash-b is hard rule 10 case, backslash-a
+  ate a separator in a libuv path. `scripts/check-invariants.mjs` section 29

@@ -324,6 +324,34 @@ for (const req of variationRequests) {
  * That is tolerable and it is not nothing, which is why it is asserted here
  * rather than left to be discovered: the family must match what the site
  * serves, and the weights build-og asks for must be the weights in the files.
+ *
+ * ## RULED 2026-09-12: THE SERVED woff2 BUILD IS CANONICAL
+ *
+ * `git-66647c0bb`, the build under `app/fonts/`, is the site's Inter. It is
+ * what every reader sees, and its provenance is already ruled: byte-identical
+ * to what fonts.gstatic.com served, so the change was WHO serves them and not
+ * WHAT is served. Social cards are a secondary artifact of that identity and
+ * take their typeface from it rather than the other way round.
+ *
+ * THE TWO ARE NOT ALIGNED AND CANNOT CHEAPLY BE. satori reads TTF, OTF and
+ * WOFF and NOT woff2, by its own README, so one shared file is impossible.
+ * Aligning would mean statics compiled from the canonical build, and those do
+ * not exist to download: Google Fonts publishes Inter as variable fonts only
+ * (`Inter[opsz,wght].ttf`), and rsms/inter releases carry their own version
+ * lineage rather than a `4.001;git-*` build string.
+ *
+ * So the difference STANDS, deliberately, and what was refused with it was
+ * building a woff2-to-TTF instancing pipeline: a new dependency, a build step
+ * and a gate to keep the two in step, which is the same trade app.css already
+ * refused for italic subsetting. What holds the line instead is this section
+ * plus the byte baseline: neither side can move without a named failure.
+ *
+ * MEASURED, and the reason this is tolerable rather than merely accepted: the
+ * two builds agree on unitsPerEm, ascent, descent and lineGap, and on the
+ * advance width of every glyph tested, so card text sets identically. Outlines
+ * differ in point encoding, which is what a variable default instance against a
+ * compiled static looks like, so that comparison cannot separate a build
+ * difference from variable-versus-static and is not offered as evidence.
  */
 const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
