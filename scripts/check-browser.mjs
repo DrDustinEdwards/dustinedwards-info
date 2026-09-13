@@ -1460,7 +1460,7 @@ try {
      *
      * MEASURED here on the origin plant: `process.exit(1)` on this path left
      * the undici handle from the probe above in flight, libuv aborted with
-     * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c`,
+     * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c`,
      * and the process died 127 with a C-level assertion printed UNDER the
      * gate's own diagnosis. The refusal was correct and the last thing on
      * screen was a crash, which is the one way to make a clear diagnosis
