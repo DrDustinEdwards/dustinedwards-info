@@ -5985,12 +5985,179 @@ console.log("\n  30. no public control depends on script to be operable");
   );
 }
 
+console.log("\n  31. every token is defined and used, and a component sheet states no raw hex");
+
+/*
+ * **A TOKEN NAME IS A CLAIM ABOUT A DEFINITION SOMEWHERE ELSE, AND NOTHING
+ * CHECKED THE OTHER END.** `var(--brand-hovr)` is valid CSS. It falls back to
+ * nothing, paints the inherited colour, and looks almost right.
+ *
+ * Three rules, and the third is the one with teeth over time.
+ *
+ *   (a) Every `var(--x)` resolves to a declaration.
+ *   (b) Every declared token is referenced somewhere.
+ *   (c) A component sheet states no raw hex.
+ *
+ * ## (b) MUST READ JAVASCRIPT, AND THE FIRST MEASUREMENT SAID OTHERWISE
+ *
+ * Over CSS alone, fourteen tokens read as unreferenced and the gate would have
+ * been wrong about all but a handful. The six `--chart-*` tokens are consumed
+ * as `var(--chart-cadet)` strings in `app/lib/content/chart.mjs`, which is a
+ * reference a CSS-only scan cannot see. Reading `app/` and `scripts/` as well
+ * takes the unreferenced set to ZERO, which is why this ships with no allowlist:
+ * the tree already satisfies it.
+ *
+ * ## THE ALLOWLISTS ARE ARGUED, NOT ACCUMULATED
+ *
+ * Five tokens are referenced and never declared, and all five are injected at
+ * runtime rather than declared in a stylesheet, so their absence here is
+ * correct. One hex is stated in a component sheet, and its own comment argues
+ * why it must not become a theme token. Each entry carries the reason; an entry
+ * with no reason is how an allowlist becomes a place to put failures.
+ *
+ * ## WHAT IS DELIBERATELY NOT HERE, AND WHEN TO REVISIT
+ *
+ * **No raw numeric `font-weight` (proposed as 3d), and no off-scale spacing,
+ * radius or control dimension (proposed as gate 4), are NOT GATED.** Both were
+ * scoped, measured and skipped on 2026-09-13 for the same reason: they gate
+ * against token scales this repository does not have. Measured that day, 79
+ * numeric `font-weight` declarations against a type system whose only tokens are
+ * `--font-sans` and `--font-mono`, and 1,769 raw dimensional literals (314 px,
+ * 1,455 rem across 29 sheets) against `--r-control`, `--r-panel`, `--site-inset`
+ * and `--control-h`. A rule with no compliant alternative at 1,769 sites is a
+ * spreadsheet, not a gate.
+ *
+ * Part A of the redesign is defining the spacing, radius and type-weight scales.
+ * **REVISIT BOTH once those land and the sheets are migrated**: the gate is
+ * perhaps thirty lines in this section once there is a scale to compare against,
+ * and it should be built then rather than forgotten.
+ */
+{
+  /** Referenced and never declared, because something sets them at runtime. */
+  const RUNTIME_INJECTED = new Map([
+    ["--swatch", "set inline per swatch by app/lib/content/pipeline.mjs, read with a fallback in prose.css"],
+    ["--shiki-light", "set inline on the pre element by the syntax highlighter"],
+    ["--shiki-light-bg", "set inline on the pre element by the syntax highlighter"],
+    ["--shiki-dark", "set inline on the pre element by the syntax highlighter"],
+    ["--shiki-dark-bg", "set inline on the pre element by the syntax highlighter"],
+  ]);
+
+  /** A hex a component sheet may state, with the argument for it. */
+  const HEX_ALLOWED = new Map([
+    ["app/styles/motion-print.css", "the print rule colour, print-scoped and deliberately not a theme token: check:contrast requires every declared token to participate in a measured pair and a paper-only colour has no screen pair"],
+  ]);
+
+  const cssFiles = [
+    join(root, "app", "app.css"),
+    join(root, "app", "admin.css"),
+    ...readdirSync(join(root, "app", "styles"), { withFileTypes: true })
+      .filter((e) => e.isFile() && e.name.endsWith(".css"))
+      .map((e) => join(root, "app", "styles", e.name)),
+  ].filter((p) => existsSync(p));
+
+  /** @type {Set<string>} */
+  const defined = new Set();
+  /** @type {Set<string>} */
+  const referenced = new Set();
+
+  for (const file of cssFiles) {
+    const css = stripComments(readFileSync(file, "utf8"));
+    for (const m of css.matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(m[1]);
+    for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) referenced.add(m[1]);
+  }
+
+  /** Every source file that could name a token, so (b) is not wrong about chart.mjs. */
+  /** @type {string[]} */
+  const sourceFiles = [];
+  /** @param {string} dir */
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!/^(node_modules|dist|generated)$/.test(e.name)) walk(p);
+      } else if (/\.(mjs|ts|tsx|js)$/.test(e.name)) {
+        sourceFiles.push(p);
+      }
+    }
+  };
+  walk(join(root, "app"));
+  walk(join(root, "scripts"));
+
+  let sourceMentions = 0;
+  for (const file of sourceFiles) {
+    const src = readFileSync(file, "utf8");
+    for (const m of src.matchAll(/(--[a-z][a-z0-9-]+)/g)) {
+      if (!defined.has(m[1])) continue;
+      referenced.add(m[1]);
+      sourceMentions += 1;
+    }
+  }
+
+  const undefinedRefs = [...referenced].filter((t) => !defined.has(t) && !RUNTIME_INJECTED.has(t)).sort();
+  const unusedDefs = [...defined].filter((t) => !referenced.has(t)).sort();
+
+  /** @type {string[]} */
+  const rawHex = [];
+  for (const file of cssFiles) {
+    const rel = relative(root, file).split(sep).join("/");
+    if (rel === "app/styles/katex.generated.css") continue;
+    // app.css and admin.css hold the primitive blocks; a hex there is the point.
+    if (rel === "app/app.css" || rel === "app/admin.css") continue;
+    if (HEX_ALLOWED.has(rel)) continue;
+    const css = stripComments(readFileSync(file, "utf8"));
+    for (const m of css.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+      rawHex.push(`${rel}:${css.slice(0, m.index).split("\n").length} ${m[0]}`);
+    }
+  }
+
+  /*
+   * SCOPE. Each of the three results below is a length, and a length is zero
+   * when the scan found nothing at all. Floors measured by running.
+   */
+  ok(
+    "[scope] the token scan read stylesheets and source",
+    cssFiles.length >= 25 && sourceFiles.length >= 200 && defined.size >= 80 && sourceMentions >= 100,
+    `read ${cssFiles.length} stylesheet(s) and ${sourceFiles.length} source file(s), found ${defined.size} ` +
+      `definition(s) and ${sourceMentions} token mention(s) in source. Below these floors the scan has stopped reading.`,
+  );
+  ok(
+    "every referenced token is defined",
+    undefinedRefs.length === 0,
+    `${undefinedRefs.length} token(s) are used and never declared. var() on an undeclared name falls back to nothing ` +
+      `and paints the inherited value, which looks almost right:\n      ${undefinedRefs.join("\n      ")}`,
+  );
+  ok(
+    "every defined token is referenced",
+    unusedDefs.length === 0,
+    `${unusedDefs.length} token(s) are declared and never used, in CSS or in source. Either something stopped ` +
+      `reading them or they are dead:\n      ${unusedDefs.join("\n      ")}`,
+  );
+  ok(
+    "no component sheet states a raw hex",
+    rawHex.length === 0,
+    `${rawHex.length} raw hex value(s) outside the primitive blocks. A colour stated in a component sheet is a ` +
+      `second owner of a palette decision and cannot be retuned with the theme:\n      ${rawHex.join("\n      ")}`,
+  );
+  console.log(
+    `     ${defined.size} defined, ${referenced.size} referenced, ${sourceFiles.length} source file(s) read, ` +
+      `${RUNTIME_INJECTED.size} runtime-injected allowed, ${rawHex.length} raw hex`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-09-08 BY RUNNING BOTH BRANCHES after section 27 (the runbook
  * is bound to the ratified secret list): 326 offline, 365 remote, against 305
  * and 344 before it. Section 27 is 21 assertions, two of them scope checks, and
  * eighteen of them one per secret in each direction, so the count moves with
  * `REQUIRED_SECRETS` and will move again the next time a secret is added.
+ *
+ * RE-MEASURED 2026-09-13 BY RUNNING THE OFFLINE BRANCH after sections 30 and 31
+ * (no public control depends on script; every token is defined and used): 341,
+ * against 337 after section 30 and 335 after 29. check:floors refused at 322:
+ * gap 19 against a tolerance of 18, which is the instrument working rather than
+ * a new defect. Offline floor 322 to 330, tighter than the 323 the tolerance
+ * would allow, and taken by RUNNING rather than by adding four to the old one.
+ * The remote floor is untouched: the remote branch was not run in this session.
  *
  * RE-MEASURED 2026-09-12 BY RUNNING THE OFFLINE BRANCH after section 29 (no
  * raw control or invisible characters in a tracked text file): 335, against 330
@@ -6029,7 +6196,7 @@ console.log("\n  30. no public control depends on script to be operable");
  * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
  * work and is proven so by differential). CI reached it on the first push.
  */
-const MINIMUM_CHECKS = wantsRemote ? 346 : 322;
+const MINIMUM_CHECKS = wantsRemote ? 346 : 330;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
