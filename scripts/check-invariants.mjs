@@ -6163,34 +6163,13 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   /* carried:start */
   /** @type {Map<string, string>} token -> the build that consumes it */
   const CARRIED = new Map([
-  ["--bar-h",              "build 2: skeleton, header, overflow, footer"],
   ["--control-min-dense",  "build 2: skeleton, header, overflow, footer"],
-  ["--ease-enter",         "build 2: view transitions and the overlay menu"],
   ["--ease-exit",          "build 2: view transitions and the overlay menu"],
-  ["--ease-state",         "build 2: view transitions and the overlay menu"],
-  ["--gutter",             "build 2: skeleton, header, overflow, footer"],
-  ["--icon-size",          "build 2: skeleton, header, overflow, footer"],
-  ["--icon-stroke",        "build 2: skeleton, header, overflow, footer"],
-  ["--line-w",             "build 2: skeleton, header, overflow, footer"],
-  ["--line-w-thick",       "build 2: skeleton, header, overflow, footer"],
   ["--lamp-origin",        "build 3: the /playground/ui inventory page"],
   ["--lamp-reach",         "build 3: the /playground/ui inventory page"],
   ["--surface-catch",      "build 3: the /playground/ui inventory page"],
-  ["--measure",            "build 2: skeleton, header, overflow, footer"],
-  ["--motion-instant",     "build 2: view transitions and the overlay menu"],
   ["--motion-page",        "build 2: view transitions and the overlay menu"],
-  ["--motion-panel",       "build 2: view transitions and the overlay menu"],
-  ["--motion-state",       "build 2: view transitions and the overlay menu"],
-  ["--radius-control",     "build 2: skeleton, header, overflow, footer"],
-  ["--s-1",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-3",                "build 2: skeleton, header, overflow, footer"],
   ["--s-4",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-5",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-6",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-7",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-8",                "build 2: skeleton, header, overflow, footer"],
-  ["--s-9",                "build 2: skeleton, header, overflow, footer"],
-  ["--t-body-family",      "build 3: the /playground/ui inventory page"],
   ["--t-body-leading",     "build 3: the /playground/ui inventory page"],
   ["--t-body-size",        "build 3: the /playground/ui inventory page"],
   ["--t-body-vars",        "build 3: the /playground/ui inventory page"],
@@ -6224,17 +6203,6 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-h3-tracking",      "build 3: the /playground/ui inventory page"],
   ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
   ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
-  ["--t-label-family",     "build 3: the /playground/ui inventory page"],
-  ["--t-label-leading",    "build 3: the /playground/ui inventory page"],
-  ["--t-label-size",       "build 3: the /playground/ui inventory page"],
-  ["--t-label-vars",       "build 3: the /playground/ui inventory page"],
-  ["--t-label-weight",     "build 3: the /playground/ui inventory page"],
-  ["--t-nav-family",       "build 3: the /playground/ui inventory page"],
-  ["--t-nav-leading",      "build 3: the /playground/ui inventory page"],
-  ["--t-nav-size",         "build 3: the /playground/ui inventory page"],
-  ["--t-nav-strong-vars",  "build 3: the /playground/ui inventory page"],
-  ["--t-nav-vars",         "build 3: the /playground/ui inventory page"],
-  ["--t-nav-weight",       "build 3: the /playground/ui inventory page"],
   ]);
   /* carried:end */
 
@@ -6346,8 +6314,20 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * 72 of them. Floors are those counts minus check:floors' own tolerance,
  * max(3, ceil(n * 0.05)): 25 and 27. Taken from the printed counts, which is
  * the correction the paragraph above records.
+ *
+ * RE-MEASURED AGAIN 2026-09-13 when build 2 landed the shell: 422 offline and
+ * 461 with --remote, floors 400 and 438. Taken after the map had finished
+ * shrinking for this build, not partway through it.
+ *
+ * **THIS FLOOR MOVES DOWN EVERY TIME THE CARRIED MAP SHRINKS, and that is the
+ * design rather than a nuisance.** Each carried token contributes two
+ * assertions, so consuming 30 of them removed 60. A floor derived from the old
+ * count by arithmetic would be wrong in the direction that matters, since it
+ * would sit ABOVE what the gate can now execute and the tier would refuse. Run
+ * the gate in both branches and read the printed counts; that is the only
+ * method that works here, and the map is designed to empty.
  */
-const MINIMUM_CHECKS = wantsRemote ? 498 : 461;
+const MINIMUM_CHECKS = wantsRemote ? 438 : 400;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
