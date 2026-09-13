@@ -395,6 +395,26 @@
   --z-skip-link: 2000;
 }
 
+/*
+ * THE PUBLIC HEADER'S THREE LAYERS, on the scale above, decided 2026-09-13 and
+ * written here so build 2 does not rediscover it.
+ *
+ *   the fixed bar      --z-pinned-bar   600
+ *   the overlay menu   --z-overlay      800
+ *   the skip link      --z-skip-link   2000
+ *
+ * **NOT --z-dropdown.** It is 200, which sits BELOW the bar, and the overlay
+ * menu hangs past the bar's own block-size and must clear it. The name reads
+ * like the right one and is the trap.
+ *
+ * Part A step 6b asked for these three renumbered to 10 / 20 / 30 under the
+ * names --z-pinned-bar, --z-dropdown and --z-overlay-scrim. Those names are
+ * already taken here, at 600 / 200 / 700, with consumers, so the repo wins and
+ * nothing is renumbered: the handoff was reasoning about a scale this site does
+ * not have. The ORDER it wanted is what matters, and the three above satisfy
+ * it, with the skip link above an open menu and the menu above the bar.
+ */
+
 :root {
   /* "Inter Fallback" sits between the real face and the generic families, so a
      reader waiting for the download gets Arial at Inter's metrics rather than
@@ -729,7 +749,19 @@
      token exists here only so components can ask for the role unconditionally. */
   --text-heading: #2b2320;
   --text-muted: #5c5248;
-  --text-disabled: #93887a;
+  /* DELIBERATELY BELOW THE FLOOR, and that is the point rather than a defect.
+     WCAG 1.4.3 and 1.4.11 both exempt an inactive component, and a disabled
+     control that met 4.5:1 would read as available, which is the failure being
+     avoided. MEASURED on limestone: --text-disabled 2.46:1, --line-disabled
+     1.64:1. Identification is the disabled attribute, the recess to --paper,
+     and visible text beside the control saying why. check:contrast carries a
+     named exemption for both; cursor:not-allowed is not a cue and counts for
+     nothing, since it is pointer-only and arrives after the reader has already
+     tried. */
+  --text-disabled: #a09990;
+  --text-disabled: color-mix(in srgb, #5b5349 55%, #f4efe6);
+  --line-disabled: #c4bcb0;
+  --line-disabled: color-mix(in srgb, #8a7d6e 45%, #f4efe6);
   --border: #8a7d6e;
   --border-strong: #6e6459;
 
@@ -972,7 +1004,10 @@
     --text: #e9e1d6;
     --text-heading: #ede6dc;
     --text-muted: #b3a99c;
-    --text-disabled: #6e655b;
+    --text-disabled: #6f685e;
+    --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
+    --line-disabled: #504a43;
+    --line-disabled: color-mix(in srgb, #8f857a 45%, #1c1916);
     --border: #746a5f;
     --border-strong: #8a8075;
 
@@ -1181,7 +1216,10 @@
   --text: #e9e1d6;
   --text-heading: #ede6dc;
   --text-muted: #b3a99c;
-  --text-disabled: #6e655b;
+  --text-disabled: #6f685e;
+  --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
+  --line-disabled: #504a43;
+  --line-disabled: color-mix(in srgb, #8f857a 45%, #1c1916);
   --border: #746a5f;
   --border-strong: #8a8075;
 
