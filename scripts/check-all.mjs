@@ -80,8 +80,11 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  * records as "a limit positioned where it cannot bite". Adding
  * `check:publications` took the count to 37 and the arithmetic answer would
  * have been 36, preserving the gap. The run said 37, so it is 37.
+ *
+ * `check:fonts` took it to 38 on 2026-09-12, and the number came the same way:
+ * the run printed `gates-discovered executed=38`, so it is 38.
  */
-const MINIMUM_GATES = 37;
+const MINIMUM_GATES = 38;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -260,6 +263,12 @@ export const TIERS = {
   "check:search": "offline",
   "check:policy": "offline",
   "check:contrast": "offline",
+  /*
+   * OFFLINE: it reads font binaries off disk and the stylesheets beside them,
+   * and asks nothing of the network. Beside check:logo because they are the two
+   * gates that open a binary asset rather than read text about one.
+   */
+  "check:fonts": "offline",
   "check:logo": "offline",
   "check:charts": "offline",
   "check:diagrams": "offline",

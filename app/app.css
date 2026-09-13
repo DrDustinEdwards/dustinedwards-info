@@ -61,7 +61,7 @@
  * an already-warm same-origin connection.
  */
 /*
- * ont-display: optional ON THE NORMAL FACE, since 2026-08-28, and it is the
+ * font-display: optional ON THE NORMAL FACE, since 2026-08-28, and it is the
  * fix for a measured layout shift rather than a preference.
  *
  * MEASURED on /blog at 390x844 on Slow 4G with a cold cache: CLS 0.0674, one
