@@ -5846,6 +5846,145 @@ console.log("\n  29. no tracked text file carries a raw control or invisible cha
   console.log(`     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offence(s)`);
 }
 
+console.log("\n  30. no public control depends on script to be operable");
+
+/*
+ * **HARD RULE 9 IS A PROPERTY OF THE MARKUP, AND NOTHING READ THE MARKUP.**
+ *
+ * Section 24 catches a client hook imported into an unhydrated tree, which is
+ * the React half. `check:features` reconciles the enhancement INVENTORY, which
+ * is the bookkeeping half. Neither reads a control and asks whether a reader
+ * with scripting off can operate it, and that is the half the law is about.
+ *
+ * ADMIN IS EXEMPT, by rule 9. LOGIN IS NOT, ruled 2026-09-13: the door is on
+ * the public plane, so it is a public reading route even though everything
+ * behind it is exempt and even though it opts into hydration.
+ *
+ * ## THE FORMS RULE IS NOT "AN ACTION IS REQUIRED", AND THAT MATTERS
+ *
+ * A form with no `action` submits to the current URL. That is valid HTML, it
+ * works with scripting off, and it is what `app/routes/login.tsx` does on
+ * purpose: a plain form rather than the router's, so a cross-origin 303 is
+ * followed by a native navigation. A gate demanding `action` would have failed
+ * the one public form in the repository, on its first run, for being correct.
+ *
+ * So the rule is that a form must have a NATIVE SUBMISSION PATH: an `onSubmit`
+ * with no `method` is script-only submission and fails; a `method` with no
+ * `action` passes, because the browser already knows where to send it.
+ *
+ * A handler on a BUTTON is likewise not a defect. login's submit button carries
+ * an onClick that preventDefaults and calls the browser client, with the form
+ * post underneath as the fallback. That is the pattern the law asks for. What
+ * fails is a handler on an element a keyboard cannot reach.
+ *
+ * ## HOW IT READS JSX WITHOUT PARSING IT
+ *
+ * Attribute values contain a closing angle bracket, because an arrow function
+ * does. A tag regex ending at the first one therefore truncates on exactly the
+ * handlers this section looks for. Two shapes avoid it: handlers are found
+ * first and their OWNING TAG is located by scanning backwards, and where a
+ * whole opening tag is needed a scanner tracks brace and quote depth.
+ */
+{
+  /** A keyboard reaches these unaided, so a handler on one is not a defect. */
+  const INTERACTIVE = new Set([
+    "a", "button", "input", "select", "textarea",
+    "summary", "details", "label", "dialog", "form", "option",
+  ]);
+
+  /** Read one opening tag, honouring braces and quotes so an arrow function cannot end it early. */
+  const openingTagAt = (/** @type {string} */ src, /** @type {number} */ start) => {
+    let depth = 0;
+    let quote = "";
+    for (let i = start; i < src.length; i += 1) {
+      const c = src[i];
+      if (quote) {
+        if (c === quote) quote = "";
+        continue;
+      }
+      if (c === '"' || c === "'" || c === "`") { quote = c; continue; }
+      if (c === "{") depth += 1;
+      else if (c === "}") depth -= 1;
+      else if (c === ">" && depth === 0) return src.slice(start, i + 1);
+    }
+    return src.slice(start);
+  };
+
+  const publicFiles = [
+    ...readdirSync(join(root, "app", "routes"), { withFileTypes: true })
+      .filter((e) => e.isFile() && e.name.endsWith(".tsx") && !e.name.startsWith("admin."))
+      .map((e) => join(root, "app", "routes", e.name)),
+    ...readdirSync(join(root, "app", "components"), { withFileTypes: true })
+      .filter((e) => e.isFile() && e.name.endsWith(".tsx"))
+      .map((e) => join(root, "app", "components", e.name)),
+  ];
+
+  /** @type {string[]} */
+  const faults = [];
+  let handlersSeen = 0;
+  let anchorsSeen = 0;
+  let formsSeen = 0;
+
+  for (const file of publicFiles) {
+    const rel = relative(root, file).split(sep).join("/");
+    const src = stripComments(readFileSync(file, "utf8"));
+    /** @param {number} i */
+    const lineAt = (i) => src.slice(0, i).split("\n").length;
+
+    for (const m of src.matchAll(/\bon[A-Z][a-zA-Z]+\s*=\s*\{/g)) {
+      handlersSeen += 1;
+      const open = src.lastIndexOf("<", m.index);
+      if (open === -1) continue;
+      const tag = src.slice(open + 1).match(/^([a-zA-Z][a-zA-Z0-9]*)/)?.[1];
+      if (!tag) continue;
+      // A capitalised tag is a component; its own file is scanned in its turn.
+      if (tag[0] === tag[0].toUpperCase()) continue;
+      if (INTERACTIVE.has(tag)) continue;
+      faults.push(`${rel}:${lineAt(m.index)} ${m[0].replace(/\s*=\s*\{$/, "")} on <${tag}>, which a keyboard cannot reach`);
+    }
+
+    for (const m of src.matchAll(/<a[\s>]/g)) {
+      anchorsSeen += 1;
+      if (!/\bhref\s*=/.test(openingTagAt(src, m.index))) {
+        faults.push(`${rel}:${lineAt(m.index)} <a> with no href, so nothing activates it without script`);
+      }
+    }
+
+    for (const m of src.matchAll(/<(form|Form)[\s>]/g)) {
+      formsSeen += 1;
+      const tag = openingTagAt(src, m.index);
+      if (/\bonSubmit\s*=/.test(tag) && !/\bmethod\s*=/.test(tag)) {
+        faults.push(`${rel}:${lineAt(m.index)} <${m[1]}> submits only through onSubmit, with no method for the browser to use`);
+      }
+    }
+
+    for (const m of src.matchAll(/\.showModal\s*\(/g)) {
+      faults.push(`${rel}:${lineAt(m.index)} showModal() is the only opener, so a scriptless reader never sees it`);
+    }
+  }
+
+  /*
+   * SCOPE. A glob that matched nothing, or a JSX scan that stopped matching,
+   * each report a clean sweep. Floors measured by running over the tree.
+   */
+  ok(
+    "[scope] the public-plane scan read routes and components",
+    publicFiles.length >= 20 && handlersSeen + anchorsSeen + formsSeen >= 10,
+    `read ${publicFiles.length} public file(s), saw ${handlersSeen} handler(s), ${anchorsSeen} anchor(s) and ` +
+      `${formsSeen} form(s). Below these floors the scan has stopped reading JSX.`,
+  );
+  ok(
+    "no public control depends on script to be operable",
+    faults.length === 0,
+    `${faults.length} control(s) work only with script. Hard rule 9: works without script, fast with it, and the ` +
+      `admin plane is the only exemption:\n      ${faults.join("\n      ")}`,
+  );
+  console.log(
+    `     ${publicFiles.length} public file(s), ${handlersSeen} handler(s), ${anchorsSeen} anchor(s), ` +
+      `${formsSeen} form(s), ${faults.length} fault(s)`,
+  );
+}
+
 /*
  * RE-MEASURED 2026-09-08 BY RUNNING BOTH BRANCHES after section 27 (the runbook
  * is bound to the ratified secret list): 326 offline, 365 remote, against 305
