@@ -115,7 +115,7 @@ const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string|null, raw: string}[]} */
 const blocks = [];
-/** @type {{sheet: string, axis: string, value: number}[]} */
+/** @type {{sheet: string, axis: string, value: number, family: string|null, level?: string}[]} */
 const variationRequests = [];
 
 for (const sheet of SHEETS) {
@@ -144,7 +144,48 @@ for (const sheet of SHEETS) {
   // what catches a type scale asking for an optical size the file cannot serve.
   for (const m of css.matchAll(/font-variation-settings\s*:\s*([^;}]+)/gi)) {
     for (const a of m[1].matchAll(/['"]([a-zA-Z]{4})['"]\s*(-?[\d.]+)/g)) {
-      variationRequests.push({ sheet, axis: a[1], value: Number(a[2]) });
+      variationRequests.push({ sheet, axis: a[1], value: Number(a[2]), family: null });
+    }
+  }
+
+  /*
+   * AND THE TYPE LEVELS, which do not spell `font-variation-settings` anywhere.
+   *
+   * app.css carries the scale as five properties per level, so a level's axes
+   * live in `--t-<level>-vars` and its family in `--t-<level>-family`. The
+   * regex above sees neither, which would have made this gate blind to exactly
+   * the defect its own header says it was written for: a type scale asking for
+   * an optical size the file cannot serve.
+   *
+   * THE FAMILY IS CARRIED WITH THE REQUEST, and that is the half that makes the
+   * assertion sharp. Two shipped families now carry `opsz` on different ranges,
+   * Inter 14 to 32 and Source Serif 4 8 to 60. Checking a request against every
+   * carrier would fail the serif's legitimate `opsz` 48 against Inter; checking
+   * it against none would let an Inter level ask for 48 and be clamped in
+   * silence. Each level is checked against the family its own -family token
+   * names, and nothing else.
+   */
+  const levelFamilies = new Map();
+  for (const m of css.matchAll(/--t-([a-z0-9-]+)-family\s*:\s*([^;]+);/gi)) {
+    levelFamilies.set(m[1], m[2].trim());
+  }
+  for (const m of css.matchAll(/--t-([a-z0-9-]+)-vars\s*:\s*([^;]+);/gi)) {
+    const [, level, value] = m;
+    // A VARIANT INHERITS ITS LEVEL'S FAMILY. A `--t-<level>-strong-vars` is
+    // that level at a heavier weight, not a ninth level, so it has no
+    // `-family` of its own and must not: a second family token for one level
+    // would be a second owner of the same decision. The base is the level name
+    // with its last segment dropped, and only when no exact `-family` exists,
+    // so a real level always wins over the fallback.
+    //
+    // The variant is NOT spelled in full here on purpose. Section 31's token
+    // scan reads scripts/ without stripping comments, so naming it would mark
+    // it as referenced and then fail it for being referenced.
+    const base = level.includes("-") ? level.slice(0, level.lastIndexOf("-")) : null;
+    const family =
+      levelFamilies.get(level) ?? (base ? (levelFamilies.get(base) ?? null) : null);
+    for (const a of value.matchAll(/['"]([a-zA-Z]{4})['"]\s*(-?[\d.]+)/g)) {
+      variationRequests.push({ sheet, axis: a[1], value: Number(a[2]), family, level });
     }
   }
 }
@@ -336,20 +377,76 @@ for (const [declared, binary] of NAMESPACED) {
  * clamps an out-of-range axis silently: the level renders, at the wrong optical
  * size, with nothing anywhere reporting it.
  */
+/*
+ * A ZERO-SCOPE SEARCH REPORTS A CLEAN SWEEP. The scale carries eight levels and
+ * every one of them names two axes, so the floor is the inventory as it stands
+ * and exists to prove the parse happened at all rather than to bound it.
+ */
+assertThat(
+  variationRequests.length >= 16,
+  "axis requests were found in the sheets",
+  `${variationRequests.length} found; a regex that stopped matching would iterate nothing and every ` +
+    `assertion below would report a clean sweep`,
+);
+
+/**
+ * `--t-*-family` holds `var(--font-sans)` or `var(--font-serif)`. Resolve the
+ * indirection to the first family in that stack, which is the face the level
+ * actually sets in.
+ *
+ * @param {string|null} value
+ * @returns {string|null}
+ */
+function resolveFamily(value) {
+  if (!value) return null;
+  let v = value.trim();
+  for (let i = 0; i < 4 && v.startsWith("var("); i += 1) {
+    const name = v.slice(4, v.indexOf(")")).trim();
+    const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
+    const decl = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(sheet);
+    if (!decl) return null;
+    v = decl[1].trim();
+  }
+  return v.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+}
+
 for (const req of variationRequests) {
   const faces = withFile.filter((b) => existsSync(b.file)).map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
-  const carriers = faces.filter((f) => f.axes[req.axis]);
+
+  const where = req.level ? `--t-${req.level}-vars` : relative(root, req.sheet);
+
+  // A level whose family cannot be resolved would be checked against nothing,
+  // which is the zero-scope class: it would pass by measuring no face at all.
+  const wanted = resolveFamily(req.family);
+  if (req.level) {
+    assertThat(
+      wanted !== null,
+      `${where} resolves to a family this gate can check`,
+      `--t-${req.level}-family is "${req.family}" and no declaration resolves it, so this level's ` +
+        `"${req.axis}" ${req.value} would be checked against no face at all`,
+    );
+  }
+
+  // A level names its own family, so it is checked against THAT face and no
+  // other. A bare `font-variation-settings` names none, so it keeps the older
+  // behaviour of being checked against every carrier of the axis.
+  const carriers = faces.filter(
+    (f) => f.axes[req.axis] && (wanted === null || f.b.family === wanted),
+  );
   assertThat(
     carriers.length > 0,
-    `the "${req.axis}" axis requested in ${relative(root, req.sheet)} exists in a shipped face`,
-    `no shipped font carries "${req.axis}"; the declaration is inert`,
+    `the "${req.axis}" axis requested in ${where} exists in a shipped face` +
+      (wanted ? ` of "${wanted}"` : ""),
+    wanted
+      ? `no shipped face of "${wanted}" carries "${req.axis}"; the declaration is inert`
+      : `no shipped font carries "${req.axis}"; the declaration is inert`,
   );
   for (const c of carriers) {
     const a = c.axes[req.axis];
     if (!a) continue;
     assertThat(
       req.value >= a.min && req.value <= a.max,
-      `"${req.axis}" ${req.value} is in range for ${relative(root, c.b.file)}`,
+      `"${req.axis}" ${req.value} from ${where} is in range for ${relative(root, c.b.file)}`,
       `the file supports ${a.min} to ${a.max}; a browser CLAMPS ${req.value} silently, so the level renders at the ` +
         `wrong optical size and nothing reports it`,
     );
@@ -495,8 +592,14 @@ if (update) {
  * 26 fewer checks than a plain run: 117 against 143. A floor measured from an
  * `--update` run sits 26 under the count it is supposed to guard, which is the
  * exact shape ruling 23 exists to catch.
+ *
+ * RE-MEASURED 2026-09-13 on a plain run, NOT an `--update` one, after the serif
+ * and the type levels landed: 232. The rise is the serif's own per-binary
+ * assertions plus 22 axis requests where there were none, since the scale is
+ * the first thing on this site to ask for an optical size. Floor is that count
+ * minus the check:floors tolerance, max(3, ceil(232 * 0.05)) = 12.
  */
-const MINIMUM_CHECKS = 138;
+const MINIMUM_CHECKS = 220;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 

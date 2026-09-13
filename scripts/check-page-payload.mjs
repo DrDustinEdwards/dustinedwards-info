@@ -794,6 +794,48 @@ function gradeBuildOnlyDependencies() {
  * the safe direction for a ceiling, and the wire half is `check:browser`.
  */
 
+/*
+ * THE REDESIGN UPLIFT, and it is TEMPORARY BY CONSTRUCTION.
+ *
+ * MEASURED 2026-09-13 through this gate on a fresh build: the Paper, Glass,
+ * Light token layer adds a UNIFORM 1257 brotli bytes to every public route,
+ * because it is all in the shared root sheet. Home went css 4655 to 5912 and
+ * total 5473 to 6730.
+ *
+ * ## WHY BOTH PALETTES SHIP AT ONCE, WHICH IS THE WHOLE COST
+ *
+ * The new roles land under their own names beside the Hill Country ones rather
+ * than replacing them, because build 1 is scoped to tokens and the old palette
+ * still has its consumers: MEASURED at the same commit, 169 uses of
+ * --text-muted, 120 of --border, 57 of --border-strong, 56 of --surface, 37 of
+ * --bg and 18 of --surface-popover. Deleting the old block in this build would
+ * take every one of those with it, and section 31's "every referenced token is
+ * defined" would fail on all of them. So the duplication is real, it is the
+ * 1257 bytes, and it ends when builds 2 to 4 migrate the consumers.
+ *
+ * ## EACH CEILING KEPT THE HEADROOM IT ALREADY HAD
+ *
+ * New ceiling = new measurement + the route's own previous headroom, rounded up
+ * to the nearest 100. The margin is therefore not a new number: it is each
+ * route's existing one carried forward, between 329 bytes on /publications and
+ * 1163 on /search. Nothing here widens a margin, it only moves the floor the
+ * margin sits on.
+ *
+ * ## IT POLICES ITSELF, on the same terms as section 31's carried-token map
+ *
+ *   - an entry naming a route this file no longer ceilings FAILS.
+ *   - an entry whose current ceiling is no longer above its pre-redesign one
+ *     FAILS: the uplift is spent, so the entry is dead and must be removed.
+ *   - after UPLIFT_EXPIRES the map must be EMPTY. Build 4 is the point the old
+ *     palette is gone and these come back down to the real post-redesign
+ *     numbers. If that has not happened by then, the redesign has quietly cost
+ *     every reader 1.2 KB a page and this is what says so. Moving the date is a
+ *     ruling, not a repair.
+ *
+ * headCss and headTotal are the PRE-REDESIGN measurements, recorded per route
+ * so build 4 has something to come back to rather than a number to re-derive.
+ */
+const UPLIFT_EXPIRES = "2026-11-30";
 /**
  * PER-ROUTE CEILINGS, in BROTLI bytes. The only copies, rule 17.
  *
@@ -813,10 +855,30 @@ function gradeBuildOnlyDependencies() {
  *
  * @type {Record<string, { id: string, css: number, total: number }>}
  */
+/** @type {Map<string, {css: number, total: number, headCss: number, headTotal: number}>} */
+const REDESIGN_UPLIFT = new Map([
+  ["/",                       { css: 5300, total: 6300, headCss: 4655, headTotal: 5473 }],
+  ["/blog",                   { css: 5800, total: 6800, headCss: 5091, headTotal: 5909 }],
+  ["/blog/:slug",             { css: 7300, total: 10000, headCss: 6709, headTotal: 9315 }],
+  ["/blog/tags/:tag",         { css: 5800, total: 6800, headCss: 4902, headTotal: 5720 }],
+  ["/blog/series/:series",    { css: 5800, total: 6800, headCss: 4902, headTotal: 5720 }],
+  ["/search",                 { css: 6100, total: 8700, headCss: 5335, headTotal: 7537 }],
+  ["/projects",               { css: 5300, total: 6300, headCss: 4756, headTotal: 5574 }],
+  ["/colophon",               { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
+  ["/playground",             { css: 6600, total: 7500, headCss: 5901, headTotal: 6719 }],
+  ["/phage-discovery",        { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
+  ["/privacy",                { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
+  ["/about",                  { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
+  ["/publications",           { css: 5300, total: 6300, headCss: 4971, headTotal: 5789 }],
+  ["/publications/:slug",     { css: 5300, total: 6300, headCss: 4971, headTotal: 5789 }],
+  // The math variant of /blog/:slug, which carries its own ceiling below.
+  ["/blog/:slug (math)",      { css: 10500, total: 13200, headCss: 9528, headTotal: 12134 }],
+]);
+
 const ROUTE_CEILINGS = {
-  "/": { id: "routes/home", css: 5300, total: 6300 },
-  "/blog": { id: "routes/blog._index", css: 5800, total: 6800 },
-  "/blog/:slug": { id: "routes/blog.$slug", css: 7300, total: 10000 },
+  "/": { id: "routes/home", css: 6600, total: 7600 },
+  "/blog": { id: "routes/blog._index", css: 7100, total: 8100 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 8600, total: 11300 },
   /*
    * MEASURED 2026-09-03 through this gate on a fresh build: css 4797 over three
    * sheets, 5615 total. The ceilings are `/blog`'s, which are the same numbers
@@ -825,7 +887,7 @@ const ROUTE_CEILINGS = {
    * stylesheets, so the two pages should be graded against one bar rather than
    * drifting apart by whichever happened to be measured later.
    */
-  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 5800, total: 6800 },
+  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7100, total: 8100 },
   /*
    * MEASURED 2026-09-04 through this gate on a fresh build: css 4797 over three
    * sheets, 5615 total, which is the tag archive's figure to the byte because
@@ -833,13 +895,13 @@ const ROUTE_CEILINGS = {
    * are the tag archive's for the same reason: one bar for one kind of page,
    * rather than two that drift apart by whichever was measured later.
    */
-  "/blog/series/:series": { id: "routes/blog.series.$series", css: 5800, total: 6800 },
-  "/search": { id: "routes/search", css: 6100, total: 8700 },
-  "/projects": { id: "routes/projects", css: 5300, total: 6300 },
-  "/colophon": { id: "routes/colophon", css: 5700, total: 6600 },
-  "/playground": { id: "routes/playground", css: 6600, total: 7500 },
-  "/phage-discovery": { id: "routes/phage-discovery", css: 5700, total: 6600 },
-  "/privacy": { id: "routes/privacy", css: 5700, total: 6600 },
+  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7100, total: 8100 },
+  "/search": { id: "routes/search", css: 7400, total: 10000 },
+  "/projects": { id: "routes/projects", css: 6600, total: 7600 },
+  "/colophon": { id: "routes/colophon", css: 7000, total: 7900 },
+  "/playground": { id: "routes/playground", css: 7900, total: 8800 },
+  "/phage-discovery": { id: "routes/phage-discovery", css: 7000, total: 7900 },
+  "/privacy": { id: "routes/privacy", css: 7000, total: 7900 },
   /*
    * MEASURED 2026-09-11 through this gate on a fresh build: css 4976 over two
    * sheets, 5794 total. That is /privacy and /colophon to the BYTE, which is
@@ -850,7 +912,7 @@ const ROUTE_CEILINGS = {
    * happened to be measured last, which is the reasoning the tag and series
    * archives above are already on.
    */
-  "/about": { id: "routes/about", css: 5700, total: 6600 },
+  "/about": { id: "routes/about", css: 7000, total: 7900 },
   /*
    * MEASURED 2026-09-12 through this gate on a fresh build: css 4666 over two
    * sheets (root plus publications.css), 5484 total, serving the one bundle
@@ -871,7 +933,7 @@ const ROUTE_CEILINGS = {
    * chips are links and the search is a GET form, so the interactive half costs
    * no script either. A hydrating version of this page would ship the corpus.
    */
-  "/publications": { id: "routes/publications", css: 5300, total: 6300 },
+  "/publications": { id: "routes/publications", css: 6600, total: 7600 },
   /*
    * ONE PAPER'S PAGE. MEASURED 2026-09-12 through this gate on a fresh build:
    * css 4768 over two sheets, 5586 total.
@@ -896,7 +958,7 @@ const ROUTE_CEILINGS = {
    * the right split: a long author list is content, and content is not a
    * payload regression.
    */
-  "/publications/:slug": { id: "routes/publications.$slug", css: 5300, total: 6300 },
+  "/publications/:slug": { id: "routes/publications.$slug", css: 6600, total: 7600 },
 };
 
 /**
@@ -912,7 +974,7 @@ const ROUTE_CEILINGS = {
  * stylesheet to grow, and the stylesheet is generated from a pinned package and
  * cannot grow without a version bump somebody chose.
  */
-const MATH_CEILING = { css: 10500, total: 13200 };
+const MATH_CEILING = { css: 11800, total: 14500 };
 
 /**
  * Floor on the faces the math stylesheet names.
@@ -938,6 +1000,15 @@ const MINIMUM_MATH_FACES = 20;
  */
 const PRELOAD_EXEMPT = {
   "inter-latin-italic": "loaded on demand by unicode-range; see app/root.tsx, links",
+  // THE SERIF IS THE LATE FACE AND IS NOT PRELOADED ON PURPOSE. Part A step 3
+  // ruled it: Inter sets every line of body, UI and --t-h3, so it owns the
+  // page's dominant metrics and gets the one preload; the serif sets a handful
+  // of heading lines. A second preload would put 122 KB on the critical path of
+  // every route to serve a few lines of heading, competing with the bytes that
+  // are needed. Late discovery is the accepted cost and it is paid for by
+  // `font-display: swap` plus the metric-override fallback, which app.css
+  // records as MEASURED CLS 0.0000 across the swap at 32px and 48px.
+  "source-serif-4-latin-normal": "the late heading face; step 3 ruled the preload goes to Inter alone",
 };
 
 /**
@@ -1005,6 +1076,42 @@ function gradeEveryPage() {
     `no ceiling: ${missing.join(", ") || "none"}; ceiling but no such public route: ` +
       `${extra.join(", ") || "none"}. A new public route arrives with its own measured ` +
       `ceiling in the same commit, or this gate stops grading the page it added.`,
+  );
+
+  /*
+   * THE UPLIFT MAP POLICES ITSELF, in the three directions its comment claims.
+   * A widening that cannot expire is just a higher ceiling with a story
+   * attached.
+   */
+  for (const [route, before] of REDESIGN_UPLIFT) {
+    // The math variant is a second grading of /blog/:slug rather than a route
+    // of its own, so its ceiling is MATH_CEILING and not a ROUTE_CEILINGS key.
+    // This gate found that itself: the entry was written as a plain route and
+    // the first assertion below rejected it.
+    const now =
+      route === "/blog/:slug (math)"
+        ? MATH_CEILING
+        : /** @type {Record<string, {css: number, total: number}>} */ (ROUTE_CEILINGS)[route];
+    ok(
+      `uplift entry ${route} names a route this gate still ceilings`,
+      Boolean(now),
+      `the route is gone or renamed and the entry outlived it; remove it`,
+    );
+    if (!now) continue;
+    ok(
+      `uplift entry ${route} is still holding a raised ceiling`,
+      now.css > before.css || now.total > before.total,
+      `its ceilings are back to or below the pre-redesign ${before.css}/${before.total}, so the ` +
+        `uplift is spent and the entry is dead. Remove it.`,
+    );
+  }
+  ok(
+    `the redesign uplift map is empty by ${UPLIFT_EXPIRES}`,
+    REDESIGN_UPLIFT.size === 0 || new Date().toISOString().slice(0, 10) <= UPLIFT_EXPIRES,
+    `${REDESIGN_UPLIFT.size} route(s) are still carrying the redesign uplift past ${UPLIFT_EXPIRES}. ` +
+      `The old palette should be gone by build 4 and these ceilings should have come back down to ` +
+      `the real post-redesign numbers. If they have not, the redesign has cost every reader about ` +
+      `1.2 KB a page and nothing else was going to say so. Moving the date is a ruling.`,
   );
 
   /* Root's own reachable assets ride on every route, so they are found once. */

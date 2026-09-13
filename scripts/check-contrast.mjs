@@ -141,16 +141,80 @@ function tokenBlock(label, selector) {
 
   /** @type {Record<string, string>} */
   const out = {};
+  /**
+   * EVERY declaration of each name, in source order, because a mixed fill
+   * ships TWICE: the composite hex first, then the `color-mix` that produced
+   * it. The hex is the source of truth and the fallback; the mix is what a
+   * browser with `color-mix` paints. Keeping only the last would make this
+   * gate read the recipe where it needs the value.
+   * @type {Record<string, string[]>}
+   */
+  const allDecls = {};
   for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    out[m[1]] = m[2].trim();
+    const name = m[1];
+    const value = m[2].trim();
+    (allDecls[name] ??= []).push(value);
+    // The FIRST declaration is the measured one: it is the hex both branches
+    // paint, and the second is the recipe that must reproduce it.
+    if (!(name in out)) out[name] = value;
   }
   if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
+  Object.defineProperty(out, "__decls", { value: allDecls, enumerable: false });
   return out;
+}
+
+/**
+ * Composite `color-mix(in srgb, A p%, B)` the way a browser does: sRGB channel
+ * interpolation of two opaque colours, which is plain linear interpolation of
+ * the 8-bit values.
+ *
+ * @param {string} expr
+ * @returns {string|null} the composite as a hex, or null if this is not a mix
+ */
+function compositeMix(expr) {
+  const m = /^color-mix\(\s*in\s+srgb\s*,\s*(#[0-9a-fA-F]{6})\s+([\d.]+)%\s*,\s*(#[0-9a-fA-F]{6})\s*\)$/.exec(
+    expr.trim(),
+  );
+  if (!m) return null;
+  const [, a, pct, b] = m;
+  const p = Number(pct) / 100;
+  /** @param {string} hex @param {number} i */
+  const ch = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const out = [0, 1, 2].map((i) => Math.round(ch(a, i) * p + ch(b, i) * (1 - p)));
+  return `#${out.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 const light = tokenBlock("light", ':root,\n[data-theme="light"]');
 const darkMedia = tokenBlock("dark (prefers-color-scheme)", ":root:not([data-theme])");
 const darkAttr = tokenBlock("dark (attribute)", '[data-theme="dark"]');
+
+/*
+ * THE CANARY. Each selector above is located by its literal text and the FIRST
+ * match wins, so a theme block added ABOVE the palette would be parsed as the
+ * palette and every ratio below would be computed from twelve tokens nobody
+ * meant. The file's own comment already records that failure once: the first
+ * run of this gate read the light block three times and reported the light
+ * values as the dark ones, and every dark row passed for the wrong reason.
+ *
+ * `--paper` is the page ground and is declared in all three palette blocks and
+ * in no other theme block, so its absence means the wrong block was parsed.
+ * Non-colour theme blocks are legitimate and exist (the lamp's geometry), which
+ * is exactly why this cannot rely on there being only one block per selector.
+ */
+/** @type {Array<[string, Record<string, string>]>} */
+const PALETTE_BLOCKS = [
+  ["light", light],
+  ["dark (prefers-color-scheme)", darkMedia],
+  ["dark (attribute)", darkAttr],
+];
+for (const [label, block] of PALETTE_BLOCKS) {
+  if (!("--paper" in block)) {
+    throw new Error(
+      `${label}: the block parsed for this selector does not declare --paper, so it is not the palette ` +
+        `block. A theme block was almost certainly added above the palette; move it below.`,
+    );
+  }
+}
 
 /* -------------------------------------------------------------------------
  * Assertions
@@ -210,10 +274,45 @@ function assert(label, ok) {
   );
 }
 
-// --- Every token is a literal hex -----------------------------------------
+// --- Every token RESOLVES to a literal hex ---------------------------------
 //
 // A token resolving to var(...) would make this gate read a name where it
-// needs a value, and would silently check nothing.
+// needs a value, and would silently check nothing. That was enforced by
+// requiring the DECLARATION to be a hex, which also forbade a legitimate
+// shape: the figure palette's ramps are the primitives and the series slots
+// are the interface, so `--fig-s1: var(--fig-purple-500)` is one owner for one
+// hex. Restating the hex on the slot would be a second owner of the same
+// decision, which is the thing rule 17 exists to stop.
+//
+// So the indirection is RESOLVED, inside the same block, and the RESOLVED
+// value must be a literal hex. A name that resolves to nothing, to something
+// that is not a hex, or around a cycle still fails: the gate never reads a
+// name where it needs a value, which is the whole of the original reason.
+
+/**
+ * Follow a chain of same-block `var()` references to the value it lands on.
+ *
+ * @param {Record<string, string>} block
+ * @param {string} name
+ * @returns {{value: string|null, chain: string[]}}
+ */
+function resolveToken(block, name) {
+  /** @type {string[]} */
+  const chain = [];
+  let current = name;
+  // A cycle cannot outlast the number of tokens in the block.
+  for (let i = 0; i <= Object.keys(block).length; i += 1) {
+    const raw = block[current];
+    if (raw === undefined) return { value: null, chain };
+    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
+    if (!ref) return { value: raw.trim(), chain };
+    if (chain.includes(ref[1])) return { value: null, chain };
+    chain.push(ref[1]);
+    current = ref[1];
+  }
+  return { value: null, chain };
+}
+
 /** @type {Array<[string, Record<string, string>]>} */
 const MODES = [
   ["light", light],
@@ -221,10 +320,56 @@ const MODES = [
 ];
 
 for (const [mode, block] of MODES) {
-  for (const [name, value] of Object.entries(block)) {
+  for (const name of Object.keys(block)) {
+    const { value } = resolveToken(block, name);
     assert(
-      `${mode} ${name} is a literal hex, got: ${value}`,
-      /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(value),
+      `${mode} ${name} resolves to a literal hex, got: ${value ?? `unresolvable (${block[name]})`}`,
+      value !== null && /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(value),
+    );
+  }
+}
+
+/* --- A MIXED FILL AND ITS RECIPE ARE MADE TO ARGUE -------------------------
+ *
+ * A glass fill ships twice: the composite hex, then the `color-mix` that
+ * produced it. Both branches paint the same pixel, which is the point, and it
+ * is also what makes the second declaration worth shipping rather than
+ * leaving in a comment: a comment cannot be checked, and this can.
+ *
+ * The hex is the SOURCE OF TRUTH and every ratio above is computed from it.
+ * What is asserted here is that the recipe beside it still produces it, so a
+ * fill retuned by hand and a fill whose recipe was edited both fail, instead
+ * of the two drifting apart with the comment quietly becoming fiction.
+ *
+ * One-unit tolerance per channel, because the rounding of a channel landing
+ * exactly on .5 is not worth pinning a browser to.
+ */
+for (const [mode, block] of MODES) {
+  const decls = /** @type {Record<string, string[]>} */ (
+    /** @type {any} */ (block).__decls
+  );
+  for (const [name, values] of Object.entries(decls)) {
+    if (values.length === 1) continue;
+    assert(
+      `${mode} ${name} is declared at most twice, got ${values.length}`,
+      values.length === 2,
+    );
+    const [hex, recipe] = values;
+    const composite = compositeMix(recipe);
+    assert(
+      `${mode} ${name}'s second declaration is a color-mix, got: ${recipe}`,
+      composite !== null,
+    );
+    if (composite === null) continue;
+    /** @param {string} h @param {number} i */
+    const ch = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+    const close =
+      /^#[0-9a-fA-F]{6}$/.test(hex) &&
+      [0, 1, 2].every((i) => Math.abs(ch(hex, i) - ch(composite, i)) <= 1);
+    assert(
+      `${mode} ${name}: the recipe composites to the hex beside it` +
+        (close ? "" : `\n    ${recipe}\n    composites to ${composite}, declared ${hex}`),
+      close,
     );
   }
 }
@@ -472,6 +617,101 @@ const MATRIX = [
   ["--text-destructive", "--surface", TEXT, "destructive text on a card"],
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
+
+  /* ----------------------------------------------------------------------
+   * PAPER, GLASS, LIGHT. Ruling 65, Part A steps 1, 2, 4 and 6a.
+   *
+   * These pairs are transcribed from the approved handoffs as NAMES, on the
+   * same footing as every row above: the handoff supplied the pair and the
+   * threshold, this file never restates its hex, and the ratio is recomputed
+   * from the shipped stylesheet. Where two handoffs disagreed the later step
+   * won, and the superseded value is recorded in the commit rather than here.
+   *
+   * NOTHING BELOW IS SHIPPED TO A READER YET. The roles are declared and no
+   * component reads them until builds 2 to 4, so these rows are what stops
+   * the palette being retuned by hand in the meantime.
+   * ------------------------------------------------------------------- */
+
+  // Text on the two paper surfaces, and on the one glass that touches paper.
+  ["--text", "--paper", TEXT, "body on limestone"],
+  ["--text", "--raised", TEXT, "body on the raised step"],
+  ["--text", "--glass-fill-paper", TEXT, "body on paper glass, composited"],
+  ["--text-secondary", "--paper", TEXT, "muted copy on limestone"],
+  ["--text-secondary", "--raised", TEXT, "muted copy on the raised step"],
+  ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
+  // The placeholder is NOT --text-secondary and is measured as its own role:
+  // secondary text is content a reader is meant to read, a placeholder is a
+  // hint that must sit below the value which will replace it.
+  ["--placeholder", "--raised", TEXT, "placeholder in a field"],
+
+  // Brand, its two states, and the second shade a followed link takes.
+  ["--brand", "--paper", TEXT, "link on limestone"],
+  ["--brand", "--raised", TEXT, "link on the raised step"],
+  ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
+  ["--brand-hover", "--paper", TEXT, "hovered link on limestone"],
+  ["--brand-hover", "--raised", TEXT, "hovered link on the raised step"],
+  ["--brand-pressed", "--paper", TEXT, "pressed link on limestone"],
+  ["--on-brand", "--brand-pressed", TEXT, "label on a pressed primary button"],
+  ["--visited", "--paper", TEXT, "visited link on limestone"],
+  ["--visited", "--raised", TEXT, "visited link on the raised step"],
+  ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
+  // A followed link inside an alert. The tints are the only surfaces a visited
+  // link lands on that are neither paper nor raised, and step 2 measured all
+  // three rather than assuming the paper ratio carried over.
+  ["--visited", "--error-tint", TEXT, "visited link on an error tint"],
+  ["--visited", "--warning-tint", TEXT, "visited link on a warning tint"],
+  ["--visited", "--success-tint", TEXT, "visited link on a success tint"],
+
+  // The bar. Brand purple is the bar FILL; everything on it is --on-brand.
+  ["--on-brand", "--bar-fill", TEXT, "text and icons on the bar"],
+  ["--on-brand", "--glass-fill-bar", TEXT, "text on bar glass, composited over the bar"],
+  ["--on-brand", "--glass-fill-bar-open", TEXT, "text on bar glass with the menu open"],
+  ["--focus-ring-on-brand", "--bar-fill", UI, "focus ring on the bar"],
+  ["--focus-ring-on-brand", "--glass-fill-bar", UI, "focus ring on bar glass"],
+  ["--line-on-brand", "--bar-fill", UI, "a control edge on the solid bar"],
+
+  // Lines. --dust has NO row against either paper surface and that is the
+  // finding, not an omission: it measures 1.57:1 on limestone, so it can rule
+  // and hairline but can never be the thing that identifies a control. That is
+  // why --line-strong exists at all, and these two rows are what hold it up.
+  ["--line-strong", "--paper", UI, "a control edge on limestone"],
+  ["--line-strong", "--raised", UI, "a control edge on the raised step"],
+
+  // Semantic, and only where the state is real.
+  ["--error", "--paper", TEXT, "error text on limestone"],
+  ["--error", "--raised", TEXT, "error text on the raised step"],
+  ["--error", "--error-tint", TEXT, "error text on its own tint"],
+  ["--on-error-fill", "--error-fill", TEXT, "label on a destructive fill"],
+  ["--warning", "--paper", TEXT, "warning text on limestone"],
+  ["--warning", "--raised", TEXT, "warning text on the raised step"],
+  ["--warning", "--warning-tint", TEXT, "warning text on its own tint"],
+  ["--on-warning-fill", "--warning-fill", TEXT, "label on a warning fill"],
+  ["--success", "--paper", TEXT, "success text on limestone"],
+  ["--success", "--raised", TEXT, "success text on the raised step"],
+  ["--success", "--success-tint", TEXT, "success text on its own tint"],
+  ["--on-success-fill", "--success-fill", TEXT, "label on a success fill"],
+
+  // Figures. EVERY SERIES CARRIES LINES AND LABELS, so every series clears the
+  // 1.4.11 floor against the ground: a series' stroke is the thing that has to
+  // be seen. An area FILL may sit lighter and has no row, by the same rule.
+  ["--fig-s1", "--fig-ground", UI, "figure series 1 stroke"],
+  ["--fig-s2", "--fig-ground", UI, "figure series 2 stroke"],
+  ["--fig-s3", "--fig-ground", UI, "figure series 3 stroke"],
+  ["--fig-s4", "--fig-ground", UI, "figure series 4 stroke"],
+  ["--fig-s5", "--fig-ground", UI, "figure series 5 stroke"],
+  // There is deliberately NO --fig-dust-300 axis-and-grid row, and it is a
+  // FINDING rather than an omission. Step 4 sets `.fig-axis,.fig-grid` to
+  // --fig-dust-300 and separately rules that a figure's strokes must clear
+  // 3:1; MEASURED 2026-09-13, that stroke is 2.33:1 on limestone (#a89d8d on
+  // #f4efe6) and 6.74:1 in dark (#ab9f8f on #1c1916), so the LIGHT theme alone
+  // does not satisfy step 4's own rule and a single row would fail for one
+  // mode. Asserting the pair would red this gate forever over a stroke
+  // nothing draws yet, which is the same call the --border-on-popover comment
+  // above records. The axis colour needs a ruling before build 3 draws its
+  // first chart: --fig-dust-400 clears it, and so does moving the rule to
+  // "an axis is a reading aid, not an information-carrying boundary".
+  ["--text-secondary", "--fig-ground", TEXT, "figure label"],
+  ["--text", "--fig-ground", TEXT, "figure key label"],
 ];
 
 /** @type {Array<{mode: string, note: string, lc: number, ratio: number}>} */
@@ -479,8 +719,10 @@ const advisory = [];
 
 for (const [mode, block] of MODES) {
   for (const [fgName, bgName, min, note] of MATRIX) {
-    const fg = block[fgName];
-    const bg = block[bgName];
+    // RESOLVED, not raw: a series slot is declared as its ramp step, and the
+    // ratio that ships is the ramp's hex.
+    const fg = resolveToken(block, fgName).value;
+    const bg = resolveToken(block, bgName).value;
     checks += 1;
     if (!fg || !bg) {
       fail(`${mode}: ${note} references a token that does not exist (${fgName} on ${bgName})`);
@@ -637,10 +879,76 @@ const DECLARED_ELSEWHERE = new Map([
 // no longer exists, or one that has since joined the matrix, fails here rather
 // than quietly widening the hole.
 /** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
-const NON_PARTICIPATING = new Map([]);
+const NON_PARTICIPATING = new Map([
+  // THE PAPER, GLASS, LIGHT ENTRIES. Every one is a token whose job carries no
+  // contrast obligation, not a token nobody got round to measuring.
+  [
+    "--dust",
+    "lines only, and deliberately below the floor: 1.57:1 on limestone. It rules, hairlines and " +
+      "outlines a disabled control, and it may never be the thing that identifies one. That is why " +
+      "--line-strong exists, and --line-strong carries the rows",
+  ],
+  [
+    "--fig-dust-300",
+    "step 4's axis and grid stroke, which MEASURES 2.33:1 on limestone against step 4's own 3:1 rule " +
+      "for figure strokes. Asserting it would red this gate over a stroke nothing draws until build 3; " +
+      "the colour needs a ruling first, and the matrix comment carries the numbers",
+  ],
+  [
+    "--lamp-chroma-on-bar",
+    "a catch hue mixed in at 14 to 22 percent behind glass. The brief's rule is that light is " +
+      "atmosphere and never meaning, so nothing reads it and no pair can be required of it",
+  ],
+  [
+    "--lamp-chroma-on-paper",
+    "the same, on the one paper glass surface. See --lamp-chroma-on-bar",
+  ],
+  // The ramp steps no series slot resolves through. They are fills, letterbox
+  // grounds and spare tints: step 4's rule is that a shape's INTERIOR may sit
+  // lighter than 3:1 and only its EDGE may not, and an edge is always a slot.
+  // A step that a slot later adopts stops being exempt on that day, because
+  // the participation pass walks the slot's chain and this map refuses an
+  // entry that has joined the matrix.
+  ...(/** @type {Array<[string, string]>} */ (
+    [
+      "--fig-purple-400",
+      "--fig-leaf-100",
+      "--fig-leaf-400",
+      "--fig-leaf-500",
+      "--fig-oxide-100",
+      "--fig-oxide-200",
+      "--fig-oxide-500",
+      "--fig-dust-100",
+      "--fig-dust-200",
+    ].map((t) => [
+      t,
+      "a ramp step no series slot resolves through: a fill or a letterbox ground, which step 4 " +
+        "exempts from the stroke floor",
+    ])
+  )),
+]);
 
 {
-  const inMatrix = new Set(MATRIX.flatMap(([fg, bg]) => [fg, bg]));
+  const named = new Set(MATRIX.flatMap(([fg, bg]) => [fg, bg]));
+
+  /*
+   * PARTICIPATION IS TRANSITIVE, because a token can ship its hex under
+   * another name. `--fig-s1` is declared as `var(--fig-purple-500)`, so the
+   * ratio the matrix measures for `--fig-s1` IS the ramp step's ratio: the
+   * primitive is measured, by the name that ships it. Counting only the names
+   * the matrix spells would have forced every ramp step to restate its hex on
+   * a slot, which is the second-owner shape rule 17 forbids.
+   *
+   * Resolved in BOTH modes, and a token counts if either mode resolves through
+   * it, because the two themes point their slots at different ramp steps.
+   */
+  const inMatrix = new Set(named);
+  for (const [, block] of MODES) {
+    for (const n of named) {
+      for (const step of resolveToken(block, n).chain) inMatrix.add(step);
+    }
+  }
+
   const declared = Object.keys(light).filter((n) => n in darkAttr && n in darkMedia);
 
   // A zero-scope search reports zero violations. Floor it against the doc's
@@ -945,12 +1253,24 @@ if (existsSync(assetDir)) {
       if (!shipped.has(m[1])) shipped.set(m[1], new Set());
       shipped.get(m[1])?.add(norm(m[2]));
     }
+    // AND THE INDIRECTIONS. A series slot ships as `--fig-s1:var(--fig-purple-500)`,
+    // which the hex pattern above cannot see, so every slot read as "shipped
+    // values: none" and failed while being present and correct. The minifier
+    // drops the space after the colon, so this matches the built spelling
+    // rather than the source's.
+    for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(var\(\s*--[a-z0-9-]+\s*\))/g)) {
+      if (!shipped.has(m[1])) shipped.set(m[1], new Set());
+      shipped.get(m[1])?.add(m[2].replace(/\s+/g, ""));
+    }
 
     let missing = 0;
     for (const [mode, block] of MODES) {
       for (const [name, value] of Object.entries(block)) {
         checks += 1;
-        if (!shipped.get(name)?.has(norm(value))) {
+        const wanted = value.trim().startsWith("var(")
+          ? value.replace(/\s+/g, "")
+          : norm(value);
+        if (!shipped.get(name)?.has(wanted)) {
           missing += 1;
           fail(
             `built CSS does not carry ${mode} ${name}: ${value}` +
@@ -1274,8 +1594,19 @@ const buildPresent = existsSync(assetDir);
  *
  * When this branch's count moves, CI is the instrument that says so. Re-measure
  * it the same way rather than deriving it from the present-branch number.
+ *
+ * RE-MEASURED 2026-09-13 for the Paper, Glass, Light token layer, by the same
+ * method and in both branches: build/ renamed away gives 774, build/ in place
+ * gives 1002. The jump is the new palette's matrix rows, the mix-composites
+ * pass and the var()-resolution pass, and it is why the floors below moved by
+ * hundreds rather than by a handful.
+ *
+ * Floors are those counts MINUS the check:floors tolerance at each count,
+ * max(3, ceil(n * 0.05)): 39 and 51. Taken from the printed counts, never by
+ * arithmetic on the old floors, which is what the paragraphs above record
+ * going wrong twice.
  */
-const MINIMUM_CHECKS = buildPresent ? 611 : 494;
+const MINIMUM_CHECKS = buildPresent ? 951 : 735;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
