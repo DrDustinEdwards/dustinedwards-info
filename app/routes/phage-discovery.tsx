@@ -1,5 +1,5 @@
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { publicHtmlHeaders, SITE,
   pageMeta,
@@ -54,8 +54,8 @@ export function meta() {
 export default function Roster() {
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
           <h1 className="page-title">Roster</h1>
 

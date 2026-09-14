@@ -5,7 +5,7 @@ import stack from "../../content/generated/stack.json";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import {
   PROJECTS_DESCRIPTION,
   PROJECTS_INTRO,
@@ -238,8 +238,8 @@ function formatAsOf(iso: string) {
 export default function Projects() {
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(itemListJsonLd()) }}

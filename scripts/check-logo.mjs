@@ -270,13 +270,23 @@ for (const { file, purple, viewBox } of FIXTURES) {
  */
 const EXPECTED_FILL_BINDINGS = [
   [".site-logo-brand", "var(--brand)"],
-  // --on-brand, NOT --mark-on-chrome. The count is what caught the missing
-  // mark and the count is unchanged; only the token moved, and it moved on a
-  // measurement rather than to fit the code. --mark-on-chrome is #b7a5e0 in
-  // both themes and build 2 made the dark bar #b7a5e0, so the old binding
-  // renders the mark at 1.00:1 against its own background. --on-brand is
-  // 10.43:1 light and 8.10:1 dark on the bar that ships.
-  [".site-header .site-logo-brand", "var(--on-brand)"],
+  /*
+   * --mark-on-chrome, AND IT WENT AND CAME BACK, which is worth recording
+   * because the round trip is the lesson rather than the destination.
+   *
+   * On 2026-09-13 this was moved to --on-brand. The measurement behind that was
+   * correct: --mark-on-chrome is #b7a5e0 in both themes, build 2 had made the
+   * dark bar #b7a5e0, and the mark was therefore a 1.00:1 silhouette of its own
+   * background. The CONCLUSION was wrong. The question asked was "which token
+   * survives this bar", when the question was "why did the bar change". Hard
+   * rule 12's own bullet: a dichotomy inherits its author's frame.
+   *
+   * Dustin restored the old header on 2026-09-14 and the bar is --surface-chrome
+   * again, so the v4 assignment is valid again with nothing re-measured. The
+   * COUNT is what caught the missing mark in the first place and it has been
+   * two throughout; only this token moved, twice.
+   */
+  [".site-header .site-logo-brand", "var(--mark-on-chrome)"],
 ];
 
 {

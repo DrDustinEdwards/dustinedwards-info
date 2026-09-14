@@ -2,7 +2,7 @@ import { Link } from "react-router";
 
 import stack from "../../content/generated/stack.json";
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
@@ -251,8 +251,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <ShellHeader />
-      <main className="home site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="home" id="main" tabIndex={-1}>
         {/*
           THE SITE AUTHOR'S h-card, on the hero that already says who this is.
           Item I, ruling 50 as amended: microformats only. No `rel="me"`, no

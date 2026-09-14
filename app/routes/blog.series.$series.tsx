@@ -2,7 +2,7 @@ import { Link, data, redirect } from "react-router";
 
 import { PostCard, Pagination } from "~/components/post-card";
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { getBlogSeries, listSeriesPosts } from "~/db";
 import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
@@ -100,8 +100,8 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

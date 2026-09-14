@@ -2,7 +2,7 @@ import { Form, Link } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { getEnv } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
@@ -318,8 +318,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <ShellHeader />
-      <main className="search-page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="search-page" id="main" tabIndex={-1}>
         <h1 className="search-heading">Search</h1>
 
         {/* A plain GET form. No client script is involved in producing results:

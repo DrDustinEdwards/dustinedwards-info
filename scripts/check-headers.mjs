@@ -750,10 +750,18 @@ ok(
   /useRouteLoaderData/.test(siteSpeculation),
   "one source in workers/app.ts, several readers; a second generator would drift",
 );
+/*
+ * `site-header.tsx` AGAIN SINCE 2026-09-14. Build 2 renamed this component to
+ * `shell-header.tsx` and Dustin's restore renamed it back; the gate followed
+ * the file both times. What is asserted has not moved: the public header is
+ * what renders SiteSpeculation, and an imported-but-unrendered component still
+ * fails. A missing file throws here rather than failing, which is why the
+ * rename had to be tracked rather than left to a soft miss.
+ */
 ok(
-  "ShellHeader renders SiteSpeculation, which is what puts it on every public page",
+  "SiteHeader renders SiteSpeculation, which is what puts it on every public page",
   /<SiteSpeculation\s*\/>/.test(
-    stripComments(readFileSync(join(root, "app", "components", "shell-header.tsx"), "utf8")),
+    stripComments(readFileSync(join(root, "app", "components", "site-header.tsx"), "utf8")),
   ),
   "an imported-but-unrendered component is the shape that passes both assertions " +
     "above while shipping nothing to any reader",

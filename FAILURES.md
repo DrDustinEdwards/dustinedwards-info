@@ -73,7 +73,7 @@ which is what repeats across people and sessions.
   `scripts/check-invariants.mjs` `.design-sync/previews/PostCard.tsx`
 - **A simulated element is not the element.** An injected probe anchor measured
   10px and gave a wrapping threshold 10px wrong.
-  `app/components/shell-header.tsx`
+  `app/components/site-header.tsx`
 - **A whole-document match is satisfied by a neighbour.** A 900-character window
   around the anchor read the next function's compliance. `df99bf1`
 - **A comment can satisfy an assertion about code, and can fail one.** Both

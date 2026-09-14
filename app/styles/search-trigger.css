@@ -26,23 +26,18 @@
  * and it carries a border besides, so it would take the .search-chip exemption
  * either way.
  *
- * Height comes from --control-min, restored 2026-09-13. It used to come from
- * --control-h (2.25rem, 36px), which was declared on .site-header-nav in
- * chrome-nav.css and went when that sheet did. The new bar sizes every control
- * at --control-min (2.75rem, 44px), which is the WCAG 2.5.5 enhanced target,
- * and this control now sits between the Menu summary and the theme button:
- * restoring 36px would have made it visibly the odd one out and a smaller
- * target than its two neighbours. One height and one centreline was the point
- * of the old rule and it still is; only the number moved, and it moved up.
+ * Height comes from --control-h on .site-header-nav, so this control, the
+ * theme button and the Blog link are one height and one centreline. The
+ * padding leaves it a square comfortably above the 24px WCAG 2.2 target floor,
+ * and it no longer changes shape when script arrives.
  */
 .search-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-block-size: var(--control-min);
-  min-inline-size: var(--control-min);
+  height: var(--control-h);
   padding: 0 0.5rem;
-  border: var(--line-w) solid var(--line-on-brand);
+  border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-muted);
   text-decoration: none;

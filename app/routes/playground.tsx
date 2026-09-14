@@ -4,7 +4,7 @@ import { unified } from "unified";
 
 import playgroundData from "../../content/playground.json";
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { CHART_TYPES, buildChartModel, renderChartHast } from "~/lib/content/chart.mjs";
 /*
  * THE MARKDOWN DEMO'S ONE CALL, behind a NAMED server export.
@@ -592,8 +592,8 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
           <h1 className="page-title">{PLAYGROUND_TITLE}</h1>
           <p className="page-intro">{PLAYGROUND_INTRO}</p>
