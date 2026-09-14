@@ -40,7 +40,7 @@
  * with or without the Preload domain enabled. So the whole gated claim is "the
  * rules a browser would act on are correct", never "the browser acted".
  *
- * @see app/lib/shell-nav.ts, app/lib/speculation.mjs, app/components/site-speculation.tsx
+ * @see app/lib/nav.ts, app/lib/speculation.mjs, app/components/site-speculation.tsx
  */
 
 import test from "node:test";
@@ -67,16 +67,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  */
 const read = (...parts) => stripComments(readFileSync(join(root, ...parts), "utf8"));
 
-/*
- * REPOINTED 2026-09-13 at the Paper, Glass, Light shell. `app/lib/nav.ts` and
- * `app/components/site-header.tsx` were deleted when build 2 retired the old
- * header, and this file read both. The FACT being pinned is unchanged: the bar
- * renders its NavLinks from an array rather than from literals, which is what
- * makes the document speculation rule cover the header by derivation rather
- * than by coincidence.
- */
-const navSource = read("app", "lib", "shell-nav.ts");
-const headerSource = read("app", "components", "shell-header.tsx");
+const navSource = read("app", "lib", "nav.ts");
+const headerSource = read("app", "components", "site-header.tsx");
 const componentSource = read("app", "components", "site-speculation.tsx");
 
 /** Every `to: "/path"` in the NAV array. */
@@ -278,7 +270,7 @@ test("ANY URL CARRYING A QUERY IS EXCLUDED, as a search component", () => {
   );
 });
 
-test("the header renders its NavLinks from SHELL_NAV, so its links are derived", () => {
+test("the header renders its NavLinks from NAV, so its links are derived", () => {
   assert.match(
     headerSource,
     /NAV\.map\(\s*\(item\)\s*=>/,
@@ -287,7 +279,7 @@ test("the header renders its NavLinks from SHELL_NAV, so its links are derived",
   for (const path of navPaths) {
     assert.ok(
       !headerSource.includes(`to="${path}"`),
-      `${path} is hard-coded in shell-header.tsx as well as in SHELL_NAV`,
+      `${path} is hard-coded in site-header.tsx as well as in NAV`,
     );
   }
 });

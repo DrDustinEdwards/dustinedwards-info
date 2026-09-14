@@ -1,5 +1,5 @@
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE, SITE_ORIGIN, pageMeta, personJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
@@ -63,8 +63,8 @@ export function meta() {
 export default function About() {
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
           <header className="page-head">
             <h1>{about.title}</h1>

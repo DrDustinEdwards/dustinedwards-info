@@ -1,5 +1,5 @@
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 // This page renders into `.prose`, and prose.css is route-scoped since the
@@ -67,8 +67,8 @@ export function meta() {
 export default function Privacy() {
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
           <header className="page-head">
             <h1>Privacy</h1>

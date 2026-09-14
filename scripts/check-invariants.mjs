@@ -6204,6 +6204,49 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-h3-tracking",      "build 3: the /playground/ui inventory page"],
   ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
   ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
+  /*
+   * NINETEEN THAT CAME BACK ON 2026-09-14, AND THE LABEL IS DELIBERATELY NOT A
+   * BUILD NUMBER. READ THIS BEFORE ADDING TO THEM.
+   *
+   * Build 2's bar was the ONLY consumer of these. Dustin ruled the old header
+   * back that day, the bar came out of shell.css, and nineteen tokens lost
+   * their only reader in one commit. Nothing about them changed; what changed
+   * is that the thing reading them is gone.
+   *
+   * Every other row here names a build. These cannot honestly, and writing
+   * "build 3" to make the column uniform would be the exact move this map
+   * exists to prevent: the inventory page renders EVERY token as a swatch, so
+   * "build 3" is a claim that is true of anything and therefore discriminates
+   * nothing. Rule 10's unfailable-condition class, applied to an exemption
+   * ledger rather than to an assertion.
+   *
+   * So the label says what is actually known. Part B is suspended pending the
+   * design-sync wiring, and when it resumes the build that consumes each of
+   * these is the one that rebuilds the bar. THIS IS FLAGGED FOR DUSTIN rather
+   * than settled: the map's stated shape is "every entry names the build that
+   * consumes it", and nineteen entries that name a suspension instead is a
+   * strain on that rule, not a satisfaction of it. CARRIED_EXPIRES is what
+   * stops it being permanent in the meantime.
+   */
+  ["--bar-h",              "Part B, suspended: build 2's bar was the only consumer"],
+  ["--col-full",           "Part B, suspended: build 2's bar was the only consumer"],
+  ["--ease-enter",         "Part B, suspended: build 2's bar was the only consumer"],
+  ["--ease-state",         "Part B, suspended: build 2's bar was the only consumer"],
+  ["--icon-size",          "Part B, suspended: build 2's bar was the only consumer"],
+  ["--icon-stroke",        "Part B, suspended: build 2's bar was the only consumer"],
+  ["--line-w-thick",       "Part B, suspended: build 2's bar was the only consumer"],
+  ["--motion-instant",     "Part B, suspended: build 2's bar was the only consumer"],
+  ["--motion-panel",       "Part B, suspended: build 2's bar was the only consumer"],
+  ["--motion-state",       "Part B, suspended: build 2's bar was the only consumer"],
+  ["--radius-control",     "Part B, suspended: build 2's bar was the only consumer"],
+  ["--s-1",                "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-label-family",     "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-label-leading",    "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-label-size",       "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-label-vars",       "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-label-weight",     "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-nav-leading",      "Part B, suspended: build 2's bar was the only consumer"],
+  ["--t-nav-strong-vars",  "Part B, suspended: build 2's bar was the only consumer"],
   ]);
   /* carried:end */
 
@@ -6323,6 +6366,15 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * two assertions, re-carrying one adds them back. Taken after the map had finished
  * shrinking for this build, not partway through it.
  *
+ * RE-MEASURED AGAIN 2026-09-14, the largest single move UPWARD so far, when
+ * Dustin's header restore took build 2's bar out of shell.css: NINETEEN tokens
+ * lost their only consumer in one commit and came back onto the carried map,
+ * which is 38 assertions. BY RUNNING BOTH BRANCHES: 462 offline and 501 with
+ * --remote, floors 438 and 475 after check:floors' own tolerance of 24 and 26.
+ * Not derived from 424 and 463 by adding 38, even though that happens to give
+ * the same answer here: the method is the point, and it is the method
+ * check:floors' own failure text demands.
+ *
  * **THIS FLOOR MOVES DOWN EVERY TIME THE CARRIED MAP SHRINKS, and that is the
  * design rather than a nuisance.** Each carried token contributes two
  * assertions, so consuming 30 of them removed 60. A floor derived from the old
@@ -6331,7 +6383,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * the gate in both branches and read the printed counts; that is the only
  * method that works here, and the map is designed to empty.
  */
-const MINIMUM_CHECKS = wantsRemote ? 440 : 403;
+const MINIMUM_CHECKS = wantsRemote ? 475 : 438;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

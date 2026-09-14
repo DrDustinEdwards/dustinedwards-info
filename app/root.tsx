@@ -10,7 +10,7 @@ import {
 } from "react-router";
 
 import { ShellFooter } from "~/components/shell-footer";
-import { ShellHeader } from "~/components/shell-header";
+import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
@@ -32,16 +32,22 @@ import "./app.css";
  * THE ORDER IS LOAD-BEARING and is the order they were cut out of the original
  * 9,269-line app.css. Do not sort this list.
  */
+import "./styles/public-chrome.css";
 import "./styles/page-shell.css";
+import "./styles/chrome-nav.css";
 import "./styles/skip-link.css";
 import "./styles/motion-print.css";
 import "./styles/search-trigger.css";
 /*
- * LAST, and that is the point rather than an accident of when it was written.
- * The Paper, Glass, Light shell replaces what public-chrome.css and
- * chrome-nav.css do, and both are still live for the routes Part B has not
- * reached. Arriving last means it wins on order rather than by out-specifying
- * them, which is the mechanism the comment above says this list IS.
+ * LAST, AND IT NO LONGER CONTAINS A HEADER.
+ *
+ * This sheet arrived last on 2026-09-13 so the Paper, Glass, Light bar would
+ * beat `public-chrome.css` and `chrome-nav.css` on ORDER rather than by
+ * out-specifying them. Dustin ruled the header back on 2026-09-14, so the two
+ * sheets above are the header again and shell.css keeps only the track grid
+ * and the footer, which neither of them declares. The position is kept because
+ * the order of this list is load-bearing and shell.css still needs to win
+ * where it and page-shell.css touch the same thing.
  */
 import "./styles/shell.css";
 
@@ -493,8 +499,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
    */
   return (
     <>
-      <ShellHeader />
-      <main className="page site-shell-main" id="main" tabIndex={-1}>
+      <SiteHeader />
+      <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
           <h1>{message}</h1>
           <p className="muted">{details}</p>
