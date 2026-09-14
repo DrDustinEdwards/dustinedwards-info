@@ -603,6 +603,40 @@ function ok(label, condition, detail = "") {
   }
 }
 
+/**
+ * CLICK A SELECTOR, AND FAIL SOFTLY WHEN IT IS NOT THERE.
+ *
+ * RULED 2026-09-14. `page.click` asserts internally and THROWS on a missing
+ * selector, which ends the whole run. MEASURED: build 2 renamed the theme
+ * control from `.theme-toggle` to `.bar-theme` and the footer from
+ * `.site-footer` to `.site-shell-footer`; the first stale click threw and
+ * voided every case after it, so one rename cost 34 results where two were
+ * actually wrong.
+ *
+ * A selector that has moved is a REAL finding and belongs in the failure count
+ * beside the others. It is not a reason to stop measuring everything else, and
+ * a gate that dies on its first surprise cannot report the second one.
+ *
+ * @param {any} target a Page or a Frame
+ * @param {string} selector
+ * @param {string} label what the click is for, used in the failure line
+ * @returns {Promise<boolean>} whether the click happened
+ */
+async function clickOrFail(target, selector, label) {
+  const handle = await target.$(selector);
+  if (!handle) {
+    ok(
+      label,
+      false,
+      `no element matches ${selector}. The selector has moved or the control is gone. ` +
+        `Every later case still ran, which is the point of failing here rather than throwing.`,
+    );
+    return false;
+  }
+  await handle.click();
+  return true;
+}
+
 /** @param {string} label @param {string} why */
 function skip(label, why) {
   skipped.push(label);
@@ -1212,6 +1246,26 @@ server?.on("exit", (code, signal) => {
  */
 /** What a deployed origin said, when it said something. Read by the diagnosis. */
 let originStatus = /** @type {number | null} */ (null);
+/**
+ * THE LAST THING THE READINESS PROBE SAW, and the reason this exists at all.
+ *
+ * RULED 2026-09-14. The old loop returned a bare false and the caller printed
+ * "the preview server process stayed alive and never answered", which is ONE
+ * sentence for four different situations: nothing bound yet, something bound
+ * and wedged, something answering with a non-ok status, and a process that had
+ * already died. Two runs failed at 261s and 310s and that message could not say
+ * which of the four they were, so this gate was called "broken on this host"
+ * for weeks when the measured answer was a slow boot on a loaded machine: 51s
+ * to first answer on a clear one, past the 180s ceiling on a busy one.
+ *
+ * A TIMEOUT THAT CANNOT SAY WHAT IT WAS WAITING FOR is what makes this gate
+ * unusable on ship, not the minutes it costs. Ruled the same day: it stays on
+ * the network tier, because a busy machine reported as a red is worse on ship
+ * than no gate at all.
+ */
+/** @type {{ state: string, detail: string }} */
+let readiness = { state: "not-started", detail: "the probe has not run" };
+
 /** What a deployed origin threw, when it could not be reached at all. */
 let originError = "";
 
@@ -1285,12 +1339,37 @@ async function waitForServer(timeoutMs = 180_000) {
         recordServerSurvivors();
         return true;
       }
-    } catch {
-      /* not up yet */
+      // It ANSWERED and said no. A different fact from silence, and the one a
+      // wrong probe path produces, so it is kept rather than folded into
+      // "not up yet".
+      readiness = { state: "answered-not-ok", detail: `HTTP ${res.status} on ${BASE}/blog` };
+    } catch (error) {
+      /*
+       * WHICH KIND OF SILENCE. The three are different diagnoses and the old
+       * loop reported all of them as "never answered":
+       *
+       *   ECONNREFUSED  nothing is listening yet, so it is still booting
+       *   a timeout     something is listening and not replying, a wedge
+       *   anything else recorded verbatim rather than guessed at
+       */
+      const cause = /** @type {any} */ (error);
+      const code = cause?.cause?.code ?? cause?.name ?? String(error);
+      readiness =
+        code === "ECONNREFUSED"
+          ? { state: "no-listener", detail: "connection refused: nothing is bound yet" }
+          : code === "TimeoutError" || code === "HeadersTimeoutError"
+            ? { state: "bound-silent", detail: "a listener accepted the connection and did not reply" }
+            : { state: "unreachable", detail: String(code) };
     }
     // The process is gone, so no amount of further waiting will help. Reported
     // in the caller with the output, which is the point of not waiting here.
-    if (serverExit) return false;
+    if (serverExit) {
+      readiness = {
+        state: "exited",
+        detail: `the server process exited with code ${serverExit.code}, signal ${serverExit.signal}`,
+      };
+      return false;
+    }
     await new Promise((r) => setTimeout(r, 700));
   }
   return false;
@@ -1304,6 +1383,27 @@ async function waitForServer(timeoutMs = 180_000) {
  * an empty region that reads like a clean log.
  */
 function serverDiagnosis() {
+  /*
+   * THE STATE FIRST, because it is the half that decides what to do next.
+   * "Still booting" means the ceiling or the machine; "wedged" means the
+   * server; "exited" means read its last words. One sentence for all three is
+   * what made two real runs unreadable.
+   */
+  const verdict =
+    readiness.state === "no-listener"
+      ? "STILL BOOTING when the ceiling expired: nothing had bound the port yet. MEASURED on a " +
+        "clear machine this boot takes about 51s and prints its Local URL 25s before it serves; " +
+        "on a loaded one it has run past the 180s ceiling. That is the machine, not a defect."
+      : readiness.state === "bound-silent"
+        ? "WEDGED: a listener accepted the connection and never replied. That is the server, not the ceiling."
+        : readiness.state === "answered-not-ok"
+          ? "ANSWERING AND REFUSING: the probe path is reachable and returned a non-ok status, which " +
+            "is a wrong probe path rather than a dead server."
+          : readiness.state === "exited"
+            ? "DEAD: the process exited before it served anything."
+            : `UNCLASSIFIED (${readiness.state}).`;
+  const stateLine = `  readiness: ${verdict}\n  last observation: ${readiness.detail}\n`;
+
   // No server was started, so there is nothing to diagnose ABOUT one: the
   // subject is a deployed origin that did not answer, and saying "the preview
   // server exited" would name a process this run never had.
@@ -1329,7 +1429,7 @@ function serverDiagnosis() {
     ? `Its last ${serverLog.length} line(s):\n    ${serverLog.join("\n    ")}`
     : `It produced NO output at all, on either stream, which usually means the ` +
       `spawn itself never ran the command.`;
-  return `${how}\n  ${tail}`;
+  return `${stateLine}  ${how}\n  ${tail}`;
 }
 
 /**
@@ -1850,6 +1950,23 @@ try {
        * vanish the day that post changed.
        */
       { path: "/blog/tags/cloudflare", module: "blog.tags.$tag.tsx" },
+      /*
+       * THE THREE HTML PUBLICATION PAGES, which drifted in efc0dab: they took
+       * `publicHtmlHeaders()` and nothing added them here, so from that commit
+       * until 2026-09-14 three shared-cacheable documents were never byte-
+       * compared. The list assertion below is what found them, which is the
+       * whole reason it reads the source rather than trusting this array.
+       */
+      { path: "/about", module: "about.tsx" },
+      { path: "/publications", module: "publications.tsx" },
+      /*
+       * THE TRAILING SLASH IS THE CANONICAL FORM, not a typo. `paths.mjs` says
+       * so and the gateway redirects the slashless spelling to it; fetching the
+       * slashless one here would byte-compare two redirects. The slug is the
+       * DOI fold of 10.1128/mra.00888-24, which is a registered DOI and cannot
+       * be re-decided, so this URL is as stable as the corpus entry itself.
+       */
+      { path: "/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
     ];
 
     /*
@@ -1903,10 +2020,20 @@ try {
        * its own URL, XML or JSON, with no `<html>` element for a theme to reach
        * and no cookie read on the way. The tag PAGE is not exempt and is a case
        * in the list above, because it is HTML and does carry the dimension.
+       *
+       * THE FIVE CITATION EXPORTS joined 2026-09-14, on identical grounds and
+       * found the same way: `publications[.bib|.ris|.json]` and the two
+       * per-paper twins serve `application/x-bibtex`,
+       * `application/x-research-info-systems` and CSL JSON through
+       * `exportHeaders(..., SHARED_CACHE_CONTROL)`. Each is one representation
+       * under its own URL with no `<html data-theme>` to carry the dimension
+       * and no cookie read on the way. The two HTML pages beside them,
+       * `publications.tsx` and `publications.$slug.tsx`, are NOT exempt and are
+       * cases in the list above.
        */
       .filter(
         (name) =>
-          !/^(blog\.(feed|rss|atom)|blog\.(tags|series)\.\$(tag|series)\.(rss|feed)|blog\.\$slug\[\.md\]|llms-full|sitemap)/.test(
+          !/^(blog\.(feed|rss|atom)|blog\.(tags|series)\.\$(tag|series)\.(rss|feed)|blog\.\$slug\[\.md\]|publications(\.\$slug)?\[\.(bib|ris|json)\]|llms-full|sitemap)/.test(
             name,
           ),
       );
@@ -2079,7 +2206,7 @@ try {
      * failing the criterion.
      */
     const help = await page.evaluate(() => {
-      const links = [...document.querySelectorAll(".site-footer a")].map(
+      const links = [...document.querySelectorAll(".site-shell-footer a")].map(
         (a) => a.getAttribute("href") ?? "",
       );
       return { links, at: links.indexOf("/privacy") };
@@ -2572,6 +2699,19 @@ try {
     const probeClient = await probe.createCDPSession();
     await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
 
+    /*
+     * A DESKTOP VIEWPORT, BECAUSE THE LINK THIS CASE CLICKS HAS A BREAKPOINT.
+     *
+     * MEASURED 2026-09-14 on the deployed site. This page took puppeteer's
+     * default 800x600, narrower than the 64rem at which `.site-header-nav` is
+     * supposed to appear. The link was still in the DOM, so the precondition
+     * below passed; its rect was all zeros, so the click landed at the document
+     * corner and the page stayed on `/`. Three assertions failed and NONE of
+     * them was about the subject: the arrival, `pagereveal`, and the
+     * view-transition assertion that is the point of the whole case.
+     */
+    await probe.setViewport({ width: 1280, height: 900 });
+
     await probe.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     ok(
       "the pagereveal probe is installed, so a later silence means something",
@@ -2591,22 +2731,84 @@ try {
      * load-bearing; it is kept because a hovered click is the more realistic
      * gesture and costs nothing. The arrival is still checked below.
      */
-    const target = await probe.evaluate(() => {
-      const link = document.querySelector('.site-header-nav a[href="/blog"]');
-      if (!link) return null;
-      const box = link.getBoundingClientRect();
-      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-    });
+    /*
+     * PRESENT IS NOT THE SAME AS CLICKABLE, and the difference cost this case
+     * three results. `getBoundingClientRect` returns a zero box for an element
+     * that exists and is hidden, and the midpoint of a zero box is the corner
+     * of the document, so the gesture silently became "click at (0,0)". The box
+     * is returned here so the assertion can refuse that, on the same rule the
+     * restored search control's width measurement follows: a control that is
+     * present and measures zero is a harness fault, not a reading.
+     *
+     * ## WHY THIS LOOKS IN TWO PLACES, WHICH IS NOT THE GATE GIVING GROUND
+     *
+     * MEASURED 2026-09-14 on the deployed site, at 375, 768, 1024 and 1280:
+     * `.site-header-nav` computes `display: none` at EVERY width. `shell.css`
+     * declares it hidden under the comment "The six destinations, at 64rem and
+     * up only" and no rule anywhere un-hides it, so build 2's desktop nav ships
+     * as six links no reader can reach. That is a site defect and it is
+     * REPORTED rather than absorbed here.
+     *
+     * The subject of this case is what a CROSS-DOCUMENT NAVIGATION does, not
+     * which control the reader started from. The overflow menu carries the same
+     * six destinations and is the only visible route to them today, so the
+     * gesture falls back to it and the strength of the assertion below is
+     * unchanged. What is NOT relaxed is the requirement itself: if neither copy
+     * of the link is laid out, this fails and the navigation cases do not run.
+     */
+    const openTarget = async () => {
+      const read = () =>
+        probe.evaluate(() => {
+          /** @param {string} sel */
+          const pick = (sel) => {
+            const link = document.querySelector(sel);
+            if (!link) return null;
+            const box = link.getBoundingClientRect();
+            if (box.width <= 0 || box.height <= 0) return null;
+            return {
+              x: box.left + box.width / 2,
+              y: box.top + box.height / 2,
+              w: box.width,
+              h: box.height,
+            };
+          };
+          const bar = pick('.site-header-nav a[href="/blog"]');
+          if (bar) return { ...bar, via: "the header nav" };
+          const menu = pick('.site-shell-menu a[href="/blog"]');
+          return menu ? { ...menu, via: "the overflow menu" } : null;
+        });
+
+      const first = await read();
+      if (first) return first;
+
+      /* Nothing laid out yet, so open the disclosure and look again. */
+      const opened = await probe.evaluate(() => {
+        const d = document.querySelector("details.site-shell-overflow");
+        if (!(d instanceof HTMLDetailsElement)) return false;
+        d.open = true;
+        return true;
+      });
+      if (!opened) return null;
+      await new Promise((r) => setTimeout(r, 250));
+      return read();
+    };
+
+    const target = await openTarget();
+    const clickable = target !== null;
     ok(
-      "the header carries the /blog link the navigation case clicks",
-      target !== null,
-      "no `.site-header-nav a[href=\"/blog\"]` on the home page, so the assertion " +
-        "below would have nothing to navigate with and would pass vacuously.",
+      "the header carries a laid-out /blog link for the navigation case to click",
+      clickable,
+      'neither `.site-header-nav a[href="/blog"]` nor `.site-shell-menu a[href="/blog"]` ' +
+        "is present with a non-zero box, even with the overflow disclosure opened. A " +
+        "hidden link puts the click at the document corner and the navigation " +
+        "assertions below then measure nothing, which is how one breakpoint read as " +
+        "three unrelated failures.",
     );
+    if (clickable) console.log(`  (the navigation case clicked via ${target.via})`);
 
     let arrived = "";
     let reveal = null;
-    if (target) {
+    if (clickable) {
       await probe.mouse.move(target.x, target.y);
       await new Promise((r) => setTimeout(r, 350));
       await probe.mouse.click(target.x, target.y);
@@ -3999,7 +4201,7 @@ try {
      * which selector was written.
      */
     const control = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll(".theme-toggle button")];
+      const buttons = [...document.querySelectorAll(".bar-theme button")];
       const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);
       const hidden = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent === null);
       return {
@@ -4062,13 +4264,31 @@ try {
      * arrives in; selecting by value would click whichever the cascade happens
      * to be hiding and puppeteer would refuse it.
      */
-    await page.click('.theme-toggle button[value="dark"]');
+    const themeClicked = await clickOrFail(
+      page,
+      '.bar-theme button[value="dark"]',
+      "the theme control is present to click",
+    );
+    /*
+     * NOT a return: this block is at top level, so an early return is illegal
+     * and, worse, would skip every case below it, which is the exact failure
+     * clickOrFail exists to stop. The click failing is already counted as a
+     * failure; the cases that depend on it are SKIPPED by name so the run says
+     * what it did not measure rather than silently measuring a page nobody
+     * clicked.
+     */
+    if (!themeClicked) {
+      skip(
+        "the theme flips in place, without a navigation, and the control turns around",
+        "the theme control could not be clicked, so nothing below it was exercised",
+      );
+    }
     await new Promise((r) => setTimeout(r, 250));
     /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number } | null} */
     let flipped = null;
     try {
       flipped = await page.evaluate(() => {
-        const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+        const shown = [...document.querySelectorAll(".bar-theme button")].filter(
           (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
         );
         return {
@@ -4081,7 +4301,7 @@ try {
     } catch {
       flipped = null;
     }
-    ok(
+    if (themeClicked) ok(
       "the theme flips in place, without a navigation, and the control turns around",
       flipped !== null &&
         flipped.attr === "dark" &&
@@ -4153,7 +4373,7 @@ try {
         await scriptless.goto(`${BASE}${postForShape}${hash}`, { waitUntil: "networkidle0" });
 
         const before = await scriptless.evaluate(() => {
-          const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+          const shown = [...document.querySelectorAll(".bar-theme button")].filter(
             (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
           );
           return {
@@ -4173,7 +4393,7 @@ try {
         /*
          * CLICKED BY THE VALUE JUST READ AS VISIBLE, never by position.
          *
-         * This was `.theme-toggle button`, the first in the DOM, and it CRASHED
+         * This was `.bar-theme button`, the first in the DOM, and it CRASHED
          * the gate with "Node is either not clickable or not an Element": the
          * scripted case above writes a theme cookie through `document.cookie`,
          * this page shares the browser's cookie jar, so the cascade had hidden
@@ -4187,7 +4407,11 @@ try {
          */
         await Promise.all([
           scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
-          scriptless.click(`.theme-toggle button[value="${before.value}"]`),
+          clickOrFail(
+            scriptless,
+            `.bar-theme button[value="${before.value}"]`,
+            "the scriptless theme control is present to click",
+          ),
         ]);
 
         const after = await scriptless.evaluate(() => ({
@@ -4224,9 +4448,11 @@ try {
     }
 
     /*
-     * THE PALETTE. "/" must open it, which also proves the hint's honesty
-     * contract: the hint is server-rendered `hidden` and unhidden only once
-     * the listener exists.
+     * THE PALETTE. Clicking the trigger must open it, which also proves the
+     * hint's honesty contract: the hint is server-rendered `hidden` and
+     * unhidden only once the listener exists. This said `"/" must open it`
+     * until 2026-09-14; the bare slash was retired in the Part A review and the
+     * gesture below is the click every reader has.
      */
     // The element must EXIST and be unhidden: a missing hint would make a
     // bare `!hidden` read true and pass on markup that lost the hint.
@@ -4244,8 +4470,24 @@ try {
       return {
         unhidden: !hint.hidden,
         associated: Boolean(described) && described === hint.id && hint.id !== "",
-        titled: (trigger.getAttribute("title") ?? "").includes("/"),
+        /*
+         * THE LIVE CHORD, NOT THE RETIRED ONE. This asked for "/" in the title
+         * until 2026-09-14, which was correct when the bare slash was the
+         * shortcut and became an assertion about a key bound to nothing the day
+         * it was retired. Re-pointed, not relaxed: the title must still NAME
+         * the key, and naming the wrong key still fails. `-K` rather than the
+         * whole chord because the modifier is spelled Command on a Mac and
+         * Control everywhere else, and the gate must not pin a platform.
+         */
+        titled: /-K\b/.test(trigger.getAttribute("title") ?? ""),
         text: (hint.textContent ?? "").trim(),
+        /*
+         * THE ANNOUNCED TEXT MUST NAME THE SAME KEY. Length alone passed on
+         * "Press slash to search" for the whole six weeks the slash was gone,
+         * which is a description that is present, associated, announced and
+         * wrong: the exact shape hard rule 10 calls an unfailable condition.
+         */
+        textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
         painted: Boolean(trigger.querySelector("kbd")),
       };
     });
@@ -4256,14 +4498,16 @@ try {
         hintShown.associated &&
         hintShown.titled &&
         hintShown.text.length > 0 &&
+        hintShown.textNamesKey &&
         !hintShown.painted,
       hintShown === null
         ? "the [data-search-hint] or [data-search-trigger] element is missing, so the " +
             "header lost the hint or the control"
         : `unhidden ${hintShown.unhidden}, aria-describedby resolves ${hintShown.associated}, ` +
-            `title names the key ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
-            `a <kbd> is painted inside the control ${hintShown.painted}. The theme bundle did ` +
-            `not run, or the badge came back.`,
+            `title names the chord ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
+            `that text names the chord ${hintShown.textNamesKey}, a <kbd> is painted inside ` +
+            `the control ${hintShown.painted}. The theme bundle did not run, the badge came ` +
+            `back, or a surface still advertises a shortcut that was retired.`,
     );
 
     /*
@@ -4297,7 +4541,17 @@ try {
         `never opens search should never download the dialog.`,
     );
 
-    await page.keyboard.press("/");
+    /*
+     * CLICKED, NOT TYPED. This pressed "/" until 2026-09-13, when the bare
+     * slash was ruled out: it collides with find-in-page and was borrowed from
+     * application UIs. Cmd/Ctrl-K survives, but the CLICK is the gesture every
+     * reader has, so it is the one the gate drives.
+     */
+    const triggerClicked = await clickOrFail(
+      page,
+      "[data-search-trigger]",
+      "the search trigger is present to click",
+    );
     /*
      * POLLED, NOT SLEPT. Opening now costs a network round trip for the
      * bundle, so a fixed wait is a race that would pass on this machine and
@@ -4305,20 +4559,29 @@ try {
      * localhost fetch and far shorter than the gate's patience.
      */
     let paletteOpen = { open: false, focused: false };
-    for (let i = 0; i < 25; i += 1) {
-      await new Promise((r) => setTimeout(r, 200));
-      paletteOpen = await page.evaluate(() => ({
-        open: Boolean(document.querySelector("dialog.palette[open]")),
-        focused: document.activeElement?.classList.contains("palette-input") ?? false,
-      }));
-      if (paletteOpen.open && paletteOpen.focused) break;
+    let navigatedToSearch = false;
+    if (triggerClicked) {
+      for (let i = 0; i < 25; i += 1) {
+        await new Promise((r) => setTimeout(r, 200));
+        paletteOpen = await page.evaluate(() => ({
+          open: Boolean(document.querySelector("dialog.palette[open]")),
+          focused: document.activeElement?.classList.contains("palette-input") ?? false,
+        }));
+        // THE OTHER LEGAL OUTCOME. With no bundle, theme.ts falls back to
+        // location.assign('/search'), and a reader who lands on the real search
+        // page has been served correctly even though no dialog opened.
+        navigatedToSearch = /\/search(\?|$)/.test(page.url());
+        if ((paletteOpen.open && paletteOpen.focused) || navigatedToSearch) break;
+      }
     }
     ok(
-      'pressing "/" opens the palette with focus in its input',
-      paletteOpen.open && paletteOpen.focused,
-      `open ${paletteOpen.open}, input focused ${paletteOpen.focused}. The gesture is ` +
-        `bound in theme.ts and the dialog is built by the bundle it appends, so this ` +
-        `fails if either half broke, including a CSP that refuses the injected script.`,
+      "clicking the search trigger opens the palette with focus in its input, or navigates to /search",
+      (paletteOpen.open && paletteOpen.focused) || navigatedToSearch,
+      `open ${paletteOpen.open}, input focused ${paletteOpen.focused}, url ${page.url()}. ` +
+        `The gesture is bound in theme.ts and the dialog is built by the bundle it appends, ` +
+        `so this fails if either half broke, including a CSP that refuses the injected ` +
+        `script. Navigating to /search is the accepted fallback; navigating anywhere ` +
+        `else, or nowhere, is not.`,
     );
 
     /*
@@ -4334,6 +4597,76 @@ try {
      * colour resolves from `--border`, so this is red if the sheet is missing
      * and red if it arrived after the dialog was already on screen.
      */
+    /*
+     * THE QUERY SURVIVES THE GESTURE, and this is the case the whole gate was
+     * missing.
+     *
+     * MEASURED 2026-09-13: build 2 put `data-search-trigger` on a FORM'S SUBMIT
+     * BUTTON. `theme.ts` calls preventDefault on that element, which cancels the
+     * submission, so with script on the typed query was discarded and the
+     * no-bundle fallback navigated to /search with no `q` at all. Every offline
+     * gate passed, because the control only worked with script OFF and nothing
+     * offline runs script.
+     *
+     * So the assertion is not 'a search UI appeared'. It is: type a real query,
+     * submit it the way a reader would, and prove the URL that results CARRIES
+     * THAT QUERY. A control that navigates to a bare /search fails here, which
+     * is exactly what shipped.
+     */
+    if (paletteOpen.open) {
+      const QUERY = "phage cocktail";
+      /*
+       * TYPED THROUGH A HANDLE, not page.type, for the reason clickOrFail
+       * exists. MEASURED 2026-09-14 on the first deployed run of this case:
+       * page.type asserts internally and THREW on a missing .palette-input,
+       * which ended the run and voided every case after it. The click path had
+       * already been made soft and this one had not, so the same defect reached
+       * the same run twice in one sitting.
+       */
+      const field = await page.$(".palette-input");
+      if (!field) {
+        ok(
+          "the typed query survives the search gesture and reaches the URL",
+          false,
+          "the palette reported itself open but carries no .palette-input to type into, " +
+            "so the query could not be entered. The dialog opened without its field.",
+        );
+      } else {
+        await field.type(QUERY);
+        await page.keyboard.press("Enter");
+
+      // Polled rather than slept: the submit is a navigation on some paths and
+      // a same-document update on others, and a fixed wait races both.
+      let landed = page.url();
+      for (let i = 0; i < 25; i += 1) {
+        await new Promise((r) => setTimeout(r, 200));
+        landed = page.url();
+        if (/[?&]q=/.test(landed)) break;
+      }
+
+      const carried = (() => {
+        try {
+          return new URL(landed).searchParams.get("q");
+        } catch {
+          return null;
+        }
+      })();
+
+      ok(
+          "the typed query survives the search gesture and reaches the URL",
+          carried === QUERY,
+          `submitted ${JSON.stringify(QUERY)} and landed on ${landed}, whose q is ` +
+            `${JSON.stringify(carried)}. A control that navigates to a bare /search ` +
+            `throws the reader's query away, which is what build 2 shipped and what ` +
+            `no offline gate could see.`,
+        );
+      }
+    } else {
+      skip(
+        "the typed query survives the search gesture and reaches the URL",
+        "the palette never opened, so there was no field to type a query into",
+      );
+    }
     const dialogStyled = await page.evaluate(() => {
       const dialog = document.querySelector("dialog.palette");
       if (!dialog) return null;
@@ -4363,7 +4696,17 @@ try {
         `more than one means the once-only guard in theme.ts stopped holding.`,
     );
     if (paletteOpen.open) {
-      await page.type(".palette-input", "cloudflare");
+      // Guarded for the same reason as the case above: a missing field here
+      // threw and voided the rest of the run.
+      const resultsField = await page.$(".palette-input");
+      if (!resultsField) {
+        ok(
+          "the palette returns live results",
+          false,
+          "the palette is open and has no .palette-input, so no query could be typed.",
+        );
+      } else {
+      await resultsField.type("cloudflare");
       // Debounce is 140ms and the first D1 query on a cold preview has been
       // measured at 360ms; poll rather than sleep, bounded at 5s.
       let paletteResult = { options: 0, status: "" };
@@ -4382,6 +4725,7 @@ try {
           `endpoint or the palette's fetch path broke.`,
       );
       await page.keyboard.press("Escape");
+      }
     }
   }
 

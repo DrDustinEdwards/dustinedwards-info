@@ -181,10 +181,24 @@ export const CI_EXCLUDED = {
    *
    * So the admin HALF of this gate is CI-capable today and only the public
    * half is not. Splitting the tiers so CI runs the admin sweep, or wiring the
-   * whole gate into ship, is Dustin's recorded open call (vol 8); this entry
-   * states the measured blocker and decides nothing.
+   * whole gate into ship, was Dustin's recorded open call (vol 8).
+   *
+   * ## THE CALL IS MADE, 2026-09-14: IT STAYS ON THE NETWORK TIER.
+   *
+   * NOT ship-capable, and the ground is the readiness wait rather than the
+   * minutes. The public cases drive a `vite preview` host: MEASURED 51s to
+   * first answer on a clear machine and past the 180s ceiling on a loaded one,
+   * so on a busy machine this gate reports a red that says nothing about the
+   * site. A ship gate that fails on the state of the laptop is worse than no
+   * ship gate, because the first thing it teaches is to re-run it.
+   *
+   * It runs on the daily schedule instead, where a slow boot costs a retry and
+   * not a deploy. The readiness probe now classifies WHY it timed out, so a
+   * scheduled red is readable without a second run; that is the half that was
+   * missing, and it is what made this gate's reputation "broken on this host"
+   * for weeks while the measured answer was a slow boot.
    */
-  "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN, pending Dustin's tiering call.",
+  "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
   /*
    * Reads build/client, which is gitignored build output; the CI job runs
    * `npm ci` and the gates with no client build in front of them. Building in

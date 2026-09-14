@@ -30,7 +30,18 @@
   grid-template-columns:
     [full-start] var(--gutter)
     [wide-start] minmax(0, 1fr)
-    [text-start] min(var(--measure), 100%) [text-end]
+    /*
+     * 100% MINUS THE GUTTERS, not 100%. check:browser found this the first time
+     * it ran, on every public page at 320: scrollWidth 340 against clientWidth
+     * 320, with no single element wider than the viewport.
+     *
+     * The text track took min(--measure, 100%), and 100% is the GRID CONTAINER,
+     * which is the full width. So at 320 the fixed tracks summed to 20 + 320 +
+     * 20 and the two 1fr tracks could not absorb it: the row was 40 wider than
+     * the box holding it. Nothing looked too wide because nothing WAS too wide;
+     * the track arithmetic was.
+     */
+    [text-start] min(var(--measure), 100% - 2 * var(--gutter)) [text-end]
     minmax(0, 1fr) [wide-end]
     var(--gutter) [full-end];
 }

@@ -189,8 +189,45 @@ function openPalette() {
  * announces after the control's name. Both are set from here, so both inherit
  * the honesty contract for free.
  */
+/**
+ * THE CHORD, SPELLED FOR THE PLATFORM, AND THE ONLY PLACE IT IS SPELLED.
+ *
+ * MEASURED 2026-09-14 on the deployed site: "/" did not open the palette and
+ * Ctrl-K did, while the hint announced "Press slash to search" and the tooltip
+ * read "Search". The slash was retired in the Part A review and the two
+ * surfaces that advertise it were never moved, so the site spent that window
+ * telling screen reader users to press a key bound to nothing. Nothing caught
+ * it because `check:browser` could not run.
+ *
+ * Both surfaces are written from this one function for the reason the id is
+ * written once: a chord spelled in two places stops agreeing the day one is
+ * edited, and the half that rots is the one nobody can see.
+ *
+ * `userAgentData.platform` first because `navigator.platform` is deprecated;
+ * the old property is the fallback rather than the primary, and the userAgent
+ * string is the last resort. Getting this wrong costs a reader the wrong
+ * modifier name, not a broken control: the listener takes meta OR ctrl either
+ * way, which is why the detection may be best-effort here and may not be in
+ * the handler.
+ */
+function shortcutChord(): string {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform ?? navigator.platform ?? navigator.userAgent;
+  return /mac/i.test(platform) ? "Command-K" : "Control-K";
+}
+
 function enhanceSearchTrigger() {
+  const chord = shortcutChord();
+
+  /*
+   * THE TEXT IS WRITTEN BEFORE THE UNHIDE, not after. The server renders a
+   * placeholder that is never announced, and the moment this element becomes
+   * visible to assistive technology it must already carry the true chord.
+   * Unhiding first would open a window, however short, in which the stale
+   * server text is the announced description.
+   */
   for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
+    hint.textContent = `Press ${chord} to search`;
     hint.hidden = false;
   }
 
@@ -200,7 +237,7 @@ function enhanceSearchTrigger() {
      * description is hidden until now: a `title` the server wrote would promise
      * a shortcut to a reader who has no script to answer it.
      */
-    trigger.title = "Search";
+    trigger.title = `Search (${chord})`;
     trigger.dataset.shortcutHint = "shown";
     trigger.addEventListener("click", (event) => {
       // Let a modified click do what the browser would do with a link.
