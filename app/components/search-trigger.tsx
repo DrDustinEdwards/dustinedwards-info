@@ -21,9 +21,12 @@ import askCss from "~/styles/ask.css?url";
  * painted at all: the header carries less chrome without it, and the control
  * is a plain icon again.
  *
- * **THE SHORTCUT IS UNCHANGED. Only the paint is gone.** `app/enhance/theme.ts`
- * still binds "/" and Cmd-K, and pressing "/" still opens the palette. What
- * changed is where a reader LEARNS that, and it is now two places that cost no
+ * **THE SHORTCUT IS Cmd/Ctrl-K, AND THE BARE SLASH IS GONE.** This paragraph
+ * said "still binds / and Cmd-K, and pressing / still opens the palette" until
+ * 2026-09-14; the slash was retired in the Part A review for colliding with
+ * find-in-page and the sentence was not moved with it. MEASURED on the wire the
+ * day it was corrected: "/" did not open the palette and Ctrl-K did. Where a
+ * reader LEARNS the chord is two places that cost no
  * pixels: the `title`, which a pointer user gets on hover, and an
  * `aria-describedby` region, which a screen reader announces after the control's
  * name. Both are discoverable and neither draws a box in the header.
@@ -113,8 +116,17 @@ export function SearchTrigger() {
         the link's own content, which is what made the old badge a second run of
         link text.
       */}
+      {/*
+        A PLACEHOLDER, NOT THE HINT. This read "Press slash to search" until
+        2026-09-14. The bare slash was retired in efc0dab the day before and
+        this string was not moved with it; because the element ships `hidden`
+        nothing painted the lie, and a reader with script got it unhidden and
+        announced verbatim. The chord is platform-dependent and
+        the server cannot know the platform, so `theme.ts` writes the real text
+        here BEFORE it unhides this, and this text is never announced.
+      */}
       <span id={HINT_ID} className="sr-only" data-search-hint="" hidden>
-        Press slash to search
+        Search
       </span>
     </>
   );
