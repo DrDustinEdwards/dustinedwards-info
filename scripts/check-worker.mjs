@@ -131,12 +131,22 @@ ok(
   "test/worker/ holds no *.test.ts. Vitest exits 0 on an empty match, so without " +
     "this the gate would report PASS while running nothing.",
 );
-ok(
-  "the worker test file set has not shrunk",
-  files.length >= MINIMUM_FILES,
-  `${files.length} file(s), expected at least ${MINIMUM_FILES}. A test file was ` +
-    `deleted or renamed out of the *.test.ts pattern.`,
+/*
+ * THROUGH assertFloor SINCE 2026-09-15. The worker test set only ever gets
+ * added to, so this is a scope floor over a GROWING set: the measured value
+ * climbs away from the floor by itself and the gap widens with no edit, which
+ * is the drift check:floors exists to notice. It printed no floor line while it
+ * was a bare ok(), so the meta-gate had nothing to read. See check-tests.mjs's
+ * note beside its file floor for which scope floors deliberately stay out.
+ */
+const filesBreach = assertFloor(
+  "check:worker",
+  "files",
+  files.length,
+  MINIMUM_FILES,
+  "A test file was deleted or renamed out of the *.test.ts pattern.",
 );
+ok("the worker test file set has not shrunk", filesBreach === null, filesBreach ?? "");
 
 /*
  * ## THE COUNTS COME FROM VITEST'S JSON REPORTER, NOT FROM ITS HUMAN OUTPUT

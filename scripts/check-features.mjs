@@ -1467,12 +1467,21 @@ const METRIC_INPUTS = {
 // Measured through this gate 2026-08-24: 6 projects. Floor one under, because
 // a roster of this size cannot absorb more slack than that.
 const MINIMUM_PROJECTS = 5;
-ok(
-  "the roster is non-empty",
-  projects.length >= MINIMUM_PROJECTS,
-  `${projects.length} project(s), expected at least ${MINIMUM_PROJECTS}; ` +
-    `a shorter list means the file was truncated, not curated.`,
+/*
+ * THROUGH assertFloor SINCE 2026-09-15. The roster only ever gets added to, so
+ * this is a scope floor over a GROWING set, which drifts the way an
+ * executed-count floor drifts and was invisible to check:floors while it was a
+ * bare ok(). See check-tests.mjs's note beside its file floor for the rule and
+ * for which scope floors deliberately stay out.
+ */
+const projectsBreach = assertFloor(
+  "check:features",
+  "projects",
+  projects.length,
+  MINIMUM_PROJECTS,
+  "A shorter list means the file was truncated, not curated.",
 );
+ok("the roster is non-empty", projectsBreach === null, projectsBreach ?? "");
 ok(
   "the stack vocabulary is non-empty",
   vocabulary.length > 0,
@@ -2034,11 +2043,20 @@ const MARK_ELEMENT = { bar: "rect", line: "path", dot: "circle", area: "path" };
 
 // FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
 const MINIMUM_DEMOS = 3;
-ok(
-  "the demo roster is non-empty",
-  demos.length >= MINIMUM_DEMOS,
-  `${demos.length} demo(s), expected at least ${MINIMUM_DEMOS}`,
+/*
+ * THROUGH assertFloor SINCE 2026-09-15, same reason as the roster floor above:
+ * the demo set only ever gets added to, so it is a scope floor over a GROWING
+ * set and drifts the way an executed-count floor drifts. See check-tests.mjs's
+ * note beside its file floor for the rule and for which scope floors stay out.
+ */
+const demosBreach = assertFloor(
+  "check:features",
+  "demos",
+  demos.length,
+  MINIMUM_DEMOS,
+  "An empty roster makes every loop below pass by iterating nothing.",
 );
+ok("the demo roster is non-empty", demosBreach === null, demosBreach ?? "");
 ok("swatch presets are declared", swatches.length > 0, "an empty list checks nothing");
 ok(
   "chart datasets are declared",
