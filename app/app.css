@@ -742,7 +742,6 @@
   --surface: #f1ebe1;
   --surface-popover: #ebe2d3;
   --surface-code: #f1ebe1;
-  --surface-hero: #ede8f5;
   --text: #241f1b;
   /* No split in light mode: halation is a light-on-dark effect, so the heading
      token exists here only so components can ask for the role unconditionally. */
@@ -751,16 +750,17 @@
   /* DELIBERATELY BELOW THE FLOOR, and that is the point rather than a defect.
      WCAG 1.4.3 and 1.4.11 both exempt an inactive component, and a disabled
      control that met 4.5:1 would read as available, which is the failure being
-     avoided. MEASURED on limestone: --text-disabled 2.46:1, --line-disabled
-     1.64:1. Identification is the disabled attribute, the recess to --paper,
-     and visible text beside the control saying why. check:contrast carries a
-     named exemption for both; cursor:not-allowed is not a cue and counts for
-     nothing, since it is pointer-only and arrives after the reader has already
-     tried. */
+     avoided. MEASURED on limestone: --text-disabled 2.46:1. Identification is
+     the disabled attribute, the recess to --paper, and visible text beside the
+     control saying why. check:contrast carries a named exemption;
+     cursor:not-allowed is not a cue and counts for nothing, since it is
+     pointer-only and arrives after the reader has already tried.
+
+     THERE WAS A --line-disabled HERE, 1.64:1 on limestone, carrying its own
+     written 1.4.11 exemption. No rule ever drew that edge. Deleted 2026-09-14:
+     MEASURING A THING IS NOT BUILDING IT. */
   --text-disabled: #a09990;
   --text-disabled: color-mix(in srgb, #5b5349 55%, #f4efe6);
-  --line-disabled: #c4bcb0;
-  --line-disabled: color-mix(in srgb, #8a7d6e 45%, #f4efe6);
   --border: #8a7d6e;
   --border-strong: #6e6459;
 
@@ -847,10 +847,10 @@
   --on-tint-info: #16385e;
   --border-info: #63819f;
 
-  /* Accent: terracotta. Decorative only. It never signals a state. */
+  /* Accent: terracotta. Decorative only. It never signals a state. ONE TOKEN
+     NOW: a lifted variant and a tint sat beside it, carried contrast pairs of
+     their own, and were never painted. Deleted 2026-09-14. */
   --text-accent: #7a3e12;
-  --text-accent-lifted: #8a4a1b;
-  --tint-accent: #f3e5dc;
 
   /* DESTRUCTIVE: a REVERSIBLE removal. Not the danger family, and the
      distinction is one the media library actually makes rather than a shade.
@@ -988,7 +988,6 @@
     --surface: #26201c;
     --surface-popover: #322a25;
     --surface-code: #26201c;
-    --surface-hero: #3d2a5c;
     /* v3 split: body steps one off maximum to reduce halation for astigmatic
        readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
     --text: #e9e1d6;
@@ -996,8 +995,6 @@
     --text-muted: #b3a99c;
     --text-disabled: #6f685e;
     --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
-    --line-disabled: #504a43;
-    --line-disabled: color-mix(in srgb, #8f857a 45%, #1c1916);
     --border: #746a5f;
     --border-strong: #8a8075;
 
@@ -1072,8 +1069,6 @@
     --border-info: #5f7c99;
 
     --text-accent: #ce7f44;
-    --text-accent-lifted: #e0996a;
-    --tint-accent: #362317;
 
     /* The rust, lifted for dark. Chosen to MIRROR the light ratios rather than
        to look similar: 7.59 / 6.80 / 5.94 against 7.62 / 6.87 / 6.34, so the
@@ -1193,14 +1188,11 @@
   --surface: #26201c;
   --surface-popover: #322a25;
   --surface-code: #26201c;
-  --surface-hero: #3d2a5c;
   --text: #e9e1d6;
   --text-heading: #ede6dc;
   --text-muted: #b3a99c;
   --text-disabled: #6f685e;
   --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
-  --line-disabled: #504a43;
-  --line-disabled: color-mix(in srgb, #8f857a 45%, #1c1916);
   --border: #746a5f;
   --border-strong: #8a8075;
 
@@ -1273,8 +1265,6 @@
   --border-info: #5f7c99;
 
   --text-accent: #ce7f44;
-  --text-accent-lifted: #e0996a;
-  --tint-accent: #362317;
 
   /* Mirrors the media-query dark block above. Both are required: one serves the
      explicit toggle, the other the OS preference, and check:contrast measures
