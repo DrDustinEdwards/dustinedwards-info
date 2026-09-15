@@ -841,12 +841,6 @@
   --fill-success: #3e5d4b;
   --on-fill-success: #ffffff;
 
-  /* Info: Space Cadet. The doc specifies no info fill, so there is none. */
-  --text-info: #16385e;
-  --tint-info: #dfe7ef;
-  --on-tint-info: #16385e;
-  --border-info: #63819f;
-
   /* Accent: terracotta. Decorative only. It never signals a state. ONE TOKEN
      NOW: a lifted variant and a tint sat beside it, carried contrast pairs of
      their own, and were never painted. Deleted 2026-09-14. */
@@ -1063,11 +1057,6 @@
     --fill-success: #8fac77;
     --on-fill-success: #1a1614;
 
-    --text-info: #85aad3;
-    --tint-info: #1e2733;
-    --on-tint-info: #85aad3;
-    --border-info: #5f7c99;
-
     --text-accent: #ce7f44;
 
     /* The rust, lifted for dark. Chosen to MIRROR the light ratios rather than
@@ -1258,11 +1247,6 @@
   --border-success: #6e8259;
   --fill-success: #8fac77;
   --on-fill-success: #1a1614;
-
-  --text-info: #85aad3;
-  --tint-info: #1e2733;
-  --on-tint-info: #85aad3;
-  --border-info: #5f7c99;
 
   --text-accent: #ce7f44;
 

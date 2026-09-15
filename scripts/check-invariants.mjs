@@ -6272,9 +6272,11 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    *               the scale, and a scale with holes cannot be that thing.
    *   component:  a named thing that will paint it, which does not exist yet.
    *   NO OWNER:   nothing would paint it and nothing is scheduled to. By
-   *               ruling 103 these are DEAD and get deleted. They are here and
-   *               not deleted because Dustin ruled the exposed set stays for
-   *               now; see the flag below. This label is not a resting place.
+   *               ruling 103 these are DEAD and get deleted. THE LABEL IS
+   *               UNUSED, and that is the state to find it in: all nine rows
+   *               that carried it were deleted rather than kept. It is a
+   *               finding, not a resting place, and a row wearing it is a row
+   *               somebody has not finished thinking about.
    *
    * ## WHY THIS MAP GREW FROM 55 ROWS TO 96, AND IT IS NOT A WIDENING
    *
@@ -6305,17 +6307,28 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    *     the only mechanism this gate has for "temporary". Moving the date is a
    *     ruling rather than a repair.
    *
-   * ## THE NINE ORPHANS: FIVE DELETED, FOUR AWAITING A RULING
+   * ## ALL NINE ORPHANS ARE DELETED. FOUR PLUS ONE PLUS FOUR.
    *
    * The fix that built this map exposed nine tokens sitting OUTSIDE the
    * "PAPER, GLASS, LIGHT" block in app.css, among siblings that ARE painted,
    * which is what marked them as orphans rather than as roles waiting for a
-   * component.
+   * component. None survived, and the groups are:
    *
-   * COUNT CORRECTION, ON THE RECORD RATHER THAN QUIETLY FIXED: this block said
-   * FIVE of the eight were owner-shipped-without and "the remaining three"
-   * were the info tokens. That is arithmetic that does not close. It was FOUR
-   * and FOUR. Both lists were right and both counts were wrong.
+   *   4  an owner that shipped and declined them
+   * + 1  --lamp-chroma-on-bar, whose owner was the deleted bar
+   * + 4  the info role, which the redesign declined
+   * = 9
+   *
+   * THE ARITHMETIC IS WRITTEN OUT BECAUSE THIS BLOCK HAS MISCOUNTED ITSELF
+   * TWICE. First it said FIVE of the eight were owner-shipped-without with
+   * "the remaining three" the info tokens, which does not close and was four
+   * and four. Then its own heading said FIVE DELETED, FOUR AWAITING, which
+   * went stale the moment the info four were deleted and read as though five
+   * tokens had an owner that shipped without them. Both times the LISTS were
+   * right and the COUNTS were wrong, which is the tell: a list can be checked
+   * against the rows below and a count cannot, so the count is the half that
+   * rots. Anyone editing this block re-derives the three numbers from the
+   * groups rather than carrying them forward.
    *
    * FOUR HAD AN OWNER THAT SHIPPED AND DECLINED THEM, AND ARE DELETED:
    * --line-disabled, --surface-hero, --text-accent-lifted and --tint-accent.
@@ -6332,25 +6345,32 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    * hole described at the top of this section: a token can accumulate
    * paperwork that looks exactly like use.
    *
-   * THE FIFTH DELETED WAS --lamp-chroma-on-bar, whose owner was the bar that
+   * THE FIFTH DELETION, AND IT IS NOT A FIFTH OWNER-SHIPPED-WITHOUT TOKEN,
+   * was --lamp-chroma-on-bar, whose owner was the bar that
    * came out of shell.css; ruling 6's missed fifth token, hidden behind the
    * contrast-mention defect while --bar-fill, --glass-fill-bar,
    * --glass-fill-bar-open and --line-on-brand were deleted. Deleting it
    * orphaned --fig-oxide-200, which took a row above in the same commit: a
    * token orphaned by a deletion is not thereby dead.
    *
-   * FOUR REMAIN AND AWAIT A RULING: --text-info, --tint-info, --border-info
-   * and --on-tint-info. They were provisionally kept as a complete definition
-   * of a component this site might grow. Then the history was read and it is
-   * weaker than that. MEASURED: all four were declared 2026-07-28 in 081ddb2,
-   * the Hill Country palette, six weeks before the redesign; no stylesheet and
-   * no component has EVER read one; the only file that ever held
-   * var(--text-info) is docs/admin-mockups/posts.html, a static mockup, which
-   * no longer references them; --on-tint-info was never read by anything
-   * anywhere, ever. And the redesign DID define a semantic set, in 7909c2c:
-   * error, warning and success, with no info among them. So they are not a
-   * finished decision waiting for a component, they are a previous palette's
-   * decision the redesign did not adopt. REPORTED, NOT ACTED ON.
+   * THE LAST FOUR WERE THE INFO ROLE, AND THEY ARE DELETED TOO: --text-info,
+   * --tint-info, --border-info and --on-tint-info. They were provisionally
+   * kept as a complete definition of a component this site might grow, which
+   * is a real argument and it did not survive the history.
+   *
+   * MEASURED, and it is the measurement rather than the impression that
+   * decided it: all four were declared 2026-07-28 in 081ddb2, the Hill Country
+   * token system, six weeks before ruling 65 began the redesign. No stylesheet
+   * and no component has EVER read one, in any commit. The only file that ever
+   * held var(--text-info) is docs/admin-mockups/posts.html, a static mockup,
+   * which no longer references them. --on-tint-info was never read by
+   * anything, anywhere, ever. And the redesign DID define its own semantic set
+   * in 7909c2c: error, warning and success, with no info among them.
+   *
+   * So the four were not a finished decision waiting for a component. They
+   * were a PREVIOUS palette's decision that the redesign looked at and did not
+   * adopt, which is Case A with a longer gap: an owner that shipped without
+   * them, where the owner is the redesign itself.
    */
   /* carried:start */
   /**
@@ -6446,10 +6466,6 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--line-strong",          "component: a control edge that identifies the control"],
   ["--brand-pressed",        "component: the primary button, pressed"],
   ["--glass-fill-paper",     "component: the /search overlay glass, ruling 71"],
-  ["--border-info",          "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
-  ["--on-tint-info",         "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
-  ["--text-info",            "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
-  ["--tint-info",            "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
   ]);
   /* carried:end */
 
@@ -6619,8 +6635,18 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * record three separate occasions when the same arithmetic was wrong.
  *
  * Floors one under tolerance again, 27 and 29: 500 and 537.
+ *
+ * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after the info role's
+ * four tokens were deleted: 518 offline and 557 remote, against 526 and 565.
+ * Floors one under tolerance, 26 and 28: 493 and 530.
+ *
+ * FOUR RE-MEASUREMENTS OF THIS FLOOR IN ONE DAY, which is worth naming rather
+ * than hiding in a list: the map was re-keyed, then five orphans went, then
+ * four more. Each was run. The alternative on offer each time was to subtract
+ * two per deleted row from the previous figure, and three entries above this
+ * one record that exact habit producing a number nobody had measured.
  */
-const MINIMUM_CHECKS = wantsRemote ? 537 : 500;
+const MINIMUM_CHECKS = wantsRemote ? 530 : 493;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
