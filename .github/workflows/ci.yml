@@ -31,12 +31,19 @@ on:
     branches: [main]
   pull_request:
 
-# A second push to main should not race the first. `cancel-in-progress` is
-# deliberately false: the runs are the review, and cancelling one loses the
-# only record that a commit was ever checked.
+# A second push to main should not race the first, and ON MAIN
+# `cancel-in-progress` stays false: the runs are the review, and cancelling one
+# loses the only record that a commit was ever checked.
+#
+# On every OTHER ref it is true. A pull request branch that is pushed again, or
+# rebased by Renovate, has its superseded run cancelled, because the run that is
+# anybody's review there is the one against the head that merges. Measured
+# 2026-09-15: Renovate branches re-ran this workflow 20 to 37 times each and
+# cost 602 Actions minutes in the September cycle, against a 2,000-minute month
+# that is a hard stop rather than a bill.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
