@@ -6057,13 +6057,28 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 
   /** @type {Set<string>} */
   const defined = new Set();
-  /** @type {Set<string>} */
+  /**
+   * NAMED ANYWHERE, including by a gate. This set answers "is this spelling
+   * known", and it is the scope of the referenced-but-undefined assertion
+   * below, which must keep seeing a gate's own token names: a gate naming a
+   * token nothing declares is a typo worth failing on.
+   * @type {Set<string>}
+   */
   const referenced = new Set();
+  /**
+   * PAINTED. A narrower set, and the one the dead-token assertion reads.
+   * See the block above the source scan for the rule and the argument.
+   * @type {Set<string>}
+   */
+  const consumed = new Set();
 
   for (const file of cssFiles) {
     const css = stripComments(readFileSync(file, "utf8"));
     for (const m of css.matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(m[1]);
-    for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) referenced.add(m[1]);
+    for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) {
+      referenced.add(m[1]);
+      consumed.add(m[1]);
+    }
   }
 
   /** Every source file that could name a token, so (b) is not wrong about chart.mjs. */
@@ -6083,8 +6098,63 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   walk(join(root, "app"));
   walk(join(root, "scripts"));
 
+  /*
+   * A GATE NAMING A TOKEN IS NOT A READER OF IT. RULED 2026-09-14.
+   *
+   * ## THE DEFECT
+   *
+   * This scan reads scripts/ as well as app/, for a good reason recorded in
+   * ruling 87b: six --chart-* tokens are consumed as `var(--chart-cadet)`
+   * STRINGS by app/lib/content/chart.mjs, and a CSS-only scan called all six
+   * dead. The scan was widened to follow them.
+   *
+   * It was widened too far. scripts/check-contrast.mjs states every colour
+   * token as a literal string, because its matrix pairs are transcribed as
+   * NAMES. So this scan saw those names and marked the whole palette read.
+   *
+   * THAT WAS NOT A NEAR MISS, IT WAS AN UNFAILABLE CONDITION. check:contrast
+   * REQUIRES every token declared in all three theme blocks to appear in its
+   * MATRIX or in NON_PARTICIPATING; a token in neither fails that gate with
+   * "declared but never measured". So a colour token cannot exist in this
+   * repository without a mention in scripts/check-contrast.mjs, and this
+   * assertion counted that mention as a read. Two gates cancelling each other:
+   * one demands the name be written down, the other accepts the writing down
+   * as evidence of use. Hard rule 10's unfailable-condition class, spanning a
+   * pair of gates rather than sitting inside one.
+   *
+   * Proven by plant before the fix: a colour token declared in all three
+   * blocks and painted by nothing FAILED check:contrast until it was given a
+   * NON_PARTICIPATING entry, and the moment it had one this section went green
+   * and stopped naming it.
+   *
+   * ## THE RULE
+   *
+   * A mention inside `scripts/check-*.mjs` does not make a token consumed. A
+   * file whose name says it checks is ASSERTING ABOUT the token, not painting
+   * with it, and a colour nothing paints is unconsumed however many pairs
+   * measure it.
+   *
+   * IT IS STRUCTURAL AND NOT A LIST, which is the point. There is no per-token
+   * exemption to widen one entry at a time; the question is what kind of file
+   * the mention is in. Measured when it landed: every scripts/ file that is
+   * not a check-*.mjs and names a token is a real renderer, build-og.mjs,
+   * build-icons.mjs, build-diagrams.mjs and lib/mark.mjs, so none of them lose
+   * a reference, and check-contrast.mjs was the only gate hiding anything.
+   *
+   * ## TWO SETS, DELIBERATELY
+   *
+   * `referenced` still takes the gate mentions, because the
+   * referenced-but-undefined assertion below must keep seeing them: a gate
+   * naming a token nothing declares is a typo and should fail. `consumed` is
+   * the narrower set and is what the dead-token assertion and the carried map
+   * read. Narrowing one set would have quietly weakened the other.
+   */
   let sourceMentions = 0;
+  let renderMentions = 0;
+  let gateMentions = 0;
   for (const file of sourceFiles) {
+    const rel = relative(root, file).split(sep).join("/");
+    const isGate = /^scripts\/check-[a-z0-9-]+\.mjs$/.test(rel);
     // THE CARRIED MAP BELOW NAMES EVERY TOKEN IT CARRIES, and this scan reads
     // scripts/ too, so without this the map would mark its own entries as
     // referenced and then fail every one of them for being referenced. The
@@ -6097,11 +6167,17 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
       if (!defined.has(m[1])) continue;
       referenced.add(m[1]);
       sourceMentions += 1;
+      if (isGate) {
+        gateMentions += 1;
+      } else {
+        consumed.add(m[1]);
+        renderMentions += 1;
+      }
     }
   }
 
   const undefinedRefs = [...referenced].filter((t) => !defined.has(t) && !RUNTIME_INJECTED.has(t)).sort();
-  const unusedDefs = [...defined].filter((t) => !referenced.has(t)).sort();
+  const unusedDefs = [...defined].filter((t) => !consumed.has(t)).sort();
 
   /** @type {string[]} */
   const rawHex = [];
@@ -6123,9 +6199,20 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    */
   ok(
     "[scope] the token scan read stylesheets and source",
-    cssFiles.length >= 25 && sourceFiles.length >= 200 && defined.size >= 80 && sourceMentions >= 100,
+    cssFiles.length >= 25 &&
+      sourceFiles.length >= 200 &&
+      defined.size >= 80 &&
+      sourceMentions >= 100 &&
+      renderMentions >= 60 &&
+      gateMentions >= 200,
     `read ${cssFiles.length} stylesheet(s) and ${sourceFiles.length} source file(s), found ${defined.size} ` +
-      `definition(s) and ${sourceMentions} token mention(s) in source. Below these floors the scan has stopped reading.`,
+      `definition(s) and ${sourceMentions} token mention(s) in source, ${renderMentions} of them in a renderer ` +
+      `and ${gateMentions} in a gate. MEASURED BY RUNNING 2026-09-14: 111 renderer and 407 gate mentions, ` +
+      `floored at 60 and 200 in the same spirit as the floors beside them, which guard against the scan ` +
+      `stopping rather than against drift. Below these floors the scan has stopped reading. THE TWO HALVES ARE ` +
+      `FLOORED SEPARATELY on purpose: the renderer half alone going to zero is the failure that would make ` +
+      `every token look dead, and the gate half alone going to zero would make the split look effective ` +
+      `while it had stopped classifying anything.`,
   );
   ok(
     "every referenced token is defined",
@@ -6160,154 +6247,196 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    *     the date is a ruling rather than a repair.
    */
   const CARRIED_EXPIRES = "2026-11-30";
+  /*
+   * RULING 103, 2026-09-14. THE CONTRACT IS AN OWNER AND A DATE. IT WAS A
+   * BUILD NUMBER AND A BUILD NUMBER IS THE WRONG CONTRACT.
+   *
+   * Ruling 91 said build 4 must leave this map empty or fail. Build 2 was
+   * reverted on 2026-09-14 when Dustin ruled the old header back, Part B is
+   * suspended, and four rows went on naming a build whose consumer no longer
+   * existed. A deadline that assumes a schedule which is not running is not a
+   * deadline. Ruling 92's check:page-payload ceiling raise moves to the same
+   * date and the same terms.
+   *
+   * ## WHAT A ROW SAYS NOW
+   *
+   * The OWNER: the thing that would paint the token. A component, a page or a
+   * scale. Not a build, because a build can be reverted and an owner cannot be
+   * reverted into something else; it either exists, is scheduled, or is not
+   * there at all.
+   *
+   *   scale:      a member of a declared scale whose other members are read.
+   *               The scale is the unit, not the token. A space scale running
+   *               2, 3, 5, 6, 7, 8, 9 is worse than one with unreached steps,
+   *               because the design's rule is that nothing uses a value off
+   *               the scale, and a scale with holes cannot be that thing.
+   *   component:  a named thing that will paint it, which does not exist yet.
+   *   NO OWNER:   nothing would paint it and nothing is scheduled to. By
+   *               ruling 103 these are DEAD and get deleted. They are here and
+   *               not deleted because Dustin ruled the exposed set stays for
+   *               now; see the flag below. This label is not a resting place.
+   *
+   * ## WHY THIS MAP GREW FROM 55 ROWS TO 96, AND IT IS NOT A WIDENING
+   *
+   * Rulings 103 and 104, same day. Section 31 used to count a token's name
+   * appearing anywhere under scripts/ as a read. scripts/check-contrast.mjs
+   * names every colour token, because its matrix pairs are transcribed as
+   * names, and check:contrast REQUIRES every token declared in all three theme
+   * blocks to be named there or in NON_PARTICIPATING. So the palette could not
+   * exist without a mention that made it look consumed. Forty-one tokens were
+   * unpainted and invisible. They are now rows. Nothing was exempted; the
+   * measurement got honest and the map got longer.
+   *
+   * RULING 104, the same defect at its purest: eleven of those forty-one exist
+   * nowhere in this repository except an entry in NON_PARTICIPATING saying no
+   * contrast pair can be required of them. An exemption from being measured
+   * was serving as proof of being used. Covered by the same structural rule,
+   * because NON_PARTICIPATING lives in a check-*.mjs.
+   *
+   * ## SELF-POLICING, BOTH DIRECTIONS, UNCHANGED
+   *
+   *   - a row naming a token no stylesheet declares FAILS. A dead row is a
+   *     hole that outlived its reason.
+   *   - a row naming a token something now PAINTS fails. The moment an owner
+   *     lands, the row must go, so the map shrinks as the redesign lands
+   *     rather than being tidied up afterwards by somebody who remembers.
+   *   - after CARRIED_EXPIRES it must be EMPTY, whatever is in it. The
+   *     per-row rules cannot see a token no owner ever painted, and a date is
+   *     the only mechanism this gate has for "temporary". Moving the date is a
+   *     ruling rather than a repair.
+   *
+   * ## NINE ROWS SAY NO OWNER, AND THEY ARE FLAGGED FOR DUSTIN
+   *
+   * Eight are older-palette tokens, NOT redesign roles: the four info tokens,
+   * --line-disabled, --surface-hero, --text-accent-lifted and --tint-accent.
+   * Each sits OUTSIDE the "PAPER, GLASS, LIGHT" block in app.css, which is
+   * what marks them as orphans rather than as roles waiting for a component.
+   *
+   * FIVE OF THE EIGHT ARE WORSE THAN UNOWNED: THE OWNER EXISTS AND SHIPPED
+   * WITHOUT THEM. --text-disabled is painted by admin-editor.css and
+   * admin-posts.css, so the disabled control is not pending, it is BUILT, and
+   * it paints its text and never --line-disabled's edge. --text-accent is
+   * painted by admin-media-later.css while --text-accent-lifted and
+   * --tint-accent never were. --surface-popover and --surface-code are painted
+   * by admin-editor.css while --surface-hero never was.
+   *
+   * A component that shipped and declined to use a token is a STRONGER case
+   * for dead than a component that does not exist yet, and ruling 103 has no
+   * name for that state. FLAGGED. The remaining three of the eight are the
+   * four info tokens, which no alert component has ever painted.
+   *
+   * Ruling 103's own test deletes all eight. They are kept only because ruling
+   * 103 also said the exposed set stays for now, and that sentence described
+   * them as redesign roles, which these eight are not.
+   *
+   * The ninth is --lamp-chroma-on-bar. Its owner is the bar, which came out of
+   * shell.css on 2026-09-14. It is ruling 6's missed fifth token: --bar-fill,
+   * --glass-fill-bar, --glass-fill-bar-open and --line-on-brand were deleted
+   * that day for exactly this reason, and this one was hidden behind the
+   * contrast-mention defect while they were not.
+   */
   /* carried:start */
   /**
-   * @type {Map<string, string>} token -> WHY IT IS CARRIED, in one of two
-   * forms: "build N: ..." names the build that will consume it, and
-   * "scale: ..." names a declared scale it is a member of. The second column
-   * is ruled and bounded; read the block above its first row before using it.
+   * @type {Map<string, string>} token -> the OWNER that would paint it.
+   * Read the block above before adding a row.
    */
   const CARRIED = new Map([
-  ["--control-min-dense",  "build 2: skeleton, header, overflow, footer"],
-  ["--ease-exit",          "build 2: view transitions and the overlay menu"],
-  ["--lamp-origin",        "build 3: the /playground/ui inventory page"],
-  ["--lamp-reach",         "build 3: the /playground/ui inventory page"],
-  ["--surface-catch",      "build 3: the /playground/ui inventory page"],
-  ["--motion-page",        "build 2: view transitions and the overlay menu"],
-  ["--s-4",                "build 2: skeleton, header, overflow, footer"],
-  ["--t-body-family",     "build 3: the /playground/ui inventory page"],
-  ["--t-body-leading",     "build 3: the /playground/ui inventory page"],
-  ["--t-body-size",        "build 3: the /playground/ui inventory page"],
-  ["--t-body-vars",        "build 3: the /playground/ui inventory page"],
-  ["--t-body-weight",      "build 3: the /playground/ui inventory page"],
-  ["--t-caption-family",   "build 3: the /playground/ui inventory page"],
-  ["--t-caption-leading",  "build 3: the /playground/ui inventory page"],
-  ["--t-caption-size",     "build 3: the /playground/ui inventory page"],
-  ["--t-caption-strong",   "build 3: the /playground/ui inventory page"],
-  ["--t-caption-vars",     "build 3: the /playground/ui inventory page"],
-  ["--t-caption-weight",   "build 3: the /playground/ui inventory page"],
-  ["--t-display-family",   "build 3: the /playground/ui inventory page"],
-  ["--t-display-leading",  "build 3: the /playground/ui inventory page"],
-  ["--t-display-size",     "build 3: the /playground/ui inventory page"],
-  ["--t-display-tracking", "build 3: the /playground/ui inventory page"],
-  ["--t-display-vars",     "build 3: the /playground/ui inventory page"],
-  ["--t-display-weight",   "build 3: the /playground/ui inventory page"],
-  ["--t-h1-family",        "build 3: the /playground/ui inventory page"],
-  ["--t-h1-leading",       "build 3: the /playground/ui inventory page"],
-  ["--t-h1-size",          "build 3: the /playground/ui inventory page"],
-  ["--t-h1-tracking",      "build 3: the /playground/ui inventory page"],
-  ["--t-h1-vars",          "build 3: the /playground/ui inventory page"],
-  ["--t-h1-weight",        "build 3: the /playground/ui inventory page"],
-  ["--t-h2-family",        "build 3: the /playground/ui inventory page"],
-  ["--t-h2-leading",       "build 3: the /playground/ui inventory page"],
-  ["--t-h2-size",          "build 3: the /playground/ui inventory page"],
-  ["--t-h2-vars",          "build 3: the /playground/ui inventory page"],
-  ["--t-h2-weight",        "build 3: the /playground/ui inventory page"],
-  ["--t-h3-family",        "build 3: the /playground/ui inventory page"],
-  ["--t-h3-leading",       "build 3: the /playground/ui inventory page"],
-  ["--t-h3-size",          "build 3: the /playground/ui inventory page"],
-  ["--t-h3-tracking",      "build 3: the /playground/ui inventory page"],
-  ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
-  ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
-  /*
-   * THE SECOND COLUMN. IT NAMES A SCALE INSTEAD OF A BUILD, AND IT IS THE
-   * NARROWEST CLAIM THAT IS ACTUALLY TRUE. RULED 2026-09-14.
-   *
-   * ## WHY THESE ROWS EXIST
-   *
-   * Build 2's bar was the ONLY consumer of these. Dustin ruled the old header
-   * back on 2026-09-14, the bar came out of shell.css, and nineteen tokens
-   * lost their only reader in one commit. Nothing about them changed; what
-   * changed is that the thing reading them is gone.
-   *
-   * Every row above names a build, and that label is what keeps this map from
-   * being an allowlist: when the build lands the token is read, the entry
-   * fails for being referenced, and it comes out. These rows cannot name a
-   * build honestly. Writing "build 3" to make the column uniform would have
-   * been the exact move this map exists to prevent: the inventory page renders
-   * EVERY token as a swatch, so "build 3" is a claim true of anything and
-   * therefore discriminates nothing. Rule 10's unfailable-condition class,
-   * applied to an exemption ledger rather than to an assertion. The label they
-   * carried instead, "Part B, suspended", named a SCHEDULE rather than a
-   * reason, and a schedule is exactly the kind of thing anything can be filed
-   * under.
-   *
-   * ## WHAT "scale:" CLAIMS
-   *
-   * That the token is a MEMBER OF A DECLARED SCALE WHOSE OTHER MEMBERS ARE
-   * READ. The scale is the unit here, not the token. A space scale running 2,
-   * 3, 5, 6, 7, 8, 9 is worse than one with two steps nothing has reached yet,
-   * because the rule the design states is that nothing uses a value off the
-   * scale, and a scale with holes in it cannot be the thing nothing goes off.
-   * Deleting a motion duration or an easing ramp is deleting part of a scale,
-   * not deleting a leftover, and that is not what a cleanup pass is for.
-   *
-   * ## WHAT IT DOES NOT CLAIM, WHICH IS THE HALF THAT KEEPS IT HONEST
-   *
-   *   - NOT "keep it, it might be useful". A token whose siblings are also
-   *     unread is not a scale member, it is a leftover with company. Name the
-   *     sibling that IS read before writing this label on anything.
-   *   - NOT a whole family claimed for convenience. --t-nav-leading was a
-   *     member of the nav type LEVEL and was deleted on this same ruling,
-   *     because a level is a set of properties for one consumer rather than a
-   *     run of steps something has to land on. The five label rows below are
-   *     here as ONE unit, the label level, and they leave together or not at
-   *     all.
-   *   - NOT softer than a build label. CARRIED_EXPIRES applies to every row in
-   *     this map without distinction. A scale still unread on that date is a
-   *     scale the design never used, and the answer then is to delete the
-   *     scale, not to move the date.
-   *   - NOT an exemption from the two per-entry assertions below. A scale row
-   *     whose token stops being declared fails, and a scale row whose token
-   *     gets read fails, exactly as a build row does.
-   *
-   * ## THE ROW THAT IS WEAKEST, SAYING SO
-   *
-   * --radius-control is the system's only radius, so "scale" names a set with
-   * one member and the test above, name the sibling that is read, has no
-   * answer for it. It is kept under the same ruling as the rest and it is the
-   * first row to look at if this column ever needs trimming. FLAGGED FOR
-   * DUSTIN rather than settled.
-   *
-   * ## FOUR SCALE MEMBERS ARE STILL IN THE BUILD COLUMN
-   *
-   * --s-4 sits in the space scale with --s-1, --ease-exit with --ease-enter
-   * and --ease-state, --motion-page with the other durations, and
-   * --control-min-dense beside --control-min. Each also has a build that named
-   * it, so its build label is true; it is just not the whole reason the token
-   * is kept. If that build lands and consumes them the question disappears; if
-   * it does not, they belong in this column. FLAGGED FOR DUSTIN and NOT moved,
-   * because relabelling a row no ruling named would be this session deciding
-   * what the map means.
-   *
-   * ## WHY --s-2 IS HERE AND --bar-h IS NOT
-   *
-   * --bar-h was derived, --control-min plus two of --s-2, and it was the last
-   * reader of --s-2. Deleting it is what put --s-2 on this map, and the two
-   * had to move in ONE commit: this map's per-entry assertion fails a row
-   * whose token is still referenced, so --s-2 could not take a row while
-   * --bar-h was reading it, and --s-2 could not be left without one once
-   * --bar-h was gone.
-   *
-   * A TOKEN ORPHANED BY A DELETION IS NOT THEREBY DEAD. --s-2 is a step of the
-   * space scale and was a step of it before --bar-h ever read it; what the
-   * deletion changed is which step happens to be reached, not whether the
-   * scale has to be whole.
-   */
-  ["--ease-enter",         "scale: the easing ramps"],
-  ["--ease-state",         "scale: the easing ramps"],
-  ["--line-w-thick",       "scale: the line widths"],
-  ["--motion-instant",     "scale: the motion durations"],
-  ["--motion-panel",       "scale: the motion durations"],
-  ["--motion-state",       "scale: the motion durations"],
-  ["--radius-control",     "scale: the corner radius, the system's only one"],
-  ["--s-1",                "scale: the space scale"],
-  ["--s-2",                "scale: the space scale"],
-  ["--t-label-family",     "scale: the label type level"],
-  ["--t-label-leading",    "scale: the label type level"],
-  ["--t-label-size",       "scale: the label type level"],
-  ["--t-label-vars",       "scale: the label type level"],
-  ["--t-label-weight",     "scale: the label type level"],
+  ["--control-min-dense",    "scale: the control dimensions, beside --control-min"],
+  ["--ease-enter",           "scale: the easing ramps"],
+  ["--ease-exit",            "scale: the easing ramps"],
+  ["--ease-state",           "scale: the easing ramps"],
+  ["--line-w-thick",         "scale: the line widths"],
+  ["--motion-instant",       "scale: the motion durations"],
+  ["--motion-page",          "scale: the motion durations"],
+  ["--motion-panel",         "scale: the motion durations"],
+  ["--motion-state",         "scale: the motion durations"],
+  ["--radius-control",       "scale: the corner radius, the system's only one"],
+  ["--s-1",                  "scale: the space scale"],
+  ["--s-2",                  "scale: the space scale"],
+  ["--s-4",                  "scale: the space scale"],
+  ["--t-body-family",        "scale: the body type level"],
+  ["--t-body-leading",       "scale: the body type level"],
+  ["--t-body-size",          "scale: the body type level"],
+  ["--t-body-vars",          "scale: the body type level"],
+  ["--t-body-weight",        "scale: the body type level"],
+  ["--t-caption-family",     "scale: the caption type level"],
+  ["--t-caption-leading",    "scale: the caption type level"],
+  ["--t-caption-size",       "scale: the caption type level"],
+  ["--t-caption-strong",     "scale: the caption type level"],
+  ["--t-caption-vars",       "scale: the caption type level"],
+  ["--t-caption-weight",     "scale: the caption type level"],
+  ["--t-display-family",     "scale: the display type level"],
+  ["--t-display-leading",    "scale: the display type level"],
+  ["--t-display-size",       "scale: the display type level"],
+  ["--t-display-tracking",   "scale: the display type level"],
+  ["--t-display-vars",       "scale: the display type level"],
+  ["--t-display-weight",     "scale: the display type level"],
+  ["--t-h1-family",          "scale: the h1 type level"],
+  ["--t-h1-leading",         "scale: the h1 type level"],
+  ["--t-h1-size",            "scale: the h1 type level"],
+  ["--t-h1-tracking",        "scale: the h1 type level"],
+  ["--t-h1-vars",            "scale: the h1 type level"],
+  ["--t-h1-weight",          "scale: the h1 type level"],
+  ["--t-h2-family",          "scale: the h2 type level"],
+  ["--t-h2-leading",         "scale: the h2 type level"],
+  ["--t-h2-size",            "scale: the h2 type level"],
+  ["--t-h2-vars",            "scale: the h2 type level"],
+  ["--t-h2-weight",          "scale: the h2 type level"],
+  ["--t-h3-family",          "scale: the h3 type level"],
+  ["--t-h3-leading",         "scale: the h3 type level"],
+  ["--t-h3-size",            "scale: the h3 type level"],
+  ["--t-h3-tracking",        "scale: the h3 type level"],
+  ["--t-h3-vars",            "scale: the h3 type level"],
+  ["--t-h3-weight",          "scale: the h3 type level"],
+  ["--t-label-family",       "scale: the label type level"],
+  ["--t-label-leading",      "scale: the label type level"],
+  ["--t-label-size",         "scale: the label type level"],
+  ["--t-label-vars",         "scale: the label type level"],
+  ["--t-label-weight",       "scale: the label type level"],
+  ["--lamp-origin",          "component: the lamp on the glass controls, ruling 74"],
+  ["--lamp-reach",           "component: the lamp on the glass controls, ruling 74"],
+  ["--surface-catch",        "component: the lamp on the glass controls, ruling 74"],
+  ["--lamp-chroma-on-paper", "component: the lamp on the paper glass surface, ruling 74"],
+  ["--error",                "component: the error alert, and a form field in its error state"],
+  ["--error-fill",           "component: the error alert, and a form field in its error state"],
+  ["--error-tint",           "component: the error alert, and a form field in its error state"],
+  ["--on-error-fill",        "component: the error alert, and a form field in its error state"],
+  ["--warning",              "component: the warning alert"],
+  ["--warning-fill",         "component: the warning alert"],
+  ["--warning-tint",         "component: the warning alert"],
+  ["--on-warning-fill",      "component: the warning alert"],
+  ["--success",              "component: the success alert"],
+  ["--success-fill",         "component: the success alert"],
+  ["--success-tint",         "component: the success alert"],
+  ["--on-success-fill",      "component: the success alert"],
+  ["--fig-ground",           "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-dust-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-dust-200",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-dust-300",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-leaf-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-leaf-400",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-leaf-500",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-oxide-100",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-oxide-500",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-s1",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-s2",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-s3",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-s4",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-s5",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--raised",               "component: the card and tile surface, one step off paper"],
+  ["--placeholder",          "component: a form field's placeholder"],
+  ["--line-strong",          "component: a control edge that identifies the control"],
+  ["--brand-pressed",        "component: the primary button, pressed"],
+  ["--glass-fill-paper",     "component: the /search overlay glass, ruling 71"],
+  ["--lamp-chroma-on-bar",   "NO OWNER: the bar it names was deleted 2026-09-14. Ruling 6's missed fifth token"],
+  ["--border-info",          "NO OWNER: the info role, older palette, nothing has ever painted it"],
+  ["--on-tint-info",         "NO OWNER: the info role, older palette, nothing has ever painted it"],
+  ["--text-info",            "NO OWNER: the info role, older palette, nothing has ever painted it"],
+  ["--tint-info",            "NO OWNER: the info role, older palette, nothing has ever painted it"],
+  ["--line-disabled",        "NO OWNER, OWNER SHIPPED WITHOUT IT: the disabled control paints --text-disabled in admin and never this edge"],
+  ["--surface-hero",         "NO OWNER, OWNER SHIPPED WITHOUT IT: --surface-popover and --surface-code are painted in admin, this never was"],
+  ["--text-accent-lifted",   "NO OWNER, OWNER SHIPPED WITHOUT IT: --text-accent is painted in admin, this variant never was"],
+  ["--tint-accent",          "NO OWNER, OWNER SHIPPED WITHOUT IT: --text-accent is painted in admin, this variant never was"],
   ]);
   /* carried:end */
 
@@ -6329,7 +6458,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
     );
     ok(
       `carried token ${token} is still unconsumed`,
-      !referenced.has(token),
+      !consumed.has(token),
       `something now reads it, so "${consumer}" has landed. Remove the entry: the map shrinks as the ` +
         `redesign lands, and an entry kept past its consumer is an allowlist.`,
     );
@@ -6345,8 +6474,11 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ok(
     "every defined token is referenced",
     unusedNotCarried.length === 0,
-    `${unusedDefs.length} token(s) are declared and never used, in CSS or in source. Either something stopped ` +
-      `reading them or they are dead:\n      ${unusedDefs.join("\n      ")}`,
+    `${unusedDefs.length} token(s) are declared and PAINTED BY NOTHING, ${unusedNotCarried.length} of them ` +
+      `with no row on the carried map, which is what this assertion fails on. A mention in a check-*.mjs is ` +
+      `not a read, so a colour with contrast pairs and no painter counts here. The full unpainted set, ` +
+      `carried rows included, because the carried ones are the deadline and not the exemption:\n      ` +
+      `${unusedDefs.join("\n      ")}`,
   );
   ok(
     "no component sheet states a raw hex",
@@ -6355,7 +6487,9 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
       `second owner of a palette decision and cannot be retuned with the theme:\n      ${rawHex.join("\n      ")}`,
   );
   console.log(
-    `     ${defined.size} defined, ${referenced.size} referenced, ${sourceFiles.length} source file(s) read, ` +
+    `     ${defined.size} defined, ${referenced.size} named, ${consumed.size} painted, ` +
+      `${sourceFiles.length} source file(s) read (${renderMentions} renderer mention(s), ` +
+      `${gateMentions} gate mention(s) not counted as reads), ` +
       `${RUNTIME_INJECTED.size} runtime-injected allowed, ${rawHex.length} raw hex`,
   );
 }
@@ -6443,8 +6577,26 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * would sit ABOVE what the gate can now execute and the tier would refuse. Run
  * the gate in both branches and read the printed counts; that is the only
  * method that works here, and the map is designed to empty.
+ *
+ * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after rulings 103 and
+ * 104 re-keyed the carried map to owners and section 31 stopped counting a
+ * check-*.mjs mention as a read: 534 offline and 573 remote, against 462 and
+ * 501 before.
+ *
+ * THE MOVE IS UP, WHICH THIS COMMENT HAS NOT SEEN BEFORE. Every earlier entry
+ * describes the floor falling as the map empties. Forty-one tokens that were
+ * unpainted and invisible became rows, and each row is two assertions, so the
+ * map went 55 to 96 and the count went up by 82 in both branches. The
+ * paragraph above still holds for the direction of travel; it just did not
+ * anticipate a measurement correction adding rows rather than a build removing
+ * them.
+ *
+ * Floors are those counts minus ONE UNDER check:floors' own tolerance,
+ * max(3, ceil(n * 0.05)) being 27 and 29: 508 and 545. The remote branch was
+ * RUN this time rather than left owed, which the entries above record going
+ * wrong twice.
  */
-const MINIMUM_CHECKS = wantsRemote ? 475 : 438;
+const MINIMUM_CHECKS = wantsRemote ? 545 : 508;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
