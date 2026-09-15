@@ -6280,16 +6280,20 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    * because relabelling a row no ruling named would be this session deciding
    * what the map means.
    *
-   * ## ONE ROW BELOW NAMES NEITHER, FOR ONE COMMIT
+   * ## WHY --s-2 IS HERE AND --bar-h IS NOT
    *
-   * --bar-h is derived, --control-min plus two of --s-2, and it is not a scale
-   * member. It is ruled for deletion and cannot go in the same commit as this
-   * column: deleting it orphans --s-2, and --s-2 cannot join the column above
-   * while --bar-h is still reading it, because the per-entry assertion below
-   * would fail the new row for being referenced. It goes next, with --s-2
-   * taking its place here, and this heading goes with it.
+   * --bar-h was derived, --control-min plus two of --s-2, and it was the last
+   * reader of --s-2. Deleting it is what put --s-2 on this map, and the two
+   * had to move in ONE commit: this map's per-entry assertion fails a row
+   * whose token is still referenced, so --s-2 could not take a row while
+   * --bar-h was reading it, and --s-2 could not be left without one once
+   * --bar-h was gone.
+   *
+   * A TOKEN ORPHANED BY A DELETION IS NOT THEREBY DEAD. --s-2 is a step of the
+   * space scale and was a step of it before --bar-h ever read it; what the
+   * deletion changed is which step happens to be reached, not whether the
+   * scale has to be whole.
    */
-  ["--bar-h",              "ruled for deletion: derived from --control-min and --s-2, build 2's bar was the only consumer"],
   ["--ease-enter",         "scale: the easing ramps"],
   ["--ease-state",         "scale: the easing ramps"],
   ["--line-w-thick",       "scale: the line widths"],
@@ -6298,6 +6302,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--motion-state",       "scale: the motion durations"],
   ["--radius-control",     "scale: the corner radius, the system's only one"],
   ["--s-1",                "scale: the space scale"],
+  ["--s-2",                "scale: the space scale"],
   ["--t-label-family",     "scale: the label type level"],
   ["--t-label-leading",    "scale: the label type level"],
   ["--t-label-size",       "scale: the label type level"],

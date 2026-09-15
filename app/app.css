@@ -647,11 +647,6 @@
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
 
-  /* The bar height is DERIVED, not invented: --control-min + 2 x --s-2. It is
-     the CLOSED bar height and the only bar figure any other rule may cite. An
-     open overflow panel is a transient state and does not resize it. */
-  --bar-h: calc(var(--control-min) + 2 * var(--s-2));
-
   --line-w: 0.0625rem;
   --line-w-thick: 0.125rem;
   --radius-control: 0.125rem;
