@@ -464,11 +464,9 @@ const MATRIX = [
   // lands inside the drawer it needs a token that survives the elevation, and
   // this comment is the reason why rather than a puzzle to re-derive.
   ["--text", "--surface-code", TEXT, "body on code surface"],
-  ["--text", "--surface-hero", TEXT, "body on hero surface"],
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
   ["--text", "--selection-bg", TEXT, "body on selection"],
   ["--text", "--tint-brand", TEXT, "body on brand tint"],
-  ["--text", "--tint-accent", TEXT, "body on accent tint"],
   ["--text-muted", "--bg", TEXT, "muted text"],
   ["--text-muted", "--surface", TEXT, "muted on surface"],
   ["--text-muted", "--surface-popover", TEXT, "muted on popover"],
@@ -614,7 +612,6 @@ const MATRIX = [
 
   // Accent, decorative but still read as text
   ["--text-accent", "--bg", TEXT, "accent text"],
-  ["--text-accent-lifted", "--bg", TEXT, "accent lifted text"],
 
   // Charts are graphical objects
   ["--chart-cadet", "--bg", UI, "chart cadet"],
@@ -920,11 +917,6 @@ const NON_PARTICIPATING = new Map([
     "an INACTIVE component, which WCAG 1.4.3 exempts outright. MEASURED 2.46:1 on limestone and " +
       "recorded as failing rather than quietly unmeasured: a disabled control that met 4.5:1 would " +
       "read as available. It is identified by the disabled attribute, the recess, and text beside it",
-  ],
-  [
-    "--line-disabled",
-    "the same, for the edge: 1.64:1 on limestone. WCAG 1.4.11 exempts an inactive component's " +
-      "boundary for the same reason 1.4.3 exempts its text",
   ],
   [
     "--lamp-chroma-on-paper",
@@ -1655,8 +1647,17 @@ const buildPresent = existsSync(assetDir);
  * next honest change and reports it as "a block was SKIPPED", which is the
  * misleading failure this instrument exists to avoid producing. Reset to the
  * same rule as the line above: tolerance 49 and 38, so 928 and 717.
+ *
+ * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after the bar's lamp
+ * chroma and four orphaned tokens were deleted with their matrix rows and
+ * their NON_PARTICIPATING entries: 940 present and 728 absent, against 976 and
+ * 754. Three matrix rows and two exemption entries left, and the move is 36
+ * and 26, which is again not what five entries look like from the outside and
+ * is again why it was RUN.
+ *
+ * Floors one under tolerance, 47 and 37: 894 and 692.
  */
-const MINIMUM_CHECKS = buildPresent ? 928 : 717;
+const MINIMUM_CHECKS = buildPresent ? 894 : 692;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

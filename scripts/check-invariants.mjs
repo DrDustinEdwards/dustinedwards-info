@@ -6305,39 +6305,52 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    *     the only mechanism this gate has for "temporary". Moving the date is a
    *     ruling rather than a repair.
    *
-   * ## EIGHT ROWS SAY NO OWNER, AND THEY ARE FLAGGED FOR DUSTIN
+   * ## THE NINE ORPHANS: FIVE DELETED, FOUR AWAITING A RULING
    *
-   * Eight are older-palette tokens, NOT redesign roles: the four info tokens,
+   * The fix that built this map exposed nine tokens sitting OUTSIDE the
+   * "PAPER, GLASS, LIGHT" block in app.css, among siblings that ARE painted,
+   * which is what marked them as orphans rather than as roles waiting for a
+   * component.
+   *
+   * COUNT CORRECTION, ON THE RECORD RATHER THAN QUIETLY FIXED: this block said
+   * FIVE of the eight were owner-shipped-without and "the remaining three"
+   * were the info tokens. That is arithmetic that does not close. It was FOUR
+   * and FOUR. Both lists were right and both counts were wrong.
+   *
+   * FOUR HAD AN OWNER THAT SHIPPED AND DECLINED THEM, AND ARE DELETED:
    * --line-disabled, --surface-hero, --text-accent-lifted and --tint-accent.
-   * Each sits OUTSIDE the "PAPER, GLASS, LIGHT" block in app.css, which is
-   * what marks them as orphans rather than as roles waiting for a component.
+   * The disabled control is not pending, it is BUILT and paints --text-disabled
+   * in admin-editor.css and admin-posts.css; --text-accent is painted in
+   * admin-media-later.css; --surface-popover and --surface-code are painted in
+   * admin-editor.css. A component that shipped and declined a token is CLOSED
+   * EVIDENCE, not a pending state, which is the distinction ruling 103 did not
+   * have a name for.
    *
-   * FIVE OF THE EIGHT ARE WORSE THAN UNOWNED: THE OWNER EXISTS AND SHIPPED
-   * WITHOUT THEM. --text-disabled is painted by admin-editor.css and
-   * admin-posts.css, so the disabled control is not pending, it is BUILT, and
-   * it paints its text and never --line-disabled's edge. --text-accent is
-   * painted by admin-media-later.css while --text-accent-lifted and
-   * --tint-accent never were. --surface-popover and --surface-code are painted
-   * by admin-editor.css while --surface-hero never was.
+   * --line-disabled is the sharpest of the four: it carried a MEASURED 1.64:1
+   * and a written WCAG 1.4.11 justification for an edge no rule ever drew.
+   * MEASURING A THING IS NOT BUILDING IT, which is the same shape as the gate
+   * hole described at the top of this section: a token can accumulate
+   * paperwork that looks exactly like use.
    *
-   * A component that shipped and declined to use a token is a STRONGER case
-   * for dead than a component that does not exist yet, and ruling 103 has no
-   * name for that state. FLAGGED. The remaining three of the eight are the
-   * four info tokens, which no alert component has ever painted.
+   * THE FIFTH DELETED WAS --lamp-chroma-on-bar, whose owner was the bar that
+   * came out of shell.css; ruling 6's missed fifth token, hidden behind the
+   * contrast-mention defect while --bar-fill, --glass-fill-bar,
+   * --glass-fill-bar-open and --line-on-brand were deleted. Deleting it
+   * orphaned --fig-oxide-200, which took a row above in the same commit: a
+   * token orphaned by a deletion is not thereby dead.
    *
-   * Ruling 103's own test deletes all eight. They are kept only because ruling
-   * 103 also said the exposed set stays for now, and that sentence described
-   * them as redesign roles, which these eight are not.
-   *
-   * A NINTH WAS HERE AND IS GONE. --lamp-chroma-on-bar's owner was the bar,
-   * which came out of shell.css on 2026-09-14; it was ruling 6's missed fifth
-   * token, hidden behind the contrast-mention defect while --bar-fill,
-   * --glass-fill-bar, --glass-fill-bar-open and --line-on-brand were deleted
-   * the same day. Dustin ruled it deleted on 2026-09-14 once the fix made it
-   * visible. Deleting it orphaned --fig-oxide-200, which was its light-theme
-   * value and had no other reader, so that token takes a row above in the same
-   * commit: a token orphaned by a deletion is not thereby dead, and the ramp
-   * step it belongs to is the figure system's.
+   * FOUR REMAIN AND AWAIT A RULING: --text-info, --tint-info, --border-info
+   * and --on-tint-info. They were provisionally kept as a complete definition
+   * of a component this site might grow. Then the history was read and it is
+   * weaker than that. MEASURED: all four were declared 2026-07-28 in 081ddb2,
+   * the Hill Country palette, six weeks before the redesign; no stylesheet and
+   * no component has EVER read one; the only file that ever held
+   * var(--text-info) is docs/admin-mockups/posts.html, a static mockup, which
+   * no longer references them; --on-tint-info was never read by anything
+   * anywhere, ever. And the redesign DID define a semantic set, in 7909c2c:
+   * error, warning and success, with no info among them. So they are not a
+   * finished decision waiting for a component, they are a previous palette's
+   * decision the redesign did not adopt. REPORTED, NOT ACTED ON.
    */
   /* carried:start */
   /**
@@ -6433,14 +6446,10 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--line-strong",          "component: a control edge that identifies the control"],
   ["--brand-pressed",        "component: the primary button, pressed"],
   ["--glass-fill-paper",     "component: the /search overlay glass, ruling 71"],
-  ["--border-info",          "NO OWNER: the info role, older palette, nothing has ever painted it"],
-  ["--on-tint-info",         "NO OWNER: the info role, older palette, nothing has ever painted it"],
-  ["--text-info",            "NO OWNER: the info role, older palette, nothing has ever painted it"],
-  ["--tint-info",            "NO OWNER: the info role, older palette, nothing has ever painted it"],
-  ["--line-disabled",        "NO OWNER, OWNER SHIPPED WITHOUT IT: the disabled control paints --text-disabled in admin and never this edge"],
-  ["--surface-hero",         "NO OWNER, OWNER SHIPPED WITHOUT IT: --surface-popover and --surface-code are painted in admin, this never was"],
-  ["--text-accent-lifted",   "NO OWNER, OWNER SHIPPED WITHOUT IT: --text-accent is painted in admin, this variant never was"],
-  ["--tint-accent",          "NO OWNER, OWNER SHIPPED WITHOUT IT: --text-accent is painted in admin, this variant never was"],
+  ["--border-info",          "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
+  ["--on-tint-info",         "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
+  ["--text-info",            "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
+  ["--tint-info",            "NO OWNER, AWAITING A RULING: Hill Country palette 2026-07-28, no stylesheet or component ever read it"],
   ]);
   /* carried:end */
 
@@ -6599,8 +6608,19 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
  * max(3, ceil(n * 0.05)) being 27 and 29: 508 and 545. The remote branch was
  * RUN this time rather than left owed, which the entries above record going
  * wrong twice.
+ *
+ * RE-MEASURED AGAIN 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after five
+ * orphaned tokens were deleted (--line-disabled, --surface-hero,
+ * --text-accent-lifted, --tint-accent and --lamp-chroma-on-bar) and
+ * --fig-oxide-200 took a row: 526 offline and 565 remote, against 534 and 573.
+ * Five rows out and one in is four rows net, which is eight assertions, and
+ * the measured move is eight in both branches. THE ARITHMETIC AGREEING IS NOT
+ * WHY THESE ARE THE NUMBERS; both branches were run, and the entries above
+ * record three separate occasions when the same arithmetic was wrong.
+ *
+ * Floors one under tolerance again, 27 and 29: 500 and 537.
  */
-const MINIMUM_CHECKS = wantsRemote ? 545 : 508;
+const MINIMUM_CHECKS = wantsRemote ? 537 : 500;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
