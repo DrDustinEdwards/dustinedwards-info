@@ -121,13 +121,28 @@ const files = readdirSync(MIGRATIONS)
   .filter((f) => f.endsWith(".sql"))
   .sort();
 
-if (files.length < MINIMUM_MIGRATIONS) {
-  console.log(
-    `  FAIL  found ${files.length} migration(s), expected at least ${MINIMUM_MIGRATIONS}.\n` +
-      `        Either the directory is wrong or migrations have been deleted. 0001_init.sql\n` +
-      `        is the ONLY copy of the CREATE TABLE statements that exists anywhere, because\n` +
-      `        wrangler d1 export is broken on this database.\n`,
-  );
+/*
+ * THROUGH assertFloor SINCE 2026-09-15. Migrations are APPEND-ONLY by hard rule
+ * 14, so this is the purest growing set in the repo: the count can only climb,
+ * and a floor left alone goes slack on its own. It was a bare early exit, so it
+ * printed no floor line and check:floors could not see the gap. See
+ * check-tests.mjs's note beside its file floor for which scope floors stay out.
+ *
+ * STILL A HARD EXIT rather than a counted assertion. Everything below reads
+ * these files; continuing past a truncated directory would measure a corpus
+ * that is not there.
+ */
+const migrationsBreach = assertFloor(
+  "check:migrations",
+  "migrations",
+  files.length,
+  MINIMUM_MIGRATIONS,
+  "Either the directory is wrong or migrations have been deleted. 0001_init.sql is the " +
+    "ONLY copy of the CREATE TABLE statements that exists anywhere, because " +
+    "wrangler d1 export is broken on this database.",
+);
+if (migrationsBreach) {
+  console.log(`  FAIL  ${migrationsBreach}\n`);
   process.exit(1);
 }
 

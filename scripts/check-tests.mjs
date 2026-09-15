@@ -293,12 +293,35 @@ ok(
   "test/ holds no *.test.mjs. node --test exits 0 on an empty match, so without " +
     "this the gate would report PASS while running nothing.",
 );
-ok(
-  "the test file set has not shrunk",
-  files.length >= MINIMUM_FILES,
-  `${files.length} file(s), expected at least ${MINIMUM_FILES}. A test file was ` +
-    `deleted or renamed out of the *.test.mjs pattern.`,
+/*
+ * THROUGH assertFloor SINCE 2026-09-15, and the reason is what this floor
+ * counts rather than tidiness.
+ *
+ * A SCOPE FLOOR OVER A GROWING SET IS AN EXECUTED-COUNT FLOOR WEARING
+ * DIFFERENT CLOTHES. The test file set only ever gets added to, so the measured
+ * value climbs away from the floor by itself and the gap widens with no edit,
+ * which is exactly the drift ruling 23 built check:floors to notice. It drifted
+ * eleven files, 67 measured to 78 actual against a floor of 63, and nothing
+ * saw it: this was a bare ok(), so it printed no floor line and check:floors
+ * had nothing to read.
+ *
+ * NOT EVERY SCOPE FLOOR BELONGS HERE, and widening the instrument to cover
+ * them all would make it agree with everything. A scope floor over a VOLATILE
+ * set must stay out: check:page-payload's built-chunk floor stands at 78
+ * against 15 and says so in its own comment, because the chunk count is a
+ * property of the bundler's splitting on the day and pinning it near 78 would
+ * fail any build that splits differently. One over a set fixed by an external
+ * version, like that gate's katex face count, has nothing to drift toward.
+ * GROWING is the property that matters, not SCOPE.
+ */
+const filesBreach = assertFloor(
+  "check:tests",
+  "files",
+  files.length,
+  MINIMUM_FILES,
+  "A test file was deleted or renamed out of the *.test.mjs pattern.",
 );
+ok("the test file set has not shrunk", filesBreach === null, filesBreach ?? "");
 
 /**
  * THE RUN IS BOUNDED, TWICE, AND IT REAPS WHAT IT STARTED.
