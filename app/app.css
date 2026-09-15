@@ -512,10 +512,14 @@
   --t-label-weight: 600;
   --t-label-vars: "opsz" 14, "wght" 600;
 
-  /* Bar destinations and footer links. */
+  /* Bar destinations and footer links.
+
+     NO LEADING TOKEN. The level was declared with one and nothing ever set a
+     line-height from it. A level member with no reader is not a scale hole the
+     way a missing spacing step is: a reader that needs nav leading adds the
+     token back in the commit that reads it. */
   --t-nav-family: var(--font-sans);
   --t-nav-size: 0.9375rem;
-  --t-nav-leading: 1.2;
   --t-nav-weight: 520;
   --t-nav-vars: "opsz" 16, "wght" 520;
 
@@ -559,20 +563,22 @@
   --t-h1-tracking: -0.012em;
   --t-display-tracking: -0.012em;
 
-  /* THE STRONG NAV WEIGHT, in both forms, because the two properties that
-     carry it take different types: `font-weight` takes the number and
-     `font-variation-settings` takes the string. The active bar destination,
-     the current filter chip and a figure caption's lead-in all read it.
+  /* THE STRONG NAV WEIGHT, a number for `font-weight`. Step 2 had no strong
+     level at all; step 6b added it. The active bar destination, the current
+     filter chip and a figure caption's lead-in all read it.
 
-     Step 2 had no strong level at all and step 6b added it at `opsz` 15 while
-     `--t-nav` sits at 16. That is the later step and it stands as written; the
-     one-step difference is 6b's, not a transcription slip.
+     ONE FORM NOW, AND IT WAS TWO. The companion `font-variation-settings`
+     string carried step 6b's `opsz` 15 against `--t-nav`'s 16, and nothing
+     ever read it. It went onto the carried token map when the bar came out of
+     shell.css, which is the only reason a token nothing reads survived at all;
+     it is deleted here rather than carried for a build that would have to
+     invent a use for it. The one-step difference it recorded is in the commit
+     that removed it and nowhere else.
 
      Step 2's "selected chip 640" has NO token here. Step 6b draws the selected
      filter with the nav strong weight instead, so a 640 would be a level
      nothing reads, which is what section 31 refuses. */
   --t-nav-strong: 620;
-  --t-nav-strong-vars: "opsz" 15, "wght" 620;
 
   /* ALIASES, NOT LEVELS. A caption needed a name so a component is not reading
      `--t-small` and hoping; it did not need a size of its own. */
@@ -649,10 +655,6 @@
   --line-w: 0.0625rem;
   --line-w-thick: 0.125rem;
   --radius-control: 0.125rem;
-
-  /* The full track: the widest the shell ever gets. */
-  --col-full: 70rem;
-
 
   /* THE THREE GUTTERS. 64rem is also the header's one breakpoint, so the
      header introduces no number of its own. */
