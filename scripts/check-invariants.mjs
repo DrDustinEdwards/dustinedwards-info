@@ -6205,7 +6205,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
   ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
   /*
-   * NINETEEN THAT CAME BACK ON 2026-09-14, AND THE LABEL IS DELIBERATELY NOT A
+   * SEVENTEEN THAT CAME BACK ON 2026-09-14, AND THE LABEL IS DELIBERATELY NOT A
    * BUILD NUMBER. READ THIS BEFORE ADDING TO THEM.
    *
    * Build 2's bar was the ONLY consumer of these. Dustin ruled the old header
@@ -6224,7 +6224,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    * design-sync wiring, and when it resumes the build that consumes each of
    * these is the one that rebuilds the bar. THIS IS FLAGGED FOR DUSTIN rather
    * than settled: the map's stated shape is "every entry names the build that
-   * consumes it", and nineteen entries that name a suspension instead is a
+   * consumes it", and seventeen entries that name a suspension instead is a
    * strain on that rule, not a satisfaction of it. CARRIED_EXPIRES is what
    * stops it being permanent in the meantime.
    */
@@ -6232,8 +6232,6 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--col-full",           "Part B, suspended: build 2's bar was the only consumer"],
   ["--ease-enter",         "Part B, suspended: build 2's bar was the only consumer"],
   ["--ease-state",         "Part B, suspended: build 2's bar was the only consumer"],
-  ["--icon-size",          "Part B, suspended: build 2's bar was the only consumer"],
-  ["--icon-stroke",        "Part B, suspended: build 2's bar was the only consumer"],
   ["--line-w-thick",       "Part B, suspended: build 2's bar was the only consumer"],
   ["--motion-instant",     "Part B, suspended: build 2's bar was the only consumer"],
   ["--motion-panel",       "Part B, suspended: build 2's bar was the only consumer"],
