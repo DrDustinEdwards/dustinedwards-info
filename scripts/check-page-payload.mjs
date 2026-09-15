@@ -826,14 +826,25 @@ function gradeBuildOnlyDependencies() {
  *   - an entry naming a route this file no longer ceilings FAILS.
  *   - an entry whose current ceiling is no longer above its pre-redesign one
  *     FAILS: the uplift is spent, so the entry is dead and must be removed.
- *   - after UPLIFT_EXPIRES the map must be EMPTY. Build 4 is the point the old
- *     palette is gone and these come back down to the real post-redesign
- *     numbers. If that has not happened by then, the redesign has quietly cost
- *     every reader 1.2 KB a page and this is what says so. Moving the date is a
- *     ruling, not a repair.
+ *   - after UPLIFT_EXPIRES the map must be EMPTY, and THE DATE IS THE WHOLE
+ *     CONTRACT. RULING 103, 2026-09-14: this used to read "build 4 is the
+ *     point the old palette is gone", and a build number is the wrong
+ *     contract. Build 2 was reverted the day Dustin ruled the old header back,
+ *     Part B is suspended, and section 31's carried map was left with rows
+ *     naming a build whose consumer no longer existed. A deadline that assumes
+ *     a schedule which is not running is not a deadline.
+ *
+ *     So: whatever the header becomes and whichever builds land or do not,
+ *     these ceilings come down by UPLIFT_EXPIRES or this gate fails. If that
+ *     has not happened by then, the redesign has quietly cost every reader
+ *     1.2 KB a page and this is what says so. Moving the date is a ruling, not
+ *     a repair.
  *
  * headCss and headTotal are the PRE-REDESIGN measurements, recorded per route
- * so build 4 has something to come back to rather than a number to re-derive.
+ * so there is something to come back to rather than a number to re-derive. The
+ * same date governs section 31's carried-token map, deliberately: the two maps
+ * are the same debt seen from two sides, one counting bytes on the wire and
+ * one counting tokens nothing paints.
  */
 const UPLIFT_EXPIRES = "2026-11-30";
 /**
@@ -1109,9 +1120,10 @@ function gradeEveryPage() {
     `the redesign uplift map is empty by ${UPLIFT_EXPIRES}`,
     REDESIGN_UPLIFT.size === 0 || new Date().toISOString().slice(0, 10) <= UPLIFT_EXPIRES,
     `${REDESIGN_UPLIFT.size} route(s) are still carrying the redesign uplift past ${UPLIFT_EXPIRES}. ` +
-      `The old palette should be gone by build 4 and these ceilings should have come back down to ` +
-      `the real post-redesign numbers. If they have not, the redesign has cost every reader about ` +
-      `1.2 KB a page and nothing else was going to say so. Moving the date is a ruling.`,
+      `The old palette should be gone and these ceilings should have come back down to the real ` +
+      `post-redesign numbers. THE DATE IS THE CONTRACT, not a build number, ruling 103: a build can ` +
+      `be reverted and this deadline cannot. If they have not come down, the redesign has cost every ` +
+      `reader about 1.2 KB a page and nothing else was going to say so. Moving the date is a ruling.`,
   );
 
   /* Root's own reachable assets ride on every route, so they are found once. */
