@@ -604,12 +604,6 @@ const MATRIX = [
   ["--border-success", "--surface", UI, "success border on surface"],
   ["--on-fill-success", "--fill-success", TEXT, "text on success fill"],
 
-  // Info
-  ["--text-info", "--bg", TEXT, "info text"],
-  ["--text-info", "--surface", TEXT, "info text on surface"],
-  ["--on-tint-info", "--tint-info", TEXT, "text on info tint"],
-  ["--border-info", "--bg", UI, "info border"],
-
   // Accent, decorative but still read as text
   ["--text-accent", "--bg", TEXT, "accent text"],
 
@@ -1656,8 +1650,13 @@ const buildPresent = existsSync(assetDir);
  * is again why it was RUN.
  *
  * Floors one under tolerance, 47 and 37: 894 and 692.
+ *
+ * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after the info role's
+ * four tokens and their four matrix rows were deleted: 916 present and 712
+ * absent, against 940 and 728. Floors one under tolerance, 46 and 36: 871 and
+ * 677.
  */
-const MINIMUM_CHECKS = buildPresent ? 894 : 692;
+const MINIMUM_CHECKS = buildPresent ? 871 : 677;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
