@@ -6161,7 +6161,12 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    */
   const CARRIED_EXPIRES = "2026-11-30";
   /* carried:start */
-  /** @type {Map<string, string>} token -> the build that consumes it */
+  /**
+   * @type {Map<string, string>} token -> WHY IT IS CARRIED, in one of two
+   * forms: "build N: ..." names the build that will consume it, and
+   * "scale: ..." names a declared scale it is a member of. The second column
+   * is ruled and bounded; read the block above its first row before using it.
+   */
   const CARRIED = new Map([
   ["--control-min-dense",  "build 2: skeleton, header, overflow, footer"],
   ["--ease-exit",          "build 2: view transitions and the overlay menu"],
@@ -6205,43 +6210,99 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-h3-vars",          "build 3: the /playground/ui inventory page"],
   ["--t-h3-weight",        "build 3: the /playground/ui inventory page"],
   /*
-   * FOURTEEN THAT CAME BACK ON 2026-09-14, AND THE LABEL IS DELIBERATELY NOT A
-   * BUILD NUMBER. READ THIS BEFORE ADDING TO THEM.
+   * THE SECOND COLUMN. IT NAMES A SCALE INSTEAD OF A BUILD, AND IT IS THE
+   * NARROWEST CLAIM THAT IS ACTUALLY TRUE. RULED 2026-09-14.
+   *
+   * ## WHY THESE ROWS EXIST
    *
    * Build 2's bar was the ONLY consumer of these. Dustin ruled the old header
-   * back that day, the bar came out of shell.css, and nineteen tokens lost
-   * their only reader in one commit. Nothing about them changed; what changed
-   * is that the thing reading them is gone.
+   * back on 2026-09-14, the bar came out of shell.css, and nineteen tokens
+   * lost their only reader in one commit. Nothing about them changed; what
+   * changed is that the thing reading them is gone.
    *
-   * Every other row here names a build. These cannot honestly, and writing
-   * "build 3" to make the column uniform would be the exact move this map
-   * exists to prevent: the inventory page renders EVERY token as a swatch, so
-   * "build 3" is a claim that is true of anything and therefore discriminates
-   * nothing. Rule 10's unfailable-condition class, applied to an exemption
-   * ledger rather than to an assertion.
+   * Every row above names a build, and that label is what keeps this map from
+   * being an allowlist: when the build lands the token is read, the entry
+   * fails for being referenced, and it comes out. These rows cannot name a
+   * build honestly. Writing "build 3" to make the column uniform would have
+   * been the exact move this map exists to prevent: the inventory page renders
+   * EVERY token as a swatch, so "build 3" is a claim true of anything and
+   * therefore discriminates nothing. Rule 10's unfailable-condition class,
+   * applied to an exemption ledger rather than to an assertion. The label they
+   * carried instead, "Part B, suspended", named a SCHEDULE rather than a
+   * reason, and a schedule is exactly the kind of thing anything can be filed
+   * under.
    *
-   * So the label says what is actually known. Part B is suspended pending the
-   * design-sync wiring, and when it resumes the build that consumes each of
-   * these is the one that rebuilds the bar. THIS IS FLAGGED FOR DUSTIN rather
-   * than settled: the map's stated shape is "every entry names the build that
-   * consumes it", and fourteen entries that name a suspension instead is a
-   * strain on that rule, not a satisfaction of it. CARRIED_EXPIRES is what
-   * stops it being permanent in the meantime.
+   * ## WHAT "scale:" CLAIMS
+   *
+   * That the token is a MEMBER OF A DECLARED SCALE WHOSE OTHER MEMBERS ARE
+   * READ. The scale is the unit here, not the token. A space scale running 2,
+   * 3, 5, 6, 7, 8, 9 is worse than one with two steps nothing has reached yet,
+   * because the rule the design states is that nothing uses a value off the
+   * scale, and a scale with holes in it cannot be the thing nothing goes off.
+   * Deleting a motion duration or an easing ramp is deleting part of a scale,
+   * not deleting a leftover, and that is not what a cleanup pass is for.
+   *
+   * ## WHAT IT DOES NOT CLAIM, WHICH IS THE HALF THAT KEEPS IT HONEST
+   *
+   *   - NOT "keep it, it might be useful". A token whose siblings are also
+   *     unread is not a scale member, it is a leftover with company. Name the
+   *     sibling that IS read before writing this label on anything.
+   *   - NOT a whole family claimed for convenience. --t-nav-leading was a
+   *     member of the nav type LEVEL and was deleted on this same ruling,
+   *     because a level is a set of properties for one consumer rather than a
+   *     run of steps something has to land on. The five label rows below are
+   *     here as ONE unit, the label level, and they leave together or not at
+   *     all.
+   *   - NOT softer than a build label. CARRIED_EXPIRES applies to every row in
+   *     this map without distinction. A scale still unread on that date is a
+   *     scale the design never used, and the answer then is to delete the
+   *     scale, not to move the date.
+   *   - NOT an exemption from the two per-entry assertions below. A scale row
+   *     whose token stops being declared fails, and a scale row whose token
+   *     gets read fails, exactly as a build row does.
+   *
+   * ## THE ROW THAT IS WEAKEST, SAYING SO
+   *
+   * --radius-control is the system's only radius, so "scale" names a set with
+   * one member and the test above, name the sibling that is read, has no
+   * answer for it. It is kept under the same ruling as the rest and it is the
+   * first row to look at if this column ever needs trimming. FLAGGED FOR
+   * DUSTIN rather than settled.
+   *
+   * ## FOUR SCALE MEMBERS ARE STILL IN THE BUILD COLUMN
+   *
+   * --s-4 sits in the space scale with --s-1, --ease-exit with --ease-enter
+   * and --ease-state, --motion-page with the other durations, and
+   * --control-min-dense beside --control-min. Each also has a build that named
+   * it, so its build label is true; it is just not the whole reason the token
+   * is kept. If that build lands and consumes them the question disappears; if
+   * it does not, they belong in this column. FLAGGED FOR DUSTIN and NOT moved,
+   * because relabelling a row no ruling named would be this session deciding
+   * what the map means.
+   *
+   * ## ONE ROW BELOW NAMES NEITHER, FOR ONE COMMIT
+   *
+   * --bar-h is derived, --control-min plus two of --s-2, and it is not a scale
+   * member. It is ruled for deletion and cannot go in the same commit as this
+   * column: deleting it orphans --s-2, and --s-2 cannot join the column above
+   * while --bar-h is still reading it, because the per-entry assertion below
+   * would fail the new row for being referenced. It goes next, with --s-2
+   * taking its place here, and this heading goes with it.
    */
-  ["--bar-h",              "Part B, suspended: build 2's bar was the only consumer"],
-  ["--ease-enter",         "Part B, suspended: build 2's bar was the only consumer"],
-  ["--ease-state",         "Part B, suspended: build 2's bar was the only consumer"],
-  ["--line-w-thick",       "Part B, suspended: build 2's bar was the only consumer"],
-  ["--motion-instant",     "Part B, suspended: build 2's bar was the only consumer"],
-  ["--motion-panel",       "Part B, suspended: build 2's bar was the only consumer"],
-  ["--motion-state",       "Part B, suspended: build 2's bar was the only consumer"],
-  ["--radius-control",     "Part B, suspended: build 2's bar was the only consumer"],
-  ["--s-1",                "Part B, suspended: build 2's bar was the only consumer"],
-  ["--t-label-family",     "Part B, suspended: build 2's bar was the only consumer"],
-  ["--t-label-leading",    "Part B, suspended: build 2's bar was the only consumer"],
-  ["--t-label-size",       "Part B, suspended: build 2's bar was the only consumer"],
-  ["--t-label-vars",       "Part B, suspended: build 2's bar was the only consumer"],
-  ["--t-label-weight",     "Part B, suspended: build 2's bar was the only consumer"],
+  ["--bar-h",              "ruled for deletion: derived from --control-min and --s-2, build 2's bar was the only consumer"],
+  ["--ease-enter",         "scale: the easing ramps"],
+  ["--ease-state",         "scale: the easing ramps"],
+  ["--line-w-thick",       "scale: the line widths"],
+  ["--motion-instant",     "scale: the motion durations"],
+  ["--motion-panel",       "scale: the motion durations"],
+  ["--motion-state",       "scale: the motion durations"],
+  ["--radius-control",     "scale: the corner radius, the system's only one"],
+  ["--s-1",                "scale: the space scale"],
+  ["--t-label-family",     "scale: the label type level"],
+  ["--t-label-leading",    "scale: the label type level"],
+  ["--t-label-size",       "scale: the label type level"],
+  ["--t-label-vars",       "scale: the label type level"],
+  ["--t-label-weight",     "scale: the label type level"],
   ]);
   /* carried:end */
 
