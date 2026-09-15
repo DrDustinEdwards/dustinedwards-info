@@ -22,15 +22,10 @@ which is what repeats across people and sessions.
 
 ## Believing a claim
 
-- **A claim inherited from a document gets the same treatment as one from
-  memory.** A clause recovered from version history put a stale fact back into
-  the file every session reads first. `CLAUDE.md` rule 15
-- **Prose about a gate ages. A boundary note is a claim, not a property.** Two
-  have gone false since being written, one in the commit that wrote it.
-  `CLAUDE.md` rule 7
-- **A duration compared against a recorded norm is compared against a dated
-  observation.** A "32x regression" was leftover processes measured against a
-  stale baseline. `3fb98fb`
+- **A written record is a dated claim, not a current property.** A clause from
+  history put a stale fact back into the file sessions read first; two gate
+  notes went false after being written, one in the commit that wrote it; a
+  "32x regression" ran against a stale baseline. `CLAUDE.md` rule 15 `3fb98fb`
 - **A stop is a claim until an independent check confirms it.** The Stop hook
   reported a clean stop for days while `tsc -b` was red, because it read the
   wrong stream. `4fe03d7`
@@ -52,6 +47,10 @@ which is what repeats across people and sessions.
   still pass; and a breach that set `process.exitCode = 1` one line above an
   unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
   old number. `VERIFICATION.md` `scripts/check-floors.mjs`
+- **A rule whose instrument the instrument-checker cannot reach is not gated.**
+  A scope floor over a GROWING set is an executed-count floor in disguise:
+  `MINIMUM_FILES` drifted eleven files unseen, printing no floor line for
+  `check:floors` to read. `34e62f1`
 - **A replay aimed at wall-clock time measures the instrument's own latency
   first.** A loop aimed 300 ms before a minute boundary started 39 s later, at
   a random phase; 0 of 3 reproduced a failure that was real. `1748513`
