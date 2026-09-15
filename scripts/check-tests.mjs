@@ -106,8 +106,16 @@ const TEST_DIR = join(root, "test");
    minus check:floors' tolerance, max(3, ceil(count * 0.05)), which is 4 here.
    RE-MEASURED 2026-09-07 by RUNNING the gate, after error-rate.test.mjs landed
    with the watchdog's error-rate check: 67 files. Tolerance is 4 at this
-   count, so 63. */
-const MINIMUM_FILES = 63;
+   count, so 63.
+   RE-MEASURED 2026-09-15 by RUNNING this gate, after check-all-environment
+   .test.mjs landed with the environment classifier: 78 files. THIS FLOOR HAD
+   DRIFTED ELEVEN FILES WITHOUT ANYONE MOVING IT, from 67 measured to 78, which
+   is exactly what the paragraph above says happens when a file lands and the
+   constant does not. It never failed, because it is asserted directly rather
+   than through assertFloor, so check:floors never saw the gap: the one floor
+   in this file that the meta-gate cannot police is the one that drifted.
+   Tolerance is 4 at this count, so 74. */
+const MINIMUM_FILES = 74;
 /* 638 against 672, RE-MEASURED 2026-09-07 by running this gate, after the six
    cases the shared upload refusal landed with. It read 632 against 666 the day
    before, which check:floors then failed at a gap of 40 against a tolerance of
@@ -145,8 +153,17 @@ const MINIMUM_FILES = 63;
    a gap of 46 against a tolerance of 39, the same mechanism a SIXTH time, and
    this time locally rather than in CI, because the run was the tier rather than
    a set of targeted gates. Tolerance is 39 at this count, so anything from 727
-   up is legal; 745 leaves the usual slack. */
-const MINIMUM_TESTS = 745;
+   up is legal; 745 leaves the usual slack.
+   RE-MEASURED 2026-09-15 by RUNNING this gate, after check-all-environment
+   .test.mjs landed with nine cases for the environment classifier: 775 tests.
+   The old 745 did NOT fail this time, at a gap of 30 against a tolerance of
+   39, so this is the first entry in this list written without the mechanism
+   catching it first. It is moved anyway, on the argument the paragraph above
+   makes: a floor left alone while the set grows gets slacker on its own, and
+   waiting for it to breach is waiting for the margin to be gone. Tolerance is
+   39 at this count, so anything from 736 up is legal; 754 leaves the usual
+   slack. */
+const MINIMUM_TESTS = 754;
 
 let checks = 0;
 let failures = 0;
