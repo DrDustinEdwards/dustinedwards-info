@@ -599,6 +599,13 @@ function runGate(name, args) {
     name,
     ok: !errored && result.status === 0,
     errored,
+    /*
+     * THE STATUS AS A NUMBER, not only inside the reason sentence below.
+     * The environment classifier correlates it across gates, and parsing it
+     * back out of human prose would make that sentence's wording
+     * load-bearing.
+     */
+    status: typeof result.status === "number" ? result.status : null,
     reason: errored ? `wrote nothing to either stream (${seen})` : "",
     ms: Date.now() - started,
     output: `${stdout}${stderr}`,
@@ -612,6 +619,117 @@ function runGate(name, args) {
      */
     peakRss: /** @type {number | null} */ (null),
   };
+}
+
+/*
+ * ENVIRONMENT FAILURE: ONE FACT ABOUT THE MACHINE, NOT N FACTS ABOUT THE REPO.
+ *
+ * MEASURED 2026-09-15, twice on this host. First `check:floors` alone, under a
+ * low-memory kill. Then all 32 offline gates at once, immediately after an
+ * `npm ci` pushed 760 packages through the filesystem cache and a full build
+ * ran. Every one of the 32 ended in 0.0s, wrote nothing to either stream, and
+ * carried status 3221225794, which is 0xC0000142 STATUS_DLL_INIT_FAILED: a
+ * process that never reached main. The four SEQUENTIAL build steps in the same
+ * run spawned fine and a single gate run by hand a minute later passed, so the
+ * discriminator was concurrency, not the repo.
+ *
+ * The tier reported "0 passed, 0 failed, 32 errored" above thirty-two separate
+ * no-verdict banners. Every word of that is true and it reads like the repo
+ * broke. The paragraph under the summary already said the usual cause is a
+ * saturated machine; nobody reaches it after thirty-two banners.
+ *
+ * ## FOUR CONDITIONS IN CONJUNCTION, AND ONE OF THEM DOES THE SAFETY WORK
+ *
+ *   1. BOTH STREAMS EMPTY. The existing `errored` test, and the ONLY one that
+ *      can keep a real failure out of this branch. Licensed by the measurement
+ *      recorded in runGate above: 25 of 25 offline gates wrote to stdout on a
+ *      clean pass and the quietest wrote 81 bytes, so no gate here is capable
+ *      of running silently. A gate that RAN has something to say.
+ *   2. A STATUS AT OR ABOVE 0xC0000000, the NTSTATUS failure range. This is
+ *      NOT load-bearing on its own and this comment will not pretend it is: on
+ *      Windows a process CAN exit with such a value deliberately, because the
+ *      exit code is a full DWORD rather than a byte. What it adds is the
+ *      distinction between the OS ending a process at init and an ordinary
+ *      nonzero exit. Condition 1 is what makes the pair safe.
+ *   3. FASTER THAN ONE SECOND. A process that never reached main cannot have
+ *      taken longer. Measured at 0.0s for all 32; the threshold is loose on
+ *      purpose, because tightening it toward the measurement would make a
+ *      slower host silently stop matching.
+ *   4. MORE THAN ONE GATE, SAME STATUS, SAME RUN. This is the condition that
+ *      earns the word "environment". One gate erroring is ambiguous and stays
+ *      ambiguous. Thirty-two erroring identically at the same instant cannot
+ *      be thirty-two independent facts about thirty-two different subjects.
+ *
+ * ## WHAT IT DELIBERATELY DOES NOT CLAIM
+ *
+ * It does NOT cover the POSIX shape of the same event, where a process killed
+ * before exec arrives with `signal` set or a spawn error rather than an
+ * NTSTATUS. That variant has not been measured here, and a branch written for
+ * a signature nobody has seen is a condition nobody can show firing, which is
+ * the class this repo spent 2026-09-14 closing in check:invariants section 31.
+ * The platform-neutral half is `errored` itself, unchanged, and it still
+ * catches that case and reports it as an errored gate.
+ *
+ * It does NOT change the verdict. An unrun gate covers nothing, so the tier
+ * still exits nonzero. Only the exit CODE differs, so a caller can tell the
+ * machine from the repo without parsing prose.
+ *
+ * PROVEN IN BOTH DIRECTIONS by test/check-all-environment.test.mjs, and the
+ * second direction is the one that matters: a synthetic gate that genuinely
+ * failed, with a non-empty stderr and status 1, must still report as a gate
+ * failure. A classifier that calls everything the machine agrees with
+ * everything, which is hard rule 10's unfailable-condition class.
+ */
+const NTSTATUS_FAILURE_FLOOR = 0xc0000000;
+const ENVIRONMENT_MAX_MS = 1000;
+
+/**
+ * The ones seen or expected on this host; anything else prints as bare hex.
+ * @type {Record<number, string>}
+ */
+const NTSTATUS_NAMES = {
+  0xc0000005: "STATUS_ACCESS_VIOLATION",
+  0xc0000017: "STATUS_NO_MEMORY",
+  0xc0000142: "STATUS_DLL_INIT_FAILED",
+};
+
+/** @param {number} status */
+export function ntstatusName(status) {
+  const name = NTSTATUS_NAMES[status];
+  return `0x${status.toString(16).toUpperCase()}${name ? ` ${name}` : ""}`;
+}
+
+/**
+ * @param {Array<{name: string, errored: boolean, status: number | null, ms: number}>} results
+ * @returns {{status: number, names: string[]} | null} the correlated group, or
+ *   null when nothing in this run meets all four conditions.
+ */
+export function classifyEnvironmentFailure(results) {
+  const candidates = results.filter(
+    (r) =>
+      r.errored === true &&
+      typeof r.status === "number" &&
+      r.status >= NTSTATUS_FAILURE_FLOOR &&
+      typeof r.ms === "number" &&
+      r.ms < ENVIRONMENT_MAX_MS,
+  );
+
+  /** @type {Map<number, string[]>} */
+  const byStatus = new Map();
+  for (const r of candidates) {
+    const status = /** @type {number} */ (r.status);
+    if (!byStatus.has(status)) byStatus.set(status, []);
+    /** @type {string[]} */ (byStatus.get(status)).push(r.name);
+  }
+
+  /** @type {{status: number, names: string[]} | null} */
+  let group = null;
+  for (const [status, names] of byStatus) {
+    // Condition 4. A single gate is not a machine fact, however it died.
+    if (names.length < 2) continue;
+    if (group === null || names.length > group.names.length) group = { status, names };
+  }
+  return group;
 }
 
 function main() {
@@ -907,6 +1025,7 @@ function main() {
       name: FLOOR_READER,
       ok: spawned.status === 0 && (stdout.length > 0 || stderr.length > 0),
       errored: stdout.length === 0 && stderr.length === 0,
+      status: typeof spawned.status === "number" ? spawned.status : null,
       reason:
         stdout.length === 0 && stderr.length === 0
           ? `wrote nothing to either stream (status ${spawned.status})`
@@ -941,10 +1060,19 @@ function main() {
     console.log(result.output.trimEnd());
   }
 
+  /*
+   * CORRELATED FIRST. When the whole errored set is one machine event, thirty
+   * two banners below would bury the finding under its own symptoms.
+   */
+  const environment = classifyEnvironmentFailure(results);
+  const environmentNames = new Set(environment ? environment.names : []);
+
   // Errored gates get their own block, and the empty output IS the evidence: a
   // gate that never started has nothing to say, and printing that emptiness
   // under its own heading is what distinguishes it from a silent failure.
-  for (const result of errored) {
+  // Gates inside a correlated environment event are listed once, together,
+  // under the banner further down instead of once each up here.
+  for (const result of errored.filter((r) => !environmentNames.has(r.name))) {
     console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
     console.log(`  ${result.reason}`);
     /*
@@ -997,8 +1125,23 @@ function main() {
         "  The tier is unaffected; this is an instrument, not a gate.\n",
     );
   }
-  if (errored.length > 0) {
+  if (environment) {
     console.log(
+      `  ENVIRONMENT FAILURE, not a repo failure. ${environment.names.length} gate(s) exited\n` +
+        `  ${ntstatusName(environment.status)} in under a second having written NOTHING to\n` +
+        "  either stream, which is a process that never reached main. That is ONE fact\n" +
+        "  about this machine, not one per gate: no gate named below reported on its\n" +
+        "  subject, in either direction, so this run covers nothing at all.\n" +
+        `  ${environment.names.join(", ")}\n` +
+        "  The usual cause is concurrent spawn on a saturated machine. Re-run the tier;\n" +
+        "  if it reproduces, that is a queued item about the host, not an investigation\n" +
+        "  into any gate named above.\n",
+    );
+  }
+  if (errored.length > environmentNames.size) {
+    const rest = errored.filter((r) => !environmentNames.has(r.name));
+    console.log(
+      `  ${rest.length} gate(s) ERRORED: ${rest.map((r) => r.name).join(", ")}.\n` +
       `  ${errored.length} gate(s) ERRORED: ${errored.map((r) => r.name).join(", ")}.\n` +
         "  An errored gate asserted NOTHING about its subject, in either direction. It is\n" +
         "  not a red gate and it is not a green one, so this run does not cover what it\n" +
@@ -1045,7 +1188,13 @@ function main() {
    * from that handler a no-op.
    */
   cleanUp();
-  process.exitCode = failed.length > 0 || errored.length > 0 ? 1 : 0;
+  /*
+   * TWO IS THE MACHINE, ONE IS THE REPO, AND BOTH ARE NONZERO. A real gate
+   * failure outranks an environment event: if anything actually reported
+   * red, that is the finding and the exit code says so.
+   */
+  process.exitCode =
+    failed.length > 0 ? 1 : environment ? 2 : errored.length > 0 ? 1 : 0;
 }
 
 /*
