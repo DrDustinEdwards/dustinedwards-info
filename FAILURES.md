@@ -67,13 +67,12 @@ which is what repeats across people and sessions.
   timing instrument threaded through one call site proved nothing about the
   other. `5940242`
 - **A proxy is not the property, and it passes while the property fails.**
-  One `artifact_load` mark was reported while two reads happened; a headless
-  render check read a non-empty root as clean while the summary text was
-  invisible against its background.
-  `scripts/check-invariants.mjs` `.design-sync/previews/PostCard.tsx`
-- **A simulated element is not the element.** An injected probe anchor measured
-  10px and gave a wrapping threshold 10px wrong.
-  `app/components/site-header.tsx`
+  One `artifact_load` mark reported while two reads happened; a headless render
+  read a non-empty root as clean while the text was invisible; a probe anchor
+  measured 10px and gave a threshold 10px wrong.
+  `scripts/check-invariants.mjs` `app/components/site-header.tsx`
+- **Two gates can cancel: one demands a name be written down, the other reads
+  the writing as use.** Neither is wrong alone, neither can fail. `af69b45`
 - **A whole-document match is satisfied by a neighbour.** A 900-character window
   around the anchor read the next function's compliance. `df99bf1`
 - **A comment can satisfy an assertion about code, and can fail one.** Both
