@@ -965,12 +965,14 @@
   /* purple-200 light, purple-300 dark */
   --fig-s5: var(--fig-purple-200);
 
-  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
-     which is why one --lamp-chroma could not work and it splits in two.
-     Brand purple at 14% over a brand-purple bar is a zero-delta
-     composite. */
-  /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
-  --lamp-chroma-on-bar: var(--fig-oxide-200);
+  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME.
+     It was two tokens, one per backdrop, because brand purple at 14% over a
+     brand-purple bar is a zero-delta composite and the bar therefore needed a
+     hue of its own. The bar came out of shell.css on 2026-09-14 and
+     --lamp-chroma-on-bar went with it; ruling 6 deleted the other four bar
+     tokens that day and missed this one, because a mention in
+     check-contrast.mjs was still counting as a read. One backdrop, one
+     token. */
   /* purple-100 light, purple-400 dark */
   --lamp-chroma-on-paper: var(--fig-purple-100);
 }
@@ -1167,12 +1169,14 @@
     /* purple-200 light, purple-300 dark */
     --fig-s5: var(--fig-purple-300);
 
-    /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
-       which is why one --lamp-chroma could not work and it splits in two.
-       Brand purple at 14% over a brand-purple bar is a zero-delta
-       composite. */
-    /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
-    --lamp-chroma-on-bar: var(--fig-purple-100);
+    /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME.
+       It was two tokens, one per backdrop, because brand purple at 14% over a
+       brand-purple bar is a zero-delta composite and the bar therefore needed a
+       hue of its own. The bar came out of shell.css on 2026-09-14 and
+       --lamp-chroma-on-bar went with it; ruling 6 deleted the other four bar
+       tokens that day and missed this one, because a mention in
+       check-contrast.mjs was still counting as a read. One backdrop, one
+       token. */
     /* purple-100 light, purple-400 dark */
     --lamp-chroma-on-paper: var(--fig-purple-400);
   }
@@ -1366,12 +1370,14 @@
   /* purple-200 light, purple-300 dark */
   --fig-s5: var(--fig-purple-300);
 
-  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME,
-     which is why one --lamp-chroma could not work and it splits in two.
-     Brand purple at 14% over a brand-purple bar is a zero-delta
-     composite. */
-  /* oxide-200 light, purple-100 dark: lighter than the bar it lands on */
-  --lamp-chroma-on-bar: var(--fig-purple-100);
+  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME.
+     It was two tokens, one per backdrop, because brand purple at 14% over a
+     brand-purple bar is a zero-delta composite and the bar therefore needed a
+     hue of its own. The bar came out of shell.css on 2026-09-14 and
+     --lamp-chroma-on-bar went with it; ruling 6 deleted the other four bar
+     tokens that day and missed this one, because a mention in
+     check-contrast.mjs was still counting as a read. One backdrop, one
+     token. */
   /* purple-100 light, purple-400 dark */
   --lamp-chroma-on-paper: var(--fig-purple-400);
 }

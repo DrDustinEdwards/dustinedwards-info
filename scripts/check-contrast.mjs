@@ -927,13 +927,10 @@ const NON_PARTICIPATING = new Map([
       "boundary for the same reason 1.4.3 exempts its text",
   ],
   [
-    "--lamp-chroma-on-bar",
-    "a catch hue mixed in at 14 to 22 percent behind glass. The brief's rule is that light is " +
-      "atmosphere and never meaning, so nothing reads it and no pair can be required of it",
-  ],
-  [
     "--lamp-chroma-on-paper",
-    "the same, on the one paper glass surface. See --lamp-chroma-on-bar",
+    "a catch hue mixed in behind the one paper glass surface. The brief's rule is that light is " +
+      "atmosphere and never meaning, so nothing reads it and no pair can be required of it. Its " +
+      "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
   // The ramp steps no series slot resolves through. They are fills, letterbox
   // grounds and spare tints: step 4's rule is that a shape's INTERIOR may sit

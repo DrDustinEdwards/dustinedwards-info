@@ -6305,7 +6305,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    *     the only mechanism this gate has for "temporary". Moving the date is a
    *     ruling rather than a repair.
    *
-   * ## NINE ROWS SAY NO OWNER, AND THEY ARE FLAGGED FOR DUSTIN
+   * ## EIGHT ROWS SAY NO OWNER, AND THEY ARE FLAGGED FOR DUSTIN
    *
    * Eight are older-palette tokens, NOT redesign roles: the four info tokens,
    * --line-disabled, --surface-hero, --text-accent-lifted and --tint-accent.
@@ -6329,11 +6329,15 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    * 103 also said the exposed set stays for now, and that sentence described
    * them as redesign roles, which these eight are not.
    *
-   * The ninth is --lamp-chroma-on-bar. Its owner is the bar, which came out of
-   * shell.css on 2026-09-14. It is ruling 6's missed fifth token: --bar-fill,
+   * A NINTH WAS HERE AND IS GONE. --lamp-chroma-on-bar's owner was the bar,
+   * which came out of shell.css on 2026-09-14; it was ruling 6's missed fifth
+   * token, hidden behind the contrast-mention defect while --bar-fill,
    * --glass-fill-bar, --glass-fill-bar-open and --line-on-brand were deleted
-   * that day for exactly this reason, and this one was hidden behind the
-   * contrast-mention defect while they were not.
+   * the same day. Dustin ruled it deleted on 2026-09-14 once the fix made it
+   * visible. Deleting it orphaned --fig-oxide-200, which was its light-theme
+   * value and had no other reader, so that token takes a row above in the same
+   * commit: a token orphaned by a deletion is not thereby dead, and the ramp
+   * step it belongs to is the figure system's.
    */
   /* carried:start */
   /**
@@ -6417,6 +6421,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--fig-leaf-400",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-500",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-100",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-oxide-200",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-500",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s1",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s2",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
@@ -6428,7 +6433,6 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--line-strong",          "component: a control edge that identifies the control"],
   ["--brand-pressed",        "component: the primary button, pressed"],
   ["--glass-fill-paper",     "component: the /search overlay glass, ruling 71"],
-  ["--lamp-chroma-on-bar",   "NO OWNER: the bar it names was deleted 2026-09-14. Ruling 6's missed fifth token"],
   ["--border-info",          "NO OWNER: the info role, older palette, nothing has ever painted it"],
   ["--on-tint-info",         "NO OWNER: the info role, older palette, nothing has ever painted it"],
   ["--text-info",            "NO OWNER: the info role, older palette, nothing has ever painted it"],
