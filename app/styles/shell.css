@@ -10,10 +10,11 @@
  * gone rather than left to lose a cascade fight it would sometimes win.
  *
  * THE BAR IS NOT FIXED ANY MORE, which is why section 4 went with it. It paid
- * for `position: fixed` by adding `--bar-h` of padding to every main element
- * and offsetting every anchor by the same amount. Against a static header that
- * padding is a blank band at the top of every page, so it could not be kept
- * "just in case" the way a colour could.
+ * for `position: fixed` by adding a bar's height of padding to every main
+ * element and offsetting every anchor by the same amount. Against a static
+ * header that padding is a blank band at the top of every page, so it could
+ * not be kept "just in case" the way a colour could. The token it added,
+ * `--bar-h`, outlived those rules and was deleted on 2026-09-14.
  *
  * IMPORTED LAST in root.tsx's list, and the position is unchanged. It no
  * longer needs to outrank the two chrome sheets, because it no longer says
