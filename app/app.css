@@ -649,8 +649,6 @@
   --line-w: 0.0625rem;
   --line-w-thick: 0.125rem;
   --radius-control: 0.125rem;
-  --icon-size: 1.25rem;
-  --icon-stroke: 1.5;
 
   /* The full track: the widest the shell ever gets. */
   --col-full: 70rem;
