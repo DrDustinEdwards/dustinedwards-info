@@ -682,13 +682,20 @@ const MATRIX = [
   ["--visited", "--warning-tint", TEXT, "visited link on a warning tint"],
   ["--visited", "--success-tint", TEXT, "visited link on a success tint"],
 
-  // The bar. Brand purple is the bar FILL; everything on it is --on-brand.
-  ["--on-brand", "--bar-fill", TEXT, "text and icons on the bar"],
-  ["--on-brand", "--glass-fill-bar", TEXT, "text on bar glass, composited over the bar"],
-  ["--on-brand", "--glass-fill-bar-open", TEXT, "text on bar glass with the menu open"],
-  ["--focus-ring-on-brand", "--bar-fill", UI, "focus ring on the bar"],
-  ["--focus-ring-on-brand", "--glass-fill-bar", UI, "focus ring on bar glass"],
-  ["--line-on-brand", "--bar-fill", UI, "a control edge on the solid bar"],
+  // THE BAR HAS NO ROWS. There were six, and the surface all six measured
+  // against is gone: --bar-fill, --glass-fill-bar, --glass-fill-bar-open and
+  // --line-on-brand were deleted on 2026-09-14 with these rows, because the
+  // bar they described came out of shell.css when Dustin ruled the old header
+  // back and no queued build reads them.
+  //
+  // A PAIR AGAINST A SURFACE NOTHING PAINTS IS NOT COVERAGE. It computes, it
+  // passes, and it raises this gate's executed count while asserting something
+  // about no reader's screen. Rule 10's class: a pass count is not coverage.
+  // When a bar comes back, its fill comes back with the rows that measure it,
+  // and both arrive in the commit that paints it.
+  //
+  // --on-brand and --focus-ring-on-brand SURVIVE with their own rows above,
+  // against --brand and its states, so neither lost its participation.
 
   // Lines. --dust has NO row against either paper surface and that is the
   // finding, not an omission: it measures 1.57:1 on limestone, so it can rule
@@ -1634,8 +1641,25 @@ const buildPresent = existsSync(assetDir);
  * complaining and there is no reason to sit exactly on it. Taken from the
  * printed counts, never by arithmetic on the old floors, which is what the
  * paragraphs above record going wrong twice.
+ *
+ * RE-MEASURED 2026-09-14, BOTH BRANCHES, BY RUNNING THEM, when the bar's six
+ * matrix rows and the four tokens they measured were deleted: 754 with build/
+ * renamed away and 976 with it in place, against 792 and 1022 before.
+ *
+ * THE MOVE IS 46 AND 38, WHICH IS NOT WHAT SIX ROWS LOOK LIKE, and that is the
+ * reason to run rather than subtract. A matrix row is not one assertion: it is
+ * measured per mode, walked again by the var()-resolution pass, and compared
+ * again against the built stylesheet in the present branch. Three of the four
+ * deleted tokens also shipped as a hex plus a color-mix recipe, so each took
+ * three assertions per mode out of the composite pass as well.
+ *
+ * BOTH OLD FLOORS WOULD HAVE HELD AND BOTH WERE WRONG TO KEEP. 976 cleared 971
+ * by five and 754 cleared 753 by ONE. A floor one under its count fails the
+ * next honest change and reports it as "a block was SKIPPED", which is the
+ * misleading failure this instrument exists to avoid producing. Reset to the
+ * same rule as the line above: tolerance 49 and 38, so 928 and 717.
  */
-const MINIMUM_CHECKS = buildPresent ? 971 : 753;
+const MINIMUM_CHECKS = buildPresent ? 928 : 717;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

@@ -902,19 +902,8 @@
   --dust: #c9c0b4;
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #8a7d6e;
-  /* control edges on the solid bar only */
-  --line-on-brand: #b9abcc;
-  --line-on-brand: color-mix(in srgb, #ffffff 60%, #4f2d7f);
-  /* the header bar. brand purple is the bar FILL and nothing else */
-  --bar-fill: #4f2d7f;
   /* a press is not a hover and is never --visited */
   --brand-pressed: #2f1a4d;
-  /* composite, measured. see the recipe below */
-  --glass-fill-bar: #684a91;
-  --glass-fill-bar: color-mix(in srgb, #ffffff 14%, #4f2d7f);
-  /* the same fill with the menu open */
-  --glass-fill-bar-open: #765b9b;
-  --glass-fill-bar-open: color-mix(in srgb, #ffffff 22%, #4f2d7f);
   /* legal on /search over paper and NOWHERE else */
   --glass-fill-paper: #e7e2ee;
   --glass-fill-paper: color-mix(in srgb, #e2dcf2 70%, #f4efe6);
@@ -1115,19 +1104,8 @@
     --dust: #6f675c;
     /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
     --line-strong: #8f857a;
-    /* control edges on the solid bar only */
-    --line-on-brand: #594f66;
-    --line-on-brand: color-mix(in srgb, #1a1614 60%, #b7a5e0);
-    /* the header bar. brand purple is the bar FILL and nothing else */
-    --bar-fill: #b7a5e0;
     /* a press is not a hover and is never --visited */
     --brand-pressed: #a08ecd;
-    /* composite, measured. see the recipe below */
-    --glass-fill-bar: #a191c3;
-    --glass-fill-bar: color-mix(in srgb, #1a1614 14%, #b7a5e0);
-    /* the same fill with the menu open */
-    --glass-fill-bar-open: #9486b3;
-    --glass-fill-bar-open: color-mix(in srgb, #1a1614 22%, #b7a5e0);
     /* legal on /search over paper and NOWHERE else */
     --glass-fill-paper: #2f2a2e;
     --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
@@ -1325,19 +1303,8 @@
   --dust: #6f675c;
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #8f857a;
-  /* control edges on the solid bar only */
-  --line-on-brand: #594f66;
-  --line-on-brand: color-mix(in srgb, #1a1614 60%, #b7a5e0);
-  /* the header bar. brand purple is the bar FILL and nothing else */
-  --bar-fill: #b7a5e0;
   /* a press is not a hover and is never --visited */
   --brand-pressed: #a08ecd;
-  /* composite, measured. see the recipe below */
-  --glass-fill-bar: #a191c3;
-  --glass-fill-bar: color-mix(in srgb, #1a1614 14%, #b7a5e0);
-  /* the same fill with the menu open */
-  --glass-fill-bar-open: #9486b3;
-  --glass-fill-bar-open: color-mix(in srgb, #1a1614 22%, #b7a5e0);
   /* legal on /search over paper and NOWHERE else */
   --glass-fill-paper: #2f2a2e;
   --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
