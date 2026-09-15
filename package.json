@@ -50,6 +50,7 @@
     "check:charts": "node scripts/check-charts.mjs",
     "check:admin-ui": "node scripts/check-admin-ui.mjs",
     "check:urls": "node scripts/check-urls.mjs",
+    "check:volumes": "node scripts/check-volumes.mjs",
     "check:media-axes": "node scripts/check-media-axes.mjs",
     "check:page-payload": "node scripts/check-page-payload.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",

@@ -83,8 +83,13 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  *
  * `check:fonts` took it to 38 on 2026-09-12, and the number came the same way:
  * the run printed `gates-discovered executed=38`, so it is 38.
+ *
+ * `check:volumes` took it to 39 on 2026-09-15, by the same method: the run
+ * printed `gates-discovered executed=39`. It is the freeze-point gate for the
+ * decisions volumes, and it is NETWORK tiered because a volume is a Capsid
+ * document with no disk to read.
  */
-const MINIMUM_GATES = 38;
+const MINIMUM_GATES = 39;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -262,6 +267,12 @@ export const TIERS = {
    * keeps a new gate from being forgotten, which is a worse trade than a later
    * line in a table that is read whole.
    */
+  /*
+   * NETWORK, and it cannot be otherwise: a decisions volume is a Capsid
+   * document and there is no disk to read. A clean checkout cannot run it, so
+   * --ci does not, which is the same reason check:uptime is tiered here.
+   */
+  "check:volumes": "network",
   "check:types": "offline",
   "check:content": "offline",
   /*
