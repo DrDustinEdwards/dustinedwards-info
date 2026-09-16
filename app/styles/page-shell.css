@@ -1,12 +1,4 @@
-/*
- * The generic public page frame, plus the footer's login link and the error-boundary stack.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* See split header, canonical statement is app/app.css:1885 */
 
 .page {
   padding: 2rem;
@@ -116,7 +108,6 @@
   min-height: 24px;
 }
 
-/* Admin cockpit shell */
 /* The shell owns the viewport, so the editor can own one scroll context inside
    it. Before this the page grew and the browser scrolled it; the editor needs
    a command bar that stays put and a canvas that scrolls under it, and a

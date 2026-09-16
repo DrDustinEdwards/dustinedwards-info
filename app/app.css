@@ -379,20 +379,20 @@
  * is neither. It sits with the font tokens, which are here for the same reason.
  */
 :root {
-  --z-tile-raise: 10;
-  --z-tile-body: 20;
-  --z-tile-action: 30;
-  --z-sticky: 100;
-  --z-dropdown: 200;
-  --z-popover: 300;
-  --z-drawer-scrim: 400;
-  --z-drawer: 500;
-  --z-pinned-bar: 600;
-  --z-overlay-scrim: 700;
-  --z-overlay: 800;
-  --z-progress: 900;
-  --z-transient: 1000;
-  --z-skip-link: 2000;
+  --z-tile-raise: 10; /* @kind other */
+  --z-tile-body: 20; /* @kind other */
+  --z-tile-action: 30; /* @kind other */
+  --z-sticky: 100; /* @kind other */
+  --z-dropdown: 200; /* @kind other */
+  --z-popover: 300; /* @kind other */
+  --z-drawer-scrim: 400; /* @kind other */
+  --z-drawer: 500; /* @kind other */
+  --z-pinned-bar: 600; /* @kind other */
+  --z-overlay-scrim: 700; /* @kind other */
+  --z-overlay: 800; /* @kind other */
+  --z-progress: 900; /* @kind other */
+  --z-transient: 1000; /* @kind other */
+  --z-skip-link: 2000; /* @kind other */
 }
 
 /*
@@ -494,7 +494,6 @@
   --t-body-weight: 420;
   --t-body-vars: "opsz" 17, "wght" 420;
 
-  /* Metadata, captions, machine lines, table cells, footnotes. */
   --t-small-family: var(--font-sans);
   --t-small-size: 0.875rem;
   --t-small-leading: 1.5;
@@ -737,7 +736,6 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  /* Neutrals: caliche, limestone, mesquite. */
   --bg: #faf7f2;
   --surface: #f1ebe1;
   --surface-popover: #ebe2d3;
@@ -816,7 +814,6 @@
   --scrim: #1a1614;
   --on-scrim: #ffffff;
 
-  /* Danger: crimson. */
   --text-danger: #a1122a;
   --tint-danger: #f7e1e1;
   --on-tint-danger: #7c0e20;
@@ -825,7 +822,6 @@
   --fill-danger-hover: #75091c;
   --on-fill-danger: #ffffff;
 
-  /* Warning: prairie gold. */
   --text-warning: #7a5a08;
   --tint-warning: #f6eac8;
   --on-tint-warning: #6b4f07;
@@ -833,7 +829,6 @@
   --fill-warning: #e0a428;
   --on-fill-warning: #2b2320;
 
-  /* Success: sage. */
   --text-success: #3e5d4b;
   --tint-success: #e3ebdd;
   --on-tint-success: #31503e;
@@ -1014,24 +1009,7 @@
     --mark-on-chrome: #b7a5e0;
     --focus-ring-on-chrome: #f3e3b8;
 
-    /* THE TILE CAPTION SCRIM, and it is OPAQUE on purpose.
-    
-       The mockup lays white text on a gradient that fades to transparent, which
-       makes the text's real backdrop the PICTURE underneath: a caption over a pale
-       photograph and the same caption over a dark one are two different contrast
-       ratios, and only one of them was ever measured. design-tokens.md already
-       worked this out for the glass extension and put a HARD FLOOR on it, computed
-       the same way: alpha 0.60 over a white backdrop lands at 4.70:1 and 0.50 at
-       3.42:1, so a fade through the range the text sits in crosses the floor
-       somewhere nobody can point at.
-    
-       So the band under the text is solid and the ratio is a constant. The fade
-       above it survives as decoration, over a region that carries NO TEXT and
-       therefore owes nothing. Same value in both themes: a scrim is a hole punched
-       in the page, not a surface the page tints.
-    
-       #1a1614 is the dark canvas hex, reused rather than invented, and white on it
-       is 18.4:1. check:contrast carries the pair. */
+    /* See dark copy of the scrim note at app/app.css:798 */
     --scrim: #1a1614;
     --on-scrim: #ffffff;
 
@@ -1074,28 +1052,26 @@
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
 
-    /* PAPER, GLASS, LIGHT. Ruling 65, Part A. The Hill Country roles above
-       stay until builds 2 to 4 migrate their consumers; these are the
-       names the redesign uses and nothing reads them yet. */
-    /* limestone: the page ground, and the footer's */
+    /* See dark copy of the Paper Glass Light note at app/app.css:883 */
+    /* See exact copy of app/app.css:886 */
     --paper: #1c1916;
-    /* one step off paper. LIGHTER in dark, darker in light */
+    /* See exact copy of app/app.css:888 */
     --raised: #232019;
-    /* all muted copy. dust never sets type */
+    /* See exact copy of app/app.css:890 */
     --text-secondary: #b2a898;
-    /* a hint below the value that will replace it, NOT --text-secondary */
+    /* See exact copy of app/app.css:892 */
     --placeholder: #a39a8b;
     --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
-    /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
+    /* See exact copy of app/app.css:895 */
     --dust: #6f675c;
-    /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
+    /* See exact copy of app/app.css:897 */
     --line-strong: #8f857a;
-    /* a press is not a hover and is never --visited */
+    /* See exact copy of app/app.css:899 */
     --brand-pressed: #a08ecd;
-    /* legal on /search over paper and NOWHERE else */
+    /* See exact copy of app/app.css:901 */
     --glass-fill-paper: #2f2a2e;
     --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
-    /* error TEXT, and the field border at --line-w-thick */
+    /* See exact copy of app/app.css:904 */
     --error: #f0a9b4;
     --error-fill: #e08a98;
     --on-error-fill: #1a1614;
@@ -1109,10 +1085,8 @@
     --on-success-fill: #1a1614;
     --success-tint: #1b2b28;
 
-    /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
-       no semantic colour ever appears in one, because a chart series is
-       not a state. */
-    /* figures sit on paper, never on raised */
+    /* See dark copy of the figure palette note at app/app.css:918 */
+    /* See exact copy of app/app.css:921 */
     --fig-ground: var(--paper);
     --fig-purple-100: #e0d7f2;
     --fig-purple-200: #c0aee6;
@@ -1120,16 +1094,16 @@
     --fig-purple-400: #7f66a8;
     --fig-purple-500: #5a4479;
     --fig-leaf-100: #dfe5e0;
-    /* leaf, the brief's primitive, is this step in light */
+    /* See exact copy of app/app.css:929 */
     --fig-leaf-200: #a9b7ab;
     --fig-leaf-300: #8b9a8e;
     --fig-leaf-400: #6f7e73;
     --fig-leaf-500: #4a5851;
     --fig-oxide-100: #f0ddd4;
-    /* iron oxide's dark primitive is this step */
+    /* See exact copy of app/app.css:935 */
     --fig-oxide-200: #d6a189;
     --fig-oxide-300: #c07f66;
-    /* iron oxide's light primitive */
+    /* See exact copy of app/app.css:938 */
     --fig-oxide-400: #a3654d;
     --fig-oxide-500: #74422f;
     --fig-dust-100: #e8e1d5;
@@ -1138,30 +1112,20 @@
     --fig-dust-400: #82776a;
     --fig-dust-500: #564e44;
 
-    /* THE SERIES SLOTS ARE THE INTERFACE; the ramps above are primitives.
-       A chart reads --fig-s1 to --fig-s5 and never a hue name or a tint
-       index, which is what makes one piece of markup correct in both
-       themes: the slot names are stable and the ramp behind them inverts. */
-    /* purple-500 light, purple-100 dark */
+    /* See dark copy of the series slots note at app/app.css:947 */
+    /* See exact copy of app/app.css:951 */
     --fig-s1: var(--fig-purple-100);
-    /* dust-500 light, leaf-200 dark */
+    /* See exact copy of app/app.css:953 */
     --fig-s2: var(--fig-leaf-200);
-    /* oxide-400 light, oxide-300 dark */
+    /* See exact copy of app/app.css:955 */
     --fig-s3: var(--fig-oxide-300);
-    /* leaf-300 light, dust-400 dark */
+    /* See exact copy of app/app.css:957 */
     --fig-s4: var(--fig-dust-400);
-    /* purple-200 light, purple-300 dark */
+    /* See exact copy of app/app.css:959 */
     --fig-s5: var(--fig-purple-300);
 
-    /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME.
-       It was two tokens, one per backdrop, because brand purple at 14% over a
-       brand-purple bar is a zero-delta composite and the bar therefore needed a
-       hue of its own. The bar came out of shell.css on 2026-09-14 and
-       --lamp-chroma-on-bar went with it; ruling 6 deleted the other four bar
-       tokens that day and missed this one, because a mention in
-       check-contrast.mjs was still counting as a read. One backdrop, one
-       token. */
-    /* purple-100 light, purple-400 dark */
+    /* See dark copy of the lamp catch hue note at app/app.css:962 */
+    /* See exact copy of app/app.css:970 */
     --lamp-chroma-on-paper: var(--fig-purple-400);
   }
 }
@@ -1197,32 +1161,14 @@
   --focus-ring: #b7a5e0;
   --focus-ring-on-brand: #2f2410;
 
-  /* v4 chrome, provisional. Same values as the block above, written out for the
-     same reason every other token here is. */
+  /* See the reason is stated at app/app.css:1169 */
   --surface-chrome: #3d2a5c;
   --on-chrome: #ede6dc;
   --on-chrome-muted: #c9baea;
   --mark-on-chrome: #b7a5e0;
   --focus-ring-on-chrome: #f3e3b8;
 
-  /* THE TILE CAPTION SCRIM, and it is OPAQUE on purpose.
-  
-     The mockup lays white text on a gradient that fades to transparent, which
-     makes the text's real backdrop the PICTURE underneath: a caption over a pale
-     photograph and the same caption over a dark one are two different contrast
-     ratios, and only one of them was ever measured. design-tokens.md already
-     worked this out for the glass extension and put a HARD FLOOR on it, computed
-     the same way: alpha 0.60 over a white backdrop lands at 4.70:1 and 0.50 at
-     3.42:1, so a fade through the range the text sits in crosses the floor
-     somewhere nobody can point at.
-  
-     So the band under the text is solid and the ratio is a constant. The fade
-     above it survives as decoration, over a region that carries NO TEXT and
-     therefore owes nothing. Same value in both themes: a scrim is a hole punched
-     in the page, not a surface the page tints.
-  
-     #1a1614 is the dark canvas hex, reused rather than invented, and white on it
-     is 18.4:1. check:contrast carries the pair. */
+  /* See exact copy of app/app.css:798 */
   --scrim: #1a1614;
   --on-scrim: #ffffff;
 
@@ -1265,28 +1211,26 @@
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
 
-  /* PAPER, GLASS, LIGHT. Ruling 65, Part A. The Hill Country roles above
-     stay until builds 2 to 4 migrate their consumers; these are the
-     names the redesign uses and nothing reads them yet. */
-  /* limestone: the page ground, and the footer's */
+  /* See exact copy of app/app.css:883 */
+  /* See exact copy of app/app.css:886 */
   --paper: #1c1916;
-  /* one step off paper. LIGHTER in dark, darker in light */
+  /* See exact copy of app/app.css:888 */
   --raised: #232019;
-  /* all muted copy. dust never sets type */
+  /* See exact copy of app/app.css:890 */
   --text-secondary: #b2a898;
-  /* a hint below the value that will replace it, NOT --text-secondary */
+  /* See exact copy of app/app.css:892 */
   --placeholder: #a39a8b;
   --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
-  /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
+  /* See exact copy of app/app.css:895 */
   --dust: #6f675c;
-  /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
+  /* See exact copy of app/app.css:897 */
   --line-strong: #8f857a;
-  /* a press is not a hover and is never --visited */
+  /* See exact copy of app/app.css:899 */
   --brand-pressed: #a08ecd;
-  /* legal on /search over paper and NOWHERE else */
+  /* See exact copy of app/app.css:901 */
   --glass-fill-paper: #2f2a2e;
   --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
-  /* error TEXT, and the field border at --line-w-thick */
+  /* See exact copy of app/app.css:904 */
   --error: #f0a9b4;
   --error-fill: #e08a98;
   --on-error-fill: #1a1614;
@@ -1300,10 +1244,8 @@
   --on-success-fill: #1a1614;
   --success-tint: #1b2b28;
 
-  /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
-     no semantic colour ever appears in one, because a chart series is
-     not a state. */
-  /* figures sit on paper, never on raised */
+  /* See exact copy of app/app.css:918 */
+  /* See exact copy of app/app.css:921 */
   --fig-ground: var(--paper);
   --fig-purple-100: #e0d7f2;
   --fig-purple-200: #c0aee6;
@@ -1311,16 +1253,16 @@
   --fig-purple-400: #7f66a8;
   --fig-purple-500: #5a4479;
   --fig-leaf-100: #dfe5e0;
-  /* leaf, the brief's primitive, is this step in light */
+  /* See exact copy of app/app.css:929 */
   --fig-leaf-200: #a9b7ab;
   --fig-leaf-300: #8b9a8e;
   --fig-leaf-400: #6f7e73;
   --fig-leaf-500: #4a5851;
   --fig-oxide-100: #f0ddd4;
-  /* iron oxide's dark primitive is this step */
+  /* See exact copy of app/app.css:935 */
   --fig-oxide-200: #d6a189;
   --fig-oxide-300: #c07f66;
-  /* iron oxide's light primitive */
+  /* See exact copy of app/app.css:938 */
   --fig-oxide-400: #a3654d;
   --fig-oxide-500: #74422f;
   --fig-dust-100: #e8e1d5;
@@ -1329,30 +1271,20 @@
   --fig-dust-400: #82776a;
   --fig-dust-500: #564e44;
 
-  /* THE SERIES SLOTS ARE THE INTERFACE; the ramps above are primitives.
-     A chart reads --fig-s1 to --fig-s5 and never a hue name or a tint
-     index, which is what makes one piece of markup correct in both
-     themes: the slot names are stable and the ramp behind them inverts. */
-  /* purple-500 light, purple-100 dark */
+  /* See exact copy of app/app.css:947 */
+  /* See exact copy of app/app.css:951 */
   --fig-s1: var(--fig-purple-100);
-  /* dust-500 light, leaf-200 dark */
+  /* See exact copy of app/app.css:953 */
   --fig-s2: var(--fig-leaf-200);
-  /* oxide-400 light, oxide-300 dark */
+  /* See exact copy of app/app.css:955 */
   --fig-s3: var(--fig-oxide-300);
-  /* leaf-300 light, dust-400 dark */
+  /* See exact copy of app/app.css:957 */
   --fig-s4: var(--fig-dust-400);
-  /* purple-200 light, purple-300 dark */
+  /* See exact copy of app/app.css:959 */
   --fig-s5: var(--fig-purple-300);
 
-  /* THE LAMP'S CATCH HUE IS A FUNCTION OF THE BACKDROP, NOT THE THEME.
-     It was two tokens, one per backdrop, because brand purple at 14% over a
-     brand-purple bar is a zero-delta composite and the bar therefore needed a
-     hue of its own. The bar came out of shell.css on 2026-09-14 and
-     --lamp-chroma-on-bar went with it; ruling 6 deleted the other four bar
-     tokens that day and missed this one, because a mention in
-     check-contrast.mjs was still counting as a read. One backdrop, one
-     token. */
-  /* purple-100 light, purple-400 dark */
+  /* See exact copy of app/app.css:962 */
+  /* See exact copy of app/app.css:970 */
   --lamp-chroma-on-paper: var(--fig-purple-400);
 }
 
@@ -1492,7 +1424,6 @@
     border-right: 1px solid;
   }
 
-  /* Anything whose shape came from a fill. */
   .btn,
   .btn-brand,
   .btn-danger,
@@ -1785,7 +1716,6 @@ a:hover {
   line-height: 1.7;
 }
 
-/* Auth gate (login + admin) */
 .gate {
   min-height: 100dvh;
   display: grid;
