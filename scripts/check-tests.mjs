@@ -120,8 +120,15 @@ const TEST_DIR = join(root, "test");
    THIS FLOOR CAUGHT ANYTHING, and it caught it the run after it was given a
    floor line: gap 5 against a tolerance of 4, refused by check:floors. While it
    was a bare ok() it had drifted eleven files unseen. Tolerance is 4 at this
-   count, so 75. */
-const MINIMUM_FILES = 75;
+   count, so 75.
+   RE-MEASURED 2026-09-16 by RUNNING this gate, after capsid-guidelines-stamp
+   .test.mjs landed with check:guidelines: 80 files. The second catch, and the
+   same shape as the first: one file arrived, the gap went 4 to 5 against a
+   tolerance of 4, and check:floors refused it. That is the floor working
+   rather than a floor in the way, so it is re-measured from the printed count
+   and never by adding one to the old number. Tolerance is 4 at this count,
+   so 76. */
+const MINIMUM_FILES = 76;
 /* 638 against 672, RE-MEASURED 2026-09-07 by running this gate, after the six
    cases the shared upload refusal landed with. It read 632 against 666 the day
    before, which check:floors then failed at a gap of 40 against a tolerance of

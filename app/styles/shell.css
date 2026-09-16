@@ -36,6 +36,11 @@
  * figure and a paragraph share one source of truth. At 375 the two `1fr` tracks
  * compute to zero and `text`, `wide` and `full` resolve to the same column,
  * which is why the narrow case needs no media query of its own.
+ *
+ * This sheet reached the design canvas for the first time on 2026-09-16, having
+ * been absent from the sync's SHEETS list since it was written, so any design
+ * built against a track grid before that date was built without it
+ * (TRACKGRID-SENTINEL-7Q42).
  * ------------------------------------------------------------------------ */
 .tracks {
   display: grid;

@@ -6,7 +6,11 @@
   "srcDir": "app/components",
   "tsconfig": ".design-sync/tsconfig.paths.json",
   "cssEntry": ".design-sync/ds-styles.css",
-  "guidelinesGlob": [],
+  "guidelinesGlob": [
+    ".design-sync/guidelines/*.md",
+    ".design-sync/guidelines/capsid/*.md",
+    "docs/ADMIN-DESIGN.md"
+  ],
   "componentSrcMap": {
     "PostCard": "app/components/post-card.tsx",
     "Pagination": "app/components/post-card.tsx",
@@ -17,6 +21,6 @@
   "provider": {
     "component": "MemoryRouter"
   },
-  "readmeHeader": ".design-sync/conventions.md",
+  "readmeHeader": ".design-sync/readme-header.md",
   "projectId": "111e462b-4598-479e-9455-c420f8da3a8d"
 }
