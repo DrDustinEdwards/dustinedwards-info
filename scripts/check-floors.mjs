@@ -97,11 +97,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  *
  * ## WHY A FLOOR OF 3 UNDER THE PERCENTAGE
  *
- * Five percent of a small count rounds to nothing. `check:hook-scope` runs 6
- * cases, and 5 percent of 6 is 1, so a pure percentage would demand its floor
- * sit within one of its count and would fail the moment a seventh case landed.
- * Three is the smallest allowance that lets a small gate grow by a case or two
- * between deliberate re-measurements.
+ * Five percent of a small count rounds to nothing. For a gate running six
+ * cases, 5 percent is 1, so a pure percentage would demand its floor sit within
+ * one of its count and would fail the moment a seventh case landed. Three is
+ * the smallest allowance that lets a small gate grow by a case or two between
+ * deliberate re-measurements.
+ *
+ * THE EXAMPLE NAMED check:hook-scope AND ITS COUNT, which was 6 when this was
+ * written and is not now. A count belongs to the gate that measures it (rule
+ * 17), and restating one here made this comment go stale three times over
+ * without anything noticing, in the file whose whole subject is floors drifting
+ * under their counts. The arithmetic is the point; whose count it was is not.
  *
  * The two combine as a MAXIMUM rather than a minimum: whichever is more
  * generous wins, so big gates get proportional room and small gates get a flat

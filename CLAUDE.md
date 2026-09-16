@@ -185,7 +185,9 @@ Ruling 45 said one clone per actor and was not enough, because it said nothing a
 - **`git diff <path>` before `git add <path>`.** A named path is not a scoped change if the file carries edits you did not write.
 - Destructive operations stay with Dustin. Anything touching money paths or auth secrets is flagged before it lands.
 
-The four PreToolUse hooks in `.claude/settings.json` are what enforce this rather than the prose above: em dashes, unscoped adds, lint and content before a push, and the deploy door. Each hook file carries its own grounds. They fire on commands issued through the agent's Bash tool and cannot fire on one typed into a terminal, so CI remains the backstop.
+The four PreToolUse hooks in `.claude/settings.json` are what enforce this rather than the prose above: em dashes, unscoped adds, lint and content before a push, and the deploy door. Each hook file carries its own grounds. They cannot fire on a command typed into a terminal, so CI remains the backstop.
+
+**WHICH TOOLS THEY FIRE ON IS THE MATCHER'S STATEMENT, and `check:hook-matchers` owns it.** A matcher enumerates tool names, so it goes stale whenever the harness gains one, and it fails OPEN: a tool the matcher does not name is a tool every hook here is blind to, because not one of them reads `tool_name`. That is not hypothetical twice over. The em dash hook matched only `Write|Edit` until 2026-08-14, and every hook matched only `Bash` until 2026-09-15, while pre-approved `PowerShell(...)` rules sat in the same directory: for 59 days the deploy door, the scoped-add check and the pre-push lint were all one tool name away from being skipped with no prompt. The gate reads the matchers against the permission allow lists and refuses a tool name it has not been told how to classify. What it cannot know is named in its own header: the harness tool list is not in this repo.
 
 ## Commands
 

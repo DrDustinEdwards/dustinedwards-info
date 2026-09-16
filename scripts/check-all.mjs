@@ -88,8 +88,12 @@ const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
  * printed `gates-discovered executed=39`. It is the freeze-point gate for the
  * decisions volumes, and it is NETWORK tiered because a volume is a Capsid
  * document with no disk to read.
+ *
+ * `check:hook-matchers` took it to 40 later the same day, by the same method:
+ * the run printed `gates-discovered executed=40`. It reads the PreToolUse
+ * matchers against the permission allow lists, so it is offline and IN CI.
  */
-const MINIMUM_GATES = 39;
+const MINIMUM_GATES = 40;
 
 /**
  * The one gate this runner does not spawn like the others, because its input is
@@ -350,6 +354,16 @@ export const TIERS = {
    * 2026-09-05 one did.
    */
   "check:hook-syntax": "offline",
+  /*
+   * Reads `.claude/settings.json`, the hooks directory, and the permission allow
+   * lists. No network, no build, no spawned hook.
+   *
+   * IN CI, and the reason is the same as its two siblings with one addition: the
+   * local settings file is gitignored, so the CI run reads the tracked half and
+   * says which half it read. The half CI CAN see is the one that matters most,
+   * because a matcher regressing to a Bash-only spelling is a tracked change.
+   */
+  "check:hook-matchers": "offline",
   /*
    * OFFLINE, and it is the slowest gate here by a wide margin because it RUNS
    * the other counting gates to read their floor lines back. That cost is the
