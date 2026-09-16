@@ -1,10 +1,9 @@
-# Slop audit, commit 1: state at handoff
+# Slop audit, commit 1: COMPLETE
 
-Partial. The corpus is parsed and the rubric is fixed; 78 of 351 blocks are
-tagged. Resume by tagging the rest against the rubric below, THEN read Grok's
-TSV and merge. Grok's file was deliberately NOT read before tagging and must
-stay unread until this side is complete, or the second reader stops being
-independent.
+All 351 blocks tagged blind, then merged with Grok. See the commit message for
+the agreement matrix. comment-tags.tsv is my side, comment-tags.grok.tsv is the
+second reader as fetched from review/grok-slop at 3a16f0b, and
+comment-tags.merged.tsv is what commit 2 applies.
 
 ## Corpus
 
