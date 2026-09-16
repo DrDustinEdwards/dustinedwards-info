@@ -87,7 +87,14 @@ payload="$(cat 2>/dev/null || true)"
 
 # CHEAP PREFILTER. Registered on every Bash call. One grep for either of the two
 # words that can reach a deploy, and out.
-printf '%s' "$payload" | grep -qE 'wrangler|deploy' || exit 0
+#
+# CASE-INSENSITIVE, 2026-09-15, and this is the half that made the fold below
+# real. The checker was taught to read `WRANGLER deploy` and `NPM RUN DEPLOY` in
+# the same commit, and both still sailed through, because this line ran first and
+# matched neither. A guard behind a filter that cannot see the input is not a
+# guard, and the replay is what said so: the two case cases were the two
+# mismatches the fold was supposed to fix.
+printf '%s' "$payload" | grep -qiE 'wrangler|deploy' || exit 0
 
 block() {
   echo "$1" >&2
@@ -254,17 +261,42 @@ else:
 if re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bship\b", cmd):
     sys.exit(0)
 
-if not outside_site and re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd):
+if not outside_site and re.search(r"(?i)\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd):
     sys.exit(5)
 
 # Every wrangler invocation in the string, with the words that follow it up to
 # the next command separator. Whole-string, not command-position anchored, for
 # the reason scoped-git-add.sh records: the anchored form let three real
 # bypasses through.
-SEGMENT = r"\bwrangler\b((?:[^|;&\x22\x27]|\x22[^\x22]*\x22|\x27[^\x27]*\x27)*)"
+#
+# THE EXECUTABLE SUFFIX IS PART OF THE NAME, and leaving it out was a live
+# bypass of every arm below, measured 2026-09-15. `\bwrangler\b` matches inside
+# `wrangler.exe` because the dot is a word boundary, so the capture began at
+# `.exe` and the first token was `.exe` rather than the verb. Every comparison
+# below reads a verb slot, so all four arms missed at once: `wrangler.exe
+# deploy` deployed, `wrangler.exe versions upload` uploaded, and `wrangler.exe
+# d1 execute dustinedwards --remote --command "DELETE FROM posts"` reached the
+# remote database, which is the arm that is global rather than scoped.
+#
+# THE SUFFIX SET IS ENUMERATED rather than written as a wildcard, because a
+# wildcard here would swallow the verb of anything spelled `wrangler.deploy`.
+# These four are what npm writes into node_modules/.bin on Windows plus the
+# POSIX-less spelling a shell finds on PATH.
+#
+# CASE-INSENSITIVE, and that half is the same defect wearing Windows. PATH
+# lookup does not care about case, so `WRANGLER deploy` and `Wrangler.exe
+# deploy` both ran and both were allowed. The verb comparisons below are folded
+# for the same reason. FLAGS ARE NOT FOLDED: `--dry-run` is the one flag that
+# LOOSENS, yargs reads it case-sensitively, and a fold there would accept a
+# `--DRY-RUN` that wrangler itself would reject while this hook stood down.
+#
+# The fold can only over-block, never under-block: npm script names and yargs
+# verbs are both case-sensitive, so every spelling this newly catches is a
+# command that would have failed at the tool anyway.
+SEGMENT = r"(?i)\bwrangler(?:\.(?:exe|cmd|bat|ps1))?\b((?:[^|;&\x22\x27]|\x22[^\x22]*\x22|\x27[^\x27]*\x27)*)"
 for m in re.finditer(SEGMENT, cmd):
     flags = [a for a in m.group(1).split() if a.startswith("-")]
-    args = [a for a in m.group(1).split() if not a.startswith("-")]
+    args = [a.lower() for a in m.group(1).split() if not a.startswith("-")]
     if not args:
         continue
     # A DRY RUN UPLOADS NOTHING, so it is not the act this hook exists to
