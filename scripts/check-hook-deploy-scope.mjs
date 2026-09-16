@@ -25,12 +25,13 @@
  * file existing in the matcher list. A hook unregistered in settings would pass
  * every case here and protect nothing.
  *
- * THREE CASES ARE PAIRED WITH A CONTROL and are read together: a dry run allowed
+ * FOUR CASES ARE PAIRED WITH A CONTROL and are read together: a dry run allowed
  * beside the same deploy still refused; a SELECT ending in a semicolon allowed
  * beside an UPDATE still blocked; a tilde path resolved beside an unresolvable
- * variable still failing closed. Each loosening alone would pass on a hook that
- * had simply stopped checking, which is the failure a loosening introduces and
- * the one that is silent.
+ * variable still failing closed; and a `.exe` deploy refused inside beside the
+ * same `.exe` deploy allowed in the sibling repo. Each loosening alone would
+ * pass on a hook that had simply stopped checking, which is the failure a
+ * loosening introduces and the one that is silent.
  *
  * FAILS CLOSED. An unreadable hook, a missing interpreter or an unexpected exit
  * code is a failure, never a skip.
@@ -128,7 +129,7 @@ function runHook(command, cwd) {
 }
 
 /*
- * THE THIRTEEN CASES, and each one names the defect it would catch.
+ * THE NINETEEN CASES, and each one names the defect it would catch.
  *
  * The parent directory is derived rather than written, so this reads correctly
  * from any clone path. `../dustinedwards-mcp` is a real sibling on the machine
@@ -324,6 +325,100 @@ const CASES = [
       "read as inside. If this allows, the guard has a bypass that is one " +
       "undefined environment variable wide.",
   },
+  /*
+   * THE SIX EXECUTABLE-NAME CASES, added 2026-09-15 for a live bypass of all
+   * four arms at once.
+   *
+   * `\bwrangler\b` matches INSIDE `wrangler.exe`, because the dot is a word
+   * boundary. The segment capture therefore began at `.exe`, the first token was
+   * `.exe` rather than the verb, and every arm below reads a verb slot. Measured
+   * before the fix: `wrangler.exe deploy` deployed, `.cmd`, `.bat` and `.ps1`
+   * did too, `wrangler.exe versions upload` uploaded, and a `DELETE FROM posts`
+   * reached the REMOTE database through the one arm that is global rather than
+   * scoped.
+   *
+   * The case half is the same defect wearing Windows: PATH lookup ignores case,
+   * so `WRANGLER deploy` and `NPM RUN DEPLOY` both ran and both were allowed.
+   * Folding the checker was not enough on its own and the replay is what caught
+   * it: the hook opens with a CHEAP PREFILTER, `grep -qE wrangler|deploy`, which
+   * ran first, matched neither spelling, and exited 0 before the folded checker
+   * was reached. Both halves are needed and both are replayed here.
+   */
+  {
+    label: "a .exe deploy INSIDE the site repo is blocked",
+    command: "wrangler.exe deploy",
+    cwd: root,
+    expect: 2,
+    why:
+      "the executable suffix is part of the name. If this allows, the segment " +
+      "capture is starting at the suffix and every verb comparison is reading " +
+      "the wrong token.",
+  },
+  {
+    label: "a .exe deploy in a SIBLING repo is still allowed",
+    /*
+     * THE CONTROL FOR THE CASE ABOVE. Widening the name must not widen the
+     * SCOPE: ruling 20 still exempts a sibling repo, and a fix that blocked
+     * both would pass the case above while breaking the admin MCP deploy.
+     */
+    command: "cd ../dustinedwards-mcp && wrangler.exe deploy",
+    cwd: root,
+    expect: 0,
+    why:
+      "ruling 20 is about WHERE the command runs, not how the binary is " +
+      "spelled. If this blocks, the name fix has swallowed the scope rule.",
+  },
+  {
+    label: "a .cmd d1 DELETE is blocked, which is the GLOBAL arm",
+    command: `wrangler.cmd d1 execute dustinedwards --remote --command "DELETE FROM posts"`,
+    cwd: root,
+    expect: 2,
+    why:
+      "the d1 arms are not directory-scoped, so this bypass reached the remote " +
+      "database from anywhere. If this allows, hard rule 18 has no enforcement " +
+      "left at the hook.",
+  },
+  {
+    label: "an UPPERCASE wrangler deploy is blocked",
+    command: "WRANGLER deploy",
+    cwd: root,
+    expect: 2,
+    why:
+      "PATH lookup on Windows ignores case, so this is a command that RUNS. If " +
+      "this allows, either the checker fold or the prefilter fold is missing.",
+  },
+  {
+    label: "an UPPERCASE npm run deploy is blocked",
+    /*
+     * THE PREFILTER CASE. This is the one that stayed green through the first
+     * attempt at the fix, because the prefilter is a separate statement of the
+     * same needle and was still case-sensitive. Two owners of one fact, which is
+     * what rule 17 is about, and the cost was a fold that could not fire.
+     */
+    command: "NPM RUN DEPLOY",
+    cwd: root,
+    expect: 2,
+    why:
+      "if this allows while the uppercase wrangler case passes, the prefilter " +
+      "has gone back to being case-sensitive and the checker below it is dead " +
+      "code for exactly the inputs it was widened to catch.",
+  },
+  {
+    label: "a .exe dry run is still allowed",
+    /*
+     * THE CONTROL FOR THE FOLD. A fold that over-blocks is the cheapest way to
+     * pass every blocking case above while breaking the 2026-09-06 loosening,
+     * and `--dry-run` is deliberately NOT folded: yargs reads flags
+     * case-sensitively, so accepting a `--DRY-RUN` would stand the guard down
+     * for a flag wrangler itself would reject.
+     */
+    command: "wrangler.exe deploy --dry-run",
+    cwd: root,
+    expect: 0,
+    why:
+      "a dry run uploads nothing and stays allowed under the new name. If this " +
+      "blocks, the suffix fix has taken the dry-run exemption with it.",
+  },
 ];
 
 for (const { label, command, cwd, expect, why } of CASES) {
@@ -350,12 +445,13 @@ console.log("");
  * the shape that fails quietly: an array that stopped parsing would run zero
  * cases and report a clean sweep of a security guard.
  *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-06 by RUNNING it: 8.
- * It was 6, before the dry-run pair landed with the 2026-09-06 loosening.
- * Slack of zero, because the set is a fixed enumeration of the ruling's own
- * cases and a drop is a removed case rather than natural movement.
+ * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-15 by RUNNING it: 19.
+ * It was 13, and 8 before that, and 6 before the dry-run pair landed with the
+ * 2026-09-06 loosening. Slack of zero, because the set is a fixed enumeration
+ * of the ruling's own cases and a drop is a removed case rather than natural
+ * movement.
  */
-const MINIMUM_CHECKS = 13;
+const MINIMUM_CHECKS = 19;
 const floorBreach = assertFloor(
   "check:hook-scope",
   "checks",
