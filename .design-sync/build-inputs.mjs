@@ -73,6 +73,13 @@ const SHEETS = [
   "app/styles/skip-link.css",
   "app/styles/motion-print.css",
   "app/styles/search-trigger.css",
+  // root.tsx line 52, LAST of the root sheets and deliberately so: its own
+  // comment says it "still needs to win where it and page-shell.css touch the
+  // same thing". It defines `.tracks`, the redesign grid (ruling 99), and was
+  // missing from this list entirely until 2026-09-16, so the canvas was
+  // designing against a grid class it had never been sent. check:design-sheets
+  // now holds this list against root.tsx and the routes (ruling 111).
+  "app/styles/shell.css",
   // Route sheets, which load after the root module's on the site.
   "app/styles/prose.css",
   "app/styles/blog-index.css",
