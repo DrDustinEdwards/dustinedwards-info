@@ -165,8 +165,20 @@ jobs:
       # `continue-on-error` is deliberately ABSENT. The only rules set to error
       # are the two type-system escapes, which defeat the typecheck that
       # check:types exists to run. Everything else is a warning by design.
+      #
+      # THE FETCH IS LOAD-BEARING and is why this step is two lines. The first
+      # run of this gate failed with `Could not resolve base ref "origin/main"`:
+      # actions/checkout clones shallow and single-branch, so a diff gate has
+      # no base to diff against. The explicit refspec creates
+      # `refs/remotes/origin/main` rather than only FETCH_HEAD, which is the
+      # name `--base origin/main` resolves, and it is unshallowed so a merge
+      # base exists. Running the gate LOCALLY cannot catch this: a developer
+      # worktree always has origin/main already.
       - name: Slop
-        run: npm run check:slop
+        run: |
+          git fetch --no-tags --unshallow origin +refs/heads/main:refs/remotes/origin/main || \
+            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          npm run check:slop
 
       - name: Gates
         run: npm run check:ci
