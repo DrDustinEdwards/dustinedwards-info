@@ -47,6 +47,7 @@
     "check:policy": "node scripts/check-policy.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:design-sheets": "node scripts/check-design-sheets.mjs",
+    "check:guidelines": "node scripts/check-guidelines.mjs",
     "check:logo": "node scripts/check-logo.mjs",
     "check:charts": "node scripts/check-charts.mjs",
     "check:admin-ui": "node scripts/check-admin-ui.mjs",

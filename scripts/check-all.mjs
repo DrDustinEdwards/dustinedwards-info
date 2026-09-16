@@ -309,6 +309,17 @@ export const TIERS = {
    * defining `.tracks`, the grid the redesign is built on (ruling 111).
    */
   "check:design-sheets": "offline",
+  /*
+   * NETWORK, and it cannot be otherwise for the same reason check:volumes is
+   * tiered there: the current `updated_at` it compares against lives in Capsid
+   * and there is no disk to read, so a clean checkout cannot run it.
+   *
+   * It asserts that the Capsid documents shipped to the design agent are still
+   * current. An export is a copy, a copy cannot know its source moved, and
+   * without this the canvas would be handed a reversed ruling with nothing
+   * anywhere saying so (ruling 109).
+   */
+  "check:guidelines": "network",
   "check:logo": "offline",
   "check:charts": "offline",
   "check:diagrams": "offline",
