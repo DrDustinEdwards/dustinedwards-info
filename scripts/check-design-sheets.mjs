@@ -121,7 +121,10 @@ function ok(label, pass, detail) {
   failures.push(`${label}: ${detail}`);
 }
 
-/** Repo-relative, forward-slashed, so every comparison is on one spelling. */
+/**
+ * Repo-relative, forward-slashed, so every comparison is on one spelling.
+ * @param {string} abs
+ */
 function rel(abs) {
   return relative(REPO, abs).split(sep).join("/");
 }
@@ -218,13 +221,21 @@ function main() {
   /** @type {string[]} root.tsx's own order, which is the cascade */
   const rootOrder = [];
 
+  /** @param {string} sheet @param {string} by */
   const note = (sheet, by) => {
-    if (!loaded.has(sheet)) loaded.set(sheet, []);
-    if (!loaded.get(sheet).includes(by)) loaded.get(sheet).push(by);
+    const who = loaded.get(sheet) ?? [];
+    if (!who.includes(by)) who.push(by);
+    loaded.set(sheet, who);
   };
 
   const excluded = new Set(OUT_OF_SCOPE);
-  const keep = (sheet) => sheet && !sheet.includes("/admin") && !excluded.has(sheet);
+  /**
+   * A path this gate is responsible for. Narrows away null so every caller
+   * downstream has a string, which is the same reason it is a type predicate
+   * rather than a plain boolean.
+   * @param {string | null} sheet @returns {sheet is string}
+   */
+  const keep = (sheet) => sheet !== null && !sheet.includes("/admin") && !excluded.has(sheet);
 
   for (const file of importers) {
     if (!existsSync(file)) continue;
@@ -249,6 +260,7 @@ function main() {
   const queue = [...loaded.keys()];
   while (queue.length > 0) {
     const sheet = queue.shift();
+    if (sheet === undefined) break;
     const abs = join(REPO, sheet);
     if (!existsSync(abs)) continue;
     for (const spec of cssAtImports(readFileSync(abs, "utf8"))) {
@@ -267,7 +279,7 @@ function main() {
     "every loaded public stylesheet is in SHEETS",
     unsynced.length === 0,
     unsynced
-      .map((s) => `${s} is loaded by ${loaded.get(s).join(", ")} but is not in SHEETS`)
+      .map((s) => `${s} is loaded by ${(loaded.get(s) ?? []).join(", ")} but is not in SHEETS`)
       .join("; ") +
       `. The canvas is designing against rules it has never been sent. Add it to ` +
       `SHEETS at the cascade position its importer gives it.`,
