@@ -229,7 +229,10 @@ function leadingDocComment(source) {
   return m ? commentProse(m[0]) : "";
 }
 
-/** Literal className values, which are the vocabulary the canvas composes with. */
+/**
+ * Literal className values, which are the vocabulary the canvas composes with.
+ * @param {string} source
+ */
 function classNames(source) {
   const out = new Set();
   for (const m of source.matchAll(/className="([^"{}]+)"/g)) {
@@ -238,7 +241,10 @@ function classNames(source) {
   return [...out].sort();
 }
 
-/** Every custom property a sheet READS, which is what the singleton consumes. */
+/**
+ * Every custom property a sheet READS, which is what the singleton consumes.
+ * @param {string} css
+ */
 function tokensRead(css) {
   const out = new Set();
   for (const m of css.matchAll(/var\((--[a-z0-9-]+)/gi)) out.add(m[1]);
