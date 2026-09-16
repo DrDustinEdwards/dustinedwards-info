@@ -145,6 +145,14 @@ const UNFLOORED = {
   "check:backup": "carries four scope floors on table counts, not an executed-count floor.",
   "check:image-weight": "asserts per-row and reports rows examined; no executed-count floor.",
   /*
+   * DELEGATES WHOLLY to `npx aislop ci`, a third-party binary that owns its own
+   * reporting and emits no floor line. Same shape as `check:types` delegating
+   * to `tsc -b`. Its threshold is `ci.failBelow` in `.aislop/config.yml`, which
+   * is a SCORE on the diff rather than a count of assertions executed here, so
+   * there is nothing for this gate to read back.
+   */
+  "check:slop": "delegates wholly to aislop, which owns its reporting and scores the diff.",
+  /*
    * Its two floors are on BUILT CHUNKS and FILES WALKED, which are scope proofs
    * rather than executed counts. Measured 2026-09-05 the syntax floor stands at
    * 78 against 15, which reads as drift and is not: the chunk count is a

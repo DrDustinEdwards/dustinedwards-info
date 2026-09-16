@@ -1,0 +1,55 @@
+# aislop, wired as a RATCHET ON NEW CODE rather than a verdict on the tree.
+#
+# Schema read out of the package rather than guessed, after a first draft was
+# silently ignored: `failBelow` nests under `ci`, severities are
+# "error" / "warning" / "off" and not "warn", and `exclude` is top level. A
+# config with the wrong keys does not error, it just does nothing, which is
+# why the plant below is the only thing that proves this file is read at all.
+version: 1
+
+ci:
+  # 70, the post-audit score of 72 minus 2.
+  #
+  # The score moved 73 to 72 ACROSS the comment cut, which is worth knowing:
+  # removing 12,821 bytes of comment LOWERED it. The dominant categories are
+  # complexity/function-too-long and complexity/file-too-large, neither of
+  # which is slop by this audit's definition and both explicitly out of scope,
+  # so this number is a regression guard rather than a quality reading.
+  failBelow: 70
+  format: json
+
+exclude:
+  # The audit's own tooling. 51 of the tree's findings live here, nearly all
+  # console.log in scripts whose output IS the report, and measuring them would
+  # be the gate grading its own instrument.
+  - scratchpad/**
+
+# ## WHY THE JOB'S FOUR ERROR RULES ARE NOT ALL ERRORS
+#
+# The audit opened all 83 in-scope findings and every one was a false positive
+# on this codebase (scratchpad/code-findings.md). As errors against the tree
+# they would make CI permanently red on things that are correct.
+rules:
+  # The type-system escapes, which have no defensible use here: both defeat
+  # the typecheck that check:types exists to run.
+  ai-slop/double-type-assertion: error
+  ai-slop/unsafe-type-assertion: error
+
+  # In a Worker, console.log IS the logging API Workers Observability reads.
+  # watchdog.ts emits its repaired-state audit trail through it, and
+  # media-events.ts carries a comment saying the log exists because without it
+  # "A004 stayed invisible". Eleven more are a measurement CLI whose console
+  # output is its product.
+  ai-slop/console-leftover: warning
+
+  # Matches the words TODO and PLACEHOLDER in prose. One hit is a comment
+  # recording that a TODO was REMOVED by Dustin's ruling, so the rule fires on
+  # a note about its own absence.
+  ai-slop/todo-stub: warning
+
+  # This repo's comments carry the measurements and the prohibitions, which is
+  # what the whole design-sync arc exists to preserve. `aislop fix --safe`
+  # deleted eight of them, including the one guarding a DELETE path. Never
+  # auto-fixed here.
+  ai-slop/narrative-comment: warning
+  ai-slop/meta-comment: warning

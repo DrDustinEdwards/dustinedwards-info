@@ -310,6 +310,22 @@ export const TIERS = {
    */
   "check:design-sheets": "offline",
   /*
+   * OFFLINE by tier, and the caveat is in the name of the thing it runs:
+   * `npx --yes aislop@latest` FETCHES the package, so a machine with no
+   * network cannot run it even though nothing it reads is deployed. It is
+   * tiered offline because it reads only the working tree and a git ref, and
+   * because the alternative, network, is where the gates that need a deployed
+   * database live and this is not one of them.
+   *
+   * IT SCORES THE DIFF, not the tree (`--changes --base origin/main`). The
+   * audit reviewed all 83 in-scope findings and every one opened was a false
+   * positive on this codebase, so a gate pointed at the tree would be
+   * permanently red on the Workers logging API and on prose containing the
+   * word PLACEHOLDER. Scoring the diff makes it a ratchet on new code, which
+   * is the only shape that is worth having here.
+   */
+  "check:slop": "offline",
+  /*
    * NETWORK, and it cannot be otherwise for the same reason check:volumes is
    * tiered there: the current `updated_at` it compares against lives in Capsid
    * and there is no disk to read, so a clean checkout cannot run it.
