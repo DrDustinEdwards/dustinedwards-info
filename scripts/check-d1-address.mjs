@@ -66,7 +66,7 @@ const DB_NAME = "dustinedwards";
  */
 /** @type {Record<string, string>} */
 const EXEMPT = {
-  "check-hook-deploy-scope.mjs":
+  "check-hook-scope.mjs":
     "its d1 strings are PAYLOADS fed to the deploy hook on stdin, to prove the " +
     "hook blocks a remote DELETE and allows a remote SELECT. They are never run " +
     "as commands, and rewriting them to a UUID would make the gate stop testing " +

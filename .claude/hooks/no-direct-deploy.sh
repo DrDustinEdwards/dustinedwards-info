@@ -46,7 +46,7 @@
 # command's own argument (the site's database) rather than by the directory it
 # runs in, so a `cd` elsewhere does not make them somebody else's business.
 #
-# Replayed both directions by `scripts/check-hook-deploy-scope.mjs`, which is in
+# Replayed both directions by `scripts/check-hook-scope.mjs`, which is in
 # the offline tier. Thirteen cases: the block inside, the allow outside, the
 # last-cd rule, an absolute path, a d1 delete still refused outside, a bare
 # `cd`, a `--dry-run` allowed inside, a deploy with no such flag still refused
