@@ -1,12 +1,4 @@
-/*
- * The blog index furniture: header nav, theme toggle, page head, tag and year chips, post list.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* See split header, canonical statement is app/app.css:1885 */
 
 /* Blog ---------------------------------------------------------------------
  *
@@ -102,14 +94,6 @@
   background: transparent;
 }
 
-/* THE TWO PRESSED-STATE RULES THAT SAT HERE ARE GONE with the pressed state
-   itself. They inverted a brand fill to --on-chrome-muted on chrome, and gave
-   that filled control an inset ring in --surface-chrome because the pale fill
-   made --focus-ring-on-brand vanish against it.
-   Both described a filled control, and no control in this header is filled any
-   more. The ratified pairs they used are untouched and still measured by
-   check:contrast wherever else they appear; only these two selectors, which
-   could no longer match anything, are removed. */
 
 /* Theme toggle ------------------------------------------------------------
  *
