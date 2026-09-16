@@ -81,6 +81,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
+import { readSheets } from "./lib/design-sheets.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BUILD_INPUTS = ".design-sync/build-inputs.mjs";
@@ -136,23 +137,6 @@ function stripLineComments(source) {
 }
 
 /**
- * The `SHEETS` array, read from its owner rather than restated here.
- * @returns {string[]}
- */
-function readSheets() {
-  const src = readFileSync(join(REPO, BUILD_INPUTS), "utf8");
-  const block = src.match(/const SHEETS = \[([\s\S]*?)\n\];/);
-  if (!block) {
-    throw new Error(
-      `${BUILD_INPUTS}: no \`const SHEETS = [ ... ];\` array found. This gate ` +
-        `parses that array rather than carrying a copy, so a rename there is a ` +
-        `refusal here, never a silent pass.`,
-    );
-  }
-  return [...block[1].matchAll(/"([^"]+\.css)"/g)].map((m) => m[1]);
-}
-
-/**
  * Every `.css` a TS/TSX module imports for its side effects: the bundled
  * cascade. The quote-terminated `.css` excludes `?url` by construction.
  * @param {string} source @returns {string[]}
@@ -194,7 +178,7 @@ function resolveSpec(spec, fromFileAbs) {
 }
 
 function main() {
-  const sheets = readSheets();
+  const sheets = readSheets(REPO);
   ok(
     `SHEETS parsed from ${BUILD_INPUTS}`,
     sheets.length >= MINIMUM_SHEETS,
