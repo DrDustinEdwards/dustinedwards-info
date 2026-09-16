@@ -348,3 +348,39 @@ writeFileSync(
   ) + "\n",
 );
 console.error(`tsconfig.paths.json: ${Object.keys(tsPaths).length} alias(es) from ${TS_SRC}, ${Object.keys(tsPaths).join(", ")}`);
+
+/**
+ * readme-header.md, the ONE file `cfg.readmeHeader` points at.
+ *
+ * ## WHY IT IS ASSEMBLED RATHER THAN AUTHORED
+ *
+ * The skill takes a single header path and prepends it to the generated README,
+ * and the app inlines only the FIRST 32,000 characters of that README into the
+ * agent prompt. So the header is the only text the design agent is guaranteed to
+ * read, and two committed files have to share it:
+ *
+ *   canvas-constraints.md  what is already decided and may not be re-decided
+ *   conventions.md         the vocabulary: tokens, class names, how to compose
+ *
+ * Constraints go FIRST. Truncation eats the tail, so the half that must survive
+ * a long README is the half that says what not to do.
+ *
+ * Both halves stay committed and single-owner; only the concatenation is
+ * derived, which is why this file is gitignored beside ds-styles.css. It is
+ * built HERE, in `cfg.buildCmd`, because that is the command the skill actually
+ * runs before the converter reads the header.
+ */
+const HEADER_PARTS = ["canvas-constraints.md", "conventions.md"];
+const headerText = HEADER_PARTS.map((name) => {
+  const path = join(HERE, name);
+  if (!existsSync(path)) throw new Error(`readme-header: ${name} is missing; the header would ship half its content`);
+  return readFileSync(path, "utf8").trim();
+}).join("\n\n");
+writeFileSync(join(HERE, "readme-header.md"), `${headerText}\n`);
+// The skill warns above 31,900 for the header plus the generated body together.
+// Naming the remaining room here means a header that has quietly eaten the
+// budget is visible at build time rather than in a truncated prompt.
+console.error(
+  `readme-header.md: ${headerText.length} chars from ${HEADER_PARTS.join(" + ")}, ` +
+    `${31900 - headerText.length} left for the generated README body`,
+);
