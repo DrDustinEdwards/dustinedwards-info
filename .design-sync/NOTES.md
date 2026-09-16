@@ -63,6 +63,47 @@ workaround is inert rather than wrong.
 extractor copies both faces itself, and leaving it set only produced a spurious
 "add a matching @font-face" line.
 
+## A fourth defect: the manifest scraper flattens `prefers-contrast`
+
+The grounds and the measurements are the comment on `stripContrastTier` in
+`build-inputs.mjs`, which stays where the code is. What belongs HERE is the fact
+a re-sync needs: **the bundle deliberately ships without the
+`prefers-contrast: more` tier**, and that is not an omission to repair.
+
+Claude Design's self-check scrapes tokens by flattening the stylesheet WITHOUT
+media context and taking the last value, so promoted values were reported as the
+base palette. Measured 2026-09-12 in the uploaded `_ds_manifest.json`:
+`--border` read as `#6e6459`, which is what `--border-strong` already is, so the
+two arrived at the design agent as THE SAME COLOUR and hard rule 5 became
+unfollowable. An agent cannot honour a distinction it cannot see.
+
+Do not "fix" this by reordering the tier to win the scraper: a media block adds
+no specificity, so the tier works only because it comes last, and moving it
+would trade a wrong manifest for a wrong render.
+
+## The `--surface-chrome` collision, and what it cost
+
+The bar's token family was documented in `conventions.md` from the first sync,
+under an "On chrome" heading: `--surface-chrome`, `--on-chrome`,
+`--on-chrome-muted`, `--mark-on-chrome`, plus the standing rule that pinned bars
+take `--border-strong`. The 2026-09 redesign invented `--bar-fill` anyway and
+abandoned `--surface-chrome`, and that single substitution invalidated every
+colour in the header at once, because the surrounding tokens are measured
+against the token it replaced. The header was eventually restored
+byte-identical to an earlier commit rather than repaired.
+
+Two things follow for the next sync, and neither is obvious from the code:
+
+- **Accuracy was never the failure.** `conventions.md` was right and was
+  hand-maintained and was still ignored, which is why the guidance is now
+  GENERATED (`scripts/build-guidelines.mjs`) and why the prohibitions ride in
+  the README header, where the 32,000-char inline ceiling guarantees they are
+  read rather than hoped over.
+- **A renamed token silently invalidates the vocabulary the canvas holds.**
+  `conventions.md` enumerates real token names; when one is renamed in the
+  sheets and not here, the design agent is sent names that resolve to nothing.
+  Re-run that check rather than assuming it.
+
 ## Known render warns (a warn not listed here is NEW)
 
 - `[TOKENS_MISSING] --shiki-light, --shiki-light-bg, --shiki-dark,
@@ -102,11 +143,15 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 
 ## Re-sync risks
 
-- **The stylesheet list in `build-inputs.mjs` is hand-maintained and will go
-  stale.** A sheet added to `app/root.tsx` or to a public route does not appear
-  here on its own. Diff `SHEETS` against `root.tsx`'s imports and the non-admin
-  `app/routes/*.tsx` imports before trusting a re-sync. The generator throws on
-  an unrecognised `@import`, which catches only some of this.
+- **The stylesheet list in `build-inputs.mjs` WAS hand-maintained and went
+  stale, exactly as this note predicted.** `app/styles/shell.css` was imported
+  by `root.tsx` and missing from `SHEETS`, so the sheet defining `.tracks`, the
+  redesign's own grid, never reached the canvas. `check:design-sheets` now holds
+  the list against `root.tsx`, the non-admin routes and the non-admin
+  components, in both directions and including cascade order, so this is an
+  instrument rather than a diff somebody remembers to run. Ruling 111.
+  Note what it covers: cascade imports, `?url` side-loads and CSS-level
+  `@import`. `katex.generated.css` is its one named exclusion.
 - **Cascade order is load-bearing and is not alphabetical.** `SHEETS` reproduces
   `root.tsx`'s deliberate order; sorting it would move the cascade.
 - The conventions header enumerates real token and class names. They were all
@@ -118,3 +163,26 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
+
+## THE UPLOAD MUST NEVER DELETE THE CANVAS'S OWN WORK
+
+**`part-a/`, `part-b/`, `references/` and `uploads/` are NEVER named in a
+plan's `deletes`.** Read this before any upload, and especially before a
+no-anchor one.
+
+There is no import direction. The upload rewrites `components/**`, `tokens/**`,
+`guidelines/**`, the bundles and `README.md` on every run, and `remote-diff.mjs`
+compares the local build against the sync's OWN `_ds_sync.json` sidecar rather
+than against the project's contents. So a canvas-side edit to any synced path is
+invisible to the diff and then silently overwritten. Canvas work lives in those
+four directories precisely because they are outside the writes list, and that is
+the only thing protecting it.
+
+The hazard is specific and it is in the skill's own instructions. On a re-sync
+with NO ANCHOR (a re-adopted or recovered project) the skill says to review
+`list_files` for "files this build doesn't produce" and put those paths in the
+plan's `deletes`. Those four directories are exactly that, by construction. A
+session following the instruction literally would delete the handoffs and the
+96 reference shots. Exclude them explicitly, every time.
+
+Ruling 110.
