@@ -298,6 +298,17 @@ export const TIERS = {
    * gates that open a binary asset rather than read text about one.
    */
   "check:fonts": "offline",
+  /*
+   * OFFLINE. It reads `.design-sync/build-inputs.mjs`, `app/root.tsx`, the
+   * non-admin routes and components, and the stylesheets they name -- all off
+   * disk, no network, no binding, so `--ci` runs it too.
+   *
+   * It exists because NOTES.md predicted this drift in prose and nothing
+   * re-checked it: `app/styles/shell.css` was imported by root.tsx, absent
+   * from SHEETS, and so never reached the canvas -- and that is the sheet
+   * defining `.tracks`, the grid the redesign is built on (ruling 111).
+   */
+  "check:design-sheets": "offline",
   "check:logo": "offline",
   "check:charts": "offline",
   "check:diagrams": "offline",
