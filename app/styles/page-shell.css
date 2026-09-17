@@ -9,9 +9,9 @@
   margin: 0 auto;
 }
 
-/* The error boundary's DEV-ONLY stack. Deliberately not `.prose pre`: this is
-   diagnostic output, not writing, and `overflow-x: auto` is what stops a long
-   frame widening the document the way the header used to. */
+/* The error boundary's dev-only stack. Not `.prose pre`: this is diagnostic
+   output, not writing. `overflow-x: auto` stops a long frame widening the
+   document. */
 .error-stack {
   max-width: 100%;
   overflow-x: auto;
@@ -39,8 +39,7 @@
   line-height: 1.6;
 }
 
-/* The shell owns the viewport, so the editor can own one scroll context inside
-   it. Before this the page grew and the browser scrolled it; the editor needs
-   a command bar that stays put and a canvas that scrolls under it, and a
-   document that also scrolls behind both is the double-scroll the spec forbids.
-   Ordinary pages are unaffected: .admin-content scrolls instead of the body. */
+/* The shell owns the viewport so the editor can own one scroll context: a
+   command bar that stays put over a canvas that scrolls. A body scrolling
+   behind both would be the double-scroll the spec forbids. Ordinary pages are
+   unaffected: .admin-content scrolls instead of the body. */

@@ -1,46 +1,20 @@
-/*
- * The base reset. Vendored from Tailwind's preflight on 2026-08-27, when
- * Tailwind was removed from the build.
- *
- * ## WHY THIS FILE EXISTS, and why it is not "the bit we could not be bothered
- * ## to delete"
- *
- * The audit that motivated the removal read: "Tailwind contributes 8 KB of the
- * 45 KB public stylesheet for one class". The 8 KB is right and the conclusion
- * was half wrong, which a measurement settled rather than an argument. Of the
- * 8,356 bytes it emitted, 3,048 were the utilities layer, of which the served
- * HTML used exactly one rule (`.sr-only`), and roughly 1,150 were a
- * custom-property registration polyfill for utilities this site never asked
- * for. Both are gone. The remaining bytes are THIS, and this site has no reset
- * of its own and never has: removing it outright moved 5,700 computed values
- * across nine pages, including every element on the site losing its font.
- *
- * So the choice was never "keep 8 KB or delete it". It was "keep a reset you
- * cannot read because it is generated, or keep one you can". This is the same
- * reset, in a file, with the parts that existed only to serve Tailwind's own
- * utility generation resolved away.
- *
- * ## WHAT CHANGED FROM THE ORIGINAL, exhaustively
- *
- * 1. `--theme(--default-font-family, ...)` and `--theme(--default-mono-font-family,
- *    ...)` become `var(--font-sans)` and `var(--font-mono)`, which are the
- *    site's own tokens and were what those calls resolved to anyway.
- * 2. The `font-feature-settings` and `font-variation-settings` lines that
- *    accompanied them are dropped: every one resolved to `normal`, which is the
- *    initial value, so each was a declaration that did nothing.
- * 3. The `@layer base` wrapper is gone. There are no layers here now, and a
- *    layer with nothing to lose to would only change specificity.
- *
- * Nothing else is edited. A reset is a list of browser bugs and inherited
- * defaults somebody else has already been bitten by, and editing one to taste
- * is how you get bitten by them again.
- *
- * ## ORDER
- *
- * Imported at the TOP of app.css, which is where `@import "tailwindcss"` sat,
- * so everything in the site's own stylesheets still outranks it by source
- * position exactly as before.
- */
+/* The base reset, vendored from Tailwind's preflight on 2026-08-27 when
+   Tailwind left the build.
+   It is not leftover nobody bothered to delete: this site has no reset of its
+   own and never has, and removing it moved 5,700 computed values across nine
+   pages, including every element's font. Of Tailwind's 8,356 bytes (8 KB of a
+   45 KB stylesheet), 3,048 were utilities of which the HTML used only
+   `.sr-only`, and about 1,150 were a polyfill for utilities the site never
+   asked for; both are gone.
+   Changes from the original, exhaustively: (1)
+   `--theme(--default-font-family, ...)` and
+   `--theme(--default-mono-font-family, ...)` become `var(--font-sans)` and
+   `var(--font-mono)`; (2) the `font-feature-settings` and
+   `font-variation-settings` lines that resolved to `normal` are dropped; (3)
+   the `@layer base` wrapper is gone. Nothing else is edited, because a reset
+   is a list of known browser bugs.
+   Imported at the top of app.css, where `@import "tailwindcss"` sat, so the
+   site's own rules still win over it by source position. */
 
 *,
 ::after,
@@ -259,38 +233,24 @@ input:where([type="button"], [type="reset"], [type="submit"]),
   height: auto;
 }
 
-/*
-  Make elements with the HTML hidden attribute stay hidden by default.
-*
-* LOAD-BEARING ON THIS SITE, not a formality. The search shortcut hint ships
-* with the `hidden` attribute and is unhidden only when the listener exists,
-* and it carries `.sr-only`, which sets its own `position`, `width` and
-* `clip-path`. The browser's own `[hidden] { display: none }` is an ordinary
-* declaration that a class rule beats; this one does not lose, so a hint that
-* is still hidden is hidden from the accessibility tree too rather than merely
-* being off screen.
-*/
+/* Hidden elements stay hidden. This is load-bearing here, not a formality:
+   the search shortcut hint ships with `hidden` and also carries `.sr-only`,
+   which sets its own `position`, `width` and `clip-path`. The browser's own
+   `[hidden] { display: none }` loses to a class rule; this one does not lose,
+   so a still-hidden hint is out of the accessibility tree, not just off
+   screen. */
 [hidden]:where(:not([hidden="until-found"])) {
   display: none !important;
 }
 
-/*
- * THE ONE UTILITY THE SITE USED, written out.
- *
- * `.sr-only` was the single rule the served HTML took from Tailwind's 44-rule
- * utilities layer. Copied from that output rather than rewritten, so the
- * computed values do not move, WITH ONE EDIT: `border-width: 0` is `border: 0`.
- *
- * The edit exists because Tailwind's `.sr-only` was never the rule that won.
- * `post.css` declared its own copy, later in the cascade and on every page,
- * spelled `border: 0`, and that is what every `.sr-only` on the site actually
- * computed. `border-width: 0` alone leaves `border-style: solid` standing from
- * the `*` rule at the top of this file, on a border with no width, which
- * renders identically and reads differently. MEASURED: it was the only
- * computed-style difference on the whole site after the split, on three
- * elements per page. Matching what shipped is worth more here than matching
- * what was generated.
- */
+/* `.sr-only`, the one utility the site used from Tailwind's 44-rule utilities
+   layer, copied so computed values do not move, with one edit: `border-width:
+   0` became `border: 0`.
+   Tailwind's copy was never the rule that won: an older `post.css` copy
+   spelled `border: 0` won on every page. `border-width: 0` alone leaves
+   `border-style: solid` from the `*` rule, which renders the same. It was the
+   only computed-style difference on the site after the split, on three
+   elements per page, so this matches what shipped. */
 .sr-only {
   clip-path: inset(50%);
   white-space: nowrap;

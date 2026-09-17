@@ -13,9 +13,9 @@
 }
 
 .palette::backdrop {
-  /* The ratified scrim pattern. This site and the admin drawer backdrop wrote
-     the same value in two notations, `45%` and `0.45`, which is how one role
-     ends up with two owners that agree by luck. */
+  /* The ratified scrim. This site and the admin drawer backdrop once wrote it
+     as `45%` and `0.45`, which is how one role ends up with two owners that
+     agree by luck. */
   background: var(--scrim);
   opacity: 0.45;
 }
@@ -52,16 +52,12 @@
   font-size: 1rem;
 }
 
-/* 2.4.7 IS NOT SATISFIED BY REMOVING THE INDICATOR.
-
-   This was `outline: none` with nothing in its place. The input is the palette's
-   only text entry and it takes focus the moment the palette opens, so a reader
-   navigating by keyboard had no way to confirm where focus had gone.
-
-   `:focus-visible` rather than `:focus`, so a pointer user opening the palette
-   does not get a ring they did not ask for, while a keyboard user always does.
-   The token is the on-surface ring the rest of the elevated chrome uses, not a
-   new colour, so it stays inside the palette the contrast gate reads. */
+/* 2.4.7 is not satisfied by removing the indicator. The input takes focus as
+   soon as the palette opens, so without a ring a keyboard reader cannot tell
+   where focus went.
+   `:focus-visible`, not `:focus`, so a pointer user does not get a ring they
+   did not ask for. The token is the on-surface ring the elevated chrome uses,
+   not a new colour, so it stays inside what the contrast gate reads. */
 .palette-input:focus {
   outline: none;
 }

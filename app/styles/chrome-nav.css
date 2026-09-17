@@ -1,60 +1,43 @@
 /* See split header, canonical statement is app/app.css:1885 */
 
-/* Blog ---------------------------------------------------------------------
- *
- * Post bodies are generated HTML stored in D1. Tailwind never sees that markup,
- * so every class it uses (including sr-only, which remark-gfm emits on the
- * footnotes label) is defined here rather than assumed from a utility scan.
- */
+/* Blog. Post bodies are generated HTML stored in D1, and Tailwind never sees
+   that markup, so every class they use (including sr-only, which remark-gfm
+   emits on the footnotes label) is defined here. */
 
-/* ONE row, one centreline, one control height.
- *
- * This used to be a stretch row with no align-items, so the theme pill (the
- * tallest item) set the height, the icon controls centred themselves inside
- * their own boxes, and the Blog link's text sat at the TOP of a box taller
- * than its line. Three items, three different vertical positions, none of it
- * visible to any gate we have.
- *
- * --control-h is declared here rather than in the token blocks because these
- * three controls are the only things that share it, and because check:contrast
- * parses :root for colour tokens. Everything on the row is given that height
- * explicitly rather than left to stretch, so the row's height stops depending
- * on which item happens to be tallest. */
+/* One row, one centreline, one control height. Every item on the row gets
+   --control-h explicitly, so the row's height no longer depends on whichever
+   item is tallest.
+   --control-h is declared here rather than in the token blocks because only
+   these three controls share it and check:contrast parses :root for colour
+   tokens. */
 .site-header-nav {
   display: flex;
   align-items: center;
-  /* See the block on `.site-header` above for the measurement. Wrapping here is
-     the half that lets the four labels and three controls break; wrapping there
-     is the half that gives them a line of their own to break onto. */
+  /* The measurement is on `.site-header` above. Wrapping here lets the four
+     labels and three controls break; wrapping there gives them a line of
+     their own to break onto. */
   flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.9375rem;
   --control-h: 2.25rem;
 }
 
-/* Amended rule 2: nav links render as bare text, so they underline. The base
-   `a` rule already does it; this only sets the colour. The icon search control
-   is a sibling of these and opts out on its own rule above. The underline is
-   deliberately KEPT under v4: the chrome changed, the second channel did not.
-
-   v4 also rules that nav links carry NO :visited state. The grounds are the
-   wordmark saga's, one step further out: persistent wayfinding is not a trail
-   marker, and "have I been to Blog" is not a question the header is answering.
-   That makes it a SPECIFICITY problem exactly like the wordmark's, and the same
-   trap applies: it is invisible in review until /blog is in history, which for a
-   returning reader is always. `.site-header-nav a:visited` is (0,2,1) against
-   the base `a:visited` at (0,1,1), so this wins rather than tying. PROVED with
-   both / and /blog in the dev browser's history, not asserted. */
+/* Amended rule 2: nav links are bare text, so they underline. The base `a`
+   rule does that and this only sets the colour; the icon search control opts
+   out on its own rule. v4 keeps the underline.
+   v4 also gives nav links no :visited state: wayfinding is not a trail
+   marker. `.site-header-nav a:visited` is (0,2,1) against the base
+   `a:visited` at (0,1,1), so this wins rather than tying, which only shows
+   once /blog is in history. Proved with / and /blog in the browser history. */
 .site-header-nav a,
 .site-header-nav a:visited {
   color: var(--on-chrome-muted);
 }
 
-/* The text link gets the same hit area as the controls beside it, so it is as
-   clickable as they are and its baseline lands on their centreline. Centring
-   the text inside a fixed-height box is what keeps the underline still: the box
-   grew, the text did not move. `:not()` because the search control is also an
-   anchor in this nav and sizes itself. */
+/* The text link gets the same hit area as the controls, so its baseline lands
+   on their centreline. Centring the text in a fixed-height box keeps the
+   underline still. `:not()` because the search control is also an anchor here
+   and sizes itself. */
 .site-header-nav a:not(.search-trigger) {
   display: inline-flex;
   align-items: center;
@@ -66,18 +49,13 @@
   color: var(--on-chrome);
 }
 
-/* The two pill controls on the row. Both were drawn against the page canvas:
-   --border and --text-muted vanish on purple, and the --tint-brand hover fill
-   becomes either invisible (light: it IS --on-chrome-muted) or a dark patch on
-   dark purple. On chrome they borrow the chrome's own three values instead, so
-   no unmeasured pair enters.
-
-   Hover is a COLOUR step rather than a fill. It was chosen so the theme
-   toggle's pressed state could stay the only filled thing in the header; there
-   is no pressed state any more (2026-08-29, one button, no aria-pressed) and
-   the colour step is KEPT, because nothing in this header is filled now and a
-   single filled control would become the loudest thing on the row. Rest and
-   hover are two distinct looks built from ratified values alone. */
+/* The two pill controls borrow the chrome's own three values. Against purple,
+   --border and --text-muted vanish and the --tint-brand hover fill is either
+   invisible (in light it is --on-chrome-muted) or a dark patch, so no
+   unmeasured pair enters.
+   Hover is a colour step rather than a fill: since 2026-08-29 there is no
+   pressed state, nothing in the header is filled, and one filled control
+   would be the loudest thing on the row. */
 .site-header .theme-toggle,
 .site-header-nav .search-trigger {
   border-color: var(--on-chrome-muted);
@@ -95,42 +73,21 @@
 }
 
 
-/* Theme toggle ------------------------------------------------------------
- *
- * ONE BUTTON since 2026-08-29, ordered by Dustin on aesthetics. It was a form
- * with three submit buttons and a brand fill on the pressed one.
- *
- * ## THE CASCADE IS THE CONTROL, and the two layers below are the mechanism
- *
- * TWO buttons ship and exactly one is ever displayed. The hidden one is
- * `display: none`, so it leaves the accessibility tree as well as the screen: a
- * screen reader finds one button, not two, and the one it finds names the
- * action it will perform.
- *
- * Which one shows is decided in two layers, and the order matters:
- *
- *   no explicit choice   `prefers-color-scheme` picks, so a reader with no
- *                        cookie sees the icon for the theme their machine is
- *                        actually in, with NO SCRIPT involved. That is what
- *                        makes the no-script form post the right value: the
- *                        button that is visible is the button that submits,
- *                        and the server never has to guess a preference it
- *                        cannot see.
- *   explicit choice      `html[data-theme]` picks, and it MUST outrank the
- *                        media query, because a reader on a light machine who
- *                        chose dark has to see the dark control. It does, on
- *                        specificity, (0,3,1) against (0,2,0), so the media
- *                        query needs no `:not()` and reads as the default it is.
- *
- * The scripted path sets or removes that attribute and nothing else; the
- * control follows by cascade. No icon is swapped in JavaScript and no label is
- * rewritten, which is why the enhancement bundle carries no copy of this SVG.
- *
- * No transition. A theme flip repaints every surface at once, and animating
- * only the few properties named here would tear the page into a fast half and
- * an instant half. The switch is deliberately immediate, so there is no motion
- * to reduce and nothing for prefers-reduced-motion to undo.
- */
+/* Theme toggle. One button since 2026-08-29, ordered by Dustin.
+   Two buttons ship and exactly one is displayed. The hidden one is `display:
+   none`, so a screen reader finds one button, not two, and it names the
+   action it will perform.
+   With no explicit choice, `prefers-color-scheme` picks with no script, so
+   the visible button is the one the no-script form submits and the server
+   never has to guess.
+   With an explicit choice, `html[data-theme]` picks, and it must outrank the
+   media query so a reader who chose dark on a light machine sees the dark
+   control. It does, (0,3,1) against (0,2,0), so the media query needs no
+   `:not()`.
+   Script only sets or removes that attribute and the control follows by
+   cascade, so no icon is swapped in JavaScript.
+   No transition: a theme flip repaints every surface at once, so it is
+   immediate and there is nothing for prefers-reduced-motion to undo. */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -161,9 +118,8 @@
   background: var(--tint-brand);
 }
 
-/* THE DEFAULT LAYER: no cookie, so the machine decides. Light is what a browser
-   reporting no preference at all falls to, which matches the palette's own
-   light-first default. */
+/* Default layer: with no cookie the machine decides. A browser reporting no
+   preference gets light, the palette's own default. */
 .theme-option[data-when="dark"] {
   display: none;
 }
@@ -178,8 +134,8 @@
   }
 }
 
-/* THE EXPLICIT LAYER, outranking the media query so a chosen theme beats a
-   machine preference that disagrees with it. */
+/* Explicit layer: outranks the media query, so a chosen theme beats the
+   machine's preference. */
 html[data-theme="light"] .theme-option[data-when="light"],
 html[data-theme="dark"] .theme-option[data-when="dark"] {
   display: grid;

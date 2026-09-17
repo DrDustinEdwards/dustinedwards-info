@@ -18,16 +18,11 @@
 }
 
 @media print {
-  /*
-   * THE PRINT RULE COLOUR, declared here and nowhere else.
-   *
-   * A mid grey that reads on paper under any ink budget. It is NOT one of the
-   * theme tokens and must not become one: the theme blocks are walked by
-   * check:contrast, which requires every declared token to participate in a
-   * measured pair, and there is no screen pair to measure for a colour that
-   * only ever exists on paper. Print-scoped, so it also cannot leak into a
-   * screen rule by being reachable from one.
-   */
+  /* The print rule colour, declared here only: a mid grey that reads on
+     paper. It is not a theme token and must not become one, because
+     check:contrast requires every theme token to sit in a measured screen
+     pair and this colour only exists on paper. Scoping it to print keeps it
+     out of screen rules. */
   :root {
     --print-rule: #999;
   }
@@ -92,40 +87,18 @@
   }
 }
 
-/* THE PUBLIC PLANE OPTS OUT OF CROSS-DOCUMENT VIEW TRANSITIONS.
- *
- * This said `navigation: auto` from the day it was written, and the transition
- * engaging was twice recorded here as a sign of health. It was the defect.
- *
- * MEASURED on production, `/` to `/blog`, three runs per cell, both themes,
- * frames read from the compositor and each one scored against the settled
- * origin page and the settled destination page:
- *
- *   as-is    12 to 14 intermediate frames matching NEITHER page, 214-220 ms
- *            dark and 245-259 ms light, 33 to 66 times the noise floor
- *   reduce   two frames after the click, no intermediate state
- *   none     one frame after the click, no intermediate state
- *
- * That is Chrome's default root crossfade: both snapshots animate through
- * partial opacity for a quarter of a second, so the reader sees the old page
- * and the new page stacked and washed out. On a full-document public plane
- * that runs on EVERY header click.
- *
- * THE REDUCED-MOTION BLOCK THAT USED TO SIT HERE IS GONE, and its absence is
- * the point rather than tidying. It set `animation: none` on the transition
- * pseudo-elements, which skipped the fade while leaving the transition opted
- * in, so readers with reduced motion were the only ones NOT seeing the blink.
- * They were the control group for a defect nobody had identified. With the
- * transition off for everyone the block has no subject left.
- *
- * WHAT REPLACES IT is Chrome's paint holding: the previous page stays on
- * screen until the new document's first contentful paint, then cuts. That is
- * the behaviour the transition was overriding.
- *
- * ONE DECLARATION, and `check:browser` asserts the consequence on the wire
- * rather than the spelling: `pagereveal` fires on a public navigation and its
- * `viewTransition` is null.
- */
+/* The public plane opts out of cross-document view transitions. Measured on
+   production, `/` to `/blog`, three runs per cell, both themes: with the
+   transition on, 12 to 14 intermediate frames matched neither page, lasting
+   214-220 ms dark and 245-259 ms light, 33 to 66 times the noise floor; with
+   it off, one frame after the click. That is Chrome's default crossfade
+   showing both pages stacked on every header click.
+   There is no reduced-motion block: with the transition off for everyone it
+   has nothing to do. The old one skipped the fade but left the transition on,
+   so readers with reduced motion were the only ones not seeing the blink.
+   Chrome's paint holding replaces it: the old page stays until the new one's
+   first contentful paint. check:browser asserts that `pagereveal` fires with
+   a null `viewTransition`. */
 @view-transition {
   navigation: none;
 }
