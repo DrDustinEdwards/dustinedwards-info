@@ -1,14 +1,8 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Projects index: cards on the canvas, which binding rule 7 permits for an
-   index. The metric leads each card, above the name: a number before a claim.
-   `auto-fit` with a minimum, so the grid collapses to one column at narrow
-   widths with no breakpoint and no JavaScript.
-   A card ends where its content ends (since 2026-08-30, Dustin's call from
-   screenshots): stretching every card to the tallest left roughly four
-   hundred pixels of empty card under short ones. `start` moves that space
-   below the card. The foot blocks' auto margins are not dead: they still
-   order the links above the evidence and act on rows of similar length. */
+/* Projects index: cards on the canvas (rule 7 permits it for an index); the metric leads, above the name.
+   auto-fit with a minimum, so no breakpoint. align-items: start, so a card ends where its content ends
+   instead of stretching to the tallest; the foot margins still order links above evidence. */
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
@@ -77,10 +71,8 @@
   color: var(--text-muted);
 }
 
-/* What is technically notable: prose inside a card, so it takes the card's
-   muted body colour and the same measure as the description. No marker or
-   indent: these are three sentences, not an enumeration, and a bullet would
-   promise an order the list does not have. */
+/* Technical notes are prose in a card: muted body colour, the description's measure, and no bullets,
+   which would promise an order the sentences do not have. */
 .project-notable {
   margin: 0.875rem 0 0;
   padding: 0;
@@ -147,11 +139,8 @@
   color: var(--text-muted);
 }
 
-/* Pushed to the card's foot. `auto` on the top margin only works on the last
-   flex child, so the evidence block takes it when present and this keeps it
-   otherwise. With the grid on `align-items: start` there is usually no slack
-   to consume, but it still orders the two foot blocks and still works on rows
-   of similar length. */
+/* Pushed to the foot: an auto top margin works only on the last flex child, so the evidence block takes it
+   when present and this otherwise. */
 .project-links {
   display: flex;
   flex-wrap: wrap;

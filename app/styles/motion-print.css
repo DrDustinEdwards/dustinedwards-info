@@ -18,11 +18,8 @@
 }
 
 @media print {
-  /* The print rule colour, declared here only: a mid grey that reads on
-     paper. It is not a theme token and must not become one, because
-     check:contrast requires every theme token to sit in a measured screen
-     pair and this colour only exists on paper. Scoping it to print keeps it
-     out of screen rules. */
+  /* The print rule colour lives here only. Never a theme token: check:contrast requires every theme token
+     in a measured screen pair, and this colour exists only on paper. */
   :root {
     --print-rule: #999;
   }
@@ -87,20 +84,10 @@
   }
 }
 
-/* The public plane opts out of cross-document view transitions. Measured on
-   production, `/` to `/blog`, three runs per cell, both themes: with the
-   transition on, 12 to 14 intermediate frames matched neither page, lasting
-   214-220 ms dark and 245-259 ms light, 33 to 66 times the noise floor; under
-   reduced motion, two frames after the click with no intermediate state; with
-   it off, one frame after the click with no intermediate state. That is
-   Chrome's default crossfade showing both pages stacked on every header
-   click.
-   There is no reduced-motion block: with the transition off for everyone it
-   has nothing to do. The old one skipped the fade but left the transition on,
-   so readers with reduced motion were the only ones not seeing the blink.
-   Chrome's paint holding replaces it: the old page stays until the new one's
-   first contentful paint. check:browser asserts that `pagereveal` fires with
-   a null `viewTransition`. */
+/* The public plane opts out of cross-document view transitions: Chrome's default crossfade showed both pages
+   stacked on every header click. With it off, paint holding keeps the old page until the new one paints.
+   The reduced-motion arm was two frames after the click with no intermediate state, so none is needed.
+   check:browser asserts pagereveal fires with a null viewTransition. */
 @view-transition {
   navigation: none;
 }

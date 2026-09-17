@@ -1,10 +1,7 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* /playground. Each demo's controls and result sit on `--surface` while the
-   prose stays on the canvas, which is binding rule 7 read correctly: the
-   surfaces are interruptions, like code blocks in an article.
-   No colour carries meaning alone (rule 1): pass and fail are words, and the
-   error block is a word plus a border. */
+/* /playground: controls and results sit on --surface while prose stays on the canvas (rule 7).
+   No colour carries meaning alone: pass and fail are words. */
 
 .playground-demo {
   margin: 3.5rem 0 0;
@@ -208,9 +205,8 @@
 
 .playground-table th,
 .playground-table td {
-  /* Tightened from 0.75rem: at the 48rem measure the six columns overflowed
-     by 26px and clipped the fused total, the one number the table exists to
-     show. It still scrolls if a title forces it to. */
+  /* Tight padding so the six columns fit the measure and the fused total is never clipped.
+     It still scrolls if a title forces it to. */
   padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border);
   text-align: left;

@@ -1,14 +1,5 @@
-/* The publications index and per-paper pages, restored 2026-09-12 from
-   `app/app.css` at `a04f922`, before PR #3 retired the academic routes. A
-   separate sheet because page styles left app.css on 2026-08-27; putting 200
-   lines back would undo that.
-   The token names are not the ones this CSS was written against: the Hill
-   Country system landed at `081ddb2`, so colours were re-pointed (`--fg` to
-   `--text`, `--muted` to `--text-muted`, `--brand-fg` to `--on-brand`, `--ok`
-   to the success pair). A literal restore would have compiled and painted
-   inherited colours with nothing failing.
-   `.research-heading` is not here: `/research` does not exist, so the rule it
-   shared with `.pub-year-heading` is now one selector. */
+/* The publications index and per-paper pages. A separate sheet because page styles left app.css;
+   its colours use the Hill Country token names. */
 
 /* Controls. Filter state lives in the URL, so the chips are links and search
    and sort are a GET form; nothing needs scripting. */
@@ -54,10 +45,8 @@
 
 .pub-chip-count {
   font-variant-numeric: tabular-nums;
-  /* Not `opacity`. The original dimmed the count with `opacity: 0.75`, and
-     check:contrast never sees an alpha applied after the declared pair;
-     core.md lists that gap, so this does not add to it. The count uses the
-     chip's own colour, a measured pair. */
+  /* Never opacity: check:contrast cannot see an alpha applied after the declared pair.
+     The count uses the chip's own colour, a measured pair. */
   font-size: 0.75rem;
 }
 
@@ -204,10 +193,8 @@
   white-space: nowrap;
 }
 
-/* One paper's page, added 2026-09-12 with `/publications/<slug>/`. It reuses
-   `.pub-badge`, `.pub-links`, `.pub-chip` and `.pub-author-me`: the two pages
-   show the same facts at different densities, and a second set of names would
-   drift. */
+/* One paper's page. It reuses .pub-badge, .pub-links, .pub-chip and .pub-author-me:
+   same facts at a different density, and a second set of names would drift. */
 .paper-breadcrumb {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
@@ -215,8 +202,7 @@
 
 .paper-title {
   margin: 0;
-  /* Smaller than other page titles on purpose: a paper title is a sentence,
-     up to 150 characters here, which is four lines at page-title size. */
+  /* Smaller than other page titles on purpose: a paper title is a sentence and runs to several lines. */
   font-size: 1.5rem;
   line-height: 1.3;
 }
@@ -282,9 +268,7 @@
   font-size: 0.8125rem;
 }
 
-/* Who cites this paper. A list of sentences, so it reads rather than tabulates:
-   each entry is a title, a venue and a year, and the longest here runs to 50
-   entries. Numbered because the order is meaningful (newest first). */
+/* Who cites this paper: a numbered list of sentences (title, venue, year), newest first. */
 .paper-citedby {
   margin-top: 2rem;
   max-width: 46rem;
@@ -337,13 +321,8 @@
   font-weight: 600;
 }
 
-/* A retraction, correction or expression of concern. Tinted, unlike
-   .paper-summary, because this is the publisher contradicting the document
-   and must be seen before the abstract.
-   It uses the warning trio (--tint-warning, --on-tint-warning,
-   --border-warning), already a measured contrast pair in both themes, so no
-   new colour needs checking. No record carries a notice today; the styling
-   ships with the path. */
+/* A retraction, correction or concern notice. Tinted, unlike .paper-summary: the publisher is contradicting
+   the document, so it must be seen first. The warning trio is already a measured contrast pair in both themes. */
 .paper-update-notice {
   margin: 1.5rem 0 0;
   max-width: 42rem;

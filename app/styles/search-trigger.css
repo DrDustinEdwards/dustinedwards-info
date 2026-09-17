@@ -4,16 +4,9 @@
    app/enhance/palette.ts creates, so a reader without script never sees any
    of it. */
 
-/* Search entry point: one control, an icon and nothing else. The visible "/"
-   is gone (Dustin, 2026-08-29): it should not be painted at all. The shortcut
-   is announced through the control's `title` and an `aria-describedby`
-   region, both written by the enhancement, so the promise exists only once
-   the listener does.
-   Rule 2 is met because the anchor renders no text and carries a border.
-   Height comes from --control-h on .site-header-nav, so this control, the
-   theme button and the Blog link share one height and centreline. The padding
-   keeps it a square above the 24px WCAG 2.2 target floor, and its shape does
-   not change when script arrives. */
+/* Search entry point: one icon control, no visible "/". The shortcut is announced through title and
+   aria-describedby, written by the enhancement, so it exists only with the listener. No text plus a border
+   meets rule 2. Height is --control-h; the padding keeps it square above the 24px target. */
 .search-trigger {
   display: inline-flex;
   align-items: center;

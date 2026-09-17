@@ -1,16 +1,11 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Blog phase 3. Everything below styles server-rendered markup or elements
-   the enhancement script adds. None of it is needed to read the page, and
-   every animation is off under prefers-reduced-motion. */
+/* Enhancement styles: none are needed to read the page, and every animation is off under
+   prefers-reduced-motion. */
 
-/* Skip link, visible only when focused. It sits at top 0, so it is only ever
-   seen against the chrome, where a --brand fill is invisible in light mode.
-   It takes the chrome's inverted pair, the one the pressed theme toggle
-   takes, so no new pair enters (a v4 consequence).
-   The reading-progress bar keeps --brand: the header is not sticky, and the
-   bar is scaleX(0) at scroll 0, so it has width only after the chrome has
-   scrolled away. */
+/* Skip link, visible on focus at top 0, so it is seen against the chrome, where a --brand fill vanishes.
+   It takes the chrome's inverted pair. The progress bar keeps --brand: it has width only after the chrome
+   has scrolled away. */
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -22,9 +17,8 @@
   border-radius: 0 0 0.375rem 0;
 }
 
-/* Its inset ring: the fill it sits in is pale, and #f3e3b8 on it is ~1.1:1.
-   At (0,1,1) it ties the base inset rule's specificity and wins on order, so
-   it must stay below that block. */
+/* Its inset ring: the pale fill needs a different ring. At (0,1,1) it ties the base inset rule and wins
+   on order, so it must stay below that block. */
 .skip-link:focus-visible {
   outline-color: var(--surface-chrome);
 }
