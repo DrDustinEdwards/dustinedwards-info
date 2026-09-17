@@ -183,7 +183,11 @@ function hits(prose, needles) {
  */
 const SINGLETONS = [
   { name: "site-header", component: "app/components/site-header.tsx", sheets: ["app/styles/public-chrome.css", "app/styles/chrome-nav.css"] },
-  { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/public-chrome.css"] },
+  // shell.css, NOT public-chrome.css. The footer was renamed `.site-footer` to
+  // `.site-shell-footer` and moved sheets; the dead rules public-chrome.css
+  // still carried were deleted 2026-09-16, so mapping it there would have sent
+  // the canvas the HEADER's tokens as the footer's.
+  { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/shell.css"] },
   { name: "theme-toggle", component: "app/components/theme-toggle.tsx", sheets: ["app/styles/public-chrome.css"] },
   { name: "search-trigger", component: "app/components/search-trigger.tsx", sheets: ["app/styles/search-trigger.css", "app/styles/palette-dialog.css"] },
 ];
@@ -208,8 +212,9 @@ specific commit on Dustin's order, and two standing design rulings are SUSPENDED
 for it rather than satisfied by it. Nothing about it changes without that
 suspension being lifted.
 
-**The header has no width breakpoints.** It is \`flex-wrap: nowrap\`, the only
-media query touching it is \`print\`, and it REFLOWS rather than breaking. The
+**The header has no width breakpoints.** It is \`flex-wrap: wrap\` on both the
+header and the nav, the only media query touching it is \`print\`, and it WRAPS
+onto a second line rather than overflowing. The
 thresholds below are measured values from the component's own comment, dated in
 the source; they are properties of the current link labels, so a longer word
 moves them and they are re-measured rather than reasoned from.
