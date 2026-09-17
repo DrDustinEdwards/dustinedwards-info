@@ -381,7 +381,8 @@
 
 /* The fold: below this width Sign out and the email move into the account menu (the existing overflow menu),
    because what remains after truncation is controls, and a control must not shrink past its label.
-   The breakpoint sits above the measured floor with headroom, because a longer address moves that floor. */
+   Not 576: that existing breakpoint is below the measured 582px floor, so it cannot fold in time; 640 is the
+   nearest existing one above it, with headroom because a longer address moves the floor. */
 .admin-topbar-account {
   display: none;
 }

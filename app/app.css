@@ -2,7 +2,8 @@
 
 /* Inter, self-hosted so style-src and font-src stay 'self': variable latin subsets, weight axis 100 to 900.
    Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/ paths
-   immutable. unicode-range keeps the italic to pages with italic latin text. font-display: swap. */
+   immutable. unicode-range keeps the italic to pages with italic latin text. font-display differs per face:
+   see the next note. */
 /* font-display: optional on the normal face, because swap re-wrapped the /blog chip row and one
    size-adjust cannot match every weight. The italic keeps swap and is not preloaded: it is needed
    only with italic text, and optional on a late face means it is almost never used. */
@@ -17,6 +18,7 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+
 @font-face {
   font-family: "Inter";
   font-style: italic;
@@ -29,8 +31,9 @@
 }
 
 /* Arial sized to Inter, tuned at 17px, the prose size. Prose computes font-optical-sizing: auto, so opsz
-   moves with the font size and Inter's advance width varies (ascent and descent do not). Only Arial,
-   which Helvetica and sans-serif resolved to when measured; other local() faces would inherit its numbers. */
+   moves with the font size and Inter's advance width varies (ascent and descent do not). Never retune from
+   the usual 1000px sample: that ratio makes body text narrower than plain Arial. Only Arial, which Helvetica
+   and sans-serif resolved to when measured; other local() faces would inherit its numbers. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;
@@ -114,8 +117,9 @@
 }
 
 /* Type levels: a consumer sets all five properties, never the font shorthand, which drops the variation axes.
-   Weight is set twice to one number: font-weight selects the face, wght positions the axis; with only
-   font-weight the browser interpolates the axis. Optical sizing is off, so nothing interpolates on resize. */
+   Weight is set twice to one number: font-weight selects the face, wght positions the axis. With only wght a
+   level matches the 400 face and draws it heavier; with only font-weight the browser interpolates the axis.
+   Optical sizing is off, so nothing interpolates on resize. */
 :root {
   /* Prose and UI body at 420, not 400: on limestone Inter's 400 goes thin
      under greyscale antialiasing. The standfirst is this level at 1.25rem, a

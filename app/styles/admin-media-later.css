@@ -526,6 +526,7 @@
  * separation is fill, and quietness is size, weight and tracking. */
 
 
+
 .panel-actions {
   display: flex;
   align-items: center;
@@ -639,6 +640,7 @@
 
 /* Type: the families are not changed here. --font-sans is the site's brand face and --font-mono a
  * free system stack; changing either is Dustin's call. Only size, weight and tracking follow the mockup. */
+
 
 .panel-head h2 {
   font-size: 1.6875rem;
