@@ -1,14 +1,5 @@
-/*
- * A single post: head, table of contents, generated prose, figures, charts, diagrams.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* See split header, canonical statement is app/app.css:1885 */
 
-/* Post detail --------------------------------------------------------------- */
 
 .post {
   max-width: 44rem;
@@ -79,10 +70,6 @@
   font-size: 0.9375rem;
 }
 
-/* What the model already held ----------------------------------------------
-   Cover, dek, related descriptions, prev/next targets and the share row. Added
-   2026-09-03; all of it was stored and none of it was drawn.
-   ------------------------------------------------------------------------ */
 
 /* The dek. Larger than body text and quieter than the title, which is what a
    standfirst is: the same sentence the meta description carries, so it reads as
