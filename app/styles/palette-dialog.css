@@ -13,9 +13,7 @@
 }
 
 .palette::backdrop {
-  /* The ratified scrim. This site and the admin drawer backdrop once wrote it
-     as `45%` and `0.45`, which is how one role ends up with two owners that
-     agree by luck. */
+  /* The ratified scrim, one owner for the role. */
   background: var(--scrim);
   opacity: 0.45;
 }
@@ -52,12 +50,8 @@
   font-size: 1rem;
 }
 
-/* 2.4.7 is not satisfied by removing the indicator. The input takes focus as
-   soon as the palette opens, so without a ring a keyboard reader cannot tell
-   where focus went.
-   `:focus-visible`, not `:focus`, so a pointer user does not get a ring they
-   did not ask for. The token is the on-surface ring the elevated chrome uses,
-   not a new colour, so it stays inside what the contrast gate reads. */
+/* WCAG 2.4.7: the input takes focus when the palette opens, so it needs a ring. :focus-visible, not :focus.
+   The on-surface ring token, so it stays inside what the contrast gate reads. */
 .palette-input:focus {
   outline: none;
 }

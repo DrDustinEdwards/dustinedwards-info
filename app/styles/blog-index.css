@@ -49,15 +49,8 @@
   color: var(--on-brand);
 }
 
-/* A token, not an opacity. It was `color: inherit; opacity: 0.7`.
-   On the filled current chip that put `--on-brand` over `--brand` at 70%
-   opacity, a composite the ratified pair was never measured at. And
-   check:contrast cannot see it: it reads token hexes and opacity is applied
-   afterwards, so any opacity on text hides a failing pair behind a passing
-   one.
-   So the count takes `--text-muted`, measured against the chip surface, and
-   on the current chip inherits `--on-brand` at full strength, the ratified
-   pair. */
+/* A token, never opacity: check:contrast reads token hexes, and opacity on text hides a failing composite
+   behind a passing pair. The count takes --text-muted, and on the current chip inherits --on-brand. */
 .tag-count {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -123,15 +116,9 @@
   font-size: 0.9375rem;
 }
 
-/* WCAG 2.2 2.5.8, target size (minimum). Measured at 39x23 and 33x23 for
-   "Older" and "Newer" against a 24px floor: the height was 23px because a
-   bare inline anchor's box is its line box, and a pixel is not a rounding
-   artefact when the floor is 24 with no tolerance.
-   `inline-flex` with a min-height, not padding, so the target grows around
-   the text and the pagination's `align-items: center` keeps both links on one
-   centreline.
-   The inline-target exception does not apply: it covers links inside a
-   sentence, and these sit alone in a nav. */
+/* WCAG 2.2 2.5.8: a bare inline anchor's box is its line box and fell short of 24px. inline-flex with a
+   min-height grows the target and keeps both links on one centreline. The inline-link exception does not
+   apply to links alone in a nav. */
 .pagination a {
   display: inline-flex;
   align-items: center;

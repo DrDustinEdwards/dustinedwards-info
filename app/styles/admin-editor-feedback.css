@@ -1,26 +1,9 @@
-/*
- * The editor's feedback slot and upload row.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* The editor's feedback slot and upload row.
+ * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* The editor's feedback slot ------------------------------------------------
- *
- * One slot, four states, and the tint changes family with the state rather than
- * the state changing only its words. Rule 4 holds because exactly one of these
- * is ever rendered: the slot is a single node, so there is no arrangement in
- * which two semantic tints appear together. Everything else in the editor that
- * could have carried a tint (the missing-token notice) was moved off one for
- * the same reason.
- *
- * The slot element itself is always present and unstyled when empty, because it
- * is the live region: a container that appears at the same moment as its text
- * announces nothing.
- */
+/* The feedback slot: one node, four states, so two semantic tints never appear together (rule 4).
+ * The empty slot stays rendered because it is the live region; a container that appears with its text
+ * announces nothing. */
 .editor-feedback-slot:empty {
   display: none;
 }
@@ -79,11 +62,8 @@
   color: var(--on-tint-danger);
 }
 
-/* First publication. The one act the system reserves to the human, so it is the
-   one message that does not look like every other save. The weight is carried
-   by size and a heavier edge, never by a colour the other success state does
-   not also have: a reader who cannot separate the two hues still sees a
-   different shape. */
+/* First publication, the one act reserved to the human, so it does not look like every other save.
+   Weight comes from size and a heavier edge, never a colour alone, so it reads without the hue. */
 .editor-feedback[data-ceremony] {
   padding: 1.125rem 1.25rem;
   border-width: 1px 1px 1px 4px;
@@ -102,18 +82,8 @@
   }
 }
 
-/* THE LEAVE GUARD. A navigation the router stopped because the post is dirty.
-
-   The warning family, the same one the drift alert spends, because this is a
-   degradation and not a failure: nothing has been lost and the crash net still
-   holds the text. It is the only tint this component adds and it is a tint the
-   editor already uses, so no new pair enters the palette and check:contrast has
-   nothing new to measure.
-
-   It sits above the form rather than over it: the author's navigation is
-   already held by the router, so there is no need to trap them behind a modal
-   to ask, and a modal would take focus away from the writing they can go back
-   to. */
+/* The leave guard takes the warning family: nothing is lost and the crash net holds the text, and it
+   adds no contrast pair. Above the form, not a modal, which would take focus from the writing. */
 .editor-leave-guard {
   display: flex;
   flex-wrap: wrap;

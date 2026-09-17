@@ -1,22 +1,8 @@
-/*
- * The three-region post editor: bar, panes, CodeMirror, settings drawer.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* The three-region post editor: bar, panes, CodeMirror, settings drawer.
+ * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* The three-region editor -------------------------------------------------
- *
- * Region 1 is a command bar that does not move. Region 2 is the writing canvas
- * and it is the ONLY thing on the page that scrolls. Region 3 is a drawer that
- * is not laid out at all until it is opened.
- *
- * One scroll context is a requirement rather than a preference: a sticky bar
- * over a document that also scrolls gives two scrollbars, and the inner one is
- * the one nobody finds. .admin-content hands its height down for this. */
+/* The three-region editor: a fixed command bar, a canvas that is the ONLY scroll context, and a drawer
+ * not laid out until opened. A second scroll context is a scrollbar nobody finds. */
 .editor-shell {
   display: flex;
   flex: 1;
@@ -35,14 +21,8 @@
 /* Region 1. Not `position: sticky`: the canvas scrolls, not this, so the bar
    is simply a flex item that never grows. Sticky would be a promise about a
    scroll container it does not live in. */
-/* The command bar is a THREE COLUMN GRID, not a flex row with space-between.
-   The centre group has to sit at the bar's centre regardless of how wide the
-   two side groups are, and space-between centres the middle item only when the
-   sides happen to match. `1fr auto 1fr` pins it.
-
-   Fixed height, declared once as --admin-cmdbar-h, because the canvas subtracts
-   it. It used to wrap to three rows at 1280px, which is what a wrapping bar of
-   unconstrained controls does. Nothing in it may wrap now. */
+/* A three-column grid, not space-between, so the centre group stays centred whatever the sides' widths.
+   Fixed height (--admin-cmdbar-h), because the canvas subtracts it. Nothing in the bar may wrap. */
 .editor-bar {
   display: grid;
   flex: none;
@@ -51,16 +31,9 @@
   gap: 0.75rem;
   height: var(--admin-cmdbar-h);
   padding: 0 1rem;
-  /* Sticky offsets are measured from the SCROLLPORT, not from the viewport, and
-     .admin-content is the scrollport here. It already begins below the topbar,
-     so asking for --admin-topbar-h again applied the offset twice: the bar was
-     pushed 52px down, overlapped the top of the canvas, and covered the title
-     input so a click on it landed on a command-bar button instead. Measured by
-     elementFromPoint on the live deploy 2026-08-01.
-
-     Zero is correct wherever .admin-content is the scrollport. The narrow
-     breakpoint, where the shell releases its height and the DOCUMENT scrolls
-     instead, is the one case that needs the real offset, and it sets it. */
+  /* Sticky offsets are measured from the scrollport, and .admin-content already starts below the topbar,
+     so a non-zero top pushes the bar over the title input. Only the narrow breakpoint, where the document
+     scrolls, sets a real offset. */
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
@@ -83,10 +56,8 @@
   justify-content: flex-end;
 }
 
-/* ONE control height across the whole bar. Every control in it opts in here
-   rather than declaring its own, so the row cannot drift back into the ragged
-   set of 28px, 32px and 36px boxes the comp was drawn to replace. 2rem is 32px
-   at the root size, comfortably past the 24px WCAG 2.2 target minimum. */
+/* One control height for the whole bar; every control opts in here so the row cannot go ragged.
+   2rem clears the 24px WCAG 2.2 target minimum. */
 .editor-bar .editor-back,
 .editor-bar .editor-layout-option,
 .editor-bar .editor-icon-button,
@@ -187,12 +158,8 @@
   background: var(--fill-warning);
 }
 
-/* Ruling 3's buffer age, beside the dirty indicator and deliberately QUIETER
-   than it. --text-muted rather than the warning colour its neighbour takes when
-   dirty: the warning is the state, this only qualifies it with when the crash
-   net last caught the draft, and two warning-coloured items would read as two
-   problems. No new contrast pair, this is the same muted-on-surface pair the
-   bar already carries at rest and check:contrast already measures. */
+/* The buffer age (ruling 3) is quieter than the dirty indicator: muted, not warning, since two
+   warning-coloured items read as two problems. It reuses a pair check:contrast already measures. */
 .editor-buffer-age {
   color: var(--text-muted);
   font-size: 0.8125rem;
@@ -206,13 +173,8 @@
   gap: 0.5rem;
 }
 
-/* Region 2, and the only scroll context on the page.
-
-   The height is DECLARED rather than left to flex, so the contract is legible:
-   the viewport, less the two bars above it. Flex would arrive at the same
-   number today and would quietly stop doing so the moment anything else joined
-   the column, which is exactly how the image uploader came to be eating 126px
-   of it. Nothing may render below this element. */
+/* Region 2, the only scroll context. The height is declared (viewport less both bars), not left to flex,
+   so nothing added to the column can silently shrink it. Nothing may render below this element. */
 .editor-canvas {
   flex: 1;
   height: calc(100dvh - var(--admin-topbar-h) - var(--admin-cmdbar-h));
@@ -247,12 +209,8 @@
   margin: 0 auto;
 }
 
-/* The title belongs to the thing being edited, so it tracks the EDITOR pane
-   rather than the page. In split view it spanned both columns while the editor
-   was half of one, which read as a page heading floating above two unrelated
-   boxes. The width is derived from the same gap the grid uses, so the two
-   cannot drift apart. Preview view needs no rule: there is one column and the
-   title spans it. */
+/* The title tracks the editor pane, not the page, using the grid's gap so the two cannot drift.
+   Preview view has one column and needs no rule. */
 .editor-canvas[data-layout="split"] .editor-title-row {
   max-width: calc((100% - var(--editor-pane-gap)) / 2);
   margin-right: auto;
@@ -264,15 +222,8 @@
   gap: 0.5rem;
 }
 
-/* The counter sits with the title, not on the page rail.
- *
- * `field-sizing: content` makes the input as wide as what is typed, so the
- * counter lands immediately after the words it counts. Where that is not
- * supported the input keeps `flex: 1` and the counter falls back to the right
- * edge of the title row, which the rules above have already narrowed to the
- * editor pane's measure. Both readings are acceptable; the enhanced one is what
- * was asked for and the fallback is where it used to be minus the full-width
- * rail that made it look unrelated. */
+/* field-sizing: content puts the counter right after the title text. Without it the input keeps
+ * flex: 1 and the counter sits at the row's right edge, already narrowed to the editor pane. */
 @supports (field-sizing: content) {
   .editor-title {
     flex: 0 1 auto;
@@ -392,10 +343,8 @@
   border-color: var(--fill-danger);
 }
 
-/* Write, split and preview ------------------------------------------------
- *
- * The panes are the canvas's content, so they inherit its single scroll
- * context: each pane scrolls its own overflow and the page still does not. */
+/* Write, split and preview. The panes inherit the canvas's single scroll context: each pane scrolls its own
+ * overflow and the page does not. */
 .editor-panes {
   display: grid;
   flex: 1;
@@ -446,11 +395,8 @@
 
 /* A sandboxed frame is a replaced element with no intrinsic height, so it is
    given one rather than collapsing to the 150px default. */
-/* No min-height. It was 20rem, which at a shorter viewport made the pane taller
-   than the canvas, so the canvas grew a scrollbar of its own and the preview
-   showed TWO stacked on its right edge: the iframe document's and the canvas's.
-   The pane is a flex child that fills what it is given; anything it cannot show
-   is the iframe's to scroll, and that is the one scroll context it should have. */
+/* No min-height: a minimum taller than the canvas gave the preview two stacked scrollbars.
+   The pane fills what it is given, and the iframe scrolls the rest. */
 .editor-preview-frame {
   flex: 1;
   width: 100%;
@@ -594,10 +540,8 @@
   color: var(--text-muted);
 }
 
-/* Word count and reading time. Pushed to the far end, away from the drop hint,
-   and TABULAR so the strip does not twitch sideways as the count climbs through
-   a digit. Muted: it is reference, and the command bar upstream owns anything
-   in this view that is actually urgent. */
+/* Word count and reading time: at the far end, tabular so the strip does not twitch as digits change,
+   and muted, because it is reference. */
 .md-stats {
   margin: 0 0 0 auto;
   color: var(--text-muted);
@@ -790,10 +734,8 @@
   }
 }
 
-/* The body fills what is left of the canvas rather than carrying a fixed
-   height with the page scrolling past it. `resize: none` because a manual
-   resize handle inside a flex column fights the layout, and there is nothing
-   to resize toward: it is already as tall as the room allows. */
+/* The body fills what is left of the canvas. resize: none, since a resize handle in a flex column fights
+   the layout and the body is already as tall as the room allows. */
 .editor-body {
   flex: 1;
   min-height: 24rem;
@@ -809,10 +751,8 @@
   resize: none;
 }
 
-/* Once CodeMirror has mounted, the textarea is still the submitted field but
-   is no longer the control. It is removed from view and from the accessibility
-   tree rather than left as a second, stale copy of the body for a screen
-   reader to find. */
+/* After CodeMirror mounts, the textarea is still the submitted field but not the control, so it leaves
+   view and the accessibility tree rather than being a stale second copy. */
 .editor-body.is-replaced {
   display: none;
 }
@@ -826,16 +766,9 @@
   font-size: 0.8125rem;
 }
 
-/* Region 3: the settings drawer -------------------------------------------
- *
- * A real <dialog> opened with showModal(), the same choice the command palette
- * made: the focus trap, Escape, and focus return are the platform's rather than
- * a keydown handler that is subtly wrong in a way nobody notices.
- *
- * It sits on the POPOVER elevation step, so every border inside it is
- * --border-strong. That is the Session 1 finding, and it is not a style
- * preference: --border clears the 3:1 UI floor on --surface by 0.04 in dark
- * mode and drops to 2.66:1 on the popover step. */
+/* Region 3, the settings drawer: a real <dialog> with showModal(), so focus trap, Escape and focus
+ * return are the platform's. It sits on the popover step, so every border inside is --border-strong:
+ * --border fails 3:1 there in dark. */
 .drawer {
   position: fixed;
   top: 0;
@@ -921,12 +854,8 @@
   font-size: 0.9375rem;
 }
 
-/* The frontmatter controls ------------------------------------------------
-   A <details> in the editing form rather than a drawer section, because the
-   drawer needs script to open and these have to work without it. Rule 5 sends
-   the disclosure's own edge to --border-strong: it is a pinned, elevated
-   surface in the sense that rule means, sitting above the canvas.
-   ---------------------------------------------------------------------- */
+/* Frontmatter controls are a <details> in the form, not a drawer section, so they work without script.
+   Its edge is --border-strong (rule 5): it is an elevated surface above the canvas. */
 
 .post-metadata {
   margin-top: 1.5rem;

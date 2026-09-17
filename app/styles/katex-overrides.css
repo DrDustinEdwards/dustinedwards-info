@@ -1,47 +1,10 @@
-/*
- * The site's half of the math stylesheet. HAND WRITTEN, and appended to the
- * derived upstream CSS by `scripts/build-katex.mjs`.
- *
- * Two files rather than one so each has an owner: everything above the marker
- * in `katex.generated.css` comes from the katex package and is replaced whole
- * on a version bump, and everything here is a decision this repo made. Editing
- * this file without running `npm run build:katex` is a named `check:content`
- * failure, because the generated artifact is byte-compared.
- *
- * IT SHIPS ONLY WITH THE MATH STYLESHEET, which is the point. A post with no
- * math links neither file, so these rules cost a mathless reader nothing. That
- * is why they are not in `prose.css`, where they would ride on all twelve posts
- * to serve one.
- *
- * NOTHING HERE SETS A COLOUR, and that is deliberate rather than unfinished.
- * KaTeX draws glyphs as text and rules as borders, and its SVG delimiters
- * declare `fill: currentColor; stroke: currentColor`, so every mark takes the
- * colour `.prose` is already painting. Both themes and forced-colors follow for
- * free, and a hardcoded value here would be the one thing that broke them.
- */
+/* The site's half of the math stylesheet, hand written; build-katex.mjs appends it to the generated
+ * upstream CSS. Run npm run build:katex after editing: check:content byte-compares the output.
+ * Ships only with math. Sets no colour: KaTeX draws in currentColor, so themes and forced-colors follow. */
 
-/*
- * DISPLAY MATH SCROLLS INSIDE ITSELF.
- *
- * KaTeX's own `.katex-display > .katex` sets `white-space: nowrap`, so a long
- * equation is wider than the 44rem column BY CONSTRUCTION rather than as an
- * edge case, and without this the whole document scrolls sideways on a phone.
- * Same repair, same reason, as `.prose pre`, which has had `overflow-x: auto`
- * since the first code block.
- *
- * `overflow-y: hidden` is what keeps the box from growing a second scrollbar it
- * has nothing to scroll, and the padding is what stops that hidden axis
- * clipping a subscript on the bottom row.
- *
- * NOT FOCUSABLE, and the omission is consistent rather than overlooked: this
- * site's other scrollable region, `.prose pre`, carries no `tabindex` either.
- * A keyboard user reaches both the same way. Changing that is a decision about
- * both, in one commit, not a difference introduced here.
- *
- * The margin comes with it: upstream is `1em 0`, measured in the 1.21em math
- * font and therefore wider than every other block in the column. Matched to
- * `.prose pre` so an equation sits in the prose rhythm rather than above it.
- */
+/* Display math scrolls inside itself: KaTeX sets nowrap, so a long equation is wider than the column.
+ * overflow-y: hidden avoids a second scrollbar; the padding keeps subscripts. Not focusable, like
+ * .prose pre; change both together or neither. Margin matches .prose pre, since upstream's em is wider. */
 .prose .katex-display {
   margin: 1.5rem 0;
   overflow-x: auto;

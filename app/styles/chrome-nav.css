@@ -1,15 +1,11 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /* Blog. Post bodies are generated HTML stored in D1, and Tailwind never sees
    that markup, so every class they use (including sr-only, which remark-gfm
    emits on the footnotes label) is defined here. */
 
-/* One row, one centreline, one control height. Every item on the row gets
-   --control-h explicitly, so the row's height no longer depends on whichever
-   item is tallest.
-   --control-h is declared here rather than in the token blocks because only
-   these three controls share it and check:contrast parses :root for colour
-   tokens. */
+/* One row, one centreline: every item takes --control-h, so no item's height sets the row's. Declared here,
+   not in the token blocks, because only these controls share it and check:contrast parses :root as colours. */
 .site-header-nav {
   display: flex;
   align-items: center;
@@ -22,22 +18,16 @@
   --control-h: 2.25rem;
 }
 
-/* Amended rule 2: nav links are bare text, so they underline. The base `a`
-   rule does that and this only sets the colour; the icon search control opts
-   out on its own rule. v4 keeps the underline.
-   v4 also gives nav links no :visited state: wayfinding is not a trail
-   marker. `.site-header-nav a:visited` is (0,2,1) against the base
-   `a:visited` at (0,1,1), so this wins rather than tying, which only shows
-   once /blog is in history. Proved with / and /blog in the browser history. */
+/* Nav links are bare text, so they underline (rule 2); the search icon opts out on its own rule. Nav links
+   have no :visited state: wayfinding is not a trail. .site-header-nav a:visited is (0,2,1) against
+   a:visited at (0,1,1), so this wins rather than ties. */
 .site-header-nav a,
 .site-header-nav a:visited {
   color: var(--on-chrome-muted);
 }
 
-/* The text link gets the same hit area as the controls, so its baseline lands
-   on their centreline. Centring the text in a fixed-height box keeps the
-   underline still. `:not()` because the search control is also an anchor here
-   and sizes itself. */
+/* The text link gets the controls' hit area, so its baseline sits on their centreline and the underline
+   stays still. :not() because the search control is also an anchor and sizes itself. */
 .site-header-nav a:not(.search-trigger) {
   display: inline-flex;
   align-items: center;
@@ -49,13 +39,8 @@
   color: var(--on-chrome);
 }
 
-/* The two pill controls borrow the chrome's own three values. Against purple,
-   --border and --text-muted vanish and the --tint-brand hover fill is either
-   invisible (in light it is --on-chrome-muted) or a dark patch, so no
-   unmeasured pair enters.
-   Hover is a colour step rather than a fill: since 2026-08-29 there is no
-   pressed state, nothing in the header is filled, and one filled control
-   would be the loudest thing on the row. */
+/* The pill controls use the chrome's tokens (--on-chrome, --on-chrome-muted): --border, --text-muted and
+   --tint-brand vanish or blotch on purple. Hover is a colour step, not a fill: nothing in the header is filled. */
 .site-header .theme-toggle,
 .site-header-nav .search-trigger {
   border-color: var(--on-chrome-muted);
@@ -73,21 +58,9 @@
 }
 
 
-/* Theme toggle. One button since 2026-08-29, ordered by Dustin.
-   Two buttons ship and exactly one is displayed. The hidden one is `display:
-   none`, so a screen reader finds one button, not two, and it names the
-   action it will perform.
-   With no explicit choice, `prefers-color-scheme` picks with no script, so
-   the visible button is the one the no-script form submits and the server
-   never has to guess.
-   With an explicit choice, `html[data-theme]` picks, and it must outrank the
-   media query so a reader who chose dark on a light machine sees the dark
-   control. It does, (0,3,1) against (0,2,0), so the media query needs no
-   `:not()`.
-   Script only sets or removes that attribute and the control follows by
-   cascade, so no icon is swapped in JavaScript.
-   No transition: a theme flip repaints every surface at once, so it is
-   immediate and there is nothing for prefers-reduced-motion to undo. */
+/* Theme toggle: two buttons ship and one is displayed; the other is display: none, so a screen reader finds
+   one. With no choice, prefers-color-scheme picks, matching the no-script form. html[data-theme] must outrank
+   the media query, and does: (0,3,1) against (0,2,0). Script only sets the attribute. No transition. */
 .theme-toggle {
   display: inline-flex;
   align-items: center;

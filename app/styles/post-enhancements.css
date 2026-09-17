@@ -37,16 +37,9 @@
   color: var(--text-muted);
 }
 
-/* Code block furniture. The label and button are script-added, so their room
-   is reserved conditionally; unconditionally, a reader with no script got
-   2.25rem of empty space above every fence for a button that could never
-   arrive (audit tier 3).
-   `scripting: enabled` reserves it at first paint where supported, so nothing
-   moves. `[data-enhanced]`, set by the enhancement when it appends the
-   furniture, covers a browser that runs script but does not know that media
-   feature, at the cost of one small shift.
-   With no script neither matches and there is no gap. `position: relative`
-   stays unconditional; it reserves nothing. */
+/* Code block furniture is script-added, so its room is reserved only when script can run:
+   scripting: enabled at first paint, or [data-enhanced] after. With no script there is no gap.
+   position: relative stays unconditional; it reserves nothing. */
 .prose pre {
   position: relative;
 }
@@ -90,11 +83,8 @@
   border-color: var(--brand);
 }
 
-/* Line highlighting from the pipeline. The band is a neutral surface, not a
-   brand tint, because syntax tokens are verified for contrast only against
-   the code surfaces; check:contrast holds every token to 4.5:1 against both
-   --surface-code and --surface-popover. The brand shows as the left bar,
-   where no text sits. */
+/* Highlighted lines use a neutral band, not a brand tint: check:contrast holds syntax tokens to 4.5:1
+   only against the code surfaces. The brand shows as the left bar, where no text sits. */
 .prose .shiki .line.highlighted {
   display: inline-block;
   width: 100%;
@@ -129,11 +119,8 @@
   cursor: zoom-in;
 }
 
-/* A native <dialog> since 2026-08-28. `position: fixed` and `z-index` are
-   gone: a modal dialog is in the top layer, above every stacking context,
-   which a z-index race can never win reliably. The scrim is `::backdrop`, so
-   the dialog sizes to its content while the scrim covers the viewport. The
-   palette's dialog works the same way. */
+/* A native modal <dialog>: it is in the top layer, above every stacking context, so it needs no z-index.
+   The scrim is ::backdrop, as in the palette. */
 .lightbox {
   max-width: 100%;
   max-height: 100%;
@@ -160,10 +147,8 @@
   border-radius: 0.375rem;
 }
 
-/* The close button: Escape and a backdrop click both work but neither is
-   discoverable. It is positioned against the dialog, which is why the dialog
-   keeps `overflow: visible`. It takes `--border-strong` per hard rule 5,
-   because `--border` does not hold on elevated furniture over a scrim. */
+/* The close button makes dismissal discoverable. Positioned against the dialog, which is why the dialog
+   keeps overflow: visible. --border-strong, never --border, which does not hold over a scrim (hard rule 5). */
 .lightbox-close {
   position: absolute;
   top: 0;
@@ -211,11 +196,8 @@
   color: var(--brand);
 }
 
-/* Further reading, related, and mentions. Mentions joins these selectors
-   rather than copying their spacing, so the shared rhythm has one owner.
-   Its own rules add only what a citation list needs and further reading does
-   not: a gap between entries, which run to three lines, and no bullet, since
-   the author's name is the marker. No new colour token. */
+/* Further reading, related and mentions share selectors, so the rhythm has one owner. Mentions adds only
+   gaps between entries and no bullet. No new colour token. */
 .further-reading,
 .related-posts,
 .post-mentions {
