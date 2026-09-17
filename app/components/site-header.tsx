@@ -28,13 +28,17 @@ import { SITE } from "~/lib/seo";
  * element is not the element, so the threshold is re-measured after the link
  * actually lands, not before.
  *
- * The header is `flex-wrap: nowrap` and the only media query touching it is
- * `print`, so nothing here is breakpoint-dependent. At every real phone width
- * the header was ALREADY two lines with three links, so the fourth costs
- * nothing there; it only moves the wordmark's two-line threshold from 537px to
- * 629px. That band is accepted (ruled 2026-08-14). A disclosure widget would be
- * client state on a page that has none, so it stays refused: the row still does
- * not break, it reflows.
+ * The header is `flex-wrap: wrap`, on BOTH the header and the nav, and the only
+ * media query touching it is `print`, so nothing here is breakpoint-dependent.
+ * `public-chrome.css` carries the 320px measurement and the reason wrapping is
+ * on both: on the nav alone the brand and the nav still compete for one line,
+ * and on the header alone the nav stays an unbreakable row.
+ *
+ * At every real phone width the header was ALREADY two lines with three links,
+ * so the fourth costs nothing there; it only moves the wordmark's two-line
+ * threshold from 537px to 619px. That band is accepted (ruled 2026-08-14). A
+ * disclosure widget would be client state on a page that has none, so it stays
+ * refused: the row wraps onto a second line rather than overflowing.
  *
  * The FIFTH link is the next place to look, and the same measurement decides
  * it. Re-measure rather than reasoning from these numbers: they are a property
