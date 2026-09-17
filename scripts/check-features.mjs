@@ -1,68 +1,11 @@
 /**
- * Gate over the colophon's HAND-WRITTEN half.
+ * Gate over the colophon's hand-written half: `npm run check:features`.
  *
- *   npm run check:features
- *
- * OBSERVATION BOUNDARY, stated plainly because it is narrow: **this gate
- * verifies that the thing each claim is ABOUT still exists. It never verifies
- * that the prose is true.** A feature saying "the editor has a draft buffer with
- * offer, restore and discard" is checked only insofar as the route and the gate
- * it names are still there. Rewrite the sentence to say the opposite and this
- * gate stays green.
- *
- * That is the ruling's design rather than a shortfall (colophon-page.md): the
- * stack half is DERIVABLE and is derived, the feature half is not derivable and
- * is anchored. What anchoring buys is that most rot is caught, because prose
- * usually goes stale by describing something that was removed or renamed, and it
- * gives the page its best property: every claim links to the thing that proves
- * it.
- *
- * **Second boundary, and it will bite someone: the route parser collects
- * DECLARED paths and does NOT compose nested prefixes.** `routes.ts` nests the
- * admin subtree under `route("admin", ...)`, so its children are declared
- * relative to it and this gate sees `/posts/:slug/edit`, never
- * `/admin/posts/:slug/edit`. That is why the four admin features are anchored
- * to their gates rather than to their routes: those paths are behind a session
- * and cannot be linked anyway, so the gate anchor is both verifiable and more
- * useful.
- *
- * The consequence to know about BEFORE it happens: the next feature that
- * anchors to a nested PUBLIC route will fail here, and the failure will read
- * like rot in the anchors file when it is really this parser's limit. Either
- * anchor it to the child segment as declared, or teach the parser to compose
- * prefixes. Do not "fix" it by hardcoding a path list, which is the mirror this
- * whole family of gates exists to prevent.
- *
- * Pure: no network, no database, no bindings.
- *
- * ## Why a decision anchor can never stand alone
- *
- * Four anchor kinds. Three are verifiable here and one is not:
- *
- *   route      a path that must appear in app/routes.ts
- *   gate       a check:* script in package.json whose file exists on disk
- *   assertion  { gate, text } where the text must appear in that script
- *   decision   a dated heading in decisions.md, which lives in Capsid
- *
- * This gate runs offline and cannot reach Capsid, so a decision anchor is
- * carried as CONTEXT and proves nothing. A feature whose only anchor were a
- * decision would therefore be an unverifiable claim wearing the costume of a
- * verified one, and the anchors file would become exactly the place rot
- * collects: the one spot on the page where a sentence can rot with a gate
- * standing over it saying nothing is wrong.
- *
- * So every feature must carry at least one route, gate or assertion anchor, and
- * that is asserted below rather than left to discipline.
- *
- * ## Derived, not restated
- *
- * No route path, gate name or script filename appears in this file as a
- * literal. Routes are parsed out of `app/routes.ts`, gates are read from
- * package.json's `check:*` scripts, and the assertion text is searched in the
- * script the anchor names. Same rule the rest of the family follows.
- *
- * FAILS CLOSED. Zero features, zero anchors, or a routes.ts that parses to
- * nothing are each a failure, so "0 problems" can never mean "0 examined".
+ * It verifies that what each claim is about still exists, never that the prose is true.
+ * The route parser does not compose nested prefixes: anchor a nested route to its declared
+ * segment, never to a hardcoded path list. Every feature needs a route, gate or assertion
+ * anchor; a decision anchor lives in Capsid and proves nothing offline. Fails closed on zero
+ * features, zero anchors, or an unparsed routes.ts.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -80,16 +23,10 @@ import {
   metricValue,
   projectAnchor,
 } from "../app/lib/projects-page.mjs";
-// The roster's derived metrics are computed from these, by the SAME function
-// the route calls. A gate deriving the expected value its own way would be two
-// implementations that agree until they do not, with nothing able to say which
-// is right (hard rule 10, and rule 12's differential discipline).
+// Same function the route calls, so the gate cannot agree only with itself (hard rule 10).
 import { PHAGE_YEARS } from "../app/data/phage-hunters.ts";
 import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
-// The key grammar's readers. Imported for the same reason the colour maths and
-// the chart renderer are: the playground's claim is that its demos run the real
-// module, and a gate that reimplemented the grammar would be checking a second
-// answer to the question the module exists to have one answer to.
+// The key grammar's readers, so the demos are checked against the real module.
 import {
   classify,
   cropSafe,
@@ -100,12 +37,9 @@ import {
   roleOf,
   storageOf,
 } from "../app/lib/media/classify.mjs";
-// The theme resolver, for the same reason: the demo's claim is that it runs the
-// function the Worker runs, and a gate restating the rules would agree with
-// itself while the site disagreed with both.
+// The theme resolver, for the same reason.
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/theme.ts";
-// The three real code paths the playground demos run. Imported rather than
-// reimplemented, which is the whole claim the playground section verifies.
+// The demos' real code paths, imported rather than reimplemented.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
@@ -131,34 +65,8 @@ let failures = 0;
 const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n");
 
 /**
- * Comments removed, so a match is a property of CODE rather than of prose.
- *
- * ONE implementation, used by ALL THREE readers in this file. It used to exist
- * only inside `declaredRoutes()`, and the assertion-anchor match a hundred lines
- * below ran against raw bytes. The pre-audit sweep defeated that directly:
- * deleting the assertion `worker returned a different fixture count` from
- * check-charts.mjs and leaving its text in a comment left this gate reporting
- * 276 checks and 0 failures. The anchor's entire promise is that a claim on the
- * colophon links to the thing that PROVES it, and the thing was gone.
- *
- * The trap was already named in this file's own header, and the fix already
- * existed twenty lines away. That is the part worth remembering: the gate knew
- * about prose matching, applied the cure to one of its two readers, and shipped
- * the other for a month.
- *
- * **AND THEN IT HAPPENED AGAIN, 2026-08-26.** The enhancement selector sweep
- * was added after this paragraph was written, read raw bytes like the reader
- * this paragraph is about, and this header went on saying "BOTH readers" while
- * there were three. The sentence describing the failure was, once more, sitting
- * directly above the code committing it. A shared helper is not adopted by
- * being documented; count the call sites when you add a reader.
- *
- * LINE STRUCTURE IS PRESERVED. A block comment becomes the same number of
- * newlines it spanned, not a single space, so a MULTI-LINE anchor still matches
- * across code that had a comment between its lines. check:assertions learned
- * this the expensive way when collapsing comments moved every reported line.
- *
- * The `[^:]` guard on line comments keeps `https://` from being read as one.
+ * Comments removed, line structure kept, so a match is a property of code. Every reader here
+ * uses it.
  *
  * @param {string} source
  */
@@ -166,20 +74,7 @@ const stripped = (/** @type {string} */ source) =>
   stripComments(source, { preserveLines: true });
 
 /**
- * Identifier tokens removed before a hard-rule-17 digit scan.
- *
- * A token mixing letters and digits is a NAME (D1, R2, FTS5, workerd), not a
- * measurement. The two forms are letters-then-digits and digits-then-letters,
- * and both are stripped whole, so a name never leaves a digit behind for the
- * scan to find. Stripping them is not a loophole: a measurement is never
- * spelled that way.
- *
- * **MODULE SCOPE SINCE 2026-08-30, and the move is the point.** It lived inside
- * the features block and the projects roster below needed the identical rule.
- * Copying it would have been this file's own recorded failure repeated a third
- * time: `stripped()` was written once, applied to one of two readers, and the
- * header went on saying "BOTH readers" while there were three. One
- * implementation, two callers, counted.
+ * Letter-digit tokens (D1, FTS5) are names, removed before a hard-rule-17 digit scan.
  *
  * @param {string} text
  */
@@ -201,29 +96,9 @@ function ok(label, condition, detail = "") {
   }
 }
 
-/**
- * Every path `routes.ts` declares, parsed rather than listed.
- *
- * `route("blog/:slug", ...)` and `index(...)` are the only two forms this repo
- * uses, and the first argument of `route()` is the path. Nested children carry
- * paths relative to their parent, so an admin child appears as `posts/new`
- * rather than `admin/posts/new`; the colophon's features name public top-level
- * paths, and a relative form is still a real declared path, so both are
- * collected and compared as declared.
- *
- * **This is the most fragile thing in this gate and it is worth saying so.** It
- * reads source with a regex rather than asking the router, so a routes file
- * written in a different style, a path built by concatenation, or a route added
- * through a plugin would be invisible here. The failure direction is safe: an
- * unparsed route makes a feature naming it FAIL rather than pass, which is
- * loud. The unsafe direction would be a hardcoded list, which is what this
- * avoids.
- */
+/** Every path `routes.ts` declares, by regex. A route it cannot parse fails, the safe direction. */
 function declaredRoutes() {
-  // Comments first: this file's own prose names paths like /phage-discovery
-  // and /colophon, and a scan that read them would report routes that are only
-  // mentioned. Same trap check:logo and check:contrast both hit, and the same
-  // one the assertion-anchor match below fell into. One `stripped()` now.
+  // Comments first: this file's prose names paths.
   const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
 
   /** @type {Set<string>} */
@@ -239,14 +114,7 @@ function declaredRoutes() {
 }
 
 /**
- * The same declarations, keyed path -> module file on disk.
- *
- * A SECOND PASS OVER THE SAME SOURCE rather than a second return value from
- * `declaredRoutes`, so that function's callers and its floor are untouched.
- * The two-argument form is what carries the module: `route("api/operator",
- * "routes/api.operator.ts")`, and `index()` names one too. A route declared
- * with no module, or with one this cannot resolve, is simply absent from the
- * map, and the caller treats an absence as a FAILURE rather than as a skip.
+ * Path to module file; an unresolvable module is absent and the caller fails it.
  *
  * @returns {Map<string, string>}
  */
@@ -271,9 +139,7 @@ function declaredGates() {
   const out = new Map();
   for (const [name, command] of Object.entries(pkg.scripts ?? {})) {
     if (!name.startsWith("check:") || name === "check:all") continue;
-    // The script FILE, taken out of the command rather than guessed from the
-    // gate's name: check:admin-ui runs check-admin-ui.mjs and the mapping is
-    // not mechanical.
+    // Taken from the command: gate names do not map to files mechanically.
     const file = String(command).match(/([\w./-]+\.mjs)/)?.[1];
     out.set(name, file ? join(root, file) : "");
   }
@@ -298,24 +164,14 @@ const routes = declaredRoutes();
 const routeModules = declaredRouteModules();
 const gates = declaredGates();
 
-/* --------------------------------------------------------- fail closed first */
+/* fail closed first */
 
 ok(
   "the feature list is not empty",
   features.length > 0,
   "no features, so every check below would pass vacuously",
 );
-/*
- * FLOOR: RE-MEASURED 2026-08-24 through declaredRoutes() by running this gate:
- * 36. Now >= 33, about eight percent under. It was 30 against 34 measured, and
- * before that 10.
- *
- * The original value could not detect the failure most likely to happen here.
- * The admin subtree contributes TWELVE nested children; if the parser ever
- * stopped seeing nested `route()` calls it would return 24, comfortably over
- * 10, and nothing would say so. The admin features anchor to gates rather than
- * routes, so no other assertion would have failed either.
- */
+/* Catches a parser that stops seeing nested `route()` calls. */
 ok(
   "routes.ts parsed to a plausible number of routes",
   routes.size >= 33,
@@ -349,7 +205,7 @@ ok(
   "every feature is unanchored, so this gate would examine nothing",
 );
 
-/* ------------------------------------------------- the anchors, one at a time */
+/* the anchors */
 
 const VERIFIABLE = ["route", "gate", "assertion"];
 /** Gates some feature points at, for the coverage report at the end. */
@@ -362,11 +218,7 @@ for (const feature of features) {
 
   ok(`${label} carries at least one anchor`, anchors.length > 0);
 
-  /*
-   * THE RULING, enforced rather than trusted. A decision anchor is context and
-   * proves nothing offline, so it may accompany a verifiable anchor and may
-   * never be a feature's only one.
-   */
+  /* A decision anchor proves nothing offline, so it may never stand alone. */
   ok(
     `${label} carries a verifiable anchor, not only a decision`,
     anchors.some((/** @type {any} */ a) => VERIFIABLE.includes(a.kind)),
@@ -384,49 +236,9 @@ for (const feature of features) {
       );
 
       /*
-       * **A ROUTE ANCHOR THAT RENDERS AS A LINK MUST ANSWER AN ANONYMOUS GET.**
-       *
-       * The colophon's best property, per the ruling, is that every claim
-       * links to its evidence. Measured in the pre-cutover audit 2026-09-11
-       * (P1-22): a sweep of 203 internal URLs found exactly two non-200s on
-       * the whole site, `/api/operator` (401) and `/search/ask` (405), and
-       * both were reached as hrefs FROM THIS PAGE. The page's one distinctive
-       * feature was also the only source of broken links on the site.
-       *
-       * So an anchor may carry `anonymousGet: false`, and the page renders
-       * that one as `<code>` rather than as a `<Link>`.
-       *
-       * ## THE FLAG IS ARGUED, NOT TRUSTED
-       *
-       * A hand-set boolean in a data file is a claim about a route, and a
-       * claim about a route ages exactly as fast as the route. So the answer
-       * is DERIVED here from the route module and compared, which is the same
-       * two-independent-sources shape the assertion anchors above use: the
-       * JSON declares, the module decides, and a disagreement fails.
-       *
-       * THE SIGNALS ARE NAMED rather than inferred, because a general "does
-       * this render" predicate is not something a source scan can honestly
-       * claim:
-       *
-       *   A DEFAULT EXPORT IS A PAGE, and it settles the question by itself.
-       *   A document route renders its component for a GET whether or not it
-       *   has a loader, which `/colophon` demonstrates: it has no loader at
-       *   all and renders from imported artifacts. The first draft of this
-       *   derivation read "no loader" as "no page" and failed on exactly that
-       *   route, which is why the signal is stated this way round.
-       *
-       *   OTHERWISE IT IS A RESOURCE ROUTE, and then the loader decides. No
-       *   loader means nothing answers a GET. A loader returning `status: 405`
-       *   refuses the method, which is `/search/ask`. A loader calling
-       *   `authenticateOperator` demands a credential a reader does not have,
-       *   which is `/api/operator`. None of those is a page.
-       *
-       * BOTH DIRECTIONS. A page route that starts requiring a credential and
-       * keeps its link fails, and so does a flag left on a route that became
-       * public, which is the direction a stale exemption always takes.
-       *
-       * Comments stripped first: this file, and the routes, discuss 405 and
-       * authentication in prose.
+       * An anchor rendered as a link must answer an anonymous GET, else `anonymousGet: false`.
+       * Derived here: a default export is a page; else no loader, `status: 405` or
+       * `authenticateOperator` means not a page.
        */
       const routeFile = routeModules.get(anchor.path);
       if (routeFile && existsSync(routeFile)) {
@@ -454,12 +266,7 @@ for (const feature of features) {
                 `The route became a page and the flag outlived it. Remove "anonymousGet": false.`,
         );
       } else {
-        /*
-         * A route declared in routes.ts whose module this gate cannot find is
-         * not a pass. The assertion above would otherwise be skipped silently,
-         * which is the construct-the-scan-does-not-reach class: the subject
-         * has no gate and the absence reads as compliance.
-         */
+        /* A declared route with no module on disk fails rather than skips. */
         ok(
           `${label}: the module for ${anchor.path} is on disk`,
           false,
@@ -485,21 +292,7 @@ for (const feature of features) {
       verified += 1;
       referencedGates.add(anchor.gate);
       const file = gates.get(anchor.gate) ?? "";
-      /*
-       * BOTH SIDES NORMALIZED, the `check:claude-md` and `check:migrations`
-       * form. Gate-backlog item 14.
-       *
-       * `core.autocrlf` is true on this host, so a file git has not rewritten
-       * since `cab1c9e` pinned the tree sits CRLF on disk while its committed
-       * blob is LF. Every anchor today is single line, so this changes nothing
-       * now; the first MULTI-LINE anchor written against a stale-CRLF disk file
-       * would match locally and fail in every fresh checkout and clone. That is
-       * exactly the class that bit `check:migrations` on 2026-08-10, caught by
-       * `check:head`, and it is cheaper to normalize than to diagnose.
-       *
-       * The needle is normalized too: a JSON file edited on this host can carry
-       * CRLF inside a string just as readily as the script can.
-       */
+      /* Both sides LF-normalized, or a multi-line anchor passes only on a CRLF disk. */
       const present =
         Boolean(file) && existsSync(file)
           ? stripped(normalizeEol(readFileSync(file, "utf8"))).includes(normalizeEol(anchor.text))
@@ -534,73 +327,18 @@ ok(
   "every anchor was a decision, so nothing was verified",
 );
 
-/* ------------------------------- hard rule 17, on the prose itself --------- */
+/* hard rule 17, on the prose */
 
 /*
- * **THE RULE THIS GATE ENFORCES, AND THE MEASUREMENT THAT FORCED IT.**
- *
- * An external audit read this repository's own prose and found that ten of
- * eighteen checkable claims were FALSE. Most carried no digits at all. They
- * were TENSE-BOUND STATE CLAIMS: present-tense sentences about how the system
- * is built, written true and left standing after the machinery moved. Five
- * entries in this very file described a committed, byte-compared content
- * artifact that had left git on 2026-08-26.
- *
- * Hard rule 17 was extended on 2026-08-28 to cover both halves: prose may carry
- * REASONING, and may not carry a NUMBER or a TENSE-BOUND STATE CLAIM that a
- * gate does not own. This is the one surface where a regex can enforce any of
- * it, so it is enforced here.
- *
- * ## OBSERVATION BOUNDARY, and it is the important paragraph
- *
- * **THIS CANNOT READ TENSE.** It refuses digits and it refuses a named
- * vocabulary. A sentence can still describe machinery deleted this morning, in
- * the present tense, with no number in it, and pass. What this buys is that the
- * two shapes which actually recurred here are now a build failure rather than a
- * reading exercise: a restated measurement, and the specific words of the
- * removed content pipeline.
- *
- * That is the same bargain the anchor checks above make. This gate has never
- * been able to verify that a sentence is TRUE, and it still cannot.
- *
- * ## WHAT COUNTS AS A NUMBER, stated because the naive form is unusable
- *
- * A digit glued to letters inside one token is an IDENTIFIER, not a
- * measurement: D1, R2, FTS5, workerd. Those are stripped before the scan, and
- * stripping them is not a loophole, because a measurement is never spelled that
- * way.
- *
- * What remains is a bare digit run, and exactly one class of those is allowed:
- * PROTOCOL CONSTANTS, listed below with a reason each. A status code is owned
- * by the protocol rather than by this repository, so it cannot drift underneath
- * a sentence, which is the test rule 17 itself states. The list is CLOSED and
- * short so that adding to it is a deliberate diff someone has to justify.
- *
- * ## DATES ARE NOT ALLOWED HERE, because there is nowhere to put one
- *
- * The rule's exception for dated records covers published posts and a dated
- * update field. **This file has no dated field**, so granting a date allowance
- * would be an allowance over nothing, which is the unfailable-condition class
- * in hard rule 10. If an `updated` field is ever added, the allowance is wired
- * HERE and scoped to that field alone, never to the prose.
- *
- * ## ANCHORS ARE EXEMPT, deliberately
- *
- * An anchor's `text` is a machine reference that must match a gate's own
- * assertion label byte for byte, and those labels carry counts. Scanning them
- * would force the gates to be reworded to satisfy a rule about prose.
+ * Hard rule 17 on the feature prose: no digit a gate does not own, no removed-pipeline
+ * words. Cannot read tense. Only protocol constants are allowed; a date allowance would cover
+ * no field here (hard rule 10). Anchor text is exempt.
  */
 
 console.log("\n  hard rule 17: the prose carries no number a gate does not own");
 
 {
-  /**
-   * Bare digit runs a feature sentence may carry, each with its reason.
-   *
-   * CLOSED. A protocol constant is owned by the protocol and cannot go stale;
-   * anything else that looks like a number in prose is a measurement, and a
-   * measurement belongs in the gate that measures it or nowhere.
-   */
+  /** Bare digits prose may carry. Closed: a protocol constant cannot go stale. */
   const PROTOCOL_CONSTANTS = new Map([
     ["403", "HTTP status: the first-publish refusal names it"],
     ["404", "HTTP status: the URL transform interface answers with it"],
@@ -611,17 +349,8 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
   /** The prose fields. `anchors` is machine reference and is exempt above. */
   const PROSE_FIELDS = ["component", "name", "what"];
 
-  /* `withoutIdentifiers` is at module scope now; the projects roster below is
-     its second caller. See its docblock for why it moved. */
 
-  /**
-   * The vocabulary of the content machinery removed on 2026-08-26.
-   *
-   * Named rather than inferred: these are the exact phrases the five stale
-   * entries used, so a sentence reintroducing one is describing a pipeline that
-   * does not exist. Git holds markdown only, D1 holds the only rendered copy,
-   * and a save commits ONE file.
-   */
+  /** Removed-pipeline phrases; a sentence using one describes nothing real. */
   const REMOVED_VOCABULARY = [
     "committed artifact",
     "byte-comparison gate",
@@ -630,10 +359,7 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
     "single commit carrying both",
   ];
 
-  /*
-   * SCOPE, ASSERTED. Every assertion below iterates the feature list, so an
-   * empty or unparsed list would report a clean sweep of nothing.
-   */
+  /* Scope asserted below, or an empty list sweeps nothing. */
   let sentencesScanned = 0;
   /** @type {string[]} */
   const numbered = [];
@@ -661,12 +387,7 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
     }
   }
 
-  /*
-   * FLOOR MEASURED 2026-08-28 BY RUNNING THIS LOOP: 114 fields over the feature
-   * list, three prose fields each. The floor is 90, about twenty percent under,
-   * so a component's worth of entries can go missing and this still notices,
-   * while adding or removing one feature does not fail the gate.
-   */
+  /* Floored under the measured field count. */
   ok(
     "the prose scan had fields to read",
     sentencesScanned >= 90,
@@ -674,14 +395,7 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
       `A zero-scope scan reports a clean sweep of nothing.`,
   );
 
-  /*
-   * THE SCAN IS PROVEN ABLE TO FIRE, on synthetic input, every run.
-   *
-   * The collection it walks is legitimately allowed to be clean, and a check
-   * that only ever sees clean data is a check nobody has watched work. Same
-   * repair as check:secrets' empty allowlist: exercise the predicate directly,
-   * on a path that does not depend on the data.
-   */
+  /* Proves the predicate can fire, since the real data may be clean. */
   ok(
     "the digit scan can fire: a bare measurement survives the stripper",
     (withoutIdentifiers("rendered 200 times").match(/[0-9]+/g) ?? []).length === 1,
@@ -708,18 +422,8 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
   );
 }
 
-/* ---------------------------------- the page's search records, ruling 3 ---- */
+/* page search records */
 
-/*
- * Why HERE and not in check:search.
- *
- * These assertions need two things this file already has and that one does not:
- * a parser for `routes.ts`, and the habit of reconciling a hand-written list
- * against reality in both directions. `check:search` is about the query parser
- * and rank fusion over synthetic input; it has no notion of routes, of the
- * artifact, or of what the page renders. Putting a routes parser there would be
- * a second one, which is the shape check:invariants exists to prevent.
- */
 
 console.log("\n  page records for /colophon");
 
@@ -730,8 +434,7 @@ const colophonRecords = pageRecords.filter(
   (/** @type {any} */ r) => r.docUid === "page:colophon",
 );
 
-// FAIL CLOSED. Zero page records is not an empty result set, it is ruling 3 not
-// having happened, and every assertion below would pass vacuously.
+// Fail closed: zero records would pass everything below.
 ok(
   "the artifact carries page records",
   pageRecords.length > 0,
@@ -743,27 +446,7 @@ ok(
   `found ${colophonRecords.filter((/** @type {any} */ r) => r.anchor === null).length}`,
 );
 
-/*
- * Every page record must live at a route that exists. A record pointing at a
- * removed route returns a hit that 404s, which is worse than no hit.
- *
- * ## THE PAPERS ARE ASSERTED AGAINST THE PARAMETERISED ROUTE, ONCE
- *
- * `declaredRoutes()` reads literal path strings out of routes.ts, which is what
- * makes it honest about the hand-authored pages: each is its own `route()` call
- * and its own record. The 36 paper records are served by ONE declaration,
- * `publications/:slug`, so a literal lookup would demand 36 route lines that
- * cannot exist, and the obvious repair, dropping them from the sweep, would
- * leave the site's largest set of page records unchecked.
- *
- * So the papers are separated by uid and checked against the declaration that
- * actually serves them, with the count of what was separated printed beside it.
- * That keeps the property the sweep exists for: delete
- * `route("publications/:slug", ...)` and every paper record reds here. What it
- * does NOT check is that a given slug resolves, and that is not a gap:
- * `check:publications` reconciles the record set against the corpus in both
- * directions and the sitemap against the same list.
- */
+/* Every page record lives at a declared route; papers share one parameterised route. */
 const PAPER_ROUTE = "/publications/:slug";
 const paperRecords = pageRecords.filter((/** @type {any} */ r) =>
   String(r.uid).startsWith("paper:"),
@@ -801,14 +484,7 @@ for (const record of otherPageRecords) {
   );
 }
 
-/*
- * Anchors, both directions against the DESCRIPTOR.
- *
- * This is the assertion the whole descriptor exists for. A section record whose
- * anchor is not a fragment the page renders still returns a hit, still looks
- * right in a result list, and scrolls nowhere. Nothing else in the repo would
- * notice.
- */
+/* Section anchors both ways: an unrendered anchor is a hit that scrolls nowhere. */
 const sectionRecords = colophonRecords.filter(
   (/** @type {any} */ r) => r.anchor !== null,
 );
@@ -833,14 +509,7 @@ ok(
   `no record for ${unrecorded.join(", ")}. Regenerate the artifact.`,
 );
 
-/*
- * The page renders FROM the descriptor, asserted structurally.
- *
- * There is no list of ids in the page to compare against, and that is the
- * property being checked: the only `<h2 id=` in the file is the one inside
- * `SectionHead`, which takes its id from the descriptor. A literal id
- * reintroduced anywhere else is a second list, and the next rename splits them.
- */
+/* The only `<h2 id=` is in `SectionHead`, so any literal id is a second list. */
 const pageSource = readFileSync(
   join(root, "app", "routes", "colophon.tsx"),
   "utf8",
@@ -869,26 +538,9 @@ console.log(
     `${COLOPHON_ANCHORS.length} descriptor anchor(s), ${rendered.length} rendered`,
 );
 
-/* ------------------------------------- the not-adopted status labels ------- */
+/* not-adopted labels */
 
-/*
- * ONE LABEL MAP, TWO READERS, asserted in both directions.
- *
- * The defect this section was written for, 2026-08-05: `STATUS_LABEL` lived in
- * `colophon.tsx`, so the page rendered `(Refused)` and `(Accepted gap)` while
- * the record body carried the raw enum `(refused)` and `(accepted-gap)`. For
- * `accepted-gap` the hyphen means the indexed token was on the page in NO
- * casing, so a reader who searched the word the index advertises would land on
- * a page that never says it.
- *
- * **No gate could see it, and it is worth being precise about why.**
- * `check:content` compares the generated output against itself (then a byte
- * gate, a determinism pass today), so a wrong output agrees with itself. This gate reconciled section
- * IDS, not the words inside a section. The comparison that was missing is index
- * against PAGE, and the three assertions below are the offline half of it: the
- * label reaches the index, the raw enum does not, and neither reader carries a
- * literal that could drift from the other.
- */
+/* The index carries the page's label, never the raw enum, and no reader holds a copy. */
 
 console.log("\n  not-adopted status labels");
 
@@ -915,8 +567,7 @@ for (const status of usedStatuses) {
       `Without a label the page and the index would disagree about what it is called.`,
   );
 }
-// Direction 2: no label for a status nothing declares. An orphan label is the
-// same mirror-going-stale shape, caught before it is the one that matters.
+// Direction 2: no label for an undeclared status.
 for (const status of Object.keys(STATUS_LABEL)) {
   ok(
     `label "${status}" is used by at least one entry`,
@@ -925,13 +576,7 @@ for (const status of Object.keys(STATUS_LABEL)) {
   );
 }
 
-/*
- * The LABEL reaches the index and the RAW ENUM does not.
- *
- * Read off the gated artifact rather than recomputed, because the artifact is
- * what `sync:content` writes into D1 and therefore what a reader's search
- * actually matches against.
- */
+/* The artifact is what search matches, so it is read, not recomputed. */
 const notAdoptedRecord = colophonRecords.find(
   (/** @type {any} */ r) => r.anchor === "not-adopted",
 );
@@ -949,8 +594,7 @@ if (notAdoptedRecord) {
       body.includes(`(${label})`),
       `the not-adopted record body does not contain "(${label})". Regenerate the artifact.`,
     );
-    // The parenthesised form, so this cannot fire on a status word that happens
-    // to appear inside a reason sentence.
+    // Parenthesised, so a reason sentence cannot fire this.
     ok(
       `the index does NOT carry the raw enum "(${status})"`,
       !body.includes(`(${status})`),
@@ -960,16 +604,7 @@ if (notAdoptedRecord) {
   }
 }
 
-/*
- * Neither reader restates the other's strings.
- *
- * Comments are stripped first. Both files' own prose names these values while
- * explaining the defect, and a scan that read the explanation would report a
- * literal that is not there. That trap has already been hit by check:logo and
- * check:contrast, and by the routes parser at the top of this file.
- *
- * The stripper is shared: scripts/lib/strip-comments.mjs.
- */
+/* Comments stripped: both files name these values in prose. */
 
 const pageCode = stripComments(pageSource);
 for (const status of usedStatuses) {
@@ -991,11 +626,7 @@ ok(
   "the page does not call statusLabel, so it is getting the word from somewhere else",
 );
 
-/*
- * And the descriptor declares each label EXACTLY ONCE, which is what makes it
- * the single source rather than merely one of the places it appears. A second
- * occurrence would mean the emitter had restated what the map already says.
- */
+/* Each label declared exactly once keeps the descriptor the single source. */
 const descriptorCode = stripComments(
   readFileSync(join(root, "app", "lib", "colophon-sections.mjs"), "utf8"),
 );
@@ -1009,34 +640,7 @@ for (const status of usedStatuses) {
   );
 }
 
-/*
- * **NO ENTRY CALLS CONTINUOUS INTEGRATION A GAP, IN EITHER DIRECTION.**
- *
- * Until 2026-09-11 the colophon's "What was not adopted" section printed
- * "Continuous integration (Accepted gap)" with the reason "with no CI, any
- * gate can be skipped indefinitely". `.github/workflows/ci.yml` had been
- * running on every push to main since 2026-08-20 and `scripts/ship.mjs`
- * refuses a HEAD without a green run for that exact sha, so the page whose
- * whole claim is that its sentences are checked against the repository was
- * printing one the repository refutes.
- *
- * NOTHING COULD SEE IT, and that is the reason this exists as an assertion
- * rather than as a one-line deletion. `check:stack` reconciles the entries
- * against the bindings and the gate list; `check:features` reconciles ids and
- * labels. Neither has any way to ask whether a hand-written REASON is true,
- * and in general neither can. This one specific claim is checkable, because
- * the workflow file either exists or it does not.
- *
- * SO IT IS ASSERTED AGAINST THE WORKFLOW RATHER THAN AS A BANNED WORD. A scan
- * for the phrase alone would be a lint that fires on a future entry about
- * something CI genuinely does not cover. The shape is: while a CI workflow
- * runs on main, no not-adopted entry may name continuous integration. Remove
- * `ci.yml` and this assertion stops applying, which is correct.
- *
- * BOTH FIELDS, because the pair can be split. The defect was a `name` of
- * "Continuous integration"; a reason saying "there is no CI" under some other
- * name is the same false sentence with the heading changed.
- */
+/* While CI runs on main, no not-adopted entry may name continuous integration. */
 {
   const ciWorkflow = join(root, ".github", "workflows", "ci.yml");
   const ciRuns = existsSync(ciWorkflow);
@@ -1069,44 +673,20 @@ console.log(
     `${Object.keys(STATUS_LABEL).length} label(s)`,
 );
 
-/* ----------------------------------- the enhancement inventory, item 10 ---- */
+/* enhancement inventory */
 
 /*
- * Hard rule 9's second half, which is the half that gets dropped: every
- * enhancement declares a NAMED fallback, EVEN WHEN THE FALLBACK IS NOTHING.
- * All four modules in `app/enhance/` did declare one, in three different
- * prose formats across two files, and no gate could read any of them.
- *
- * BOTH DIRECTIONS. A file in `app/enhance/` with no entry is an enhancement
- * nobody named a fallback for; an entry naming a module that does not exist is
- * an inventory describing a repo that no longer exists.
- *
- * WHAT THIS CANNOT SEE, and it is the more important half: whether a route is
- * genuinely server-complete with script off. That is a claim about the WIRE,
- * hard rule 7 says so, and it belongs in `verify-live`. This gate proves the
- * fallback was NAMED and that the thing it names EXISTS. It cannot prove the
- * fallback works, and a lie written confidently into the prose passes here.
+ * Hard rule 9: every enhancement names a fallback, both directions against `app/enhance/`.
+ * Whether it works is a wire claim (hard rule 7).
  */
 
 const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
 const ENHANCE_DIR = join(root, "app", "enhance");
 
-/**
- * EXACTLY FOUR TODAY, tripwired rather than bounded.
- *
- * A fifth module is not automatically wrong, but it is an enhancement that
- * arrived without anyone walking this list, which is the omission hard rule 9
- * exists about. Moving this number is a deliberate edit in the same commit.
- */
+/** A tripwire: a new module means walking this list (hard rule 9). */
 const EXPECTED_ENHANCE_MODULES = 4;
 
-/**
- * Measured THROUGH this gate's own reading, re-measured 2026-08-24: 10 entries
- * across the 4 modules, because `blog.ts` carries seven. Set under, because the
- * job is catching a file that stopped being read, not tracking growth. At the
- * previous 8 the three modules that are not `blog.ts` could all have stopped
- * being read at once and this would have passed.
- */
+/** Set under measured, to catch a module that stopped being read. */
 const MINIMUM_ENHANCEMENT_ENTRIES = 9;
 
 ok(
@@ -1165,21 +745,7 @@ for (const modulePath of [...inventoryModules].sort()) {
   );
 }
 
-/**
- * Every source file under `app/` EXCEPT `app/enhance/`.
- *
- * The exclusion is the whole point. A selector that appears only inside the
- * enhancement module is markup the enhancement CREATES for itself, which is not
- * a fallback; it would make the assertion agree with itself.
- *
- * **STYLESHEETS ARE OUT, since 2026-08-26, and that is a correctness fix rather
- * than a narrowing.** `.css` was in this list, and a stylesheet cannot be the
- * fallback: it STYLES markup, so a rule naming a class is evidence that someone
- * intended the class to exist, never that anything renders it. Measured the day
- * it was removed: with the image anchor deleted from the pipeline and
- * `.image-link` surviving only in `app/styles/post.css`, this gate reported 585
- * checks and 0 failures on markup that had ceased to exist.
- */
+/** Sources under `app/` except `app/enhance/` and stylesheets: neither renders a fallback. */
 function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} */ out = []) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
@@ -1195,30 +761,8 @@ function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} *
 
 const serverSources = serverRenderedSources(join(root, "app"));
 
-// NON-EMPTY SCOPE. A walk that returned nothing would make every selector
-// assertion below fail closed rather than pass, but the count is asserted so
-// the reason is named rather than inferred from a wall of failures.
-/*
- * FLOOR: RE-MEASURED 2026-08-26 through this gate's own walk by running it:
- * 158. Now >= 145, about eight percent under.
- *
- * IT WENT DOWN, and that is the one direction a floor is never re-measured in
- * by accident, so the reason is written here: the walk stopped taking `.css`
- * on 2026-08-26, which removed fifteen stylesheets. 173 minus those is 158.
- * A floor moving DOWN after a deliberate narrowing is correct; a floor moving
- * down on its own is the walk breaking, which is what this assertion catches.
- *
- * **THIS FLOOR IS ITS OWN CAUTIONARY TALE and the comment is kept for that.**
- * It was raised from 20 to 92 against a measured 105, with the note below
- * about the 81 percent blind zone the old value left. app/ then grew to 173
- * without the floor moving, so by 2026-08-24 the same floor left a 47 percent
- * blind zone: eighty-one files could stop being walked and the selector sweep
- * would still report itself satisfied. **A floor is not repaired once. It goes
- * stale in exactly the direction its own subject grows.**
- *
- * A floor that only catches a walk returning nothing is not catching the
- * failure that actually happens, which is a walk that stops descending.
- */
+// Scope asserted so an empty walk fails by name.
+/* Catches a walk that stops descending; re-measure by running the gate. */
 ok(
   "the server-rendered source scope is non-empty and complete",
   serverSources.length >= 145,
@@ -1226,46 +770,14 @@ ok(
     `measured 158. The walker has stopped matching this tree, or stopped descending into it.`,
 );
 
-/*
- * COMMENTS STRIPPED, since 2026-08-26, and this is the THIRD reader to learn it.
- *
- * The header above says "ONE implementation, used by BOTH readers in this
- * file", and that sentence was true when it was written and stopped being true
- * when this sweep was added: it read raw bytes, so any `.tsx` comment
- * mentioning a class name satisfied the fallback that class was supposed to
- * name. The header's own closing line already described this exact outcome
- * about a different reader. It has now happened twice in one file.
- */
+/* Comments stripped, so a comment cannot satisfy a fallback. */
 const sourceBlobs = serverSources.map((file) =>
   stripped(normalizeEol(readFileSync(file, "utf8"))),
 );
 
 /*
- * AND WHAT THE SHARED RENDERER EMITS, which is server-rendered markup that no
- * file under `app/` spells.
- *
- * Removing stylesheets and comments above turned `footnote-previews` red, and
- * the red was CORRECT: `footnotes` lived in exactly two places under `app/`, a
- * CSS rule in post.css and a sentence inside a comment in blog-index.css.
- * Neither renders anything. But the fallback is real: `remark-gfm` emits
- * `<section data-footnotes class="footnotes">` with working bidirectional
- * links, and it does so from `app/lib/content/pipeline.mjs`, which is the
- * server and is under `app/`.
- *
- * So the honest repair is not to weaken the entry, it is to ASK THE RENDERER.
- * "Is this markup server-rendered" is a question the server-rendered output
- * answers directly, where a grep over route source can only answer "did
- * somebody type this string".
- *
- * A FIXTURE RATHER THAN THE CORPUS, deliberately. `content/generated/posts.json`
- * is what the corpus happens to contain today, and today it contains ZERO
- * footnotes and ZERO images (measured 2026-08-26), so a corpus-backed sweep
- * would go red the moment an author deleted the last post using a feature. The
- * claim under test is about the RENDERER, which is a property of the code.
- *
- * This is input, not expected values, so it does not offend the
- * fixture-independence discipline: nothing here is compared against something
- * the renderer also produced.
+ * Plus what the shared renderer emits (remark-gfm footnotes), from a fixture, since the
+ * claim is about the renderer and not the corpus.
  */
 const RENDERER_FIXTURE = [
   "A paragraph with a footnote reference[^1].",
@@ -1287,9 +799,7 @@ const renderedMarkup = await renderBody({
   resolveImage: async () => ({ width: 1200, height: 630 }),
 }).then((result) => result.html);
 
-// SCOPE, proven before the blob is trusted. A render that threw or returned
-// nothing would quietly narrow the sweep back to where it started, which is the
-// failure this whole section is about.
+// Scope first: a failed render would narrow the sweep.
 ok(
   "the renderer fixture produced markup for the selector sweep",
   renderedMarkup.length > 0 && /<section[^>]*class="footnotes"/.test(renderedMarkup),
@@ -1341,8 +851,7 @@ for (const entry of inventory) {
     kindCounts.selector += 1;
     const selector = String(entry.fallbackAt ?? "");
     const tokens = selectorTokens(selector);
-    // A selector that yields no checkable token would pass by examining
-    // nothing, which is the empty-scope failure this family keeps hitting.
+    // No checkable token would mean examining nothing.
     ok(
       `enhancements ${id}: the selector ${selector} yields a checkable identifier`,
       tokens.length > 0,
@@ -1384,8 +893,7 @@ console.log(
   `     kinds: ${kindCounts.route} route, ${kindCounts.selector} selector ` +
     `(${selectorTokensChecked} identifier(s) checked), ${kindCounts.none} deliberate nothing`,
 );
-// The selector sweep's denominator, PRINTED. Its floor is set against this
-// number, and a floor whose subject is invisible cannot be re-measured.
+// Printed so its floor can be re-measured.
 console.log(
   `     ${serverSources.length} server-rendered file(s) searched, excluding app/enhance/`,
 );
@@ -1394,14 +902,9 @@ console.log(
     `That is a claim about the wire (hard rule 7).`,
 );
 
-/* ------------------------------------------------------- the coverage report */
+/* coverage report */
 
-/*
- * REPORTED, NOT FAILED, per the spec. A gate no feature mentions is a coverage
- * signal about the page, not a defect in the repo: plenty of gates protect
- * things a reader does not need described. Failing here would push the next
- * person to write filler prose to silence it, which is worse than the silence.
- */
+/* Reported, not failed: failing would invite filler prose. */
 const unreferenced = [...gates.keys()]
   .filter((name) => !referencedGates.has(name))
   .sort();
@@ -1418,22 +921,7 @@ if (unreferenced.length > 0) {
   console.log("  every gate is referenced by at least one feature");
 }
 
-/* --- The projects roster ---------------------------------------------------
- *
- * WHY HERE AND NOT IN check:content. The spec guessed check:content; measured,
- * that gate proves the GENERATED corpus renders deterministically from
- * content/posts, so it has nothing to regenerate a HAND-AUTHORED file
- * from and a projects section there would be structurally foreign. This gate is
- * already the owner of hand-authored content data: it reads content/, parses
- * routes.ts, knows the gate list, and already reconciles the colophon's page
- * records. The roster is the same kind of object as features.json.
- *
- * BOTH DIRECTIONS, and the pairs are the point. Schema and vocabulary catch a
- * malformed entry; the artifact parity below catches the defect that actually
- * happens, which is editing the roster and forgetting to rebuild, leaving the
- * search index describing projects the page no longer lists or missing ones it
- * does.
- */
+/* The projects roster; parity catches a roster edited without a rebuild. */
 console.log("\n  projects roster");
 
 const projectsDoc = JSON.parse(readFileSync(PROJECTS_PATH, "utf8"));
@@ -1441,21 +929,7 @@ const projects = projectsDoc.projects ?? [];
 const vocabulary = projectsDoc.stackVocabulary ?? [];
 const projectsChecksBefore = checks;
 
-/*
- * WHAT THE DERIVED METRICS ARE COMPUTED FROM, assembled the way the route
- * assembles them: from artifacts that already have owners.
- *
- * `content/generated/stack.json` is generated from package.json by
- * `build:stack` and reconciled against its sources by `check:stack`, so the
- * gate count reaches the card through the pipe that already owns it rather
- * than through a second count taken here. `PHAGE_YEARS` is the data the roster page renders.
- *
- * NOT fixture-independent, and it does not need to be: hard rule 10's fixture
- * rule forbids a gate whose EXPECTED value is produced by the code under test,
- * and there is no expected value here. The assertion is that the derivation
- * runs and yields something real, which is a property of the pipeline rather
- * than a comparison against a number this file would otherwise have to restate.
- */
+/* Metric inputs, from the artifacts that own them; no expected value (hard rule 10). */
 const METRIC_INPUTS = {
   stack: JSON.parse(
     readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
@@ -1463,17 +937,9 @@ const METRIC_INPUTS = {
   phageYears: PHAGE_YEARS,
 };
 
-// FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
-// Measured through this gate 2026-08-24: 6 projects. Floor one under, because
-// a roster of this size cannot absorb more slack than that.
+// Fail closed: an empty roster passes every loop below.
 const MINIMUM_PROJECTS = 5;
-/*
- * THROUGH assertFloor SINCE 2026-09-15. The roster only ever gets added to, so
- * this is a scope floor over a GROWING set, which drifts the way an
- * executed-count floor drifts and was invisible to check:floors while it was a
- * bare ok(). See check-tests.mjs's note beside its file floor for the rule and
- * for which scope floors deliberately stay out.
- */
+/* A scope floor over a growing set; see check-tests.mjs. */
 const projectsBreach = assertFloor(
   "check:features",
   "projects",
@@ -1508,28 +974,13 @@ const REQUIRED = [
   "metric",
 ];
 const STATUSES = ["live", "building", "internal"];
-/*
- * CLOSED, and closed in BOTH directions below. The route emits
- * `applicationCategory` for one of these and not the other, so a third value
- * would render structured data nothing decided the shape of.
- */
+/* Closed: the route shapes structured data for these only. */
 const SCHEMA_TYPES = ["SoftwareApplication", "WebPage"];
-/*
- * The evidence kinds this gate knows how to VERIFY, which is the only list
- * worth having: a kind nobody checks is a citation nobody checks. Each is
- * verified differently below, and the route refuses to render an unknown one.
- */
+/* The kinds this gate verifies; the route refuses others. */
 const EVIDENCE_KINDS = ["post", "page", "repo"];
 const seenSlugs = new Set();
 
-/*
- * THE BUILT CORPUS, read once for the roster and again for the playground.
- *
- * Hoisted here on 2026-08-30 because the evidence checks need it and the
- * playground's citation check already did. It is `content/generated/posts.json`,
- * the gitignored local build product, which is why a roster edited without a
- * rebuild fails here rather than shipping a link to a post that is not there.
- */
+/* The built corpus; a roster edited without a rebuild fails here. */
 const artifactPostRows =
   JSON.parse(readFileSync(join(root, "content", "generated", "posts.json"), "utf8")).posts ??
   [];
@@ -1560,10 +1011,7 @@ for (const project of projects) {
     `got ${project.status}`,
   );
 
-  // `url` and `repo` are NULLABLE by design: the unlinked tier is a real state,
-  // not a gap. What is checked is that a value, when present, is a URL the
-  // pipeline's rule-6 allowlist would accept. The predicate is IMPORTED rather
-  // than restated, so this cannot drift from what the renderer permits.
+  // Nullable by design; a value must pass the imported rule-6 predicate.
   for (const field of ["url", "repo"]) {
     const value = project[field];
     if (value === null || value === undefined) continue;
@@ -1591,15 +1039,7 @@ for (const project of projects) {
       `@type and branches on it, so an unknown value is structured data nobody designed`,
   );
 
-  /*
-   * THE METRIC IS THE PAGE'S WHOLE ARGUMENT, so it is checked hardest.
-   *
-   * TWO FORMS, MUTUALLY EXCLUSIVE, and the exclusivity is asserted rather than
-   * left to convention. A metric carrying both a stored value and a derivation
-   * would have TWO owners of its freshness, which is the state hard rule 17
-   * names: the stored copy can drift while the derived one stays true, and the
-   * page would render whichever the route happened to prefer.
-   */
+  /* Stored or derived, never both (hard rule 17: one owner). */
   const metric = project.metric ?? {};
   ok(`${id} metric has a label`, typeof metric.label === "string" && metric.label.length > 0);
 
@@ -1625,12 +1065,7 @@ for (const project of projects) {
       `a date beside a value this build recomputed records when a human last ` +
         `looked, which is the tense-bound claim rule 17 was extended to cover`,
     );
-    /*
-     * RUN THE DERIVATION, through the function the ROUTE calls. This is the
-     * assertion that makes a derived metric worth more than a dated one: it
-     * proves the value the card renders is producible, non-empty and not a
-     * placeholder, on every run, without this gate knowing how it is computed.
-     */
+    /* Runs the route's derivation: producible, not a placeholder. */
     if (Object.hasOwn(METRIC_DERIVATIONS, metric.derived)) {
       const derivedValue = metricValue(metric, METRIC_INPUTS);
       ok(
@@ -1652,14 +1087,7 @@ for (const project of projects) {
     );
   }
 
-  /*
-   * NOTABLE: optional, and shaped when present.
-   *
-   * The bound is two or three, and it is a bound rather than a minimum because
-   * both failures are real. One sentence is a claim with no support; six is the
-   * description field again under another name, and this list sits inside a
-   * card in a grid where a long one pushes every sibling's foot down.
-   */
+  /* Optional; two or three sentences when present. */
   if (project.notable !== undefined) {
     const notable = Array.isArray(project.notable) ? project.notable : [];
     ok(
@@ -1676,15 +1104,7 @@ for (const project of projects) {
     }
   }
 
-  /*
-   * EVIDENCE: optional, and every entry VERIFIED rather than merely shaped.
-   *
-   * A citation nobody checks is the silent failure this whole family of gates
-   * exists for: it returns a hit, looks correct in a card, and goes nowhere.
-   * Each kind is checked against the thing that owns it, and the post label is
-   * argued against the corpus rather than trusted, which is the same
-   * two-sources-must-agree bargain the chart enums make.
-   */
+  /* Optional; every entry verified against its owner. */
   if (project.evidence !== undefined) {
     const evidence = Array.isArray(project.evidence) ? project.evidence : [];
     ok(
@@ -1721,15 +1141,7 @@ for (const project of projects) {
           `no published post has that slug. A draft or a typo here is a link to ` +
             `a page the live site does not serve.`,
         );
-        /*
-         * THE LABEL IS THE POST'S TITLE, byte for byte.
-         *
-         * The route cannot read the corpus, so the title has to be restated in
-         * the manifest for the card to render it. Restating it is fine; NOT
-         * arguing it against the corpus is what would rot, and it would rot
-         * invisibly, because a card showing a stale title still links to the
-         * right article and nothing about the page looks wrong.
-         */
+        /* Must equal the post's title; a stale one would still link. */
         if (publishedTitles.has(ref)) {
           ok(
             `${id} evidence label matches the post's title: ${ref}`,
@@ -1760,9 +1172,7 @@ for (const project of projects) {
   }
 }
 
-// The vocabulary is closed in BOTH directions. An entry nothing uses is a term
-// that can quietly stop meaning anything, which is how a "closed" list becomes
-// a suggestion.
+// Closed both ways: an unused term stops meaning anything.
 for (const term of vocabulary) {
   ok(
     `vocabulary term is used by at least one project: ${term}`,
@@ -1771,34 +1181,8 @@ for (const term of vocabulary) {
   );
 }
 
-/*
- * THE PAGE RENDERS FROM THIS FILE, asserted at the source.
- *
- * The colophon can compare literal `<SectionHead id="...">` against its
- * descriptor because it hand-writes each one. This page MAPS over the roster,
- * so there are no literal ids to compare and the equivalent guarantee is
- * structural: the route must read the roster and derive its anchors from the
- * shared helper. If it ever stops doing either, parity becomes a coincidence.
- */
-/*
- * HARD RULE 17 ON THE ROSTER'S PROSE, the same scan the feature sentences get.
- *
- * THIS PAGE NEEDS IT MORE THAN THE COLOPHON DOES, because its entire premise is
- * that the number is in the metric channel, where it carries either a date or a
- * derivation. A digit loose in a description is a measurement with nowhere to
- * say how old it is, sitting on the one page whose argument is that a number
- * without provenance keeps looking authoritative after it stops being true.
- *
- * THE EVIDENCE LABELS ARE EXEMPT FROM THIS SCAN and are exempt for the reason the
- * feature anchors are: a post label is a MACHINE REFERENCE that must equal the
- * post's title byte for byte, and titles carry measurements ("6 ms with Rank
- * Fusion"). Scanning them would force articles to be retitled to satisfy a rule
- * about portfolio prose. The label has a stronger guarantee than the scan
- * anyway: it is argued against the corpus above.
- *
- * METRIC LABELS ARE ALSO OUT. The metric is the number channel; its label says
- * what is counted and sits beside a value that carries its own provenance.
- */
+/* The route must read the roster and derive anchors from the shared helper. */
+/* Hard rule 17 on roster prose; evidence and metric labels are exempt. */
 {
   const PROJECT_PROSE_FIELDS = ["oneLiner", "description"];
   let projectFieldsScanned = 0;
@@ -1823,14 +1207,7 @@ for (const term of vocabulary) {
     }
   }
 
-  /*
-   * SCOPE, ASSERTED, and floored one under the measured count rather than at
-   * the roster length: this scan reads two fields per project PLUS every
-   * notable sentence, so the count moves with the notable lists and a floor
-   * tied to `projects.length` would go stale on the next card that gains one.
-   * MEASURED THROUGH THIS LOOP 2026-08-30: 23 fields over seven projects with
-   * three notable lists.
-   */
+  /* Floored under measured; notable sentences move the count. */
   ok(
     "the roster prose scan had fields to read",
     projectFieldsScanned >= 14,
@@ -1859,16 +1236,7 @@ ok(
   "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
 );
 
-/*
- * THE ROUTE IS WIRED TO THE NEW FIELDS, asserted structurally.
- *
- * The manifest checks above prove the DATA is well formed. They say nothing
- * about whether any of it reaches a reader, and a field nothing renders is
- * worse than an absent one: it passes every shape check, it reads as shipped,
- * and the page is unchanged. Each assertion below is a thing only CODE can do,
- * on the lesson this file already carries in its search-anatomy block, where a
- * ban on a string fired against the caption that was supposed to say it.
- */
+/* Asserted on code: a field nothing renders passes every shape check. */
 ok(
   "the page computes derived metrics through metricValue",
   /metricValue\(/.test(projectsSource),
@@ -1898,12 +1266,7 @@ ok(
   "the item's @type must come from the entry, or the roster page is emitted as an " +
     "application again and the field is decoration",
 );
-/*
- * THE PROVENANCE LINE BRANCHES. Without this, a route that dropped the derived
- * branch would render an empty <time> for every derived metric: no date, no
- * sentence, and a card that silently stops saying where its number came from,
- * which is the one thing this page exists to say.
- */
+/* Unbranched, a derived metric renders an empty `<time>`. */
 ok(
   "the page renders a provenance line for both metric forms",
   /metric\.derived\s*!==\s*undefined/.test(projectsSource) &&
@@ -1912,11 +1275,7 @@ ok(
     "one renders its <time>",
 );
 
-/*
- * Artifact parity, both directions. THIS is the assertion that catches the real
- * defect: a roster edited without `npm run build:content`, leaving the search
- * index and the page describing different sets of projects.
- */
+/* Parity both ways: catches a roster edited without a rebuild. */
 const projectRecords = artifactRecords.filter(
   (/** @type {any} */ r) => r.docUid === "page:projects",
 );
@@ -1951,26 +1310,7 @@ for (const anchor of recordAnchors) {
   );
 }
 
-/*
- * Executed-count floor, MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING
- * it, never by summing the loops. The first number ever written here was 91,
- * guessed by adding up the loops against 154 measured, and it was wrong by two
- * thirds.
- *
- * RE-MEASURED 2026-08-30, after the roster gained evidence, notable sentences,
- * derived metrics and a schema type: **275** over a seven-project roster with a
- * fifteen-term vocabulary. It was 154 over six projects, and nearly all of the
- * growth is per-citation: every evidence entry costs four assertions and a post
- * citation costs six.
- *
- * Floored at 250, the ~8% margin the other gates use. That is deliberately not
- * generous: this count now moves with the EVIDENCE, so removing one card's
- * citations should not silently drop under a slack floor.
- *
- * Not scope-floored. The roster length gates most of the loops above, so a
- * truncated file trips `the roster is non-empty` first; this catches the case
- * where a whole BLOCK stops running, which a length assertion cannot see.
- */
+/* Executed-count floor, measured by running the gate, never by summing. */
 const projectsChecks = checks - projectsChecksBefore;
 const MINIMUM_PROJECT_CHECKS = 281;
 const projectsFloorBreach = assertFloor(
@@ -1988,28 +1328,9 @@ console.log(
     `${projectRecords.length} artifact record(s), ${projectsChecks} assertion(s)`,
 );
 
-/* --- The playground -------------------------------------------------------
- *
- * SAME OWNER, SAME REASON as the projects roster above: this gate is where
- * hand-authored content JSON is reconciled against the route that renders it.
- *
- * WHAT MAKES THIS SECTION DIFFERENT. A project card is markup, and this gate
- * does not render markup, so the roster above is reconciled structurally. The
- * playground's demos are not markup, they are CODE PATHS, and all three are
- * reachable offline: the colour maths, `fuse()` and the chart renderer are pure
- * modules with no database, no network and no clock. So each demo also gets a
- * BEHAVIOURAL assertion that runs the real module.
- *
- * THE EXPECTED VALUES ARE NOT PRODUCED BY THE CODE UNDER TEST. Ratios come from
- * design-tokens.md, the fusion arithmetic is written longhand, and the mark
- * labels are a fact about Observable Plot's output. Hard rule 10's fixture
- * independence: a gate whose expectations are generated by its subject is a
- * mirror.
- *
- * OBSERVATION BOUNDARY: this section does NOT execute the route's loader, so it
- * cannot see a rendered page. It proves the modules compute what the page
- * claims and that the page is WIRED to them. That a byte reached a browser is
- * verify-live's claim, per hard rule 7.
+/*
+ * The playground: each demo runs the real module against expectations it did not produce
+ * (hard rule 10). A rendered page is verify-live's claim (hard rule 7).
  */
 console.log("\n  playground");
 
@@ -2029,26 +1350,13 @@ const serializeHast = (/** @type {any[]} */ children) =>
     .use(rehypeStringify)
     .stringify(/** @type {any} */ ({ type: "root", children }));
 
-/**
- * The element each mark type must emit, MEASURED 2026-08-14 rather than assumed.
- *
- * `line` and `area` both emit only `<path>`, so the element alone cannot tell
- * them apart and an element-only assertion would pass with the wrong mark drawn.
- * Plot also labels the mark group, and THAT discriminates all four, so both are
- * asserted: the group proves the requested mark reached the renderer, the
- * element proves it drew something of the right kind.
- */
+/** `line` and `area` both emit `<path>`, so the mark group label is asserted too. */
 /** @type {Record<string, string>} */
 const MARK_ELEMENT = { bar: "rect", line: "path", dot: "circle", area: "path" };
 
-// FAIL CLOSED. An empty roster makes every loop below pass by iterating nothing.
+// Fail closed: an empty list passes every loop.
 const MINIMUM_DEMOS = 3;
-/*
- * THROUGH assertFloor SINCE 2026-09-15, same reason as the roster floor above:
- * the demo set only ever gets added to, so it is a scope floor over a GROWING
- * set and drifts the way an executed-count floor drifts. See check-tests.mjs's
- * note beside its file floor for the rule and for which scope floors stay out.
- */
+/* Scope floor, as for the roster. */
 const demosBreach = assertFloor(
   "check:features",
   "demos",
@@ -2091,7 +1399,7 @@ ok(
 
 const playgroundSource = stripped(readFileSync(PLAYGROUND_ROUTE_PATH, "utf8"));
 
-/* -- manifest and page, BOTH DIRECTIONS ----------------------------------- */
+/* manifest and page */
 
 ok(
   "the page imports the manifest rather than restating it",
@@ -2113,16 +1421,7 @@ ok(
     /playgroundData\.keyPresets/.test(playgroundSource),
   "if the route restated them, the behavioural checks below would be checking a copy of the input",
 );
-/*
- * THE HEADERS ARE KEYED BY SLUG, NOT BY POSITION, asserted because the failure
- * it prevents is invisible.
- *
- * With a positional index, inserting a demo anywhere but the end renders every
- * section below it under another demo's title, lede and article link. The
- * reconciliation above stays green in both directions the whole time, because
- * both lists are still complete: what changed is which header sits over which
- * form, and no list-membership check can see that.
- */
+/* Keyed by slug: a position index shifts headers while list checks stay green. */
 ok(
   "demo headers are keyed by slug rather than by list position",
   /<DemoHeader\s+slug=/.test(playgroundSource) && !/<DemoHeader\s+index=/.test(playgroundSource),
@@ -2193,17 +1492,7 @@ if (chartDemo) {
   }
 }
 
-/*
- * Every demo cites a PUBLISHED article. Citing a draft would link a reader on
- * the live site to a page that is not there.
- *
- * READS `publishedTitles`, hoisted to the projects section on 2026-08-30 when
- * the roster's evidence checks needed the same corpus. This block used to parse
- * `posts.json` a second time, which was a second reader of one artifact rather
- * than a second copy of a fact, but it is the shape that becomes one: the two
- * would have needed the same draft predicate, and only one of them applied it
- * to titles.
- */
+/* Demos cite published articles; a draft link is a missing page. */
 ok(
   "the artifact carries published posts",
   publishedTitles.size > 0,
@@ -2217,7 +1506,7 @@ for (const demo of demos) {
   );
 }
 
-/* -- behavioural: the contrast lab ---------------------------------------- */
+/* contrast lab */
 
 for (const swatch of swatches) {
   const actual = contrast(swatch.fg, swatch.bg);
@@ -2233,8 +1522,7 @@ for (const swatch of swatches) {
     "the module and the recorded ratio disagree across the 4.5 to 1 threshold",
   );
 }
-// Lc is SIGNED and the page prints the sign, so polarity is asserted in both
-// directions. An unsigned implementation would pass a magnitude check.
+// Lc is signed, so polarity is asserted both ways.
 ok(
   "contrast lab: APCA is positive for dark text on a light ground",
   apca("#2B2320", "#FAF7F2") > 0,
@@ -2246,7 +1534,7 @@ ok(
   "polarity reversed or dropped",
 );
 
-/* -- behavioural: the fusion arithmetic ----------------------------------- */
+/* fusion arithmetic */
 
 // Fixture lists, real fuse(). "a" ranks 1 in both layers, "c" ranks 2 in one.
 const fusionFixture = fuse([
@@ -2280,8 +1568,7 @@ if (rowA && rowC) {
     rowC.sources.length === 1 && rowC.ranks.length === 1 && rowC.contributions.length === 1,
     "a length mismatch would render a value against the wrong layer",
   );
-  // THE RENDERED CELLS. The page formats with toFixed(5), so these are the exact
-  // strings a reader sees for this fixture. Precision cannot drift silently.
+  // The exact strings toFixed(5) renders.
   ok(
     "search anatomy: rank 1 renders as 0.01639",
     rowA.contributions[0].toFixed(5) === "0.01639",
@@ -2298,18 +1585,7 @@ if (rowA && rowC) {
     `renders ${rowC.score.toFixed(5)}`,
   );
 }
-/*
- * The page must READ the decomposition. A route computing the contribution
- * itself would be a second implementation of the fusion rule, which is the one
- * thing the playground exists not to do.
- *
- * ASSERTED ON CODE, NOT ON PROSE. The first version of this check forbade the
- * string "1/(k + rank)" and failed immediately, because the table's CAPTION
- * says exactly that in English and `stripped()` removes comments, not JSX text.
- * A guard that fires on the copy it is supposed to require is worse than no
- * guard. So the three below are all things only code can do: own the constant,
- * divide by a literal 60, or read the value from the payload.
- */
+/* The page reads the decomposition, never computes it; asserted on code, not JSX text. */
 ok(
   "search anatomy: the page reads the per-layer contribution",
   /identityContribution/.test(playgroundSource),
@@ -2341,22 +1617,9 @@ ok(
   "the sentence explaining why fusion is over ranks is the answer to why there is no score column",
 );
 
-/* -- behavioural: the media key grammar ----------------------------------- */
+/* media key grammar */
 
-/*
- * THE EXPECTED ANSWERS ARE HAND-WRITTEN IN THE MANIFEST, never captured from a
- * run. Hard rule 10's fixture independence, and it is load-bearing here rather
- * than ceremonial: this demo's entire claim is that ONE grammar answers for
- * four readers, and a fixture generated by those readers would agree with any
- * grammar they happened to share, including a wrong one.
- *
- * WHAT EACH ROW BUYS, because a table of booleans looks like padding: the two
- * content-key forms pin the optional dimension segment, the leading-zero key
- * pins the strict spelling that the collapsing differential chose over the
- * loose one, the served path pins THREE different argument contracts at once,
- * and the unclassifiable extension pins the classifier's refusal, which is the
- * one branch a passing test suite would otherwise never enter.
- */
+/* Hand-written expectations (hard rule 10's fixture independence). */
 for (const preset of keyPresets) {
   const label = preset.label ?? preset.key;
   const expect = preset.expect ?? {};
@@ -2401,11 +1664,7 @@ for (const preset of keyPresets) {
     `the module says ${roleOf(preset.key)}`,
   );
 
-  /*
-   * "refused" IS AN EXPECTED ANSWER, and it has to be tested as one. A gate
-   * that only ever asserted successful classifications would never enter the
-   * throw branch, and that branch is the module's whole fail-closed design.
-   */
+  /* "refused" is an answer, so the throw branch runs. */
   let actualKind;
   try {
     actualKind = classify(preset.key).kind;
@@ -2430,11 +1689,7 @@ for (const preset of keyPresets) {
   );
 }
 
-/*
- * THE PRESET SET COVERS EVERY BRANCH, asserted rather than trusted to the
- * curator. A preset list can shrink to the easy cases one edit at a time, and
- * every assertion above would keep passing on whatever was left.
- */
+/* Presets must cover every branch. */
 const presetKinds = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.kind));
 const presetStorage = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.storage));
 const presetRoles = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.role));
@@ -2461,7 +1716,7 @@ ok(
     "have to be present or the pin is on the easy half",
 );
 
-/* -- the key demo is WIRED to the module, not to a copy of its answers ----- */
+/* key demo wiring */
 
 ok(
   "media key: the page imports the grammar's readers",
@@ -2486,20 +1741,9 @@ ok(
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
 
-/* -- behavioural: the theme resolver -------------------------------------- */
+/* theme resolver */
 
-/*
- * RUN THE REAL RESOLVER OVER A REAL REQUEST, exactly as the demo does and
- * exactly as the Worker does on every request.
- *
- * Expected answers are hand-written in the manifest, never captured. That
- * matters most for the two rows that look identical and are not arrived at the
- * same way: no cookie takes the resolver's first branch, the header-absent
- * test, while a legacy `theme=system` walks the header, decodes, fails the
- * writable-set test and falls through. A captured fixture would record that
- * they agree; a written one asserts that they MUST, which is the property the
- * shared cache entry depends on.
- */
+/* Real resolver, real request, hand-written expectations. */
 for (const preset of cookiePresets) {
   const label = preset.label ?? JSON.stringify(preset.cookie);
   const expect = preset.expect ?? {};
@@ -2514,32 +1758,13 @@ for (const preset of cookiePresets) {
     typeof preset.note === "string" && preset.note.trim().length > 0,
   );
 
-  /*
-   * NO HEADER AT ALL versus an EMPTY ONE, and the distinction is deliberate.
-   * The resolver's first line returns early when the header is absent, so
-   * building a request that always carries a `cookie:` header would route the
-   * no-cookie preset down the walking path and quietly stop testing that line.
-   */
+  /* No header differs from an empty one: the resolver returns early. */
   const request = new Request(
     "https://example.invalid/",
     preset.cookie ? { headers: { cookie: preset.cookie } } : undefined,
   );
 
-  /*
-   * A THROW IS A NAMED FAILURE HERE, NOT A CRASH, and this shape was chosen by
-   * a plant rather than by foresight.
-   *
-   * Removing the resolver's URIError guard made this loop die on the malformed
-   * escape preset: the gate exited non-zero with a stack trace and recorded NO
-   * assertion, which is "EXIT 1 IS NOT EVIDENCE" in its purest form. The gate
-   * was right that something was wrong and useless about what.
-   *
-   * It also matters beyond the plant. The one thing this preset exists to prove
-   * is that a malformed cookie costs a reader the default theme and never the
-   * page, and a gate that dies on it proves that by dying, which nothing
-   * downstream can read. So the throw is caught and reported AS the failure of
-   * this preset, with the message, and the loop carries on to the rest.
-   */
+  /* A throw is this preset's named failure, and the loop continues. */
   let theme;
   try {
     theme = themeFromRequest(request);
@@ -2574,11 +1799,7 @@ for (const preset of cookiePresets) {
   );
 }
 
-/*
- * BRANCH COVERAGE, asserted rather than left to the curator, same as the key
- * presets. Each of these is a line in the resolver that nothing else on this
- * page would enter.
- */
+/* Branch coverage for the resolver. */
 const cookieValues = cookiePresets.map((/** @type {any} */ p) => String(p.cookie ?? ""));
 ok(
   "theme: a preset sends no cookie at all",
@@ -2612,33 +1833,16 @@ ok(
   "the endpoint accepts exactly these two and both must resolve",
 );
 
-/* -- the theme demo is WIRED to the module and to the Worker's own caller -- */
+/* theme demo wiring */
 
-/*
- * BOTH NEEDLES ARE WORD-ANCHORED, and that was found by a plant rather than by
- * care. The Worker assertion below was written unanchored; the plant renamed
- * `themeFromRequest` to `themeFromRequestLegacy` throughout workers/app.ts and
- * the gate stayed GREEN, because the longer name CONTAINS the shorter one.
- *
- * That is hard rule 10's unanchored-needle class, and it is structural in this
- * repository rather than a one-off: `check:head`/`check:headers` and
- * `check:content`/`check:contrast` are the recorded prefix pairs, and an
- * identifier plus a suffix is the same trap wearing a different hat. Anchor
- * every needle that verifies a NAME.
- */
+/* Word-anchored: a suffixed name contains the shorter one (hard rule 10). */
 ok(
   "theme: the page imports the resolver",
   /from\s+["']~\/lib\/theme["']/.test(playgroundSource) &&
     /\bthemeFromRequest\b/.test(playgroundSource),
   "the demo must call the real resolver, not restate its rules",
 );
-/*
- * THE DEMO'S CENTRAL CLAIM, ANCHORED. Its lede says this is the function the
- * Worker calls on every request. That is a sentence about another file, so it
- * is checked against that file rather than left as prose: if the Worker ever
- * stops resolving the theme this way, the claim goes red here instead of
- * quietly becoming a boundary note that aged (hard rule 7).
- */
+/* The lede's claim about the Worker, checked there (hard rule 7). */
 ok(
   "theme: the Worker still resolves the theme through this function",
   /\bthemeFromRequest\b/.test(stripped(readFileSync(join(root, "workers", "app.ts"), "utf8"))),
@@ -2667,25 +1871,9 @@ ok(
   "an empty cell reads as a bug; the absence IS the answer for a reader on system",
 );
 
-/* -- behavioural: the markdown pipeline ----------------------------------- */
+/* markdown pipeline */
 
-/*
- * RENDER EACH SNIPPET THROUGH `renderBody`, the one call the deploy build makes
- * for every post, the editor preview makes on every keystroke and the operator
- * API makes on every save.
- *
- * ASYNC, so this block is a labelled scope rather than a bare loop: the rest of
- * this gate is synchronous and top-level await is what keeps the executed-count
- * arithmetic below honest about having run.
- *
- * THE EXPECTED VALUES ARE HAND-WRITTEN. Fixture independence again, and the
- * `throws` row is the one that needs it most: a captured fixture would record
- * whatever the pipeline did, including nothing, and the whole point of the
- * third snippet is that the pipeline MUST refuse it.
- *
- * The image resolver REFUSES, exactly as the route's does. A snippet that grows
- * a media citation has to fail here rather than reach a bucket.
- */
+/* Snippets render through `renderBody`; the image resolver refuses media. */
 {
   const refuseImages = async (/** @type {string} */ src) => {
     throw new Error(`the markdown snippets cite no media, and one cites ${src}`);
@@ -2704,13 +1892,7 @@ ok(
         snippet.note.trim().length > 0,
     );
 
-    /*
-     * A SNIPPET MAY NOT CITE MEDIA, asserted on the SOURCE rather than only by
-     * the resolver throwing. The resolver's throw arrives as a render failure,
-     * which names the wrong cause: it would read as the pipeline refusing the
-     * snippet when what happened is that the snippet asked for something this
-     * demo will not do.
-     */
+    /* On the source: the resolver's throw names the wrong cause. */
     ok(
       `markdown: ${label} cites no media`,
       !/!\[[^\]]*\]\(/.test(snippet.source) && !/\/media\//.test(snippet.source),
@@ -2739,12 +1921,7 @@ ok(
     );
 
     if (expect.throws) {
-      /*
-       * THE REFUSAL NAMES THE CAUSE. A throw alone is not the property: the
-       * ruling is that an unimplemented directive is a NAMED build error rather
-       * than a silent empty div, and a message that did not name the directive
-       * would satisfy a bare throws check while failing the actual promise.
-       */
+      /* A bare throw is not enough; the directive must be named. */
       ok(
         `markdown: ${label} refusal names the unknown directive`,
         typeof refusal === "string" && /unknown directive/i.test(refusal),
@@ -2768,12 +1945,7 @@ ok(
       )}`,
     );
 
-    /*
-     * A DEMOTED URL MUST NOT SURVIVE AS AN HREF, which is the whole claim and
-     * is NOT implied by the count. The demotion renders the markdown that
-     * produced it as escaped TEXT, so the URL appears in the document; what
-     * must not appear is an attribute carrying it.
-     */
+    /* Escaped text is fine; an attribute is not. */
     for (const blocked of rendered.blockedUrls) {
       ok(
         `markdown: ${label} demotes ${blocked.url} out of every attribute`,
@@ -2785,11 +1957,7 @@ ok(
     }
   }
 
-  /*
-   * BRANCH COVERAGE. Each of these is a pipeline behaviour a PUBLISHED ARTICLE
-   * cannot demonstrate, which is the demo's entire reason for existing: a
-   * published article is by definition one that tripped none of the refusals.
-   */
+  /* Branches no published article can show. */
   ok(
     "markdown: a snippet is refused outright",
     snippets.some((/** @type {any} */ s) => s.expect?.throws === true),
@@ -2807,14 +1975,9 @@ ok(
   );
 }
 
-/* -- the markdown demo is WIRED to the pipeline, and bounded -------------- */
+/* markdown demo wiring */
 
-/*
- * A TWO-FILE CHAIN, so both links are asserted. The route calls a server
- * wrapper and the wrapper calls the shared renderer; checking only the route
- * would prove it calls SOMETHING, and checking only the wrapper would prove
- * nothing about what the page does.
- */
+/* Both links of the chain are asserted. */
 const snippetRendererSource = stripped(
   readFileSync(join(root, "app", "lib", "content", "render-snippet.server.ts"), "utf8"),
 );
@@ -2843,12 +2006,7 @@ ok(
   "a resolver that reached a bucket on behalf of fixture text is a door this " +
     "demo has no reason to open",
 );
-/*
- * THE BOUND IS THE ENUM, asserted on CODE. This is the assertion that keeps the
- * deferred entry honest: the free-text form is still deferred, and the way that
- * stays true is that the loader selects from the manifest's slugs rather than
- * reading a body out of the query string.
- */
+/* The loader picks from manifest slugs, never a body from the URL. */
 ok(
   "markdown: the snippet is chosen from the manifest, never taken from the URL",
   /SNIPPET_SLUGS\.includes\(/.test(playgroundSource),
@@ -2865,11 +2023,7 @@ ok(
   /Unknown snippet/.test(playgroundSource),
   "a hand-edited URL must say what happened, the same rule the chart demo follows",
 );
-/*
- * THE DEFERRED ENTRY STILL REFUSES THE TEXT BOX. Narrowing an entry is a
- * legitimate move; deleting it because a NEIGHBOURING form shipped is how a
- * stated absence quietly becomes a claim of completeness.
- */
+/* A shipped neighbour does not complete the deferred entry. */
 ok(
   "markdown: the free-text form is still stated as deferred",
   deferredDemos.some(
@@ -2880,7 +2034,7 @@ ok(
     "highlighter, and the page must keep saying so",
 );
 
-/* -- behavioural: the chart renderer -------------------------------------- */
+/* chart renderer */
 
 for (const [key, dataset] of Object.entries(datasets)) {
   for (const type of CHART_TYPES) {
@@ -2933,8 +2087,7 @@ for (const [key, dataset] of Object.entries(datasets)) {
       /class="chart-data"/.test(svg) && /<table/.test(svg),
       "the text equivalent is mandatory for every chart",
     );
-    // A hex here would be a palette bypass check:contrast can never see, because
-    // it never reads this SVG.
+    // check:contrast never reads this SVG.
     ok(
       `chart options: ${key}/${type} contains no hex colour literal`,
       !/#[0-9a-fA-F]{6}\b/.test(svg),
@@ -2948,7 +2101,7 @@ for (const [key, dataset] of Object.entries(datasets)) {
   }
 }
 
-/* -- copy law -------------------------------------------------------------- */
+/* copy law */
 
 ok(
   "the lab names WCAG 2.2 as the conformance target",
@@ -2960,42 +2113,12 @@ ok(
   /not part of any standard/.test(playgroundSource),
   "Lc is advisory and the page must not imply otherwise",
 );
-/*
- * DELETED 2026-08-21: the assertion banning the string "WCAG 3" from this page.
- *
- * THE LABELING RULING ABOVE STAYS and is the half that was ever load-bearing.
- * The page must name WCAG 2.2 as its conformance target and must label APCA as
- * not part of any standard. Those say what the page MUST claim, which is the
- * honest form of the rule and is falsified by a real defect.
- *
- * Banning a two-word string said what the page may not SAY, which is a
- * different and worse thing. WCAG 3.0 exists as a W3C working draft and APCA is
- * being developed in its context, so the most accurate sentence this lab could
- * add is one naming that relationship. **The ban made the next TRUE sentence
- * fail the build**, which is a gate holding a page back from being more correct
- * rather than stopping it being wrong.
- *
- * The failure it guarded, a page claiming conformance to a level that has none,
- * is already impossible: the assertion above requires WCAG 2.2 to be named as
- * THE target, so a page claiming WCAG 3 conformance instead would fail there.
- */
 ok(
   "the page states the input cap it enforces",
   /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
-/*
- * EITHER SPELLING SATISFIES THIS, and the widening is deliberate rather than a
- * loosening. The needle was /SHARED_CACHE_CONTROL/ against this route's source,
- * which stopped matching the day the four identical headers() bodies were
- * replaced by one publicHtmlHeaders() helper: the route still sets an explicit
- * Cache-Control, it just no longer names the constant.
- *
- * The claim being made is "this route sets one", not "this route spells it a
- * particular way", so the assertion now accepts the helper OR the constant and
- * still requires the headers() export. A route that exports nothing fails, which
- * is the state the assertion exists for.
- */
+/* The claim is that Cache-Control is set, by helper or constant. */
 ok(
   "the route sets an explicit Cache-Control",
   /publicHtmlHeaders|SHARED_CACHE_CONTROL/.test(playgroundSource) &&
@@ -3010,7 +2133,7 @@ ok(
   "a timing readout is the one value that differs between two fetches of one URL",
 );
 
-/* -- artifact parity, both directions ------------------------------------- */
+/* artifact parity */
 
 const playgroundRecords = artifactRecords.filter(
   (/** @type {any} */ r) => r.docUid === "page:playground",
@@ -3045,13 +2168,7 @@ for (const anchor of playgroundRecordAnchors) {
   );
 }
 
-/*
- * Executed-count floor, MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING
- * the section, never by adding up the loops. Two recorded failures of summing
- * sit behind that rule: 91 guessed against 154 measured in the projects section
- * above, and 40 against 37 in the icon suite. Floored at the measured count
- * less the ~8% margin the rest of the family uses.
- */
+/* Measured by running the section, never by summing. */
 const playgroundChecks = checks - playgroundChecksBefore;
 const MINIMUM_PLAYGROUND_CHECKS = 294;
 const playgroundFloorBreach = assertFloor(
@@ -3074,50 +2191,8 @@ console.log(
     `${playgroundRecords.length} artifact record(s), ${playgroundChecks} assertion(s)`,
 );
 
-/*
- * WHOLE-GATE EXECUTED-COUNT FLOOR.
- *
- * The projects and playground sections already floor THEMSELVES, and that is
- * not the same guarantee: a section floor cannot see a DIFFERENT section
- * stopping, and this gate has several unfloored ones ahead of them (the feature
- * roster, the anchors, the enhancement inventory, the colophon page records).
- * Each section floor is a local witness; this is the global one.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it. Never summed, and
- * the habit of summing is why: 91 was guessed against 154 measured for the
- * projects section in this very file.
- *
- * **RE-MEASURED 2026-08-30, twice in one day: 715 after the roster build-out and
- * 801 after the key demo, 854 after the theme demo and 887 after the markdown
- * demo, against 583 on 2026-08-14.**
- *
- * Floored at 660, roughly 7 percent. More slack than the small gates get,
- * because this count moves with the CORPUS: posts, tags, projects and demos all
- * feed it, so ordinary content work shifts it by tens.
- */
-/*
- * RE-MEASURED 2026-09-11 BY RUNNING THE GATE, never by adding this session's
- * new assertions to the old number. 909 before the anonymousGet
- * reconciliation and the continuous-integration assertion landed, 936 after.
- * The floor stood at 864, which was 45 under its own count BEFORE either of
- * them and 72 under after: a floor that far below what it measures can lose
- * seventy assertions and still pass, which is the exact shape FAILURES.md
- * calls a limit positioned where it cannot bite.
- *
- * Executed 936, tolerance 47, so the lowest legal floor is 889. This sits at
- * 913, about half the tolerance under the count.
- *
- * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
- * first attempt.** That attempt read "six percent under" out of a comment in
- * check-headers.mjs and applied it to four gates. The rule is
- * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
- * the gate that enforces it. Prose about a gate ages; the gate does not.
- *
- * It went undetected locally because check:floors runs the whole offline tier
- * and therefore runs LAST, and the tier hangs before it on this host
- * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
- * work and is proven so by differential). CI reached it on the first push.
- */
+/* Whole-gate floor: section floors cannot see another section stopping. */
+/* Within the tolerance `scripts/check-floors.mjs` owns; re-measure by running the gate. */
 const MINIMUM_CHECKS = 913;
 const floorBreach = assertFloor(
   "check:features",
