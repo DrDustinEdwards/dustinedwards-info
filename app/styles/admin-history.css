@@ -1,12 +1,5 @@
-/*
- * Admin version history.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Admin version history.
+ * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /* Version history (admin) --------------------------------------------------- */
 
@@ -66,11 +59,8 @@
   white-space: pre;
 }
 
-/* The documented exception to rule 4 (one semantic tint per view). A diff is a
-   data surface whose whole job is to distinguish two states side by side, so
-   both tints are load-bearing rather than decorative. Rule 1 still holds: each
-   line keeps its literal "+" or "-" prefix in the text, which is the second
-   channel, and the tints are the ratified hexes rather than a mix. */
+/* The documented exception to rule 4: a diff must tell two states apart, so both tints are load-bearing.
+   Rule 1 still holds: each line keeps its literal + or - prefix. */
 .history-diff [data-diff="add"] {
   background: var(--tint-success);
   color: var(--on-tint-success);

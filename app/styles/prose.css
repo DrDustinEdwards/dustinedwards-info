@@ -52,31 +52,17 @@
   border-radius: 0.375rem;
 }
 
-/* The low-quality placeholder behind a prose image. The pipeline
-   (pipeline.mjs, rehypeImageSources) writes `class="has-lqip"` and an inline
-   `background-image` holding a twenty-pixel WebP; only the per-image URL is
-   inline and everything shared is here, as the no-inline-style rule asks.
-   `cover` and `center` crop the blurred wash the way the image will be
-   cropped.
-   No transition and no cleanup: the loaded image is opaque and covers it. A
-   transparent image would show the wash through; exclude it at derivation
-   instead of adding script.
-   `width` and `height` are always on the image, so the box is at its final
-   size before anything paints. */
+/* The blurred placeholder behind a prose image: the pipeline writes has-lqip and an inline background image;
+   everything shared is here. No transition or cleanup: the opaque image covers it (exclude transparent
+   images at derivation). width and height are always set, so the box is final before paint. */
 .prose img.has-lqip {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-/* Every body image links to its original file (pipeline.mjs,
-   rehypeImageSources).
-   Rule 2's underline exemption applies, as it does for `.btn` and
-   `.search-chip`: the affordance is not colour, since the whole content is an
-   image, and an underline would just draw a line under the picture.
-   The cursor is on the anchor because it is the click target and works with
-   script off; without the lightbox the click opens the original, so `zoom-in`
-   is honest either way. */
+/* Body images link to their original. Exempt from rule 2's underline, since the whole content is an image.
+   zoom-in is honest with or without the lightbox. */
 .prose a.image-link {
   text-decoration: none;
   cursor: zoom-in;
@@ -97,26 +83,17 @@
   margin: 0;
 }
 
-/* No opacity on this text. Measured 2026-08-21: at `opacity: 0.8` the
-   inherited `--text-muted` composites against `--bg` to #7c736a in light
-   mode, 4.35:1, below the 4.5 AA floor; check:contrast saw only the declared
-   7.13:1 because opacity is applied after it reads token hexes. Dark was
-   5.41:1.
-   Size already separates the credit from the caption (0.8125rem against
-   0.875rem). `.tag-count` had the same fix, from opacity 0.7 to a token. */
+/* No opacity on this text: opacity composites after check:contrast reads the token, so a passing pair can
+   ship below the 4.5:1 floor. Size separates the credit from the caption. */
 .figure-credit {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.8125rem;
 }
 
-/* Charts. The renderer strips the <style> block Observable Plot injects into
-   each SVG: it carried `--plot-background: white`, the one colour literal
-   breaking the tokens-only rule, and N charts would ship N copies. These
-   rules replace it once.
-   The SVG has `fill="currentColor"`, so axes and labels inherit --text.
-   Series colours are var(--chart-*) properties written in at build time and
-   resolved per theme, so one stored SVG serves light and dark. */
+/* Charts: the renderer strips Plot's injected <style>, which carried a white literal per chart; these rules
+   replace it once. Axes inherit --text via currentColor; series use var(--chart-*), so one SVG serves both
+   themes. */
 .chart-figure svg {
   display: block;
   max-width: 100%;
@@ -155,19 +132,9 @@
   margin: 0.75rem 0 0;
 }
 
-/* Diagrams are build-time assets in <img>, not inline SVG, because mermaid
-   needs a real browser engine for font metrics and a Worker has none (Capsid
-   `dustinedwards/chart-stack.md`).
-   There are two images because the page's custom properties never reach an
-   SVG loaded through <img>, so each theme gets its own render and these rules
-   pick one.
-   `display: none`, not opacity or visibility, because only it also removes
-   the hidden image from the accessibility tree, so both share one alt without
-   a screen reader reading the diagram twice.
-   The selectors follow the site's theme resolution: light by default, dark
-   under a dark OS preference with no attribute, dark when chosen. The server
-   writes the attribute in the first byte, so the right image shows before
-   paint. */
+/* Diagrams are build-time <img> assets (mermaid needs a real browser; see dustinedwards/chart-stack.md).
+   Two images, one per theme, since custom properties never reach an SVG in <img>. display: none, which
+   also drops the hidden one from the accessibility tree. Selectors follow the site's theme resolution. */
 .diagram-image {
   display: block;
   max-width: 100%;
@@ -227,23 +194,14 @@
   border-radius: 0.25rem;
   background: var(--surface);
   font-size: 0.9em;
-  /* Inline code may break, because its contents (file paths, gate names) are
-     single unbreakable tokens. The CI browser run on Linux found /colophon
-     scrolling sideways by 2px at 320px: the fallback monospace is a different
-     width on each platform.
-     `anywhere`, not `break-word`, because only `anywhere` also lowers
-     min-content, which stops a long token widening its container past the
-     viewport. It breaks only when it must, so short spans are unchanged. */
+  /* Inline code may break: its contents are single unbreakable tokens, and monospace fallbacks differ in width
+     by platform. anywhere, not break-word: only anywhere lowers min-content, so a token cannot widen the page.
+     It breaks only when it must, so short spans are unchanged. */
   overflow-wrap: anywhere;
 }
 
-/* The colour swatch from the `:swatch` directive.
-   The label is not styled here, deliberately: `.swatch-label` is a real
-   `<code>` inside a `<span>`, so the inline-code rule above already gives it
-   surface, padding, radius and `overflow-wrap: anywhere`. A second
-   declaration would drift.
-   No per-theme block either: the border is `--border`, measured in every
-   theme block, and the fill is the post's own hex on the element. */
+/* The :swatch chip. The label is a real <code>, so the inline-code rule already styles it; a second
+   declaration would drift. No per-theme block: the border is --border and the fill is the post's own hex. */
 .prose .swatch {
   display: inline-flex;
   align-items: center;
@@ -270,13 +228,8 @@
 }
 
 @media (forced-colors: active) {
-  /* The chip is flattened in forced-colors, and that is intended: the mode
-     replaces every background, and the ratified v3 policy is that the palette
-     yields to system colours. `forced-color-adjust: none` would override that
-     and is deliberately not used.
-     The value survives as text in the code span beside the chip, not a
-     `title` or tooltip, so the reader loses the sample and keeps the hex.
-     The border is repainted in CanvasText so the chip keeps its shape. */
+  /* Flattened in forced-colors on purpose (the palette yields, per v3). Never forced-color-adjust: none.
+     The hex survives as text beside the chip; the border is repainted in CanvasText. */
   .prose .swatch-chip {
     border-color: CanvasText;
   }
@@ -306,18 +259,13 @@
 }
 
 /* remark-gfm labels the footnote section with a visually hidden heading. */
-/* `.sr-only` lives only in reset.css. A second copy here won on cascade
-   order, which stopped being reliable once prose.css was no longer on every
-   page, so one class would have behaved differently with and without prose.
-   One owner, rule 17. */
+/* .sr-only lives only in reset.css: a second copy here would make the class behave differently on pages
+   with and without prose. One owner, rule 17. */
 
 /* Heading anchors. Hidden until the heading is hovered or the link is focused,
    so they never clutter the page but stay reachable by keyboard. */
-/* WCAG 2.2 2.5.8 as well as 1.4.3. Measured at 14.8 x 29 against a 24px
-   floor: the width was short and the height never was.
-   `inline-flex` with a min-width, not padding, because padding would push the
-   anchor away from its heading; the heading's line box already gives the
-   height. */
+/* WCAG 2.2 2.5.8 and 1.4.3. inline-flex with a min-width, not padding, which would push the anchor away
+   from its heading; the heading's line box gives the height. */
 .heading-anchor {
   display: inline-flex;
   align-items: center;
@@ -327,16 +275,9 @@
   color: var(--text-muted);
 }
 
-/* The reveal is scoped to pointers that can hover (since 2026-08-28), so the
-   touch path has no opacity.
-   It was `opacity: 0` with a `hover: none` override to 0.55. A partial
-   opacity composites after check:contrast measures: `--text-muted` passes and
-   0.55 of it does not, and no gate sees it.
-   Inside the query the values are 0 then 1, a reveal rather than a shade, so
-   nothing paints at an unmeasured contrast. On touch the anchor is plain
-   `--text-muted` at full strength.
-   `focus-visible` sits inside the query safely: outside it the anchor is
-   already fully visible. */
+/* The reveal is scoped to hover-capable pointers and goes 0 to 1, never a partial opacity, which composites
+   after check:contrast measures. On touch the anchor is plain --text-muted. focus-visible is safe inside
+   the query: outside it the anchor is already visible. */
 @media (hover: hover) {
   .heading-anchor {
     opacity: 0;
@@ -350,17 +291,9 @@
   }
 }
 
-/* Shiki dual themes: the generator emits both palettes as custom properties
-   on every token, so switching needs no script and no second stylesheet.
-   The theme's own background is dropped: github-dark's blue-black #24292e
-   fights the warm prairie night, and a block with its own surface would be
-   the one rectangle the token system does not own. Blocks sit on
-   --surface-code, and check:contrast holds every syntax token to 4.5:1
-   against --surface-code and --surface-popover (the highlighted-line band) in
-   both modes.
-   Resolution mirrors the token block: with no attribute
-   :root:not([data-theme]) answers, and with one only the attribute rules
-   match, so no [data-theme="light"] override is needed. */
+/* Shiki dual themes: both palettes ride as custom properties, so switching needs no script. The theme's own
+   background is dropped; blocks sit on --surface-code, where check:contrast holds every syntax token to
+   4.5:1 (and on --surface-popover). With no attribute :root:not([data-theme]) answers; no light override. */
 .prose .shiki,
 .prose .shiki span {
   color: var(--shiki-light);
@@ -373,11 +306,8 @@
   background-color: var(--surface-code);
 }
 
-/* Some theme rules pair a foreground with their own background: the diff
-   scopes (markup.inserted, markup.deleted, markup.changed, markup.ignored)
-   and carriage-return. Those foregrounds are only legible on that background,
-   so those spans keep it. The attribute test matters: custom properties
-   inherit, so a blanket rule would paint every token with the pre's value. */
+/* Diff scopes and carriage-return pair a foreground with their own background and are only legible on it,
+   so those spans keep it. The attribute test matters: custom properties inherit. */
 .prose .shiki span[style*="--shiki-light-bg"] {
   background-color: var(--shiki-light-bg);
 }

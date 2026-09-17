@@ -1,21 +1,6 @@
-/* The base reset, vendored from Tailwind's preflight on 2026-08-27 when
-   Tailwind left the build.
-   It is not leftover nobody bothered to delete: this site has no reset of its
-   own and never has, and removing it moved 5,700 computed values across nine
-   pages, including every element's font. Of Tailwind's 8,356 bytes (8 KB of a
-   45 KB stylesheet), 3,048 were utilities of which the HTML used only
-   `.sr-only`, and about 1,150 were a polyfill for utilities the site never
-   asked for; both are gone.
-   Changes from the original, exhaustively: (1)
-   `--theme(--default-font-family, ...)` and
-   `--theme(--default-mono-font-family, ...)` become `var(--font-sans)` and
-   `var(--font-mono)`; (2) the `font-feature-settings` and
-   `font-variation-settings` lines that resolved to `normal` are dropped; (3)
-   the `@layer base` wrapper is gone, and must stay gone: nothing else here is
-   layered, so the wrapper would only change which rules win. Nothing else is
-   edited, because a reset is a list of known browser bugs.
-   Imported at the top of app.css, where `@import "tailwindcss"` sat, so the
-   site's own rules still win over it by source position. */
+/* The base reset, vendored from Tailwind's preflight, with font tokens swapped in. It is load-bearing:
+   removing it moves computed values on every page. The @layer base wrapper must stay gone: nothing else is
+   layered, so it would only change which rules win. Imported first in app.css, so site rules win by position. */
 
 *,
 ::after,
@@ -171,11 +156,8 @@ textarea,
   opacity: 1;
 }
 
-/*
-  Set the default placeholder color to a semi-transparent version of the
-  current text color in browsers that do not crash when using color-mix()
-  with currentcolor.
-*/
+/* Placeholder text: a semi-transparent version of the current text colour, only in browsers
+   that do not crash on color-mix() with currentcolor. */
 @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
   ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
@@ -234,24 +216,14 @@ input:where([type="button"], [type="reset"], [type="submit"]),
   height: auto;
 }
 
-/* Hidden elements stay hidden. This is load-bearing here, not a formality:
-   the search shortcut hint ships with `hidden` and also carries `.sr-only`,
-   which sets its own `position`, `width` and `clip-path`. The browser's own
-   `[hidden] { display: none }` loses to a class rule; this one does not lose,
-   so a still-hidden hint is out of the accessibility tree, not just off
-   screen. */
+/* Hidden stays hidden: the browser's [hidden] loses to a class rule, and the search hint carries both
+   hidden and .sr-only. This one does not lose, so the hint stays out of the accessibility tree. */
 [hidden]:where(:not([hidden="until-found"])) {
   display: none !important;
 }
 
-/* `.sr-only`, the one utility the site used from Tailwind's 44-rule utilities
-   layer, copied so computed values do not move, with one edit: `border-width:
-   0` became `border: 0`.
-   Tailwind's copy was never the rule that won: an older `post.css` copy
-   spelled `border: 0` won on every page. `border-width: 0` alone leaves
-   `border-style: solid` from the `*` rule, which renders the same. It was the
-   only computed-style difference on the site after the split, on three
-   elements per page, so this matches what shipped. */
+/* .sr-only, the one Tailwind utility the site used, copied so computed values do not move.
+   One edit: border: 0, which is what shipped. */
 .sr-only {
   clip-path: inset(50%);
   white-space: nowrap;

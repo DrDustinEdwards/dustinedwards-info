@@ -1,21 +1,9 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Public header. v4 (provisional, chrome-purple-v4.md): the chrome is a brand
-   surface in both themes, because nav links at --text-muted #5c5248 read
-   green beside the purple wordmark.
-   The seam takes --border-strong, not --border: in dark mode the
-   chrome-to-canvas step is 1.4:1. That is not a failure, since seams need no
-   3:1, but it needs a visible edge.
-   Public plane only; the admin chrome is not covered. */
-/* The header wraps, because when it did not, every public page scrolled
-   sideways on a phone. Measured at a 320px viewport: `.site-header-nav` was
-   414px wide with its right edge at 552, so scrollWidth was 552 against a
-   clientWidth of 320.
-   `flex-wrap` is on both. On the nav alone the brand and nav still share one
-   line and the nav's wrap point never arrives; on the header alone the nav
-   stays a 414px unbreakable row.
-   No media query: wrapping holds at 320, at 280, and after another link is
-   added. */
+/* Public header: the chrome is a brand surface in both themes. The seam takes --border-strong, never --border:
+   a seam needs no 3:1, but it needs a visible edge. Public plane only. */
+/* The header wraps, or public pages scroll sideways on a phone. flex-wrap is on both .site-header and
+   .site-header-nav: on either alone, one of them stays an unbreakable row. No media query. */
 .site-header {
   display: flex;
   align-items: center;
@@ -37,18 +25,10 @@
   outline-color: var(--focus-ring-on-chrome);
 }
 
-/* Rule 2 identity exemption, extended by Dustin's ruling 2026-07-30: an
-   identity element must not take :visited styling.
-   `.site-header-brand` is (0,1,0) and the base `a:visited` is (0,1,1), so
-   without these rules the base wins and the wordmark turns visited claret for
-   any returning reader. The site's name is not a place the reader has been.
-   v4: the wordmark takes --on-chrome, the ratified white-on-brand pair
-   (10.4:1 light, 10.1:1 dark). Hover steps down to --on-chrome-muted because
-   rest is already the lightest measured value here.
-   The `:visited` and `:hover` selectors are (0,2,0) and outrank the base
-   pseudo-class rules deliberately. Do not "simplify" them away.
-   No colour pseudo-class reaches the mark; it takes the dark-mode variant on
-   chrome in both themes, which is a fill. */
+/* Identity exemption: the wordmark never takes :visited. .site-header-brand is (0,1,0) and a:visited
+   (0,1,1), so without these it turns claret. It takes --on-chrome; hover steps to --on-chrome-muted.
+   The :visited and :hover selectors are (0,2,0) and outrank the base pseudo-class rules deliberately.
+   Do not "simplify" them away. No colour pseudo-class reaches the mark. */
 .site-header-brand,
 .site-header-brand:visited {
   display: inline-flex;

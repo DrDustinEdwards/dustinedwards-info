@@ -1,16 +1,10 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /* Search. Layer 0 is server rendered and must work fully with scripting off,
    so nothing here depends on a class a script adds. */
 
-/* The same column as everything around it. Measured at 1280: this form was
-   1216px wide from x=32 while `.page-head`, `.tag-chips` and `.post-list`
-   were each 768px from x=256, so the search field was the only full-bleed
-   element on the page.
-   This restates the siblings' `max-width: 48rem; margin: 0 auto`, a mirror of
-   a value this repo normally refuses; the real fix is a shared class across
-   all four, a refactor of an 8,700-line stylesheet. There are now four
-   places, not three. */
+/* The same column as the page head, chips and list. This restates their max-width and margin, a mirror
+   this repo normally refuses; the real fix is one shared class for all four. */
 .blog-search {
   display: flex;
   gap: 0.5rem;
