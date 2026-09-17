@@ -149,5 +149,36 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # THE SLOP RATCHET, and it gates the DIFF rather than the tree.
+      #
+      # The audit opened all 83 in-scope ai-slop findings and every one was a
+      # false positive here: console.log is the Workers logging API, todo-stub
+      # matches the word PLACEHOLDER in prose, and one hit is a comment
+      # recording that a TODO was removed by Dustin's ruling. Pointed at the
+      # tree this would be permanently red, so `--changes --base origin/main`
+      # scores what the branch adds and an existing finding costs nothing.
+      #
+      # It sits beside Lint and for the same reason: it reads style, it proves
+      # nothing about behaviour, and CI is where a preference belongs. It is
+      # NOT in check:ci, so a deploy is never blocked by it.
+      #
+      # `continue-on-error` is deliberately ABSENT. The only rules set to error
+      # are the two type-system escapes, which defeat the typecheck that
+      # check:types exists to run. Everything else is a warning by design.
+      #
+      # THE FETCH IS LOAD-BEARING and is why this step is two lines. The first
+      # run of this gate failed with `Could not resolve base ref "origin/main"`:
+      # actions/checkout clones shallow and single-branch, so a diff gate has
+      # no base to diff against. The explicit refspec creates
+      # `refs/remotes/origin/main` rather than only FETCH_HEAD, which is the
+      # name `--base origin/main` resolves, and it is unshallowed so a merge
+      # base exists. Running the gate LOCALLY cannot catch this: a developer
+      # worktree always has origin/main already.
+      - name: Slop
+        run: |
+          git fetch --no-tags --unshallow origin +refs/heads/main:refs/remotes/origin/main || \
+            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          npm run check:slop
+
       - name: Gates
         run: npm run check:ci

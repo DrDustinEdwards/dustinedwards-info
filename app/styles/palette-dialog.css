@@ -190,7 +190,6 @@
   margin-left: auto;
 }
 
-/* Mobile: a full-screen sheet rather than a floating card. */
 @media (max-width: 40rem) {
   .palette {
     width: 100vw;
@@ -207,7 +206,6 @@
   }
 }
 
-/* Ask inside the command palette ------------------------------------------ */
 
 .palette-ask {
   padding: 0 0.75rem;
