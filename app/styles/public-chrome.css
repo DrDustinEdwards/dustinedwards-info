@@ -58,8 +58,7 @@
 /* The chrome is a fill, so a focus ring on it lands on brand purple, not on the
    page canvas the default --focus-ring was measured against. Descendant
    selectors are (0,2,0) and outrank the bare `:focus-visible` at (0,1,0). */
-.site-header :focus-visible,
-.site-footer :focus-visible {
+.site-header :focus-visible {
   outline-color: var(--focus-ring-on-chrome);
 }
 
