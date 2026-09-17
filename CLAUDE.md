@@ -134,9 +134,9 @@ In `scripts/ship.mjs`, each step failing closed and none optional. Procedure aro
 
 A measured value lives in the gate that measures it, or nowhere. Prose may POINT AT the gate; it may not restate the value. A pointer carrying no digits is the preferred form.
 
-The test before writing a number down: can something re-run and re-derive it. If yes it belongs there and nowhere else. If no, it is a dated observation and says so, with its date.
+The test before writing a number down: can something re-run and re-derive it. If yes it belongs there and nowhere else. If no, it is a dated observation, and it goes to Capsid with its date rather than into the file.
 
-**Prose may carry REASONING; it may not carry a NUMBER or a TENSE-BOUND STATE CLAIM that a gate does not own.** A why survives its mechanism changing; a state claim is a measurement in the present tense and rots on a count's schedule.
+**A comment carries a SHORT WHY beside the rule it protects, and no history.** Ruling 115. One to three lines: the reason or the prohibition, never how it was found, when, by whom, or what a ruling decided; Capsid holds that. A why survives its mechanism changing; a NUMBER or a TENSE-BOUND STATE CLAIM in prose is a measurement in the present tense and rots on a count's schedule, so every number that matters is asserted by a gate and never only stated. Anything another consumer must not break, such as the design canvas, is extracted or gated, never left to a comment that consumer may not read. Comment volume is not a floor, and a rule that does not make the site better is changed or deleted.
 
 **Published posts are the exception.** An article is a DATED RECORD, so it may carry numbers with the date and conditions beside them, but not as a standing property. When a figure moves, the old one is KEPT as the earlier dated measurement.
 

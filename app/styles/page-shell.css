@@ -1,4 +1,4 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 .page {
   padding: 2rem;
@@ -39,7 +39,5 @@
   line-height: 1.6;
 }
 
-/* The shell owns the viewport so the editor can own one scroll context: a
-   command bar that stays put over a canvas that scrolls. A body scrolling
-   behind both would be the double-scroll the spec forbids. Ordinary pages are
-   unaffected: .admin-content scrolls instead of the body. */
+/* The shell owns the viewport so the editor owns one scroll context; a scrolling body behind it would be
+   the forbidden double scroll. Other pages scroll .admin-content instead. */

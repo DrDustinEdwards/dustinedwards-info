@@ -1,4 +1,4 @@
-/* See split header, canonical statement is app/app.css:1885 */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 
 .post {
@@ -43,11 +43,8 @@
   padding-left: 1rem;
 }
 
-/* WCAG 2.2 2.5.8. Measured at 497.6 x 22.5 and 493.9 x 22.5: wide links a
-   pixel and a half short in height, because a bare anchor's box is its line
-   box.
-   The audit's list did not name these; they were found by measuring every
-   target on a post, since the list is not the instrument. */
+/* WCAG 2.2 2.5.8: a bare anchor's box is its line box, which fell short of 24px here,
+   so these wide links get an explicit minimum height rather than relying on their width. */
 .post-nav a {
   display: inline-flex;
   align-items: center;
