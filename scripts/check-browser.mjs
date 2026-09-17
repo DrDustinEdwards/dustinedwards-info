@@ -1,100 +1,15 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 /**
- * Gate: the site as a BROWSER LAYS IT OUT, not as markup.
+ * Gate: the site as a browser lays it out, not as markup.
  *
  *   npm run check:browser
  *   npm run check:browser -- --keep    leave the preview server running
  *
- * ## OBSERVATION BOUNDARY
- *
- * **ONE BROWSER, ONE ENGINE.** Chromium, via the Puppeteer already installed in
- * this repo. Nothing here says anything about Firefox, Safari or WebKit on iOS,
- * and the layout defects this repo has shipped were engine-agnostic, so that is
- * a real limit rather than a theoretical one.
- *
- * **TWO VIEWPORTS**, 1280x900 and 320x800. A defect that appears only at 768 or
- * only at 1440 is invisible here. 320 is the narrowest commonly cited phone
- * width and the one the recorded defects were about; 1280 is where the column
- * layout is supposed to be at its widest.
- *
- * **IT LOADS A LOCAL PREVIEW BUILD, not the deployed Worker.** So it proves what
- * the working tree renders, which is the point, and proves nothing about what is
- * live. `verify-live` owns that and needs the wire. **The admin cases are the
- * one exception and they invert this**, for a reason measured below.
- *
- * **UNLESS `PUBLIC_ORIGIN` IS SET, WHICH INVERTS THE SENTENCE ABOVE.** With it,
- * the public cases drive a deployed site, nothing is built and no server is
- * started, and the whole gate speaks about one live build. That is what the
- * daily CI schedule runs, and it is a DIFFERENT question: a green run there
- * proves nothing about uncommitted work, exactly as a green local run proves
- * nothing about what is live. The banner names which one ran, every run,
- * because these two are easy to confuse and expensive to confuse.
- *
- * **IT DOES NOT LOOK.** Every assertion is a number from `getBoundingClientRect`
- * or an attribute from the DOM. A page that lays out correctly and is unreadable,
- * mis-coloured, or has its z-order inverted passes here. Screenshots would need a
- * human or a baseline, and a baseline is a fixture that drifts.
- *
- * **THE ADMIN CASES ARE OPT-IN, AND THERE ARE NOW TWO WAYS TO OPT IN.**
- * Preferred: the read-only SMOKE credential, a bearer token in `.smoke-token`
- * or at `SMOKE_TOKEN_FILE`, which authenticates as its own machine principal
- * and is the one a CI run can hold. Fallback: a real admin session cookie in
- * `.admin-session`, pasted out of Chrome by a human. Either way, ABSENT they
- * skip loudly, and SUPPLIED AND UNUSABLE they FAIL, because a file on disk is a
- * request for them.
- *
- * **WHICH ONE RAN DECIDES WHAT A GREEN RESULT MEANS, and the run says so.** The
- * smoke actor is read-only by construction, so under it these cases prove what
- * a machine can RENDER and nothing about any write surface. Under the cookie
- * they run as Dustin, which proves more and proves it only when Dustin is
- * sitting there. The banner names the credential and the residue.
- *
- * **NOTHING HERE SUBMITS ANYTHING, under either credential.** The interaction
- * cases click client state and read numbers back; the destructive ladder is
- * asserted by whether its button is ENABLED, never by pressing it.
- *
- * **THE ADMIN CASES DO NOT OBSERVE THE PREVIEW BUILD.** They cannot, and that is
- * measured rather than assumed: sessions live in the PRODUCTION KV namespace,
- * the preview server runs against local miniflare storage, and a real session
- * cookie presented to the preview lands on /login every time. So when they run
- * at all they run against `ADMIN_ORIGIN`, a DEPLOYED Worker, which means they
- * prove what is live and prove nothing about the working tree. That is the
- * opposite of every other case in this file. It is the price of the "cannot be
- * faked" rule below, and the banner says so at runtime.
- *
- * ## Why this exists
- *
- * Audit 2.3. Twenty-seven gates and none of them had ever laid out a page:
- * `check:admin-ui` renders routes with `.server` imports stubbed AND NO
- * STYLESHEET, and says so in its own header. Five layout defects shipped
- * invisible to the whole suite, and a sixth class, a component that renders in
- * markup and fails to MOUNT, took the editor down for two days with every gate
- * green.
- *
- * ## Why Puppeteer rather than Playwright
- *
- * Playwright is the better tool in the abstract: three engines, better tracing,
- * better waiting primitives. It was rejected on cost that is specific to this
- * repo. **Puppeteer 25.4.0 is ALREADY a declared devDependency** and its Chrome
- * is already downloaded, because `build:diagrams` renders mermaid through
- * `@mermaid-js/mermaid-cli`, which drives Puppeteer. Adding Playwright means a
- * second browser stack, a second ~150MB download in `npm ci`, and two automation
- * APIs in one repo, to gain engines this gate's own boundary already says it is
- * not testing. Verified before choosing: `puppeteer.launch()` succeeded headless
- * on Chrome/151.0.7922.47 with no install step.
- *
- * ## Why a PREVIEW build and not the dev server
- *
- * MEASURED, and it nearly produced a spec that asserted nothing. Against
- * `npm run dev` the page came back with `document.styleSheets.length === 1`,
- * `0` total CSS rules, `getComputedStyle(.page-head).maxWidth === "none"` and an
- * 8px body margin: the app stylesheet was not applied at all, so `.blog-search`
- * and `.page-head` measured identical full-bleed widths and every column
- * assertion would have passed on an unstyled page. That is exactly the
- * `check:admin-ui` failure this gate exists to replace, reproduced by accident.
- * The preview build serves `assets/root-*.css` as a real stylesheet and the same
- * measurement immediately separated 1216px from 768px.
+ * Chromium only. Public cases drive a preview build of this disk (the dev server
+ * serves the page unstyled), or the deployed site when `PUBLIC_ORIGIN` is set.
+ * Admin cases always drive `ADMIN_ORIGIN`, because sessions live in production KV;
+ * absent credentials skip, unusable ones fail. Nothing is submitted.
  */
 
 import { spawn, spawnSync } from "node:child_process";
@@ -107,18 +22,10 @@ import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
 import { assertFloor } from "./lib/floor.mjs";
 
-/*
- * The profile the /blog layout shift was found on, named rather than restated
- * so it cannot drift from the measurement that set the ceiling below.
- */
+/* The network profile the /blog layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
 
-/*
- * IMPORTED, NEVER RESTATED. The home tile's freshness assertion compares
- * against the same constant the tile itself decides with, so a schedule change
- * moves the gate and the page together. A digit here would be a third copy of
- * a number that already has two owners bound by check:invariants section 25.
- */
+/* Imported, never restated (`check:invariants` section 25). */
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import {
   ChildRegistry,
@@ -133,119 +40,34 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
 
 /**
- * What a live command line must STILL contain before this gate is allowed to
- * kill the process holding it.
- *
- * DECLARED HERE rather than beside the spawn that uses it, because the port
- * preflight further down runs BEFORE anything is spawned and needs the same
- * needles. One spelling, one owner: two lists would drift and the drift would
- * show up as a refusal to clean up the gate's own leftover.
- *
- * MEASURED against the real holder 2026-09-03. The process that binds 4173 is
- * `node .../vite/bin/vite.js preview --port 4173`, not the npx or cmd wrappers
- * above it, so all three needles are satisfied by the listener itself.
+ * Needles a live command line must still match before this gate kills it. Declared
+ * here because the port preflight needs them before any spawn.
  */
 const VITE_NEEDLES = ["vite", "preview", String(PORT)];
 
 /**
- * WHAT THIS GATE STARTED, so the next run can clear what a kill left behind.
- *
- * Gitignored, for the reason `/.ship-logs/` is: `npm run ship` refuses on any
- * dirty tree, untracked files included, so a file the gate writes about itself
- * would make the next ship refuse because of the last check:browser.
- *
- * The registry exists because THE ORDERLY CLEANUP BELOW CANNOT COVER A HARD
- * KILL. On Windows a `taskkill /F` is not deliverable as a signal: no handler
- * runs, no `finally` runs, and `browser.close()` never happens. Measured
- * 2026-08-31, that leaves the vite side holding port 4173 with no owner and no
- * way for anything in THIS process to have prevented it. So the repair belongs
- * to the next run, which is what this file is for.
+ * What this gate started, so the next run can clear what a hard kill left behind.
+ * Gitignored, or `npm run ship` would refuse the dirty tree.
  */
 const registry = new ChildRegistry(join(root, ".gate-pids", "check-browser.jsonl"));
 
-/**
- * WHERE THE PUBLIC CASES LOOK, and it changes what a green run MEANS.
- *
- * Unset, which is every local run: the gate builds the working tree, serves it
- * with `vite preview`, and the public cases observe THIS DISK. That is the
- * whole reason the preview exists, and it is the instrument that can see a
- * layout defect before it ships.
- *
- * Set, which is the CI schedule: the public cases observe the DEPLOYED site
- * instead, no build and no preview server. That is a different question with a
- * different answer, and the banner says which one ran, because a green run
- * against production proves nothing about uncommitted work and a green run
- * against the preview proves nothing about what is live.
- *
- * The ADMIN cases have always observed the deployment (the smoke credential is
- * a wrangler secret and no local server can answer for it), so under this
- * variable the whole gate speaks about one build for the first time.
- */
+/** Unset: public cases observe this disk. Set: they observe the deployed site. */
 const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
 /** Whether this run builds and serves the working tree. */
 const DRIVES_PREVIEW = !PUBLIC_ORIGIN;
 const BASE = PUBLIC_ORIGIN || `http://localhost:${PORT}`;
 
 /**
- * A real admin session, read from a FILE first and the environment second.
- *
- * **THE ADMIN CASES CANNOT BE FAKED AND ARE NOT.** Better Auth holds the session
- * in KV, the single admin signs in through Google, and this repo has NO
- * `.dev.vars` by design, so no local server can mint a session. A test-only
- * bypass would mean the spec authenticates through a path production does not
- * have, and the defect it exists to catch, the editor's Suspense boundary
- * failing under the enforced CSP, lives in the real authenticated render. A
- * stub would have passed while the editor was broken in production.
- *
- * ## WHY A FILE, AND NOT THE ENVIRONMENT VARIABLE ALONE
- *
- * `ADMIN_SESSION_COOKIE` has to be exported in the SAME SHELL the gate runs in,
- * and it was absent in three consecutive sessions. That is not bad luck, it is
- * the design: a variable that lives in one shell cannot survive the next one,
- * and nothing in the repo can carry it forward. The cost is recorded rather
- * than theoretical. The admin block's executed-count floor is DERIVED instead
- * of measured, and its sideways-scroll plant is still owed, both because the
- * cases have never once run.
- *
- * A gitignored file at the repo root survives shells, survives sessions, and is
- * checked by `git check-ignore` rather than by assumption. `.admin-session.example`
- * is tracked beside it and carries the five Chrome clicks that refill it.
- *
- * THE ENVIRONMENT STILL WINS where it is set, so nothing that works today stops
- * working. It is not free: the variable now has to carry the same `name=value`
- * form the file does, because the old leniency is the defect below.
- *
- * ## WHAT THE VALUE HAS TO BE, AND WHY GUESSING FAILED
- *
- * MEASURED 2026-08-21: `ADMIN_SESSION_COOKIE` held the cookie's VALUE with no
- * `name=` segment, was passed whole to a `Cookie:` header, and produced a header
- * with no name that no server can parse. The repair at the time was to ask
- * whether the string contained an `=` and to prepend the canonical name when it
- * did not.
- *
- * **THAT TEST CANNOT WORK AND IS REPLACED HERE.** A Better Auth token is
- * `<id>.<base64 hmac>`, and base64 pads with `=`. So a bare value carrying
- * padding contains an `=`, is read as already-named, and gets split at the
- * padding: the name becomes the token and the value becomes the empty string.
- * Silently, and the failure that follows blames the session.
- *
- * There is no string test that separates those two cases, so the gate stops
- * guessing and states the requirement instead: the pair, with its name. The one
- * unambiguous case is kept, because it cannot be misread: a value with NO `=`
- * anywhere is a bare token and is given the canonical name here.
+ * The admin cookie, `name=value`, from `ADMIN_SESSION_COOKIE` or `.admin-session`. There is no
+ * test-only auth bypass: the defects these cases catch live in the real authenticated render.
+ * Never infer the name from an `=`: base64 padding puts one in a bare token.
  */
 const SESSION_COOKIE_NAME = "__Secure-better-auth.session_token";
 const SESSION_FILE = join(root, ".admin-session");
 const SESSION_EXAMPLE = ".admin-session.example";
 
 /**
- * Reads the session file, or null when there is none.
- *
- * `key = value`, `#` comments, blank lines ignored. A non-comment line whose key
- * is not one this understands is taken as the cookie itself, so a bare
- * `name=value` pasted straight out of DevTools works without the `cookie = `
- * prefix. Forgiving about the shape of the line, exact about the cookie, which
- * is the half that cannot be guessed at.
+ * Reads the session file, or null. An unrecognised line is the cookie itself.
  *
  * @param {string} path
  */
@@ -268,16 +90,8 @@ function readSessionFile(path) {
 }
 
 /**
- * Turns whatever was supplied into the one `name=value` pair to send, or names
- * what was wrong with it.
- *
- * Accepts a whole `Cookie:` header, so pasting from the Network tab works: the
- * session cookie is picked out by name and everything else is dropped, because
- * `applySession` sets ONE cookie and the wire check sends one pair.
- *
- * **RETURNS NAMES, NEVER VALUES.** The diagnostic says which cookie names were
- * found and how long the string was. A gate that echoes a live session token
- * into a terminal, a CI log or a report has published it.
+ * Turns a pair or a whole `Cookie:` header into one pair, or an error that names
+ * cookies and never prints a value.
  *
  * @param {string} raw
  * @returns {{ pair: string, error: string }}
@@ -286,18 +100,7 @@ function sessionPair(raw) {
   const value = raw.trim();
   if (!value) return { pair: "", error: "" };
 
-  /*
-   * THE PLACEHOLDER IS CHECKED FIRST, and the plant is why.
-   *
-   * `__Secure-better-auth.session_token=PASTE_THE_VALUE_HERE` is a WELL FORMED
-   * pair carrying the right name, so every structural test below passes it and
-   * the request goes out and is refused. That reached the "almost certainly
-   * EXPIRED" branch and told an operator who had never pasted anything that
-   * their session had run out. The repair it named happened to be right; the
-   * diagnosis was invented.
-   *
-   * A file copied and not filled in is its own state and gets its own sentence.
-   */
+  /* Checked first: the placeholder is well formed and would read as an expired session. */
   if (value.includes("PASTE_THE_VALUE_HERE")) {
     return {
       pair: "",
@@ -322,20 +125,7 @@ function sessionPair(raw) {
   const found = pairs.find((c) => c.name === SESSION_COOKIE_NAME);
   if (found) return { pair: found.rest, error: "" };
 
-  /*
-   * REDACTED BY DEFAULT, because the thing being described might be the secret.
-   *
-   * The malformed case that matters most is a bare token pasted with no name.
-   * Parsed as pairs, its "name" IS the session token, so a diagnostic that
-   * helpfully lists the names it found would print a live credential into the
-   * terminal, and into any CI log the gate ever runs in. Measured on the first
-   * plant, which is how this exists.
-   *
-   * So a segment is echoed only when it LOOKS like a cookie name: short, and
-   * built from the characters names actually use. A Better Auth token is
-   * neither, so it redacts to its length. This heuristic decides only what to
-   * PRINT, never what to accept, and it errs toward printing nothing.
-   */
+  /* Print only name-shaped segments: a bare token parsed as a pair is its own name. */
   const safeName = (/** @type {string} */ n) =>
     /^(__Secure-|__Host-)?[A-Za-z0-9_.-]{1,32}$/.test(n) && !/^[A-Za-z0-9+/]{24,}$/.test(n)
       ? JSON.stringify(n)
@@ -359,59 +149,18 @@ const COOKIE_SOURCE = process.env.ADMIN_SESSION_COOKIE
   : `.admin-session`;
 const { pair: ADMIN_COOKIE, error: COOKIE_ERROR } = sessionPair(RAW_COOKIE);
 
-/**
- * Where to go and refill, named after WHICH source was actually read.
- *
- * The environment wins when it is set, so a stale variable in the shell makes
- * the file irrelevant, and "refill .admin-session" would send the reader to edit
- * a file the gate is not reading. Naming the wrong repair is the exact failure
- * this block was rewritten to remove.
- */
+/** Names the source read: a set `ADMIN_SESSION_COOKIE` overrides the file. */
 const REFILL_HINT = process.env.ADMIN_SESSION_COOKIE
   ? `ADMIN_SESSION_COOKIE is set in this shell and OVERRIDES the file. Update it, or unset ` +
     `it to fall back to .admin-session. ${SESSION_EXAMPLE} has the five Chrome clicks.`
   : `refill .admin-session. ${SESSION_EXAMPLE} has the five Chrome clicks.`;
 
-/**
- * The origin the admin cases drive, which is NOT the preview server.
- *
- * MEASURED, and it is why this exists at all: a valid production session
- * presented to `vite preview` renders the login page, because the preview's
- * APP_KV is local miniflare storage and the session is a key in the production
- * namespace. Nothing about the cookie is wrong in that case, so the gate must
- * not report it as a rejected session.
- *
- * Comes from the same file as the cookie, so setting the session up is one file
- * and not a file plus a variable. The environment overrides it, on the same
- * footing as the cookie above.
- */
+/** The admin origin, not the preview: preview KV cannot hold a production session. */
 const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? fileSession?.origin ?? "").replace(/\/+$/, "");
 
 /**
- * THE SMOKE CREDENTIAL, and it is the preferred way in since 2026-08-24.
- *
- * A read-only bearer token that authenticates as its own machine principal
- * rather than as Dustin. It is what moves these cases out of his hands: a
- * session cookie has to be pasted out of Chrome by a human, expires, and cannot
- * be minted by CI, so the admin block had NEVER RUN unattended and the header
- * above still records its floor as derived rather than measured because of it.
- *
- * Read from a FILE, on the `.admin-session` precedent and for the same reason:
- * a variable exported in one shell cannot survive the next one, and that cost
- * three consecutive sessions. `SMOKE_TOKEN_FILE` names the path; absent, the
- * gitignored `.smoke-token` at the repo root is used if it is there.
- *
- * **THE VALUE IS NEVER PRINTED, and no diagnostic below quotes it.** The
- * failures report the SOURCE and the LENGTH only, which is everything needed to
- * repair a bad token and nothing that helps anyone use a good one.
- *
- * ## THREE STATES, AND THE MIDDLE ONE IS A FAILURE
- *
- *   env set, file missing   FAILURE. Naming a path is a request for this path,
- *                           and falling back to the cookie silently would run a
- *                           different credential than the one CI asked for.
- *   nothing anywhere        absent. Fall back to the cookie, saying so.
- *   file present, unusable  FAILURE, exactly as a malformed cookie is.
+ * The read-only smoke token, from `SMOKE_TOKEN_FILE` or `.smoke-token`; never printed.
+ * A named file that is missing, or an unusable one, fails rather than falling back.
  */
 const SMOKE_TOKEN_ENV = process.env.SMOKE_TOKEN_FILE;
 const SMOKE_TOKEN_PATH = SMOKE_TOKEN_ENV ?? join(root, ".smoke-token");
@@ -439,30 +188,14 @@ if (existsSync(SMOKE_TOKEN_PATH)) {
 /** Whether the smoke path was ASKED for, which is not the same as usable. */
 const SMOKE_REQUESTED = Boolean(SMOKE_TOKEN || SMOKE_ERROR);
 
-/**
- * WHICH CREDENTIAL THE ADMIN CASES USE, decided once, here.
- *
- * Smoke wins when it is present, because it is the one that runs unattended.
- * The cookie remains a complete fallback rather than a deprecated path: a
- * machine credential proves what a machine can reach, and there are things only
- * a real signed-in session can (see the remaining-human list at the end).
- */
+/** Smoke wins because it runs unattended; the cookie remains a full fallback. */
 const CREDENTIAL = SMOKE_REQUESTED ? "smoke" : "cookie";
 const CREDENTIAL_PRESENT = SMOKE_REQUESTED || Boolean(RAW_COOKIE);
 const CREDENTIAL_ERROR = SMOKE_REQUESTED ? SMOKE_ERROR : COOKIE_ERROR;
 const CREDENTIAL_SOURCE = SMOKE_REQUESTED ? SMOKE_SOURCE : COOKIE_SOURCE;
 
 /**
- * Puts the session in the browser's COOKIE JAR rather than on a pinned header.
- *
- * MEASURED, 40 navigations: `setExtraHTTPHeaders({ cookie })` bounced to /login
- * on 6 of 16, while the jar bounced on 0 of 20 and 0 of 4 more in the full
- * render sweep. A pinned header is also sent in place of whatever the server
- * most recently Set-Cookie'd, so it fights Better Auth's own session refresh.
- * The jar is what a real browser does and it is what the gate does now.
- *
- * `url` rather than `domain` so the browser derives the host and the secure
- * attribute from the origin, which keeps this correct for http and https alike.
+ * Uses the cookie jar: a pinned `Cookie` header fights Better Auth's refresh.
  *
  * @param {import("puppeteer").Page} page
  * @param {string} origin
@@ -480,15 +213,7 @@ async function applySession(page, origin) {
 }
 
 /**
- * Puts the smoke credential on the page as a pinned `Authorization` header.
- *
- * **A PINNED HEADER IS WRONG FOR THE COOKIE AND RIGHT FOR THIS**, and the
- * difference is worth stating because the note above says the opposite. The
- * cookie was measured bouncing to /login on 6 of 16 navigations when pinned,
- * because a pinned `Cookie` is sent INSTEAD of whatever the server most
- * recently `Set-Cookie`d and therefore fights Better Auth's session refresh. A
- * bearer token has no refresh and no server-side counterpart: it is a constant,
- * so there is nothing for a pin to fight.
+ * A pinned header is safe here: a bearer token has no refresh to fight.
  *
  * @param {import("puppeteer").Page} page
  */
@@ -508,13 +233,7 @@ async function applyCredential(page, origin) {
 }
 
 /**
- * Does this origin accept the supplied session? Answered over the WIRE, before
- * a browser is driven at it.
- *
- * A redirect to the login page is the whole signal, and it is read with
- * `redirect: "manual"` on purpose: a browser follows the 302 and reports 200 for
- * the login page it lands on, so a status check after following would call a
- * rejected session a success.
+ * `redirect: "manual"`: a followed 302 to /login reports 200.
  *
  * @param {string} origin
  */
@@ -528,14 +247,7 @@ async function credentialAuthenticates(origin) {
       redirect: "manual",
       signal: AbortSignal.timeout(20_000),
     });
-    /*
-     * THE STATUS IS THE ANSWER, and for the smoke path it is a RICHER answer
-     * than for the cookie. The middleware refuses a PRESENTED bearer token with
-     * a status that names the repair rather than redirecting: 401 wrong token,
-     * 503 not configured on that deployment, 429 rate limited. Those need three
-     * different fixes, so the status is carried out of here rather than
-     * collapsed into a boolean the caller cannot interpret.
-     */
+    /* The status is kept: each smoke refusal status needs a different repair. */
     return { ok: res.status === 200, status: res.status };
   } catch (error) {
     return { ok: false, status: 0, error: String(error) };
@@ -576,19 +288,11 @@ let checks = 0;
 let failures = 0;
 const skipped = [];
 
-/**
- * Whether the admin block actually got past authentication and ran its cases.
- *
- * NOT derived from `skipped.length`, which cannot tell the difference between
- * "the admin cases ran" and "the session was rejected, so one assertion failed
- * and the other fifteen never happened". Those need different floors and the
- * second must not be reported as a collapsed run on top of its real failure.
- */
+/** Not `skipped.length`: that cannot tell a rejected session from a completed run. */
 let adminCasesRan = false;
 
 /**
- * The wire pre-check's full result, kept so the failure branch can name a
- * repair from the STATUS rather than from a boolean that discarded it.
+ * The pre-check's full result, so a failure can name a repair.
  *
  * @type {{ ok: boolean, status: number, error?: string }}
  */
@@ -604,18 +308,7 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * CLICK A SELECTOR, AND FAIL SOFTLY WHEN IT IS NOT THERE.
- *
- * RULED 2026-09-14. `page.click` asserts internally and THROWS on a missing
- * selector, which ends the whole run. MEASURED: build 2 renamed the theme
- * control from `.theme-toggle` to `.bar-theme` and the footer from
- * `.site-footer` to `.site-shell-footer`; the first stale click threw and
- * voided every case after it, so one rename cost 34 results where two were
- * actually wrong.
- *
- * A selector that has moved is a REAL finding and belongs in the failure count
- * beside the others. It is not a reason to stop measuring everything else, and
- * a gate that dies on its first surprise cannot report the second one.
+ * Fails one case on a missing selector, where `page.click` would end the run.
  *
  * @param {any} target a Page or a Frame
  * @param {string} selector
@@ -644,12 +337,7 @@ function skip(label, why) {
 }
 
 /**
- * A measured fact worth printing that is NOT a pass or a failure.
- *
- * Distinct from `skip`, which says a case could not run. This says a case ran,
- * observed something true, and that the thing observed is not the gate's to
- * enforce. Counted in neither total, so it can never make a red run look green
- * or a green one look red.
+ * A measured fact that is neither a pass nor a failure.
  *
  * @param {string} what
  */
@@ -662,19 +350,8 @@ function report(what) {
 console.log("\ncheck:browser\n");
 
 /*
- * PREFLIGHT: clear what the LAST run left behind, before this one needs the
- * port it is probably still holding.
- *
- * REPORTED EVERY RUN, INCLUDING ZERO. A silent cleanup is indistinguishable
- * from one that is not running, which is the same argument the executed-count
- * floors make further down this file: a check that can pass by doing nothing
- * has to say how much it did.
- *
- * `reused` is the line worth reading. A pid is not an identity, Windows hands
- * them out again, and the registry entry is a claim about the past. Anything
- * still alive whose command line no longer matches what this gate launches is
- * DROPPED rather than killed. Dustin runs his own Chrome, and that branch is
- * the only thing standing between a stale pid and his tabs.
+ * Preflight: clear the last run's leftovers, reported even at zero. A pid whose
+ * command line no longer matches is dropped, never killed: pids are reused.
  */
 {
   const swept = registry.preflight();
@@ -686,55 +363,13 @@ console.log("\ncheck:browser\n");
 }
 
 /*
- * PREFLIGHT, SECOND HALF: ask the OS who is holding the port, INDEPENDENTLY of
- * the registry above.
- *
- * ## WHY THE FIRST HALF IS NOT ENOUGH, measured rather than reasoned about
- *
- * The registry is written by the process that dies. A hard kill early enough
- * leaves a `vite preview` on 4173 with NO ENTRY NAMING IT, and the sweep above
- * then reports `0 cleared, 0 stale, 0 reused` while the port is occupied.
- * Measured 2026-09-03 with pid 21108: a preview server survived its parent's
- * death, the registry file was empty, and preflight said zero of everything.
- * The registry's own docblock calls the leftover the case it exists for, and
- * this is the shape of leftover it cannot see.
- *
- * ## WHAT AN UNCLEARED PORT COST BEFORE `--strictPort`, which was worse than a
- * failure
- *
- * `vite preview` DEFAULTS to falling back. Measured 2026-09-03: it printed
- * "Port 4173 is in use, trying another one..." and bound 4174. The gate then
- * polled 4173, was answered from LAST RUN'S BUILD, and would have run every
- * public case against a build nobody asked about while reporting on the working
- * tree. A refusal is loud. That was a silent wrong answer, which is the failure
- * this file spends the most words guarding against elsewhere.
- *
- * The spawn passes `--strictPort` now, so the fallback cannot happen. This
- * probe still runs first and still does the useful half: strictPort turns a
- * held port into a crash, and this turns the gate's OWN leftover into a
- * cleanup, which is the difference between a run that works and one that
- * refuses until somebody reads a pid.
- *
- * ## KILLING IS STILL EARNED, NEVER ASSUMED
- *
- * The OS names a pid. That is not permission. The pid's live command line is
- * read and has to satisfy the same needles the registry uses, and anything else
- * REFUSES THE RUN and names the pid rather than killing it. The needles cannot
- * tell this gate's leftover from a `vite preview` Dustin started by hand on the
- * same port, and that is accepted: the gate is about to bind that port either
- * way, and the server it would find there is serving a build this run did not
- * make. What the needles DO exclude is everything that is not a vite preview
- * on this port, which is every process whose loss would cost him something.
- *
- * Only when this run is going to bind the port. Under PUBLIC_ORIGIN nothing is
- * served locally, so a holder is somebody else's business.
+ * Preflight, second half: ask the OS who holds the port, which the registry may
+ * not know. Kill only a `VITE_NEEDLES` match; anything else refuses the run.
  */
 if (DRIVES_PREVIEW) {
   const holders = portListeners(PORT);
   if (holders === null) {
-    // Not collapsed into "free". A probe that cannot read a listing reports
-    // that it could not, and the run continues, because refusing here would
-    // make an unreadable netstat a hard stop for a port that is usually free.
+    // An unreadable listing is reported, not treated as free or as fatal.
     console.log(`  preflight: port ${PORT} could NOT be probed, so a holder would go unseen`);
   } else if (holders.length === 0) {
     console.log(`  preflight: port ${PORT} probed directly, 0 holders`);
@@ -769,14 +404,7 @@ if (DRIVES_PREVIEW) {
       process.exit(1);
     }
 
-    /*
-     * THE KILL REPORTING SUCCESS IS NOT THE PORT BEING FREE, so the freeing is
-     * what gets asserted. `taskkill` returns before the socket is released, and
-     * "I killed it" is exactly the class of claim this gate does not accept
-     * from itself anywhere else. The probe is re-run until the port is clear or
-     * the bound runs out, and the bound expiring is a REFUSAL, not a shrug:
-     * binding after a held port is what produced the silent wrong answer above.
-     */
+    /* `taskkill` returns before the socket is released, so re-probe until clear. */
     const releasedBy = Date.now() + 5000;
     let stillHeld = portListeners(PORT) ?? [];
     while (stillHeld.length > 0 && Date.now() < releasedBy) {
@@ -796,30 +424,13 @@ if (DRIVES_PREVIEW) {
   }
 }
 
-/*
- * This process is registered FIRST, and it is not the obvious entry.
- *
- * The measured shape on 2026-08-31: killing the npm and cmd wrappers ABOVE this
- * process leaves THIS process orphaned and still running, holding a browser and
- * a preview server. It finishes and cleans up if it is left alone, and becomes
- * a permanent leak the moment somebody kills it too, which is what a supervisor
- * retrying a kill does. Nothing inside a stranded process can fix that, so the
- * next run inherits it, exactly like the children below.
- */
+/* Registered first: killing its wrappers orphans this process. */
 registry.record(process.pid, "the check:browser gate", ["check-browser.mjs"]);
 
-/*
- * IT BUILDS, rather than trusting whatever is in build/.
- *
- * A stale build is the disk-versus-HEAD class wearing a different hat: the gate
- * would lay out code nobody is looking at and report on it confidently. 24s
- * measured, which is the price of the assertions below meaning anything.
- */
+/* Builds rather than trusting build/, which may be stale. */
 if (DRIVES_PREVIEW) {
   console.log("  building ...");
-  // The enhancement bundles first: the app build's ?url imports name files
-  // under the gitignored app/enhance/dist/, and this gate runs standalone as
-  // well as inside check:all, so it cannot assume a runner already built them.
+  // Enhancement bundles first: the app build imports them, and this gate runs alone.
   const bundled = spawnSync("npm", ["run", "build:enhance"], {
     cwd: root,
     encoding: "utf8",
@@ -829,9 +440,7 @@ if (DRIVES_PREVIEW) {
   if (bundled.status !== 0) {
     console.error("check:browser failed. build:enhance did not succeed, so the build below cannot.");
     console.error((bundled.stderr || bundled.stdout || "").slice(-1200));
-    // Nothing has been started yet, so the only entry is this process's own.
-    // Cleared directly rather than through cleanupChildren, which reads a
-    // `const` that is still in its temporal dead zone this early.
+    // `cleanupChildren` is still in its temporal dead zone here.
     registry.clear();
     process.exit(1);
   }
@@ -848,43 +457,13 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
 } else {
-  // Nothing is built and nothing is served: the subject is already running
-  // somewhere else. Said out loud, because "building ..." missing from the log
-  // is exactly the kind of silence a reader fills in wrongly.
+  // Said out loud, so a missing "building" line is not misread.
   console.log(`  NOT building: the public cases observe ${PUBLIC_ORIGIN}, a deployed site.`);
 }
 
 /*
- * THE SEEDED APPROVED MENTION, and it exists because the byte-identity case
- * below would otherwise be asserting nothing about this feature.
- *
- * `/blog/ten-years-on-cloudflare` is already in THEME_CACHED, where two
- * documents are compared for a credentialed reader and a cookieless one. That
- * comparison is what licenses caching the page on path plus theme, and item H2
- * added a section to it whose contents come out of D1. A post with NO approved
- * mention renders no section at all, so the comparison would keep passing while
- * saying nothing about the markup the feature actually emits: the clean-sweep
- * shape, over an empty scope, on the one case that matters.
- *
- * So two rows are written first, and their presence in the rendered document is
- * asserted before the comparison is believed.
- *
- * ## WHY THE ROWS ARE HAND-WRITTEN AND NOT SENT THROUGH THE ENDPOINT
- *
- * The endpoint cannot produce either of them. `sourceVerdict` refuses a
- * `javascript:` source and `readAuthor` keeps an `author_url` only when it
- * parses as absolute http(s), so the hostile row below is unreachable through
- * `POST /webmention` by construction. That is exactly why it is worth
- * rendering: `safeHttpHref` is a render-time check on a value two earlier
- * checks should already have refused, and the only way to exercise it is to
- * write the row those checks cannot produce.
- *
- * ## LOCAL ONLY, AND IT SAYS SO WHEN IT SKIPS
- *
- * Under PUBLIC_ORIGIN this gate observes the deployed site, where nothing here
- * may write a row and no approved mention exists. The assertions SKIP with the
- * reason rather than passing quietly, on the same grounds the series-route
- * exemption below gives.
+ * Seeded mentions give the THEME_CACHED byte-identity case markup to cover.
+ * Hand-written: the endpoint refuses the hostile row `safeHttpHref` must render.
  */
 const MENTION_POST_PATH = "/blog/ten-years-on-cloudflare";
 const MENTION_SLUG = MENTION_POST_PATH.slice("/blog/".length);
@@ -899,11 +478,7 @@ const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
 const MENTION_SEED_ROWS = 2;
 
 if (DRIVES_PREVIEW) {
-  /*
-   * DELETE THEN INSERT, so a re-run is idempotent and the count below means
-   * "this run wrote them" rather than "some earlier run did". The delete names
-   * only rows this seed could have written.
-   */
+  /* Delete then insert, so the count means this run wrote the rows. */
   const sql = [
     `DELETE FROM webmentions WHERE source_url LIKE '${MENTION_SEED_PREFIX}%'`,
     `INSERT INTO webmentions ` +
@@ -918,20 +493,7 @@ if (DRIVES_PREVIEW) {
       `${MENTION_DECIDED_AT - 60}, ${MENTION_DECIDED_AT - 60})`,
   ].join("; ");
 
-  /*
-   * ONE COMMAND STRING, NOT AN ARGV ARRAY, and this cost a run to learn.
-   *
-   * `spawnSync(cmd, args, { shell: true })` on Windows joins the array into a
-   * command line WITHOUT quoting it, so every space in the SQL became an
-   * argument boundary and cmd answered "The system cannot find the file
-   * specified" about a program named after the first word of the statement.
-   *
-   * The repair is the shape `check-worker.mjs` already uses for the same
-   * reason: build the line, quote the one argument that needs it. The SQL below
-   * contains single quotes only, so the double quotes here cannot be closed
-   * from inside it, and the angle brackets in the hostile author name are
-   * inside those quotes where cmd does not read them as redirection.
-   */
+  /* One quoted string: with `shell: true` on Windows an argv array is joined unquoted. */
   const seeded = spawnSync(
     `npx wrangler d1 execute dustinedwards --local --command "${sql}"`,
     { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
@@ -947,55 +509,12 @@ if (DRIVES_PREVIEW) {
 }
 
 /*
- * THE MATH PAGE, REACHED THROUGH A SEEDED PREVIEW TOKEN.
- *
- * ## THE PROBLEM THIS SOLVES
- *
- * The math fixture is `draft: true`, on the same footing as the chart fixture,
- * because nothing in it is written for a reader. A draft has no public URL: the
- * candidate list this gate builds from the artifact filters `draft !== true`,
- * and `/blog/math-typesetting-fixture` answers 404 by design. So the one page
- * on this site with an equation on it is the one page a browser gate cannot
- * visit, and every claim about how math RENDERS would have to be made offline
- * against markup, which is the class hard rule 7 is about.
- *
- * `/preview/:token` is the door that already exists. It re-exports
- * `blog.$slug`'s component and shares `blogPostView`, so what it renders IS the
- * published page for everything this section measures. Two rows are written to
- * make it resolve: the post itself, and the KV record the token names.
- *
- * ## THE POST ROW IS SEEDED FROM THE ARTIFACT, NOT ASSUMED PRESENT
- *
- * The local database is whatever the last `sync:content --local` left, which on
- * this machine predates the fixture and on a colleague's may predate the
- * corpus. Seeding it from `content/generated/posts.json` makes the page a
- * function of the build this gate is grading rather than of somebody's sync
- * history, which is the same reason the mention rows above are written here.
- *
- * ## `--file`, NOT `--command`, AND THAT IS NOT A STYLE CHOICE
- *
- * The mention seed above records why its SQL is one quoted command string. That
- * shape cannot carry this one: the value is rendered post HTML, it is full of
- * double quotes (`class="katex"` alone appears seventeen times), and every one
- * of them would close the quote cmd is holding the statement in. A file has no
- * shell in the path at all, so the only escaping left is SQL's own, which is
- * doubling single quotes.
- *
- * ## LOCAL ONLY
- *
- * Under `PUBLIC_ORIGIN` this gate observes the deployed site, where nothing
- * here may write a row and no preview token of ours exists. The assertions SKIP
- * with the reason, exactly as the mention cases do.
+ * The draft math fixture is reached through a seeded `/preview/:token`, since
+ * offline markup cannot prove rendering (hard rule 7). `--file`, because the
+ * HTML's double quotes would break a cmd command string.
  */
 const MATH_SLUG = "math-typesetting-fixture";
-/**
- * A FIXED token, not a minted one, and the fixed-ness is the point twice over.
- *
- * A re-run overwrites one KV record instead of leaving a trail of live preview
- * links behind it, and a failure names a URL somebody can open by hand. It is
- * 43 base64url characters because `isWellFormedToken` is length-exact and
- * anchored, which the route checks BEFORE it spends a KV read.
- */
+/** Fixed, so a re-run overwrites one KV record. `isWellFormedToken` is length-exact. */
 const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
 /** A post with no math, for the paired control. Already driven by other cases. */
 const MATHLESS_POST_PATH = "/blog/ten-years-on-cloudflare";
@@ -1009,11 +528,7 @@ if (DRIVES_PREVIEW) {
   );
   const fixture = artifact.posts.find((/** @type {any} */ p) => p.slug === MATH_SLUG);
 
-  /*
-   * FAILS RATHER THAN SKIPS. A missing fixture is not a mode this gate runs in:
-   * `check:content` already refuses a corpus with no math in it, so by the time
-   * anything gets here the post exists or the build is broken.
-   */
+  /* Fails rather than skips: `check:content` already requires the fixture. */
   if (!fixture) {
     console.error(
       `check:browser failed. content/generated/posts.json carries no post "${MATH_SLUG}", ` +
@@ -1074,13 +589,7 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
 
-  /*
-   * The KV record is the AUTHORITY: the token is a lookup key carrying no
-   * claims, so this JSON is what decides which post the link opens. Its shape
-   * is `preview-links.server.ts`'s, and `resolvePreview` re-reads the post's
-   * status afterwards regardless, which is why a stale record cannot leak a
-   * published post.
-   */
+  /* `resolvePreview` re-checks post status, so a stale record cannot leak. */
   const record = JSON.stringify({
     slug: MATH_SLUG,
     createdAt: Date.UTC(2026, 8, 6),
@@ -1102,19 +611,7 @@ if (DRIVES_PREVIEW) {
   console.log(`  seeded the ${MATH_SLUG} draft row and its preview token`);
 }
 
-/*
- * THE SERVER'S OUTPUT IS KEPT, and until 2026-08-24 it was thrown away.
- *
- * `stdio: "ignore"` meant that when the startup poll timed out, the gate could
- * say only that nothing answered on the port. The server had usually said
- * exactly what was wrong on its own stderr (a port already bound, a config it
- * could not read, a crash on boot) and the gate discarded it and then reported
- * a symptom with no cause. That cost a session, which is why this is here.
- *
- * A RING BUFFER, not a transcript. `vite preview` is quiet, but a crash loop is
- * not, and a gate that prints an unbounded server log buries its own result.
- * The last 40 non-empty lines are what a startup failure needs.
- */
+/* A ring buffer of server output, so a startup failure can show its cause. */
 /** @type {string[]} */
 const serverLog = [];
 const SERVER_LOG_LINES = 40;
@@ -1128,22 +625,7 @@ const recordServerOutput = (chunk) => {
   }
 };
 
-/*
- * `--strictPort`, and it is the difference between a failure and a WRONG ANSWER.
- *
- * Measured 2026-09-03: without it `vite preview` does not refuse an occupied
- * port. It prints "Port 4173 is in use, trying another one..." and binds 4174.
- * The gate then polls 4173, is answered by whatever is still sitting there,
- * and runs every public case against LAST RUN'S BUILD while its banner says it
- * is observing the working tree. Every assertion below would be true of a build
- * nobody asked about.
- *
- * The port preflight above already clears or refuses a holder, so this is the
- * belt rather than the braces. It is worth having anyway: the preflight can
- * only act on what it can see, and a process that binds 4173 in the seconds
- * between the probe and this spawn is invisible to it. This makes that race a
- * loud crash instead of a confident wrong answer.
- */
+/* Without `--strictPort` vite binds the next port and the gate grades a stale server. */
 const server = DRIVES_PREVIEW
   ? spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"], {
       cwd: root,
@@ -1156,113 +638,22 @@ server?.stdout?.on("data", recordServerOutput);
 server?.stderr?.on("data", recordServerOutput);
 server?.on("error", (error) => recordServerOutput(`spawn failed: ${error.message}`));
 
-/*
- * The pid `spawn()` hands back is the SHELL, and on the kill path it is the one
- * process guaranteed to be gone.
- *
- * `shell: true` plus npx puts a chain between this gate and the vite process
- * that actually binds the port. Measured 2026-08-31, when the gate node is
- * killed, that shell dies with it because its stdio pipe breaks, and its
- * descendants survive: the npx node, an inner cmd, and vite itself, holding
- * 4173 with nobody left who knows they exist.
- *
- * So the shell is recorded here for the orderly case, and the SURVIVORS are
- * recorded separately once the server answers. Recording only this pid would
- * produce a registry that always looks correct and never clears anything.
- */
+/* This pid is the shell, which dies with the gate; survivors are recorded later. */
 if (server?.pid) registry.record(server.pid, "the vite preview server", VITE_NEEDLES);
 
-/*
- * WHETHER THE SERVER PROCESS IS STILL ALIVE, which is the half the poll could
- * not see.
- *
- * A process that exited immediately and a process still booting look identical
- * to a fetch that refuses to connect. The old loop treated both as "not up
- * yet" and waited out the entire bound before saying anything, so the single
- * commonest startup failure, the server dying on boot, took a full minute to
- * report and reported the wrong thing.
- */
+/* A dead server and a booting one look alike to a fetch, so exit ends the wait. */
 let serverExit = /** @type {{ code: number | null, signal: string | null } | null} */ (null);
 server?.on("exit", (code, signal) => {
   serverExit = { code, signal };
 });
 
 /**
- * Polls until the server answers, rather than sleeping a guessed interval.
- *
- * ## THE BOUND, AND A CORRECTION TO WHAT THIS COMMENT FIRST CLAIMED
- *
- * The 2026-08-24 watch item asked whether the 60s bound was the real problem,
- * given the gate's own `npm run build` completes first. This comment answered
- * "`vite preview` answers in about a second" and cut the bound to 30s.
- *
- * **THAT NUMBER WAS A PREDICTION WRITTEN AS A MEASUREMENT, and the very first
- * run refuted it: 17,277ms.** Not one second, seventeen. So the 30s bound this
- * file briefly carried had 1.7x of headroom, which is TIGHTER than the 60s it
- * replaced and would have started failing on a loaded machine. Restored to 60s,
- * which against the worst reading is about 3.5x and is the honest bound.
- *
- * THREE SAMPLES, 2026-08-24, same machine, each after the gate's own build:
- * **17,277ms, 13,782ms, 12,040ms.** A dated observation, not a maintained
- * value: `npx` resolving through a shell on Windows is most of it, and the
- * spread across three consecutive runs is already 5 seconds, which is the
- * argument against a tight bound on its own. The gate PRINTS the figure every
- * run, so the next reader has a current number rather than this sentence.
- *
- * **AND THE BOUND WAS NEVER THE PROBLEM ANYWAY.** The recorded overrun was a
- * startup that never happened, and against that a tighter bound only shortens
- * the wait before an undiagnosed message. What actually fixes it is below: the
- * wait now ENDS EARLY when the process dies, and whatever the server said is
- * printed either way.
- *
- * ## 180s SINCE 2026-08-29, BECAUSE THE 3.5x HEADROOM HAD BECOME 1.1x
- *
- * The gate failed twice on a quiet machine with "the preview server process was
- * still alive and never answered", which is the message for a bound that
- * expired rather than for anything being wrong. RE-MEASURED THE SAME DAY, three
- * ways: a hand-started `vite preview` first answered at **53s**, and the gate
- * itself, with the bound temporarily raised, printed **46,119ms** and then went
- * on to pass 207 checks with 0 failures.
- *
- * So the startup has got roughly three times slower than the samples above,
- * and 60s against 46 to 53s is not a bound, it is a coin flip. What dominates
- * now is visible in the server's own first line, `Establishing remote
- * connection...`: the `AI_SEARCH` binding reaches a real instance even in local
- * dev, which is also why this gate is tiered NETWORK. That latency is not ours
- * and will not be steady.
- *
- * **RAISING IT COSTS NOTHING, and that is the paragraph above's own argument
- * used forwards.** A long bound is only ever paid when the server is alive and
- * slow. A server that DIES is reported immediately by the `serverExit` early
- * exit, which is the case the short bound was protecting, and that protection
- * is structural rather than a function of the number. So the number can be
- * generous without making any failure slower to diagnose.
- *
- * NOT a fix for the slowness, and deliberately not disguised as one. The
- * measurement is recorded so the next reader can see the trend rather than
- * rediscover it; `remote: true` on the binding, which the server's own warning
- * suggests, is the thing that would actually address it and is a ruling about
- * billing rather than a gate change.
+ * Polls until the server answers. The bound is generous: a dead server ends the
+ * wait at once, so only a live, slow one pays it.
  */
 /** What a deployed origin said, when it said something. Read by the diagnosis. */
 let originStatus = /** @type {number | null} */ (null);
-/**
- * THE LAST THING THE READINESS PROBE SAW, and the reason this exists at all.
- *
- * RULED 2026-09-14. The old loop returned a bare false and the caller printed
- * "the preview server process stayed alive and never answered", which is ONE
- * sentence for four different situations: nothing bound yet, something bound
- * and wedged, something answering with a non-ok status, and a process that had
- * already died. Two runs failed at 261s and 310s and that message could not say
- * which of the four they were, so this gate was called "broken on this host"
- * for weeks when the measured answer was a slow boot on a loaded machine: 51s
- * to first answer on a clear one, past the 180s ceiling on a busy one.
- *
- * A TIMEOUT THAT CANNOT SAY WHAT IT WAS WAITING FOR is what makes this gate
- * unusable on ship, not the minutes it costs. Ruled the same day: it stays on
- * the network tier, because a busy machine reported as a red is worse on ship
- * than no gate at all.
- */
+/** What the readiness probe last saw, so a timeout names what it waited on. */
 /** @type {{ state: string, detail: string }} */
 let readiness = { state: "not-started", detail: "the probe has not run" };
 
@@ -1272,16 +663,7 @@ let originError = "";
 async function waitForServer(timeoutMs = 180_000) {
   const started = Date.now();
 
-  /*
-   * A DEPLOYED ORIGIN IS NOT BOOTING, so it gets ONE attempt and no loop.
-   *
-   * The retry above exists for a process that has been started and needs a
-   * moment; none of that is true of a site that is already serving. A 404 from
-   * a live origin is a WRONG PATH, and asking it again 85 times over a minute
-   * cannot turn it into a right one: it would spend 60 seconds converting an
-   * answer the origin gave immediately into a timeout, and a timeout is the
-   * one diagnosis that names nothing. So the status is captured and reported.
-   */
+  /* A deployed origin is not booting: one attempt, status reported, no retry. */
   if (!DRIVES_PREVIEW) {
     try {
       const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(10_000) });
@@ -1298,32 +680,8 @@ async function waitForServer(timeoutMs = 180_000) {
 
   const deadline = started + timeoutMs;
   /*
-   * THE SURVIVORS ARE RECORDED WHILE WAITING, NOT ONLY ONCE THE SERVER ANSWERS.
-   *
-   * MEASURED 2026-09-06 by hard-killing the gate node mid-startup. The registry
-   * held two entries, the gate and the pid `spawn()` returned, and `taskkill /F`
-   * on the gate took both: they are npx wrappers and they die with the parent
-   * whose stdio they hold. What SURVIVED was the real vite (a node running
-   * vite.js preview) plus its esbuild and workerd, five processes, and the real
-   * vite's parent was an intermediate that was already gone, so it was not a
-   * descendant of anything recorded.
-   *
-   * The next run then reported `0 cleared, 5 stale, 0 reused, 1 FAILED TO KILL`:
-   * every recorded pid was gone, and the tree that was still standing had never
-   * been written down. The port probe could not see it either, because vite had
-   * not bound 4173 yet, which is exactly the window the probe cannot cover.
-   *
-   * So the capture happens on every poll of the wait loop, not once at the end.
-   * The whole point of the registry is the case where the gate dies without
-   * warning, and recording only at the moment of success leaves the entire
-   * startup uncovered, which is when a slow or wedged start makes a kill most
-   * likely.
-   *
-   * `record` is idempotent enough for this: a repeated pid appends a line, and
-   * `preflight` verifies the live command line before killing anything, so a
-   * duplicate costs a string comparison rather than a wrong kill. Reading the
-   * process table is the expensive half, so it is throttled rather than run on
-   * every iteration of a tight loop.
+   * Survivors are recorded on every poll, since a kill during startup is the case
+   * the registry exists for. Throttled: reading the process table is expensive.
    */
   let lastCapture = 0;
   const CAPTURE_INTERVAL_MS = 2000;
@@ -1339,19 +697,10 @@ async function waitForServer(timeoutMs = 180_000) {
         recordServerSurvivors();
         return true;
       }
-      // It ANSWERED and said no. A different fact from silence, and the one a
-      // wrong probe path produces, so it is kept rather than folded into
-      // "not up yet".
+      // Answered and said no: a wrong probe path, not a slow boot.
       readiness = { state: "answered-not-ok", detail: `HTTP ${res.status} on ${BASE}/blog` };
     } catch (error) {
-      /*
-       * WHICH KIND OF SILENCE. The three are different diagnoses and the old
-       * loop reported all of them as "never answered":
-       *
-       *   ECONNREFUSED  nothing is listening yet, so it is still booting
-       *   a timeout     something is listening and not replying, a wedge
-       *   anything else recorded verbatim rather than guessed at
-       */
+      /* ECONNREFUSED is still booting, a timeout is a wedge, anything else verbatim. */
       const cause = /** @type {any} */ (error);
       const code = cause?.cause?.code ?? cause?.name ?? String(error);
       readiness =
@@ -1361,8 +710,7 @@ async function waitForServer(timeoutMs = 180_000) {
             ? { state: "bound-silent", detail: "a listener accepted the connection and did not reply" }
             : { state: "unreachable", detail: String(code) };
     }
-    // The process is gone, so no amount of further waiting will help. Reported
-    // in the caller with the output, which is the point of not waiting here.
+    // Gone, so waiting cannot help; the caller prints its output.
     if (serverExit) {
       readiness = {
         state: "exited",
@@ -1375,20 +723,9 @@ async function waitForServer(timeoutMs = 180_000) {
   return false;
 }
 
-/**
- * What to print when the server never answered. THE SERVER'S OWN LAST WORDS.
- *
- * Named rather than inlined so the failure carries its diagnosis in one place,
- * and so a run that captured NOTHING says that explicitly instead of printing
- * an empty region that reads like a clean log.
- */
+/** The server's state and last output; an empty capture says so. */
 function serverDiagnosis() {
-  /*
-   * THE STATE FIRST, because it is the half that decides what to do next.
-   * "Still booting" means the ceiling or the machine; "wedged" means the
-   * server; "exited" means read its last words. One sentence for all three is
-   * what made two real runs unreadable.
-   */
+  /* The state first: it decides what to do next. */
   const verdict =
     readiness.state === "no-listener"
       ? "STILL BOOTING when the ceiling expired: nothing had bound the port yet. MEASURED on a " +
@@ -1404,9 +741,7 @@ function serverDiagnosis() {
             : `UNCLASSIFIED (${readiness.state}).`;
   const stateLine = `  readiness: ${verdict}\n  last observation: ${readiness.detail}\n`;
 
-  // No server was started, so there is nothing to diagnose ABOUT one: the
-  // subject is a deployed origin that did not answer, and saying "the preview
-  // server exited" would name a process this run never had.
+  // No server was started, so diagnose the deployed origin.
   if (!DRIVES_PREVIEW) {
     if (originStatus !== null) {
       return (
@@ -1433,30 +768,10 @@ function serverDiagnosis() {
 }
 
 /**
- * Record the preview processes that OUTLIVE this gate when it is killed.
- *
- * Called once, at the moment the server answers, because that is the first
- * moment the chain exists and is stable. It is one process listing in a gate
- * that takes minutes, and it buys the only registry entries that are still
- * alive on the path this whole mechanism exists for.
- *
- * Each survivor has to satisfy the same needles a later run will re-check it
- * against, so anything in the subtree that does not name itself as this
- * preview server is not recorded at all. workerd and esbuild are the deliberate
- * omissions: they say nothing about vite on their own command lines, and
- * `taskkill /T` from the vite process reaches them anyway.
+ * Records `VITE_NEEDLES`-matching processes that outlive a killed gate. workerd and
+ * esbuild are reached by `taskkill /T` from vite.
  */
-/**
- * Pids already written, so a repeated capture does not append them again.
- *
- * The capture now runs on every poll of the startup wait, and without this the
- * same three pids are appended each time: one killed run wrote twelve lines for
- * four processes and the next preflight reported `20 stale`, which is a count of
- * duplicates rather than of anything that happened. In memory rather than by
- * re-reading the file, because the file is append-only ON PURPOSE (a rewritten
- * one would be empty in exactly the case it exists for) and this only needs to
- * be right for the life of the process doing the writing.
- */
+/** Pids already written, held in memory because the registry is append-only. */
 const recorded = new Set();
 
 function recordServerSurvivors() {
@@ -1473,13 +788,7 @@ function recordServerSurvivors() {
   }
 }
 
-/**
- * Stop the preview server, and everything npx put underneath it.
- *
- * `/T` rather than a bare kill, for the reason recorded at the registration
- * site: the pid `spawn()` returned is a shell, and the process holding the port
- * is two levels below it.
- */
+/** `/T`, because the spawned pid is a shell above vite. */
 function stopServer() {
   if (!server) return;
   if (process.argv.includes("--keep")) return;
@@ -1487,16 +796,7 @@ function stopServer() {
 }
 
 /**
- * Every long-running child, on every ORDERLY exit path.
- *
- * `browser.close()` stays and runs first: it is the graceful stop, it lets
- * Puppeteer flush what it is holding, and it is what should normally do the
- * job. The tree kill after it is the BACKSTOP for when it does not run or does
- * not finish, which is a case this gate has actually been in.
- *
- * What this function CANNOT cover is the case that produced the leftovers:
- * `taskkill /F` on Windows delivers no signal, so nothing here executes. That
- * is not a gap in the handlers, it is the reason the registry exists.
+ * Stops every child on an orderly exit: `browser.close()`, then a tree kill.
  *
  * @param {import("puppeteer").Browser | undefined} openBrowser
  */
@@ -1507,33 +807,20 @@ async function cleanupChildren(openBrowser) {
     if (chrome?.pid && !process.argv.includes("--keep")) killTree(chrome.pid);
   }
   stopServer();
-  // With `--keep` the operator wants the server left standing, so the entries
-  // stay too: the next run's preflight is then the thing that frees the port,
-  // which is what it is for.
+  // With `--keep` the entries stay, and the next preflight frees the port.
   if (!process.argv.includes("--keep")) registry.clear();
 }
 
 /**
- * Declared HERE rather than beside its first use, because the signal handlers
- * below close over it and a handler is reachable from the moment it is
- * registered. Left further down, an interrupt during the build would hit the
- * temporal dead zone and replace the gate's diagnosis with a ReferenceError.
+ * Declared before the signal handlers that close over it (temporal dead zone).
  *
  * @type {import("puppeteer").Browser | undefined}
  */
 let browser;
 
 /*
- * THE SIGNALS THAT ARE DELIVERABLE, which is a smaller set than it looks.
- *
- * Ctrl+C and a console close arrive as signals and are worth handling: they are
- * how a person stops this gate. A `taskkill /F`, which is how a supervisor
- * stops it, arrives as nothing at all. So these handlers narrow the window and
- * do not close it, and saying which is the point: the registry above is what
- * covers the rest.
- *
- * `process.exit` here rather than a set exit code, because a signal handler that
- * returns hands control back to a gate whose children are now gone.
+ * `taskkill /F` delivers no signal; the registry covers it. `process.exit`, because
+ * returning resumes a gate whose children are gone.
  */
 for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"])) {
   process.on(signal, () => {
@@ -1555,16 +842,8 @@ try {
     console.error(`check:browser failed. ${serverDiagnosis()}`);
     await cleanupChildren(browser);
     /*
-     * `process.exitCode`, NOT `process.exit()`, and this is the recorded
-     * Windows class at a new site.
-     *
-     * MEASURED here on the origin plant: `process.exit(1)` on this path left
-     * the undici handle from the probe above in flight, libuv aborted with
-     * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c`,
-     * and the process died 127 with a C-level assertion printed UNDER the
-     * gate's own diagnosis. The refusal was correct and the last thing on
-     * screen was a crash, which is the one way to make a clear diagnosis
-     * unreadable. Setting the code and letting the loop drain exits 1 cleanly.
+     * Not `process.exit()`: with the probe's undici handle in flight, libuv aborts on
+     * Windows.
      */
     process.exitCode = 1;
     subjectReachable = false;
@@ -1572,24 +851,11 @@ try {
   }
 
   browser = await puppeteer.launch({ headless: true });
-  /*
-   * The needle is the PUPPETEER CACHE PATH, not "chrome".
-   *
-   * Dustin runs his own Chrome, and a needle that matched on the browser name
-   * would let a reused pid point this gate's cleanup at his tabs. Puppeteer's
-   * binary lives under its own download cache and nothing else on the machine
-   * runs from there, so the path is the part that says whose browser it is.
-   */
+  /* The Puppeteer cache path, not "chrome", so cleanup never reaches a user's browser. */
   registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   const page = await browser.newPage();
 
-  /*
-   * WHICH BUILD THE PUBLIC CASES ARE ABOUT, stated on the same footing as the
-   * admin credential below. Two runs of this gate can now disagree while both
-   * are correct, because they are answering about different artifacts, and a
-   * reader who does not know which one ran cannot tell a shipped defect from an
-   * unshipped one.
-   */
+  /* Names which build the public cases observe. */
   console.log(
     DRIVES_PREVIEW
       ? `  public cases: observing the PREVIEW BUILD of the working tree (${BASE})`
@@ -1598,12 +864,7 @@ try {
 
   /* ------------------------------------------------- the stylesheet itself */
 
-  /*
-   * SCOPE, ASSERTED FIRST, and it is the assertion that makes the rest mean
-   * anything. Against the dev server this gate measured an unstyled page and
-   * every column assertion below passed on it. If the stylesheet is not applied
-   * the numbers are about the browser's defaults, not about this site.
-   */
+  /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   const css = await page.evaluate(() =>
@@ -1616,41 +877,8 @@ try {
     }, 0),
   );
   /*
-   * RE-MEASURED 2026-08-24, AND THE FLOOR WAS THE THING THAT WAS WRONG.
-   *
-   * This read `> 500` and went RED when `app/admin.css` was split out of
-   * `app/app.css`. Nothing about the page had broken: the public bundle simply
-   * stopped carrying the admin plane's seven stylesheets, which is what the
-   * split was FOR. Measured on the preview build: 351 rules from `root-*.css`,
-   * and the page is genuinely styled (body background resolves to the token
-   * colour, not to white).
-   *
-   * So this was a floor set against a stylesheet that no longer exists, and it
-   * had been failing ever since. It is the unfailable-floor class inverted: a
-   * threshold ABOVE its subject cannot pass rather than cannot fail, and it is
-   * just as useless, because a red that is always red stops being read.
-   *
-   * Floored at 320, about eight percent under the measurement.
-   *
-   * **AND THIS ASSERTION IS ABOUT THE PUBLIC PLANE ONLY.** It runs on `/blog`.
-   * It never said anything about the admin pages, which load a second sheet;
-   * they now have their own scope check where they are measured.
-   *
-   * ## RE-MEASURED AGAIN 2026-08-27, FOR THE SAME REASON IN A SMALLER FORM
-   *
-   * Public CSS stopped being one site-wide bundle: a route now loads the sheets
-   * its own markup needs. `/blog` fell from 351 rules to 157, and this floor
-   * went red on a page that is perfectly styled, which is the identical shape
-   * the 2026-08-24 entry above records. Floored at 144, about eight percent
-   * under 157.
-   *
-   * **THE NUMBER IS NOW ROUTE-SPECIFIC AND THIS ASSERTION SAYS SO.** Before the
-   * split, "the public plane" had one answer; now every route has its own, and
-   * a floor measured on `/blog` says nothing about `/playground`. It is kept
-   * because its job is unchanged and crude on purpose: catch a page that
-   * arrived with no stylesheet at all, so that the layout assertions below are
-   * not quietly measuring browser defaults. Per-route BYTE ceilings are
-   * `check:page-payload`'s subject, not this one's.
+   * A crude per-route floor that catches a page with no stylesheet. Byte ceilings
+   * are `check:page-payload`'s.
    */
   ok(
     "the blog page's stylesheets are actually applied",
@@ -1663,35 +891,8 @@ try {
   /* ------------------------------------ 0. the home health tile is a READ */
 
   /*
-   * THE FRONT DOOR REPORTS A STORED VERDICT, AND IT IS RECENT.
-   *
-   * `home.tsx` used to run the whole health suite in its loader. Measured
-   * 2026-08-26 against a control: this page rendered at origin in 1.07 to
-   * 3.48 s while `/blog` took 0.32 to 0.90 s, and `/api/health` alone took
-   * 0.98 to 2.01 s. The suite was the gap. It now reads a snapshot `/api/health`
-   * writes to KV.
-   *
-   * THE RISK THE REPLACEMENT INTRODUCES is the one this case is about: a
-   * snapshot that is never written, or written and never read, leaves a cached
-   * front page showing no verdict or an ancient one. `check:invariants`
-   * section 22 can see that the loader CALLS the reader; only a browser can
-   * see what the reader returned.
-   *
-   * ## THE ENDPOINT IS HIT FIRST, ON PURPOSE
-   *
-   * This is a fresh preview or a fresh deploy, so nothing has polled yet and
-   * KV is legitimately empty. Priming through `/api/health` is not the gate
-   * arranging its own pass: it is the gate exercising the ACTUAL WRITE PATH,
-   * and the assertion that follows fails unless that write reached KV and the
-   * loader read it back. A gate that skipped the prime would be asserting that
-   * the scheduled workflow had run, which is a claim about GitHub.
-   *
-   * ## AND THE READ IS CACHE-BUSTED
-   *
-   * The home page is `public, s-maxage=600`, so a plain fetch can be answered
-   * from an entry rendered before the prime and the assertion would measure a
-   * snapshot that predates the write. A unique query string is a distinct cache
-   * key, which forces the origin render this case is about.
+   * `/api/health` is hit first to exercise the snapshot write; the read is
+   * cache-busted because the home page is shared-cached.
    */
   {
     /**
@@ -1711,68 +912,20 @@ try {
           value: value ? value.textContent.trim() : null,
         };
       });
-      /* The wall clock at the moment of the read, so an AGE can be turned into
-         a fixed point. Two ages measured at different moments are not
-         comparable; the write times they imply are. */
+      /* Wall clock at the read, so an age becomes a fixed write time. */
       return { ...read, readAtMs: Date.now() };
     };
 
     /**
-     * WHEN THE SNAPSHOT THIS TILE IS SHOWING WAS WRITTEN, on the local clock.
-     *
-     * The tile carries an AGE, which grows on its own, so comparing two ages
-     * needs the elapsed time between them subtracted back out, and that is what
-     * the old `before + WAIT_SECONDS` arithmetic was doing. Deriving the write
-     * time instead makes the comparison independent of how long anything took,
-     * which is what lets the poll below run for as many seconds as it needs.
+     * When the shown snapshot was written, on the local clock.
      *
      * @param {{age: number|null, readAtMs: number}} t
      */
     const writtenAtMs = (t) => t.readAtMs - Number(t.age) * 1000;
 
     /*
-     * ## A BEFORE AND AN AFTER, BECAUSE THE OBVIOUS ASSERTION DOES NOT
-     * ## DISCRIMINATE. This is the plant's finding, not a precaution.
-     *
-     * The first version of this case primed `/api/health` and then asserted the
-     * tile's age was under one poll interval. PLANTED by deleting the snapshot
-     * write, PROVEN APPLIED in the artifact this gate builds (`writeHealthSnapshot`
-     * absent from build/server, `readHealthTile` still present as the control),
-     * and the gate went GREEN: 83 checks, 0 failures.
-     *
-     * The reason is that the preview's miniflare KV PERSISTS between runs. An
-     * earlier green run had left a snapshot behind, it was a few minutes old,
-     * and "a few minutes" is comfortably under fifteen. The assertion was
-     * measuring that a snapshot EXISTS, which a leftover satisfies, and not
-     * that this run's request wrote one.
-     *
-     * So the tile is read before and after, and the comparison is between the
-     * two WRITE TIMES the ages imply. A snapshot that is not being rewritten
-     * keeps its write time; one that is rewritten moves it forward. A leftover
-     * of ANY age fails and no absolute threshold has to be guessed.
-     *
-     * ## AND THE SECOND READ IS A POLL, BECAUSE A KV READ IS NOT A KV WRITE
-     *
-     * The read used to be a single fetch four seconds after the call, and
-     * against production that FAILED while the write was working perfectly.
-     * Measured 2026-08-28: `/api/health` answered 200 with five passing checks,
-     * `wrangler kv key get health:snapshot --remote` showed the new timestamp
-     * already stored, and the home page kept rendering the previous one.
-     * Polling the page every two seconds after the call, the age read 118, 121,
-     * 123, 126, then 10, 13, then 133, 135, then 19, 22.
-     *
-     * It ALTERNATES, which is the signature and rules out a simple delay:
-     * Workers KV serves `get` from an edge cache, entries expire independently,
-     * and for about a minute after a write some reads are answered from a
-     * cached copy of the old value and some are not. A one-shot read four
-     * seconds later is a coin toss, and the gate lost it on the 2026-08-28
-     * scheduled run and reported a write failure that had not happened.
-     *
-     * THE ASSERTION IS UNCHANGED IN WHAT IT REFUSES. A snapshot nobody wrote
-     * never moves its write time, so the poll spends its whole budget and
-     * fails, which is the defect this case was built for. What the poll removes
-     * is a failure caused by the READER's cache, which is not a fact about this
-     * site. The budget is longer than that cache's lifetime for that reason.
+     * Compares write times before and after: a leftover snapshot in persistent KV
+     * passes an absolute age check. Polled, because KV reads are edge-cached.
      */
     const before = await readTile("before");
 
@@ -1786,12 +939,7 @@ try {
         `for a reason that is not about the tile. Body: ${primedBody.slice(0, 200)}`,
     );
 
-    /*
-     * Longer than the KV read cache, and the poll stops the moment it sees a
-     * newer write time, so the budget is a ceiling rather than a cost. The
-     * tolerance absorbs the age's one-second quantisation plus network jitter;
-     * a rewrite moves the write time by far more than that.
-     */
+    /* The poll stops at the first newer write, so the budget is only a ceiling. */
     const POLL_BUDGET_MS = 90_000;
     const POLL_EVERY_MS = 5_000;
     const STAMP_TOLERANCE_MS = 2_000;
@@ -1835,11 +983,7 @@ try {
         `the ${HEALTH_POLL_INTERVAL_SECONDS}s poll interval.`,
     );
 
-    /*
-     * THE DISCRIMINATING ASSERTION. Skipped, loudly, when there was nothing to
-     * compare against: on a genuinely fresh deploy the first read is `missing`,
-     * and a comparison against an absent number would pass vacuously.
-     */
+    /* Skipped with no first reading: an absent number would pass vacuously. */
     if (before.present && Number.isInteger(before.age)) {
       ok(
         "calling /api/health made the home page's verdict NEWER",
@@ -1874,64 +1018,18 @@ try {
         `seeing it here means the age assertions above passed on the wrong element.`,
     );
 
-    /*
-     * BACK TO /blog, AND THIS LINE IS LOAD-BEARING.
-     *
-     * Every assertion below reuses this one `page` and was written after a
-     * `goto` to /blog four screens up. Landing this case in front of them
-     * without restoring the page left them measuring the HOME document:
-     * `.blog-search` and `.page-head` came back null and the column comparison
-     * failed, while `.post-list` resolved because the home page has one too.
-     * That is a case passing on the wrong subject, which is the shape this
-     * repository keeps getting bitten by, and the gate caught it on the first
-     * run rather than reporting a clean column measurement of a page with no
-     * columns.
-     */
+    /* Back to /blog: every case below reuses this page. */
     await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   }
 
-  /* ------- 0b. a public document depends on the THEME and nothing else ---- */
+  /* 0b. a public document depends on the theme alone */
 
   /*
-   * THE PRECONDITION FOR KEYING THE PUBLIC CACHE ON PATH PLUS THEME.
-   *
-   * Today every public HTML route sends `Vary: Cookie` and `workers/app.ts`
-   * downgrades any cookie-bearing request to `private, no-store`, so the only
-   * variant that can ever be stored is the cookieless one. Measured: no cookie
-   * HITs, `theme=dark` BYPASSes, and an unrelated `_ga=1` BYPASSes too. The
-   * cost is that a reader who has ever touched the theme toggle, or who is
-   * signed in, gets an origin render on every page for ever.
-   *
-   * Replacing that with a cache key of path plus theme is only sound if a
-   * public document's bytes depend on the theme AND ON NOTHING ELSE ABOUT THE
-   * REQUESTER. If any public page carries session-dependent bytes, the key is
-   * wrong and one reader's page would be served to another. So this asserts
-   * the property FIRST, and it is written to keep asserting it afterwards:
-   * the day somebody renders a signed-in affordance into the public header,
-   * this goes red rather than the cache quietly becoming a leak.
-   *
-   * ## WHAT THE COMPARISON CAN AND CANNOT SEE, stated because it changes
-   * ## between the two run modes
-   *
-   * With PUBLIC_ORIGIN set, the smoke bearer is a REAL credential against that
-   * deployment and the comparison is the strong one: a document rendered for
-   * an authenticated principal against one rendered for a stranger.
-   *
-   * Locally, against the preview, no credential authenticates. The case then
-   * proves the weaker but still useful property: a public route does not
-   * BRANCH on a credential being presented at all. Both are worth running and
-   * the banner already says which origin this is.
-   *
-   * The nonce is masked before comparing. It is supposed to differ per
-   * request, it is the one field documented to do so, and leaving it in would
-   * drown every real difference.
+   * Keying the public cache on path plus theme is sound only if public bytes depend on
+   * the theme alone. The nonce is masked: it differs per request by design.
    */
   {
-    /*
-     * THE SUBJECT SET, bound to the source rather than restated. Every route
-     * that exports the shared cache headers is here, and the assertion below
-     * fails if the two lists ever disagree, in either direction.
-     */
+    /* Every route exporting the shared cache headers; checked against the source below. */
     const THEME_CACHED = [
       { path: "/", module: "home.tsx" },
       { path: "/blog", module: "blog._index.tsx" },
@@ -1942,47 +1040,15 @@ try {
       { path: "/colophon", module: "colophon.tsx" },
       { path: "/search?q=cloudflare", module: "search.tsx" },
       { path: "/privacy", module: "privacy.tsx" },
-      /*
-       * The tag archive, which IS HTML and therefore carries the theme
-       * dimension every other case here is checked for. `cloudflare` is used
-       * because it is the corpus's most-carried tag, so the case survives any
-       * single post being retagged; a tag with one post would make this case
-       * vanish the day that post changed.
-       */
+      /* The most-carried tag, so one post being retagged cannot remove the case. */
       { path: "/blog/tags/cloudflare", module: "blog.tags.$tag.tsx" },
-      /*
-       * THE THREE HTML PUBLICATION PAGES, which drifted in efc0dab: they took
-       * `publicHtmlHeaders()` and nothing added them here, so from that commit
-       * until 2026-09-14 three shared-cacheable documents were never byte-
-       * compared. The list assertion below is what found them, which is the
-       * whole reason it reads the source rather than trusting this array.
-       */
       { path: "/about", module: "about.tsx" },
       { path: "/publications", module: "publications.tsx" },
-      /*
-       * THE TRAILING SLASH IS THE CANONICAL FORM, not a typo. `paths.mjs` says
-       * so and the gateway redirects the slashless spelling to it; fetching the
-       * slashless one here would byte-compare two redirects. The slug is the
-       * DOI fold of 10.1128/mra.00888-24, which is a registered DOI and cannot
-       * be re-decided, so this URL is as stable as the corpus entry itself.
-       */
+      /* The trailing slash is canonical; the slashless form redirects. */
       { path: "/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
     ];
 
-    /*
-     * SHARED-CACHED HTML WITH NOTHING IN THE CORPUS TO POINT AT, named with the
-     * reason, on the same rule as every other exemption map in this repo.
-     *
-     * A case here would need a real URL, and a URL that 404s would byte-compare
-     * two renders of the ERROR page: green, and asserting nothing about the
-     * route it names. This gate already SKIPs on the same grounds where the
-     * corpus cannot exercise a case, for footnote previews and for post images,
-     * and says so in its own output rather than passing quietly.
-     *
-     * The moment a series is published this entry is deleted and the route
-     * joins THEME_CACHED with its path, which is a one-line change the closure
-     * assertion below will demand rather than allow.
-     */
+    /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
     const THEME_CACHED_PENDING = {
       "blog.series.$series.tsx":
         "no post in the corpus carries a series, so every /blog/series/ URL is a " +
@@ -1994,43 +1060,11 @@ try {
       .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
       .filter((name) => {
         const source = readFileSync(join(routeDir, name), "utf8");
-        // The two idioms: the helper, and the constant used directly by the
-        // routes that also negotiate on Accept. `preview.$token.tsx` names the
-        // constant in PROSE only and must not be caught, so comments go first.
+        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first.
         const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
         return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
       })
-      /*
-       * SHARED-CACHED BUT NOT HTML, so they carry no theme dimension and are
-       * out of this case's subject. The markdown twin joined this list on
-       * 2026-08-26 when it stopped being `private, no-store`; it is one
-       * representation under its own URL and has no `<html>` element to carry
-       * a `data-theme` attribute at all.
-       *
-       * `sitemap` joined 2026-09-02, when it stopped being `max-age=3600` and
-       * took the same constant the feeds use. It lists exactly the posts those
-       * feeds list, from the same projection, and is XML: there is no
-       * `<html data-theme>` for a theme to leak into and no cookie it reads.
-       * The membership assertion above is what makes this an EXEMPTION rather
-       * than an omission, because a route that quietly gained the shared
-       * headers still fails until somebody classifies it here.
-       *
-       * THE ATOM FEED AND THE TWO TAG FEEDS joined 2026-09-03, on exactly the
-       * same grounds as the two feeds above them: each is a feed document under
-       * its own URL, XML or JSON, with no `<html>` element for a theme to reach
-       * and no cookie read on the way. The tag PAGE is not exempt and is a case
-       * in the list above, because it is HTML and does carry the dimension.
-       *
-       * THE FIVE CITATION EXPORTS joined 2026-09-14, on identical grounds and
-       * found the same way: `publications[.bib|.ris|.json]` and the two
-       * per-paper twins serve `application/x-bibtex`,
-       * `application/x-research-info-systems` and CSL JSON through
-       * `exportHeaders(..., SHARED_CACHE_CONTROL)`. Each is one representation
-       * under its own URL with no `<html data-theme>` to carry the dimension
-       * and no cookie read on the way. The two HTML pages beside them,
-       * `publications.tsx` and `publications.$slug.tsx`, are NOT exempt and are
-       * cases in the list above.
-       */
+      /* Shared-cached but not HTML: no `<html data-theme>` for a theme to reach. */
       .filter(
         (name) =>
           !/^(blog\.(feed|rss|atom)|blog\.(tags|series)\.\$(tag|series)\.(rss|feed)|blog\.\$slug\[\.md\]|publications(\.\$slug)?\[\.(bib|ris|json)\]|llms-full|sitemap)/.test(
@@ -2060,19 +1094,7 @@ try {
     );
 
     /**
-     * Everything documented to differ between two renders of the same page.
-     *
-     * The nonce and the report endpoint are per REQUEST by design. The health
-     * tile's age is per RENDER: it is a count of seconds and it ticks whether
-     * or not anything about the reader changed, so two fetches a second apart
-     * differ by one. MEASURED here on the first run of this case, at byte 5870
-     * of `/`, reading 2 against 3.
-     *
-     * Masking it is correct rather than convenient. This case is about whether
-     * the document depends on the COOKIE, and the age depends on the clock. A
-     * value that differs between two identical requests cannot tell you
-     * anything about a cache key, and leaving it in would make `/` permanently
-     * unassertable while proving nothing.
+     * What differs between two renders by design: nonce, report endpoint, health age.
      *
      * @param {string} html
      */
@@ -2082,36 +1104,8 @@ try {
         .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
         .replace(/data-health-age="\d+"/g, 'data-health-age="A"')
         /*
-         * THE SENTENCE BESIDE THE AGE, added 2026-08-28. The attribute above
-         * was masked from this case's first run and the prose spelling of the
-         * same fact was not, so the comparison still failed on it.
-         *
-         * MEASURED on production 2026-08-28, in the theme comparison below: the
-         * cookieless copy read "Read under a minute ago, at 18:48 UTC" and the
-         * dark copy, fetched seconds later, read "Read 7 minutes ago, at 18:41
-         * UTC". The case failed at byte 7365 and neither render was wrong.
-         *
-         * SEVEN MINUTES APART IS NOT A SLOW CLOCK, and the mechanism is worth
-         * stating because it is the reason a wait would not have fixed it:
-         * Workers KV serves `get` from an edge cache, so two renders taken
-         * seconds apart can legitimately read snapshots up to a minute apart,
-         * and the age is recomputed against the wall clock at each render on
-         * top of that. Diagnosed by reading the stored value directly with
-         * `wrangler kv key get` while the page still showed the older one.
-         *
-         * IT IS HERE AND NOT IN `maskTheme` because the difference is not one
-         * the theme is allowed to make. Two requests carrying the SAME cookie
-         * can differ by it, so the credentialed-reader comparison has the same
-         * exposure, and `maskTheme` is not applied to that one.
-         *
-         * WHAT STOPS THIS FROM HIDING A DEFECT: the health-tile case at the top
-         * of this gate asserts, against the same deployment, that the attribute
-         * is present, numeric and inside one poll interval, and that the
-         * verdict gets NEWER across a call to `/api/health`.
-         *
-         * The tile's VALUE is deliberately NOT masked. A `5/5` against a `--`
-         * is a verdict disagreeing with a verdict, and two renders seconds
-         * apart that disagree about whether the site is healthy is a finding.
+         * The age sentence differs between same-cookie renders (KV edge cache plus clock), so
+         * it is masked here and not in `maskTheme`. The health-tile case asserts the age.
          */
         .replace(
           /(data-health-age="A"[\s\S]*?<span class="proof-detail[^"]*">)[^<]*/,
@@ -2137,74 +1131,20 @@ try {
       return { at: i, a: a.slice(Math.max(0, i - 60), i + 80), b: b.slice(Math.max(0, i - 60), i + 80) };
     };
 
-    /*
-     * WHAT THE THEME IS ALLOWED TO CHANGE, enumerated. Masking both of these
-     * must make the documents identical; anything left over is a byte that
-     * depends on the reader for some other reason, which is the finding.
-     */
+    /* What the theme may change; after masking, the documents must be identical. */
     const maskTheme = (/** @type {string} */ html) =>
       html
         .replace(/<html[^>]*>/, "<html>")
-        /*
-         * THE COLOUR-SCHEME META JOINED THIS SET on 2026-08-28, and it is the
-         * third thing the theme is allowed to change. It has to be here: it
-         * carries the resolved theme by design, so leaving it out would make
-         * the enumeration below fail on every route for a difference that is
-         * the point of the meta rather than a leak. Its own case asserts the
-         * value, which is what stops this mask from hiding a defect.
-         */
+        /* The color-scheme meta carries the theme by design; its own case asserts the value. */
         .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
-    /*
-     * THE SET SHRANK ON 2026-08-29, and shrinking is the strict direction.
-     *
-     * A third entry masked `aria-pressed`, because the theme control was three
-     * buttons and the pressed one moved with the theme. The control is one
-     * button now and carries no pressed state: BOTH of its buttons ship in
-     * every document and the cascade displays whichever matches `data-theme`,
-     * so the markup of the control is byte-identical between light and dark and
-     * there is nothing about it to mask.
-     *
-     * That makes the comparison below STRONGER rather than weaker. Two things
-     * are now allowed to differ where three were, so a control that started
-     * varying its own markup by theme would fail here instead of being masked.
-     */
-    /*
-     * THE HOME TILE'S AGE SENTENCE IS NOT IN THIS SET, and the omission is the
-     * ruling rather than an oversight.
-     *
-     * It was going to be added here under hard rule 8, which names `maskTheme`
-     * the one owner of the enumeration. The rule 8 tag is about what the THEME
-     * may change, and the sentence is not that: it varies with the clock, it
-     * varies between two requests that carry the same cookie, and it therefore
-     * has exactly the same exposure in the credentialed-reader comparison
-     * above, which `maskTheme` is not applied to. It lives in `mask`, with the
-     * nonce and the age attribute it is a second spelling of. See the comment
-     * there for the measurement.
-     */
+    /* The age sentence is not here: hard rule 8 scopes this to what the theme may change. */
 
     for (const { path } of THEME_CACHED) {
-      /*
-       * The footer assertions below need a RENDERED page, and `fetchDoc` reads
-       * bytes rather than driving the browser. One navigation per route, before
-       * the byte comparisons, which the comparisons do not disturb: they fetch
-       * their own copies with their own cache-busting query.
-       */
+      /* The footer assertions below need a rendered page. */
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    /* ---- consistent help: the privacy link is on every public page ------ */
+    /* consistent help: the privacy link on every public page */
 
-    /*
-     * WCAG 2.2 3.2.6. A help mechanism that appears on some pages and not
-     * others is worse than one that appears nowhere: a reader who found it once
-     * and cannot find it again concludes it moved, or that they misremembered.
-     *
-     * ASSERTED ACROSS THE WHOLE SET, in the same loop that proves these routes
-     * are byte-identical for a credentialed reader, so the subject is the same
-     * derived list rather than a second one that could drift from it. The
-     * relative ORDER is asserted too, not just presence: 3.2.6 is about the
-     * mechanism being in the same relative order, and a link that moves between
-     * the colophon and the feed on different pages satisfies presence while
-     * failing the criterion.
-     */
+    /* WCAG 2.2 3.2.6: order is asserted as well as presence. */
     const help = await page.evaluate(() => {
       const links = [...document.querySelectorAll(".site-shell-footer a")].map(
         (a) => a.getAttribute("href") ?? "",
@@ -2246,12 +1186,7 @@ try {
       const dark = await fetchDoc(path, { cookie: "theme=dark" });
       const light = await fetchDoc(path, { cookie: "theme=light" });
 
-      /*
-       * THE THEME MUST ACTUALLY CHANGE THE DOCUMENT. Without this the two
-       * assertions below would both pass on a site that had stopped rendering
-       * the theme server-side altogether, which is the failure that makes the
-       * whole cache key pointless.
-       */
+      /* Without this, both assertions below pass on a site that stopped rendering the theme. */
       ok(
         `${path}: the theme changes the served bytes`,
         firstDiff(light, dark) !== null,
@@ -2260,19 +1195,7 @@ try {
           `keyed on theme would be keying on nothing.`,
       );
 
-      /*
-       * THE MENTIONS SECTION, ON THE DOCUMENT THE COMPARISON ABOVE JUST RAN ON.
-       *
-       * Deliberately not a fetch of its own. The property being established is
-       * that the page carrying this section is the page proven byte-identical
-       * for a credentialed reader, and a second fetch would be a second
-       * document that only probably matches the first.
-       *
-       * THE FIRST ASSERTION IS THE SCOPE ASSERTION. Without the section
-       * present, everything below it passes by examining nothing and the
-       * comparison above says nothing about the feature, which is the shape
-       * this repository has been bitten by more than any other.
-       */
+      /* The document just compared, not a new fetch. Section presence is asserted first. */
       if (path === MENTION_POST_PATH) {
         if (!DRIVES_PREVIEW) {
           skip(
@@ -2346,41 +1269,9 @@ try {
       );
     }
 
-    /* ------ the cache itself moved to verify-live, and here is why --------- */
+    /* the cache itself is verify-live's */
 
-    /*
-     * THREE CACHE ASSERTIONS USED TO LIVE HERE AND CANNOT ANY MORE, 2026-09-05.
-     *
-     * They reused one key across four requests and read `x-theme-cache`, the
-     * marker the hand-built `caches.default` layer set: a miss then a hit on the
-     * same theme, a cookied reader never receiving a public cache-control, and a
-     * light reader not being served the warmed dark document. Three more did the
-     * same for the negotiated representations.
-     *
-     * ## WHY THEY CANNOT BE PORTED, AND IT IS MEASURED RATHER THAN ASSUMED
-     *
-     * The layer is gone (rulings 11, 15, 16) and the platform cache replaced it.
-     * MINIFLARE DOES NOT IMPLEMENT WORKERS CACHE. Measured 2026-09-05 under this
-     * gate's own `vite preview`, before the split was written: a response
-     * carrying `public, s-maxage=600` and a fixed `cf.cacheKey` was re-rendered
-     * on all three fetches, the body's timestamp changed every time, and no
-     * `Cf-Cache-Status` header appeared at all. The same is true in the worker
-     * test pool, which is the same runtime.
-     *
-     * So there is no local cache to warm, no marker to read, and a ported
-     * assertion would be green on a site whose cache was completely broken.
-     * That is worse than no assertion, which is why this is a SKIP that names
-     * the instrument rather than a quiet deletion.
-     *
-     * ## WHAT STILL COVERS IT
-     *
-     * `verify-live` owns all six wire measurements now (ruling 18), against
-     * production, reading `Cf-Cache-Status` and the theme attribute. What THIS
-     * gate still owns is the half that licenses the key being short: the
-     * byte-identity and theme-only-difference assertions in the loop above,
-     * which are untouched and are what would catch the document starting to
-     * depend on the cookie for some other reason.
-     */
+    /* Miniflare does not implement Workers Cache; `verify-live` owns the cache assertions. */
     skip(
       "the cache stores, separates by theme, and refuses a negotiated read",
       "miniflare does not implement Workers Cache: measured 2026-09-05, three fetches " +
@@ -2389,25 +1280,9 @@ try {
         "against production. The theme-only-difference assertions above are unaffected.",
     );
 
-    /* ------ the negotiated ROUTING half, which needs no cache -------------- */
+    /* negotiated routing, which needs no cache */
 
-    /*
-     * WHAT SURVIVES THE MOVE, and it is the half that was actually broken.
-     *
-     * The defect this replays reached production: after the deploy of 2f0b4d5,
-     * `Accept: text/markdown` on a post returned 31,869 bytes of `text/html`.
-     * The CACHE was the mechanism, but the property a reader cares about is
-     * simply that asking for markdown gets markdown, and that property is
-     * testable with no cache at all.
-     *
-     * The old version warmed the HTML entry first and asserted the warming,
-     * because without a warm entry the alternate representation rendered fresh
-     * for the boring reason and the case passed on a broken site. THAT
-     * PRECONDITION IS GONE WITH THE CACHE and is not reconstructible here, so
-     * this case is deliberately weaker than the one it replaces: it proves the
-     * routing and says nothing about what the cache would have answered.
-     * `verify-live` measurement (a) is where the cache half is established.
-     */
+    /* Routing only, which needs no cache; `verify-live` measurement (a) owns the cache half. */
     const NEGOTIATED = [
       {
         path: "/blog/ten-years-on-cloudflare",
@@ -2439,12 +1314,7 @@ try {
           `negotiatesAwayFromHtml in app/lib/negotiate.mjs and cacheDimensions in ` +
           `workers/app.ts.`,
       );
-      /*
-       * AND IT DECLARES ITSELF UNSTORABLE. This is the part of the old
-       * three-assertion block that survives without a cache: the negotiated
-       * response must say `no-store` on its own, which is what keeps the
-       * platform from holding it under a key the HTML reader also matches.
-       */
+      /* `no-store` keeps the platform from storing it under the HTML reader's key. */
       ok(
         `${label}: the negotiated response refuses storage on its own headers`,
         (negotiated.headers.get("cache-control") ?? "").includes("no-store"),
@@ -2455,81 +1325,21 @@ try {
       );
     }
 
-    /* ---- the BROWSER is told the colour scheme, before it fetches CSS ---- */
+    /* the browser learns the colour scheme before CSS */
 
     /*
-     * THE WHITE FRAME BETWEEN TWO PAGES, and why this is the assertion.
-     *
-     * ## WHAT WAS MEASURED
-     *
-     * Real Chrome 151, headed, sampling the SCREEN at about 45 frames a
-     * second, against production. A header click from `/` to `/blog` with
-     * `theme=dark` and `prefers-color-scheme: light`: one composited frame at
-     * 253 of 255 between two pages that settle at 61. Same click with
-     * `<meta name="color-scheme" content="dark">` injected into the same bytes
-     * and nothing else changed: never leaves the dark range. Peak 253 against
-     * peak 61 is the whole finding.
-     *
-     * `data-theme` tells the STYLESHEET which palette to use. Nothing in the
-     * document told the BROWSER, so the canvas it paints between and beneath
-     * documents was its default, which is light.
-     *
-     * THE READER IT HAPPENS TO is the one whose choice disagrees with their
-     * machine. With `theme=dark` AND a dark OS there is no flash on any
-     * navigation, which is why every earlier attempt to reproduce it failed:
-     * the instrument had been setting both from one variable.
-     *
-     * ## WHY THIS IS NOT A PIXEL ASSERTION, stated because the pixel form was
-     * ## asked for and was BUILT before being rejected on measurement
-     *
-     * Nothing available to a headless gate can see this flash:
-     *
-     *   - `Page.startScreencast` carries frames the RENDERER composites. The
-     *     white is painted by the BROWSER compositor. Measured headless AND
-     *     headed on the reproducing click: brightest cast frame 34 of 255
-     *     while the screen was 253. With a stylesheet delayed 2,500 ms the
-     *     cast emits NOTHING between 34 ms and 2,792 ms, so it does not merely
-     *     miss the flash, it reports nothing at all about that interval.
-     *   - `Page.captureScreenshot({ fromSurface: true })` does see it, once,
-     *     by luck. It BLOCKS while the renderer has no frame, which is exactly
-     *     the interval in question, so it samples the moments the flash is not
-     *     there. Two runs of the same condition: one caught a 255, the next
-     *     caught nothing.
-     *
-     * A "zero flash frames" case built on either would have passed with the
-     * fix removed. That is the unfailable-threshold class, and it is worse
-     * than no gate because it reads as coverage.
-     *
-     * What DID see it is a PowerShell screen-capture loop over a headed
-     * window, and that is not a gate: it is Windows-only, it needs an unlocked
-     * desktop at fixed coordinates, it took ten minutes for sixty runs, and it
-     * rejected about a third of its own runs as not looking at the browser. A
-     * gate that can silently degrade into a pass is the failure mode this repo
-     * has paid for most.
-     *
-     * So the assertion is the document property the experiment proved causal,
-     * on every public route and every reader state. It cannot silently pass:
-     * remove the meta and every route fails by name.
+     * Without a color-scheme meta the browser paints a light canvas between pages. Screencast
+     * and screenshots cannot see that frame, so the document property is asserted.
      */
     {
       const SCHEME = /<meta name="color-scheme" content="([^"]*)"/;
       const FIRST_SHEET = /<link[^>]+rel="stylesheet"/;
 
-      /**
-       * The four reader states, and the value each one must produce.
-       *
-       * "system" and no-cookie both resolve to `light dark` because the reader
-       * has not chosen: the document supports both and the machine decides.
-       * Asserting a single value there would put the flash back for whichever
-       * half of those readers the guess went against.
-       */
+      /** No choice resolves to `light dark`, so the machine decides. */
       const READER_STATES = [
         { label: "theme=dark", cookie: "theme=dark", expect: "dark" },
         { label: "theme=light", cookie: "theme=light", expect: "light" },
-        /* THE LEGACY COOKIE. No control writes `system` since 2026-08-29, and
-         * `/theme` refuses it, but cookies carrying it are in readers' browsers
-         * for a year. It still means "follow the machine", so it must resolve
-         * exactly as no cookie does. */
+        /* Legacy `theme=system` cookies must resolve as no cookie. */
         { label: "theme=system (legacy)", cookie: "theme=system", expect: "light dark" },
         { label: "no cookie", cookie: null, expect: "light dark" },
       ];
@@ -2556,14 +1366,7 @@ try {
             `composited frame on a dark page whose reader is on a light machine.`,
         );
 
-        /*
-         * POSITION, because a signal that arrives after the stylesheet has
-         * already been requested is a signal that arrived too late to matter.
-         * Asserted against the FIRST stylesheet link rather than against
-         * charset: React 19 hoists document metadata and owns the order among
-         * the metas, so pinning an exact index would be asserting React's
-         * internals rather than the property that makes this work.
-         */
+        /* Before the first stylesheet, not at a fixed index: React 19 orders the metas. */
         const dark = docs.find((d) => d.state === "theme=dark")?.html ?? "";
         const atMeta = dark.search(SCHEME);
         const atSheet = dark.search(FIRST_SHEET);
@@ -2577,13 +1380,7 @@ try {
         );
       }
 
-      /*
-       * AND THE MARKUP AGREES WITH THE CASCADE. The meta and the stylesheet
-       * are two statements of one fact, which rule 17 tolerates only while
-       * something checks they still say the same thing: a palette moved in CSS
-       * with the meta left behind would restore the flash while every byte
-       * assertion above still passed.
-       */
+      /* The meta and the stylesheet state one fact (rule 17), so they are checked to agree. */
       for (const theme of ["dark", "light"]) {
         const context = await browser.createBrowserContext();
         const probe = await context.newPage();
@@ -2605,58 +1402,17 @@ try {
     }
   }
 
-  /* ---- a public navigation does not run a view transition -------------- */
+  /* a public navigation runs no view transition */
 
   /*
-   * THE NAVIGATION BLINK, and why the assertion is the ViewTransition object.
-   *
-   * ## WHAT WAS MEASURED, production, `/` to `/blog`, three runs per cell
-   *
-   * Compositor frames, each scored against the settled origin page and the
-   * settled destination page, so a frame that is NEITHER shows up as a spike
-   * over a measured noise floor:
-   *
-   *   as-is    12 to 14 intermediate frames, 214-220 ms dark and 245-259 ms
-   *            light, peak 33 to 66 times the floor
-   *   reduce   two frames after the click, nothing in between
-   *   none     one frame after the click, nothing in between
-   *
-   * Chrome's default root crossfade animates both snapshots through partial
-   * opacity for a quarter of a second. On a plane that navigates by full
-   * document load, that ran on every header click, and TWO EARLIER SESSIONS
-   * HERE RECORDED THE ViewTransition OBJECT'S PRESENCE AS HEALTH. It was the
-   * disease. This case exists so that reading cannot be made again.
-   *
-   * ## WHY THE PROPERTY AND NOT THE PIXELS
-   *
-   * A pixel assertion would need the frames above, and a gate cannot have
-   * them: the crossfade is renderer paint so `Page.startScreencast` does carry
-   * it, but the measurement needs a settled reference on both sides plus a
-   * noise floor per run, and the cast emits only on change, so a clean
-   * navigation yields one or two frames and no floor at all. The object is the
-   * cause, it is one boolean, and it cannot be true while the fade is absent.
-   *
-   * `pagereveal` fires on EVERY document load, with a null `viewTransition`
-   * when no transition is running. So the assertion has two halves and needs
-   * both: the event fired at all, which proves the probe ran, and the object
-   * was null, which is the property. Asserting only the second would pass on a
-   * page where the listener never attached.
+   * Chrome's root crossfade blinks full-document navigations, so the ViewTransition must
+   * be null. `pagereveal` must also fire, or an unattached listener would pass.
    */
   {
     const context = await browser.createBrowserContext();
     const probe = await context.newPage();
 
-    /*
-     * THE EVENT IS REPORTED TO NODE, not stashed in sessionStorage.
-     *
-     * The first version wrote a record in `pagereveal` and read it back after
-     * the navigation. It came back null on every run while a standalone script
-     * doing the same thing returned it fine, so the read was answering about
-     * something other than the document under test. An exposed binding is
-     * re-installed on every document by puppeteer and fires in Node at the
-     * moment the event does, which removes the round trip and the question of
-     * when it is safe to read.
-     */
+    /* An exposed binding, reinstalled per document, rather than sessionStorage. */
     /** @type {Array<{ path: string, hasTransition: boolean }>} */
     const reveals = [];
     await probe.exposeFunction(
@@ -2675,41 +1431,11 @@ try {
       });
     });
 
-    /*
-     * PRERENDERING OFF, and this is the whole reason the first three attempts
-     * at this case failed while a standalone script doing the same thing
-     * worked.
-     *
-     * The rules were `prerender` when this was written, so hovering the link
-     * prerendered it and the click ACTIVATED that document. A prerendered
-     * document is a separate target: the script injected here never ran in it,
-     * so no listener existed to fire. Measured: the initial load on `/`
-     * recorded {"path":"/","hasTransition":false} and the click recorded
-     * nothing at all, while `location.pathname` read `/blog`. That reads
-     * exactly like "the event did not fire" and is really "the probe was not
-     * in that document".
-     *
-     * **The site now speculates `prefetch`, so it can no longer produce a
-     * document this probe is absent from.** The guard is KEPT anyway, and
-     * deliberately: it costs one CDP call, it is what makes this case a
-     * statement about an ordinary document load whatever the rules say, and the
-     * failure it prevents presents as a silent absence rather than an error.
-     * The action itself is asserted in the speculation case below.
-     */
+    /* An activated prerender is a separate target the probe never ran in. */
     const probeClient = await probe.createCDPSession();
     await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
 
-    /*
-     * A DESKTOP VIEWPORT, BECAUSE THE LINK THIS CASE CLICKS HAS A BREAKPOINT.
-     *
-     * MEASURED 2026-09-14 on the deployed site. This page took puppeteer's
-     * default 800x600, narrower than the 64rem at which `.site-header-nav` is
-     * supposed to appear. The link was still in the DOM, so the precondition
-     * below passed; its rect was all zeros, so the click landed at the document
-     * corner and the page stayed on `/`. Three assertions failed and NONE of
-     * them was about the subject: the arrival, `pagereveal`, and the
-     * view-transition assertion that is the point of the whole case.
-     */
+    /* The header nav is hidden below 64rem, and a hidden link clicks at (0,0). */
     await probe.setViewport({ width: 1280, height: 900 });
 
     await probe.goto(`${BASE}/`, { waitUntil: "networkidle0" });
@@ -2723,38 +1449,8 @@ try {
     reveals.length = 0;
 
     /*
-     * A REAL CLICK ON THE HEADER LINK, hovered first. This was written when a
-     * click with no dwell could activate a PENDING prerender, which puppeteer
-     * cannot follow: the page stayed on `/` and the case asserted against a
-     * navigation that never happened. The action is `prefetch` now and the
-     * guard above forbids prerendering regardless, so the hover is no longer
-     * load-bearing; it is kept because a hovered click is the more realistic
-     * gesture and costs nothing. The arrival is still checked below.
-     */
-    /*
-     * PRESENT IS NOT THE SAME AS CLICKABLE, and the difference cost this case
-     * three results. `getBoundingClientRect` returns a zero box for an element
-     * that exists and is hidden, and the midpoint of a zero box is the corner
-     * of the document, so the gesture silently became "click at (0,0)". The box
-     * is returned here so the assertion can refuse that, on the same rule the
-     * restored search control's width measurement follows: a control that is
-     * present and measures zero is a harness fault, not a reading.
-     *
-     * ## WHY THIS LOOKS IN TWO PLACES, WHICH IS NOT THE GATE GIVING GROUND
-     *
-     * MEASURED 2026-09-14 on the deployed site, at 375, 768, 1024 and 1280:
-     * `.site-header-nav` computes `display: none` at EVERY width. `shell.css`
-     * declares it hidden under the comment "The six destinations, at 64rem and
-     * up only" and no rule anywhere un-hides it, so build 2's desktop nav ships
-     * as six links no reader can reach. That is a site defect and it is
-     * REPORTED rather than absorbed here.
-     *
-     * The subject of this case is what a CROSS-DOCUMENT NAVIGATION does, not
-     * which control the reader started from. The overflow menu carries the same
-     * six destinations and is the only visible route to them today, so the
-     * gesture falls back to it and the strength of the assertion below is
-     * unchanged. What is NOT relaxed is the requirement itself: if neither copy
-     * of the link is laid out, this fails and the navigation cases do not run.
+     * A hidden element's zero box clicks the document corner, so it fails. Falls back to
+     * the overflow menu's copy; fails if neither is laid out.
      */
     const openTarget = async () => {
       const read = () =>
@@ -2850,47 +1546,11 @@ try {
     );
   }
 
-  /* ---- the speculation rules, as CHROME parses them -------------------- */
+  /* speculation rules, as Chrome parses them */
 
   /*
-   * THE OTHER HALF OF THE NAVIGATION BLINK, and the assertion is the CANDIDATE
-   * LIST because the activation cannot be observed at all.
-   *
-   * ## WHAT THIS IS FOR
-   *
-   * Dustin still saw a blink after the view-transition fix above, on clicks to
-   * destinations nothing had speculated. Measured on production 2026-08-28: a
-   * footer click to `/colophon` reported `deliveryType` empty and produced no
-   * preloading attempt of any kind, while every header and post click reported
-   * `navigational-prefetch`. The rules covered the header's five paths and
-   * `/blog/*` and nothing else, so `/colophon`, `/privacy`, `/search` and a post
-   * linked from anywhere but a blog page were cold document loads.
-   *
-   * ## WHY A GATE CAN NEVER ASSERT THAT A PRERENDER ACTIVATED
-   *
-   * **CHROME REFUSES TO PRERENDER WHILE CDP IS ATTACHED.** Measured 2026-08-28
-   * against production: `Preload.prerenderStatusUpdated` reports every single
-   * attempt as `Failure [PrerenderingDisabledByDevTools]`, Chrome falls back to
-   * prefetch, and the destination reports `deliveryType: navigational-prefetch`
-   * with `activationStart: 0`. It is CDP itself and not the Preload domain,
-   * confirmed by running the same navigation with the domain never enabled and
-   * getting an identical result.
-   *
-   * So `activationStart > 0` is unfalsifiable here in the worst way: it is
-   * always 0, and a gate asserting it would fail forever while the site was
-   * correct. Do not add it. What IS observable is everything upstream of the
-   * activation: that the block is on the page, that Chrome ACCEPTED the rule
-   * set, and which URLs it resolved as candidates. A candidate list is the
-   * browser's own reading of the payload, which is strictly more than a source
-   * match can give, and it is where a malformed `href_matches` shows up: a
-   * rejected rule set renders identically and speculates nothing.
-   *
-   * ## THE EXCLUSIONS ARE ASSERTED AGAINST THE LINKS THAT ACTUALLY EXIST
-   *
-   * `/blog` renders a `?tag=` chip per tag, a `?page=` link, the `.md` twin's
-   * cousin `rss.xml`, and `/login` in the header. So the exclusion assertions
-   * below have a live subject rather than a hypothetical one, and the case
-   * proves that subject non-empty before reading anything into a zero.
+   * Chrome refuses to prerender under CDP, so `activationStart` is always 0: never assert
+   * it. The candidate list is Chrome's own reading of the rules.
    */
   {
     const PAGES = ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon", "/privacy"];
@@ -3025,11 +1685,7 @@ try {
       );
     }
 
-    /*
-     * THE COVERAGE HALF. `/colophon` is the exact destination measured cold on
-     * production, and it is reached from the FOOTER, which is why a rule scoped
-     * to the header or to `/blog/*` never covered it.
-     */
+    /* `/colophon` is reached from the footer. */
     const fromBlog = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get("/blog"));
     ok(
       "/blog: the candidate list is non-empty, so the assertions below are about something",
@@ -3047,24 +1703,14 @@ try {
       );
     }
 
-    /*
-     * THE EXCLUSION HALF, each one asserted against links the page really
-     * renders. The counts are proven non-empty first, because "no excluded
-     * candidate" and "no such link on the page" are the same reading otherwise.
-     */
+    /* Link counts are proven non-empty first. */
     const EXCLUSIONS = [
       {
         label: "a query string",
         matches: (/** @type {string} */ href) => href.includes("?"),
         /*
-         * NOTE THE PHRASING, and it is not stylistic. This detail cannot spell
-         * the wrong glob out, because a slash-star inside a string literal in a
-         * gate file opens a BLOCK COMMENT as far as `stripComments` is
-         * concerned: it is not string-aware, and it then runs to the next
-         * close-comment anywhere in the file. Written literally here, this
-         * string hid 74 of this gate's own `ok()` calls from
-         * `check:invariants` section 17, which is what caught it: 97 calls
-         * examined before, 23 after. Measured 2026-08-28.
+         * Do not spell the glob here: `stripComments` reads a slash-star in a string as a
+         * comment opener, hiding `ok()` calls from `check:invariants` section 17.
          */
         why:
           "a filtered view is a database read per variant, and /blog renders one chip " +
@@ -3106,61 +1752,14 @@ try {
     }
   }
 
-  /*
-   * THE PAGE GOES BACK TO /blog BEFORE THE COLUMN CASE.
-   *
-   * Everything from here down reads the CURRENT page, and it has always been
-   * /blog because the stylesheet case near the top navigated there and nothing
-   * between moved it. The consistent-help assertions added on 2026-08-28 need a
-   * rendered page per route, so they navigate, and the last route in that list
-   * is /privacy: the column case then measured a page with no `.blog-search`
-   * and reported "a missing element makes the comparison below vacuous".
-   *
-   * That is the third time in this file that adding a navigating case broke a
-   * later case reading the page it left behind, and the second time in one
-   * session. Restoring here rather than making the case below navigate for
-   * itself, because the case below is not mine and its assumption was correct
-   * until this block existed.
-   */
+  /* The cases below read the current page and expect /blog. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
 
-  /* ---- the layout does not shift while the font arrives ----------------- */
+  /* no layout shift while the font arrives */
 
   /*
-   * WHY THIS LIVES HERE AND NOT IN check:page-payload OR verify-live.
-   *
-   * The audit asked for a CLS ceiling in `check:page-payload`, falling back to
-   * verify-live. Neither can hold one: `check:page-payload` is offline and
-   * reads the build on disk, and verify-live is a fetch client with no
-   * rendering engine. CLS is a rendering measurement, and this file is the only
-   * gate that renders.
-   *
-   * ## WHAT IT IS FOR
-   *
-   * MEASURED on /blog at 390x844 on Slow 4G with a cold cache: CLS 0.0674, one
-   * shift at about six seconds, the tag-chip row re-wrapping when the web font
-   * replaced the fallback and moving everything below it by a line. Blocking
-   * the woff2 and changing nothing else gave 0.0000, which is the
-   * single-variable experiment that named the cause. The repair was
-   * `font-display: optional` on the normal face; this is what stops it coming
-   * back.
-   *
-   * ## THROTTLED, BECAUSE OTHERWISE IT CANNOT FAIL
-   *
-   * Against a localhost preview the font arrives in single-digit milliseconds,
-   * inside any block period, so an unthrottled run reports 0.0000 whatever
-   * `font-display` says. That is the unfailable-threshold class: a ceiling
-   * nothing can breach is not a ceiling. Slow 4G is the profile the shift was
-   * found on and the one that can still expose it.
-   *
-   * ## AND A ZERO IS ONLY BELIEVED IF THE OBSERVER RAN
-   *
-   * A missing PerformanceObserver reports the same 0.0000 a stable page does.
-   * The probe therefore returns null when it never installed, and null fails
-   * rather than passing. That distinction is exactly what made an earlier
-   * reading of this shift wrong: disabling JavaScript to test whether script
-   * caused it also disabled the observer measuring it, so "no script, no shift"
-   * was a statement about the instrument.
+   * Throttled, or a local font arrives in time and CLS can never fail. A missing observer
+   * returns null, which fails.
    */
   {
     const context = await browser.createBrowserContext();
@@ -3207,18 +1806,9 @@ try {
     );
   }
 
-  /* ------------------------------------- 1. the search field and the column */
+  /* 1. the search field and the column */
 
-  /*
-   * THE DEFECT: `.blog-search` carries no max-width while `.page-head`,
-   * `.tag-chips` and `.post-list` are each `max-width: 48rem; margin: 0 auto`.
-   * MEASURED at 1280: search 1216px against a 768px column, left 32 against 256.
-   *
-   * Asserted as ALIGNMENT against a sibling rather than against the literal
-   * 48rem. A hardcoded 768 would be a second statement of a value app.css owns,
-   * and it would go red the day the column is deliberately widened, which is a
-   * design decision and not a defect.
-   */
+  /* Aligned with a sibling, not the literal 48rem app.css owns. */
   const cols = await page.evaluate(() => {
     const box = (/** @type {string} */ sel) => {
       const el = document.querySelector(sel);
@@ -3246,14 +1836,9 @@ try {
     );
   }
 
-  /* ------------------------------------------------ 2. the skip link target */
+  /* 2. the skip link target */
 
-  /*
-   * Both halves. A skip link whose target does not exist is a keyboard trap
-   * dressed as an affordance, and the audit records it as a dead hash on the
-   * login page and the error boundary. The public pages are checked here; login
-   * is checked below because it is a different layout entirely.
-   */
+  /* A skip link with no target is a keyboard trap. */
   for (const path of ["/", "/blog", "/search?q=workers", "/colophon"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const s = await page.evaluate(() => {
@@ -3273,14 +1858,9 @@ try {
     );
   }
 
-  /* ------------------------------- 3. aria-current is not on Blog on a post */
+  /* 3. aria-current is not on Blog on a post */
 
-  /*
-   * THE DEFECT: `<NavLink to="/blog">` has no `end`, so React Router marks it
-   * active for every `/blog/*` descendant and stamps `aria-current="page"` on a
-   * link that is not the current page. The admin nav already uses `end: true`,
-   * so the repo disagrees with itself.
-   */
+  /* `NavLink` without `end` marks Blog current on every `/blog/*` page. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   const firstPost = await page.evaluate(() => {
     const a = document.querySelector('.post-list a[href^="/blog/"]');
@@ -3308,27 +1888,10 @@ try {
     );
   }
 
-  /* --------------------------------------- 4. no horizontal scroll at 320px */
+  /* 4. no horizontal scroll at 320px */
 
-  /*
-   * THE WIDEST-REACHING OF THE FIVE. Measured on every public page rather than
-   * one, because the culprit turned out to be shared chrome: `.site-header-nav`
-   * is `display: flex` with no `flex-wrap` and no narrow media query, so four
-   * links plus the search control plus the theme toggle measure 414px inside a
-   * 320px viewport and every public page scrolls sideways.
-   *
-   * The offending element is NAMED in the failure, not just the page, because
-   * "something overflows" sends the next reader hunting through 8,700 lines of
-   * CSS.
-   */
-  /*
-   * `/playground` JOINED THIS LIST on 2026-08-30, and it is the page with most
-   * to lose from being absent. It carries the widest content on the public
-   * plane: the fusion table's six columns, the rendered markdown pane and now
-   * the key demo's nine-cell grid. Each of those scrolls inside its own box by
-   * design, and this case is the only instrument that can tell a box that
-   * scrolls from a page that does.
-   */
+  /* Every page, since shared chrome can overflow. The failure names the element. */
+  /* `/playground` boxes scroll by design; the page must not. */
   await page.setViewport({ width: 320, height: 800 });
   for (const path of [
     "/",
@@ -3360,32 +1923,11 @@ try {
     );
   }
 
-  /* ------------------- 4a. MATH: the one page that must not drag the doc --- */
+  /* 4a. maths must not drag the document */
 
   /*
-   * WHY 375 AND NOT 320. The loop above runs at 320, which is the narrowest
-   * width this site claims, and this case runs at 375 because that is the width
-   * the ruling names and the one a phone actually has. Both are in the admin
-   * loop's list for the same reason. A display equation is wider than the
-   * column at EVERY width, so the case is not width-sensitive in the way the
-   * chrome above is: what it proves is that the box scrolls and the document
-   * does not, and 375 is where a person would see it fail.
-   *
-   * ## THE PAIRED CONTROL IS THE HALF THAT MAKES IT A MEASUREMENT
-   *
-   * "The document does not scroll sideways" is true of a page whose equation
-   * failed to render at all, and true of a page where the stylesheet never
-   * loaded and every expression collapsed to unstyled text. So the overflow
-   * assertion is bracketed: the display box must itself be WIDER than its own
-   * client width (there is really something overflowing), and the stylesheet
-   * must be linked (it is really being styled). Neither alone means anything.
-   *
-   * ## AND A MATHLESS POST LINKS NOTHING, which is hard rule 4's half
-   *
-   * `check:page-payload` proves the sheet is in no route manifest, offline,
-   * from the build. This proves the OTHER direction on the wire: the document a
-   * reader of a mathless post receives carries no link to it. Two instruments,
-   * two artifacts, one claim.
+   * Paired controls: the box must really overflow and the sheet be linked. A mathless
+   * post links no sheet, which is hard rule 4's half on the wire.
    */
   if (!mathPreviewSeeded) {
     skip(
@@ -3401,12 +1943,7 @@ try {
     await page.setViewport({ width: NARROW_MATH, height: 800 });
     const response = await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
 
-    /*
-     * THE DOOR OPENED, ASSERTED FIRST. `/preview/:token` answers one 404 for
-     * every refusal it has, so a stale KV record, a revoked token and a
-     * published post are indistinguishable from here. Reading anything into the
-     * assertions below without this would be reading it out of an error page.
-     */
+    /* Every refusal is the same 404, so the door is asserted open first. */
     ok(
       `${MATH_PATH}: the preview door opened`,
       response?.status() === 200,
@@ -3415,20 +1952,7 @@ try {
         `is not a draft, or the slugs disagree.`,
     );
 
-    /*
-     * THE HEAD ORDER ON THIS PAGE, and it is here because the defect that
-     * forced it was invisible everywhere else.
-     *
-     * The colour-scheme meta must be declared before the first stylesheet
-     * request; that is asserted for five public paths in the theme block above,
-     * and a math page is in none of them. The first implementation rendered the
-     * link from the post component with React 19's `precedence`, which HOISTS a
-     * managed stylesheet to the top of `<head>`, above the meta. It was caught
-     * only because the plant that forced the flag true put the sheet on
-     * `/blog/ten-years-on-cloudflare`, which IS in that set. Without this line
-     * the arrangement would have been correct on twelve posts and inverted on
-     * the one with maths.
-     */
+    /* React 19 `precedence` hoists the sheet above the color-scheme meta. */
     const order = await page.evaluate(() => {
       const html = document.documentElement.outerHTML;
       const head = html.slice(0, html.indexOf("</head>"));
@@ -3528,23 +2052,7 @@ try {
           "measured wider than the viewport, so it is on an element this scan skipped)"}`,
     );
 
-    /*
-     * COLOUR, MEASURED RATHER THAN REASONED ABOUT, and this is the case
-     * `check:contrast` cannot carry.
-     *
-     * That gate computes ratios from token hexes in the stylesheet and says so
-     * in its own header: it does not render, so it cannot see a colour that is
-     * inherited rather than declared. KaTeX declares none. Its glyphs are text,
-     * its rules are borders, and its stretched delimiters are SVG with
-     * `fill: currentColor`, so the whole expression takes whatever `.prose` is
-     * painting. The way to check an inherited value is to read the COMPUTED one
-     * off a rendered page, which is this instrument.
-     *
-     * Equality against the prose colour is the right assertion rather than a
-     * ratio: if they are equal, every contrast fact `check:contrast` already
-     * proves about body text is a fact about the maths too, in both themes and
-     * under forced-colors, without this gate restating a single threshold.
-     */
+    /* KaTeX declares no colour, so it must compute to the `.prose` colour. */
     ok(
       `${MATH_PATH}: maths takes the prose colour rather than declaring one`,
       math.katexColour !== null && math.katexColour === math.proseColour,
@@ -3552,17 +2060,7 @@ try {
         `declared colour would survive a theme change and break both of them.`,
     );
 
-    /*
-     * FORCED COLOURS GOES THROUGH CDP, not through `page.emulateMediaFeatures`.
-     *
-     * MEASURED 2026-09-06: puppeteer 25.4.0 validates the feature name against
-     * its own allowlist and throws `Unsupported media feature: forced-colors`
-     * before anything reaches the browser. Chrome supports it perfectly well;
-     * it is the wrapper that does not know about it. `Emulation.setEmulatedMedia`
-     * is the call puppeteer would have made, so this is the same instrument with
-     * one fewer layer, and it is the shape this file already uses for the
-     * Preload domain.
-     */
+    /* Through CDP: puppeteer's `emulateMediaFeatures` rejects `forced-colors`. */
     const emulation = await page.createCDPSession();
     for (const mode of [
       { label: "dark", cookie: "dark", features: [] },
@@ -3599,7 +2097,7 @@ try {
     await emulation.detach();
     await page.deleteCookie({ url: BASE, name: "theme", path: "/" });
 
-    /* ---- and the control: a mathless post links nothing extra ----------- */
+    /* control: a mathless post links nothing extra */
 
     await page.goto(`${BASE}${MATHLESS_POST_PATH}`, { waitUntil: "networkidle0" });
     const mathless = await page.evaluate(() => ({
@@ -3617,31 +2115,11 @@ try {
     );
   }
 
-  /* ------------------- 4b. THE PLAYGROUND'S DEMOS ANSWER ON THE WIRE ------- */
+  /* 4b. the playground demos answer on the wire */
 
   /*
-   * WHY THIS EXISTS ALONGSIDE check:features, which already runs every one of
-   * these modules over the same fixtures.
-   *
-   * That gate imports the modules and compares their return values. It is the
-   * right instrument for "does the grammar say this", and it is BLIND to the
-   * only thing that can go wrong afterwards: whether a reader who pastes the
-   * URL gets the answer. A loader that threw, a section that stopped
-   * rendering, a WASM module that will not instantiate in workerd, a
-   * `<Form action>` pointing at the wrong path, all of those leave every
-   * source-reading assertion green. Hard rule 7: a gate that feeds a module
-   * its own stored output cannot see the transport.
-   *
-   * THE MARKDOWN CASE IS THE ONE THAT EARNS THIS. Its renderer needs the
-   * Worker's WASM instantiator, and the Node build has a different one, so
-   * check:features CANNOT observe the failure mode that matters here: it
-   * would pass on a page that answers every reader with a render failure.
-   *
-   * EXPECTATIONS ARE THE MANIFEST'S, read from the same file the page renders
-   * from, so this case cannot drift from the presets. It asserts the ANSWER
-   * appears, not where: these are visible-text checks over the whole document,
-   * because asserting a cell position would fail on a restyle rather than on a
-   * defect.
+   * check:features cannot see the transport (Hard rule 7), such as the Worker's WASM
+   * instantiator. Expectations come from the manifest.
    */
   await page.setViewport({ width: 1280, height: 900 });
   {
@@ -3653,13 +2131,7 @@ try {
     const visibleText = async () =>
       (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, " ");
 
-    /*
-     * SCOPE FIRST. Every assertion below is "this string is present", and a
-     * page that failed to render at all would fail them for the wrong reason
-     * while a page that rendered an EMPTY demo would pass nothing. Proving the
-     * page is the playground, and that the sections exist, is what makes the
-     * per-demo results below mean what they say.
-     */
+    /* The page must be the playground with every declared section. */
     await page.goto(`${BASE}/playground`, { waitUntil: "networkidle0" });
     const sections = await page.evaluate(() =>
       [...document.querySelectorAll("section.playground-demo")].map((s) => s.id),
@@ -3671,7 +2143,7 @@ try {
       `manifest: ${declared.join(", ")}; rendered: ${sections.join(", ") || "none"}`,
     );
 
-    /* -- the key grammar, on the wire -------------------------------------- */
+    /* the key grammar, on the wire */
 
     const keyPreset = manifest.keyPresets.find(
       (/** @type {any} */ p) => p.expect?.dimensions !== null && p.expect?.contentKey === true,
@@ -3704,11 +2176,7 @@ try {
       );
     }
 
-    /*
-     * THE CLASSIFIER'S REFUSAL, on the wire. A caught throw that renders
-     * nothing is the failure this demo would have, and it looks identical to a
-     * working page in every source-reading gate.
-     */
+    /* A caught throw that renders nothing looks like a working page. */
     const refusedPreset = manifest.keyPresets.find(
       (/** @type {any} */ p) => p.expect?.kind === "refused",
     );
@@ -3726,20 +2194,14 @@ try {
       );
     }
 
-    /* -- the theme resolver, on the wire ----------------------------------- */
+    /* the theme resolver, on the wire */
 
     for (const preset of manifest.cookiePresets) {
       await page.goto(`${BASE}/playground?cookie=${encodeURIComponent(preset.cookie)}`, {
         waitUntil: "networkidle0",
       });
       const text = await visibleText();
-      /*
-       * THE ATTRIBUTE ROW IS THE ASSERTION, not the resolved theme, because
-       * "system" appears in the page's prose and would match anywhere. The
-       * rendered word for an absent attribute is "omitted", which appears
-       * nowhere else, so a preset resolving to the default is checked by a
-       * string only this row can produce.
-       */
+      /* "system" appears in prose; "omitted" appears only in this row. */
       const expected = preset.expect.attribute ?? "omitted";
       ok(
         `the theme demo answers ${JSON.stringify(preset.cookie)} with ${expected}`,
@@ -3748,15 +2210,9 @@ try {
       );
     }
 
-    /* -- the markdown pipeline, on the wire -------------------------------- */
+    /* the markdown pipeline, on the wire */
 
-    /*
-     * THE WASM CASE. `renderBody` starts a syntax highlighter on an oniguruma
-     * WebAssembly module, and workerd refuses `WebAssembly.instantiate()` on
-     * raw bytes, which is what the Node default ends up doing. The Worker
-     * installs a different instantiator. check:features runs the NODE path and
-     * therefore cannot observe this failing; only a real Worker can.
-     */
+    /* workerd refuses `WebAssembly.instantiate()` on raw bytes; only a Worker sees this. */
     for (const snippet of manifest.markdownSnippets) {
       await page.goto(`${BASE}/playground?md=${encodeURIComponent(snippet.slug)}`, {
         waitUntil: "networkidle0",
@@ -3781,12 +2237,7 @@ try {
         );
       }
 
-      /*
-       * THE HIGHLIGHTER RAN, asserted on the DOM rather than on text: shiki
-       * emits per-token spans, and their absence is exactly what a Worker that
-       * could not instantiate the WASM module would produce. A snippet with no
-       * code fence has none, so this is conditional on the snippet carrying one.
-       */
+      /* Shiki's token spans are absent when the WASM module failed. */
       if (snippet.source.includes("```")) {
         const highlighted = await page.evaluate(
           () => document.querySelectorAll(".playground-rendered pre.shiki span[style]").length,
@@ -3800,11 +2251,7 @@ try {
       }
 
       if (snippet.expect.blockedCount > 0) {
-        /*
-         * THE DEMOTED URL IS NOT LIVE. The count is check:features' claim; this
-         * is the one that matters on a page a reader loads, and it is asserted
-         * against the DOM's own links rather than against the source bytes.
-         */
+        /* Checked on the DOM's own links. */
         const liveHrefs = await page.evaluate(() =>
           [...document.querySelectorAll(".playground-rendered a")].map((a) =>
             a.getAttribute("href"),
@@ -3819,7 +2266,7 @@ try {
     }
   }
 
-  /* ------------------------------------------------- 5. the login skip link */
+  /* 5. the login skip link */
 
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle0" });
@@ -3837,29 +2284,11 @@ try {
       `carries that id, so keyboard focus goes nowhere`,
   );
 
-  /* --------------------- 5b. THE ENHANCEMENTS RUN, and nothing else ships */
+  /* 5b. the enhancements run, and nothing else ships */
 
   /*
-   * The public plane stopped hydrating React (2026-08-26), so "works without
-   * script" stopped being the risky half of rule 9's standing ruling: the
-   * server-rendered page is now also what a scripted reader gets, plus four
-   * nonced enhancement bundles. What can silently die is the OTHER half,
-   * "fast with it": a bundle the CSP refuses, a selector that moved, or a
-   * ?url import gone stale produces a page that renders perfectly and
-   * enhances nothing, with every source-reading gate green. These cases run
-   * the bundles in a real browser, which is the only instrument that can see
-   * that class.
-   *
-   * WHAT IS DELIBERATELY NOT DRIVEN: the Ask stream. Clicking the trigger
-   * bills a Workers AI generation per run, which is why the billed probe
-   * lives in verify-live and not in a gate (same ruling as its Ask probes).
-   * Asserted here instead: the affordance is visible and bound, which is the
-   * half that dies silently.
-   *
-   * CONSOLE ERRORS ARE COLLECTED ACROSS THESE CASES and asserted empty at the
-   * end. A CSP refusal of an un-nonced or mis-pathed bundle surfaces exactly
-   * there and nowhere else this gate looks; this assertion is what makes
-   * "remove the nonce" a plant this gate can catch by name.
+   * Rule 9's "fast with it" half, which fails silently. The Ask stream is not driven
+   * because it bills. Console errors are asserted empty at the end, where CSP refusals show.
    */
   /** @type {string[]} */
   const publicConsoleErrors = [];
@@ -3872,13 +2301,7 @@ try {
   };
   collectErrors(page);
 
-  /*
-   * The expected script set, derived from the SOURCE listing rather than the
-   * build: an enhancement asset's stem is its module's basename (the ?url
-   * asset is dist/<name>.js emitted as <name>-<hash>.js), and app/enhance/ is
-   * present in any checkout while build/client may belong to another build.
-   * Stems, not names, for the reason chunkStem gives in check-page-payload.
-   */
+  /* Stems from app/enhance/, since build/client may be another build's. */
   const enhanceStems = new Set(
     readdirSync(join(root, "app", "enhance"))
       .filter((f) => f.endsWith(".ts"))
@@ -3892,12 +2315,7 @@ try {
 
   await page.setViewport({ width: 1280, height: 900 });
 
-  /*
-   * A post that actually carries code blocks, found by walking the listing
-   * rather than naming a slug: a slug pinned here goes stale the day the post
-   * is retitled, and the corpus is the loader's business. Capped so a corpus
-   * with no code posts skips loudly instead of crawling everything.
-   */
+  /* Found by walking the listing, since a pinned slug goes stale. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   const postPaths = await page.evaluate(() =>
     [...new Set(
@@ -3907,21 +2325,7 @@ try {
     )].slice(0, 6),
   );
   /*
-   * THE BLOG BUNDLE IS FOR POSTS, and the index is not a post.
-   *
-   * Every one of blog.ts's enhancements targets markup the post pipeline
-   * renders inside `.prose`: the reading bar, the table-of-contents scrollspy,
-   * the code-block buttons, the heading links, the footnote previews and the
-   * lightbox. The listing has none of them, and it carried the bundle anyway
-   * until 2026-08-27, so 4,514 bytes were downloaded and parsed to find
-   * nothing on the site's second most visited page.
-   *
-   * BOTH DIRECTIONS, and the positive half is the one that matters. Asserting
-   * only "absent from the index" would pass on a commit that deleted the
-   * component from both routes and quietly turned seven enhancements off.
-   *
-   * Read off the resource timeline. A source reading can see the component is
-   * gone; only this can see what the browser fetched.
+   * The blog bundle loads on a post and not on the index.
    *
    * @param {string} stem
    */
@@ -3989,24 +2393,9 @@ try {
     );
   }
 
-  /* ---- WCAG 2.2 1.4.13, all three parts, on a post with footnotes -------- */
+  /* WCAG 2.2 1.4.13, on a post with footnotes */
 
-  /*
-   * HOVERABLE, DISMISSIBLE, PERSISTENT. All three were missing, and none of
-   * them is visible in a screenshot or reachable by a source reading, which is
-   * why they are here rather than in check:policy.
-   *
-   * The bubble appeared BELOW the reference and `mouseleave` hid it
-   * immediately, so it vanished the moment the pointer moved toward it: nobody
-   * could read a footnote longer than one glance or select text from one. There
-   * was no Escape. A `scroll` listener destroyed it, including on the scroll a
-   * reader makes to bring a long footnote into view.
-   *
-   * THE POST IS FOUND, NOT NAMED. A slug pinned here goes stale the day the
-   * post is retitled, and the corpus is the loader's business. Skipped loudly
-   * when no post carries a footnote, because a case that silently examines
-   * nothing is what the lightbox case already does on this corpus.
-   */
+  /* Hoverable, dismissible, persistent (WCAG 1.4.13). The post is found, not named. */
   const footnotePost = await (async () => {
     for (const path of postPaths) {
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
@@ -4038,12 +2427,7 @@ try {
         `vacuous without this: the three properties are all about a bubble that exists.`,
     );
 
-    /*
-     * HOVERABLE. The pointer moves from the reference to the bubble, which is
-     * the gesture the old code made impossible. Moved in one step to the
-     * bubble's own centre, because that is what a reader does; a step onto the
-     * gap between them would test the grace period rather than the property.
-     */
+    /* Straight to the bubble's centre; a gap step would test the grace period. */
     const box = await page.evaluate(() => {
       const el = document.querySelector(".footnote-preview");
       if (!el) return null;
@@ -4099,20 +2483,9 @@ try {
         `not cost the reader their place, which is what 1.4.13 asks for.`,
     );
 
-    /* ---- WCAG 2.2 4.1.3, the copy controls announce ---------------------- */
+    /* WCAG 2.2 4.1.3, the copy controls announce */
 
-    /*
-     * All three copy controls said "Copied" VISUALLY and told a screen reader
-     * nothing: two swapped their own textContent and the heading permalink set
-     * an attribute that CSS renders through `::after`, which is not in the
-     * accessibility tree at all.
-     *
-     * ASSERTED ON THE REGION, not on the announcement. Whether a screen reader
-     * SPEAKS is not observable from here; what is observable is that a
-     * `role="status"` region exists and that the copy wrote a message into it.
-     * That is the mechanism 4.1.3 requires, and it is the honest limit of what
-     * a browser gate can see.
-     */
+    /* Asserted on the `role="status"` region; speech is not observable. */
     const codePost = await page.evaluate(
       () => document.querySelectorAll(".prose pre[data-lang] .code-copy").length > 0,
     );
@@ -4151,14 +2524,7 @@ try {
     }
   }
 
-  /*
-   * FROM HERE THE PAGE MOVES AGAIN, and the cases below re-navigate for
-   * themselves. The first version of this block sat ABOVE the code-copy case
-   * and walked the corpus looking for a footnote, which left the page on a
-   * different post: the copy-button assertion then reported "0 button(s) on 0
-   * block(s)" about a page that has no code blocks. That is this file's own
-   * recorded failure shape, from the home health-tile case, repeated.
-   */
+  /* The cases below navigate for themselves. */
   const postForShape = codePost ?? probedPost;
   if (postForShape === null) {
     skip("a post page's enhancements", "the listing yielded no post links at all");
@@ -4177,29 +2543,8 @@ try {
      * gone, and the page would still LOOK right, which is why looking is not
      * the assertion.
      */
-    /*
-     * WHEN THE BUNDLE IS DEAD THE CLICK REALLY NAVIGATES, because the form
-     * is the fallback and it works. That navigation destroys the execution
-     * context, and an evaluate racing it throws rather than returning, which
-     * on the first plant run crashed this gate instead of failing it. So the
-     * evaluate is caught, and a destroyed context IS the finding: the submit
-     * was not intercepted.
-     */
-    /*
-     * ONE BUTTON IN THE ACCESSIBILITY TREE, and this is asserted BEFORE the
-     * click because it is a property of the control at rest.
-     *
-     * The single toggle ships TWO buttons and the cascade displays whichever
-     * matches the theme in effect. The hidden one must be `display: none`
-     * rather than visually hidden: `.sr-only` would keep it in the
-     * accessibility tree, so a screen reader would find two buttons offering
-     * opposite actions and no way to tell which one does anything.
-     *
-     * MEASURED THROUGH `offsetParent`, which is null exactly when an ancestor
-     * or the element itself is `display: none`, and NOT through a class name:
-     * the assertion is about what the browser did with the element, not about
-     * which selector was written.
-     */
+    /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
+    /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
     const control = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll(".bar-theme button")];
       const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);
@@ -4215,17 +2560,7 @@ try {
         label: shown[0]?.getAttribute("aria-label") ?? null,
         value: shown[0]?.getAttribute("value") ?? null,
         pressed: shown[0]?.hasAttribute("aria-pressed") ?? false,
-        /*
-         * PLAIN NUMBERS, NOT THE DOMRect. Returning the rect itself reads 0x0
-         * on this side: puppeteer serializes the evaluate's result and a
-         * DOMRect comes back as an empty object, so `box.width` is undefined
-         * and `?? 0` turns a 28px button into a failing 0.
-         *
-         * MEASURED, on this gate's own first run: "0x0px, floor 24x24" against
-         * a control that is 28px square in the page. The instrument was wrong,
-         * not the button, which is this repo's simulated-element class wearing
-         * a serialization boundary instead of an injected probe.
-         */
+        /* A DOMRect serializes as an empty object, so return plain numbers. */
         width: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect().width : 0,
         height: shown[0] ? /** @type {HTMLElement} */ (shown[0]).getBoundingClientRect().height : 0,
       };
@@ -4258,25 +2593,13 @@ try {
     await page.evaluate(() => {
       /** @type {any} */ (window).__probe = "same-document";
     });
-    /*
-     * CLICKED BY WHAT IS VISIBLE, not by value. The dark-setting button is the
-     * one displayed while the page is light, which is the state this gate
-     * arrives in; selecting by value would click whichever the cascade happens
-     * to be hiding and puppeteer would refuse it.
-     */
+    /* Clicked by what is visible; by value could pick the hidden button. */
     const themeClicked = await clickOrFail(
       page,
       '.bar-theme button[value="dark"]',
       "the theme control is present to click",
     );
-    /*
-     * NOT a return: this block is at top level, so an early return is illegal
-     * and, worse, would skip every case below it, which is the exact failure
-     * clickOrFail exists to stop. The click failing is already counted as a
-     * failure; the cases that depend on it are SKIPPED by name so the run says
-     * what it did not measure rather than silently measuring a page nobody
-     * clicked.
-     */
+    /* Top level, so no return; dependent cases are skipped by name. */
     if (!themeClicked) {
       skip(
         "the theme flips in place, without a navigation, and the control turns around",
@@ -4306,10 +2629,7 @@ try {
       flipped !== null &&
         flipped.attr === "dark" &&
         flipped.sameDocument &&
-        /* THE CONTROL FOLLOWED THE ATTRIBUTE. The button that was showing set
-         * dark; the one showing now must offer the way back, which is what
-         * proves the cascade re-resolved rather than the script leaving a
-         * control that would set dark a second time. */
+        /* The visible button now offers light: the cascade re-resolved. */
         flipped.shownValue === "light" &&
         flipped.shownCount === 1,
       flipped === null
@@ -4322,52 +2642,14 @@ try {
     );
 
     /*
-     * ## THE SAME CONTROL WITH SCRIPT OFF, which is the half rule 9 is about
-     *
-     * Everything above proves the ENHANCEMENT works. None of it proves the
-     * fallback does, and the fallback is the part the law requires: the
-     * enhancement removes a round trip and is allowed to fail.
-     *
-     * Until now the only no-script assertion about this control was a string
-     * match on `action="/theme"` in verify-live, which proves the markup and
-     * not the behaviour. A form can carry that attribute and still do nothing:
-     * `type="button"` on the submit, a `preventDefault` in the markup, or a
-     * server that refuses the value would all pass it.
-     *
-     * So this drives the real thing with JavaScript DISABLED: click what is
-     * visible, let the browser post, and read the document that comes back.
-     *
-     * ## THE FRAGMENT CANNOT SURVIVE, AND THIS CASE IS HOW THAT WAS FOUND
-     *
-     * It first asserted that the fragment came back too, because
-     * `safeReturnTo` echoes `url.hash` from the `Referer` and its comment said
-     * that was what returned a scriptless reader to where they were reading.
-     *
-     * MEASURED HERE 2026-08-29, in real Chrome, on a real form post: the theme
-     * changed correctly and the fragment was GONE. The mechanism is not a bug
-     * in the echo, it is that `Referer` never carries a fragment; RFC 9110
-     * requires it to be stripped. So the hash branch cannot fire on this path,
-     * and no server-side fix exists: the fragment is never sent to an origin at
-     * all, so /theme cannot know it and cannot redirect to it.
-     *
-     * The scripted path keeps the reader's position by never navigating, which
-     * is where that promise is actually delivered.
-     *
-     * So this asserts the PATH, which is achievable and required, and the
-     * fragment is documented rather than demanded. An assertion nothing can
-     * satisfy is worth less than no assertion, because it is a permanent red
-     * that teaches a reader to ignore this gate.
+     * Rule 9's fallback, with JavaScript disabled. Only the path is asserted: `Referer`
+     * never carries a fragment.
      */
     {
       const scriptless = await browser.newPage();
       try {
         await scriptless.setJavaScriptEnabled(false);
-        /*
-         * A CLEAN JAR. The scripted case above leaves a theme cookie in this
-         * browser, and a case about the DEFAULT state that inherits somebody
-         * else's choice is a case about something else. Cleared so this page
-         * loads the way a first-time reader's does.
-         */
+        /* Clear the theme cookie the scripted case left, so this page loads as a first-time reader's. */
         await scriptless.deleteCookie({ name: "theme", url: BASE });
         const hash = "#a-fragment-to-return-to";
         await scriptless.goto(`${BASE}${postForShape}${hash}`, { waitUntil: "networkidle0" });
@@ -4391,19 +2673,8 @@ try {
         );
 
         /*
-         * CLICKED BY THE VALUE JUST READ AS VISIBLE, never by position.
-         *
-         * This was `.bar-theme button`, the first in the DOM, and it CRASHED
-         * the gate with "Node is either not clickable or not an Element": the
-         * scripted case above writes a theme cookie through `document.cookie`,
-         * this page shares the browser's cookie jar, so the cascade had hidden
-         * the first button and puppeteer refused to click a `display: none`
-         * element. A crash is not a failure; it took the whole gate down
-         * instead of reporting anything, which is how a plant proves nothing.
-         *
-         * Selecting by the value that was just measured as visible makes the
-         * click independent of which theme this page happens to load in, which
-         * is the property the case needs anyway.
+         * Click the button just read as visible, never by position: the shared cookie jar may have
+         * hidden the first one, and puppeteer throws on a hidden element.
          */
         await Promise.all([
           scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
@@ -4428,11 +2699,8 @@ try {
             `requires to work: the enhancement is allowed to fail, this is not.`,
         );
         /*
-         * REPORTED, NOT ASSERTED. The fragment is unreachable by construction,
-         * so a failing assertion here would be permanent and would say nothing
-         * about the code. It is printed when it goes missing so the fact stays
-         * visible to whoever reads this gate next, rather than being a comment
-         * nobody meets.
+         * Reported, not asserted: the fragment is unreachable by construction, so a failure here
+         * would be permanent and say nothing about the code.
          */
         if (after.hash !== hash) {
           report(
@@ -4448,20 +2716,11 @@ try {
     }
 
     /*
-     * THE PALETTE. Clicking the trigger must open it, which also proves the
-     * hint's honesty contract: the hint is server-rendered `hidden` and
-     * unhidden only once the listener exists. This said `"/" must open it`
-     * until 2026-09-14; the bare slash was retired in the Part A review and the
-     * gesture below is the click every reader has.
+     * The palette: clicking the trigger opens it. The hint is server-rendered `hidden` and
+     * unhidden only once the listener exists.
      */
-    // The element must EXIST and be unhidden: a missing hint would make a
-    // bare `!hidden` read true and pass on markup that lost the hint.
-    //
-    // SINCE 2026-08-29 THE HINT IS NOT PAINTED, so this asserts the two
-    // surfaces that replaced the badge rather than a visible box: the
-    // description is unhidden AND the anchor's `aria-describedby` resolves to
-    // it, and the control carries the tooltip. Unhiding alone would pass on a
-    // description nothing points at, which is a hint no screen reader reads.
+    // The hint must exist and be unhidden (a missing hint makes `!hidden` true), and the anchor's
+    // `aria-describedby` must resolve to it, or no screen reader reads it.
     const hintShown = await page.evaluate(() => {
       const hint = document.querySelector("[data-search-hint]");
       const trigger = document.querySelector("[data-search-trigger]");
@@ -4471,21 +2730,14 @@ try {
         unhidden: !hint.hidden,
         associated: Boolean(described) && described === hint.id && hint.id !== "",
         /*
-         * THE LIVE CHORD, NOT THE RETIRED ONE. This asked for "/" in the title
-         * until 2026-09-14, which was correct when the bare slash was the
-         * shortcut and became an assertion about a key bound to nothing the day
-         * it was retired. Re-pointed, not relaxed: the title must still NAME
-         * the key, and naming the wrong key still fails. `-K` rather than the
-         * whole chord because the modifier is spelled Command on a Mac and
-         * Control everywhere else, and the gate must not pin a platform.
+         * The title must name the live key. `-K` rather than the whole chord, because the modifier is
+         * Command on a Mac and Control elsewhere.
          */
         titled: /-K\b/.test(trigger.getAttribute("title") ?? ""),
         text: (hint.textContent ?? "").trim(),
         /*
-         * THE ANNOUNCED TEXT MUST NAME THE SAME KEY. Length alone passed on
-         * "Press slash to search" for the whole six weeks the slash was gone,
-         * which is a description that is present, associated, announced and
-         * wrong: the exact shape hard rule 10 calls an unfailable condition.
+         * The announced text must name the same key; length alone is hard rule 10's unfailable
+         * condition.
          */
         textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
         painted: Boolean(trigger.querySelector("kbd")),
@@ -4511,19 +2763,8 @@ try {
     );
 
     /*
-     * THE BUNDLE IS NOT ON THE PAGE UNTIL SOMEBODY ASKS FOR IT, since
-     * 2026-08-27, and this is the assertion that says so on the wire.
-     *
-     * The palette is the largest bundle on the public plane and it answers one
-     * gesture, so it used to be a script tag on every document: every reader
-     * downloaded and parsed a search dialog, and almost none of them opened
-     * it. `theme.ts` now holds the gestures and appends a script element for
-     * the palette on the first one.
-     *
-     * Counted from the RESOURCE TIMELINE rather than from the DOM. A missing
-     * script tag proves nothing about what was fetched, and a fetch is the
-     * thing rule 4 grades. The name is matched loosely because the asset
-     * carries a content hash the gate must not restate.
+     * The palette bundle is fetched only on the first gesture. Counted from the resource timeline,
+     * not the DOM, because a fetch is what rule 4 grades; matched loosely past the content hash.
      */
     const paletteFetches = () =>
       page.evaluate(() =>
@@ -4541,23 +2782,13 @@ try {
         `never opens search should never download the dialog.`,
     );
 
-    /*
-     * CLICKED, NOT TYPED. This pressed "/" until 2026-09-13, when the bare
-     * slash was ruled out: it collides with find-in-page and was borrowed from
-     * application UIs. Cmd/Ctrl-K survives, but the CLICK is the gesture every
-     * reader has, so it is the one the gate drives.
-     */
+    /* Clicked, not typed: the click is the gesture every reader has. */
     const triggerClicked = await clickOrFail(
       page,
       "[data-search-trigger]",
       "the search trigger is present to click",
     );
-    /*
-     * POLLED, NOT SLEPT. Opening now costs a network round trip for the
-     * bundle, so a fixed wait is a race that would pass on this machine and
-     * fail on a slower one. Bounded at 5s, which is far longer than a
-     * localhost fetch and far shorter than the gate's patience.
-     */
+    /* Polled, not slept: opening costs a network round trip for the bundle, so a fixed wait races. */
     let paletteOpen = { open: false, focused: false };
     let navigatedToSearch = false;
     if (triggerClicked) {
@@ -4585,44 +2816,16 @@ try {
     );
 
     /*
-     * THE DIALOG ARRIVES STYLED, which is the half that on-demand CSS can lose.
-     *
-     * `palette-dialog.css` and `ask.css` are no longer on any page: theme.ts
-     * appends them beside the bundle and waits for all three before opening, so
-     * that a reader never sees an unstyled modal. Nothing offline can see
-     * whether that wait works, and the open assertion above passes either way,
-     * since an unstyled `<dialog open>` is still open.
-     *
-     * Asserted against a token-derived value rather than a literal: the border
-     * colour resolves from `--border`, so this is red if the sheet is missing
-     * and red if it arrived after the dialog was already on screen.
+     * The dialog arrives styled: its CSS loads on demand, and an unstyled `<dialog open>` still
+     * passes the open check. Compared against the `--border` token, never a literal.
      */
     /*
-     * THE QUERY SURVIVES THE GESTURE, and this is the case the whole gate was
-     * missing.
-     *
-     * MEASURED 2026-09-13: build 2 put `data-search-trigger` on a FORM'S SUBMIT
-     * BUTTON. `theme.ts` calls preventDefault on that element, which cancels the
-     * submission, so with script on the typed query was discarded and the
-     * no-bundle fallback navigated to /search with no `q` at all. Every offline
-     * gate passed, because the control only worked with script OFF and nothing
-     * offline runs script.
-     *
-     * So the assertion is not 'a search UI appeared'. It is: type a real query,
-     * submit it the way a reader would, and prove the URL that results CARRIES
-     * THAT QUERY. A control that navigates to a bare /search fails here, which
-     * is exactly what shipped.
+     * The query survives the gesture: type a real query, submit it, and the resulting URL must
+     * carry it. A control that lands on a bare /search fails here.
      */
     if (paletteOpen.open) {
       const QUERY = "phage cocktail";
-      /*
-       * TYPED THROUGH A HANDLE, not page.type, for the reason clickOrFail
-       * exists. MEASURED 2026-09-14 on the first deployed run of this case:
-       * page.type asserts internally and THREW on a missing .palette-input,
-       * which ended the run and voided every case after it. The click path had
-       * already been made soft and this one had not, so the same defect reached
-       * the same run twice in one sitting.
-       */
+      /* Typed through a handle, not `page.type`, which throws on a missing field and voids the run. */
       const field = await page.$(".palette-input");
       if (!field) {
         ok(
@@ -4707,8 +2910,7 @@ try {
         );
       } else {
       await resultsField.type("cloudflare");
-      // Debounce is 140ms and the first D1 query on a cold preview has been
-      // measured at 360ms; poll rather than sleep, bounded at 5s.
+      // The debounce and a cold D1 query both outlast a fixed wait; poll instead.
       let paletteResult = { options: 0, status: "" };
       for (let i = 0; i < 25; i += 1) {
         await new Promise((r) => setTimeout(r, 200));
@@ -4730,49 +2932,15 @@ try {
   }
 
   /*
-   * THE IMAGE LINK, both states, because this enhancement has two halves that
-   * fail in opposite directions and no source-reading gate can see either.
-   *
-   * WITHOUT SCRIPT the image's parent must be an anchor, and its href must
-   * actually SERVE an image. An href is a string; a 200 with an image
-   * content-type is the only thing that distinguishes a working fallback from
-   * a plausible one, and the defect this replays produced a URL that was
-   * merely well formed.
-   *
-   * WITH SCRIPT the overlay must show THE ANCHOR'S HREF. That comparison is
-   * the whole case: the bug it replays opened `currentSrc`, the rung of the
-   * srcset ladder already downloaded, which renders an overlay that looks
-   * completely correct while showing the resized copy. Nothing but comparing
-   * the two URLs can tell those apart.
-   *
-   * COMPARED RAW, attribute against attribute, deliberately not as resolved
-   * URLs. `currentSrc` is always ABSOLUTE, so the raw form discriminates on
-   * any image; a resolved comparison only discriminates on an image that
-   * carries a `srcset`, and whether the post that gets found has one is a
-   * content accident. The correct implementation assigns the href verbatim,
-   * so this asserts exactly that and nothing weaker.
-   *
-   * The scriptless half runs on its own page with JavaScript disabled rather
-   * than on a DOM the bundle has already touched, so "the markup carries the
-   * anchor" is a claim about what the SERVER sent.
+   * The image link, both states. Without script the image's parent is an anchor whose href
+   * serves an image (a 200 with an image type, not a well-formed string). With script the
+   * overlay shows the anchor's href, compared raw, attribute to attribute: `currentSrc` is
+   * absolute, so the raw form discriminates on any image.
    */
   {
     /*
-     * THE SUBJECT COMES FROM THE ARTIFACT, not from crawling the listing.
-     *
-     * It was a crawl of the same capped `postPaths` the code case uses, and
-     * that was wrong in the way this repo keeps paying for: with a planted
-     * image in an OLDER post the case skipped, and its skip said "the corpus
-     * carries no body image at all" on the strength of a SIX-POST SAMPLE. A
-     * silent cap that reads as full coverage is the exact shape FAILURES.md
-     * names, and here it was writing the false claim into its own reason.
-     *
-     * The artifact knows which posts carry the anchor, over the whole corpus
-     * and with no crawl, so the skip below is now a measurement rather than an
-     * inference. BOUNDARY: it is the artifact on THIS DISK. Driving a deployed
-     * origin (PUBLIC_ORIGIN) can therefore name a post the deployment has not
-     * got, which is why a named candidate that does not show the anchor in the
-     * browser SKIPS naming the discrepancy instead of failing.
+     * The subject comes from the on-disk artifact, over the whole corpus, not a capped crawl. A
+     * deployed origin may lack a named post, so a candidate without the anchor skips, not fails.
      */
     const artifact = JSON.parse(
       readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
@@ -4795,16 +2963,7 @@ try {
     }
 
     if (imagePost === null) {
-      /*
-       * MEASURED 2026-08-26 against content/posts/: ZERO body images across the
-       * 12 posts, by every form the pipeline recognises (`:::figure`, a
-       * markdown image, a `/media/` citation, a raw `<img>`). The 2026-08-11
-       * record of "6 images across 12 posts" is stale in the numerator: the
-       * charts post's figure was removed. So this is a CONTENT fact and not a
-       * defect, exactly like the no-code-post skip above, and it is loud
-       * because a silent pass here would be indistinguishable from a working
-       * anchor.
-       */
+      /* No body image in the corpus is a content fact, not a defect, so this skips loudly. */
       skip(
         "post images link to their originals, and the lightbox opens the link",
         candidates.length === 0
@@ -4876,19 +3035,8 @@ try {
       );
 
       /*
-       * IT IS A REAL MODAL DIALOG, since 2026-08-28.
-       *
-       * It was a `div` with `tabIndex = -1`: no role, no `aria-modal`, no
-       * focus trap, no `inert` on the page behind it and no close button.
-       * Escape worked only while focus happened to be inside it, and a screen
-       * reader was never told a dialog had opened.
-       *
-       * ASSERTED THROUGH THE PLATFORM'S OWN PROPERTIES, not through attributes
-       * the code could set on a div. `matches("dialog:modal")` is true only
-       * for an element opened with `showModal()`, so a hand-rolled overlay
-       * carrying `role="dialog"` and `aria-modal="true"` fails this while
-       * satisfying any attribute check. That distinction is the whole point:
-       * the attributes are a claim and modality is a behaviour.
+       * A real modal dialog, asserted through `matches("dialog:modal")`, which only `showModal()`
+       * satisfies: attributes on a div are a claim, modality is a behaviour.
        */
       const modal = await page.evaluate(() => {
         const el = document.querySelector(".lightbox");
@@ -4962,10 +3110,8 @@ try {
   );
 
   /*
-   * THE SCRIPT SET, per page: only enhancement bundles, no framework, no
-   * modulepreload. This is the wire half of check:page-payload's claim, on
-   * the artifact this gate drives; verify-live section 16 makes the same
-   * assertion against the deployed origin.
+   * The script set per page: enhancement bundles only, no framework, no modulepreload. The wire
+   * half of check:page-payload.
    */
   for (const path of ["/", postForShape, "/search?q=workers"].filter(Boolean)) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
@@ -4999,60 +3145,21 @@ try {
   page.removeAllListeners("console");
   page.removeAllListeners("pageerror");
 
-  /* ------------------------------- 6. THE ADMIN PLANE, opt-in, DEPLOYED ONLY */
+  /* ------------------------------- 6. the admin plane, opt-in, deployed only */
 
   /*
-   * The class no gate in this repo had ever seen: markup that renders and a
-   * component that never MOUNTS. The editor's lazily imported CodeMirror sat
-   * behind a Suspense boundary that the enforced CSP broke, and it was down for
-   * two days with all twenty-seven gates green, because every one of them reads
-   * source or stub-rendered markup.
-   *
-   * Widened 2026-08-21 from one editor case to the whole plane, because the
-   * first session to render the admin with an instrument found two defects on
-   * surfaces nobody had ever laid out, and roughly 5,500 lines of the split CSS
-   * are admin with no assertion touching any of it.
-   *
-   * READ THE BANNER. These cases observe ADMIN_ORIGIN, a deployed Worker. Every
-   * other case in this file observes the preview build of the working tree.
+   * Catches markup that renders while a component never mounts. These cases observe
+   * ADMIN_ORIGIN, a deployed Worker; every other case observes the preview build.
    */
   /*
-   * THREE STATES, AND ONLY THE FIRST IS A SKIP.
+   * Only an absent credential is a skip. A supplied but unusable one fails, with a message
+   * naming the repair:
    *
-   * ABSENT means nobody asked for these cases, so the gate says loudly what it
-   * did not cover and moves on. That is the one honest skip here.
-   *
-   * SUPPLIED BUT NOT USABLE is a FAILURE, every variety of it. A session file
-   * on disk is a request for the admin cases, and the operator who wrote it is
-   * entitled to be told they did not happen. Skipping instead would be the
-   * silent-skip failure wearing the shape of a precondition, and it is what made
-   * an expired session read like a broken test.
-   *
-   * The varieties are told apart because they need DIFFERENT REPAIRS, and a
-   * message that cannot tell them apart sends the reader to the wrong one:
-   *
-   *   malformed  the file exists and its cookie cannot be used. Fix the FORMAT.
+   *   malformed  the cookie cannot be used; fix the format.
    *   no origin  a session was supplied and there is nowhere to send it.
-   *   rejected   the format is right and the server said no. REFILL the file.
-   *
-   * "Rejected" is overwhelmingly an EXPIRED session, so the message leads with
-   * that and names the file that explains the refill rather than describing the
-   * clicks here, where they would rot next to a second copy of themselves.
+   *   rejected   the server said no, usually an expired session; refill the file.
    */
   if (!CREDENTIAL_PRESENT) {
-    /*
-     * A FAILURE, NOT A SKIP, since 2026-09-06 (vol 15).
-     *
-     * This was `skip`, which counts nothing, and the floor then dropped from 236
-     * to 172 to accommodate it. So a machine with no credential ran a quarter of
-     * this gate and printed a green result, and the smaller floor made that
-     * green look measured. The gate's whole admin half was optional in a way
-     * nothing announced.
-     *
-     * The gate now refuses. Everything it could not observe is named below, and
-     * the remedy is two commands rather than a mystery, so failing costs a
-     * reader nothing they were not going to have to do anyway.
-     */
     ok(
       "the admin plane has a credential to observe it with",
       false,
@@ -5109,12 +3216,8 @@ try {
     );
   } else {
     /*
-     * THE PATH SELECTION IS STATED, BOTH WAYS, and it is the line a reader needs
-     * most: these cases now have two completely different principals available,
-     * and which one ran decides what the result MEANS. The smoke credential is
-     * read-only, so a green run under it says nothing about any write surface;
-     * the cookie is Dustin, so a green run under it says nothing about whether
-     * CI could have produced it.
+     * State which credential ran: the smoke token is read-only, so its green says nothing about
+     * writes; the cookie is Dustin, so its green says nothing about CI.
      */
     console.log(
       CREDENTIAL === "smoke"
@@ -5146,15 +3249,8 @@ try {
     /* ---------------------------------------- 6a. every surface renders */
 
     /*
-     * The SHELL is the assertion, not the page title, because a title is set by
-     * the route module and survives a body that rendered nothing. The sidebar
-     * and the topbar are the two elements every admin route inherits from the
-     * layout, so their absence means the layout itself failed.
-     *
-     * The login page is named explicitly in the failure. A bounced session
-     * renders a complete, correct, fully styled page, and without this the
-     * failure would read as "the sidebar is missing" on a page that never had
-     * one.
+     * The shell (sidebar and topbar) is the assertion, not the title, which survives an empty
+     * body. The login page is named, because a bounced session renders a complete page.
      */
     const SURFACES = [
       ["/admin", "the cockpit"],
@@ -5164,17 +3260,8 @@ try {
       ["/admin/tools", "tools"],
       ["/admin/origin-requests", "origin requests"],
       /*
-       * ADDED 2026-09-05 with ruling 21's redesign, and what it asserts is
-       * deliberately NOT the redesign.
-       *
-       * These cases observe ADMIN_ORIGIN, a DEPLOYED Worker, so an assertion
-       * written against the new markup would be red from the moment it is
-       * committed until the moment it ships, and green for the wrong reason in
-       * between. The page's STRUCTURE is check:admin-ui's, which renders the
-       * working tree: filter chips, counts, the box a message lands in, the
-       * three button weights. What only a browser can say is that the route
-       * renders inside the shell at all and that it does not overflow, and that
-       * is what this and the width loop below take.
+       * Asserts only that the route renders in the shell and fits, not its structure: this observes
+       * a deployed Worker, and structure is check:admin-ui's, which renders the working tree.
        */
       ["/admin/mentions", "the mentions queue"],
     ];
@@ -5198,21 +3285,9 @@ try {
     /* ------------------------- 6b. the two mark fills, across the split */
 
     /*
-     * app.css split into sixteen files on 2026-08-21 and the only evidence the
-     * admin half survived was that the BUILT stylesheet was byte-identical.
-     * That is a real check and it cannot see this: the mark's base fill lives in
-     * app.css and its header override in styles/public-chrome.css, so the two
-     * are separated by a file boundary and by the @import order that decides
-     * which one wins.
-     *
-     * Asserted as RESOLVED COLOUR from getComputedStyle, compared against the
-     * TOKEN read off the same document, never against a literal hex. A hex here
-     * would be a second statement of a value the palette owns, and it would go
-     * red the day the brand is deliberately re-toned.
-     *
-     * Both halves, on the two planes where each is supposed to win: the admin
-     * sidebar mark takes the (0,1,0) base rule, the public header mark takes the
-     * (0,2,0) override. Asserting only one would pass with the override deleted.
+     * The mark's base fill (app.css) and header override (styles/public-chrome.css) sit in two
+     * files; both are asserted as resolved colour against the token, never a hex, because
+     * @import order decides which wins.
      */
     const rgb = (/** @type {string} */ hex) => {
       const h = hex.trim().replace("#", "");
@@ -5266,7 +3341,7 @@ try {
         `which is what the sixteen-file split put at risk.`,
     );
 
-    /* ----------------------------------------- 6c. THE MOUNT CLASS */
+    /* ----------------------------------------- 6c. the mount class */
 
     await admin.goto(`${ADMIN_ORIGIN}/admin/posts`, { waitUntil: "networkidle0" });
     const slug = await admin.evaluate(() => {
@@ -5298,45 +3373,18 @@ try {
       );
     }
 
-    /* ------------- 6d. THE MEDIA INTERACTIONS, previously Dustin's clicks --- */
+    /* ------------------------------------- 6d. the media interactions --- */
 
     /*
-     * FOUR INTERACTIONS ON /admin/media, ASSERTED, and they used to be a list
-     * of things for Dustin to click after every media change.
-     *
-     * ## WHAT THEY ARE, AND WHY EXACTLY THESE
-     *
-     * The media route split moved 1,699 lines of markup between files, and
-     * `check:admin-ui` proved every number identical across the move. That gate
-     * renders routes with `.server` imports stubbed AND NO STYLESHEET, so what
-     * it cannot see is precisely what these cover: a header that renders but
-     * sorts nothing, an inspector that never opens, a bulk bar that appears
-     * with the wrong arithmetic in it, and a confirmation ladder that is
-     * enforced on the server and silently ungated in the browser.
-     *
-     * ## THE READ-ONLY BOUNDARY IS VISIBLE HERE AND IT IS NOT A LIMITATION
-     *
-     * Every case below is a GET or a click on client state. NOTHING SUBMITS.
-     * Under the smoke credential a submission would be refused by the
-     * middleware anyway, but these are written not to submit under EITHER
-     * credential, because the cookie path runs as Dustin and a gate that
-     * trashes a file to prove the trash button works is not a gate anybody can
-     * afford to run.
-     *
-     * That boundary is why two of the destructive confirmations are NOT here:
-     * see the remaining-human list at the end of this file.
+     * Four interactions on /admin/media that check:admin-ui cannot see, since it renders without
+     * scripts or styles. Nothing here submits, under either credential: the cookie path runs as
+     * Dustin. Unreachable confirmations are on the remaining-human list below.
      */
     await admin.setViewport({ width: 1280, height: 900 });
 
     /* --- (i) the list view renders a header, and it marks the sorted column - */
 
-    /*
-     * SORTED BY SIZE, chosen because it is not the default: a header that
-     * hardcoded its active column would pass on `sort=name` and fail here.
-     * The active column is read back from the DOM and compared against the sort
-     * this URL ASKED for, so the assertion cannot be satisfied by whichever
-     * column happens to be marked.
-     */
+    /* Sorted by size, not the default, so a header that hardcodes its active column fails. */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=list&sort=size`, {
       waitUntil: "networkidle0",
     });
@@ -5372,19 +3420,8 @@ try {
         : "not measured",
     );
     /*
-     * EVERY SORTABLE CELL IS AN ANCHOR, which is the property. NOT "every href
-     * carries sort=", which is what this asserted first and which was WRONG.
-     *
-     * Measured: 4 anchors, 3 carrying `sort=`. The missing one is Added, and it
-     * is missing correctly. `hrefWith` omits any parameter equal to its default
-     * and `DEFAULTS.sort` is `added`, so the link to the default sort is a
-     * shorter URL by design rather than a link that has lost its sort. The
-     * first assertion could not tell those apart and reported a defect in code
-     * that was behaving exactly as its own URL builder is written to.
-     *
-     * What actually has to hold is that sorting has an ADDRESS: an anchor with
-     * an href, so it is shareable, restored by the back button and usable with
-     * scripting off, which a click handler on a cell is none of.
+     * Every sortable cell is an anchor, so sorting has an address. Not every href carries `sort=`:
+     * `hrefWith` omits a parameter equal to its default.
      */
     ok(
       "every sortable header cell is a real link, so sorting has an address",
@@ -5399,12 +3436,7 @@ try {
           `A header cell that is not an anchor does not work with scripting off.`
         : "not measured",
     );
-    /*
-     * AND EXACTLY ONE COLUMN ANNOUNCES ITSELF SORTED, to assistive technology.
-     * `aria-sort="none"` on the others is not noise: it is what tells a screen
-     * reader the column CAN be sorted and currently is not. Two columns claiming
-     * to be sorted, or none, are both wrong and both render identically.
-     */
+    /* `aria-sort="none"` on the others tells a screen reader they can be sorted. */
     ok(
       "exactly one column carries a live aria-sort, and it is the sorted one",
       !!listHead &&
@@ -5421,11 +3453,7 @@ try {
 
     /* --- (ii) the inspector opens on ?key= ---------------------------------- */
 
-    /*
-     * THE KEY COMES OFF THE PAGE, never from a fixture. A hardcoded key would be
-     * a second copy of a content hash that the bucket owns, and it would go red
-     * the day that object is deleted rather than the day the inspector breaks.
-     */
+    /* The key comes off the page, never a fixture: the bucket owns it and may delete it. */
     const firstKey = await admin.evaluate(() => {
       const tile = document.querySelector("[data-tile]");
       return tile ? tile.getAttribute("data-tile") : null;
@@ -5483,16 +3511,8 @@ try {
     /* --- (iii) the bulk bar counts and sizes the selection ------------------ */
 
     /*
-     * A CLICK, and the only case here that is not a navigation.
-     *
-     * Selection is the one piece of client state this page has, so the bulk bar
-     * cannot be reached by a URL and `check:admin-ui` reaches it only through a
-     * seeded fixture. This is the live version of that fixture: a real click, on
-     * a real hydrated page, with the arithmetic read back out.
-     *
-     * The SIZE is the half worth asserting. A count is hard to get wrong; the
-     * size sums a field over the selected subset, and a sum over the wrong
-     * subset still renders a plausible number.
+     * Selection is client state, so this is a real click. The size is the half worth asserting:
+     * a sum over the wrong subset still renders a plausible number.
      */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=grid`, { waitUntil: "networkidle0" });
     const beforeSelect = await admin.evaluate(() => !!document.querySelector(".posts-bulk"));
@@ -5564,35 +3584,9 @@ try {
     /* --- (iv) a destructive delete demands the count typed ------------------ */
 
     /*
-     * THE EMPTY-TRASH LADDER, which is the ONE destructive confirmation a
-     * read-only credential can reach.
-     *
-     * It opens from a URL (`?confirm=empty-trash`), so it is server-rendered and
-     * a GET reaches it. The other two confirmations in this route open from
-     * `actionData`, which means reaching them requires the POST the smoke
-     * credential is refused: they are unreachable BY CONSTRUCTION, not by any
-     * limit of the harness, and they are on the remaining-human list with that
-     * reason.
-     *
-     * ## THE REQUIRED STRING IS READ OFF THE PAGE
-     *
-     * The modal states what to type, and this reads it from there rather than
-     * computing a trash count independently. A gate that derived the expected
-     * count itself would be asserting its own arithmetic against the page's, and
-     * when they disagreed it could not say which was wrong.
-     *
-     * ## IT NEVER SUBMITS
-     *
-     * The button's ENABLED state is the assertion. Pressing it would empty the
-     * trash, and the ladder exists precisely because that is not undoable.
-     *
-     * ## CONDITIONAL, AND THE CONDITION IS REPORTED
-     *
-     * The modal renders only when the trash is non-empty (`trashedCount > 0`),
-     * so on a deployment with an empty bin there is genuinely nothing to
-     * measure. That is a SKIP with the reason, never a silent pass: an
-     * assertion that quietly examines nothing reports what a working ladder
-     * reports.
+     * The empty-trash ladder, the one confirmation a GET reaches; the others open from
+     * `actionData` and need a POST. The required string is read off the page, not computed. It
+     * never submits: the enabled state is the assertion. An empty trash is a reported skip.
      */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
       waitUntil: "networkidle0",
@@ -5688,114 +3682,14 @@ try {
     /* ------------------------- the admin plane does not scroll sideways ---- */
 
     /*
-     * THE SAME WIDTH THE PUBLIC PAGES ARE GATED AT, and it had never been
-     * applied to this plane. Case 4 above drives every public page at 320 and
-     * has since the `.site-header-nav` defect; the admin shell was exempt for
-     * no reason beyond needing a session, so it was never measured and it was
-     * broken.
-     *
-     * MEASURED BEFORE THE REPAIR: 23px of overflow at 553, 96 at 480, 176 at
-     * 400, 256 at 320. Those four are one number. 553 + 23, 480 + 96,
-     * 400 + 176 and 320 + 256 are 576 every time, because `.admin-topbar-user`
-     * had a min-content floor it could not shrink past (the operator's email is
-     * one unbreakable token, 199px, in a 343px block once the drawer toggle
-     * appears) and the document simply grew to meet it.
-     *
-     * **THE TOPBAR WAS ONE FLOOR AND NOT THE ONLY ONE. THIS ASSERTION IS STILL
-     * RED WITH THE TOPBAR REPAIR APPLIED, and the number it reports is the
-     * correction to a claim made when the repair landed.**
-     *
-     * That claim was "0 overflow at 320, 400, 480 and 553", and it was measured
-     * by constraining `.admin-topbar` directly and reading its children back. It
-     * was true about the topbar and false about the document, which is the
-     * instrument seeing only what it was threaded through: the topbar was
-     * constrained, so the topbar was what got measured.
-     *
-     * MEASURED PROPERLY on the deployed page with HEAD's stylesheet swapped into
-     * the response and PROVEN in the cascade first: the document floor moves
-     * 576 to 542, not below 320. 553 goes green. 480, 400 and 320 stay red at
-     * 62, 142 and 222.
-     *
-     * The chain, at 320: two `.stat-card`s at 234 each hold `.card-grid` at 480,
-     * which holds `.panel` at 480 and `.admin-content` at 528 once its padding
-     * is added. `.admin-content` sizes the grid track, the track stretches
-     * `.admin-topbar` to 528, and `.admin-signout` (correctly refusing to shrink)
-     * ends up 14px past that at 542. So the remaining floor is the COCKPIT
-     * CONTENT, not the bar, and the bar's own repair did what it claimed: its
-     * min-content is no longer the binding constraint.
-     *
-     * ## RE-READ 2026-08-24 ON A PAGE PROVEN STYLED, AND THE PARAGRAPH ABOVE
-     * ## IS A PREDICTION THAT DID NOT HOLD
-     *
-     * The two assertions above this loop now prove `admin.css` is applied where
-     * these numbers are taken, which is what the re-read was for. All EIGHT
-     * failures survive, so they were never the artefact of an unstyled page
-     * that the public stylesheet assertion's unrelated red made them look like.
-     *
-     * What did NOT survive is the prediction. Measured against the deployed
-     * build, the document floor is **582**, uniform across all four widths:
-     *
-     *   553 -> 29px over    480 -> 102px over
-     *   400 -> 182px over   320 -> 262px over
-     *
-     * Three specifics differ from what was written above, and each matters to
-     * whoever fixes this:
-     *
-     *   1. **553 did not go green.** It is 29px over, not 0.
-     *   2. **The floor is 582, higher than both 576 and the predicted 542.**
-     *   3. **The binding chain is the TOPBAR again**, not the cockpit content:
-     *      `header.admin-topbar@582` over `div.admin-topbar-user@558`,
-     *      `form@558`, `button.admin-signout@558`. No `.stat-card` or
-     *      `.card-grid` appears in the widest set at any width; at 400 and 320
-     *      the third widest is `span.muted@446`.
-     *
-     * The earlier reading was taken by swapping a stylesheet into a response
-     * rather than by observing the built page, which is the simulated-element
-     * class: a probe that is not the element measures the probe. The numbers
-     * here come from the deployed build through the same harness that reports
-     * them.
-     *
-     * NOTHING ABOUT THE LAYOUT IS CHANGED HERE. The fix is Dustin's design
-     * call, and it now rests on readings whose scope is asserted.
-     *
-     * This assertion stays exactly as it is. Narrowing it to pass on the half
-     * that is fixed would be tuning the assertion to the defect.
-     *
-     * FOUR WIDTHS, NOT ONE, and that is the point of the arithmetic above. A
-     * single assertion at 320 would pass the moment the floor dropped to 320,
-     * while 553 still scrolled. The failure was linear in the viewport, so the
-     * gate has to sample the line rather than its worst point. 553 is included
-     * precisely because it is the shallowest of the four and the first to go
-     * green under a partial fix.
-     *
-     * 1280 is asserted too. Everything here shrinks and truncates, and a fix
-     * built out of `min-width: 0` can easily buy the narrow case by collapsing
-     * something that was fine at desktop width.
-     *
-     * The offending element is NAMED, exactly as case 4 names it.
+     * The admin plane at the widths the public pages are gated at. Several widths, because the
+     * overflow is linear in the viewport; 1280 catches a fix that collapses desktop. Do not narrow
+     * this to pass on a partial fix.
      */
     /*
-     * THE ADMIN PLANE'S OWN STYLESHEET CHECK, added 2026-08-24.
-     *
-     * The public check near the top of this file runs on `/blog` and says
-     * nothing about these pages: since the CSS split, `/admin/*` loads a SECOND
-     * sheet, `app/admin.css`, linked only by `routes/admin.tsx`. Every number
-     * the overflow loop below reads is a layout measurement, and a layout
-     * measurement on a page missing its stylesheet is a measurement of the
-     * browser's defaults. The scope check belongs where the measurement is
-     * taken, and it was not here.
-     *
-     * That gap had a cost. With the public assertion red for an unrelated
-     * reason, the eight overflow failures were recorded as INCONCLUSIVE, and
-     * the design decision resting on them was parked waiting for a styled
-     * re-read. MEASURED 2026-08-24: the admin pages were styled the whole time,
-     * 965 rules against the public plane's 351, with `.admin-sidebar`
-     * resolving to `display: flex` at 240px. The readings were sound and the
-     * instrument that would have said so did not exist.
-     *
-     * ASSERTED THREE WAYS, because a rule count alone is the weakest of them.
-     * A count proves bytes arrived; the computed style proves the cascade
-     * applied them to the element the overflow loop is about to measure.
+     * `/admin/*` loads a second sheet, `app/admin.css`, and a layout measurement on an unstyled page
+     * measures browser defaults. A rule count proves bytes arrived; the computed style proves the
+     * cascade applied them.
      */
     await admin.setViewport({ width: 1280, height: 900 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
@@ -5839,26 +3733,14 @@ try {
         `readings below meaningless while looking like a real measurement.`,
     );
 
-    /*
-     * 582 AND 375 ADDED 2026-08-26, and each earns its place.
-     *
-     * 582 is the MEASURED FLOOR itself, the widest width that scrolled before
-     * the fold landed. Every other narrow width in this list is comfortably
-     * inside the folded branch; none of them sits on the boundary, and a
-     * breakpoint that drifted from 640 down past 582 would go unnoticed by all
-     * four. 375 is the common phone width the four skip between 400 and 320.
-     */
+    /* 582 is the measured floor, on the fold boundary; 375 is the common phone width. */
     const OVERFLOW_WIDTHS = [1280, 582, 553, 480, 400, 375, 320];
     for (const width of OVERFLOW_WIDTHS) {
       await admin.setViewport({ width, height: 800 });
       for (const [path, what] of [
         ["/admin", "the cockpit"],
         ["/admin/posts", "the posts list"],
-        /* The mentions queue joined this loop with ruling 21, because the
-           redesign puts a row of chips, a quoted excerpt and three buttons on
-           one line and every one of those is a thing that pushes past a narrow
-           viewport. 375 is the width that matters here and it is already in the
-           list. */
+        /* The mentions queue puts chips, an excerpt and three buttons on one line. */
         ["/admin/mentions", "the mentions queue"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
@@ -5890,15 +3772,8 @@ try {
     }
 
     /*
-     * AND THE BAR ITSELF FITS, which is a different claim from the document not
-     * scrolling.
-     *
-     * `.admin-topbar` could stay inside the viewport while its own children
-     * overflowed it, if something above it ever gained `overflow: hidden`. Then
-     * the document would not scroll, this section's assertions would all pass,
-     * and the email and Sign out would simply be clipped off the right edge
-     * with nothing reporting it. Asserted at the narrowest width only, because
-     * that is where it would happen.
+     * The bar itself fits: an ancestor with `overflow: hidden` would clip its children while the
+     * document does not scroll.
      */
     await admin.setViewport({ width: 320, height: 800 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
@@ -5935,40 +3810,9 @@ try {
     );
 
     /*
-     * THE FOLD KEEPS EVERY ACTION, which is the half none of the assertions
-     * above can see.
-     *
-     * Everything before this measures WIDTH. A fold that simply deleted the
-     * email and Sign out below the breakpoint would satisfy every one of them:
-     * nothing overflows if nothing is there. That is not a hypothetical repair,
-     * it is the cheapest one, and it is why the ruling asked for the items to
-     * be the same controls rather than a reduced set.
-     *
-     * SUBSET, NOT EQUAL COUNT, and the reason is that the two widths are not
-     * supposed to offer the same things. Narrow legitimately has MORE: the
-     * drawer toggle appears, and the Account disclosure exists only when the
-     * bar has folded. What must never happen is narrow having FEWER. So the
-     * claim is that every action the wide bar offers is still reachable once
-     * the disclosure is open, and the failure names the ones that went missing.
-     *
-     * BY ACCESSIBLE NAME rather than by count, because a count can be held
-     * steady by a swap: lose Sign out, gain something else, and the arithmetic
-     * agrees while the fold has eaten the one control that matters.
-     *
-     * The name is APPROXIMATED, `aria-label` then text content, and that is
-     * stated because it is not the full accname algorithm: no `aria-labelledby`
-     * chase, no `title` fallback, no alt on an image child. It was enough to
-     * find a real one on its first run. The folded Sign out was named
-     * "Sign outEnds this session. You will need to sign in again with Google.",
-     * because the hint span is a CHILD of the button and name-from-content
-     * takes descendants. Fixed at the component with an explicit label and a
-     * description, so the two variants are now the same control by name as well
-     * as by markup.
-     *
-     * OPENED THROUGH THE `open` PROPERTY, which is what a click on a
-     * `<summary>` does with no script running at all. Driving it with a
-     * synthetic click would test the enhancement's listeners instead of the
-     * markup, and the markup is what rule 9 is about here.
+     * The fold keeps every action: narrow may add controls but never lose one. Compared by
+     * accessible name, since a swap holds a count steady. Opened via the `open` property, as a
+     * scriptless `<summary>` click does, because rule 9 is about the markup.
      */
     const NARROW = 375;
     /** Focusable controls in the topbar, by accessible name, at this width. */
@@ -6053,339 +3897,18 @@ try {
 }
 
 /*
- * EXECUTED-COUNT FLOOR, one per MODE.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, 2026-08-21: **15**
- * with the admin cases skipped and **31** with them running. Never summed.
- * Floored at 13 and 29, slack of two either way.
- *
- * **THE PREVIOUS RECORDED FIGURE, 16, WAS WRONG BY ONE**, and it had been in
- * this comment since the gate was written. Counted by hand from the eight
- * non-admin `ok()` sites: one stylesheet, one three-element presence, one
- * alignment, four skip links, one post-link presence, one aria-current, five
- * overflow paths, one login skip link. That is 15, and running it says 15. The
- * old floor of 14 still passed, so the stale number never failed anything,
- * which is exactly why it survived: a recorded count nothing re-measures is a
- * claim, not a property.
- *
- * ONE FLOOR WOULD NOT DO. A single value low enough for the skip mode would let
- * the admin block collapse from sixteen assertions to nothing in the run mode
- * and still clear the bar, which is the failure this floor exists to catch.
- *
- * A gate that drives a browser has more ways to examine nothing than most: a
- * page that 404s, a selector that stopped matching after a class rename, and a
- * server that came up but served an error page all produce assertions that
- * never run rather than assertions that fail.
+ * Executed-count floor, one per mode, measured by running the gate, never summed. A browser gate
+ * has many ways to examine nothing: a 404, a stale selector, an error page.
  */
 /*
- * **BOTH FLOORS ARE NOW MEASURED THROUGH THIS GATE'S OWN PIPELINE, by RUNNING
- * it. 15 with the admin cases skipped, 43 with them running.** Never summed.
- * Floored at 13 and 41, slack of two either way.
- *
- * The run-mode figure was DERIVED until 2026-08-22 and said so, because the
- * admin cases need a session and no session had ever been present. It was
- * 29 + 12 counted from the source, and the count that replaced it is 43, so the
- * derivation happened to be right and the floor does not move. **That is the
- * least interesting possible outcome and it is still worth the run**: a summed
- * floor that agrees with the measurement is indistinguishable, before the
- * measurement, from one that does not. The previous figure in this file was
- * wrong by one for years, and the comment above says why nothing noticed.
- *
- * The cross-check that makes 43 credible rather than merely observed: the
- * recorded pre-overflow measurement was 31, twelve assertions were added, and
- * the run reports 43.
- *
- * RE-MEASURED 2026-08-24 by running it: **45** with the admin cases, after the
- * two admin-stylesheet assertions landed beside the overflow loop. The same
- * cross-check holds, 43 plus two. The floor stays at 41, which is about nine
- * percent under and inside the margin this repo uses; it is not raised on every
- * pair of assertions, only when the gap stops meaning anything.
- *
- * ## RE-MEASURED AGAIN 2026-08-24 WITH THE FOUR MEDIA INTERACTIONS: **59**
- *
- * Run through this gate's own pipeline, never summed. Floored at 54, about
- * eight percent under. 45 to 59 is fourteen assertions and the gap at 41 had
- * stopped meaning anything, which is the condition the paragraph above names
- * for raising it.
- *
- * **59 IS THE FLOOR OF THE RANGE, NOT THE MIDDLE OF IT, and that is why the
- * floor is not higher.** The empty-trash ladder is gated on the deployment
- * actually having something in its trash, so it contributes 0 assertions on a
- * clean bin and 5 on a dirty one. The measured 59 is the 0 case. A floor set
- * against a run that happened to catch a full trash would go red on the next
- * clean one and report a collapsed block where nothing had collapsed.
- *
- * The cross-check that makes 59 credible rather than merely observed: 45 was
- * the last measurement, the media block adds three list-header assertions, four
- * inspector, six bulk-bar and one skip, and 45 + 14 is 59.
- *
- * ## RE-MEASURED 2026-08-26 WITH THE PUBLIC ENHANCEMENT CASES: **71**
- *
- * Run through this gate's own pipeline after the public plane stopped
- * hydrating. The unhydration block (5b) adds twelve assertions in both modes:
- * one listing scope, one code-copy, one progress bar, one theme flip, one
- * hint, one palette open, one palette results, one Ask affordance, three
- * script-set pages, one console-error sweep. 59 + 12 is 71 in run mode, and
- * the skip mode moves from 15 to 27 by the same twelve. Floors 65 and 25,
- * about eight percent under, raised because the old gaps stopped meaning
- * anything. The code-copy case can skip on a corpus with no code post, which
- * is why the slack is not smaller.
- *
- * ## RE-MEASURED 2026-08-26 WITH THE TOPBAR FOLD CASES: **78** in run mode
- *
- * Run through this gate's own pipeline against the deployment that carries
- * them. The cross-check: 71 was the last measurement, the fold work adds two
- * overflow widths across two admin paths, which is four, plus three topbar
- * action assertions, and 71 + 7 is 78. Floored at 72, about eight percent
- * under.
- *
- * SKIP MODE IS UNCHANGED at 27, floor 25, because every assertion added here
- * is inside the admin block that skip mode does not reach. A floor that moved
- * in both modes on an admin-only change would be wrong in the mode that never
- * saw it.
- *
- * **THE RUN-MODE FLOOR WAS NOT MOVED IN THE COMMIT THAT ADDED THE SEVEN**, and
- * that is the second time in one day the same convention was missed here and in
- * check-tests.mjs. Both were caught by re-measuring rather than by anything
- * automatic. A floor is the one value in a gate that nothing else can check.
- *
- * ## RE-MEASURED 2026-08-26 WITH THE HOME HEALTH-TILE CASE: **84 to 83**
- *
- * Run through this gate's own pipeline, same two skips as the 78 measurement
- * (no body image in the corpus, empty trash on the deployment). The case adds
- * six assertions: the endpoint answered, the tile is present, its age parses,
- * its age is inside one poll interval, the age got NEWER across the call, and
- * the value is a ratio. 78 + 6 is 84, measured.
- *
- * **IT IS A RANGE, AND 83 IS THE FLOOR OF IT**, on exactly the reasoning the
- * empty-trash entry above records. The differential is skipped when the first
- * read finds no verdict at all, which is what a genuinely empty KV gives on a
- * first-ever run, so that run scores 83. A floor set against the 84 would go
- * red on the next fresh state and report a collapsed block where nothing had
- * collapsed. Floored at 76, about eight percent under 83.
- *
- * **THE CROSS-CHECK, because the first run of this case was RED and the
- * arithmetic is what explains both numbers.** That run reported 82 checks and
- * 1 failure: the case navigated to `/` and did not navigate back, so the
- * column comparisons below it measured the HOME document, found no
- * `.blog-search` and no `.page-head`, and their guarded assertion never ran.
- * 82 plus that one guarded assertion is 83. A count that moved by four when
- * five assertions were added was the signal, not the failure line.
- *
- * **BOTH MODES MOVE THIS TIME**, which is the opposite of the topbar entry
- * above and for the stated reason: this case is in the PUBLIC block, which
- * skip mode reaches in full. Skip mode is 27 + 6 = 33, or 32 when the
- * differential skips; floor 25 to 29. Derived rather than run, on the same
- * basis the 15-to-27 step above was derived: the public block executes
- * identically in both modes and nothing in this case touches a credential.
- *
- * ## RE-MEASURED 2026-08-26 WITH THE BYTE-IDENTITY PRECONDITION: **109 to 108**
- *
- * Run through this gate's own pipeline, same two skips. The case adds one list
- * binding plus three assertions on each of the eight public HTML routes that
- * declare the shared cache headers: a credentialed reader gets identical
- * bytes, the theme changes the bytes at all, and the theme changes ONLY the
- * enumerated diff. 84 + 25 is 109, measured, and 108 when the health
- * differential skips on an empty KV.
- *
- * Both modes again, and for the same reason: the case is in the public block.
- * Skip mode is 33 + 25 = 58, or 57 with the same skip. Floors 76 to 99 and 29
- * to 52, about eight percent under the low end of each range.
- *
- * ## RE-MEASURED 2026-08-26 WITH THE THEMED CACHE CASE: **112 to 111**
- *
- * Three assertions, on one key reused across four requests rather than the
- * cache-busted fetches the byte comparisons use: the entry is stored and
- * served on the second read, a cookied reader never receives a public
- * cache-control on either a miss or a hit, and a light reader is not handed
- * the dark document. 109 + 3 is 112, measured, and 111 when the health
- * differential skips.
- *
- * Both modes, same reason again. Skip mode is 61, or 60 with that skip. Floors
- * 99 to 102 and 52 to 55, about eight percent under the low end of each range.
- *
- * ## RE-MEASURED 2026-08-27 WITH THE NEGOTIATED-REPRESENTATION CASE: **118 to 117**
- *
- * Six assertions, three on each of the two routes that serve a second
- * representation at one URL: the HTML entry is warm before the negotiated read
- * (the precondition, which is the assertion that keeps the other two from
- * being vacuous), the warm entry does not answer the negotiated request, and
- * the negotiated response is not itself served from the cache. 112 + 6 is 118,
- * measured, and 117 when the health differential skips.
- *
- * **THE COUNT IS ALSO THE EVIDENCE THAT THE CASE RAN.** The plant for it lives
- * in `workers/app.ts` rather than here, so the planted run scores the SAME 118
- * with four of them red; a case that had quietly examined nothing would have
- * scored 112 in both runs and gone green in both.
- *
- * Both modes, same reason again: the case is in the public block. Skip mode is
- * 67, or 66 with that skip. Floors 102 to 108 and 55 to 61, about eight percent
- * under the low end of each range.
- *
- * ## RE-MEASURED 2026-08-27 WITH THE LAZY PALETTE: **120 to 119**
- *
- * Two assertions, both on the resource timeline rather than the DOM, either
- * side of the "/" keystroke: the palette bundle is not fetched by a page nobody
- * searched on, and the gesture fetches it exactly once. 118 + 2 is 120,
- * measured, and 119 when the health differential skips.
- *
- * The palette-open assertion beside them changed from a fixed 250ms wait to a
- * bounded poll in the same commit, because opening now costs a network round
- * trip and a fixed wait is a race that passes on this machine and fails on a
- * slower one. It is still one assertion, so the count moves by two.
- *
- * Both modes, same reason again. Skip mode is 69, or 68 with that skip. Floors
- * 108 to 110 and 61 to 62, about eight percent under the low end of each range.
- *
- * ## RE-MEASURED 2026-08-27 WITH THE BLOG-BUNDLE SCOPE CASE: **122**
- *
- * Two more resource-timeline assertions, in opposite directions: the blog
- * reading bundle is not fetched by the listing, and it IS fetched by a post.
- * 120 + 2 is 122, measured.
- *
- * **THE RANGE GREW A SECOND GUARD and the floor is set against the low end of
- * both.** The positive assertion is inside `probedPost !== null`, which is a
- * CONTENT condition: a corpus with no posts skips it, the same way the health
- * differential skips on an empty KV. Two independent skips means the honest low
- * end is 120, not 121.
- *
- * **THE RUN-MODE FLOOR DOES NOT MOVE, and that is arithmetic rather than an
- * oversight.** Eight percent under 120 is 110.4, and the previous floor was
- * eight percent under 119, which is 109.5. Both round to 110. Recorded because
- * a floor that stays put while the count moves is exactly the shape this file
- * has twice caught as a MISSED update, and the way to tell the two apart is to
- * show the arithmetic. Skip mode is 71, low end 69, so that one moves: 62 to 63.
- *
- * ## RE-MEASURED 2026-08-27 WITH THE STYLED-DIALOG CASE: **123**
- *
- * One assertion: the palette dialog's computed border comes from the token
- * rather than from the browser default, by the time it is open. It exists
- * because the dialog's stylesheet is now fetched on the gesture beside its
- * bundle, and the open assertion next to it passes either way, since an
- * unstyled `<dialog open>` is still open. 122 + 1 is 123, measured.
- *
- * Public block, so both modes. Skip mode is 72, low end 70. Floors 110 to 111
- * and 63 to 64, about eight percent under the low end of each range.
- *
- * ## RE-MEASURED 2026-08-30 WITH THE PLAYGROUND WIRE CASES: **232 and 181**
- *
- * **THE NARRATION ABOVE HAD GONE STALE AND THE CONSTANT HAD NOT.** This chain
- * ends at 123 and the floors in code were 159 and 112, so somebody raised the
- * numbers and stopped writing down why. That is the mirror of the failure this
- * comment block keeps recording: usually the count moves and the floor does
- * not, and here the floor moved and the record did not. Both leave a number
- * nobody can check, which is the whole reason a floor gets a paragraph.
- *
- * **BOTH ENDS MEASURED BY RUNNING, INCLUDING THE BASELINE.** The pre-change
- * count was taken by putting HEAD's copy of this file on disk and running it:
- * 212, against 232 with the new block. Twenty assertions, and the delta is
- * measured rather than counted off the source, because the previous figure in
- * this file was wrong by one for years and nothing noticed.
- *
- * The run-mode floor moves from 159 to 214. It is raised rather than left,
- * because 159 against 232 is thirty percent of slack and a gap that wide stops
- * meaning anything, which is the condition the 2026-08-24 entry above names.
- *
- * **THE SKIP-MODE FIGURE IS 181 AND THE PROBE CONTRIBUTED ONE OF IT.** Skip
- * mode was reached by pointing `SMOKE_TOKEN_FILE` at a path that does not
- * exist, and the gate correctly reads a named-but-absent token file as a
- * CONFIGURATION problem rather than as no credential offered, so that run
- * scored 182 with one failing assertion the probe itself created. True skip
- * mode, where no credential is offered at all, emits a skip instead and does
- * not increment. Establish what the instrument contributes before ruling on
- * what it found: the honest figure is 181, floored at 166.
- *
- * **TWO OF THE NEW TWENTY ARE CONTENT-CONDITIONAL**, on the same footing as the
- * blog-bundle case above: the highlighter assertion runs only for a snippet
- * carrying a code fence, and the live-href assertion only for one with a
- * demoted URL. Both conditions are held by `check:features`, which reconciles
- * the snippet set in both directions, so they cannot quietly go absent.
- *
- * ## RE-MEASURED 2026-09-04 WITH THE SEEDED MENTION CASES: **246**
- *
- * **BOTH ENDS MEASURED BY RUNNING**, on the convention the previous entry set
- * and for the reason it gives. The baseline was taken by putting HEAD's copy of
- * this file on disk and running it: 240, against 246 with the new block. Six
- * assertions on the one route that now carries a seeded approved mention: the
- * section renders at all (the precondition, without which the other five and
- * the byte-identity pair beside them are all about a page with no feature on
- * it), the ordinary mention is an anchor carrying the full four-token rel, a
- * script-shaped author name is escaped, no live script element reaches the
- * document, a `javascript:` author URL renders no anchor, and the row whose
- * URLs both failed still renders its text.
- *
- * **THE DELTA WAS THE CROSS-CHECK AND IT CAUGHT A MISCOUNT.** The block was
- * expected to add five; it added six, and the sixth is the degradation
- * assertion. Counting assertions off the source is what the previous entry
- * warns against, and this is the same mistake caught the same way.
- *
- * The run-mode floor moves from 214 to 226, about eight percent under.
- *
- * **SKIP MODE IS 187, DERIVED**, on the basis this file has used since the
- * home-tile entry: these six are in the PUBLIC block, which executes
- * identically in both modes, and skip mode turns on the ADMIN credential
- * rather than on the preview. 181 + 6 = 187, floored at 172.
- *
- * **A `PUBLIC_ORIGIN` RUN SCORES SIX LOWER IN EITHER MODE**, and that is a
- * SKIP rather than a collapse: the deployed site has no approved mention and
- * nothing here may write one, so the block says so and does not increment.
- * 240 against a floor of 226 still passes, which is the slack that mode needs
- * and the reason the floor is not set nearer the measurement.
- *
- * ## RE-MEASURED 2026-09-05 WITH THE MENTIONS QUEUE: **249**
- *
- * Run through this gate's own pipeline, never summed: 241 before, 249 after,
- * and the arithmetic that makes 249 credible rather than merely observed is one
- * surface case plus one overflow case at each of the seven widths. Floored at
- * 234, which is the slack of 15 this floor has always carried.
- *
- * THE PUBLIC_ORIGIN MODE STILL CLEARS IT. That mode scores six lower for the
- * reason above, so it reads 243 against 234 and passes with nine to spare. A
- * floor set nearer the 249 would go red on a run this file already documents as
- * correct, which is the unfailable-floor class inverted.
- */
-/*
- * THE SUMMARY AND THE FLOOR RUN ONLY IF SOMETHING WAS MEASURED.
- *
- * When the subject never answered, the diagnosis above is the whole result:
- * zero assertions ran, so a summary would print `0 checks, 0 failures`, which
- * reads like a pass, and the floor would refuse with `a block was SKIPPED`,
- * which names the wrong cause. Nothing was skipped; there was nothing to talk
- * to. The exit code is already 1.
+ * Only if something was measured: an unreachable subject would print `0 checks, 0 failures`,
+ * which reads as a pass. The exit code is already 1.
  */
 if (subjectReachable) {
   /*
-   * TWO FLOORS, ONE PER MODE, AND THE ADMIN-ABSENT ONE STAYS DELETED.
-   *
-   * The admin-absent branch went on 2026-09-06 (vol 15) because nothing ever
-   * exercised it: this machine always has a credential, the gate is CI-excluded
-   * in its preview mode, and an unreachable branch is a mirror of the real one
-   * that nobody maintains. That reasoning is unchanged and that branch is gone.
-   *
-   * **THE MODE SPLIT IS DIFFERENT, because both sides are RUN.**
-   * `.github/workflows/browser.yml` runs this gate twice: once with no
-   * `PUBLIC_ORIGIN`, against a preview build of the working tree, and once with
-   * it set, against the deployed site. So this is ruling 23's per-branch floor
-   * rather than the mirror ruling 26 deleted: a single value would be judged
-   * against whichever mode ran last, silently.
-   *
-   * The gap between them is what the deployed mode CANNOT write: six mention
-   * assertions (nothing may seed an approved mention on production) and twelve
-   * math assertions (the fixture is a draft and nothing here may publish it).
-   * Both blocks SKIP with their reason rather than passing quietly.
-   *
-   * ## RE-MEASURED 2026-09-06 WITH THE MATH CASES, BY RUNNING BOTH MODES
-   *
-   * Never summed, and the arithmetic is shown only to make the two numbers
-   * credible against each other: **261** driving the preview, **243** against
-   * `https://dustinedwards.dustin-edwards.workers.dev`, a difference of 18 which
-   * is the 6 + 12 above. Before the math cases the figures were 249 and 243.
-   *
-   * Floored at 248 and 230, which is `check:floors`' own tolerance,
-   * `max(3, ceil(count * 0.05))`, applied by hand: 13 under each. By hand
-   * because this gate is tiered `network`, so `check:floors` reads the offline
-   * tier and never sees these lines. Nothing re-measures them automatically and
-   * the trigger is touching this file.
+   * Two floors, one per mode, because CI runs both: the preview and the deployed site. Each floor sits
+   * `max(3, ceil(count * 0.05))` under a run; check:floors never sees this network-tier gate,
+   * so re-measure when touching this file.
    */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
   console.log(
@@ -6393,13 +3916,7 @@ if (subjectReachable) {
       (skipped.length ? `, ${skipped.length} skipped` : "") +
       "\n",
   );
-  /*
-   * The summary says WHAT WAS NOT COVERED, not just that something was skipped.
-   *
-   * A reader who sees "15 checks, 0 failures" and a SKIP line four screens up has
-   * been told the admin plane was not looked at, in a way nobody reads. This is
-   * the last line before the exit code, which is the one line that gets read.
-   */
+  /* Name what was not covered on the last line, the one that gets read. */
   if (!adminCasesRan) {
     console.log(
       "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
@@ -6413,21 +3930,8 @@ if (subjectReachable) {
   }
 
   /*
-   * WHAT STILL NEEDS A HUMAN, PRINTED EVERY RUN, INCLUDING GREEN ONES.
-   *
-   * The smoke credential moved a list of manual clicks into assertions. It did not
-   * empty the list, and a gate that reports only what it covered lets the
-   * remainder quietly become "everything is covered". Each line names the reason,
-   * because the reasons are different in kind and only one of them is a limit of
-   * this harness:
-   *
-   *   BY CONSTRUCTION  the credential is read-only, so any surface that can only
-   *                    be reached THROUGH a write is unreachable to it. Widening
-   *                    the credential to reach them would give the machine actor
-   *                    the authority the whole design exists to withhold, so
-   *                    these stay human on purpose and are not a backlog item.
-   *   BY THE HARNESS   Puppeteer cannot express it. These ARE backlog items.
-   *   BY JUDGEMENT     it needs an eye rather than a number.
+   * What still needs a human, printed every run. Widening the read-only credential to reach the
+   * by-construction items would grant the authority the design withholds; they stay human.
    */
   console.log(
     "  REMAINING HUMAN, and why:\n" +
@@ -6448,25 +3952,10 @@ if (subjectReachable) {
       "        attribute; a page that lays out correctly and is unreadable passes.\n",
   );
   /*
-   * THIS FLOOR COULD NOT FAIL THE GATE UNTIL 2026-09-05, and the defect is the
-   * reason the floor sweep exists.
-   *
-   * The breach set `process.exitCode = 1` and the line immediately below it then
-   * assigned `process.exitCode = failures > 0 ? 1 : 0` UNCONDITIONALLY, so a
-   * breach with no other failure was overwritten with 0 before the process
-   * exited. The gate printed its REFUSED line and exited green. That is hard
-   * rule 10's unfailable-condition class, in the gate with the largest and most
-   * skippable case set here.
-   *
-   * The repair is to fold the breach into `failures`, which is the number the
-   * exit code is actually computed from, rather than to reorder two assignments
-   * and leave the next editor the same trap.
+   * The breach is folded into `failures`, which the exit code is computed from; setting
+   * `process.exitCode` alone is overwritten by the assignment below.
    */
-  /*
-   * THE FLOOR NAME CARRIES THE MODE, per ruling 23's amendment. One name for
-   * two branches would file both readings under one label, and whichever ran
-   * last would be judged against a floor measured from the other.
-   */
+  /* The floor name carries the mode, so each reading is judged against its own floor. */
   const floorBreach = assertFloor(
     "check:browser",
     DRIVES_PREVIEW ? "checks:preview" : "checks:deployed",
