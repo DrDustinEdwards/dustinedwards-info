@@ -69,7 +69,7 @@ export const REWRITES = {
   "app/styles/motion-print.css#1":
     "The print rule colour, declared here only: a mid grey that reads on paper. It is not a theme token and must not become one, because check:contrast requires every theme token to sit in a measured screen pair and this colour only exists on paper. Scoping it to print keeps it out of screen rules.",
   "app/styles/motion-print.css#4":
-    "The public plane opts out of cross-document view transitions. Measured on production, `/` to `/blog`, three runs per cell, both themes: with the transition on, 12 to 14 intermediate frames matched neither page, lasting 214-220 ms dark and 245-259 ms light, 33 to 66 times the noise floor; with it off, one frame after the click. That is Chrome's default crossfade showing both pages stacked on every header click.\n" +
+    "The public plane opts out of cross-document view transitions. Measured on production, `/` to `/blog`, three runs per cell, both themes: with the transition on, 12 to 14 intermediate frames matched neither page, lasting 214-220 ms dark and 245-259 ms light, 33 to 66 times the noise floor; under reduced motion, two frames after the click with no intermediate state; with it off, one frame after the click with no intermediate state. That is Chrome's default crossfade showing both pages stacked on every header click.\n" +
     "There is no reduced-motion block: with the transition off for everyone it has nothing to do. The old one skipped the fade but left the transition on, so readers with reduced motion were the only ones not seeing the blink.\n" +
     "Chrome's paint holding replaces it: the old page stays until the new one's first contentful paint. check:browser asserts that `pagereveal` fires with a null `viewTransition`.",
 
@@ -84,7 +84,7 @@ export const REWRITES = {
   // ---------------- shell.css ----------------
   "app/styles/shell.css#0":
     "The track grid and the footer. Ruling 65, Part A steps 3 and 6b, build 2.\n" +
-    "The header rules left this sheet on 2026-09-14; public-chrome.css and chrome-nav.css own the header. The bar is not fixed, so section 4's padding and anchor offsets went too, and `--bar-h` was deleted on 2026-09-14.\n" +
+    "The header rules left this sheet on 2026-09-14; public-chrome.css and chrome-nav.css own the header. The bar is not fixed, so section 4's padding and anchor offsets went too, and `--bar-h` was deleted on 2026-09-14. Do not restore that padding \"just in case\": against a static header it is a blank band at the top of every page.\n" +
     "Imported last in root.tsx because that list is the cascade and must not be sorted; it no longer needs to outrank the two chrome sheets.",
   "app/styles/shell.css#1":
     "1 · The track grid.\n" +
@@ -215,7 +215,7 @@ export const REWRITES = {
   "app/styles/reset.css#0":
     "The base reset, vendored from Tailwind's preflight on 2026-08-27 when Tailwind left the build.\n" +
     "It is not leftover nobody bothered to delete: this site has no reset of its own and never has, and removing it moved 5,700 computed values across nine pages, including every element's font. Of Tailwind's 8,356 bytes (8 KB of a 45 KB stylesheet), 3,048 were utilities of which the HTML used only `.sr-only`, and about 1,150 were a polyfill for utilities the site never asked for; both are gone.\n" +
-    "Changes from the original, exhaustively: (1) `--theme(--default-font-family, ...)` and `--theme(--default-mono-font-family, ...)` become `var(--font-sans)` and `var(--font-mono)`; (2) the `font-feature-settings` and `font-variation-settings` lines that resolved to `normal` are dropped; (3) the `@layer base` wrapper is gone. Nothing else is edited, because a reset is a list of known browser bugs.\n" +
+    "Changes from the original, exhaustively: (1) `--theme(--default-font-family, ...)` and `--theme(--default-mono-font-family, ...)` become `var(--font-sans)` and `var(--font-mono)`; (2) the `font-feature-settings` and `font-variation-settings` lines that resolved to `normal` are dropped; (3) the `@layer base` wrapper is gone, and must stay gone: nothing else here is layered, so the wrapper would only change which rules win. Nothing else is edited, because a reset is a list of known browser bugs.\n" +
     "Imported at the top of app.css, where `@import \"tailwindcss\"` sat, so the site's own rules still win over it by source position.",
   "app/styles/reset.css#2":
     "Hidden elements stay hidden. This is load-bearing here, not a formality: the search shortcut hint ships with `hidden` and also carries `.sr-only`, which sets its own `position`, `width` and `clip-path`. The browser's own `[hidden] { display: none }` loses to a class rule; this one does not lose, so a still-hidden hint is out of the accessibility tree, not just off screen.",
@@ -290,7 +290,7 @@ export const REWRITES = {
     "Subsetting was refused on effort, not principle: it needs a font pipeline, a dependency and a gate. If the corpus comes to lean on italics, the trade changes.",
   "app/app.css#3":
     "The metric-adjusted fallback, so the swap does not move the page. Measured cold on the audit profile: CLS 0.0065 on home, 0.0128 on a post, 0.0737 on /blog.\n" +
-    "Inter has an optical size axis, so its advance width per em is not a constant; Arial's is. Measured 2026-08-26 in a real browser against the deployed font, body-text sample:\n" +
+    "Prose computes `font-optical-sizing: auto`, so Inter's `opsz` axis moves with the font size (wider and more open when small, narrower when large) and its advance width per em is not a constant, which every metric-override recipe assumes it is. Arial has no such axis. Measured 2026-08-26 in a real browser against the deployed font, body-text sample:\n" +
     "  size    Inter/em   Arial/em   size-adjust\n" +
     "    16     82.3313    78.8799     104.38%\n" +
     "    17     81.9303    78.8799     103.87%\n" +
@@ -362,8 +362,8 @@ export const REWRITES = {
     "The Paper, Glass, Light type levels ----------------------------------------\n" +
     "Ruling 65, Part A step 2: eight levels, each five properties rather than one composite value.\n" +
     "No `font` shorthand: `font-variation-settings` cannot ride in it, so `font: var(--t-h1)` would silently lose the optical size and variable weight and still render. There is no composite `--t-h1`, deprecated or otherwise; a consumer sets all five or it is not using the level. The repo has never carried a `--t-*` token of either shape.\n" +
-    "The weight is declared twice on purpose: `--t-*-weight` feeds `font-weight`, which selects the face, and the `wght` in `--t-*-vars` positions the axis. They are not redundant; with only the axis a level would match the 400 face and be told to draw at 620.\n" +
-    "The optical size is always explicit: `font-optical-sizing` is off at every consumer, and `opsz` moves at one breakpoint, 48rem, for the two serif levels only. Inter carries `opsz` 14 to 32 and every Inter level sits inside it, the lowest at 14; Source Serif 4 carries 8 to 60 and its levels name 32 and 48. check:fonts ties each level's request to its own `--t-*-family`, so an Inter level asking for 48 fails by name.",
+    "The weight is declared twice on purpose: `--t-*-weight` feeds `font-weight`, which selects the face, and the `wght` in `--t-*-vars` positions the axis. They are not redundant: with only the axis a level would match the 400 face and be told to draw at 620, and with only `font-weight` the browser would interpolate the axis itself. Both are set, to the same number, at every level.\n" +
+    "The optical size is always explicit: `font-optical-sizing` is off at every consumer of a level, so nothing interpolates on resize, and `opsz` moves at one breakpoint, 48rem, for the two serif levels only. Inter carries `opsz` 14 to 32 and every Inter level sits inside it, the lowest at 14; Source Serif 4 carries 8 to 60 and its levels name 32 and 48. check:fonts ties each level's request to its own `--t-*-family`, so an Inter level asking for 48 fails by name.",
   "app/app.css#28":
     "Prose and UI body at 420, not 400: on limestone Inter's 400 goes thin under greyscale antialiasing. The standfirst is this level at 1.25rem, a size alias, not a ninth level.",
   "app/app.css#29":

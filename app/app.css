@@ -67,9 +67,11 @@
 /* The metric-adjusted fallback, so the swap does not move the page. Measured
    cold on the audit profile: CLS 0.0065 on home, 0.0128 on a post, 0.0737 on
    /blog.
-   Inter has an optical size axis, so its advance width per em is not a
-   constant; Arial's is. Measured 2026-08-26 in a real browser against the
-   deployed font, body-text sample:
+   Prose computes `font-optical-sizing: auto`, so Inter's `opsz` axis moves
+   with the font size (wider and more open when small, narrower when large)
+   and its advance width per em is not a constant, which every metric-override
+   recipe assumes it is. Arial has no such axis. Measured 2026-08-26 in a real
+   browser against the deployed font, body-text sample:
      size    Inter/em   Arial/em   size-adjust
        16     82.3313    78.8799     104.38%
        17     81.9303    78.8799     103.87%
@@ -251,14 +253,17 @@
    carried a `--t-*` token of either shape.
    The weight is declared twice on purpose: `--t-*-weight` feeds
    `font-weight`, which selects the face, and the `wght` in `--t-*-vars`
-   positions the axis. They are not redundant; with only the axis a level
-   would match the 400 face and be told to draw at 620.
+   positions the axis. They are not redundant: with only the axis a level
+   would match the 400 face and be told to draw at 620, and with only
+   `font-weight` the browser would interpolate the axis itself. Both are set,
+   to the same number, at every level.
    The optical size is always explicit: `font-optical-sizing` is off at every
-   consumer, and `opsz` moves at one breakpoint, 48rem, for the two serif
-   levels only. Inter carries `opsz` 14 to 32 and every Inter level sits
-   inside it, the lowest at 14; Source Serif 4 carries 8 to 60 and its levels
-   name 32 and 48. check:fonts ties each level's request to its own
-   `--t-*-family`, so an Inter level asking for 48 fails by name. */
+   consumer of a level, so nothing interpolates on resize, and `opsz` moves at
+   one breakpoint, 48rem, for the two serif levels only. Inter carries `opsz`
+   14 to 32 and every Inter level sits inside it, the lowest at 14; Source
+   Serif 4 carries 8 to 60 and its levels name 32 and 48. check:fonts ties
+   each level's request to its own `--t-*-family`, so an Inter level asking
+   for 48 fails by name. */
 :root {
   /* Prose and UI body at 420, not 400: on limestone Inter's 400 goes thin
      under greyscale antialiasing. The standfirst is this level at 1.25rem, a

@@ -11,8 +11,9 @@
    `--theme(--default-mono-font-family, ...)` become `var(--font-sans)` and
    `var(--font-mono)`; (2) the `font-feature-settings` and
    `font-variation-settings` lines that resolved to `normal` are dropped; (3)
-   the `@layer base` wrapper is gone. Nothing else is edited, because a reset
-   is a list of known browser bugs.
+   the `@layer base` wrapper is gone, and must stay gone: nothing else here is
+   layered, so the wrapper would only change which rules win. Nothing else is
+   edited, because a reset is a list of known browser bugs.
    Imported at the top of app.css, where `@import "tailwindcss"` sat, so the
    site's own rules still win over it by source position. */
 

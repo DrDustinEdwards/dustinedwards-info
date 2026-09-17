@@ -1,7 +1,9 @@
 /* The track grid and the footer. Ruling 65, Part A steps 3 and 6b, build 2.
    The header rules left this sheet on 2026-09-14; public-chrome.css and
    chrome-nav.css own the header. The bar is not fixed, so section 4's padding
-   and anchor offsets went too, and `--bar-h` was deleted on 2026-09-14.
+   and anchor offsets went too, and `--bar-h` was deleted on 2026-09-14. Do
+   not restore that padding "just in case": against a static header it is a
+   blank band at the top of every page.
    Imported last in root.tsx because that list is the cascade and must not be
    sorted; it no longer needs to outrank the two chrome sheets. */
 
