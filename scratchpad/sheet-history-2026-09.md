@@ -58,7 +58,7 @@ admin bundle and cascade whys kept; split date and bundle sizes are history.
 
 ### app/app.css:3 (WHY, shortened)
 
-CSP and cache whys kept; self-hosting history and weight census moved.
+CSP and cache whys kept; self-hosting history and weight census moved; restored after Grok review 89352d6.
 
 ```css
 /* Inter, self-hosted since 2026-08-21: two files from this origin instead of
@@ -121,7 +121,7 @@ ruling date and the declined subsetting; its why is carried by the two blocks ab
 
 ### app/app.css:67 (NUMBER, shortened)
 
-metric table is a dated measurement; the declarations own the shipped values.
+metric table is a dated measurement; the declarations own the shipped values; restored after Grok review 89352d6.
 
 ```css
 /* The metric-adjusted fallback, so the swap does not move the page. Measured
@@ -289,7 +289,7 @@ one owner and gate reason kept; 'agreed by chance' is history.
 
 ### app/app.css:246 (WHY, shortened)
 
-the shorthand ban and the weight and optical-size whys kept (Grok's restored points).
+the shorthand ban and the weight and optical-size whys kept (Grok's restored points); restored after Grok review 89352d6.
 
 ```css
 /* The Paper, Glass, Light type levels ----------------------------------------
@@ -3564,7 +3564,7 @@ trimmed.
 
 ### app/styles/admin-shell.css:623 (WHY, shortened)
 
-fold reason and headroom rule kept; floor measurements moved.
+fold reason and headroom rule kept; floor measurements moved; restored after Grok review 89352d6.
 
 ```css
 /* ------------------------------------------------------------------ THE FOLD
@@ -4231,7 +4231,7 @@ trimmed.
 
 ### app/styles/motion-print.css:90 (NUMBER, shortened)
 
-frame counts and durations are a dated measurement; check:browser asserts the null viewTransition.
+frame counts and durations are a dated measurement; check:browser asserts the null viewTransition; restored after Grok review 89352d6.
 
 ```css
 /* The public plane opts out of cross-document view transitions. Measured on
@@ -4702,7 +4702,7 @@ the wrap rule on both elements kept; the overflow measurement moved.
 
 ### app/styles/public-chrome.css:40 (WHY, shortened)
 
-the identity exemption, specificity and the do-not-simplify prohibition kept verbatim; ruling date and ratios moved.
+the identity exemption, specificity and the do-not-simplify prohibition kept verbatim; ruling date and ratios moved; restored after Grok review 89352d6.
 
 ```css
 /* Rule 2 identity exemption, extended by Dustin's ruling 2026-07-30: an

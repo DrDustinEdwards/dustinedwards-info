@@ -86,8 +86,8 @@
 
 /* The public plane opts out of cross-document view transitions: Chrome's default crossfade showed both pages
    stacked on every header click. With it off, paint holding keeps the old page until the new one paints.
-   The reduced-motion arm was two frames after the click with no intermediate state, so none is needed.
-   check:browser asserts pagereveal fires with a null viewTransition. */
+   Never bring back a reduced-motion block that skips the fade but leaves the transition on: it protects only
+   reduced-motion readers and leaves everyone else with the blink. check:browser asserts a null viewTransition. */
 @view-transition {
   navigation: none;
 }

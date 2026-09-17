@@ -26,9 +26,9 @@
 }
 
 /* Identity exemption: the wordmark never takes :visited. .site-header-brand is (0,1,0) and a:visited
-   (0,1,1), so without these it turns claret. It takes --on-chrome; hover steps to --on-chrome-muted.
-   The :visited and :hover selectors are (0,2,0) and outrank the base pseudo-class rules deliberately.
-   Do not "simplify" them away. No colour pseudo-class reaches the mark. */
+   (0,1,1), so without these it turns claret. It takes --on-chrome; hover steps down to --on-chrome-muted,
+   because rest is already the lightest measured value on chrome. The :visited and :hover selectors are
+   (0,2,0) and outrank the base pseudo-class rules deliberately. Do not "simplify" them away. */
 .site-header-brand,
 .site-header-brand:visited {
   display: inline-flex;

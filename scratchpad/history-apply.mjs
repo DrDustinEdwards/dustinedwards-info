@@ -128,17 +128,9 @@ for (const sheet of sheets) {
       throw new Error(`block ${b.id}: offset drifted`);
     }
     if (b.repl === null) {
-      // Remove the whole line when the comment is alone on it.
-      const lineStart = css.lastIndexOf("\n", b.at - 1) + 1;
-      let lineEnd = css.indexOf("\n", b.at + original.text.length);
-      if (lineEnd === -1) lineEnd = css.length;
-      const before = css.slice(lineStart, b.at);
-      const after = css.slice(b.at + original.text.length, lineEnd);
-      if (before.trim() === "" && after.trim() === "") {
-        css = css.slice(0, lineStart) + css.slice(Math.min(lineEnd + 1, css.length));
-      } else {
-        css = css.slice(0, b.at) + css.slice(b.at + original.text.length);
-      }
+      // Remove the comment and nothing else. Its line stays, empty, so the
+      // sheet with comments stripped is byte-identical to the original's.
+      css = css.slice(0, b.at) + css.slice(b.at + original.text.length);
     } else {
       css = css.slice(0, b.at) + render(b, css) + css.slice(b.at + original.text.length);
     }

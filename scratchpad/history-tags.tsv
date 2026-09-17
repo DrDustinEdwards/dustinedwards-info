@@ -1,9 +1,9 @@
 sheet	line	bytes	tag	reason
 app/admin.css	1	2094	WHY	admin bundle and cascade whys kept; split date and bundle sizes are history
-app/app.css	3	1417	WHY	CSP and cache whys kept; self-hosting history and weight census moved
+app/app.css	3	1417	WHY	CSP and cache whys kept; self-hosting history and weight census moved; restored after Grok review 89352d6
 app/app.css	23	985	NUMBER	CLS figures are a dated measurement with no gate; the why stays
 app/app.css	49	465	HISTORY	ruling date and the declined subsetting; its why is carried by the two blocks above
-app/app.css	67	1463	NUMBER	metric table is a dated measurement; the declarations own the shipped values
+app/app.css	67	1463	NUMBER	metric table is a dated measurement; the declarations own the shipped values; restored after Grok review 89352d6
 app/app.css	102	843	WHY	serif scope, namespacing and swap whys kept
 app/app.css	126	1828	NUMBER	metric table and CLS arms are a dated measurement; the Georgia-bold trap stays
 app/app.css	163	434	WHY	the at-rule trap kept; Tailwind history moved
@@ -27,7 +27,7 @@ app/app.css	223	233	WHY	at most three lines; kept as written
 app/app.css	228	170	WHY	at most three lines; kept as written
 app/app.css	232	287	WHY	trimmed to three lines
 app/app.css	239	246	WHY	one owner and gate reason kept; 'agreed by chance' is history
-app/app.css	246	1418	WHY	the shorthand ban and the weight and optical-size whys kept (Grok's restored points)
+app/app.css	246	1418	WHY	the shorthand ban and the weight and optical-size whys kept (Grok's restored points); restored after Grok review 89352d6
 app/app.css	268	189	WHY	at most three lines; kept as written
 app/app.css	283	140	WHY	at most three lines; kept as written
 app/app.css	291	207	WHY	at most three lines; kept as written
@@ -498,7 +498,7 @@ app/styles/admin-shell.css	555	744	WHY	grid-level min-width rule kept; the deplo
 app/styles/admin-shell.css	581	1164	WHY	the yield order kept; overflow measurements moved
 app/styles/admin-shell.css	602	201	WHY	at most three lines; kept as written
 app/styles/admin-shell.css	612	380	WHY	trimmed
-app/styles/admin-shell.css	623	1610	WHY	fold reason and headroom rule kept; floor measurements moved
+app/styles/admin-shell.css	623	1610	WHY	fold reason and headroom rule kept; floor measurements moved; restored after Grok review 89352d6
 app/styles/admin-shell.css	663	752	WHY	trimmed
 app/styles/admin-shell.css	678	188	WHY	at most three lines; kept as written
 app/styles/admin-shell.css	687	232	WHY	at most three lines; kept as written
@@ -586,7 +586,7 @@ app/styles/motion-print.css	1	81	WHY	at most three lines; kept as written
 app/styles/motion-print.css	21	320	WHY	trimmed
 app/styles/motion-print.css	60	206	WHY	at most three lines; kept as written
 app/styles/motion-print.css	71	72	WHY	at most three lines; kept as written
-app/styles/motion-print.css	90	959	NUMBER	frame counts and durations are a dated measurement; check:browser asserts the null viewTransition
+app/styles/motion-print.css	90	959	NUMBER	frame counts and durations are a dated measurement; check:browser asserts the null viewTransition; restored after Grok review 89352d6
 app/styles/page-shell.css	1	63	WHY	stale line pointer (app.css:1885 does not exist) replaced by the rule itself
 app/styles/page-shell.css	12	167	WHY	at most three lines; kept as written
 app/styles/page-shell.css	36	75	WHY	at most three lines; kept as written
@@ -665,7 +665,7 @@ app/styles/public-chrome.css	3	428	WHY	seam and scope rules kept; the provisiona
 app/styles/public-chrome.css	10	524	WHY	the wrap rule on both elements kept; the overflow measurement moved
 app/styles/public-chrome.css	26	121	WHY	at most three lines; kept as written
 app/styles/public-chrome.css	33	220	WHY	at most three lines; kept as written
-app/styles/public-chrome.css	40	821	WHY	the identity exemption, specificity and the do-not-simplify prohibition kept verbatim; ruling date and ratios moved
+app/styles/public-chrome.css	40	821	WHY	the identity exemption, specificity and the do-not-simplify prohibition kept verbatim; ruling date and ratios moved; restored after Grok review 89352d6
 app/styles/public-chrome.css	66	143	WHY	at most three lines; kept as written
 app/styles/public-chrome.css	72	153	WHY	at most three lines; kept as written
 app/styles/publications.css	1	742	WHY	the separate-sheet reason kept; the restore provenance moved
