@@ -59,7 +59,7 @@ visited. Do not restate that on every anchor.
 `page-head` and `page-title` for the heading block. Long-form copy goes in
 `prose`. Listings are `<ul class="post-list">`. Secondary text is `muted`. Tag
 rows are `tag-chips` holding `tag-chip`. Chrome is `site-header` and
-`site-footer`; the login card is `gate-card` with `gate-mark`.
+`site-shell-footer`; the login card is `gate-card` with `gate-mark`.
 
 ## Where the truth lives
 
