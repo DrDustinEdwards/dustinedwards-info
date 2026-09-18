@@ -59,7 +59,7 @@ async function tally(files, decisionsDir, beforeDir, only) {
 const w1 = await tally(WAVE1, "code-decisions", "code-history-before", null);
 console.log(`wave 1   ${w1.blocks} blocks, ${w1.before} -> ${w1.after}  (${Math.round(w1.after / w1.blocks)} bytes per block, ${((100 * w1.after) / w1.before).toFixed(1)}%)`);
 
-for (const n of ["1", "2", "3", "4"]) {
+for (const n of Object.keys(CHUNKS).filter((k) => existsSync(join(HERE, "code-decisions-wave2", `${k}.mjs`)))) {
   const files = [...new Set((Array.isArray(CHUNKS[n][0]) ? CHUNKS[n] : [CHUNKS[n]]).map((s) => s[0]))];
   const c = await tally(files, "code-decisions-wave2", "code-history-before-wave2", n);
   console.log(`chunk ${n}  ${c.blocks} blocks, ${c.before} -> ${c.after}  (${Math.round(c.after / c.blocks)} bytes per block, ${((100 * c.after) / c.before).toFixed(1)}%)`);
