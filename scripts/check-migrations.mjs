@@ -6,7 +6,8 @@
  *
  * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** It does not prove the
  * manifest was honest when written, and it does not know what the LIVE database applied, which is
- * `check:invariants --remote`'s half.
+ * `check:invariants --remote`'s half. It is verified by PLANTS ONLY, no migration here having ever
+ * been edited after being applied, so replay a real one against it before trusting the plants.
  */
 
 import { createHash } from "node:crypto";

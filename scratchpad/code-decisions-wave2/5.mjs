@@ -76,7 +76,8 @@ grows UPWARD into the gap, so a long title eats air rather than the meta line.
   "scripts/build-og.mjs#10": [
     "NUMBER",
     "what changing the padding invalidates; the two figures are the constants below",
-    `THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against.`,
+    `THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against, and
+the vertical is the smallest margin at which the mark still reads as placed rather than cropped.`,
   ],
   "scripts/build-og.mjs#11": [
     "WHY",

@@ -4,7 +4,9 @@
  *
  * BOUNDARY: it is a JAVASCRIPT TOKENIZER, so it reads an apostrophe in SVG text as opening a
  * string and a slash after an operator as opening a regex, and the CSS readers, where `//` is
- * never a comment, are not this job. A boundary note is a claim that ages, per hard rule 7, and
+ * never a comment, are not this job. Do not fold `template-refs.mjs`, `check-urls.mjs` or the CSS
+ * readers onto this one without a measurement: they are different jobs, and the second needs
+ * `//host` inside a string to survive. A boundary note is a claim that ages, per hard rule 7, and
  * this one already aged once, in the commit that turned a regex into a tokenizer.
  *
  * @see test/strip-comments.test.mjs

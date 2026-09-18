@@ -16,7 +16,9 @@ export default {
   npm run check:policy
 
 BOUNDARY: the decision function in isolation, and pure. It proves what the policy DECIDES,
-never that a caller consults it before writing.`,
+never that a caller consults it before writing. Every rule here comes with its paired negative,
+and so does every rule added later: a policy that only refuses has not been shown to permit
+anything.`,
   ],
   "scripts/check-policy.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/check-policy.mjs#10": ["CONTRACT", "section marker, rule padding cut", `readState`],

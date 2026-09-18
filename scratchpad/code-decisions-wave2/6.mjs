@@ -16,7 +16,9 @@ export default {
   npm run check:restore
 
 BOUNDARY: it takes its OWN export, so the claim is that the path round-trips rather than that a
-kept artifact is restorable, and it never touches production, enforced by one guarded writer.`,
+kept artifact is restorable, and it never touches production, enforced by one guarded writer.
+D1 Time Travel is the other restore path and cannot be drilled here at all, because it restores
+a database IN PLACE and no form of it targets a different one.`,
   ],
   "scripts/restore-drill.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/restore-drill.mjs#2": [
