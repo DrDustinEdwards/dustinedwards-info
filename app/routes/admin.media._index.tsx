@@ -697,6 +697,24 @@ export default function AdminMedia({
   initialSelection?: string[];
   initialConfirmingTrash?: boolean;
 }) {
+  /*
+   * EVERY HOOK FIRST, then the early return. The JSON branches below return null, and a return
+   * above a hook makes the hook conditional: React reads hooks by call order, so a render that
+   * takes the short branch and one that does not disagree about which state belongs to which
+   * call. None of these reads loaderData, so hoisting them costs nothing.
+   */
+  const [displayParams] = useSearchParams();
+  const navigation = useNavigation();
+  const here = useLocation();
+  /* The only client state: transient, so never in the URL. */
+  const [selected, setSelected] = useState<string[]>(initialSelection);
+  /** Whether the bulk-trash confirmation is open. Transient by nature. */
+  const [confirmingTrash, setConfirmingTrash] = useState(initialConfirmingTrash);
+  /* Shift-range anchor. A ref, so it never renders and cannot differ between server and client. */
+  const anchor = useRef<string | null>(null);
+  /** The real file input, so the drop enhancement fills it rather than a copy. */
+  const fileRef = useRef<HTMLInputElement>(null);
+
   // Both JSON branches render nothing: they are data for a fetch, not a page.
   if (loaderData.picker || loaderData.palette) return null;
   const {
@@ -719,12 +737,9 @@ export default function AdminMedia({
   } = loaderData;
 
   /* From the URL: `shouldRevalidate` skips the loader for these, so its copy is stale. */
-  const [displayParams] = useSearchParams();
   const view = { ...loadedView, ...readDisplayAxes(displayParams) };
 
   /* From `useNavigation`, so a slow request does not invite a second press. Display changes excluded. */
-  const navigation = useNavigation();
-  const here = useLocation();
   const pending =
     navigation.state === "loading" &&
     navigation.location != null &&
@@ -737,10 +752,6 @@ export default function AdminMedia({
     );
   const activeLens = LENS_CHIPS.find((l) => l.id === view.lens);
 
-  /* The only client state: transient, so never in the URL. */
-  const [selected, setSelected] = useState<string[]>(initialSelection);
-  /** Whether the bulk-trash confirmation is open. Transient by nature. */
-  const [confirmingTrash, setConfirmingTrash] = useState(initialConfirmingTrash);
   const visible = objects.map((o) => o.key);
   /** Selection survives a filter change only for rows still on screen. */
   const chosen = selected.filter((key) => visible.includes(key));
@@ -748,10 +759,6 @@ export default function AdminMedia({
   const toggle = (key: string) =>
     setSelected((was) => (was.includes(key) ? was.filter((k) => k !== key) : [...was, key]));
 
-  /* Shift-range anchor. A ref, so it never renders and cannot differ between server and client. */
-  const anchor = useRef<string | null>(null);
-  /** The real file input, so the drop enhancement fills it rather than a copy. */
-  const fileRef = useRef<HTMLInputElement>(null);
   const selectRange = (key: string, shift: boolean) => {
     const from = anchor.current;
     anchor.current = key;
