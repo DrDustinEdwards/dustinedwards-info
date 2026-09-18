@@ -1131,7 +1131,13 @@ try {
       return { at: i, a: a.slice(Math.max(0, i - 60), i + 80), b: b.slice(Math.max(0, i - 60), i + 80) };
     };
 
-    /* What the theme may change; after masking, the documents must be identical. */
+    /*
+     * What the theme may change; after masking, the documents must be identical.
+     *
+     * THE SET ONLY EVER SHRINKS. A wider mask hides a control that has started varying its
+     * markup by theme and the comparison below still passes, because masking more makes two
+     * documents more alike. Shrinking it is the strict direction.
+     */
     const maskTheme = (/** @type {string} */ html) =>
       html
         .replace(/<html[^>]*>/, "<html>")
@@ -1435,7 +1441,13 @@ try {
     const probeClient = await probe.createCDPSession();
     await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
 
-    /* The header nav is hidden below 64rem, and a hidden link clicks at (0,0). */
+    /*
+     * The nav is a wrapping row with no breakpoint of its own, so a destination is laid out
+     * at every width. MEASURED 2026-09-17 on the deployed site: `.site-header-nav` computes
+     * `display: flex` at 1280 and its links have boxes. Build 2 shipped a nav that computed
+     * `display: none` at every width; it was reverted on 2026-09-14, and the overflow
+     * fallback below is that build's residue, rendered by nothing in `app/` today.
+     */
     await probe.setViewport({ width: 1280, height: 900 });
 
     await probe.goto(`${BASE}/`, { waitUntil: "networkidle0" });
@@ -1505,6 +1517,12 @@ try {
     let arrived = "";
     let reveal = null;
     if (clickable) {
+      /*
+       * Hovered first because a hovered click is the realistic gesture. The dwell is no
+       * longer load-bearing: it was written when a click with no dwell could activate a
+       * PENDING prerender puppeteer cannot follow, and the guard above forbids prerendering
+       * outright now. Kept because it costs nothing.
+       */
       await probe.mouse.move(target.x, target.y);
       await new Promise((r) => setTimeout(r, 350));
       await probe.mouse.click(target.x, target.y);

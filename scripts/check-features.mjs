@@ -2,10 +2,20 @@
  * Gate over the colophon's hand-written half: `npm run check:features`.
  *
  * It verifies that what each claim is about still exists, never that the prose is true.
+ *
  * The route parser does not compose nested prefixes: anchor a nested route to its declared
- * segment, never to a hardcoded path list. Every feature needs a route, gate or assertion
- * anchor; a decision anchor lives in Capsid and proves nothing offline. Fails closed on zero
- * features, zero anchors, or an unparsed routes.ts.
+ * segment, never to a hardcoded path list, which is the mirror this whole family of gates
+ * exists to prevent. The consequence to know about BEFORE it happens: the next feature that
+ * anchors to a nested PUBLIC route fails here, and the failure reads like rot in the anchors
+ * file when it is really this parser's limit.
+ *
+ * NO ROUTE PATH, GATE NAME OR SCRIPT FILENAME APPEARS IN THIS FILE AS A LITERAL. Routes are
+ * parsed out of app/routes.ts, gates are read from package.json, and assertion text is
+ * searched in the script the anchor names.
+ *
+ * Every feature needs a route, gate or assertion anchor; a decision anchor lives in Capsid and
+ * proves nothing offline. Fails closed on zero features, zero anchors, or an unparsed
+ * routes.ts.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -2113,6 +2123,14 @@ ok(
   /not part of any standard/.test(playgroundSource),
   "Lc is advisory and the page must not imply otherwise",
 );
+/*
+ * NEVER RESTORE THE BAN ON THE STRING "WCAG 3". The two assertions above say what the page
+ * MUST claim, which a real defect falsifies. A banned string says what the page may not SAY,
+ * and it made the next TRUE sentence fail the build: WCAG 3.0 is a working draft and APCA is
+ * developed in its context, so the most accurate sentence this lab could add was the one the
+ * ban refused. The failure it guarded is already impossible, because WCAG 2.2 is required
+ * above as THE target.
+ */
 ok(
   "the page states the input cap it enforces",
   /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),

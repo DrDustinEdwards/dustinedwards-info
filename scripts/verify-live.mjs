@@ -554,7 +554,9 @@ const ASK_PROBE_LIMIT = 3;
     }
   }
 
-  // Billed, so capped, and the cap is printed.
+  // Billed per answer AND metered by Ask's per-IP rate limit, so this is capped and the cap is
+  // printed: raising the probe count collides with that limit rather than improving coverage.
+  // A silent cap reads as full coverage.
   const probes = drafts.slice(0, ASK_PROBE_LIMIT);
   for (const p of probes) {
     const got = await askKeys(`draft ${p.slug}`, p.title);

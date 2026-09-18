@@ -289,6 +289,13 @@ const headFull = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: 
 const shaFull = (headFull.stdout ?? "").trim();
 console.log(`  HEAD is ${sha}`);
 
+/*
+ * NEVER PUT THE STATED-ABSENCE PLACEHOLDERS LOOP BACK. It iterated an empty array and printed
+ * that nothing had been checked, kept as a mechanism for a successor that never came: a dead
+ * loop kept for a hypothetical is a shape, not a mechanism. Writing it again with a real
+ * subject in hand produces a better check than reviving a generalisation drawn from one case.
+ * The property it guarded is not lost, and is asserted on the rendered page by check:admin-ui.
+ */
 
 /* ------------------------------------------------- 1b. CI's verdict, early */
 

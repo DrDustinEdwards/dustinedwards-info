@@ -600,6 +600,13 @@ function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
         ),
       ];
     default:
+      /*
+       * Role rank, then newest. `uploaded_at DESC` alone put every static row last, because a
+       * build-time asset has no upload event and SQLite sorts NULL below everything, which
+       * buried the only insertable images in the corpus. A CASE in this view rather than a
+       * stored sort column: the ordering is a property of the VIEW, and a sort key in the
+       * index would be a UI decision stored in the index.
+       */
       return [
         sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
         way(media.uploadedAt),
@@ -666,7 +673,12 @@ export async function listMediaPage(
     .select()
     .from(media)
     .where(where)
-    /* Role rank is the default sort only. `key ASC` keeps offset pagination stable. */
+    /*
+     * The role rank is the DEFAULT ordering and never a prefix on an explicit sort: a reader
+     * who asked for "largest first" wants the largest file, not the largest content file
+     * followed by the largest brand file. `key ASC` always breaks the tie, because an
+     * unstable sort makes offset pagination skip and repeat rows.
+     */
     .orderBy(...orderFor(options), asc(media.key))
     .limit(limit + 1)
     .offset(offset);
@@ -699,8 +711,20 @@ export async function mediaRoleCounts(env: Env) {
 
 
 /**
- * Twins by the key's content hash, exact only. The page offers trash, not delete.
- * Static rows are excluded: their keys are paths.
+ * Twins by the key's content hash, EXACT IDENTITY ONLY, and that is a boundary rather than a
+ * first pass. There is no perceptual comparison, no resize detection, no similarity score, and
+ * none is coming: a "these look alike" feature would put a judgement call in front of a delete
+ * button, and this library's whole safety argument is that deletion decisions are answerable
+ * from facts.
+ *
+ * The hash is READ OFF THE KEY, never recomputed. Keys are content-addressed, so recomputing
+ * would mean reading every object out of R2 to learn what the filename already states.
+ *
+ * NOT A DUPLICATE-DELETION FEATURE. Two rows sharing bytes are two separate objects at two
+ * separate public URLs, either of which may be cited. The page offers to TRASH one, which
+ * changes what the library shows and leaves both URLs serving.
+ *
+ * Static rows are excluded: their keys are paths rather than hashes.
  */
 export async function mediaTwins(env: Env) {
   const rows = await getDb(env)
