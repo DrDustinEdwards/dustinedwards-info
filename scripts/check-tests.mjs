@@ -3,36 +3,11 @@
  *
  *   npm run check:tests
  *
- * ## OBSERVATION BOUNDARY
- *
- * **IT RUNS `node --test` AND READS ITS SUMMARY.** It knows how many test files
- * were discovered and how many tests reported pass or fail. It does not know
- * whether those tests ASSERT anything: a file full of `test("x", () => {})`
- * bodies counts as passing tests here, exactly as it does for node. That class
- * belongs to review, and to `check:assertions` for the gates.
- *
- * It also cannot see whether the tests cover the right modules. Six files
- * covering two of the ten `scripts/lib/` modules is the current state and this
- * gate is content with it; coverage is a judgement, not a count.
- *
- * ## Why this exists
- *
- * The external audit of 2026-08-11. `check:tests` was `npm test --silent`,
- * which is `node --test "test/**\/*.test.mjs"`, and **node exits 0 when the
- * glob matches nothing**. Measured, by changing the glob to `*.spec.mjs`, which
- * is what renaming the files would do:
- *
- *   baseline      tests 43, pass 43, EXIT=0
- *   glob broken   tests  0, pass  0, EXIT=0
- *   exit code seen by check-all: 0 -> PASS
- *
- * Every hand-written gate in this repo fails closed on an empty scope. This one
- * structurally could not, because it delegated to a runner whose "nothing to
- * do" is success. It is the only gate asserting BEHAVIOUR of shipped modules,
- * so its silent emptying is the most expensive one available.
- *
- * FAILS CLOSED on zero files, on fewer files than are committed, and on fewer
- * tests than have been measured.
+ * IT RUNS `node --test` AND READS ITS SUMMARY: how many files were discovered and how many tests
+ * reported, not whether those tests ASSERT anything, and not whether they cover the right
+ * modules. WHY IT EXISTS: this was `npm test --silent`, and **node exits 0 when the glob matches
+ * nothing**, so the only gate asserting BEHAVIOUR structurally could not fail closed. FAILS
+ * CLOSED on zero files, on fewer files than are committed, and on fewer tests than measured.
  */
 
 import { spawnSync } from "node:child_process";
@@ -45,137 +20,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
 /**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY by RUNNING it. Never
- * summed. The measurement is the two constants below and the dates are on
- * them; re-taking it means running the gate, not reading this sentence.
- *
- * **THE CONVENTION BELOW WAS MISSED ONCE ALREADY, on 2026-08-26.**
- * `post-image-links.test.mjs` landed without these floors moving, so for a few
- * hours the set could have lost that file and five others and still reported a
- * clean run. Caught on the next re-measurement rather than by anything, which
- * is exactly the argument for the tightness: a slack floor does not announce
- * that it has gone slack.
- *
- * **BOTH HAD DRIFTED INTO THE UNFAILABLE CLASS, and this is the gate where that
- * costs the most.** They were 23 and 237 against 40 and 389: seventeen test
- * FILES and a hundred and fifty-two TESTS could have been deleted with this
- * gate, the one instrument in the suite that asserts BEHAVIOUR, reporting a
- * clean run. The floors had last moved when `artifact-once-per-request` landed
- * and were never re-measured across everything after it.
- *
- * The drift is not new and the changelog that used to sit here recorded five
- * earlier rounds of it, each with the same shape and the same resolution. That
- * changelog is deleted rather than extended: it was six stale numbers arguing
- * for a discipline the numbers themselves did not follow, which is rule 17's
- * own subject. **The measurement is the two constants below and this comment
- * points at how to retake it, which is to run the gate.**
- *
- * Tight rather than slack, deliberately, and that is this gate's own
- * convention rather than the suite's: these move UP when somebody adds a test,
- * a one-line edit in the same commit, and the whole point is to notice the set
- * SHRINKING.
- *
- * **THE INVARIANT, corrected 2026-08-28, because the sentence here stated a
- * consequence that had stopped following.** It read "narrow enough that losing
- * the smallest test file still trips the file floor", which was true when the
- * ratio was written against a much smaller set and is arithmetic that does not
- * survive the set growing: at 94 percent of a measurement, ONE file out of
- * fifty-odd is well inside the margin.
- *
- * What is actually true, and what the ratio is chosen for: **each floor sits at
- * 94 percent of its own measurement, so the set has to shrink by about six
- * percent before this notices.** That is a handful of files, not one. The
- * tightness buys an early warning rather than an immediate one, and the reason
- * to keep it tight is that the margin only ever widens on its own: every test
- * added without moving these constants makes the floor slacker, silently, which
- * is exactly the drift the paragraph above records happening five times.
- *
- * Stated as the invariant rather than as a number, because a number here is a
- * third copy of the two constants below.
+ * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY by RUNNING it, never summed. TIGHT RATHER
+ * THAN SLACK, this gate's own convention: they move UP with a test, a one-line edit in the same
+ * commit, and the point is to notice the set SHRINKING. The margin only ever widens on its own.
  */
-/* 60 against 64 measured 2026-09-04 by RUNNING the gate, after
-   webmention-href.test.mjs landed with roadmap item H2. It read 59 against 63
-   earlier the same day, after post-readership.test.mjs landed with item G, and
-   58 against 62 from 2026-09-03. Previously:
-   editor-duplicate.test.mjs landed with the section F row actions. It read 56
-   against 60 from 2026-08-30, and the set has grown twice since, so the margin
-   had widened on its own, which is the drift the paragraph above names. */
-/* RE-MEASURED 2026-09-06 by RUNNING the gate, after post-image-lqip.test.mjs
-   landed with the body placeholder: 66 files. It read 61 against 65 earlier
-   the same day, after math-outputs.test.mjs landed with KaTeX. Set to count
-   minus check:floors' tolerance, max(3, ceil(count * 0.05)), which is 4 here.
-   RE-MEASURED 2026-09-07 by RUNNING the gate, after error-rate.test.mjs landed
-   with the watchdog's error-rate check: 67 files. Tolerance is 4 at this
-   count, so 63.
-   RE-MEASURED 2026-09-15 by RUNNING this gate, after check-all-environment
-   .test.mjs landed with the environment classifier: 78 files. THIS FLOOR HAD
-   DRIFTED ELEVEN FILES WITHOUT ANYONE MOVING IT, from 67 measured to 78, which
-   is exactly what the paragraph above says happens when a file lands and the
-   constant does not. It never failed, because it is asserted directly rather
-   than through assertFloor, so check:floors never saw the gap: the one floor
-   in this file that the meta-gate cannot police is the one that drifted.
-   Tolerance is 4 at this count, so 74.
-   RE-MEASURED 2026-09-15 by RUNNING this gate, after decisions-volume-freeze
-   .test.mjs landed with the freeze-point gate: 79 files. THIS IS THE FIRST TIME
-   THIS FLOOR CAUGHT ANYTHING, and it caught it the run after it was given a
-   floor line: gap 5 against a tolerance of 4, refused by check:floors. While it
-   was a bare ok() it had drifted eleven files unseen. Tolerance is 4 at this
-   count, so 75.
-   RE-MEASURED 2026-09-16 by RUNNING this gate, after capsid-guidelines-stamp
-   .test.mjs landed with check:guidelines: 80 files. The second catch, and the
-   same shape as the first: one file arrived, the gap went 4 to 5 against a
-   tolerance of 4, and check:floors refused it. That is the floor working
-   rather than a floor in the way, so it is re-measured from the printed count
-   and never by adding one to the old number. Tolerance is 4 at this count,
-   so 76. */
+/* Re-taken by running the gate whenever a test file lands. */
+/*
+ * RE-MEASURED BY RUNNING THIS GATE, never by adding one. This floor once drifted eleven files
+ * without failing, being asserted directly rather than through `assertFloor`, so the one floor
+ * here the meta-gate could not police is the one that drifted.
+ */
 const MINIMUM_FILES = 76;
-/* 638 against 672, RE-MEASURED 2026-09-07 by running this gate, after the six
-   cases the shared upload refusal landed with. It read 632 against 666 the day
-   before, which check:floors then failed at a gap of 40 against a tolerance of
-   34: six cases arriving is what pushed that floor past it. The file floor
-   above catches a file LEAVING; this one catches a file being hollowed out in
-   place, which no file count can see. Same tolerance rule, 34 at this count.
-   RE-MEASURED 2026-09-07 by RUNNING this gate, after error-rate.test.mjs
-   landed with eleven cases: 683 tests. check:floors had just failed the old
-   638 at a gap of 45 against a tolerance of 35, which is the mechanism working:
-   eleven cases arriving is what pushed that floor past it. Tolerance is 35 at
-   this count, so anything from 648 up is legal; 660 leaves the usual slack.
-   RE-MEASURED 2026-09-09 by RUNNING this gate, after slug-redirect.test.mjs
-   landed with ten cases: 703 tests. check:floors failed the old 660 in CI at a
-   gap of 43 against a tolerance of 36, which is the same mechanism a third
-   time. Tolerance is 36 at this count, so anything from 667 up is legal; 680
-   leaves the usual slack.
-   RE-MEASURED 2026-09-10 by RUNNING this gate, after the small-items session
-   added seventeen cases across three files (startHere's two branches, ruling
-   56's deferred plant, and ship's preflight scan): 720 tests. check:floors
-   failed the old 680 in CI at a gap of 40 against a tolerance of 36, the same
-   mechanism a FOURTH time, which is the argument for it rather than against
-   it. Tolerance is 36 at this count, so anything from 684 up is legal; 700
-   leaves the usual slack.
-   RE-MEASURED 2026-09-12 by RUNNING this gate, after publication-entities
-   .test.mjs landed with eight cases: 739 tests. check:floors failed the old 700
-   in CI at a gap of 39 against a tolerance of 37, the same mechanism a FIFTH
-   time, and this one is worth a line about HOW it was caught: the local run
-   before the push was a set of targeted gates rather than the tier, and
-   check:floors is a meta-gate that reads the tier's own output, so it was the
-   one gate a targeted run could not include. CI is what saw it. Tolerance is 37
-   at this count, so anything from 702 up is legal; 720 leaves the usual slack.
-   RE-MEASURED 2026-09-12 by RUNNING this gate, after the publications session
-   added sixteen cases across two files (the Ask key mapping for papers, and the
-   retraction path's Lancet fixture): 766 tests. The tier caught the old 720 at
-   a gap of 46 against a tolerance of 39, the same mechanism a SIXTH time, and
-   this time locally rather than in CI, because the run was the tier rather than
-   a set of targeted gates. Tolerance is 39 at this count, so anything from 727
-   up is legal; 745 leaves the usual slack.
-   RE-MEASURED 2026-09-15 by RUNNING this gate, after check-all-environment
-   .test.mjs landed with nine cases for the environment classifier: 775 tests.
-   The old 745 did NOT fail this time, at a gap of 30 against a tolerance of
-   39, so this is the first entry in this list written without the mechanism
-   catching it first. It is moved anyway, on the argument the paragraph above
-   makes: a floor left alone while the set grows gets slacker on its own, and
-   waiting for it to breach is waiting for the margin to be gone. Tolerance is
-   39 at this count, so anything from 736 up is legal; 754 leaves the usual
-   slack. */
+/*
+ * RE-MEASURED BY RUNNING THIS GATE. The file floor catches a file LEAVING; this catches one
+ * hollowed out in place. Moved when the set grows even if nothing has breached, because waiting
+ * for a breach is waiting for the margin to be gone.
+ */
 const MINIMUM_TESTS = 754;
 
 let checks = 0;
@@ -191,17 +51,8 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * Kill any `node --test` runner this gate left behind, and report what it took.
- *
- * BY COMMAND LINE, NEVER BY IMAGE NAME. `node.exe` on this host selects this
- * gate itself, the editor's language server and the agent harness; the
- * cleanup work in `check-all.mjs` records that mistake being made and
- * corrected. The needle is the runner's own argv, which nothing else carries.
- *
- * Windows only, because that is where the leak was measured and where
- * `Get-CimInstance` exists. On other platforms it reports nothing and the gate
- * is unchanged, which is honest: the guard is not claiming coverage it has no
- * mechanism for.
+ * BY COMMAND LINE, NEVER BY IMAGE NAME: `node.exe` here selects this gate, the language server
+ * and the agent harness. Windows only, that being where the leak was measured.
  *
  * @returns {number[]} the pids killed
  */
@@ -223,17 +74,9 @@ function reapTestRunners() {
 }
 
 /**
- * The five slowest tests in the run, so a creeping hang is visible BEFORE it
- * becomes a timeout.
- *
- * The suite went from minutes to never in one commit, and nothing printed a
- * duration, so there was no gradient to notice. This prints one every run.
- *
- * READS WHATEVER REPORTER RAN. `spawnSync` is not a TTY, so node picks the tap
- * reporter and emits `duration_ms:` under each `ok`/`not ok`; a TTY run picks
- * spec and puts `(1234.5ms)` on the line itself. Both are parsed rather than
- * one being assumed, because the reporter is chosen by something this gate
- * does not control.
+ * The five slowest tests, so a creeping hang is visible BEFORE it is a timeout: the suite went
+ * from minutes to never in one commit with no duration printed. READS WHATEVER REPORTER RAN,
+ * both parsed rather than one assumed, the choice not being this gate's.
  *
  * @param {string} text the runner's combined output
  * @returns {Array<{ ms: number, name: string }>}
@@ -265,13 +108,8 @@ function slowestTests(text) {
   }
 
   /*
-   * DEDUPED BY NAME, keeping the longest reading.
-   *
-   * A FAILING test appears twice in tap output, once in the stream and once in
-   * the failure summary, so the first version of this list printed the same
-   * 30.4s test in two of its five slots and pushed a real entry off the end.
-   * Measured on the proof run that caught the ordering race, where the list
-   * was the instrument being read to diagnose it.
+   * DEDUPED BY NAME, longest reading kept: a FAILING test appears twice in tap output and took two
+   * of the five slots.
    */
   const longest = new Map();
   for (const t of timed) {
@@ -307,25 +145,9 @@ ok(
     "this the gate would report PASS while running nothing.",
 );
 /*
- * THROUGH assertFloor SINCE 2026-09-15, and the reason is what this floor
- * counts rather than tidiness.
- *
- * A SCOPE FLOOR OVER A GROWING SET IS AN EXECUTED-COUNT FLOOR WEARING
- * DIFFERENT CLOTHES. The test file set only ever gets added to, so the measured
- * value climbs away from the floor by itself and the gap widens with no edit,
- * which is exactly the drift ruling 23 built check:floors to notice. It drifted
- * eleven files, 67 measured to 78 actual against a floor of 63, and nothing
- * saw it: this was a bare ok(), so it printed no floor line and check:floors
- * had nothing to read.
- *
- * NOT EVERY SCOPE FLOOR BELONGS HERE, and widening the instrument to cover
- * them all would make it agree with everything. A scope floor over a VOLATILE
- * set must stay out: check:page-payload's built-chunk floor stands at 78
- * against 15 and says so in its own comment, because the chunk count is a
- * property of the bundler's splitting on the day and pinning it near 78 would
- * fail any build that splits differently. One over a set fixed by an external
- * version, like that gate's katex face count, has nothing to drift toward.
- * GROWING is the property that matters, not SCOPE.
+ * THROUGH assertFloor, because A SCOPE FLOOR OVER A GROWING SET IS AN EXECUTED-COUNT FLOOR
+ * WEARING DIFFERENT CLOTHES: the measured value climbs away by itself. NOT EVERY SCOPE FLOOR
+ * BELONGS HERE, or the instrument agrees with everything: GROWING is the property, not SCOPE.
  */
 const filesBreach = assertFloor(
   "check:tests",
@@ -337,64 +159,17 @@ const filesBreach = assertFloor(
 ok("the test file set has not shrunk", filesBreach === null, filesBreach ?? "");
 
 /**
- * THE RUN IS BOUNDED, TWICE, AND IT REAPS WHAT IT STARTED.
- *
- * ## The defect this closes, measured 2026-09-11
- *
- * `node --test` over the whole suite sat resident on this host and never
- * exited. `test/check-all-cleanup.test.mjs` leaked a PowerShell sampler whose
- * ChildProcess handle never closes, so the runner had nothing left to do and
- * still could not leave. This gate called `spawnSync` with NO timeout, so it
- * waited with it, forever, and took `check:head` and `check:floors` down too,
- * because both run the offline tier and the tier runs this.
- *
- * Three sessions lost a local tier to it, and three orphans accumulated in one
- * session. The leak itself is fixed in that file. This is the GUARD, and it is
- * here because the next leak will be in a different file.
- *
- * ## Two bounds, because they catch different things
- *
- * `--test-timeout` is the runner's own per-test bound: a test that hangs is
- * reported as a FAILING TEST, by name, in the summary this gate already parses.
- * That is the outcome worth having, because it names the culprit.
- *
- * `timeout` on the spawn is the backstop for everything the runner's bound
- * cannot see, which is the case that actually happened: the tests all finished
- * and the PROCESS would not exit. A per-test timeout never fires on that.
- *
- * The gate's bound is comfortably above the runner's so the runner reports
- * first when it can. `SIGKILL` rather than the default `SIGTERM`: the thing
- * being killed is a process that has already demonstrated it will not leave.
+ * THE RUN IS BOUNDED, TWICE, AND IT REAPS WHAT IT STARTED: a leaked child once left the runner
+ * unable to exit and this gate waited with it forever. `--test-timeout` reports a hang as a
+ * FAILING TEST, by name; the spawn timeout is the backstop for what that cannot see, and is what
+ * actually happened. `SIGKILL` rather than `SIGTERM`: it has demonstrated it will not leave.
  */
 const TEST_TIMEOUT_MS = 60_000;
 
 /*
- * THE SPAWN BOUND IS LOAD-BEARING, NOT BELT AND BRACES, and the plant proved
- * it rather than the comment asserting it.
- *
- * MEASURED 2026-09-11 with an unbounded wait planted in one subtest:
- *
- *   node --test <that file alone>, --test-timeout=10000
- *     the test is CANCELLED at 10s, the other three run, and the process
- *     EXITS at 24s. Per-file, the runner's own bound is sufficient.
- *
- *   npm test (the whole suite), --test-timeout=60000
- *     903s, ending at THIS bound, with two wedged runners for the reaper to
- *     take. The per-test cancellation did not get the suite out.
- *
- * The difference is the leak. A cancelled test's `finally` never runs, because
- * the promise it is suspended on never settles, so the sampler survives and
- * that forked child cannot exit; the parent waits on its children. Alone, the
- * later tests in the same file reach their own teardown and reap the earlier
- * leak, which is why the single-file case gets out. In the suite it did not.
- *
- * So `--test-timeout` names the culprit and this bound is what ends the run.
- * Both are needed and neither is decoration.
- *
- * SIX MINUTES, against a clean run measured three times at 27, 27 and 28
- * seconds: roughly twelve times the observed cost. Low enough that a wedge
- * costs minutes instead of a quarter of an hour, high enough that a loaded
- * machine or a slower host is nowhere near it.
+ * THE SPAWN BOUND IS LOAD-BEARING, and a plant proved it. Against one file the runner's own bound
+ * gets the process out; against the whole suite it did not, because a cancelled test's `finally`
+ * never runs and the child survives. So one names the culprit and the other ends the run.
  */
 const RUN_TIMEOUT_MS = 6 * 60_000;
 
@@ -413,18 +188,8 @@ const run = spawnSync(
 const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 
 /*
- * WHATEVER THE RUN LEFT BEHIND, taken down before this gate returns.
- *
- * `spawnSync`'s own timeout kills the shell it started and nothing below it,
- * which on Windows is the npm wrapper and not the node that holds the leak.
- * So the sweep is by COMMAND LINE against the runner's own signature, never by
- * image name: matching `node.exe` here would select this gate, the editor and
- * every other tool on the machine, which is the mistake the cleanup work in
- * `check-all.mjs` already records.
- *
- * It runs on EVERY path, not just the timeout path, because a run that
- * finished can still have leaked: that is precisely what the suite did for two
- * days while reporting failures and then hanging.
+ * WHATEVER THE RUN LEFT BEHIND: `spawnSync`'s timeout kills the shell and nothing below it. By
+ * COMMAND LINE, and on EVERY path, because a run that finished can still have leaked.
  */
 const leaked = reapTestRunners();
 if (leaked.length > 0) {
@@ -432,11 +197,8 @@ if (leaked.length > 0) {
 }
 
 /*
- * TYPED READ OF THE TIMEOUT. `spawnSync`'s `error` is declared as `Error`,
- * and the `ETIMEDOUT` that a timeout sets lives on `code`, which only
- * `ErrnoException` declares. The cast is the honest narrowing rather than a
- * cast to `any`: this is exactly the shape node documents for a timed-out
- * spawn, and naming the type says so.
+ * TYPED READ OF THE TIMEOUT: `error` is declared as `Error` and `ETIMEDOUT` lives on `code`,
+ * which only `ErrnoException` declares. The honest narrowing rather than a cast to `any`.
  */
 /** @type {NodeJS.ErrnoException | undefined} */
 const runError = run.error;
@@ -471,11 +233,7 @@ if (slowest.length > 0) {
     console.log(`    ${(t.ms / 1000).toFixed(1).padStart(6)}s  ${t.name}`);
   }
 } else {
-  /*
-   * NOT SILENT. A reporter whose durations this cannot read is a reporter
-   * change, and the whole point of the list is to make a creeping hang
-   * visible, so its absence has to be visible too.
-   */
+  /* NOT SILENT: a reporter whose durations this cannot read is a reporter change. */
   console.log("  slowest five: unavailable, no durations parsed from this reporter");
 }
 
@@ -501,19 +259,9 @@ const testsFloorBreach = assertFloor(
 ok("the executed test count has not shrunk", !testsFloorBreach, testsFloorBreach ?? "");
 
 /*
- * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS.
- *
- * MINIMUM_TESTS above floors the tests NODE ran, which is the important number
- * and not this one. This floors the handful of assertions this gate makes ABOUT
- * that run: discovery, the exit code, the reported totals. If those stopped
- * running, the test floor above would stop being consulted and nothing would
- * say so.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 5.
- * Never summed. Floored at 5, slack of ZERO, which is justified here and almost
- * nowhere else: this gate asserts a fixed set of properties about one run, so a
- * drop is a removed assertion rather than natural movement, and a rise arrives
- * in the commit that adds one.
+ * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS: if those stopped, the test floor would
+ * stop being consulted. MEASURED BY RUNNING IT, with slack of ZERO, justified here and almost
+ * nowhere else, this gate asserting a fixed set of properties about one run.
  */
 const MINIMUM_CHECKS = 5;
 const floorBreach = assertFloor("check:tests", "checks", checks, MINIMUM_CHECKS);

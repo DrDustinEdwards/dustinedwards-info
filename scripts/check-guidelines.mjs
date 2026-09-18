@@ -1,41 +1,19 @@
 /**
- * Gate: the Capsid documents handed to the design agent are not stale, and the
- * guidelines the glob ships actually exist.
+ * Gate: the Capsid documents handed to the design agent are not stale, and the guidelines the
+ * glob ships actually exist.
  *
- * ## THE DEFECT THIS IS FOR, ruling 109
+ * THE DEFECT: an export is a copy, and a copy has no way of knowing its source moved. Without an
+ * instrument the canvas would be handed a ruling reversed a week ago and nothing would say so.
+ * Every exported file carries the stamp it was taken at and this compares it to Capsid's CURRENT
+ * value, which is hard rule 18's shape: the export is derived, the repair is re-running the
+ * derivation, and the gate sees the DRIFT rather than policing how the copy got there.
  *
- * `guidelinesGlob` now ships an export of three Capsid documents. An export is
- * a copy, and a copy has no way of knowing its source moved. Without an
- * instrument, the canvas would be handed a ruling that was reversed a week ago
- * and nothing anywhere would say so; the design agent would be confidently
- * working from a superseded rule, which is the exact failure the whole wiring
- * arc exists to close.
+ * NETWORK TIER, AND IT CANNOT BE OTHERWISE: the current value lives in Capsid, so there is no disk
+ * to read. THE CREDENTIAL FAILS CLOSED rather than skipping, an unchecked export not being an
+ * export known to be current.
  *
- * Every exported file carries the `updated_at` it was taken at. This compares
- * that stamp to Capsid's CURRENT value. Hard rule 18's shape: the export is
- * derived, the repair is re-running the derivation, and the gate sees the
- * DRIFT rather than trying to police how the copy got there.
- *
- * ## NETWORK TIER, AND IT CANNOT BE OTHERWISE
- *
- * The current `updated_at` lives in Capsid. There is no disk to read, so a
- * clean checkout cannot run this and `--ci` does not, the same reason
- * `check:volumes` and `check:uptime` are tiered here.
- *
- * ## THE CREDENTIAL FAILS CLOSED, on check:volumes' precedent
- *
- * `CAPSID_TOKEN` from the environment or the gitignored `.dev.vars`. Absent,
- * this FAILS rather than skipping: a gate that silently does not run is the
- * thing the runner exists to prevent, and an unchecked export is not an export
- * known to be current.
- *
- * ## WHY IT ALSO CHECKS THE GLOB
- *
- * A stamp check over an empty directory passes, because every export it found
- * was in step and it found none. That is the zero-scope vacuity class (hard
- * rule 10), so the glob's own targets are asserted present first, and the
- * expected document list comes from `lib/capsid.mjs` rather than from whatever
- * happens to be on disk.
+ * WHY IT ALSO CHECKS THE GLOB: a stamp check over an empty directory passes, every export it found
+ * being in step and it having found none, which is the zero-scope vacuity class.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -81,9 +59,8 @@ async function main() {
       `turned OFF and ships nothing at all. Ruling 109.`,
   );
 
-  // Every literal (wildcard-free) glob entry must resolve to a file that exists,
-  // and every wildcard entry to a directory with something in it. A glob that
-  // matches nothing ships nothing and says nothing.
+  // Every literal glob entry must resolve to a file that exists, and every wildcard entry to a
+  // directory with something in it: a glob that matches nothing ships nothing and says nothing.
   for (const glob of Array.isArray(globs) ? globs : []) {
     if (glob.includes("*")) {
       const dir = join(REPO, glob.slice(0, glob.lastIndexOf("/")));

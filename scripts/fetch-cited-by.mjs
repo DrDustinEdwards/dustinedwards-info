@@ -2,40 +2,20 @@
  * Who cites each paper, from OpenAlex, into a committed artifact.
  *
  *   node scripts/fetch-cited-by.mjs          report only
- *   node scripts/fetch-cited-by.mjs --write  update data/publications.cited-by.json
+ *   node scripts/fetch-cited-by.mjs --write  update the artifact
  *
- * ## WHY A COMMITTED ARTIFACT AND NOT A RUNTIME FETCH
+ * WHY A COMMITTED ARTIFACT AND NOT A RUNTIME FETCH, three ways. It is tens of kilobytes across the
+ * corpus, so fetching per request would put a third-party round trip in front of a page that is
+ * otherwise a pure function of committed data. It needs a LIST query, which is metered far above a
+ * singleton lookup, and the ruling says singleton lookups only, so this is the one deliberate
+ * departure and doing it at build keeps the departure small. And it is EVIDENCE, which carries a
+ * date the page states.
  *
- * The counts on these pages come from KV and refresh themselves, because a
- * count is one number and a stale one is only slightly wrong. A citing LIST is
- * different in three ways that all point the same direction:
+ * NOT A GATE, AND NEVER RUN BY ONE: a gate that fetches a third party is red on their bad day
+ * rather than on ours. A human runs it, the result is committed, and the gate checks the file.
  *
- *   It is 55 KB across 25 papers. Fetching it per request would put a
- *   third-party round trip in front of a page that is otherwise a pure function
- *   of committed data, on a route that is shared-cached precisely because it has
- *   no per-reader anything.
- *
- *   It needs a LIST query. `?filter=cites:W...` costs 10 credits where a
- *   singleton lookup costs 1, and OpenAlex has metered both since 2026-02-13.
- *   Ruling 63 says "singleton lookups only"; there is no singleton form of
- *   cited-by, so this is the one place that rule is departed from, deliberately,
- *   and doing it at build rather than per request is what keeps the departure
- *   small: 286 credits for the whole corpus, once, rather than per reader.
- *
- *   It is EVIDENCE, and evidence carries a date. The artifact records when it
- *   was read and the page says so, which is the same contract the counts have.
- *
- * ## NOT A GATE, AND NEVER RUN BY ONE
- *
- * Network, and a gate that fetches OpenAlex is red on OpenAlex's bad day rather
- * than on ours. Same placement as `pubs-pipeline/refresh.py`: a human runs it,
- * the result is committed, and `check:publications` checks the committed file.
- *
- * ## NEWEST FIRST, CAPPED AT 50
- *
- * Ruling 63's number. One paper in this corpus exceeds it (52 citations), and
- * the artifact records the true total beside the truncated list so the page can
- * say "50 of 52" rather than implying it has them all.
+ * NEWEST FIRST, CAPPED: the artifact records the true total beside the truncated list, so the page
+ * can say how many of how many rather than implying it has them all.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -104,8 +84,8 @@ async function main() {
     list.searchParams.set("filter", `cites:${openalexId}`);
     list.searchParams.set("per-page", String(MAX_CITING));
     list.searchParams.set("sort", "publication_year:desc");
-    // `select` keeps the response to the four fields the page renders. The
-    // default response is a large record per work and this is 50 of them.
+    // `select` keeps the response to the fields the page renders: the default is a large record per
+    // work and this asks for many of them.
     list.searchParams.set("select", "id,doi,title,publication_year,primary_location");
     const cited = await get(list);
     lists += 1;
@@ -117,8 +97,8 @@ async function main() {
         title: w.title ?? null,
         year: w.publication_year ?? null,
         venue: w.primary_location?.source?.display_name ?? null,
-        // The DOI as OpenAlex gives it, which is a full URL; the page needs the
-        // bare name. Stripped here so the artifact carries one form.
+        // The DOI as OpenAlex gives it is a full URL and the page needs the bare name, stripped here so
+        // the artifact carries one form.
         doi: typeof w.doi === "string" ? w.doi.replace(/^https?:\/\/doi\.org\//, "") : null,
       })),
     };

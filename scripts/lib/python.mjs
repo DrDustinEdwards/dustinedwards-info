@@ -1,45 +1,24 @@
 /**
  * Resolving the Python a gate needs, the SAME WAY THE HOOKS DO.
  *
- * ## WHY THIS IS NOT A HARDCODED `python3`
+ * WHY NOT A HARDCODED `python3`: measured on this machine, the name resolves under git bash and
+ * is ABSENT under PowerShell, so a gate spawning it would be green in every session and absent at
+ * `npm run ship`. The same shape a sibling module was written for hours earlier.
  *
- * MEASURED 2026-09-05 on this machine, both shells:
+ * AND WHY THE PROBE RUNS A PROGRAM rather than asking for a version: on Windows the bare name is
+ * often a Store STUB, which satisfies `command -v`, prints a version-ish banner and is not an
+ * interpreter. Matching the hooks' probe exactly is load-bearing for `check:hook-syntax`, which
+ * must compile a hook with the interpreter that hook would have used.
  *
- *     git bash      python3 -> hookprobe   python -> hookprobe   py -> hookprobe
- *     PowerShell    python3 -> ABSENT      python -> hookprobe   py -> hookprobe
- *
- * A gate spawning `python3` by name would therefore be green in every Claude
- * Code session, which runs git bash, and absent at `npm run ship`, which runs
- * from PowerShell. That is the shape `scripts/lib/bash.mjs` was written for a
- * few hours earlier, recurring in a second interpreter before the ink was dry,
- * which is the whole argument for resolving rather than naming.
- *
- * ## AND WHY THE PROBE IS `print("hookprobe")` RATHER THAN `--version`
- *
- * Copied deliberately from the hooks, which carry the reason: on Windows the
- * bare name `python3` is often the Microsoft Store STUB. The stub satisfies
- * `command -v`, prints a version-ish banner, and is not an interpreter. Only
- * running a program discriminates it, so the candidate must EXECUTE something
- * and be judged on what it printed.
- *
- * Matching the hooks' probe exactly is load-bearing for `check:hook-syntax`: a
- * gate that compiles a hook's embedded Python must use the interpreter that
- * hook would have used, or it is checking a different thing than it claims.
- *
- * ## FAILS CLOSED
- *
- * Returns null when nothing ran. The caller prints one line naming that no
- * Python was found and exits nonzero, exactly as the hooks themselves block
- * rather than passing silently when the probe fails.
+ * FAILS CLOSED: it returns null, and the caller prints one line and exits nonzero.
  */
 
 import { spawnSync } from "node:child_process";
 
 /**
- * The candidates and their order, IDENTICAL to the hooks' own
- * `for cand in python3 python py`. One owner would be better; a shell script
- * and an ES module cannot share a constant, so the duplication is stated here
- * rather than left for a reader to notice.
+ * The candidates and their order, IDENTICAL to the hooks' own. One owner would be better; a shell
+ * script and an ES module cannot share a constant, so the duplication is stated here rather than
+ * left for a reader to notice.
  */
 const CANDIDATES = ["python3", "python", "py"];
 
@@ -50,9 +29,8 @@ const PROBE_OUTPUT = "hookprobe";
 let resolved;
 
 /**
- * The first candidate that actually runs a program, or null if none does.
- *
- * Memoised, including the null.
+ * The first candidate that actually runs a program, or null if none does. Memoised, including
+ * the null.
  *
  * @returns {{ path: string } | null}
  */
@@ -64,8 +42,8 @@ export function resolvePython() {
       windowsHide: true,
     });
     if (probe.error || probe.status !== 0) continue;
-    // Equality after trimming, never a substring: the Store stub's banner
-    // mentions Python and would satisfy a loose match.
+    // Equality after trimming, never a substring: the Store stub's banner mentions Python and would
+    // satisfy a loose match.
     if (String(probe.stdout ?? "").trim() !== PROBE_OUTPUT) continue;
     resolved = { path };
     return resolved;
@@ -84,24 +62,14 @@ export function pythonNotFoundMessage() {
 }
 
 /**
- * Compile a Python source string, WITHOUT EXECUTING IT.
+ * Compile a Python source string, WITHOUT EXECUTING IT: the subject is whether the string PARSES,
+ * and running a hook's checker here would execute repository logic for no benefit.
  *
- * `ast.parse` rather than `exec` or `compile` into a runnable object: the whole
- * subject is whether the string PARSES, and running a hook's checker here would
- * execute repository logic against a gate's stdin for no benefit.
- *
- * ## THE SOURCE CROSSES AS BYTES, WHICH IS THE POINT
- *
- * `sys.stdin.read()` decodes through the platform text layer, and on Windows
- * that is cp1252, so a checker containing a non-ASCII character (these hooks
- * carry U+2014 and U+2013 literals, which is what one of them is FOR) would
- * either mangle or raise for a reason that has nothing to do with its syntax.
- * `sys.stdin.buffer.read().decode("utf-8")` reads the bytes and names the
- * encoding, and the input is handed over as a Buffer for the same reason.
- *
- * Passing the source as an argv argument was the other option and is worse: the
- * strings are multi-line and quote-bearing, and Windows argv quoting is the
- * hazard this repo has already been bitten by.
+ * THE SOURCE CROSSES AS BYTES, WHICH IS THE POINT. The platform text layer is not UTF-8 on this
+ * host, and these hooks carry non-ASCII literals on purpose, so reading the bytes and naming the
+ * encoding is what keeps a syntax question about syntax. Passing the source as an argv argument is
+ * worse: the strings are multi-line and quote-bearing, and Windows argv quoting is a hazard this
+ * repo has already been bitten by.
  *
  * @param {string} pythonPath
  * @param {string} source

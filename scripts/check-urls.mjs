@@ -1,40 +1,15 @@
 /**
  * Gate over the URL protocol allowlist.
  *
- * OBSERVATION BOUNDARY: the allowlist predicate over crafted inputs. It never
- * fetches a URL and never scans the live corpus, so it proves the rule and not
- * that every published href obeys it.
- *
  *   npm run check:urls
  *
- * Ruling: dustinedwards/url-protocol-allowlist.md, 2026-08-01. The finding it
- * exists for: `[x](javascript:alert(1))` rendered as a LIVE href and reached
- * the stored HTML, the gated artifact, D1 and the published page. The operator
- * API writes posts, so it was agent-reachable on a public surface with no human
- * click in the path.
- *
- * This imports `app/lib/content/pipeline.mjs`, the module the Worker imports,
- * on the same principle as check:search and check:policy. Testing a copy of the
- * rule would prove the copy correct and say nothing about what ships.
- *
- * Two levels, deliberately:
- *
- *   The PREDICATE, `isAllowedUrl`, tested directly. Fast, and it can express
- *   obfuscations that markdown would percent-encode before the renderer ever
- *   saw them, which is the only way to check the figure directive's raw path.
- *
- *   The RENDERER, end to end. The predicate being right is worth nothing if the
- *   plugin is not wired in, or is wired in before the plugin that emits the
- *   href. Every case is rendered and the markup is read back.
- *
- * FAILS CLOSED. A missing fixture is an error, never an empty pass, and every
- * comparison is paired with a count so "0 failures" cannot mean "0 cases read".
- *
- * The javascript entries in the fixture are PERMANENT NEGATIVES. They are not
- * examples; they are the regression this gate exists to prevent, and removing
- * one is removing the gate.
- *
- * Pure: no database, no network, no build.
+ * BOUNDARY: the allowlist predicate over crafted inputs. It never fetches a URL and never scans
+ * the live corpus. The finding it exists for: a `javascript:` href rendered LIVE and reached the
+ * stored HTML, the artifact, D1 and the published page, agent-reachable with no human click.
+ * TWO LEVELS: the PREDICATE, which can express obfuscations markdown would percent-encode, and
+ * the RENDERER end to end, because a right predicate is worth nothing if the plugin is wired in
+ * after the one that emits the href. FAILS CLOSED, and the `javascript` fixture entries are
+ * PERMANENT NEGATIVES: removing one is removing the gate.
  */
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
@@ -80,9 +55,7 @@ function assert(label, ok, detail = "") {
   }
 }
 
-/* -------------------------------------------------------------------------
- * The predicate
- * ---------------------------------------------------------------------- */
+/* The predicate */
 
 for (const probe of fixture.predicateCases) {
   assert(
@@ -92,12 +65,8 @@ for (const probe of fixture.predicateCases) {
 }
 
 /**
- * Obfuscations are built from CODE POINTS rather than written as escapes.
- *
- * The source file then contains no control characters at all, which matters
- * more than it sounds: writing them literally corrupted pipeline.mjs into a
- * binary file three times while this was being built, and an escape sequence in
- * a JSON fixture would have been decoded by whichever tool wrote the file.
+ * Obfuscations are built from CODE POINTS rather than escapes, so this file holds no control
+ * characters: writing them literally corrupted the module into a binary file more than once.
  */
 for (const probe of fixture.obfuscationCases) {
   const url = probe.codes.map((code) => String.fromCodePoint(code)).join("");
@@ -107,9 +76,7 @@ for (const probe of fixture.obfuscationCases) {
   );
 }
 
-/* -------------------------------------------------------------------------
- * The renderer, end to end
- * ---------------------------------------------------------------------- */
+/* The renderer, end to end */
 
 /** Images are measured without touching R2; dimensions are not what is tested. */
 const resolveImage = async () => ({ width: 8, height: 8 });
@@ -161,20 +128,12 @@ for (const probe of fixture.cases) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * FRONTMATTER, which the render layer never sees
- *
- * `rehypeUrlProtocols` walks the hast tree `renderBody` produces. Frontmatter is
- * not in that tree, so the allowlist that closed the markdown XSS did not bind
- * the two frontmatter fields that reach a URL context. `further_reading[].url`
- * is rendered as a live public `<a href>` and was validated with `z.url()`,
- * which accepts `javascript:`, `data:`, `vbscript:` and `file:`. Findings B001
- * and B008.
- *
- * These bind the SCHEMA, because the schema is the only thing in that path.
- * Asserted against `frontmatterSchema` itself, the object both writers import,
- * so it cannot pass against a copy of the rule.
- * ---------------------------------------------------------------------- */
+/*
+ * FRONTMATTER, which the render layer never sees: the plugin walks the tree `renderBody`
+ * produces, so the allowlist did not bind the two frontmatter fields that reach a URL context,
+ * one of which renders as a live public href. These bind the SCHEMA, the only thing in that path,
+ * asserted against the object both writers import so they cannot pass against a copy.
+ */
 
 const FM_BASE = { title: "t", slug: "a-slug", date: "2026-01-01", description: "d" };
 
@@ -210,34 +169,14 @@ for (const probe of fixture.frontmatterCases) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * THE SHARED PREDICATE, asserted on the SOURCE
- *
- * Everything above tests BEHAVIOUR, and behaviour is not enough here. The rule
- * is not "these fields refuse bad protocols", it is "these fields call
- * `isAllowedUrl`, the same predicate the renderer uses, rather than
- * reimplementing the rule". Those come apart, and on 2026-08-07 they had:
- * `cover.src` was a site-absolute regex that blocked `javascript:` only as a
- * side effect of demanding a leading slash. Every behavioural case above was
- * green, because every fixture outcome the regex produces is the outcome the
- * predicate produces. A green gate, a correct outcome, and the wrong mechanism.
- *
- * That matters because the mechanism is what survives the next edit. Relax the
- * path rule for a legitimate reason and the protocol hole reopens silently,
- * with no fixture case failing. So the property is asserted directly, against
- * the source text, the way check:headers binds `workers/app.ts` to its
- * ratification rather than inferring it from a response.
- *
- * COMMENTS ARE STRIPPED FIRST. Both docblocks in `pipeline.mjs` discuss
- * `isAllowedUrl` in prose, one of them saying in so many words that it is the
- * same predicate called rather than reimplemented. A parser that read the prose
- * would find the claim instead of the code and pass on a field that does not
- * call it. That trap has already been hit by check:logo, check:contrast,
- * check:features and check:headers; it is the default failure here, not an edge
- * case. Only BLOCK comments are stripped: the line-comment form would truncate
- * the `//host` inside a message string, and the prose trap is entirely in the
- * docblocks.
- * ---------------------------------------------------------------------- */
+/*
+ * THE SHARED PREDICATE, ASSERTED ON THE SOURCE. Everything above tests BEHAVIOUR, and the rule is
+ * not "these fields refuse bad protocols" but "these fields call the same predicate the renderer
+ * uses". Those come apart: one field was a regex that blocked the protocol only as a side effect
+ * of demanding a leading slash, and every behavioural case was green. The mechanism is what
+ * survives the next edit. COMMENTS ARE STRIPPED FIRST, both docblocks discussing the predicate in
+ * prose; only BLOCK comments, the line form truncating a `//host` inside a message string.
+ */
 
 const PIPELINE = join(root, "app", "lib", "content", "pipeline.mjs");
 const pipelineSource = readFileSync(PIPELINE, "utf8");
@@ -288,37 +227,13 @@ assert(
   `found ${[...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length} definitions`,
 );
 
-/* -------------------------------------------------------------------------
- * THE REDIRECT MAP: every old slug goes somewhere that exists, and no post
- * claims a slug the map is still redirecting away from.
- *
- * Ruling 47, 2026-09-09. Nine posts were reslugged and every old URL keeps
- * answering with a 301. Two things can go wrong with that, and neither is
- * visible until a reader hits it:
- *
- *   A REDIRECT TO A 404. The gateway resolves the map without touching the
- *   database, deliberately (the grounds are on `slug-redirect.mjs`), so it
- *   CANNOT know whether the target exists. Nothing else looks either: a post
- *   body's internal links are not corpus-checked, and `check:content` reads
- *   `further_reading` only. So the target's existence is this gate's to own,
- *   and it is a build-time property, because the corpus is on disk.
- *
- *   A SLUG THAT IS ALSO A SOURCE. If a post ever took the name
- *   `letting-an-agent-publish` again, that post would be UNREACHABLE: the
- *   redirect runs in the gateway, before the router, so the 301 fires and the
- *   post at that slug can never be served. It is the sharper of the two,
- *   because the post looks completely fine on disk and in D1.
- *
- * READ FROM `content/posts/*.md`, NOT FROM THE BUILD PRODUCT.
- * `content/generated/posts.json` is gitignored, so a CI checkout does not have
- * it, and a gate whose expected values come out of the pipeline it is checking
- * is the fixture-independence failure hard rule 10 names. The frontmatter is
- * parsed with the same `frontmatterSchema` the Worker uses, so "published"
- * means here exactly what it means there.
- *
- * PAIRED WITH COUNTS, like every other section in this file: a map that parsed
- * to nothing and a corpus that read nothing both report a clean sweep.
- * ---------------------------------------------------------------------- */
+/*
+ * THE REDIRECT MAP: every old slug goes somewhere that exists, and no post claims a slug the map
+ * redirects away from. A REDIRECT TO A 404 is invisible because the gateway resolves the map
+ * without touching the database; A SLUG THAT IS ALSO A SOURCE is sharper, the redirect running
+ * before the router, so the post can never be served while looking fine on disk. READ FROM THE
+ * MARKDOWN, NOT THE BUILD PRODUCT, which is the fixture independence hard rule 10 names.
+ */
 
 const REDIRECTS_PATH = join(root, "content", "redirects.json");
 
@@ -333,25 +248,10 @@ const redirects = JSON.parse(readFileSync(REDIRECTS_PATH, "utf8"));
 const redirectSources = Object.keys(redirects.posts ?? {});
 
 /*
- * THE RETIRED SET, AND WHY IT IS A SECOND FILE.
- *
- * Everything below this point reads `content/redirects.json` and checks that
- * what is IN it is coherent. That cannot catch the failure that matters most:
- * DELETING an entry. A map with an entry removed is perfectly coherent, it just
- * silently stops redirecting a URL that is already published, and the gate
- * would report a clean sweep over a smaller set. Same shape as the empty-scope
- * failure this file guards everywhere else, one level up.
- *
- * So the expected set comes from a file the map cannot edit, and the two are
- * reconciled in BOTH DIRECTIONS: every retired slug has a redirect, and every
- * redirect source is a retired slug. That is the same arrangement
- * `check:features` uses for `content/enhancements.json`.
- *
- * This is not two owners of one fact (hard rule 17), because they are two
- * different facts. `retired-slugs.json` records that a URL was ONCE PUBLIC,
- * which is history and is append-only. `redirects.json` records WHERE IT GOES
- * NOW, which is a current decision and can change. Retiring a tenth post edits
- * both, in the same commit, which is what the reconciliation forces.
+ * THE RETIRED SET, AND WHY IT IS A SECOND FILE: everything below checks that what is IN the map
+ * is coherent, which cannot catch DELETING an entry. So the expected set comes from a file the
+ * map cannot edit, reconciled BOTH DIRECTIONS. Not two owners of one fact, which hard rule 17
+ * forbids, but two facts: that a URL was ONCE PUBLIC, and WHERE IT GOES NOW.
  */
 const RETIRED_PATH = join(root, "scripts", "fixtures", "retired-slugs.json");
 if (!existsSync(RETIRED_PATH)) {
@@ -389,11 +289,8 @@ for (const from of redirectSources) {
 }
 
 /**
- * The corpus, as slug to frontmatter, straight off disk.
- *
- * A post whose frontmatter does not parse is NOT skipped, it is counted and
- * reported. Skipping would let a malformed post drop out of the known set and
- * turn a live redirect target into a missing one that this gate calls fine.
+ * A post whose frontmatter does not parse is counted and reported, never skipped: skipping turns
+ * a live redirect target into a missing one this gate calls fine.
  */
 const postFiles = readdirSync(join(root, "content", "posts")).filter((f) => f.endsWith(".md"));
 /** @type {Map<string, { published: boolean, file: string }>} */
@@ -409,10 +306,8 @@ for (const file of postFiles) {
   }
   const fm = result.data;
   /*
-   * PUBLISHED, on the same three conditions the public read applies: not a
-   * draft, dated today or earlier, and not holding a future `publish_at`. A
-   * redirect whose target is a draft is a redirect to a 404 for every reader,
-   * and hard rule 1 is why this cannot be softened to "the file exists".
+   * PUBLISHED, on the same three conditions the public read applies. A redirect whose target is a
+   * draft is a 404 for every reader, and hard rule 1 is why this cannot soften to "the file exists".
    */
   const scheduled = fm.publish_at ? fm.publish_at.slice(0, 10) > today : false;
   corpus.set(fm.slug, { published: fm.draft !== true && fm.date <= today && !scheduled, file });
@@ -484,10 +379,8 @@ for (const from of redirectSources) {
 }
 
 /*
- * PERMANENT NEGATIVES for the predicate. Each is a path it must never claim:
- * a sibling route under the same prefix, or a lookup shape that would answer
- * from `Object.prototype` rather than from the map. Removing one is removing
- * the check.
+ * PERMANENT NEGATIVES: a sibling route under the same prefix, and a lookup shape that would
+ * answer from the prototype. Removing one is removing the check.
  */
 for (const path of [
   "/blog",
@@ -525,14 +418,8 @@ assert(
 );
 
 /*
- * THE GATEWAY ACTUALLY CALLS IT, AND CALLS IT IN THE RIGHT PLACE.
- *
- * Everything above is about a predicate that nothing has to invoke. This is the
- * wiring, asserted by POSITION in the gateway's own body, which is the same
- * reasoning `check:policy` uses for the money path: asserting that a stage
- * merely EXISTS passes on an arrangement that runs it too late. Comments are
- * stripped first, because in this repo a comment has both satisfied and failed
- * an assertion about code.
+ * THE GATEWAY ACTUALLY CALLS IT, AND IN THE RIGHT PLACE, asserted by POSITION in its own body:
+ * asserting a stage EXISTS passes on an arrangement that runs it too late. Comments stripped.
  */
 {
   const workerSource = readFileSync(join(root, "workers", "app.ts"), "utf8");
@@ -568,9 +455,7 @@ assert(
   );
 }
 
-/* -------------------------------------------------------------------------
- * Counts, so a green run cannot mean an empty one
- * ---------------------------------------------------------------------- */
+/* Counts, so a green run cannot mean an empty one */
 
 assert(
   "the frontmatter fixture still carries its permanent negatives",
@@ -605,28 +490,11 @@ console.log(
 );
 
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * Every case here comes from a committed fixture, which is exactly the shape
- * that fails quietly: a fixture that parsed to an empty list would run zero
- * cases and report a clean sweep of the protocol allowlist, which is hard rule
- * 6's enforcement.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 97.
- * Never summed. The count is a fixed function of the fixture's case lists, so
- * it moves only when a case is added.
- *
- * The prose here said "floored at 92" while the constant below read 97, which
- * is hard rule 17's rot in its ordinary form: the constant was raised to the
- * measured value and the sentence justifying it was not. Corrected 2026-09-09
- * rather than left for the next reader to trip over.
- *
- * RE-MEASURED THE SAME WAY on 2026-09-09, after the redirect section landed:
- * 197. Floored at 188, a slack of nine. The redirect half contributes six
- * assertions per map entry plus the reconciliation's two, so the slack is
- * deliberately smaller than one entry's worth: deleting a single redirect has
- * to be caught by the both-directions reconciliation going RED, and it must not
- * be able to hide inside the floor's tolerance instead.
+ * EXECUTED-COUNT FLOOR. Every case comes from a committed fixture, which fails quietly: one that
+ * parsed to an empty list runs zero cases and reports a clean sweep. MEASURED BY RUNNING IT, with
+ * slack deliberately smaller than one redirect entry's worth, so deleting a redirect cannot hide
+ * inside the tolerance. The prose here once claimed a floor the constant disagreed with, which is
+ * hard rule 17's rot in its ordinary form.
  */
 const MINIMUM_CHECKS = 188;
 const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);

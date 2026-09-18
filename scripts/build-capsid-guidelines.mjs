@@ -1,31 +1,18 @@
 /**
  * Export the Capsid documents the canvas needs into the guidelines directory.
  *
- * ## WHY A COPY EXISTS AT ALL, when hard rule 17 says one owner per fact
+ * WHY A COPY EXISTS AT ALL, when hard rule 17 says one owner per fact: the glob can only point at
+ * files inside the workspace and drops anything whose realpath escapes it, while Capsid documents
+ * are database rows. So the design agent cannot be handed a pointer, only text, and a copy is
+ * forced.
  *
- * `guidelinesGlob` can only point at `.md` files inside the workspace, and the
- * skill drops anything whose realpath escapes it. Capsid documents are database
- * rows. So the design agent cannot be handed a pointer: it can only be handed
- * text, and a copy is forced.
+ * The honest version of a forced copy is a DERIVED one: Capsid stays the owner, this writes a
+ * gitignored export, every file carries the stamp it was taken at, and the gate fails when the
+ * source has moved. Same shape as hard rule 18, the store derived and the repair a re-run.
  *
- * The honest version of a forced copy is a DERIVED one. Capsid stays the owner,
- * this writes a gitignored export, every file carries the `updated_at` it was
- * taken at, and `check:guidelines` fails when the source has moved since. Same
- * shape as hard rule 18: the store is derived, the repair is re-running the
- * derivation, and the gate sees the drift rather than the provenance.
- *
- * The alternative considered and rejected: a hand-written repo document that
- * SUMMARISES the rulings and points at Capsid for the rest. That is the rule-17
- * shape and it is worthless here, because the reader this is for cannot follow a
- * pointer into Capsid.
- *
- * ## THE CREDENTIAL
- *
- * `CAPSID_TOKEN`, from the environment or the gitignored `.dev.vars`, the same
- * operator credential `check:volumes` reads. It is machine-local and not a
- * wrangler secret, because it is read by a Node program here rather than by
- * deployed code. Absent, this REFUSES rather than writing a partial directory:
- * a half-exported guidelines set that still globs is worse than none.
+ * THE CREDENTIAL is machine-local and not a wrangler secret, being read by a Node program here
+ * rather than by deployed code. Absent, this REFUSES rather than writing a partial directory: a
+ * half-exported guidelines set that still globs is worse than none.
  */
 
 import { writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
@@ -67,8 +54,8 @@ async function main() {
     throw new Error(`read ${docs.length} of ${EXPORTED_DOCS.length} documents; refusing a partial export`);
   }
 
-  // Rebuild, so a document dropped from the list cannot survive as a stale file
-  // the glob still ships.
+  // Rebuild, so a document dropped from the list cannot survive as a stale file the glob still
+  // ships.
   if (existsSync(OUT_DIR)) {
     for (const entry of readdirSync(OUT_DIR)) rmSync(join(OUT_DIR, entry), { recursive: true, force: true });
   }

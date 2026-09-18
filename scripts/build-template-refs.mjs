@@ -3,24 +3,18 @@
  *
  *   npm run build:template-refs
  *
- * The THIRD usage state depends on this file. `media_refs` and
- * `resolveCitations` both answer "does a POST cite this", and nothing answered
- * "does the SITE ITSELF place this", so nine cohort photographs referenced by
- * `app/data/phage-hunters.ts` read as unreferenced next to a delete button.
+ * THE THIRD USAGE STATE DEPENDS ON THIS FILE. Two mechanisms answer "does a POST cite this" and
+ * nothing answered "does the SITE ITSELF place this", so assets referenced by a data module read
+ * as unreferenced next to a delete button.
  *
- * Every decision lives in `app/lib/media/template-refs.mjs`, which is pure and
- * unit tested. This file is the part that touches a filesystem and nothing else,
- * for the same reason `build-assets.mjs` is split that way: a scan that decides
- * things in the same function that walks directories cannot be tested without a
- * repository.
+ * Every decision lives in a pure, unit-tested module; this file touches a filesystem and nothing
+ * else, because a scan that decides things in the same function that walks directories cannot be
+ * tested without a repository.
  *
- * OBSERVATION BOUNDARY: this reads SOURCE TEXT and matches asset paths as
- * literal strings. It sees `src: "/phage-hunters/2019.webp"` and it does not see
- * `src: \`/diagrams/${id}.svg\``, because evaluating a template literal means
- * running the code. Constructed paths therefore read as unattached, which is a
- * false negative in the safe direction: this tool under-claims usage and never
- * invents it. The copy on the page says "no reference found" rather than
- * "unused" precisely because of this line.
+ * BOUNDARY: it reads SOURCE TEXT and matches asset paths as literal strings, so a constructed path
+ * reads as unattached, which is a false negative in the safe direction: this under-claims usage
+ * and never invents it. The copy on the page says "no reference found" rather than "unused"
+ * precisely because of this line.
  */
 
 import { readFileSync } from "node:fs";
@@ -29,10 +23,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /*
- * `readFileSync` rather than an import attribute, per the ruling verify-live.mjs
- * already records: `with { type: "json" }` is only legal under a newer `module`
- * setting than this repo's tsconfig uses, and it fails the TYPECHECK rather than
- * the run, so it looks fine until `tsc -b`.
+ * `readFileSync` rather than an import attribute: the attribute form is only legal under a newer
+ * module setting than this repo's, and it fails the TYPECHECK rather than the run, so it looks
+ * fine until the build.
  */
 const assetManifest = JSON.parse(
   readFileSync(path.join("content", "generated", "assets.json"), "utf8"),
@@ -49,11 +42,9 @@ import {
 export const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
 
 /**
- * Every source file under the scanned roots, repo-relative with forward slashes.
- *
- * Forward slashes always, because the artifact is committed and compared: a
- * Windows backslash would make it disagree with itself across machines, which
- * is the platform-dependence `walkPublic` already had to fix once.
+ * Every source file under the scanned roots, repo-relative with forward slashes always, because
+ * the artifact is committed and compared: a backslash would make it disagree with itself across
+ * machines.
  *
  * @param {string} dir
  * @returns {Promise<string[]>}
@@ -90,11 +81,9 @@ export async function scanTemplateRefs() {
   const scanned = [];
   for (const file of kept) {
     const raw = await readFile(file, "utf8");
-    // COMMENTS GO FIRST. A doc comment naming an asset is prose about it, not a
-    // placement of it; this module's own header caught exactly that and would
-    // have marked six brand files as placed by page code. JSON has no comments,
-    // so it is passed through unchanged rather than run through a tokenizer that
-    // would treat a `//` inside a URL string as one.
+    // COMMENTS GO FIRST: a doc comment naming an asset is prose about it, not a placement of it, and
+    // this module's own header caught exactly that. JSON has no comments, so it is passed through
+    // rather than run through a tokenizer that would treat a `//` inside a URL string as one.
     const text = file.endsWith(".json") || file.endsWith(".webmanifest")
       ? raw
       : stripComments(raw, file.endsWith(".css"));
@@ -103,23 +92,18 @@ export async function scanTemplateRefs() {
   }
   return {
     ...foldRefs(scanned),
-    // SCOPE, carried in the artifact rather than printed and forgotten. A scan
-    // that read zero files reports the same "no references" as a repository
-    // that genuinely has none, and this is the number that tells them apart.
+    // SCOPE, carried in the artifact rather than printed and forgotten: a scan that read zero files
+    // reports the same "no references" as a repository that genuinely has none.
     filesRead: kept.length,
     assetsConsidered: assetPaths.length,
   };
 }
 
 /*
- * THROUGH `pathToFileURL`, NEVER BY CONCATENATING `file://`.
- *
- * The hand-rolled form was written first and silently did nothing on this host:
- * `import.meta.url` is `file:///C:/...` with THREE slashes and a concatenated
- * `file://` + `C:/...` has two, so the comparison was false, the script exited
- * 0, and the artifact was never written. A build step that succeeds while
- * producing no output is the worst shape a build step can have, and it is the
- * same Windows path class that has already cost this repo a vacuous plant.
+ * THROUGH `pathToFileURL`, NEVER BY CONCATENATING A URL SCHEME: the hand-rolled form silently did
+ * nothing on this host, the two spellings differing in their slashes, so the script exited 0 and
+ * the artifact was never written. A build step that succeeds while producing no output is the
+ * worst shape a build step can have.
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const result = await scanTemplateRefs();

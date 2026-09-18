@@ -1,43 +1,22 @@
 /**
  * The Ask index convergence window ship waits out before declaring a miss.
  *
- * Split out of `ship.mjs` on exactly the footing `ci-status.mjs` is: the
- * DECISION is a pure loop over readings and can be driven by tests, while the
- * reading itself is a network call ship supplies. A poll loop that only exists
- * inside a deploy script is a poll loop nothing can exercise, and this repo has
- * already recorded the failure that hides there: "a poll loop that is a single
- * fetch wearing a loop", which breaks out on a not-yet-converged response and
- * defeats the wait it exists for.
+ * Split out of ship so the DECISION is a pure loop over readings that tests can drive, while the
+ * reading itself is a network call ship supplies: a poll loop that only exists inside a deploy
+ * script is a poll loop nothing can exercise, and this repo has recorded the failure that hides
+ * there, a single fetch wearing a loop.
  *
- * ## WHY THERE IS A WINDOW AT ALL
+ * WHY THERE IS A WINDOW: the uploader reads its counts back immediately after two writes and the
+ * index is eventually consistent, so the first reading can be early rather than wrong.
  *
- * `syncAsk` reads `expected` and `present` back IMMEDIATELY after its two
- * writes, and AI Search is eventually consistent, so the first reading can be
- * early rather than wrong. MEASURED 2026-08-24: ship read drift 1 at 02:20:18Z,
- * NO REMEDY WAS APPLIED, and the scheduled health check read ok 75 seconds
- * later and stayed ok.
+ * THE READING MUST BE READ-ONLY, AND THAT IS THE WHOLE DESIGN. Polling by re-uploading repairs the
+ * thing being measured, and a run that then converged could not be told apart from one that had
+ * self-healed. This module cannot enforce that; what it does is refuse to do the reading itself,
+ * so the choice is made at one visible call site.
  *
- * ## THE READING MUST BE READ-ONLY, AND THAT IS THE WHOLE DESIGN
- *
- * Polling by calling `sync_ask` again would re-upload the corpus, which repairs
- * the thing being measured, and a run that then converged could not be told
- * apart from one that had self-healed. That ambiguity is what the 2026-08-24
- * watch item recorded as unresolvable with the instruments then available.
- *
- * This module cannot enforce that its `reading` is read-only. What it does is
- * refuse to do the reading itself, so the choice is made at one visible call
- * site rather than buried in a loop.
- *
- * ## THE BOUND IS TWO INDEPENDENT LIMITS, DELIBERATELY
- *
- * No more than `attempts` iterations, AND no iteration begins once `windowMs`
- * has elapsed. A clock test alone would spin without limit if the clock never
- * advanced; a count alone would not honour the stated window if a reading hung.
- * Neither can be relieved by the other, so the loop terminates under both.
- *
- * The window can be exceeded only by the duration of the single reading already
- * in flight when the deadline passes, which is bounded by the caller's own
- * timeout on it.
+ * THE BOUND IS TWO INDEPENDENT LIMITS: a count, because a clock test alone would spin if the clock
+ * never advanced, and a deadline, because a count alone would not honour the stated window if a
+ * reading hung.
  */
 
 /** Polls, at most. Twelve at ten seconds each is the two-minute window. */
@@ -86,9 +65,8 @@ export async function awaitAskConvergence({
     try {
       observed = await reading();
     } catch {
-      // An unreadable poll, same as a null. Health answering 503 is NOT this:
-      // that is a readable answer about a failing check somewhere, and the
-      // caller is expected to parse the body regardless of status.
+      // An unreadable poll, same as a null. A failing status is NOT this: that is a readable answer
+      // about a failing check somewhere, and the caller parses the body regardless of status.
       observed = null;
     }
 
@@ -96,8 +74,8 @@ export async function awaitAskConvergence({
     if (usable) latest = usable;
     onPoll({ poll: polls, reading: usable });
 
-    // The one line the "single fetch wearing a loop" failure lives on: this
-    // returns ONLY on ok. A not-yet-converged reading continues the loop.
+    // The one line the "single fetch wearing a loop" failure lives on: this returns ONLY on ok, and a
+    // not-yet-converged reading continues the loop.
     if (usable && usable.ok) return { converged: true, polls, latest };
   }
 

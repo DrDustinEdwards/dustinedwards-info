@@ -1,17 +1,13 @@
 /**
  * Reads resource names out of the real wrangler config.
  *
- * **Nothing that talks to a bucket may name one in a string literal.** That was
- * already a latent hazard while `build:og` only ever PUT objects; it became a
- * live one when the prune landed, because a stale literal would then aim a
- * DELETE at whatever bucket happened to still answer to that name. Deriving it
- * means renaming a bucket in the config is a rename everywhere, and a bucket
- * that no longer exists is an immediate error rather than a silent no-op.
+ * **Nothing that talks to a bucket may name one in a string literal.** That was latent while the
+ * card builder only ever PUT objects and became live when the prune landed, because a stale
+ * literal would then aim a DELETE at whatever bucket still answered to that name. Deriving it
+ * makes a rename a rename everywhere, and a bucket that no longer exists an immediate error.
  *
- * `wrangler.jsonc` is gitignored and `wrangler.jsonc.example` is tracked, per
- * the portfolio's public-repo hygiene rule. This reads the REAL file, because
- * the example carries placeholder ids and a build script needs the truth;
- * `check:config` is what keeps the two describing the same binding surface.
+ * This reads the REAL file, because the example carries placeholder ids and a build script needs
+ * the truth; `check:config` is what keeps the two describing the same binding surface.
  */
 
 import { readFileSync } from "node:fs";
@@ -22,20 +18,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CONFIG = join(root, "wrangler.jsonc");
 
 /**
- * JSONC to JSON. Comments only; this config has no trailing commas. Same
- * stripping `check-config.mjs` does, and for the same reason.
+ * JSONC to JSON. Comments only; this config has no trailing commas.
+ *
  * @returns {any}
  */
 /*
- * WEAK ON PURPOSE. This is JSONC on its way to JSON.parse, so the shared
- * strong stripper in scripts/lib/strip-comments.mjs must NOT be used: its
- * line-comment rule eats a protocol-relative url ("//cdn.example.com/x"),
- * whose slashes follow a quote rather than a colon, and takes the rest of
- * the line with it. MEASURED 2026-08-23: the config stops parsing.
- *
- * Weak is SUFFICIENT here, which is the other half: JSON.parse throws on
- * any comment this fails to remove, so an under-strip cannot pass quietly.
- * test/strip-comments.test.mjs asserts both halves.
+ * WEAK ON PURPOSE, this being JSONC on its way to JSON.parse: the shared strong stripper's
+ * line-comment rule eats a protocol-relative url and takes the rest of the line with it. Weak is
+ * SUFFICIENT, because JSON.parse throws on any comment this fails to remove.
  */
 export function readWranglerConfig() {
   const raw = readFileSync(CONFIG, "utf8");
@@ -45,6 +35,7 @@ export function readWranglerConfig() {
 
 /**
  * Every R2 bucket name the Worker binds, keyed by binding name.
+ *
  * @returns {Record<string, string>}
  */
 export function bucketNames() {
@@ -61,12 +52,8 @@ export function bucketNames() {
 }
 
 /**
- * The D1 database NAME for a binding, or a named failure.
- *
- * DERIVED, not restated. `sync-content.mjs` carries `const DB_NAME =
- * "dustinedwards"` as a literal, which is the mirror shape this repo keeps
- * paying for; `build-og.mjs` needed the same value and this is where it comes
- * from instead of a second copy.
+ * The D1 database NAME for a binding, or a named failure. DERIVED, not restated: another script
+ * carries the same value as a literal, which is the mirror shape this repo keeps paying for.
  *
  * @param {string} binding
  */
@@ -87,10 +74,8 @@ export function databaseFor(binding) {
 }
 
 /**
- * One bucket by binding name, or a named failure.
- *
- * Throws rather than returning undefined, so a typo cannot become `undefined`
- * interpolated into a wrangler command line.
+ * One bucket by binding name, or a named failure. Throws rather than returning undefined, so a
+ * typo cannot become `undefined` interpolated into a wrangler command line.
  *
  * @param {string} binding
  */

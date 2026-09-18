@@ -1,26 +1,15 @@
 /**
  * The site mark, as anything rendering it at build time embeds it.
  *
- * ONE definition with TWO readers, and the second reader is the point. This
- * lived inside `build-og.mjs` when it was written, where the only way for a
- * gate to see what the card actually embeds was to import the card template.
- * Last session proved the render by hand and then deleted the harness, leaving
- * the gap `check:logo` names in its own boundary: nothing in this repo looks at
- * the SHAPE of a rendered raster, so a satori or resvg upgrade that resampled
- * the embedded svg would pass every gate.
+ * ONE definition with TWO readers, and the second is the point: nothing in this repo looks at the
+ * SHAPE of a rendered raster, so a satori or resvg upgrade that resampled the embedded svg would
+ * pass every gate. This is a real seam rather than an export added for a test: the build builds
+ * its card from `markElement()` and `check:logo` renders that same node against the fixture.
  *
- * So the mark moved here, and it is a real seam rather than an export added for
- * a test: `build:og` builds its card from `markElement()`, `check:logo` renders
- * that same node and compares it against the committed fixture. Neither one
- * reaches into the other, and the thing under test is the thing that ships.
- *
- * NO PATH DATA IS STATED IN THIS FILE. The mark's single source is
- * `app/components/site-logo.tsx`, which the Worker renders, and the four
- * `public/*.svg` are the fixtures `check:logo` compares that module against in
- * both directions. A Node script cannot import the .tsx without a build step,
- * so it reads the fixtures the gate already binds the component to: the same
- * source one hop along a link something else keeps honest. Hand-edit either
- * side and `check:logo` fails before any of this runs.
+ * NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the Worker
+ * renders, and the four `public/*.svg` are the fixtures `check:logo` binds it to in both
+ * directions. A Node script cannot import the .tsx without a build step, so it reads those
+ * fixtures: the same source one hop along a link something else keeps honest.
  */
 
 import { readFileSync } from "node:fs";
@@ -38,11 +27,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const HEIGHT = 64;
 
 /**
- * The brand fill, RESOLVED from app.css rather than restated.
- *
- * `--mark-on-chrome` is the token the real header binds the mark to on brand
- * surface, and the light block is the one a card takes: a card is rendered once
- * and served into a feed with no idea which theme the reader prefers.
+ * The brand fill, RESOLVED from app.css rather than restated. The light block is the one a card
+ * takes: a card is rendered once and served into a feed with no idea which theme a reader prefers.
  */
 const { mark: MARK } = resolveTokens(
   { mark: "--mark-on-chrome" },
@@ -58,16 +44,13 @@ const { mark: MARK } = resolveTokens(
 /**
  * The mark, on brand surface, sized and framed for an embedded render.
  *
- * WHICH PATHS ARE THE BRAND PATHS IS DERIVED, NOT LISTED. The light and dark
- * fixtures are identical except for the fills on the purple paths, so the paths
- * whose fill DIFFERS between the two files are exactly the ones that take a
- * brand colour, and the warm ones (identical in both) keep the fill the asset
- * gives them. Nothing here restates a hex or a path index.
+ * WHICH PATHS ARE THE BRAND PATHS IS DERIVED, NOT LISTED: the light and dark fixtures are
+ * identical except for the fills on the purple paths, so the paths whose fill DIFFERS are exactly
+ * the ones that take a brand colour. Nothing here restates a hex or a path index.
  *
- * It fails closed on every way the fixtures could stop agreeing: a different
- * viewBox, a different path count, a path whose geometry differs between the
- * variants, or no differing fill at all, which would mean the brand paths were
- * no longer identifiable and would silently paint the mark in asset colours.
+ * It fails closed on every way the fixtures could stop agreeing: a different viewBox, a different
+ * path count, differing geometry, or no differing fill at all, which would silently paint the mark
+ * in asset colours.
  *
  * @returns {Mark}
  */
@@ -84,9 +67,8 @@ export function readMark() {
     return { file, viewBox, paths };
   };
 
-  // The HEADER crop, 78 15 232 328, because the band this sits in is the
-  // header. The square master would sit in a 132px band surrounded by its own
-  // whitespace.
+  // The HEADER crop, because the band this sits in is the header: the square master would sit in a
+  // taller band surrounded by its own whitespace.
   const light = parse("logo-header.svg");
   const dark = parse("logo-header-dark.svg");
   if (light.viewBox !== dark.viewBox) {
@@ -111,23 +93,13 @@ export function readMark() {
   }
 
   /*
-   * SIZED FROM THE viewBox, AND THE viewBox PADDED TO THE BOX, never guessed.
-   *
-   * A width that is not the viewBox's aspect times the height is a squashed
-   * mark, and satori will not say so. The subtler failure is the one measured
-   * here: satori LAYS OUT at integer pixels but writes the embedded svg at the
-   * viewBox's exact aspect, so 232x328 at 64px tall gives a 45.27px-wide image
-   * inside a 45px-wide box, and resvg letterboxes the difference. The mark then
-   * renders 0.4% short and 0.2px off centre, which is invisible and is also
-   * enough to stop the render matching the fixture pixel for pixel, which is
-   * how this mark is now proved: `check:logo` asserts a max channel delta of
-   * ZERO. Measured by removing this padding and running that gate, 2026-08-14:
-   * 348 of 2880 pixels differ and the max channel delta is 45.
-   *
-   * So the CROP is padded, symmetrically, until its aspect is exactly the
-   * integer box's. Only the empty margin around the mark moves; no path is
-   * touched, and the padding here is 1.96 viewBox units, under a fifth of a
-   * rendered pixel.
+   * SIZED FROM THE viewBox, AND THE viewBox PADDED TO THE BOX, never guessed. A width that is not
+   * the viewBox's aspect times the height is a squashed mark and satori will not say so. The subtler
+   * failure is measured: satori LAYS OUT at integer pixels and writes the embedded svg at the exact
+   * aspect, so resvg letterboxes the difference and the mark renders fractionally short and off
+   * centre, which is invisible and is enough to stop it matching the fixture pixel for pixel, which
+   * is how this mark is now proved. So the CROP is padded symmetrically until its aspect is exactly
+   * the integer box's: only the empty margin moves and no path is touched.
    */
   const [x, y, boxWidth, boxHeight] = light.viewBox.split(/\s+/).map(Number);
   const width = Math.round((HEIGHT * boxWidth) / boxHeight);
@@ -149,11 +121,10 @@ export function readMark() {
 /**
  * The mark as one satori element node, JSX-free so no caller needs a build step.
  *
- * satori takes an inline `svg` node and emits it as an `<image>` whose href is
- * the same markup URL-encoded, so the path data reaches resvg VERBATIM: no
- * re-fitting, no simplification, no reinterpretation of the arcs. Measured on
- * satori 0.29.0, and asserted by `check:logo` against a rasterisation of the
- * fixture rather than believed.
+ * satori takes an inline `svg` node and emits it as an `<image>` whose href is the same markup
+ * URL-encoded, so the path data reaches resvg VERBATIM: no re-fitting, no simplification, no
+ * reinterpretation of the arcs. Asserted by `check:logo` against a rasterisation of the fixture
+ * rather than believed.
  *
  * @param {Record<string, unknown>} [style] layout only. The caller owns where
  *   the mark sits; it does not own how the mark is drawn.

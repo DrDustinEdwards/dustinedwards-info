@@ -1,44 +1,25 @@
 /**
  * What a cold load of one public route actually fetches, resolved offline.
  *
- * Split out of `check-page-payload.mjs` on the footing `ci-status.mjs` and
- * `ask-converge.mjs` stand on: the DECISION is a pure function over a manifest
- * and a set of source files, and a pure function can be driven by tests. The
- * gate supplies the disk.
+ * Split out of the gate because the DECISION is a pure function over a manifest and a set of
+ * source files, and a pure function can be driven by tests. The gate supplies the disk.
  *
- * ## WHY THIS IS DERIVED AND NOT DECLARED
+ * WHY DERIVED AND NOT DECLARED: a hand-kept list goes stale in the direction that hides bytes from
+ * the gate. STYLESHEETS come from React Router's own browser manifest, root's plus the route's,
+ * which is what the document carries. ENHANCEMENT BUNDLES come from a reachability walk over the
+ * route's import graph, following `~/` and relative imports inside `app/`.
  *
- * A hand-kept list of "what /blog loads" is the mirror this repo keeps paying
- * for: it goes stale in the direction that hides bytes from the gate. Two
- * sources are read instead, and neither is written by hand.
- *
- *   STYLESHEETS come from React Router's own browser manifest, which is the
- *   list the framework will emit `<link>` tags from. Root's sheets plus the
- *   route's, which is exactly what the document carries.
- *
- *   ENHANCEMENT BUNDLES come from a reachability walk over the route's import
- *   graph. A bundle reaches a page by being `?url`-imported by some component
- *   the route renders, so "which bundles does this route serve" is "which
- *   `~/enhance/dist/*.js?url` specifiers are reachable from this route module
- *   or from root". The walk follows `~/` and relative imports inside `app/`
- *   and stops there.
- *
- * ## WHAT THE WALK CANNOT SEE, stated because it bounds every count below
- *
- * Reachability is not rendering. A component that imports a bundle inside a
- * branch the route never takes still counts here, so this OVER-approximates,
- * and it over-approximates in the safe direction for a byte ceiling. It also
- * cannot see a bundle fetched at runtime rather than imported: the search
- * palette is fetched by `theme.ts` on a gesture, from a URL carried on a data
- * attribute, so it is correctly NOT part of any page's cold load and is
- * reported separately by the gate.
+ * WHAT THE WALK CANNOT SEE, stated because it bounds every count: reachability is not rendering,
+ * so a bundle imported inside a branch the route never takes still counts, which over-approximates
+ * in the safe direction for a ceiling. Nor can it see a bundle fetched at runtime rather than
+ * imported, which is correctly not part of any page's cold load.
  */
 
 import { dirname, join } from "node:path";
 
 /**
- * Module specifiers a source file imports, normalised to absolute paths inside
- * `app/`, plus the raw `?url` specifiers, which are assets rather than modules.
+ * Module specifiers a source file imports, normalised to absolute paths inside `app/`, plus the
+ * raw `?url` specifiers, which are assets rather than modules.
  *
  * @param {string} source @param {string} file @param {string} appDir
  */
@@ -48,17 +29,12 @@ export function importsOf(source, file, appDir) {
   /** @type {string[]} */
   const assets = [];
   /*
-   * A `?url` IMPORT IS NOT A FETCH, and conflating the two was this walk's
-   * first bug. `search-trigger.tsx` imports the palette bundle's URL so it can
-   * put it on a data attribute; the page does not fetch that bundle, a gesture
-   * does. Counting the import made every route look like it served a search
-   * dialog, which is the opposite of what the split achieved.
-   *
-   * What puts an enhancement bundle on a page is `<EnhancementScript>`, which
-   * renders the script tag. So an `enhance/dist` asset counts only when the
-   * file that names it also renders that component. Every other `?url` asset,
-   * a font or a stylesheet handed to something at runtime, is collected
-   * unconditionally: the callers filter by what they are asking about.
+   * A `?url` IMPORT IS NOT A FETCH, and conflating the two was this walk's first bug: a component
+   * imports the palette bundle's URL so it can put it on a data attribute, and a gesture fetches it,
+   * so counting the import made every route look like it served a search dialog. What puts a bundle
+   * on a page is the component that renders the script tag, so an `enhance/dist` asset counts only
+   * when the file naming it also renders that component. Every other `?url` asset is collected
+   * unconditionally and the callers filter.
    */
   const rendersScript = source.includes("<EnhancementScript");
 
@@ -77,13 +53,9 @@ export function importsOf(source, file, appDir) {
 }
 
 /**
- * Every `?url` asset specifier reachable from `entry`, following imports
- * inside `app/`.
- *
- * Cycle-safe by construction: a file is expanded once. Extensions are probed
- * because a specifier omits them, and a specifier that resolves to nothing is
- * SKIPPED rather than thrown on, since the walk deliberately does not know
- * about node_modules, virtual modules or the vite alias table.
+ * Every `?url` asset specifier reachable from `entry`, following imports inside `app/`.
+ * Cycle-safe by construction, and a specifier that resolves to nothing is SKIPPED rather than
+ * thrown on, the walk deliberately not knowing about node_modules or the vite alias table.
  *
  * @param {string} entry absolute path to a route or root module
  * @param {string} appDir
@@ -130,11 +102,8 @@ function resolveModule(path, read) {
 }
 
 /**
- * The stylesheets a route's document links, root's first then its own.
- *
- * Order matters and is the manifest's: root is the parent match, so its sheets
- * arrive first, which is the cascade the site depends on since the per-route
- * split.
+ * The stylesheets a route's document links, root's first then its own. The order is the
+ * manifest's: root is the parent match, which is the cascade the site depends on since the split.
  *
  * @param {any} manifest React Router's browser manifest
  * @param {string} routeId
@@ -148,12 +117,9 @@ export function stylesheetsFor(manifest, routeId) {
 }
 
 /**
- * Font files a set of stylesheets reference from `@font-face`, as asset paths.
- *
- * Only `@font-face`, deliberately. A `url()` elsewhere in a stylesheet is a
- * background image or a mask and is fetched only if something matches; a
- * `@font-face` src is fetched whenever the family is used, which on this site
- * is every page.
+ * Font files a set of stylesheets reference from `@font-face`, deliberately only there: a
+ * `url()` elsewhere is fetched only if something matches, while a face is fetched whenever the
+ * family is used, which on this site is every page.
  *
  * @param {string[]} cssText
  */

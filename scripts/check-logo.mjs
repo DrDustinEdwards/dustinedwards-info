@@ -1,58 +1,13 @@
 /**
  * Gate over the site mark.
  *
- * OBSERVATION BOUNDARY: compares the component's path data against the four SVG
- * fixtures, the mark's fill BINDINGS in app.css against a closed expected set,
- * the shipped icon suite's CONTAINER SHAPE, dimensions and one tile pixel
- * against a ruled manifest, and the mark AS RENDERED into a social card against
- * a rasterisation of the committed fixture, every pixel of it.
- *
- * It does not check CONTRAST, and it resolves exactly one token to a hex,
- * `--mark-on-chrome`, on both sides of that render comparison, so a retuned
- * token moves them together and the comparison stays about shape. A mark bound
- * to the right token name where the token has been given the page colour still
- * passes here; check:contrast owns resolved values.
- *
- * THE ICON SUITE is still read ONE pixel per raster: an icon whose tile is
- * right and whose mark is upside down, clipped or drawn in the wrong purple
- * passes every assertion about it. That gap is now bounded rather than total,
- * because the same mark is compared pixel for pixel in the render section, and
- * the icons are rendered from the same paths; what is unasserted is each icon
- * FILE, not the shape it was cut from. Eyes remain the instrument for the
- * suite, and the contact sheet is how they get used.
- *
  *   npm run check:logo
  *
- * Proves that app/components/site-logo.tsx, the module the Worker renders,
- * reproduces the ratified SVGs exactly. Pure: no network, no database, no build.
- *
- * WHY THE FOUR public/*.svg FILES ARE KEPT. They are not dead assets and they
- * are not what the site renders; the component is. They are the FIXTURES this
- * gate derives from. Two independent sources argue here, exactly as in
- * check:contrast: the expected path data and fills come from the SVG files, and
- * the actual ones come from the component. Nothing in this script restates a
- * path, so a hand-edited component moves one side of the comparison and fails.
- * Delete the fixtures and the gate has nothing to check against, which is the
- * whole reason they stay under the repo's leanness rule.
- *
- * The component collapses four files into one path list plus a viewBox, because
- * the four differ in exactly two ways: the viewBox, and whether the five purple
- * paths carry the light hex or the dark one. The five purple paths carry no fill
- * at all in the component; they take .site-logo-brand, which is var(--brand),
- * and that token already resolves per theme. This gate is what keeps that
- * collapse honest.
- *
- * v4 AMENDED that last claim and the amendment is asserted at the foot of this
- * file, not just described here. --brand is no longer the only fill the class
- * can take: on the public chrome the mark is bound to --mark-on-chrome, the
- * dark-mode variant, in BOTH themes. The component is untouched, because the
- * override is a CSS binding and not a path.
- *
- * It fails in BOTH directions: a path hand-edited in the component, and an asset
- * regenerated from the spec that the component did not follow.
- *
- * Construction spec: Capsid dustinedwards/logo-spec.md. A variant is a rebuild
- * from those values, never a hand edit of path data.
+ * BOUNDARY: the component's path data against the four SVG fixtures, the fill BINDINGS against a
+ * closed set, the icon suite's container shape and one tile pixel, and the mark AS RENDERED into
+ * a social card against a rasterisation of the fixture. IT DOES NOT CHECK CONTRAST, and the icon
+ * suite is still ONE PIXEL PER RASTER, so an upside-down mark passes. THE FOUR public/*.svg
+ * FILES ARE THE FIXTURES: two sources argue and nothing restates a path, so it fails both ways.
  */
 
 import { readFileSync } from "node:fs";
@@ -98,30 +53,15 @@ function eq(label, actual, expected) {
 }
 
 /**
- * Strips block comments before anything is located.
- *
- * check:contrast learned this the hard way: its own token block spelled the
- * three theme selectors out in prose, so the parser found the COMMENT first and
- * passed every row for the wrong reason. This file's header names viewBox and
- * both hexes, so the same trap is live here.
+ * Strips block comments first: this file's header names the viewBox and both hexes.
  *
  * @param {string} source
  * @returns {string}
  */
 /*
- * WEAK ON PURPOSE, and only for SVG. This removes whole-line // comments
- * only. The shared strong stripper in scripts/lib/strip-comments.mjs must
- * NOT be pointed at SVG: its line-comment rule eats a PROTOCOL-RELATIVE url
- * ("//cdn.example.com/x"), whose slashes follow a quote rather than a colon,
- * and takes the rest of the line with it. Measured 2026-08-23 on a fixture:
- * the whole xlink:href value and the attributes after it were destroyed.
- *
- * The audit that prompted the consolidation said the hazard was the strong
- * form eating xmlns:xlink="http://...". It is not; that is a colon and the
- * guard protects it. test/strip-comments.test.mjs asserts the real one.
- *
- * The TSX and CSS call sites below DO use the shared helper: a .tsx file has
- * real // comments and this weak form would leave a trailing one standing.
+ * WEAK ON PURPOSE, and only for SVG: the shared strong stripper's line rule eats a
+ * protocol-relative url and the rest of its line. The TSX and CSS call sites use the shared one,
+ * because a .tsx file has real `//` comments this form would leave standing.
  */
 function stripSvgComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -177,10 +117,8 @@ function readComponent() {
 
 const component = readComponent();
 
-// --- The component is shaped the way the collapse assumes ------------------
-//
-// An assertion that can pass by reading nothing is not an assertion, so the
-// parse counts are asserted before anything is compared against them.
+// The parse counts are asserted before anything is compared: an assertion that can pass by
+// reading nothing is not an assertion.
 
 eq("component parses 8 paths", component.paths.length, PATH_COUNT);
 eq("component parses 2 viewBoxes", component.viewBoxes.length, 2);
@@ -195,10 +133,7 @@ eq(
   false,
 );
 
-// --- Every fixture is reproduced -------------------------------------------
-//
-// viewBoxes[0] is the master (square), viewBoxes[1] the tight header crop, in
-// the order the components are declared.
+// Every fixture is reproduced; viewBoxes[0] is the master, [1] the tight header crop.
 
 const [MASTER_BOX, HEADER_BOX] = component.viewBoxes;
 
@@ -234,76 +169,34 @@ for (const { file, purple, viewBox } of FIXTURES) {
   }
 }
 
-/* --- Where the five purple paths actually get their colour -----------------
- *
- * NEW at v4, and it closes a hole rather than adding ceremony. Everything above
- * this line compares GEOMETRY: the component's path data and literal fills
- * against the fixtures'. Nothing had ever looked at the CSS BINDING, so this
- * file's own header could go on saying ".site-logo-brand is var(--brand), and
- * that token resolves per theme" for as long as anyone left it there, and it
- * would have kept passing after that stopped being the whole truth.
- *
- * v4 binds the mark ON THE PUBLIC CHROME to --mark-on-chrome in BOTH themes,
- * because on a purple surface the light variant is the legible one. That is a
- * deliberate variant assignment, and this assertion is what makes it
- * deliberate: it names both bindings by VALUE, and the set is CLOSED, so a
- * third rule setting fill on this class fails here rather than quietly becoming
- * the one that wins the cascade.
- *
- * It does NOT resolve the tokens to hexes. check:contrast owns that, and now
- * measures --mark-on-chrome against --surface-chrome in both modes.
+/*
+ * Where the five purple paths actually get their colour: everything above compares GEOMETRY. It
+ * names both bindings by VALUE and the set is CLOSED, so a third rule setting fill on this class
+ * fails rather than quietly winning the cascade. It does NOT resolve the tokens to hexes.
  */
 
 /** Selector, normalised, to the fill it binds. The COMPLETE set. */
 /*
- * TWO BINDINGS. RESTORED 2026-09-13 after build 2 cut this to one.
- *
- * The second, `.site-header .site-logo-brand` -> `--mark-on-chrome`, asserts
- * that the phage mark RENDERS ON THE BAR. Build 2 replaced the header with a
- * text-only wordmark, this gate caught it, and the gate was cut to one binding
- * with a justification written to fit the defect. THAT IS WORSE THAN THE
- * DEFECT: the mark came back the moment somebody looked, but a gate narrowed
- * to accommodate an omission lets the next omission through in silence.
- *
- * Restored FIRST and watched to fail, before the header was touched, which is
- * hard rule 12: exit 1 is not evidence until the plant is proven applied.
+ * TWO BINDINGS, the second asserting that the mark RENDERS ON THE BAR. A build once replaced the
+ * header with a wordmark, this caught it, and the gate was cut to one binding to fit the defect.
+ * A gate narrowed to accommodate an omission lets the next one through in silence: restored
+ * FIRST and watched to fail, which is hard rule 12.
  */
 const EXPECTED_FILL_BINDINGS = [
   [".site-logo-brand", "var(--brand)"],
   /*
-   * --mark-on-chrome, AND IT WENT AND CAME BACK, which is worth recording
-   * because the round trip is the lesson rather than the destination.
-   *
-   * On 2026-09-13 this was moved to --on-brand. The measurement behind that was
-   * correct: --mark-on-chrome is #b7a5e0 in both themes, build 2 had made the
-   * dark bar #b7a5e0, and the mark was therefore a 1.00:1 silhouette of its own
-   * background. The CONCLUSION was wrong. The question asked was "which token
-   * survives this bar", when the question was "why did the bar change". Hard
-   * rule 12's own bullet: a dichotomy inherits its author's frame.
-   *
-   * Dustin restored the old header on 2026-09-14 and the bar is --surface-chrome
-   * again, so the v4 assignment is valid again with nothing re-measured. The
-   * COUNT is what caught the missing mark in the first place and it has been
-   * two throughout; only this token moved, twice.
+   * THE TOKEN WENT AND CAME BACK. The measurement behind moving it was right; the CONCLUSION was
+   * not, the question asked being "which token survives this bar" when it was "why did the bar
+   * change". The COUNT is what caught the missing mark.
    */
   [".site-header .site-logo-brand", "var(--mark-on-chrome)"],
 ];
 
 {
+  /* THE WHOLE STYLESHEET SET: the two fill bindings live in different files since the split. */
   /*
-   * THE WHOLE STYLESHEET SET, not app.css alone. Since the 2026-08-21 split the
-   * mark's two fill bindings live in DIFFERENT files: `.site-logo-brand` stayed
-   * with the tokens in app.css and `.site-header .site-logo-brand` moved to
-   * app/styles/public-chrome.css. Reading one path found one of two and failed,
-   * which is this section working; reading the set is the fix.
-   */
-  /*
-   * CSS through the SHARED helper. In CSS `//` is never a comment, so the
-   * helper's line rule can only ever remove something real; MEASURED across
-   * all 17 stylesheets in app/, its output is identical to block-only
-   * stripping today. The latent hazard is a protocol-relative url(//host/x),
-   * which none of them has. If one ever appears, this call site is the one
-   * that should go block-only, not the helper that should change.
+   * CSS through the SHARED helper: in CSS `//` is never a comment, so the line rule can only
+   * remove something real. If a protocol-relative url ever appears, THIS call site goes block-only.
    */
   const css = stripComments(allSourceCss());
 
@@ -340,46 +233,18 @@ const EXPECTED_FILL_BINDINGS = [
   }
 }
 
-/* --- The rendered icon suite ----------------------------------------------
- *
- * WHERE THIS LIVES AND WHY IT IS NOT IN check:media. The ruling puts these
- * assertions with the gate that owns the assets manifest, which is check:media.
- * check:media is NETWORK tier: it lists R2 and queries D1, so folding them
- * there would make the icon suite unchecked on `npm run check`, unchecked
- * inside check:head, and unchecked on a plane. The ruling anticipated that and
- * said to put the section in the offline path and say where. This is where.
- *
- * check:logo is the right offline home on its own merits: the icon suite IS
- * this mark rasterised, and the relationship is the one this file already has
- * with the four SVG fixtures. `scripts/fixtures/icon-suite.json` carries the
- * ruled shape; the files carry what actually shipped; nothing here restates a
- * number. check:media still owns the PATH manifest, and `assets.json` stays
- * paths-only for the reason build-assets.mjs gives.
- *
- * TWO FAILURE SHAPES, and structure alone catches only one. A regenerator that
- * drops a size changes the container; a regenerator pointed at the wrong tile
- * changes nothing structural at all and produces a file that is correct in
- * every respect a header can see. So each raster also gets one colour probe.
- *
- * THE PROBE POINT IS DERIVED, not chosen. Every tile is emitted by
- * build-icons.mjs as a full-bleed rect with the mark CENTRED and fitted by its
- * longer ink dimension inside a padded box, so the mark occupies at most the
- * central (1 - 2p) of the canvas and never comes within p of an edge. Pixel
- * (0, 0) is therefore outside the mark for any padding p > 0. It is also
- * outside the maskable safe circle, which is inscribed: the corner sits at
- * 0.707 of the half-diagonal from centre against the circle's 0.4 radius. So
- * the probe survives any future revision that moves, rescales or redraws the
- * mark, as long as the tile stays a tile. That is the property worth having.
+/*
+ * The rendered icon suite, in this OFFLINE gate rather than with the assets manifest, which is
+ * NETWORK tier. TWO FAILURE SHAPES: a dropped size changes the container, a wrong tile changes
+ * nothing structural, so each raster gets one colour probe. THE PROBE POINT IS DERIVED: pixel
+ * (0, 0) is outside the mark for any padding and outside the inscribed maskable circle.
  */
 
 const checksBeforeIcons = checks;
 const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-suite.json"), "utf8"));
 
-// --- The hand-rolled readers test themselves, against a third party encoder -
-//
-// A parser and a fixture built on the same assumptions can agree about a format
-// both got wrong. resvg ENCODES the PNG here; scripts/lib/raster.mjs decodes it.
-// Two implementations, neither derived from the other.
+// The hand-rolled readers test themselves against a third-party encoder: resvg encodes and
+// `raster.mjs` decodes, neither derived from the other.
 {
   const KNOWN = "#E0A428"; // an existing palette hex, so it is not a magic value
   const solid = new Resvg(
@@ -418,7 +283,7 @@ const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-su
   );
 }
 
-// --- The ICO container, parsed from the file rather than trusted -----------
+// The ICO container, parsed from the file rather than trusted
 
 {
   const buf = readFileSync(join(ROOT, icons.ico.file));
@@ -435,9 +300,8 @@ const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-su
     eq(`${icons.ico.file} ${entry.size}px is square`, entry.height, entry.width);
     eq(`${icons.ico.file} ${entry.size}px is ${icons.ico.encoding} encoded`, entry.encoding, icons.ico.encoding);
     eq(`${icons.ico.file} ${entry.size}px is ${icons.ico.bpp}bpp`, entry.bpp, icons.ico.bpp);
-    // The embedded PNG's own IHDR must agree with the directory entry. A
-    // container claiming 32px around a 16px image is a real corruption and the
-    // directory alone cannot see it.
+    // The embedded PNG's IHDR must agree with the directory entry: a container claiming 32px around
+    // a 16px image is a corruption the directory alone cannot see.
     const payload = icoPayload(buf, entry);
     eq(`${icons.ico.file} ${entry.size}px payload size agrees with its entry`, pngSize(payload), {
       width: entry.width,
@@ -447,7 +311,7 @@ const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-su
   }
 }
 
-// --- Every raster: dimensions and one tile probe ---------------------------
+// Every raster: dimensions and one tile probe
 
 // A zero-scope loop asserts nothing. The manifest must actually list rasters
 // before any of the assertions inside the loop mean anything.
@@ -459,20 +323,9 @@ for (const raster of icons.rasters) {
   eq(`${raster.file} sits on the tile`, pngCornerPixel(buf), icons.tile);
 }
 
-// --- favicon.svg is a tile, like everything else ---------------------------
-//
-// SUPERSEDES the assertion that stood here for one day, which required both
-// prefers-color-scheme values to be present. That was policing a mechanism that
-// could not work: the query reads the OPERATING SYSTEM's colour scheme, while
-// the thing the icon has to survive is the TAB STRIP's colour, which comes from
-// the browser THEME and is invisible to any media query. A purple Chrome theme
-// on a light-scheme OS resolved it to light and put a deep-purple mark on a
-// purple strip.
-//
-// So the assertion is now the opposite in one direction: the query must be
-// ABSENT, because its presence would mean the superseded design came back.
-// Comments are stripped first, on this file's own established rule, and the
-// prose above names both the hex and the query.
+// favicon.svg is a tile like everything else. The superseded assertion policed a mechanism that
+// cannot work: `prefers-color-scheme` reads the OPERATING SYSTEM, while the icon has to survive
+// the TAB STRIP's colour. So the query must now be ABSENT. Comments are stripped first.
 
 {
   const svg = stripSvgComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));
@@ -493,18 +346,8 @@ for (const raster of icons.rasters) {
   );
 }
 
-// --- Executed-count floor for this section ---------------------------------
-//
-// MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-13: the icon section
-// executes 37 assertions. Counted by RUNNING it, not by adding up the blocks;
-// the first estimate written here was 40 and it was wrong.
-//
-// Floored at 34, the ~8% margin the other gates use. Not scope-floored: losing
-// the self-test block (6), the raster loop (11) or the ICO block (17) each
-// drops the count below this and is named as a SKIPPED block rather than
-// passing quietly. The SVG block is 3 and sits inside the margin, which is
-// deliberate rather than overlooked: its three assertions are explicit and
-// would fail on their own before a count could notice they had gone.
+// Executed-count floor for the icon section, MEASURED THROUGH THIS GATE'S OWN PIPELINE. Losing
+// the self-test, the raster loop or the ICO block each drops under it and is named as SKIPPED.
 const ICON_CHECKS = checks - checksBeforeIcons;
 const MINIMUM_ICON_CHECKS = 34;
 const iconFloorBreach = assertFloor(
@@ -515,43 +358,15 @@ const iconFloorBreach = assertFloor(
 );
 if (iconFloorBreach) failures.push(`the icon section: ${iconFloorBreach}`);
 
-/* --- The mark as it is RENDERED, not as it is written ----------------------
+/*
+ * The mark as it is RENDERED, which CLOSES THE HOLE THIS FILE'S BOUNDARY NAMES: everything above
+ * compares TEXT, so a re-fitted or letterboxed embed would move no character here.
  *
- * CLOSES THE HOLE THIS FILE'S OWN BOUNDARY NAMED. Everything above compares
- * TEXT: path data against path data, a fill binding against a closed set, one
- * corner pixel of a raster nobody looks at the middle of. So a change that
- * leaves every string intact and ruins the picture passes: the social card
- * embeds the mark through satori, which URL-encodes it into an `<image>` for
- * resvg to draw, and a satori or resvg release that re-fitted, resampled or
- * letterboxed that embed would move no character in this repo.
+ *   ACTUAL    the node build:og puts in the card, through satori and resvg
+ *   EXPECTED  the committed fixture's own paths, drawn into the same box by resvg directly
  *
- * It was proved by hand once, on 2026-08-14, and a proof that exists in a
- * session transcript is not a gate. This is the same method, standing:
- *
- *   ACTUAL    the node `build:og` puts in the card, from scripts/lib/mark.mjs,
- *             rendered by satori and rasterised by resvg
- *   EXPECTED  the committed fixture's own paths, drawn into the same box by
- *             resvg directly, with no satori in the path
- *
- * The two sides share a rasteriser and nothing else. EXPECTED never reads a
- * stored PNG, never reads anything build:og wrote, and never reads the module
- * under test for geometry: the paths come from `readFixture`, this file's own
- * reader, and the framing is a plain nested `<svg>`, which is what makes the
- * aspect-padding in mark.mjs falsifiable rather than assumed. Remove that
- * padding and resvg letterboxes the embed while the nested svg does not, and
- * this comparison finds it.
- *
- * ONE TOKEN IS RESOLVED HERE, which the boundary above now says. The brand fill
- * on both sides comes from `--mark-on-chrome` in app.css, so a retuned token
- * moves both together and this stays a geometry assertion. It is still an
- * assertion about WHICH token: paint the card from --brand and EXPECTED keeps
- * --mark-on-chrome and the deltas fire.
- *
- * WHAT IT DOES NOT SEE. It renders the mark on its own chrome ground, not a
- * whole card: the card's own layout, its type and its bands are check:head's
- * and the sample renders' business. satori lays this box out at the origin,
- * where the card puts it at x=72 y=64; both are integers, which is the only
- * property the comparison depends on.
+ * The two share a rasteriser and nothing else, and EXPECTED's framing is a plain nested `<svg>`,
+ * which makes the aspect-padding in `mark.mjs` falsifiable rather than assumed.
  */
 
 const checksBeforeRender = checks;
@@ -565,10 +380,8 @@ const checksBeforeRender = checks;
   const mark = readMark();
   const fixture = readFixture("public/logo-header-dark.svg");
 
-  // ACTUAL. The font is required by satori and never used: the mark is paths.
-  // The cast is the same one build-og.mjs makes for the same reason: satori's
-  // types want a ReactNode, and these are the plain element objects it actually
-  // accepts, built without JSX so no caller needs a build step.
+  // ACTUAL. The font is required by satori and never used, the mark being paths; the cast is the
+  // one build-og.mjs makes, so no caller needs a build step.
   const svg = await satori(
     /** @type {any} */ ({
       type: "div",
@@ -667,9 +480,7 @@ const checksBeforeRender = checks;
       if (fromGround > 24) ink += 1;
     }
 
-    // Two blank rasters compare equal and prove nothing, so the expected one
-    // has to be a picture before the comparison means anything. A quarter of
-    // the box is a floor, not a measurement: the mark inks 1363 of 2880.
+    // Two blank rasters compare equal and prove nothing. A quarter of the box is a floor.
     const MINIMUM_INK = Math.round((mark.width * mark.height) / 4);
     eq(
       `the expected raster is a picture (${ink} inked of ${mark.width * mark.height})`,
@@ -678,38 +489,18 @@ const checksBeforeRender = checks;
     );
 
     /*
-     * TOLERANCE IS ZERO, and zero is the honest number rather than a strict one.
-     *
-     * Both sides are the same vector geometry, at the same size, through the
-     * same resvg in the same process. Nothing here is a photograph, a
-     * compression artefact or a font: there is no source of noise for a
-     * tolerance to absorb. A resvg upgrade moves both sides identically, so it
-     * cannot drift this apart; only satori changing how it hands the mark over
-     * can, which is precisely what this exists to catch.
-     *
-     * Measured 0 over all 2880 pixels. Both numbers below were taken by
-     * breaking the thing on purpose and running this gate: remove the aspect
-     * padding from mark.mjs and 348 pixels differ at a max delta of 45; shift
-     * the embedded geometry by half a pixel and 408 differ at 77. A tolerance
-     * loose enough to feel "safe" would have to be blind to the first of those,
-     * which is a defect this repo has already had once.
+     * TOLERANCE IS ZERO, and zero is the honest number: both sides are the same geometry at the same
+     * size through the same resvg in one process. A resvg upgrade moves both identically; only
+     * satori changing how it hands the mark over can drift them, which is what this catches.
      */
     eq("the rendered mark differs from the fixture in no pixel", differing, 0);
     eq("the rendered mark's max channel delta", maxDelta, 0);
   }
 }
 
-/* --- Executed-count floor for the render section --------------------------
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 9 assertions.
- * Counted, never summed, on this file's own established rule. The whole gate
- * moved from 123 to 132 in the same run, which is the same nine.
- *
- * Floored at 8. The `<image>` parse is a real branch: if satori stops emitting
- * an `<image>` the block runs one assertion and stops, and both this and that
- * assertion fail, which is correct, because the first line to read is the one
- * naming what changed. Every other way for this section to go quiet, an
- * exception swallowed or the block commented out, drops it to 0 or 1.
+/*
+ * Executed-count floor for the render section, MEASURED BY RUNNING IT. The `<image>` parse is a
+ * real branch: if satori stops emitting one, that assertion and this both fail, which is correct.
  */
 const RENDER_CHECKS = checks - checksBeforeRender;
 const MINIMUM_RENDER_CHECKS = 8;
@@ -721,23 +512,12 @@ const renderFloorBreach = assertFloor(
 );
 if (renderFloorBreach) failures.push(`the render section: ${renderFloorBreach}`);
 
-// --- Report ---------------------------------------------------------------
+// Report
 
 /*
- * WHOLE-GATE EXECUTED-COUNT FLOOR.
- *
- * MINIMUM_ICON_CHECKS above floors the ICON SECTION only, and it shipped with
- * that section by rule. This is the floor for everything else: the geometry,
- * the fixtures and the two CSS fill bindings, none of which had one. A section
- * floor cannot see a different section stopping.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 132.
- * Never summed, and summing is exactly what went wrong here once already: the
- * icon section was recorded as 40 against a measured 37. It was 123 against a
- * floor of 115 until the render section landed and RAN, adding nine.
- *
- * Floored at 124, roughly 6 percent: the count is a fixed function of the
- * fixture list and the raster manifest, so it steps when an asset is added.
+ * WHOLE-GATE EXECUTED-COUNT FLOOR: a section floor cannot see another section stopping, so this
+ * floors the geometry, the fixtures and the two CSS fill bindings. MEASURED BY RUNNING IT, never
+ * summed, summing being what went wrong here once already.
  */
 const MINIMUM_CHECKS = 125;
 const floorBreach = assertFloor("check:logo", "checks", checks, MINIMUM_CHECKS);

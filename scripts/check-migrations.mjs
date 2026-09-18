@@ -4,57 +4,14 @@
  *   npm run check:migrations
  *   node scripts/check-migrations.mjs --write [--force]
  *
- * ## OBSERVATION BOUNDARY
- *
- * **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.**
- *
- * It does NOT prove the manifest was honest when it was written. Someone who
- * edits a migration and regenerates in the same commit produces a green run;
- * what stops that is the diff, which shows both the `.sql` change and the hash
- * change, and `--write` refusing to alter an existing hash without `--force`.
- *
- * It does NOT know what the LIVE database actually applied. A migration edited
- * before it was ever applied is legitimate and indistinguishable here from one
- * edited after. The live half is `check:invariants --remote`, which compares
- * the migrations replayed into memory against the real schema.
- *
- * ## IT HASHES NORMALIZED CONTENT, NOT RAW BYTES, and that was learned the hard
- * way
- *
- * The first version hashed raw bytes on the reasoning that a migration whose
- * bytes moved is a migration whose bytes moved. That made the manifest
- * MACHINE-SPECIFIC. `core.autocrlf` is true on this host, so seven of the ten
- * migrations sit CRLF in the working tree while their committed blobs are LF;
- * hashes generated from disk therefore failed against every fresh checkout.
- *
- * Found by `check:head` on the run immediately after this gate was wired: it
- * passed on disk in 0.7s and failed inside an extraction of the same commit.
- * That is precisely the class check:head exists for, catching a defect in a
- * gate written the same session.
- *
- * CRLF is collapsed to LF before hashing, so the hash is a property of the
- * CONTENT. Nothing is lost: `.gitattributes` pins the whole tree to LF, so line
- * endings are not a meaningful axis of change here, and a genuine content edit
- * still moves the hash.
- *
- * ## Why this exists, and the honest note about its testing
- *
- * Hard rule 14: migrations are hand-written and an applied one is never edited.
- * `check:invariants` section 4 replays every migration into an empty database
- * and diffs the result against `schema.ts`, so it catches an edit that MOVES A
- * COLUMN. It cannot see anything else. Editing seed data, an index, a trigger,
- * or FTS DDL inside an applied file changes what a fresh clone builds and is
- * invisible to every gate in this repo. Backlog item 7.
- *
- * **RULE 12 CANNOT BE SATISFIED HERE, and that is stated rather than papered
- * over.** A new gate is supposed to be tested by replaying the defect it was
- * written for. No such defect exists: no migration in this repo has ever been
- * edited after being applied. So this gate is verified by PLANTS ONLY, which
- * the rule warns are written to match the implementation rather than the bug.
- * If an edited migration is ever discovered, replay it against this gate before
- * trusting the plants.
- *
- * Pure: no network, no database.
+ * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** What stops a dishonest
+ * manifest is the diff and `--write` refusing to alter an existing hash without `--force`; what
+ * the LIVE database applied is `check:invariants --remote`'s half. IT HASHES NORMALIZED CONTENT,
+ * NOT RAW BYTES: with autocrlf on, the working tree and its own committed blobs disagree about
+ * line endings. WHY IT EXISTS: hard rule 14. The replay section catches an edit that MOVES A
+ * COLUMN and nothing else, so seed data, an index, a trigger or FTS DDL is invisible elsewhere.
+ * **RULE 12 CANNOT BE SATISFIED HERE:** no migration has ever been edited after being applied, so
+ * this is verified by PLANTS ONLY, which that rule warns match the implementation not the bug.
  */
 
 import { createHash } from "node:crypto";
@@ -74,10 +31,8 @@ const WRITE = args.includes("--write");
 const FORCE = args.includes("--force");
 
 /**
- * Below this the directory is not a migrations directory and something is wrong.
- * Measured through this gate 2026-08-24: 12 on disk. It was 8, which could not
- * notice a third of the directory being deleted, and 0001_init.sql is the only
- * copy of the CREATE TABLE statements that exists anywhere.
+ * Below this the directory is not a migrations directory. The earlier value could not notice a
+ * third of it being deleted, and the first migration is the only copy of the CREATE TABLEs.
  */
 const MINIMUM_MIGRATIONS = 11;
 
@@ -94,12 +49,8 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * sha256 of the migration's CONTENT, with CRLF collapsed to LF.
- *
- * Normalized rather than raw for the reason in the header: with
- * `core.autocrlf` true, a working tree and its own committed blobs disagree on
- * line endings, so a raw-byte manifest is only valid on the machine that wrote
- * it and fails in every checkout.
+ * The migration's CONTENT, with CRLF collapsed: with autocrlf on, a working tree and its own
+ * committed blobs disagree, so a raw-byte manifest is valid only where it was written.
  *
  * @param {string} file
  */
@@ -110,7 +61,7 @@ function hashOf(file) {
 
 console.log("\ncheck:migrations\n");
 
-/* ------------------------------------------------------- fail closed first */
+/* fail closed first */
 
 if (!existsSync(MIGRATIONS)) {
   console.log("  FAIL  drizzle/ is missing. Refusing to pass with nothing to check.\n");
@@ -122,15 +73,9 @@ const files = readdirSync(MIGRATIONS)
   .sort();
 
 /*
- * THROUGH assertFloor SINCE 2026-09-15. Migrations are APPEND-ONLY by hard rule
- * 14, so this is the purest growing set in the repo: the count can only climb,
- * and a floor left alone goes slack on its own. It was a bare early exit, so it
- * printed no floor line and check:floors could not see the gap. See
- * check-tests.mjs's note beside its file floor for which scope floors stay out.
- *
- * STILL A HARD EXIT rather than a counted assertion. Everything below reads
- * these files; continuing past a truncated directory would measure a corpus
- * that is not there.
+ * THROUGH assertFloor: migrations are append-only, the purest growing set in the repo, so a floor
+ * left alone goes slack on its own. STILL A HARD EXIT rather than a counted assertion, because
+ * continuing past a truncated directory would measure a corpus that is not there.
  */
 const migrationsBreach = assertFloor(
   "check:migrations",
@@ -146,7 +91,7 @@ if (migrationsBreach) {
   process.exit(1);
 }
 
-/* --------------------------------------------------------------- generator */
+/* generator */
 
 if (WRITE) {
   /** @type {Record<string, string>} */
@@ -160,10 +105,9 @@ if (WRITE) {
   }
 
   /*
-   * REFUSES TO LAUNDER AN EDIT. Regenerating is the obvious way to make this
-   * gate green after editing an applied migration, so a hash that CHANGES needs
-   * --force, which puts the decision in the command line and therefore in the
-   * shell history and the reviewer's question. Adding a NEW file needs nothing.
+   * REFUSES TO LAUNDER AN EDIT: regenerating is the obvious way to make this gate green, so a hash
+   * that CHANGES needs `--force`, which puts the decision in the shell history. A NEW file needs
+   * nothing.
    */
   if (changed.length > 0 && !FORCE) {
     console.log(
@@ -182,7 +126,7 @@ if (WRITE) {
   process.exit(0);
 }
 
-/* ------------------------------------------------------------ the checking */
+/* the checking */
 
 ok(
   "drizzle/manifest.json exists",
@@ -249,32 +193,15 @@ console.log(
 );
 
 
-/* ------------------------------ ship refuses on a pending migration -------- */
+/* ship refuses on a pending migration */
 
 /*
- * **AUTHORING A MIGRATION MUST CREATE AN OBLIGATION SOMEWHERE, AND THIS IS IT.**
- *
- * SHIP WINDOW 5 deployed with every offline gate green and the media admin page
- * returned a 500 on its first load, because `0011_media_trash_tags.sql` had
- * been pending on the remote database since the session that authored it, four
- * sessions earlier. The columns did not exist and every media loader query
- * threw.
- *
- * This section belongs HERE rather than in a gate of its own, and that is a
- * judgement worth stating. Nothing owns ship's step ORDERING today; the closest
- * thing is `check:assertions`, which lints every `scripts/**` file including
- * `ship.mjs`, but only for the vacuity classes. What this gate owns is the
- * MIGRATION CONTRACT: hashes both directions, append-only, never edit an
- * applied one. "A migration that exists in the repo must be applied before the
- * code that needs it deploys" is a clause of that same contract, so it is added
- * to the gate that already holds it rather than a new gate being invented for
- * one assertion.
- *
- * SOURCE LEVEL, and the boundary is real: this reads what `ship.mjs` DECLARES.
- * It cannot run ship, and must not: the ship-guard law is that a deploy guard
- * is proven on its PREDICATE IN ISOLATION, never by invoking the deploy. The
- * predicate's own behaviour is unit tested in `test/pending-migrations.test.mjs`
- * against wrangler output recorded from a real database in both states.
+ * **AUTHORING A MIGRATION MUST CREATE AN OBLIGATION SOMEWHERE, AND THIS IS IT.** A ship deployed
+ * with every offline gate green and the media admin page 500d on first load, a migration having
+ * been pending on the remote database since the session that authored it. THIS SECTION BELONGS
+ * HERE: what this gate owns is the MIGRATION CONTRACT, and "a migration in the repo is applied
+ * before the code that needs it deploys" is a clause of it. SOURCE LEVEL: it reads what ship
+ * DECLARES, and must not run ship, a deploy guard being proven on its PREDICATE IN ISOLATION.
  */
 
 /* One owner: scripts/lib/strip-comments.mjs carries the trap, the guard and the boundary. */
@@ -326,12 +253,8 @@ if (existsSync(SHIP)) {
   );
 
   /*
-   * ORDERING, which is the half a presence check cannot see.
-   *
-   * A guard that runs AFTER the deploy is not a guard, it is a report. The
-   * index comparison is crude and it is the right crudeness: it reads the
-   * position of the guard's own announce against the deploy's, so moving
-   * either one fails.
+   * ORDERING, the half a presence check cannot see: a guard that runs AFTER the deploy is a report.
+   * The index comparison is crude and it is the right crudeness, moving either end failing it.
    */
   const guardAt = shipCode.indexOf("The deployed database has every migration");
   const deployAt = shipCode.indexOf('announce("Deploy")');
@@ -349,62 +272,17 @@ if (existsSync(SHIP)) {
   );
 }
 
-/* ------------- the LOCAL tier's ledger, when there is one to read --------- */
+/* the LOCAL tier's ledger, when there is one to read */
 
 /*
- * **NOTHING READ THE LOCAL DATABASE, AND THAT IS WHY IT SAT TWO MIGRATIONS
- * BEHIND FOR A WEEK.**
- *
- * The blind spot was structural rather than an oversight. This gate hashes
- * FILES against the manifest and never opened a database at all.
- * `check:invariants` section 4 does compare against a database, but only behind
- * `--remote`, and its third source is the migrations REPLAYED into an in-memory
- * database, which is built from the same files it is checking and therefore
- * agrees with them by construction. So every instrument either read the files,
- * or read production. A tier lagging the files was invisible to all of them.
- *
- * ## WHY THIS GATE OWNS IT
- *
- * The subject is the migration SET, which is this gate's whole subject. It also
- * has to run OFFLINE, and this is the offline-tier gate for migrations;
- * section 4's database arm is remote-gated, so putting it there would mean a
- * local assertion that never runs in the tier that ships, or a second flag.
- *
- * ## READ DIRECTLY, NOT THROUGH WRANGLER, AND THE REASON IS A SIDE EFFECT
- *
- * `wrangler d1 execute --local` CREATES the local database when it is absent.
- * A gate that brings its own subject into existence cannot report on it, and it
- * would turn every fresh clone into a machine with a database it never asked
- * for. `node:sqlite` opens the file READ ONLY, and `check:invariants` already
- * reads sqlite this way, so this is the established path rather than a new one.
- *
- * ## A MISSING DATABASE IS NOT A LAGGING ONE
- *
- * Conflating them would put a false red on every fresh checkout and on CI,
- * which has no `.wrangler` state at all. Three states, and only the third can
- * fail:
- *
- *   no directory, or no candidate file   SKIP. Nothing has ever run here.
- *   a database with no d1_migrations     SKIP. `wrangler dev` creates the file
- *                                        lazily, so this is indistinguishable
- *                                        from a first run, and failing it would
- *                                        red the first `npm run dev` on a clone.
- *   a database WITH a ledger             COMPARED, and this is the real case:
- *                                        a tier that has been migrated before
- *                                        and has since fallen behind.
- *
- * **THE SKIP EMITS NO ASSERTION ON PURPOSE.** These `ok()` calls run only when
- * there is a ledger, so the executed count is lower on CI than on a developer
- * machine, and `MINIMUM_CHECKS` below is floored for the CI case. A skip that
- * counted would make the floor mean different things in different environments,
- * which is worse than a floor that is slightly loose.
- *
- * ## NAMES, NOT A COUNT
- *
- * The cheapest version compares `d1_migrations` row count against the number of
- * files. This compares the NAMES, both directions, for the same cost: a count
- * passes when a file is renamed, or when the ledger holds twelve rows that are
- * not these twelve, and both of those are the drift this exists to catch.
+ * **NOTHING READ THE LOCAL DATABASE, AND THAT IS WHY IT SAT TWO MIGRATIONS BEHIND.** The blind
+ * spot was structural: this gate hashes FILES, and the gate that does compare against a database
+ * is remote-gated and builds its third source by REPLAYING the same files. READ DIRECTLY, NOT
+ * THROUGH WRANGLER: `d1 execute --local` CREATES the local database when absent, and a gate that
+ * brings its own subject into existence cannot report on it. Opened READ ONLY. A MISSING DATABASE
+ * IS NOT A LAGGING ONE: three states, and only the third can fail. **THE SKIP EMITS NO ASSERTION
+ * ON PURPOSE**, so the floor below is set for the CI case. NAMES, NOT A COUNT: a count passes
+ * when a file is renamed.
  */
 const D1_STATE = join(root, ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject");
 
@@ -470,25 +348,11 @@ if (ledger === null) {
 }
 
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * MINIMUM_MIGRATIONS above floors the SCOPE, which is a different question: it
- * catches a directory that stopped being read. This catches an assertion block
- * that stopped running over a directory that is still full, and neither can see
- * the other's bug.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, both cases, on
- * 2026-08-22. **THE COUNT NOW DEPENDS ON THE ENVIRONMENT and the floor is set
- * for the lower one**, which is the half that would otherwise bite CI:
- *
- *   47  no local D1 (a fresh clone, and every CI run). The ledger section
- *       skips and emits no assertion, deliberately.
- *   50  a machine with a local D1. The same run plus the ledger's three.
- *
- * Floored at 44, slack of three under the CI case. Never summed: 47 and 50 are
- * both read off a run. It was 41 against a measured 44 before the two
- * migrations this arc added and before the ledger section, and the count steps
- * by a fixed amount per migration, which is append-only by hard rule 14.
+ * EXECUTED-COUNT FLOOR. The scope floor catches a directory that stopped being read; this catches
+ * an assertion block that stopped running over a full one. MEASURED BY RUNNING IT, both cases.
+ * **THE COUNT DEPENDS ON THE ENVIRONMENT and the floor is set for the lower one**, the ledger
+ * section emitting no assertion where there is no local database. It steps by a fixed amount per
+ * migration, which is append-only by hard rule 14.
  */
 const MINIMUM_CHECKS = 53;
 const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);

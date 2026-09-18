@@ -1,58 +1,11 @@
 /**
- * Gate over the wrangler configs: every committed `.example` must declare the
- * same BINDING SURFACE as the real file beside it.
+ * Gate over the wrangler configs: every committed `.example` declares the same BINDING SURFACE as
+ * the real file beside it. Two pairs, the site and the watchdog; the real files are gitignored,
+ * so the example is the only description a fresh clone can see.
  *
- * TWO PAIRS SINCE 2026-08-29. The site (`wrangler.jsonc`) and the watchdog
- * Worker (`wrangler.watchdog.jsonc`). Both real files are gitignored and both
- * examples are tracked, for the same portfolio reason; the watchdog's redacted
- * value is an inbox address rather than an account-scoped id, which is why the
- * placeholder rule is per-entry rather than "a run of zeros" everywhere.
- *
- * OBSERVATION BOUNDARY: compares each pair to itself. It does not ask
- * Cloudflare whether any of these resources EXIST, so a binding naming a
- * deleted bucket passes, a service binding naming a Worker nobody deployed
- * passes, and it only knows the binding kinds `surfaceOf()` enumerates: a new
- * kind is invisible until added there.
- *
- * **THE CRON HALF MOVED INSIDE THAT BOUNDARY ON 2026-09-07.** This note used to
- * say the gate "cannot tell whether a cron TRIGGER is actually registered on
- * the deployed Worker, only what the config asks for; that half is proven live
- * by the freshness assertion in check:browser". That was a boundary note, which
- * FAILURES.md classes as a claim that ages, and it aged: `check:browser`'s
- * freshness assertion proves the WATCHDOG's cron fires and says nothing about a
- * cron registered on the SITE Worker that should not exist. One was, for fifteen
- * days. `--remote` now reads the registered schedules and compares them to the
- * declared set in both directions. WITHOUT `--remote` the old limitation still
- * holds exactly as written.
- *
- * Why this exists. The real config is gitignored portfolio-wide
- * (capsid/conventions.md, "Public-repo hygiene": secrets live in
- * `wrangler secret`, real wrangler.jsonc is gitignored, commit an example with
- * placeholder ids). The example is therefore the ONLY description of a Worker's
- * bindings that a fresh clone can see, and `scripts/bootstrap-config.mjs`
- * copies each into place on install.
- *
- * That mechanism has one failure mode and it happened: on 2026-08-02 an
- * `images` binding was added to the real config and not mirrored into the
- * example, so a clone would have built a site whose media thumbnails silently
- * degraded to full-resolution originals. Nothing compared the two files, so the
- * drift was invisible until someone went looking.
- *
- * This is the house rule for exactly that shape, from conventions.md: "Where
- * code hardcodes a list that mirrors schema or filesystem state, add a test that
- * derives the expected list from the source of truth and fails in both
- * directions: missing entries and orphaned ones."
- *
- * WHAT IS COMPARED: binding names, their kinds, and the non-identifying
- * settings (resource names, class names, compat date and flags, migrations,
- * cron triggers). WHAT IS NOT: the account-scoped resource identifiers,
- * `database_id` and the KV namespace `id`, which are exactly what the example is
- * meant to hold placeholders for. Comparing those would demand the example carry
- * real ids and defeat the convention this gate protects.
- *
- * FAILS CLOSED. A missing or unparseable file is a failure, never a skip: a
- * gate that passes when it cannot read its inputs is the class of silent pass
- * conventions.md was written about.
+ * BOUNDARY: it compares each pair to itself, asks Cloudflare nothing, and knows only the kinds
+ * `surfaceOf()` enumerates. WHAT IS COMPARED: names, kinds, non-identifying settings; NOT the
+ * account-scoped identifiers. FAILS CLOSED: a missing or unparseable file is a failure.
  */
 
 import { execFileSync } from "node:child_process";
@@ -71,14 +24,8 @@ import { readDevVar } from "./lib/dev-vars.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * Whether the caller asked for the live half.
- *
- * DECLARED HERE rather than beside the floor that reads it, because the
- * `--remote` block runs long before that point and a `const` further down the
- * module is in the temporal dead zone when it does. Caught by running both
- * modes: each exited 1 with a ReferenceError and printed no floor line at all,
- * which is the shape worth noticing, since a gate that dies before its floor
- * prints has no floor.
+ * DECLARED HERE rather than beside the floor that reads it: the `--remote` block runs first and
+ * a `const` further down is in the temporal dead zone.
  */
 const wantsRemote = process.argv.includes("--remote");
 
@@ -101,19 +48,9 @@ function assertThat(ok, label, detail) {
 console.log("\ncheck:config\n");
 
 /**
- * Vars whose VALUE is deliberately not committed: name to reason and to what a
- * legal placeholder looks like.
- *
- * Self-policing in both directions: an entry naming a var no config declares
- * fails below, and a var in here must match its placeholder shape in the
- * example rather than merely differing from the real value.
- *
- * THE PLACEHOLDER SHAPE IS PER ENTRY, since the watchdog landed. It used to be
- * "a run of zeros", which is right for an id and impossible for an email
- * address. `example.com` is RFC 2606 reserved, so the watchdog's placeholder
- * cannot be a real inbox by construction, which is the same property a row of
- * zeros has for an id: not merely different from the real value, but incapable
- * of being anyone's.
+ * Vars whose VALUE is deliberately not committed, name to reason to a legal placeholder.
+ * Self-policing both ways, and per entry, because "a run of zeros" is right for an id and
+ * impossible for an address; `example.com` cannot be a real inbox by construction.
  *
  * @type {Map<string, { why: string, placeholder: RegExp, shape: string }>}
  */
@@ -143,12 +80,8 @@ const REDACTED_VARS = new Map([
 ]);
 
 /**
- * Compares one real config against its tracked example.
- *
- * SHARED BY BOTH PAIRS rather than written twice. Two comparison routines
- * walking two configs is the mirror this gate's own docblock warns about: a
- * check tightened on one pair and forgotten on the other fails in the direction
- * that never reports, by comparing less and saying nothing.
+ * SHARED BY BOTH PAIRS: two routines walking two configs is the mirror this gate's own subject
+ * warns about, and one tightened on a single pair fails in the direction that never reports.
  *
  * @param {{
  *   label: string,
@@ -187,10 +120,8 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
   const realSurface = surfaceOf(real);
   const exampleSurface = surfaceOf(example);
 
-  // A binding KIND no reader understands is absent from BOTH surfaces, so the
-  // two agree by being equally blind and this gate passes. Found by planting
-  // `vectorize` in the example and watching check:stack pass; the same hole was
-  // here. Reported against both files, since either may carry it.
+  // A binding KIND no reader understands is absent from BOTH surfaces, so the two agree by being
+  // equally blind. Reported against both files, since either may carry it.
   for (const [what, config] of [
     [label, real],
     [`${label}.example`, example],
@@ -212,18 +143,8 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
   );
 
   /*
-   * AND A FLOOR, not just a non-empty check, added by the 2026-08-24 floor sweep.
-   *
-   * `> 0` is the weakest form of this assertion and it was the only form here.
-   * The failure it cannot see is the one that actually happens: `surfaceOf()`
-   * stops recognising a binding TYPE, so nine of ten bindings parse and the tenth
-   * silently drops out of both sides of the comparison. Two configs that both
-   * omit the same binding compare equal, which is exactly the drift this gate
-   * exists to catch, and `> 0` reports it as a clean run.
-   *
-   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, per pair. Floored
-   * just under, because each binding set is small and hand-maintained: it moves
-   * when a binding is added, in the same commit that adds it to both files.
+   * AND A FLOOR, not just non-empty: what `> 0` cannot see is `surfaceOf()` ceasing to recognise a
+   * TYPE, so both sides drop it and compare equal.
    */
   assertThat(
     realSurface.size >= floor,
@@ -270,30 +191,10 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
   );
 
   /*
-   * PLAIN VARS, BOTH DIRECTIONS, keys and values.
-   *
-   * `surfaceOf()` carries BINDINGS, and a var is not a binding, so before this
-   * block the `vars` object was compared by nothing at all: a var added to
-   * wrangler.jsonc and forgotten in the example would reach the running Worker
-   * and be absent from every clone, which is the exact drift this gate exists to
-   * catch for everything else. Found 2026-08-14 while adding the first var.
-   *
-   * VALUES are compared, not just names, and that is deliberate. A var is by
-   * definition not a credential (a credential goes in `wrangler secret`), so the
-   * example can usually carry the real value and there is nothing to redact.
-   *
-   * NOT-A-CREDENTIAL AND NOT-COMMITTABLE ARE TWO DIFFERENT QUESTIONS, and an
-   * earlier version of this paragraph collapsed them. `CLOUDFLARE_ACCOUNT_ID` is
-   * an identifier: it grants nothing on its own, which is why it is a var and not
-   * a secret. It is also ACCOUNT-SCOPED, and the portfolio rule keeps
-   * account-scoped identifiers out of git. `ALERT_EMAIL` is the second instance
-   * of the same distinction wearing different clothes: an inbox address grants
-   * nothing either, and belongs out of git for a different reason, that this repo
-   * gets copied.
-   *
-   * So a var may be REDACTED, by name, with its reason, and the redaction is
-   * checked in both directions: the example must carry a placeholder of the
-   * declared SHAPE and must not carry the real value.
+   * PLAIN VARS, BOTH DIRECTIONS, keys and values: `surfaceOf()` carries bindings and a var is not
+   * one, so a var added to the real config reaches the Worker and is absent from every clone.
+   * NOT-A-CREDENTIAL AND NOT-COMMITTABLE ARE DIFFERENT QUESTIONS, so a var may be REDACTED by
+   * name, with its reason, checked both ways against the declared placeholder SHAPE.
    */
   {
     const realVars = /** @type {Record<string, unknown>} */ (real.vars ?? {});
@@ -335,17 +236,9 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
     }
   }
 
-  // Observability. Not a binding, so surfaceOf() cannot carry it, and nothing
-  // compared it until 2026-08-14. It stopped being a debugging preference then:
-  // an invocation log is enriched with the request context, which measurably
-  // included `request.headers.cookie` and `cf-connecting-ip`, so leaving those
-  // records on persists full reader IPs and session cookies for 7 days. There is
-  // no field-level redaction, so `invocation_logs: false` IS the mechanism.
-  //
-  // Parity is not the property. Both files could be flipped back together and
-  // stay consistent, so the VALUE is asserted in each, and `enabled` is asserted
-  // true alongside it: turning observability off wholesale would also satisfy an
-  // invocation_logs check while silently ending error visibility.
+  // Observability, which `surfaceOf()` cannot carry. Invocation logs were measured to include the
+  // request's cookie header and connecting IP with no field-level redaction, so `invocation_logs:
+  // false` IS the mechanism. Parity is not the property, so the VALUE is asserted in each.
   assertThat(
     JSON.stringify(real.observability ?? null) === JSON.stringify(example.observability ?? null),
     `${label} observability block matches`,
@@ -374,7 +267,7 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
   return { real, example, surface: realSurface };
 }
 
-/* ======================================================== the site Worker */
+/* the site Worker */
 
 const site = comparePair({
   label: "wrangler.jsonc",
@@ -390,20 +283,14 @@ assertThat(
   "durable object migrations match",
   "A class listed in one and not the other means a clone's DO migration state diverges.",
 );
-// Workers Cache is not a binding, so surfaceOf() cannot carry it, but it is
-// exactly the kind of setting this gate exists for: a clone that built without
-// it would re-decode and re-encode every thumbnail and never say so.
+// Workers Cache is not a binding, but a clone built without it would re-encode every thumbnail.
 assertThat(
   JSON.stringify(site.real.cache ?? null) === JSON.stringify(site.example.cache ?? null),
   "cache block matches",
   `real: ${JSON.stringify(site.real.cache ?? null)} | example: ${JSON.stringify(site.example.cache ?? null)}`,
 );
-// PARITY IS NOT THE PROPERTY. The comparison above passes with the cache turned
-// OFF in both files, which is the state `workers/app.ts` is written against:
-// its `private, no-store` default exists precisely because a response with no
-// Cache-Control is cached rather than skipped. Turning the block off in both
-// places would be a silent, symmetric change to what the Worker's fail-closed
-// default is defending. Asserted by VALUE, in both files, for that reason.
+// PARITY IS NOT THE PROPERTY: the comparison above passes with the cache OFF in both, which is
+// not the state `workers/app.ts` is written against. Asserted by VALUE, in both files.
 for (const [label, config] of [
   ["real", site.real],
   ["example", site.example],
@@ -421,12 +308,7 @@ for (const [label, config] of [
 // that account-scoped identifiers stay out of git.
 const exampleDbId = site.example.d1_databases?.[0]?.database_id ?? "";
 const exampleKvId = site.example.kv_namespaces?.[0]?.id ?? "";
-// SIMPLIFIED 2026-08-29, behaviour preserving. The original was a disjunction
-// whose first arm stripped the dashes, prepended an "x" when the string was
-// empty, and then tested a pattern the second arm already covered; both arms
-// rejected the empty string and every real id, so this is the same predicate
-// written once. The length check makes the empty case explicit rather than
-// incidental.
+// The length check makes the empty case explicit rather than incidental.
 assertThat(
   /^[0-]+$/.test(exampleDbId) && exampleDbId.length > 0,
   "example's database_id is still a placeholder",
@@ -438,21 +320,8 @@ assertThat(
   `Found ${exampleKvId ? "a non-placeholder value" : "nothing"}.`,
 );
 /*
- * THE SENTINEL IS A WORD, NOT A NUL, and that is not a style preference.
- *
- * These two comparisons need a fallback that can never equal a real id, so a
- * real config missing the field cannot make the assertion pass by accident.
- * The value here used to be a literal NUL, and `check:head`'s preflight refuses
- * one anywhere under `scripts/`, `app/` or `workers/` for a good reason: a NUL
- * makes git render the file as BINARY and makes ripgrep skip it in a directory
- * search, so every later change to this gate would ride in unreviewed and
- * invisible to a repo-wide grep.
- *
- * It arrived here as a byte rather than as an escape, which is the same class
- * VERIFICATION.md records for a backspace that reached a script as 0x08 and
- * displayed correctly while matching nothing. Caught by `check:head` on the run
- * before this one. A readable word is a better sentinel anyway: it survives
- * being printed into a failure message.
+ * THE SENTINEL IS A WORD, NOT A NUL: a NUL makes git render the file BINARY and ripgrep skip it,
+ * so every later change here would ride in unreviewed.
  */
 assertThat(
   exampleDbId !== (site.real.d1_databases?.[0]?.database_id ?? "(absent)"),
@@ -463,19 +332,12 @@ assertThat(
   "example's KV id is not the real one",
 );
 
-/* ==================================================== the watchdog Worker */
+/* the watchdog Worker */
 
 /*
- * ADDED 2026-08-29. The watchdog is a second Worker with its own config, its
- * own cron and its own redacted var, and before this it was described by
- * nothing: a binding added to it and forgotten in the example would have been
- * invisible in exactly the way the `images` binding was in August.
- *
- * `main` is compared like the site's. `workers_dev` is compared AND asserted
- * false in both, on the cache block's reasoning: parity is not the property,
- * because both files could be flipped together. This Worker exports `scheduled`
- * and nothing else, so a public route would answer errors to anyone who found
- * it and would be a second way in to a Worker holding the operator token.
+ * The watchdog is a second Worker with its own config, cron and redacted var. `workers_dev` is
+ * false in both: it exports `scheduled` only, so a public route is a second way in to a Worker
+ * holding the operator token.
  */
 const watchdog = comparePair({
   label: "wrangler.watchdog.jsonc",
@@ -505,20 +367,9 @@ for (const [label, config] of [
 }
 
 /*
- * THE CRON, AND THIS CONFIG IS NOW ITS ONE OWNER.
- *
- * `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs decides when
- * the home page calls its health verdict stale. Until 2026-08-29 that number
- * was bound to `.github/workflows/health.yml`'s cron by `check:invariants`
- * section 25. The watchdog now sets the pace and health.yml is the hourly
- * second opinion, so section 25 parses THIS file instead. The binding lives
- * there; what lives here is that the trigger exists, that there is exactly
- * ONE of it, and that it means fifteen minutes.
- *
- * EXACTLY ONE, because section 25 compares one schedule against one constant
- * and cannot arbitrate between two. Asserted in both files: a cron in the real
- * config and none in the example describes a Worker a clone would deploy
- * without a schedule, which is a watchdog that never fires and says nothing.
+ * THE CRON, AND THIS CONFIG IS ITS ONE OWNER: the trigger exists, there is EXACTLY ONE, and it
+ * means fifteen minutes. Exactly one, because `check:invariants` section 25 compares one schedule
+ * against one constant. In both files, or a clone deploys a Worker with no schedule.
  */
 for (const [label, config] of [
   ["real", watchdog.real],
@@ -549,18 +400,10 @@ assertThat(
 );
 
 /*
- * THE SITE'S CRON SET IS DECLARED, AND DECLARING IT EMPTY IS THE POINT.
- *
- * Added 2026-09-07. `triggers` was ABSENT from both site configs, and absent
- * is not empty: wrangler syncs the cron set from that key, so with no key it
- * leaves whatever is registered on the account untouched. An hourly
- * `0 * * * *` created 2026-08-23 sat on this Worker, which exports no
- * `scheduled()`, and threw on every firing for fifteen days. Grounds and the
- * measurement are in `wrangler.jsonc.example`.
- *
- * ASSERTED AS PRESENT-AND-ARRAY rather than merely equal to each other. Two
- * files that both omit the key agree perfectly, which is exactly the state
- * that hid the defect, so "they match" is not a strong enough assertion here.
+ * THE SITE'S CRON SET IS DECLARED, AND DECLARING IT EMPTY IS THE POINT: absent is not empty, so
+ * with no `triggers` key wrangler leaves whatever is registered, and an hourly trigger sat on a
+ * Worker exporting no `scheduled()`. ASSERTED AS PRESENT-AND-ARRAY, since two files that both
+ * omit the key agree perfectly.
  */
 for (const [label, config] of [
   ["real", site.real],
@@ -581,7 +424,7 @@ assertThat(
     `example: ${JSON.stringify(site.example.triggers ?? null)}`,
 );
 
-/* ================================================ both, against the tree */
+/* both, against the tree */
 
 for (const [name, redaction] of REDACTED_VARS) {
   assertThat(
@@ -594,21 +437,9 @@ for (const [name, redaction] of REDACTED_VARS) {
 }
 
 /*
- * THE REAL REDACTED VALUES APPEAR IN NO TRACKED FILE.
- *
- * The placeholder assertions above each police ONE field in ONE file. They say
- * nothing about the same digits being written into a script, which is where the
- * account id actually was: `scripts/ae-probe.mjs` carried it as a const, and the
- * example carried it as a var, and both were committed while the database id
- * beside them was a row of zeros.
- *
- * The needles are READ OUT OF THE REAL CONFIGS, never typed here. A gate that
- * restated the digits it is hunting would be the next committed copy. The
- * watchdog's alert address joined the hunt in the same commit that introduced
- * it, so it can never become the thing this paragraph describes.
- *
- * Scoped to `git ls-files`, which is the definition of "committed" that
- * matters: the real configs are gitignored and are expected to contain them.
+ * THE REAL REDACTED VALUES APPEAR IN NO TRACKED FILE: the placeholder assertions police one
+ * field in one file and say nothing about the same digits in a script, which is where the account
+ * id was. The needles are READ OUT OF THE REAL CONFIGS and scoped to `git ls-files`.
  */
 {
   /** @type {Array<[string, string]>} what it is, and the value to hunt for */
@@ -620,9 +451,8 @@ for (const [name, redaction] of REDACTED_VARS) {
   ].filter(([, value]) => value.length >= 16));
 
   /*
-   * SCOPE, ASSERTED, on both halves. An empty needle list finds nothing because
-   * it looked for nothing, and a short one would match noise; the length filter
-   * above is why the floor is on the COUNT rather than on the values.
+   * SCOPE, ASSERTED on both halves: an empty needle list finds nothing because it looked for
+   * nothing, and a short one matches noise, which is why the floor is on the COUNT.
    */
   assertThat(
     secretsInConfig.length === 4,
@@ -664,28 +494,12 @@ for (const [name, redaction] of REDACTED_VARS) {
   );
 }
 
-/* =================================================== the traces ruling */
+/* the traces ruling */
 
 /*
- * TRACES STAY OFF ON BOTH WORKERS, and this asserts the RULING rather than the
- * default.
- *
- * Ruled 2026-09-08: export logs to Sentry, never traces. A fetch span carries
- * `url.full`, `url.path` and `url.query`, and this site puts a 43-character
- * capability in a path at `/preview/<token>`, so traces would ship preview
- * tokens to a third party. That is the exposure `recordTraffic` was fixed for
- * on 2026-08-15. `redact_query_string` does not reach it, because the token is
- * in the path. Full grounds are in `wrangler.jsonc.example`.
- *
- * ASSERTED AS EXPLICITLY-FALSE, not merely falsy. `traces` absent is also
- * "off", and it is off by somebody not having decided; `{ enabled: false }` is
- * off because somebody decided. The distinction is the whole of the
- * cold-audit rule this implements, so a config that DROPPED the key would pass
- * a truthiness check and fail this one.
- *
- * Adding `destinations` to `logs` later does not touch this. That is the point
- * of splitting the two: the log export can be turned on without anyone having
- * to reason again about what a span carries.
+ * TRACES STAY OFF ON BOTH WORKERS, asserted as the RULING: a fetch span carries the full path,
+ * and this site puts a capability in one. EXPLICITLY-FALSE, not merely falsy: absent is off by
+ * nobody having decided, so a config that DROPPED the key would pass a truthiness check.
  */
 for (const [label, config] of [
   ["site real", site.real],
@@ -709,42 +523,14 @@ for (const [label, config] of [
   );
 }
 
-/* ============================================ --remote: the live schedules */
+/* --remote: the live schedules */
 
 /*
- * THE ONE ASSERTION THIS GATE COULD NOT MAKE, until 2026-09-07.
- *
- * The docblock at the top of this file used to say, correctly, that it "cannot
- * tell whether a cron TRIGGER is actually registered on the deployed Worker,
- * only what the config asks for; that half is proven live by the freshness
- * assertion in check:browser". That boundary note was a CLAIM, and it aged
- * exactly the way FAILURES.md says a boundary note ages. The freshness
- * assertion proves the WATCHDOG's cron fires. It says nothing about a cron
- * registered on the SITE Worker that should not exist at all, and one was:
- * `0 * * * *`, created 2026-08-23, throwing on every firing for fifteen days
- * because `workers/app.ts` exports no `scheduled()`.
- *
- * So this reads the schedules the platform actually holds and compares them to
- * what the configs declare, IN BOTH DIRECTIONS. A trigger in the config and not
- * on the platform is a Worker that will not fire; a trigger on the platform and
- * not in the config is the defect above.
- *
- * ## WHY IT IS BEHIND `--remote` AND NOT A NEW GATE
- *
- * `check:config` is tiered OFFLINE and ship runs the offline tier, which is
- * what makes it load bearing on the one machine that deploys. Moving it to the
- * network tier to gain this would have taken it out of ship. So it keeps its
- * offline body and gains a network half behind a flag, which is the shape
- * `check:backup`, `check:llms` and `check:invariants` already use and which
- * `check-all.mjs` already knows how to pass through in `check:all`.
- *
- * ## FAILS CLOSED ON A MISSING CREDENTIAL
- *
- * `--remote` was ASKED FOR, so being unable to answer is a failure and not a
- * skip. The house stance, stated in `repair.mjs`: degrading to alert-only is
- * correct, degrading to silence is not. A gate that quietly passed when it
- * could not reach the API would report the same green for "no stray cron" and
- * "I did not look".
+ * THE ONE ASSERTION THIS GATE COULD NOT MAKE. check:browser proves the WATCHDOG's cron fires and
+ * says nothing about a cron registered on the SITE Worker that should not exist. One was. So the
+ * platform's schedules are compared IN BOTH DIRECTIONS. Behind `--remote` rather than a new gate,
+ * this one being tiered offline, and FAILING CLOSED ON A MISSING CREDENTIAL, since `--remote` was
+ * asked for and a quiet pass reports the same green as "I did not look".
  */
 if (wantsRemote) {
   const token = readDevVar("CLOUDFLARE_API_TOKEN");
@@ -799,11 +585,7 @@ if (wantsRemote) {
         continue;
       }
 
-      /*
-       * BOTH DIRECTIONS, NAMED SEPARATELY. One assertion comparing two sorted
-       * arrays would report "they differ" and leave the reader to work out
-       * which way, and the two directions mean genuinely different things.
-       */
+      /* BOTH DIRECTIONS, NAMED SEPARATELY: one comparison of two sorted arrays says only "they differ". */
       const stray = live.filter((/** @type {string} */ c) => !declared.includes(c));
       const missing = declared.filter((/** @type {string} */ c) => !live.includes(c));
 
@@ -832,42 +614,16 @@ console.log(
   `  ${watchdog.surface.size} watchdog binding(s): ${[...watchdog.surface.keys()].join(", ")}`,
 );
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * This gate is the only thing binding the tracked examples to the configs that
- * actually run, and both real files are gitignored. If a parse returned an
- * empty surface, every comparison for that pair would iterate nothing and
- * report the two files in perfect agreement.
- *
- * RE-MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-29 by RUNNING it, and
- * NEVER SUMMED: the number below was read off the run, not computed from 61
- * plus an estimate of the watchdog's contribution: the first guess written here
- * was 92 and the run said 95. It was 61 on 2026-08-28 with one pair, and 55 on
- * 2026-08-14. Floored roughly 8 percent under: the count
- * steps by two or three per binding and per var, so a single added binding
- * moves it visibly and a deleted one should be a deliberate diff.
+ * EXECUTED-COUNT FLOOR. If a parse returned an empty surface, every comparison for that pair
+ * would iterate nothing and report perfect agreement. RE-MEASURED BY RUNNING IT, never summed.
  */
 /*
- * RE-MEASURED 2026-09-07 BY RUNNING IT, TWICE, and the second time is the
- * lesson. After the site's `triggers` assertions landed the offline run
- * reported 104 and this was set to 100; the watchdog's CLOUDFLARE_ACCOUNT_ID
- * var then took it to 108, and `check:floors` failed the 100 at a gap of 8
- * against a tolerance of 6. That is the mechanism doing its job, and it is why
- * the number here comes from a run rather than from arithmetic on the old one.
- * The floor tracks the OFFLINE count deliberately, because `--remote` adds
- * assertions and a floor set to the remote count would breach on every offline
- * run, which is the tier ship uses.
+ * The floor tracks the OFFLINE count deliberately: `--remote` adds assertions, and a floor set
+ * from the remote count breaches on every offline run, which is the tier ship uses.
  */
 /*
- * NAMED PER BRANCH, on check:invariants' vol 15 binding, and this gate needed
- * it the moment `--remote` landed. MEASURED 2026-09-08 by RUNNING each mode:
- * 118 offline, 124 remote. One name for both judges whichever branch ran last
- * against a floor set from the other, which is exactly what happened here: the
- * offline floor of 113 passed a standalone run and then failed inside
- * `check:all`, where the gate runs `--remote` and the extra six schedule
- * assertions push the gap past the tolerance.
- *
- * Tolerance is 6 at both counts, so each floor sits five under its own.
+ * NAMED PER BRANCH: one name for both judges whichever branch ran last against the other's floor,
+ * which is what happened here, passing standalone and failing inside `check:all`.
  */
 const MINIMUM_CHECKS = wantsRemote ? 119 : 113;
 const floorBreach = assertFloor(
@@ -880,16 +636,8 @@ if (floorBreach) assertThat(false, "this gate executed its assertions", floorBre
 
 console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
 /*
- * `exitCode` RATHER THAN `process.exit()`, since `--remote` made this gate do
- * network I/O.
- *
- * MEASURED 2026-09-08: the remote branch printed a clean floor line and 0
- * failures and then exited 127 with libuv's
- * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`, because
- * `process.exit()` tears the process down while undici's keep-alive sockets
- * from the schedules API are still closing. It is a RACE, so it did not fire on
- * every run, which is worse than a consistent failure: `check-all.mjs` reads
- * exit codes and cannot see the clean table above one. Same fix, and same
- * reason, as `check:uptime`.
+ * `exitCode` RATHER THAN `process.exit()`, `--remote` having made this gate do network I/O: it
+ * tears the process down while sockets close and exits 127 under a clean table. It is a RACE,
+ * which is worse than a consistent failure because `check-all.mjs` reads exit codes.
  */
 process.exitCode = failures > 0 ? 1 : 0;

@@ -1,46 +1,10 @@
 /**
- * Gate over the security headers the Worker stamps on every response.
+ * Gate over the security headers the Worker stamps on every response: npm run check:headers.
  *
- *   npm run check:headers
- *
- * ## OBSERVATION BOUNDARY, and it is the whole point of reading this first
- *
- * **THIS GATE CANNOT SEE THE WIRE.** It reads `workers/app.ts` and asserts what
- * the source DECLARES and that both code paths apply it. It cannot tell you a
- * single header actually arrived at a browser. A deploy that never happened, a
- * Cloudflare feature that strips a header, a route that returns before the
- * entry handler: all invisible here and all green.
- *
- * That is hard rule 7 restated for this file. The wire is `verify-live`'s job,
- * and it asserts every header by EXACT VALUE on both a 200 and the `/admin`
- * 302, because the immutable-headers rebuild is a different branch. Neither
- * file replaces the other and neither is sufficient alone.
- *
- * What this gate IS for: stopping a later edit from silently dropping a header
- * or loosening a value. That failure has no symptom a human would notice, which
- * is precisely the class the gate family exists for.
- *
- * ("On a site with no CI", until 2026-08-20. CI landed and runs this gate on
- * every push, which changes who notices a red result, not whether a dropped
- * header has a symptom. The argument never depended on the missing half.)
- *
- * ## Two independent sources argue
- *
- * The EXPECTED set below is transcribed from the ratification (2026-08-06,
- * Phase A). The ACTUAL set is parsed out of `workers/app.ts`. Nothing here
- * reads its expectation from the file it is checking, so a changed value moves
- * one side of the comparison and fails. Same construction as `check:contrast`,
- * which takes thresholds from the design doc and hexes from the stylesheet.
- *
- * **Changing a header therefore means editing this file too, in the same
- * commit. That is the design, not friction.** These seven values were each
- * ruled on, and two of them (CORP, COOP) are deliberately NOT the restrictive
- * choice; a one-sided edit is exactly what must not pass quietly.
- *
- * Pure: no network, no database, no bindings. Offline tier.
- *
- * FAILS CLOSED. An empty constant, a missing constant, or a file that stops
- * parsing are each a failure, so "0 problems" can never mean "0 examined".
+ * BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is hard rule 7
+ * for this file; the wire is verify-live's. Two independent sources argue, the expected set
+ * transcribed and the actual parsed, and two values are deliberately not the restrictive choice.
+ * FAILS CLOSED on a missing constant.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -91,19 +55,13 @@ if (!existsSync(APP_PATH)) {
   process.exit(1);
 }
 
-/*
- * Comments are stripped before anything is located. This file's own header and
- * the constant's docblock both spell out header names and values while
- * explaining WHY they are what they are, and a parser that read the prose would
- * find `same-origin` in the sentence saying same-origin is wrong. That trap has
- * already been hit by check:logo, check:contrast and check:features.
- */
+/* Comments stripped first: this file's prose names headers while explaining why they are wrong. */
 /* One owner: scripts/lib/strip-comments.mjs carries the trap, the guard and the boundary. */
 
 const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
 
-/* ------------------------------------------------------- fail closed first */
+/* fail closed first */
 
 const block = code.match(/const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/);
 ok(
@@ -131,7 +89,7 @@ ok(
   `declares ${Object.keys(declared).length}: ${Object.keys(declared).join(", ") || "(none)"}`,
 );
 
-/* ------------------------------------------- both directions, name by name */
+/* both directions, name by name */
 
 for (const [name, expected] of Object.entries(RATIFIED)) {
   ok(
@@ -162,13 +120,9 @@ for (const name of Object.keys(declared)) {
   );
 }
 
-/* ------------------------------------- the two values that look tightenable */
+/* the two values that look tightenable */
 
-/*
- * Called out individually rather than left to the value comparison above,
- * because these are the two a future session is most likely to "fix", and a
- * failure that NAMES the reason is worth more than one that just prints a diff.
- */
+/* Named individually, because these two are what a future session is most likely to "fix". */
 ok(
   "Cross-Origin-Resource-Policy is cross-origin, not same-origin",
   declared["Cross-Origin-Resource-Policy"] === "cross-origin",
@@ -182,14 +136,11 @@ ok(
     "which was deliberately not verified. allow-popups is correct either way.",
 );
 
-/* ------------------------------------------------ applied on BOTH branches */
+/* applied on BOTH branches */
 
 /*
- * Declaring the set and applying it are different things, and the second is
- * where it would actually break. `workers/app.ts` has two exits: the normal
- * mutable one and the rebuild for immutable headers (`Response.redirect()`).
- * A helper called on only one of them means redirects ship bare, and `/admin`
- * returning 302 is a live example.
+ * Declaring the set and applying it differ: app.ts has two exits, and one helper call means
+ * redirects ship bare.
  */
 const applications = [...code.matchAll(/applySecurityHeaders\s*\(/g)].length;
 ok(
@@ -210,29 +161,11 @@ ok(
   "the Response.redirect() path must be rebuilt, not silently skipped",
 );
 
-/* ------------------------------------------- the cache-control DEFAULT ---- */
+/* the cache-control DEFAULT */
 
 /*
- * **THIS IS THE ASSERTION THAT WAS MISSING, AND IT GUARDS AN AUTH BYPASS.**
- *
- * Workers Cache is on, and a response carrying no `Cache-Control` is CACHED
- * under RFC 9111 heuristic freshness, not skipped. The cache key does not
- * include cookies. `workers/app.ts` therefore stamps `private, no-store` on any
- * response that did not set the header itself, and that default is the only
- * thing standing between an authenticated `/admin` render and a shared cache
- * entry served to anyone who asks for that path for the next two hours.
- *
- * Audited 2026-08-07: those lines could be deleted and EVERY gate stayed green.
- * `check:config` compared the two config files to each other, which passes with
- * the cache turned off in both. `verify-live` observed only the cookie-downgrade
- * branch, never the no-header default, because all six routes it sweeps now
- * export `headers` of their own. Nothing looked at this.
- *
- * The value is transcribed from the ruling, like RATIFIED above, so a changed
- * default moves one side of the comparison. The BOTH-EXITS assertion is the
- * same shape as the one for applySecurityHeaders and for the same reason: the
- * immutable rebuild is a separate branch, and `/admin`'s 302 is the live case
- * that goes through it.
+ * THIS GUARDS AN AUTH BYPASS: with no Cache-Control an /admin render is stored under heuristic
+ * freshness under a cookieless key. BOTH EXITS.
  */
 
 console.log("\n  cache-control default");
@@ -276,50 +209,18 @@ ok(
   `${guardsSettingUncached} of ${guards.length} guards set it`,
 );
 
-/* ------------------------------------------ the CSP (Phase B, ENFORCED) --- */
+/* the CSP (Phase B, ENFORCED) */
 
 /*
- * The assertion that matters most here is the one about `'unsafe-inline'`, and
- * ENFORCEMENT made it matter more, not less.
- *
- * When something breaks, the cheapest way to make it stop is to add
- * `'unsafe-inline'` to `script-src`. That silences it, keeps every page working,
- * and reduces the policy to decoration, because `'unsafe-inline'` is exactly
- * what an injected `<script>` needs. It is invisible in review and nothing else
- * in the repo would notice. Hence a named assertion rather than trusting the
- * value comparison to catch it.
- *
- * This paragraph used to say "the single most likely wrong fix DURING THE
- * OBSERVATION WINDOW", which dated the risk to a phase that ended on
- * 2026-08-17. The risk did not end with the phase. It got sharper: under
- * Report-Only a wrong fix silenced a report, and under enforcement it unbreaks
- * a page a reader is looking at, which is a far stronger reason to reach for
- * it.
- *
- * Note `'strict-dynamic'` makes browsers IGNORE `'unsafe-inline'` when both are
- * present, so a future session could add it, see no behaviour change, and
- * conclude it was harmless. It is not harmless: it is what the policy falls
- * back to the moment `'strict-dynamic'` is dropped or a browser does not
- * support it.
+ * unsafe-inline IS THE ASSERTION THAT MATTERS: it silences the report, breaks nothing, and is
+ * what an injected script needs. strict-dynamic makes browsers ignore it until it is dropped.
  */
 
 console.log("\n  content security policy");
 
 /*
- * THE POLICY IS CALLED, NOT PARSED, since the admin-only style nonce landed.
- *
- * This section used to match `function contentSecurityPolicy` out of the Worker
- * source and regex the directives out of the text. That worked while the
- * builder returned one string, and stopped being adequate the moment it
- * returned two: a regex can see that both branches EXIST, and cannot see which
- * one a request gets, so the strongest assertion it supports is "a nonce
- * appears somewhere in the function" rather than "the public policy has none".
- * Those two differ by exactly the defect worth catching.
- *
- * So the builder moved to `workers/csp.mjs` and is IMPORTED here. Same module
- * the Worker runs, so there is no second copy to drift. The nonce below is a
- * fixed string written in this file and never generator output, per hard rule
- * 10's fixture-independence discipline.
+ * THE POLICY IS CALLED, NOT PARSED: a regex sees both branches exist, not which one a request
+ * gets. The builder is imported and the nonce is fixed here, which is fixture independence.
  */
 const NONCE = "gate-fixture-nonce-not-a-real-one";
 const publicCsp = contentSecurityPolicy(NONCE, false);
@@ -348,19 +249,8 @@ ok(
     "with itself.",
 );
 
-// The ratified directive names. Values are deliberately NOT all asserted here,
-// and the reason CHANGED on 2026-08-17 without the code moving.
-//
-// It used to be "the point of Report-Only is that some of them may have to
-// change", which expired with the phase. What holds now is narrower and is the
-// real argument: this gate transcribes the ratification, and pinning every
-// VALUE would make it a mirror of workers/csp.mjs, so a deliberate widening
-// would fail here for no reason beyond having been made. The NAMES are asserted
-// so a directive cannot be quietly dropped, and the values that carry the whole
-// policy have named assertions of their own.
-//
-// BOTH BRANCHES, because a directive dropped from one arm only is exactly what
-// a single-arm sweep reports as clean.
+// The ratified directive NAMES, not their values, or this becomes a mirror of workers/csp.mjs.
+// BOTH BRANCHES: a directive dropped from one arm is what a single-arm sweep calls clean.
 for (const name of [
   "default-src",
   "script-src",
@@ -389,33 +279,14 @@ for (const name of [
   }
 }
 
-/* ------------------------------------ the feeds get NO policy at all ------ */
+/* the feeds get NO policy at all */
 
 /*
- * **EVERY FEED ROUTE'S DECLARED CONTENT-TYPE IS ONE `isFeed()` EXEMPTS.**
- *
- * The exemption list and the routes are two owners of one fact, and they had
- * already drifted. Measured on the live host 2026-09-11: `/blog/atom.xml`
- * served a full CSP carrying a per-request nonce on a body stored with
- * `s-maxage=600`, because `isFeed()` listed `application/rss+xml` and
- * `application/json` while a comment beside it called that "the two feeds".
- * Atom arrived later and nothing compared the two sides. `/sitemap.xml` had
- * the same shape for the same reason.
- *
- * THE TYPES ARE READ OUT OF THE ROUTE FILES, not restated here. That is what
- * makes this an argument between two independent sources rather than a mirror:
- * a route that starts declaring a different type moves the ACTUAL side, and a
- * shortened exemption list moves the EXPECTED side. Either one fails.
- *
- * `isFeed` is IMPORTED and CALLED, on the same reasoning `contentSecurityPolicy`
- * is: a regex over the list in the Worker reads its spelling, not its answer.
+ * EVERY FEED ROUTE'S DECLARED CONTENT-TYPE IS ONE isFeed() EXEMPTS. The two owners had already
+ * drifted. The types are READ OUT OF THE ROUTE FILES and isFeed is CALLED, not spelled.
  */
 {
-  /**
-   * The three feeds, by route file. Named rather than globbed, because the
-   * assertion is about THESE THREE documents being exempt and a glob would
-   * quietly shrink to whatever still matches.
-   */
+  /** Named rather than globbed: the assertion is about THESE THREE, and a glob quietly shrinks. */
   const FEED_ROUTES = [
     "blog.rss[.xml].ts",
     "blog.atom[.xml].ts",
@@ -448,12 +319,7 @@ for (const name of [
     );
   }
 
-  /*
-   * THE NEGATIVE, so the three assertions above cannot pass by `isFeed()`
-   * having become `() => true`. A document type must still be policed; that is
-   * the entire reason the list is named types rather than a negation of
-   * `text/html`.
-   */
+  /* THE NEGATIVE, so the three above cannot pass by isFeed() having become a constant true. */
   for (const type of ["text/html", "text/html; charset=utf-8", "image/svg+xml", ""]) {
     ok(
       `isFeed(${JSON.stringify(type)}) is false, so a document still gets a policy`,
@@ -464,27 +330,12 @@ for (const name of [
   ok("isFeed(null) is false", !isFeed(null));
 }
 
-/* ------------------------------------ the style nonce is ADMIN ONLY ------- */
+/* the style nonce is ADMIN ONLY */
 
 /*
- * **THE PUBLIC BRANCH IS THE ASSERTION THAT MATTERS.**
- *
- * The admin plane gets a style nonce so CodeMirror's injected StyleModule is
- * accepted. The entire value of scoping it that way is that the public side
- * stays ABSOLUTE, and nothing in the code stops a later edit from passing
- * `true` everywhere: doing so would fix a violation report, read as a
- * simplification, leave every comment in place describing a policy that no
- * longer exists, and break nothing a reader could see.
- *
- * The seven edge-cached public routes are why it would matter. Header and body
- * are cached together for cookieless readers, so one nonce is valid there for
- * up to ten minutes. That exposure is accepted in writing for `script-src`;
- * extending it to styles as a side effect is not.
- *
- * Asserted in BOTH DIRECTIONS. The public arm must carry no nonce source, and
- * the admin arm must carry one, because an assertion that only refuses the
- * nonce publicly is equally satisfied by a build where the editor is broken
- * again.
+ * THE PUBLIC BRANCH IS THE ASSERTION THAT MATTERS: true everywhere fixes a violation report and
+ * breaks nothing visible, while header and body share one public entry for the cache lifetime.
+ * BOTH DIRECTIONS, since refusing it publicly is equally satisfied by a broken editor.
  */
 const publicStyleSrc = directiveIn(publicCsp, "style-src");
 const adminStyleSrc = directiveIn(adminCsp, "style-src");
@@ -537,14 +388,7 @@ ok(
     "do not apply to attributes at all",
 );
 
-/*
- * WHAT DECIDES THE BRANCH, asserted on real paths rather than on the caller's
- * `if`, which would be a mirror of the caller.
- *
- * The public list is taken from `routes.ts` and includes the cases that would
- * catch a bare `startsWith("/admin")`: a hypothetical `/administrator`, and the
- * `.data` serialisations React Router actually emits.
- */
+/* WHAT DECIDES THE BRANCH, on real paths rather than on the caller's if, which would mirror it. */
 for (const path of [
   "/",
   "/blog",
@@ -618,15 +462,8 @@ ok(
 );
 
 /*
- * PHASE B IS ENFORCED, ruled 2026-08-17 (option A). This assertion REVERSED on
- * that date: it used to require Report-Only and to refuse the enforcing header,
- * so that enforcement could not happen as a side effect of some other edit. The
- * ruling is made, so the direction flips and the guard stays: enforcement must
- * not be silently REVERTED either, which is the more likely accident now.
- *
- * A revert would be invisible in every other way. The page still works, the
- * header is still present, the reports still arrive, and the only difference is
- * that nothing is blocked, which is exactly the state this spent eleven days in.
+ * ENFORCED, NOT REPORT-ONLY: a revert leaves the page working, the header present and the
+ * reports arriving, with nothing blocked.
  */
 ok(
   "the CSP is applied as ENFORCED, not Report-Only",
@@ -641,11 +478,7 @@ ok(
   [...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length >= 2,
   "a redirect that misses it is UNPROTECTED, not merely unreported",
 );
-/*
- * REPORTING SURVIVES ENFORCEMENT. Enforcing and reporting are independent: a
- * policy can block silently. Losing the reports would remove the only signal
- * that the policy is refusing something a reader needed.
- */
+/* REPORTING SURVIVES ENFORCEMENT: a policy blocks silently, so the reports are the only signal. */
 ok(
   "reporting is still on after the switch to enforcing",
   publicCsp.includes("report-uri ") && publicCsp.includes("report-to "),
@@ -668,17 +501,11 @@ console.log(
     `${[...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length} application site(s)`,
 );
 
-/* -------------------------------------- the nonce reaches every script ---- */
+/* the nonce reaches every script */
 
 /*
- * TWO SCRIPT CLASSES THAT DO NOT GET THE NONCE FOR FREE, both found by the
- * browser rather than by reading, and both invisible to every other gate.
- *
- * A source-level check only. Whether the attribute reaches the wire is
- * verify-live's job, and whether the browser accepts it is the browser's. What
- * this stops is a later edit silently dropping either one, which produces a
- * page that renders perfectly and would fail closed the moment the policy is
- * enforced.
+ * TWO SCRIPT CLASSES THAT DO NOT GET THE NONCE FOR FREE, both found by the browser rather than
+ * by reading. What this stops is a later edit dropping either one.
  */
 
 console.log("\n  the nonce reaches every script");
@@ -688,11 +515,8 @@ const entryServer = stripComments(
 );
 
 /*
- * `ServerRouter` passes its `nonce` prop BOTH into FrameworkContext and
- * directly to `StreamTransfer`, which stamps React Router's two streaming
- * scripts. Without the prop those ship bare on every page, and the `enqueue`
- * one carries the hydration payload. Measured 2026-08-06: 10 violation
- * reports, all script-src-elem/inline, all on the document's last line.
+ * ServerRouter passes its nonce prop both into FrameworkContext and to StreamTransfer; without
+ * it React Router's two streaming scripts ship bare, one of them carrying the payload.
  */
 ok(
   "entry.server.tsx passes a nonce to <ServerRouter>",
@@ -712,29 +536,8 @@ ok(
 );
 
 /*
- * THE SPECULATION BLOCK, and since 2026-08-28 there is exactly ONE.
- *
- * `speculationrules` IS gated by script-src while `application/ld+json` is NOT.
- * Both are non-executable data blocks, so this is counter-intuitive and was
- * settled by the browser, not by argument. Asserted so nobody "consistently"
- * removes it.
- *
- * `SiteSpeculation` rides in `SiteHeader`, so it renders on every public page.
- * Under an ENFORCED policy an un-nonced `type="speculationrules"` element is
- * refused by `script-src` on every one of them, SILENTLY: the page renders
- * identically, nothing is logged where anyone looks, and the enhancement is
- * simply absent.
- *
- * `BlogSpeculation` was the second block, on the two blog routes, and its
- * assertions lived here beside these. It was deleted when the rules became
- * document rules; its subject is inside the document rule now. Its file no
- * longer exists, so a `readFileSync` of it would throw rather than pass, which
- * is the loud direction.
- *
- * WHAT THIS DOES NOT ASSERT: that the rules name the right paths or exclude the
- * right ones. That is `test/header-speculation.test.mjs` for the derivation and
- * `check:browser` for the payload a browser actually parses, which is why this
- * gate carries no second copy of either list.
+ * THE SPECULATION BLOCK, and there is exactly ONE: speculationrules is gated by script-src, so
+ * an un-nonced element is refused SILENTLY and the page renders identically without it.
  */
 const siteSpeculation = stripComments(
   readFileSync(join(root, "app", "components", "site-speculation.tsx"), "utf8"),
@@ -750,14 +553,6 @@ ok(
   /useRouteLoaderData/.test(siteSpeculation),
   "one source in workers/app.ts, several readers; a second generator would drift",
 );
-/*
- * `site-header.tsx` AGAIN SINCE 2026-09-14. Build 2 renamed this component to
- * `shell-header.tsx` and Dustin's restore renamed it back; the gate followed
- * the file both times. What is asserted has not moved: the public header is
- * what renders SiteSpeculation, and an imported-but-unrendered component still
- * fails. A missing file throws here rather than failing, which is why the
- * rename had to be tracked rather than left to a soft miss.
- */
 ok(
   "SiteHeader renders SiteSpeculation, which is what puts it on every public page",
   /<SiteSpeculation\s*\/>/.test(
@@ -767,32 +562,12 @@ ok(
     "above while shipping nothing to any reader",
 );
 
-/* ------------------------------- the draft preview route (feature G) ------ */
+/* the draft preview route (feature G) */
 
 /*
- * **THE ONE ROUTE WHOSE HEADERS ARE THE ACCESS CONTROL.**
- *
- * `/preview/:token` serves an UNPUBLISHED post to a caller with no session.
- * Workers Cache is in front of this Worker and its key does not include
- * cookies; the cookieless downgrade in `workers/app.ts` is what keeps the
- * public post route safe, and a preview reviewer is exactly the request shape
- * that downgrade never fires for. So the route's own `Cache-Control` is not a
- * performance choice, it is the thing standing between a draft and a shared
- * cache entry.
- *
- * The failure this is written for is SPECIFIC and it is a copy-paste:
- * `blog.$slug.tsx` sits next to it in the same directory, exports a `headers()`
- * of the same shape, and sets `SHARED_CACHE_CONTROL`. Someone reaching for the
- * neighbouring file's version of this function would produce a route that
- * renders perfectly, passes every other gate, and publishes drafts to anyone
- * who asks for the path.
- *
- * Two independent sources argue, as above: RATIFIED_PREVIEW is transcribed from
- * the ruling and the actual set is parsed out of the route. The parse accepts an
- * IDENTIFIER as a value as well as a string literal, deliberately: had it only
- * matched quoted values, swapping in `SHARED_CACHE_CONTROL` would have read as
- * "Cache-Control is not declared" rather than as the wrong value, and the
- * failure would name the wrong problem on the one edit most likely to happen.
+ * THE ONE ROUTE WHOSE HEADERS ARE THE ACCESS CONTROL: /preview/:token serves an unpublished
+ * post to a caller with no session, and the cookieless downgrade never fires for it. An
+ * IDENTIFIER counts as a value, so the shared constant fails as wrong rather than as absent.
  */
 
 console.log("\n  the draft preview route");
@@ -874,14 +649,7 @@ if (existsSync(PREVIEW_PATH)) {
     );
   }
 
-  /*
-   * NO PUBLIC BRANCH, named rather than left to the value comparison.
-   *
-   * The value check above catches `"Cache-Control": SHARED_CACHE_CONTROL`. This
-   * catches the subtler shape: the constant staying correct while a conditional
-   * somewhere else in the file hands back the public value on some path. The
-   * rule is that the identifier does not appear in this file AT ALL.
-   */
+  /* NO PUBLIC BRANCH, named: the rule is that the identifier does not appear in this file AT ALL. */
   ok(
     "the preview route never references SHARED_CACHE_CONTROL",
     !/\bSHARED_CACHE_CONTROL\b/.test(preview),
@@ -905,28 +673,11 @@ if (existsSync(PREVIEW_PATH)) {
   );
 }
 
-/* ------------------------------- the analytics capture (feature F.1 + G) --- */
+/* the analytics capture (feature F.1 + G) */
 
 /*
- * **NOTHING GATED THIS UNTIL 2026-08-15, and the belief that something did is
- * itself worth recording.**
- *
- * F.1 proved the capture's exclusions by querying the LIVE DATASET after a
- * deploy: admin 0, assets 0, query strings 0, referer paths 0. That is a strong
- * measurement and it is not a gate. It ran once, against one deploy, and
- * nothing has re-asserted it since; deleting the `/admin` skip would have left
- * every gate in this repo green while the operator's own page views started
- * flowing into the panel that exists to exclude them.
- *
- * This section lives in `check:headers` because this is the only gate that
- * parses `workers/app.ts`, and the capture is in `workers/app.ts`. The name is
- * a poor fit and the alternative was worse: a new gate would have to be tiered
- * in `check-all.mjs` and would duplicate this file's whole parsing setup to
- * read the same source. The OBSERVATION BOUNDARY at the top of this file
- * already says what it can and cannot see, and it covers this identically.
- *
- * SOURCE-LEVEL ONLY. It sees what the capture DECLARES. Whether a row reaches
- * the dataset is `ae-probe`'s question and needs a deploy plus a read token.
+ * A LIVE MEASUREMENT IS NOT A GATE: dropping the /admin skip would leave every gate green while
+ * the operator's own views flowed into the panel that exists to exclude them.
  */
 
 console.log("\n  the analytics capture");
@@ -946,11 +697,7 @@ ok(
   `parsed ${captureBody.length} characters, so every assertion below would be vacuous`,
 );
 
-/*
- * THE THREE EXCLUSIONS F.1 RULED, each named individually rather than left to
- * one "does it look right" check, because a failure that says WHICH exclusion
- * went is worth more than one that says the function changed.
- */
+/* Each exclusion named individually, because a failure saying WHICH one went is worth more. */
 ok(
   "the capture excludes the /admin plane",
   /pathname\s*===\s*"\/admin"/.test(captureBody) &&
@@ -976,21 +723,9 @@ ok(
 );
 
 /*
- * **THE REDACTION, AND IT IS AN ACCESS CONTROL RATHER THAN A DATA CHOICE.**
- *
- * `/preview/<token>` carries a 43-character capability in its PATH. Writing
- * `url.pathname` verbatim stored it in Analytics Engine and rendered it in full
- * on /admin/origin-requests, defeating the drawer's six-character truncation.
- * Measured on production 2026-08-15 on the first real use of the feature.
- *
- * BOTH SLOTS, asserted separately. The path is written twice: into `blobs` and
- * into `indexes`, which is the sampling key. Redacting one and not the other
- * leaves the token in the dataset, and the `indexes` slot is the easier of the
- * two to forget because it is three lines further down behind a comment.
- *
- * Asserted as the ABSENCE of the raw expression as well as the presence of the
- * redacted one. Presence alone passes on a capture that computes `path` and
- * then writes `url.pathname` anyway.
+ * THE REDACTION IS AN ACCESS CONTROL: /preview/<token> carries a capability in its PATH. BOTH
+ * SLOTS separately, and the ABSENCE of the raw expression, or a capture computes the safe path
+ * and writes the raw one anyway.
  */
 ok(
   "the capture imports the analyticsPath redaction",
@@ -1041,41 +776,12 @@ console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * A pass count is not coverage. An assertion block that stops running reports
- * green, and a green run with nothing in it looks exactly like a green run that
- * checked everything.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 94.
- * Never summed. It was 66 against a floor of 62 until the draft preview route's
- * section landed, then 82 against 77, and the analytics capture section took it
- * to 94. Every one of those steps was counted by RUNNING the gate rather than
- * by adding up what the new block looked like it would contribute, which is the
- * discipline verify-live's floor proved the value of on this same feature: the
- * arithmetic there was one low against the measurement.
- *
- * Floored at 88, roughly 6 percent: the count tracks the header sets declared
- * in workers/app.ts and in the preview route, their application sites, and now
- * the capture's exclusions, so it moves when one is added, which should be a
- * deliberate diff rather than drift.
+ * EXECUTED-COUNT FLOOR. A green run with nothing in it looks like a green run that checked
+ * everything. MEASURED BY RUNNING THIS GATE, never summed.
  */
-/* ------------------------------------------------------------------ *
- * UPLOADED SVG IS SERVED AS AN ATTACHMENT.
- * ------------------------------------------------------------------ *
- *
- * An SVG is a document, not a picture: it can carry script. `image/svg+xml` is
- * on the upload allowlist, and `/media/*` serves from the SITE'S OWN ORIGIN, so
- * inline it is script running as the site.
- *
- * The CSP has BLOCKED that since 2026-08-17 rather than merely reporting it, and
- * this assertion is kept regardless: it does not depend on the policy, so it
- * survives a loosened directive and covers any client that ignores CSP. Same
- * reasoning as the comment on `attachIfActive` itself.
- *
- * OBSERVATION BOUNDARY: source only. This proves the route SETS the header on
- * the paths that serve the stored bytes; it does not fetch an object, so it
- * cannot see R2 or a cache layer dropping it on the way out.
+/*
+ * UPLOADED SVG IS SERVED AS AN ATTACHMENT: it can carry script and /media/* is the site's own
+ * origin. Kept even though the CSP blocks it, because it does not depend on the policy.
  */
 {
   const mediaRoute = readFileSync(join(root, "app/routes/media.$.ts"), "utf8");
@@ -1087,14 +793,7 @@ console.log(
   // SCOPED to the helper's own body. Asserting the FILE mentions attachment
   // would pass on a comment, which is the mistake the media axis gate made.
   const helperBody = helperAt === -1 ? "" : mediaRoute.slice(helperAt, helperAt + 700);
-  /*
-   * DERIVED FROM THE UPLOAD ALLOWLIST, never restated. The pairing is the
-   * invariant: a script-capable type is uploadable only while this route
-   * refuses to serve it inline. Restating "svg" here would let a NEW capable
-   * type be added to the allowlist with no corresponding attachment rule,
-   * which is the exact shape of the N-1-of-N misses this repo keeps paying for.
-   * The allowlist end of the pairing is asserted in test/upload-contract.test.mjs.
-   */
+  /* DERIVED FROM THE UPLOAD ALLOWLIST, never restated, or a NEW capable type joins with no rule. */
   const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
   const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
 
@@ -1116,11 +815,7 @@ console.log(
     /x-content-type-options/.test(helperBody),
     "an attachment a browser sniffs back to SVG defeats the disposition");
 
-  /*
-   * AND IT IS APPLIED ON EVERY PATH THAT SERVES THE STORED BYTES, which is the
-   * half that rots: a new branch returning `object.body` would be invisible to
-   * a check that only asserted the helper exists. Counted, both directions.
-   */
+  /* AND APPLIED ON EVERY PATH THAT SERVES THE STORED BYTES, the half a helper check cannot see. */
   const bodyReturns = [...mediaRoute.matchAll(/new Response\(object\.body/g)].length;
   const applications = [...mediaRoute.matchAll(/attachIfActive\(headers\)/g)].length;
   ok("media: some path serves the stored bytes", bodyReturns > 0,
@@ -1131,50 +826,10 @@ console.log(
       `applied ${applications} time(s). A path serves an SVG inline.`);
 }
 
-/* ------------------------------------------------------------------ *
- * ASSET CACHE RULES: `public/_headers`.
- * ------------------------------------------------------------------ *
- *
- * Workers Assets defaults every asset to `max-age=0, must-revalidate`.
- * MEASURED on production 2026-08-16, one full document load of /admin/media:
- * 14 asset requests, all 14 on the network, every one headers-only
- * (transferSize 300 against encoded bodies up to 60 kB, so a 304 with the body
- * already on disk), median 689ms and 1204ms for the slowest.
- *
- * The immutable year is scoped to `/assets/*`, whose filenames carry their
- * content hash, so a year is safe by construction. THE DANGER IS THE GLOB
- * WIDENING. A rule over `/*` would pin `favicon.ico`, `logo.svg` and the icon
- * suite for a year at stable paths, and this repo has already recorded a
- * browser holding a stale favicon hard enough to look like a failed deploy.
- * That is what this asserts.
- *
- * ## IT USED TO ASSERT "`/assets/*` IS THE ONLY PATH", WHICH IS NOT THE RULE
- *
- * That was a proxy for the property, and it was a fair proxy while `/assets/*`
- * was the only path anybody wanted. It stopped being one on 2026-09-12, when
- * the markdown twins arrived: `public/publications/*.md` are assets rather than
- * route output, so the two headers a route would have set (a ten-minute shared
- * cache and `X-Robots-Tag: noindex`) can only be set here. Under the old
- * assertion, adding a NOINDEX rule to an unhashed path failed a check about
- * long-lived caching, which is a gate refusing something its own reasoning
- * permits.
- *
- * So the assertion is now the property: no path outside `/assets/*` is
- * immutable or fresh for longer than `MAX_UNHASHED_FRESHNESS`. Read PER BLOCK
- * rather than over the whole file, because the file-wide reading could not tell
- * which path a directive belonged to, and would have passed a year on
- * `/logo.svg` beside a short rule somewhere else.
- *
- * `stale-while-revalidate` is deliberately NOT bounded. It is not a freshness
- * lifetime: the body is revalidated in the background and replaced, which is
- * the opposite of the un-revokable state this guards against, and every HTML
- * route on this site already sends `stale-while-revalidate=86400` through
- * `SHARED_CACHE_CONTROL`.
- *
- * OBSERVATION BOUNDARY: this reads the tracked FILE. It does not fetch an
- * asset, so it cannot see Workers Assets failing to apply a rule it parsed.
- * The served header was proven separately with `wrangler dev` and is owed a
- * re-measure on the next deploy.
+/*
+ * ASSET CACHE RULES in public/_headers. The immutable year is scoped to /assets/*, whose names
+ * carry a content hash; the danger is the glob widening over stable paths. Asserted as the
+ * PROPERTY and read PER BLOCK, since a file-wide reading cannot attribute a directive.
  */
 const HEADERS_FILE = "public/_headers";
 const headersPath = join(root, HEADERS_FILE);
@@ -1183,16 +838,8 @@ ok(`${HEADERS_FILE} exists`, existsSync(headersPath),
   "Workers Assets falls back to max-age=0 for every asset without it");
 
 /**
- * The longest freshness an UNHASHED path may declare, in seconds.
- *
- * One hour. The hazard is a path whose bytes can change under a stable URL: once
- * a browser has stored it as fresh, nothing on the server can recall it, and
- * there is no purge door here (hard rule 20 records why: `workers.dev` has no
- * zone). An hour is short enough that a bad deploy is corrected within one, and
- * long enough to be worth declaring at all.
- *
- * `/assets/*` is exempt because its filenames carry a content hash, so its URL
- * changes whenever its bytes do and the question cannot arise.
+ * The longest freshness an UNHASHED path may declare, in seconds. Nothing recalls a stored
+ * entry and there is no purge door here, which hard rule 20 records. /assets/* is exempt.
  */
 const MAX_UNHASHED_FRESHNESS = 3600;
 
@@ -1203,12 +850,7 @@ if (existsSync(headersPath)) {
     .split(/\r?\n/)
     .filter((l) => l.trim() && !l.trim().startsWith("#"));
 
-  /*
-   * PARSED INTO BLOCKS, so every directive is attributed to the path it sits
-   * under. The flat split this replaced read all the directives in the file as
-   * one list, which cannot answer "is anything unhashed pinned for a year" the
-   * moment the file has two paths in it.
-   */
+  /* PARSED INTO BLOCKS, so every directive is attributed to the path it sits under. */
   /** @type {Array<{ path: string, directives: string[] }>} */
   const blocks = [];
   for (const raw_line of lines) {
@@ -1243,11 +885,7 @@ if (existsSync(headersPath)) {
   ok("an immutable rule is declared", immutable.length > 0,
     "the file exists but pins nothing, so every asset still revalidates");
 
-  /*
-   * THE PROPERTY, per block. `max-age` and `s-maxage` are both read, because
-   * `s-maxage` overrides `max-age` for the shared cache and a year there is the
-   * same un-revokable state at the edge instead of in a browser.
-   */
+  /* THE PROPERTY, per block, and both max-age and s-maxage: a year at the edge is as un-revokable. */
   const unhashed = blocks.filter((b) => b.path !== "/assets/*");
   const overFresh = unhashed.flatMap((b) =>
     b.directives.flatMap((d) => {
@@ -1270,32 +908,12 @@ if (existsSync(headersPath)) {
     `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
 }
 
-/* --------------------------------- the health endpoint's own headers ------ */
+/* the health endpoint's own headers */
 
 /*
- * **A HEALTH CHECK THAT CAN BE SERVED FROM CACHE IS NOT A HEALTH CHECK.**
- *
- * `/api/health` returned `Response.json({ ok: true })` with no `Cache-Control`.
- * Hard rule 8: that is CACHED, not skipped. Workers Cache is in front of this
- * Worker and Cloudflare applies heuristic freshness to a 200 carrying neither
- * `Cache-Control` nor `Expires`, storing it for two hours. The endpoint could
- * therefore report health measured two hours ago, identically whether the
- * Worker was fine or on fire, which is the reassuring silence a monitor exists
- * to break.
- *
- * ## SCOPED STRUCTURALLY, NOT BY A WINDOW
- *
- * The tempting assertion is "the file mentions no-store", and it is worthless:
- * it passes on a comment, and this repo has had a comment both satisfy an
- * assertion and fail one in the same week. The next temptation is a window
- * around each `new Response`, and that is the shape that read the NEXT
- * function's compliance in `df99bf1`.
- *
- * So the property asserted is structural: the route constructs a Response in
- * EXACTLY ONE place, that place is inside `healthJson`, and `healthJson`
- * applies the constant. A second exit added later without the headers moves the
- * count and fails here, which is the case that matters once the endpoint grows
- * a 503 path. Comments are stripped before any of it.
+ * A HEALTH CHECK SERVED FROM CACHE IS NOT A HEALTH CHECK: no Cache-Control means heuristic
+ * freshness (hard rule 8). SCOPED STRUCTURALLY by counting the ONE Response construction,
+ * because "the file mentions no-store" passes on a comment.
  */
 
 console.log("\n  the health endpoint");
@@ -1354,11 +972,7 @@ if (existsSync(HEALTH_PATH)) {
     );
   }
 
-  /*
-   * THE APPLICATION SITE, counted rather than searched for. One construction is
-   * the invariant: it is what makes "the header is on every response" provable
-   * without inspecting each response.
-   */
+  /* THE APPLICATION SITE, counted: one construction is what makes the header provably universal. */
   const constructions = [
     ...health.matchAll(/\bnew\s+Response\s*\(|\bResponse\s*\.\s*json\s*\(/g),
   ];
@@ -1383,20 +997,7 @@ if (existsSync(HEALTH_PATH)) {
     const helperEnd = health.indexOf("\n}", helperAt);
     const helperBody = helperEnd === -1 ? "" : health.slice(helperAt, helperEnd + 2);
 
-    /*
-     * THE NEEDLE FOLLOWED THE HELPER, 2026-08-26. It read
-     * `headers: HEALTH_HEADERS`, which was exact while the helper passed the
-     * object straight through. The rate limit gave the route one response that
-     * needs a `Retry-After` no other response wants, so the helper now seeds a
-     * `Headers` from the constant and overlays the caller's extras.
-     *
-     * `new Headers(HEALTH_HEADERS)` is asserted rather than a bare mention of
-     * the identifier, and the difference matters: a bare `HEALTH_HEADERS`
-     * anywhere in the body would be satisfied by a line that merely READS the
-     * constant without seeding from it, which is exactly the shape a refactor
-     * that stopped applying it would leave behind. The invariant is unchanged:
-     * the one construction site is built FROM the constant.
-     */
+    /* new Headers(HEALTH_HEADERS), not a bare mention, so the one site is built FROM the constant. */
     ok(
       "healthJson seeds its headers from HEALTH_HEADERS",
       /new\s+Headers\(\s*HEALTH_HEADERS\s*\)/.test(helperBody),
@@ -1419,31 +1020,12 @@ console.log("  plaintext requests are upgraded before anything else runs");
 
 {
   /*
-   * MEASURED ON THE WIRE, 2026-08-23, and it is why this section exists: plain
-   * http:// returned 200 with the full page, and the first plaintext request to
-   * a path already warmed over HTTPS came back CF-Cache-Status: HIT carrying the
-   * SAME CSP nonce. The two schemes shared one cache entry, so the nonce that
-   * the enforced policy relies on was being handed out in the clear.
-   *
-   * Asserted on POSITION, not presence. A redirect that runs after the router
-   * has already produced a response is not a redirect, and presence alone would
-   * pass on exactly that.
+   * MEASURED ON THE WIRE: plain http returned the full page, and a warmed path came back a HIT
+   * carrying the same nonce. Asserted on POSITION: a redirect after the router is not a redirect.
    */
   /*
-   * RE-SCOPED TO THE GATEWAY, 2026-09-05, and the re-scope is a finding.
-   *
-   * This block used to take the FIRST `async fetch(` in the file and assert
-   * that `httpsRedirectTarget` appeared before `RouterContextProvider` inside
-   * it. After the entrypoint split the first `async fetch(` is the RENDERER's,
-   * which constructs the router and never redirects, so the needle was pointing
-   * at the wrong handler and this gate went red. It was right to: an assertion
-   * about POSITION has to know which body it is reading, and this one silently
-   * changed subject when the file's shape changed.
-   *
-   * The property is now stated against the shape that exists, and it is
-   * STRONGER than the old claim. The redirect must be in the GATEWAY and must
-   * come before the loopback: before the loopback means before anything could
-   * be answered from cache, where the old one only meant before a render.
+   * SCOPED TO THE GATEWAY, because a position assertion must know which body it reads, and before
+   * the LOOPBACK, so before anything could be answered from cache.
    */
   const appCode = stripComments(readFileSync(APP_PATH, "utf8"));
   const gatewayAt = appCode.search(/export\s+default\s*\{/);
@@ -1465,10 +1047,8 @@ console.log("  plaintext requests are upgraded before anything else runs");
       "the loopback could be answered from a cache entry the scheme is not part of",
   );
   /*
-   * AND THE RENDERER DOES NOT REDIRECT, which is the other direction. Without
-   * it the assertion above could be satisfied by a copy of the redirect having
-   * moved into the entrypoint that runs on a miss only, where it would be
-   * skipped on every hit.
+   * AND THE RENDERER DOES NOT REDIRECT, or the assertion above is satisfied by a copy that runs
+   * on a miss only.
    */
   const rendererAt = appCode.search(/export\s+class\s+Renderer\b/);
   const rendererBody =
@@ -1484,12 +1064,7 @@ console.log("  plaintext requests are upgraded before anything else runs");
     "the renderer runs on a cache miss only, so an upgrade decided there is skipped on a hit",
   );
 
-  /*
-   * The redirect's own caching, and this one is a safety property rather than
-   * hygiene. The scheme is NOT part of the cache key, which is the whole defect
-   * this closes; a cacheable redirect stored under a shared key would be served
-   * to HTTPS readers too and send them to the URL they already requested.
-   */
+  /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
   const redirectBlock = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 420);
   ok(
     "the redirect block was located",
@@ -1508,26 +1083,11 @@ console.log("  plaintext requests are upgraded before anything else runs");
   );
 }
 
-/* ------------------------- every public HTML route sets the shared policy - */
+/* every public HTML route sets the shared policy */
 
 /*
- * **THE GAP THIS CLOSES EXISTED BECAUSE NOTHING ASSERTED IT.**
- *
- * /projects exported no headers() at all and so fell through to hard rule 8's
- * uncached default: the one public page never edge-cached, every reader paying
- * an origin hit for a body identical to everyone's. It sat in core.md as a
- * known gap for weeks, because a missing export has no symptom a human meets
- * and no gate was looking.
- *
- * Asserted on the ROUTE FILES rather than on the helper, because the helper
- * being correct proves nothing about who calls it. Comments are stripped
- * first: three of these files discuss headers() in prose while explaining the
- * Vary pairing, and a raw match would read the explanation as the code.
- *
- * The routes that negotiate on Accept are deliberately absent: blog.$slug,
- * blog._index and search take loaderHeaders or HTML_VARY_ACCEPT and are their
- * own shape. preview.$token is absent for the opposite reason and has its own
- * section above.
+ * A public page exporting no headers() falls through to hard rule 8's uncached default with no
+ * symptom a human meets. Asserted on the ROUTE FILES, comment-stripped, not on the helper.
  */
 
 console.log("");
@@ -1545,22 +1105,11 @@ console.log("  public HTML routes share one headers()");
     "playground.tsx",
     "projects.tsx",
     /*
-     * The publication index, back on the site 2026-09-12 under ruling 63.
-     *
-     * Shared-cached, and the interesting part is that its QUERY STRING is part
-     * of the cache key rather than a reason to refuse caching: the topic chips,
-     * the search box and the sort are all GET parameters, so one reader's
-     * `?topic=bacteriophages` is a different entry from another's bare URL and
-     * neither can be served to the other. Nothing on it is reader-specific; the
-     * citation counts come from KV and are the same for everybody.
+     * The publication index: its QUERY STRING is part of the key rather than a reason to refuse,
+     * since the chips and the sort are GET parameters and nothing on it is reader-specific.
      */
     "publications.tsx",
-    /*
-     * One paper's page. Same policy as the index and for the same reason:
-     * every byte of it is a function of the committed corpus, so one reader's
-     * copy is every reader's copy. The citation counts come from KV and are
-     * identical for everybody.
-     */
+    /* One paper's page, same policy: every byte is a function of the committed corpus. */
     "publications.$slug.tsx",
     "privacy.tsx",
     // The tag archive. It calls `publicHtmlHeaders()` and negotiates nothing:
@@ -1570,11 +1119,8 @@ console.log("  public HTML routes share one headers()");
     // The series archive, on the tag archive's terms: `publicHtmlHeaders()`,
     // and its feeds are separate URLs rather than representations of this one.
     "blog.series.$series.tsx",
-    // MOVED HERE FROM THE ACCEPT-NEGOTIATING LIST, 2026-09-05. `/blog` was in
-    // that list because it set its own `Vary`, and the Vary it set was
-    // `Cookie` rather than `Accept`: it has no twin representation and never
-    // did. With the theme in the cache key instead, it has no reason for a Vary
-    // at all and calls the helper like every other listing page.
+    // /blog is here rather than with the negotiating routes: no twin representation, and with the
+    // theme in the cache key it has no reason for a Vary at all.
     "blog._index.tsx",
   ];
 
@@ -1585,15 +1131,8 @@ console.log("  public HTML routes share one headers()");
   );
 
   /*
-   * THE ACCEPT-NEGOTIATING PAIR, asserted on the string rather than on the
-   * helper. They cannot call publicHtmlHeaders(): each pairs the shared
-   * Cache-Control with its own Vary, because each has a twin representation
-   * (markdown, or JSON) that Accept selects between.
-   *
-   * IT WAS THREE UNTIL 2026-09-05. `/blog` was here for a `Vary: Cookie` it no
-   * longer sets, and it never negotiated on Accept; the theme is a cache key
-   * dimension now, so the only Vary left on this site is the one that names a
-   * real second representation.
+   * THE ACCEPT-NEGOTIATING PAIR, on the string rather than the helper: the only Vary left on this
+   * site is one naming a real second representation.
    */
   const ACCEPT_NEGOTIATED = ["blog.$slug.tsx", "search.tsx"];
   for (const name of ACCEPT_NEGOTIATED) {
@@ -1608,28 +1147,9 @@ console.log("  public HTML routes share one headers()");
   }
 
   /*
-   * EVERY SHARED-CACHEABLE ROUTE ALSO SETS A CACHE TAG. Ruling 17, 2026-09-05.
-   *
-   * ## WHY THIS IS A GATE AND NOT A CONVENTION
-   *
-   * A response that can be stored and cannot be purged is a page that stays
-   * wrong for ten minutes after a write that was supposed to fix it, and the
-   * failure is SILENT in both directions: the write reports success, and
-   * `cache.purge` reports `success: true` for a tag that matches nothing,
-   * because there is nothing for it to report. Neither end says anything. The
-   * only place the omission is visible is here, in the source, before it ships.
-   *
-   * ## IT IS THE PAIRING THAT IS ASSERTED
-   *
-   * `publicHtmlHeaders` returns both halves together, so a route that calls it
-   * passes by construction. The two Accept-negotiating routes build their
-   * headers by hand and are exactly where a half can go missing, which is why
-   * this is checked FROM the same derived list the section above closes over
-   * rather than from a hand-kept set of route names.
-   *
-   * The needle is the CALL or the header name, never the tag's VALUE. What the
-   * tag should say is `cacheTags`' business and hard rule 17 gives that one
-   * owner; a gate that restated the vocabulary would be the second owner.
+   * EVERY SHARED-CACHEABLE ROUTE ALSO SETS A CACHE TAG, or a stored response stays wrong silently
+   * at both ends. THE PAIRING is asserted, from the same derived list, and the needle is the CALL
+   * or the header name, never the tag's VALUE, which hard rule 17 gives one owner.
    */
   const TAG_NEEDLE = /publicHtmlHeaders\s*\(|"Cache-Tag"|cacheTags\s*\(/;
   const untagged = [];
@@ -1646,13 +1166,8 @@ console.log("  public HTML routes share one headers()");
   }
 
   /*
-   * SCOPE, ASSERTED. An empty walk reports no untagged routes, which is exactly
-   * what a compliant tree reports.
-   *
-   * MEASURED THROUGH THIS LOOP on 2026-09-05 by RUNNING the gate: 11. The first
-   * figure written here was 10, counted off the two list literals above rather
-   * than run, and it was wrong by one. Hard rule 10's own example, in the commit
-   * that added the assertion: a floor arrived at by reading is not a floor.
+   * SCOPE, ASSERTED: an empty walk reports what a compliant tree reports. MEASURED THROUGH THIS
+   * LOOP, having come out wrong by one when counted off the literals, hard rule 10's own example.
    */
   ok(
     "the cache-tag walk examined the shared-cacheable routes",
@@ -1670,24 +1185,10 @@ console.log("  public HTML routes share one headers()");
   );
 
   /*
-   * CLOSURE, AND IT IS THE HALF THAT MAKES THESE LISTS AN OWNER RATHER THAN A
-   * SECOND COPY.
-   *
-   * The lists are checked FROM the tree, not against it: every .tsx route that
-   * references the shared string must appear in one of them. A new shared-cached
-   * page therefore cannot ship unlisted, which is how /projects went the other
-   * way and sat uncached for weeks with nothing looking.
-   *
-   * THIS IS WHAT LETS workers/app.ts STATE THE NONCE EXPOSURE WITHOUT A COUNT.
-   * That count read seven, was written when the true value was six, and became
-   * eight the morning /projects gained headers(). Three copies of it existed, in
-   * two files, and all three were wrong at once. A number in prose beside a gate
-   * is a second copy of the gate; hard rule 8 carries the same lesson, and this
-   * is where the habit has cost the most.
-   *
-   * Comments stripped first: preview.$token.tsx NAMES the shared constant in
-   * prose to explain why it refuses it, and an unstripped scan would read that
-   * sentence as a reference and demand the route join the list.
+   * CLOSURE, WHICH MAKES THESE LISTS AN OWNER RATHER THAN A SECOND COPY: a new shared-cached page
+   * cannot ship unlisted, and workers/app.ts can state the nonce exposure without a count, which
+   * once stood in three copies and was wrong in all three; hard rule 8 carries the same lesson.
+   * Comments stripped, because one route NAMES the constant while explaining why it refuses it.
    */
   {
     const listed = new Set([...PUBLIC_HTML, ...ACCEPT_NEGOTIATED]);
@@ -1741,59 +1242,8 @@ console.log("  public HTML routes share one headers()");
   }
 }
 /*
- * FLOOR RE-MEASURED 2026-08-23 BY RUNNING THIS GATE, never summed.
- *
- * **THE OLD VALUE HAD GONE STALE BY 44 AND NOBODY WOULD HAVE NOTICED.** It read
- * 99, its comment said "Measured: 99", and the gate was in fact running 143
- * before this section landed. A floor 44 under the truth is not a floor: two
- * whole sections could have stopped running and the count would still have
- * cleared it, which is precisely the failure this assertion exists to catch.
- * It was a floor that could not fail, hard rule 10's own class, sitting inside
- * the gate family that names it.
- *
- * That is the argument for measuring THROUGH the pipeline every time rather
- * than adding up what a new block looks like it will contribute: the arithmetic
- * drifts silently, and only running it says so. I first wrote 108 here by
- * reasoning from the stale 99, and running the gate is what corrected it.
- *
- * Measured now: 184, by RUNNING it. Floored at 173, roughly
- * six percent under, matching the convention the preview-route floor set.
- *
- * **AND THE 174 THIS PARAGRAPH USED TO CARRY HAD ALREADY DRIFTED BY SEVEN.**
- * Measured 2026-08-23 by extracting HEAD's copy of this gate and running it
- * against the current tree: 181, before the three SiteSpeculation assertions
- * above landed. So the value was stale within the same day it was written, by
- * ordinary commits doing ordinary work, which is the whole argument for the
- * floor being a floor rather than an equality. The delta is stated as a
- * measurement of two runs, never as arithmetic on the new block.
- *
- * **RE-MEASURED 2026-09-11, BY RUNNING BOTH SIDES.** HEAD's copy of this file,
- * extracted and executed against the current tree: 197. This tree, with the
- * feed-exemption block: 208, and 211 once `about.tsx` joined PUBLIC_HTML and
- * brought its three per-route assertions with it. So 187 had drifted ten under
- * its own count before that commit, by the same ordinary work the paragraph
- * above describes. The value is six percent under the 211 actually observed,
- * which is the convention the preview-route floor set, and it is arithmetic on
- * a MEASUREMENT rather than on the old number plus the new block.
- *
- * **SET THROUGH check:floors' OWN TOLERANCE, 2026-09-11, after CI caught the
- * first attempt.** That attempt read "six percent under" out of a comment in
- * check-headers.mjs and applied it to four gates. The rule is
- * `max(3, ceil(executed * 0.05))` and it belongs to `scripts/check-floors.mjs`,
- * the gate that enforces it. Prose about a gate ages; the gate does not.
- *
- * It went undetected locally because check:floors runs the whole offline tier
- * and therefore runs LAST, and the tier hangs before it on this host
- * (node --test wedges on test/check-all-cleanup.test.mjs, which predates this
- * work and is proven so by differential). CI reached it on the first push.
- *
- * Executed 211, tolerance 11, so the lowest legal floor is 200. This sat at
- * 206, about half the tolerance under the count: far enough to absorb an added
- * block, close enough that a gate which has quietly halved cannot pass.
- *
- * RE-MEASURED at 219 on 2026-09-12, when the `_headers` block was rewritten to
- * read per path rather than per file. Same reasoning, same fraction: tolerance
- * 11, lowest legal floor 208, this sits at 213.
+ * FLOOR RE-MEASURED BY RUNNING THIS GATE, never summed: this one was once far enough under for
+ * two sections to stop running while it still cleared, which is hard rule 10's class.
  */
 const MINIMUM_CHECKS = 213;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);

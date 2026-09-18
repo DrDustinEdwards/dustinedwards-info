@@ -3,47 +3,18 @@
  *
  *   npm run check:d1-address
  *
- * ## THE DEFECT THIS REFUSES, measured in CI on 2026-09-08
+ * THE DEFECT: the by-name spelling resolves through the gitignored config's entry and uses THAT
+ * entry's id, and a clean checkout bootstraps that file with a placeholder, so the name addresses
+ * a database that does not exist ON A RUNNER AND ONLY THERE. Two gates had it and one had never
+ * run in CI, so nothing had noticed; the repair is an instrument rather than a sweep.
  *
- * `wrangler d1 <cmd> dustinedwards` resolves the name through the
- * `d1_databases` entry in `wrangler.jsonc`, and uses THAT ENTRY'S id.
- * `wrangler.jsonc` is gitignored; a clean checkout bootstraps it from
- * `wrangler.jsonc.example`, whose id is the zero placeholder. So the by-name
- * spelling addresses a database that does not exist ON A RUNNER AND ONLY
- * THERE, and dies as 7404.
+ * REFUSED: a `d1` subcommand whose database argument is the NAME, in a segment that is not
+ * `--local`. ALLOWED, deliberately: `--local`, where Miniflare keys state by the config id and
+ * there is no account-side UUID to resolve; `d1 list`, the lookup itself; and `d1 migrations`,
+ * applied through wrangler by design.
  *
- * `check:restore` found it the expensive way (run 34301357787). `check:backup`
- * had the same defect and had never run in CI, so nothing had noticed. The
- * queued item that produced this gate asked for it before a third victim was
- * found by a red run, which is the "a fix in N-1 of N sites is not a fix" shape
- * in FAILURES.md answered with an instrument instead of a sweep.
- *
- * ## WHAT IS REFUSED, AND WHAT IS NOT
- *
- * Refused: a `d1` subcommand whose database argument is the NAME, in a segment
- * that is not `--local`. `resolveD1Address` in `scripts/lib/d1-address.mjs` is
- * the only production spelling: it asks the account for the UUID and fails
- * closed.
- *
- * Allowed, deliberately:
- *
- *   `--local`      Miniflare keys state by the config id and there is no
- *                  account-side UUID to resolve. Asking for one would answer a
- *                  question about a different database.
- *   `d1 list`      the lookup itself, which takes no database argument.
- *   `d1 migrations` applied through wrangler by design (CLAUDE.md, Commands).
- *
- * ## SCOPE IS PROVEN NON-EMPTY BEFORE ANYTHING IS ASSERTED
- *
- * A sweep over zero files reports exactly what a clean sweep reports, and this
- * gate is a per-file loop over a glob. Hard rule 10, first discipline.
- *
- * ## COMMENTS ARE STRIPPED FIRST
- *
- * Every one of these files DESCRIBES the defect in prose, this one included. A
- * needle that matched a comment would fire on the documentation of the rule it
- * enforces, which is the "a comment can satisfy an assertion about code, and
- * can fail one" shape.
+ * SCOPE IS PROVEN NON-EMPTY, this being a per-file loop over a glob, hard rule 10. COMMENTS ARE
+ * STRIPPED FIRST: every one of these files DESCRIBES the defect in prose, this one included.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -58,11 +29,9 @@ const SCRIPTS_DIR = "scripts";
 const DB_NAME = "dustinedwards";
 
 /**
- * Files whose `d1 ... dustinedwards` strings are FIXTURES, never invocations.
- *
- * ENUMERATED AND ARGUED, never a glob. An exclusion naming a file excludes
- * everything in it, so each one states what it is and why the rule does not
- * reach it.
+ * Files whose `d1` strings are FIXTURES, never invocations. ENUMERATED AND ARGUED, never a glob:
+ * an exclusion naming a file excludes everything in it, so each states why the rule does not reach
+ * it.
  */
 /** @type {Record<string, string>} */
 const EXEMPT = {
@@ -111,28 +80,15 @@ if (failures.length > 0) {
 }
 
 /**
- * A `d1` subcommand followed by the database NAME, in either spelling.
- *
- * Two forms, because both appear: the literal `dustinedwards`, and the
- * `${DB_NAME}` interpolation that several scripts bind to the same string. A
- * needle for the literal alone would miss every one of the second kind, which
- * is the "resolve bindings, not spellings" discipline.
- *
- * `d1 list` cannot match: it takes no database argument, so there is no name
- * after it. `d1 migrations` is excluded by name below rather than by hoping.
+ * A `d1` subcommand followed by the database NAME, in either spelling: the literal and the
+ * interpolation several scripts bind to it, because a needle for the literal alone would miss
+ * every site of the second kind. `d1 list` cannot match, taking no database argument.
  */
 /*
- * THE WORD BOUNDARY GOES INSIDE THE FIRST ALTERNATIVE, NOT AFTER THE GROUP.
- *
- * It was `(?:dustinedwards|\$\{DB_NAME\})\b`, and that trailing `\b` can never
- * match the second alternative: `}` is a non-word character and the next
- * character is a space, so there is no boundary between them. The needle
- * therefore saw the literal spelling and was BLIND to every `${DB_NAME}` site,
- * which is most of them. It reported 3 sites where there are 11, and one
- * violation where there are nine, and read as a nearly clean repo.
- *
- * Caught by counting the sites and disbelieving the number, which is the whole
- * reason the count is printed rather than just the violations.
+ * THE WORD BOUNDARY GOES INSIDE THE FIRST ALTERNATIVE, NOT AFTER THE GROUP. A trailing `\b` can
+ * never match the interpolated alternative, `}` being a non-word character followed by a space,
+ * so the needle was BLIND to most of the sites and read as a nearly clean repo. Caught by counting
+ * the sites and disbelieving the number, which is why the count is printed.
  */
 const BY_NAME = new RegExp(
   String.raw`\bd1\s+([a-z-]+)\s+(?:` + DB_NAME + String.raw`\b|\$\{DB_NAME\})`,
@@ -150,10 +106,8 @@ for (const name of files) {
   if (EXEMPT[base]) continue;
 
   const raw = await readFile(join(SCRIPTS_DIR, name), "utf8");
-  // `preserveLines`, because a reported line number that does not match the
-  // file is worse than none: it sends the reader to the wrong place with
-  // confidence. Without it the stripper collapses comment lines and every
-  // number below is short by the length of the docblocks above the match.
+  // `preserveLines`, because a reported line number that does not match the file sends the reader
+  // to the wrong place with confidence.
   const source = stripComments(raw, { preserveLines: true });
   scanned += 1;
 
@@ -167,10 +121,8 @@ for (const name of files) {
       if (EXEMPT_SUBCOMMANDS.has(subcommand)) continue;
       sites += 1;
       /*
-       * `--local` ON THE SAME LINE is what makes the name correct. Read from
-       * the line rather than the file, so a `--local` belonging to some other
-       * command cannot license this one. That is the same rule the deploy
-       * hook applies to `--dry-run`, and for the same reason.
+       * `--local` ON THE SAME LINE is what makes the name correct, read from the line rather than the
+       * file so a `--local` belonging to another command cannot license this one.
        */
       const local = /--local\b/.test(line);
       ok(
@@ -190,11 +142,9 @@ for (const name of files) {
 console.log(`  ${scanned} script(s) scanned, ${sites} by-name d1 site(s) found.`);
 
 /*
- * THE SITES ARE COUNTED AND THE COUNT IS PRINTED, because "0 violations" and
- * "0 lines examined" are the same output otherwise. The floor below counts
- * ASSERTIONS, and every assertion here comes from a site, so a corpus with no
- * by-name sites at all would floor at the scope check alone. That is why the
- * scope assertion is separate and unconditional.
+ * THE SITES ARE COUNTED AND THE COUNT IS PRINTED, because "0 violations" and "0 lines examined"
+ * are otherwise the same output. Every assertion here comes from a site, so the scope assertion is
+ * separate and unconditional.
  */
 const MINIMUM_CHECKS = 1;
 const floorBreach = assertFloor(

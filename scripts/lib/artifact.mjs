@@ -1,12 +1,8 @@
 /**
- * The on-disk shape of the local content build product.
- *
- * ONE writer since the artifact arc: `scripts/build-content.mjs`, whose output
- * is a gitignored local file that sync-content, the gates and the OG and
- * diagram builders read after building it. The admin editor no longer writes
- * or reads this shape; it renders straight into D1 through `renderAndWrite`.
- * Moved from app/lib/content/ to scripts/lib/ with that change, because the
- * Worker imports nothing from it any more.
+ * The on-disk shape of the local content build product. ONE writer, the content build, whose
+ * output is a gitignored local file the sync, the gates and the asset builders read. The editor
+ * renders straight into D1 instead, which is why this lives beside the scripts rather than in the
+ * app: the Worker imports nothing from it any more.
  */
 
 import {
@@ -23,18 +19,11 @@ import {
  */
 export function serializeArtifact(posts, pages, papers) {
   /*
-   * `pages` is REQUIRED, and the throw is the point.
-   *
-   * Ruling 3 of colophon-page.md put hand-authored pages in the search corpus,
-   * so the records array is no longer derivable from `posts` alone. A caller
-   * that forgot the second argument would produce a SMALLER artifact that is
-   * internally consistent and passes every shape check, and `check:content`
-   * would then go red on the next ordinary build with a byte difference nobody
-   * could place. Failing here names it instead.
-   *
-   * The two callers, `scripts/build-content.mjs` and the editor's save path,
-   * differ only in how they LOAD the JSON that feeds `colophonPages()`. The
-   * assembly itself lives in one place, for the reason this whole module exists.
+   * `pages` is REQUIRED, and the throw is the point: hand-authored pages are in the search corpus,
+   * so the records array is no longer derivable from the posts alone. A caller that forgot the
+   * second argument would produce a SMALLER artifact that is internally consistent and passes every
+   * shape check, and the gate would go red on the next ordinary build with a byte difference nobody
+   * could place.
    */
   if (!Array.isArray(pages)) {
     throw new Error(
@@ -45,11 +34,9 @@ export function serializeArtifact(posts, pages, papers) {
   }
 
   /*
-   * `papers` IS REQUIRED FOR THE SAME REASON, and it is required rather than
-   * defaulted to an empty array on purpose. A default is the exact failure the
-   * paragraph above describes, reintroduced: a caller that forgot it would
-   * produce an artifact missing 36 records, internally consistent, passing
-   * every shape check, and red on the next unrelated build.
+   * `papers` IS REQUIRED FOR THE SAME REASON, and required rather than defaulted to an empty array
+   * on purpose: a default is the failure above reintroduced, an artifact missing every paper,
+   * internally consistent, and red on the next unrelated build.
    */
   if (!Array.isArray(papers)) {
     throw new Error(
@@ -59,12 +46,9 @@ export function serializeArtifact(posts, pages, papers) {
     );
   }
 
-  // Records are derived here rather than stored per post so that adding a post
-  // cannot leave another post's records stale. They are a pure function of the
-  // post list, the page inputs and the paper inputs, so the gate compares them
-  // like everything else. Posts, then pages, then papers, each internally
-  // sorted, so the order is stable across writers and `check:content` never
-  // fails on ordering alone.
+  // Records are derived here rather than stored per post, so adding a post cannot leave another
+  // post's records stale, and each group is internally sorted so the order is stable across writers
+  // and the gate never fails on ordering alone.
   return `${JSON.stringify(
     {
       posts,

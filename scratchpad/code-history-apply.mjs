@@ -297,9 +297,10 @@ if (mode === "apply") {
   const history = [
     `# Code comment history, 2026-09, wave ${WAVE}`,
     "",
-    "Extracted by job_2cec82881996 under ruling 115, from cdb4300. Every comment",
-    "block the job deleted or shortened in the ten heaviest code files is here",
-    "VERBATIM, with the file and line it had at cdb4300, its tag, and why it moved.",
+    `Extracted under ruling 115, from cdb4300. Every comment block this wave`,
+    `deleted or shortened is here VERBATIM, with the file and line it had at`,
+    `cdb4300, its tag, and why it moved. Wave 1 took app/ and the ten heaviest`,
+    `code files; wave ${WAVE} takes the remaining ${FILES.length} files under scripts/.`,
     "The files keep only the short why and the contract; this is where the",
     "measurements, dates and the story went.",
     "",

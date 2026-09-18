@@ -1,30 +1,20 @@
 /**
- * Writes the markdown twin of every paper into `public/publications/`.
+ * Writes the markdown twin of every paper into the public directory.
  *
- * Run: `npm run build:publication-twins`
+ *   npm run build:publication-twins
  *
- * A BUILD PRODUCT, gitignored, on exactly the terms ruling 39a set for
- * `content/generated/posts.json`: it is derived entirely from tracked sources
- * (`app/data/publications.ts`, `data/publications.text.json`,
- * `data/publications.cited-by.json`), so committing it would make every corpus
- * change a two-file change that only a machine running this script could
- * complete. It runs where `build:content` runs: check-all's preflight, ship's
- * build step, CI's build step, and `npm run dev`.
+ * A BUILD PRODUCT, gitignored, on the same terms as the content artifact: it is derived entirely
+ * from tracked sources, so committing it would make every corpus change a two-file change only a
+ * machine running this script could complete. It runs where the content build runs.
  *
- * The twins are ASSETS rather than route output. The reasoning, and the
- * measurement behind it, is on `app/lib/publications/twin.mjs`.
+ * The twins are ASSETS rather than route output, and the reasoning is on the module that renders
+ * one.
  *
- * ## IT PRUNES, AND THAT IS NOT TIDINESS
- *
- * A gitignored file that nothing deletes is a file that outlives its reason. A
- * paper removed from the corpus, or a DOI corrected, leaves a twin on disk that
- * this script would never overwrite, `check:publications` would never compare,
- * and the next deploy would upload: a page that 404s with a twin beside it that
- * still answers. So every `.md` directly under `public/publications/` that this
- * run did not write is removed, and the run says how many.
- *
- * Directly under, never recursive: `public/publications/<slug>/` holds the PDFs
- * and nothing here has any business walking into it.
+ * IT PRUNES, AND THAT IS NOT TIDINESS: a gitignored file nothing deletes outlives its reason. A
+ * paper removed, or a DOI corrected, leaves a twin this script would never overwrite, the gate
+ * would never compare and the next deploy would upload, so every file directly under the directory
+ * that this run did not write is removed. Directly under, never recursive: the subdirectories hold
+ * the PDFs.
  */
 
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
@@ -43,11 +33,8 @@ const OUT_DIR = join(root, "public", "publications");
 const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 /**
- * Every twin, as a map from `<slug>.md` to its bytes.
- *
- * Exported so `check:publications` can generate and compare without writing,
- * for the reason `build-publications.mjs` guards its own write: a gate that
- * repairs its subject before looking at it cannot fail.
+ * Every twin, as a map from filename to bytes. Exported so the gate can generate and compare
+ * without writing: a gate that repairs its subject before looking at it cannot fail.
  *
  * @returns {Promise<Map<string, string>>}
  */
@@ -60,9 +47,8 @@ export async function generateTwins() {
   );
 
   /*
-   * Text is keyed by DOI as deposited, and six of the 36 are mixed case. A
-   * raw-string lookup would silently produce a twin with no full text, which is
-   * the failure `doiKey` exists to prevent everywhere else in this corpus.
+   * Text is keyed by DOI as deposited and some are mixed case, so a raw-string lookup would silently
+   * produce a twin with no full text.
    */
   const textByDoi = new Map(
     Object.entries(extracted.papers ?? {}).map(([doi, entry]) => [doiKey(doi), entry]),
@@ -79,9 +65,8 @@ export async function generateTwins() {
       `${slug}.md`,
       paperTwin(paper, {
         /*
-         * Null and empty are different states and the twin renders them
-         * differently: null is "this site does not host the PDF" and produces
-         * no full-text section at all, while an empty array is "the PDF is
+         * Null and empty are different states and the twin renders them differently: null is "this site
+         * does not host the PDF" and produces no full-text section, while an empty array is "the PDF is
          * here and extraction found nothing", which the twin says out loud.
          */
         pages: hosted ? (entry?.text ?? []) : null,
@@ -117,8 +102,10 @@ async function main() {
   );
 }
 
-/* Writes only when run directly, so the gate's import cannot rewrite the files
- * it is about to compare. `build-publications.mjs` carries the full grounds. */
+/*
+ * Writes only when run directly, so the gate's import cannot rewrite the files it is about to
+ * compare.
+ */
 if (pathToFileURL(process.argv[1] ?? "").href === import.meta.url) {
   await main();
 }

@@ -4,57 +4,17 @@
  *   node scripts/uptime-ensure.mjs            create or update, write the manifest
  *   node scripts/uptime-ensure.mjs --dry-run  say what it would do, change nothing
  *
- * ## WHY AN EXTERNAL MONITOR AT ALL
+ * WHY AN EXTERNAL MONITOR AT ALL: everything else watches this site from inside Cloudflare or
+ * does not reliably run. This is the off-platform half, run by somebody else's computer.
  *
- * Everything that currently watches this site watches it from inside
- * Cloudflare, or does not run. `workers/watchdog.ts` polls `/api/health` every
- * fifteen minutes through a SERVICE BINDING, which proves the Worker runs and
- * its invariants hold and proves nothing about whether a reader can reach the
- * site: that is stated in the watchdog's own docblock as the cost of the 1042
- * measurement. The one instrument that speaks from outside is
- * `.github/workflows/health.yml`, and its own notes record the schedule firing
- * 2 times against 96 expected on 2026-08-28. So the off-platform half of the
- * monitoring was a best-effort cron that measurably does not fire.
+ * TWO MONITORS, ANSWERING DIFFERENT QUESTIONS. The home page can be served from the edge cache
+ * long after the Worker stops answering, so it proves REACHABILITY and is a weak liveness signal;
+ * `/api/health` bypasses the cache and runs its checks, so it proves the Worker is ALIVE.
  *
- * This is that half, run by somebody else's computer.
- *
- * ## TWO MONITORS, AND THEY ANSWER DIFFERENT QUESTIONS
- *
- * MEASURED on production 2026-09-07. The home page answers in 89 and 99 ms
- * from `CF-Cache-Status: HIT` and carries
- * `public, s-maxage=600, stale-while-revalidate=86400`, so a 200 from it can
- * be served out of the edge cache long after the Worker stops answering. It
- * proves REACHABILITY and is a weak liveness signal by up to a day.
- *
- * `/api/health` carries `Cache-Control: no-store` and was measured
- * `CF-Cache-Status: BYPASS`, so every request reaches the Worker. Five samples:
- * 4.60, 3.73, 1.20, 1.72 and 1.58 seconds, because it runs five checks against
- * D1, both R2 buckets, AI Search and the GitHub Contents API. It proves the
- * Worker is ALIVE and its invariants hold.
- *
- * Neither is redundant and neither substitutes for the other, so both are here.
- *
- * ## IDEMPOTENT, AND MATCHED BY URL RATHER THAN BY NAME
- *
- * A monitor already existed when this was written (id 803937424, the home
- * page, created by hand), so "create two monitors" would have produced a
- * duplicate on its first run. Existing monitors are matched on the URL they
- * point at, because that is the thing that makes two monitors the same
- * monitor; a friendly name is a label a human edits in a dashboard, and
- * matching on it would create a second monitor the first time somebody renamed
- * one.
- *
- * The manifest is then written from what the API RETURNED, never from what
- * this program intended. A manifest recording an id from the request rather
- * than the response is a manifest that records a write that may not have
- * happened.
- *
- * ## THE ALERT CONTACT IS RESOLVED, NEVER INVENTED
- *
- * The account default email contact is looked up and its id assigned. If the
- * account has no active email contact this REFUSES rather than creating a
- * monitor that alerts nobody, which is the failure mode a monitoring setup
- * cannot afford: it looks exactly like a working one.
+ * IDEMPOTENT, AND MATCHED BY URL RATHER THAN BY NAME, the URL being what makes two monitors the
+ * same monitor; a friendly name is a label a human edits. The manifest is written from what the
+ * API RETURNED, never from what this intended. THE ALERT CONTACT IS RESOLVED, NEVER INVENTED, and
+ * an account with no active contact REFUSES rather than alerting nobody.
  *
  * @see scripts/check-uptime.mjs the gate that refuses when this has not run
  * @see scripts/lib/uptimerobot.mjs the measured v3 contract
@@ -88,7 +48,7 @@ if (!key) {
   process.exit(1);
 }
 
-/* ------------------------------------------------------- the alert contact */
+/* the alert contact */
 
 const contactsRes = await call(key, "/alert-contacts");
 if (!contactsRes.ok) {
@@ -97,9 +57,8 @@ if (!contactsRes.ok) {
 }
 const contacts = Array.isArray(contactsRes.body?.data) ? contactsRes.body.data : [];
 /*
- * ACTIVE EMAIL CONTACTS ONLY. An unconfirmed contact exists in the list and
- * receives nothing, so assigning one would produce a monitor that alerts into
- * a void while every panel says it is configured.
+ * ACTIVE EMAIL CONTACTS ONLY: an unconfirmed contact exists in the list and receives nothing, so
+ * assigning one produces a monitor that alerts into a void while every panel says it is configured.
  */
 const emailContacts = contacts.filter(
   (/** @type {{ type: unknown, status: unknown }} */ c) =>
@@ -116,7 +75,7 @@ if (emailContacts.length === 0) {
 const contact = emailContacts[0];
 console.log(`  alert contact: id ${contact.id} (${emailContacts.length} active email contact(s))`);
 
-/* ------------------------------------------------------------ reconcile */
+/* reconcile */
 
 const existing = await listMonitors(key);
 console.log(`  ${existing.length} monitor(s) on the account`);
@@ -131,10 +90,8 @@ for (const want of desired) {
   const match = existing.find((m) => String(m.url).replace(/\/+$/, "") === url.replace(/\/+$/, ""));
 
   /*
-   * THE ALERT CONTACT TRAVELS WITH EVERY WRITE, create and update alike. A
-   * monitor that lost its contact is the silent-failure shape again, and
-   * re-asserting it costs nothing because the API takes the whole assignment
-   * list on a PATCH.
+   * THE ALERT CONTACT TRAVELS WITH EVERY WRITE, create and update alike: a monitor that lost its
+   * contact is the silent-failure shape again, and re-asserting it costs nothing.
    */
   const payload = {
     ...want.shape,
@@ -159,9 +116,8 @@ for (const want of desired) {
   }
 
   /*
-   * WHAT ACTUALLY DIFFERS, so a run that changes nothing says so. Comparing
-   * the whole object would report a difference on every run, because the API
-   * returns forty fields this program never sets.
+   * WHAT ACTUALLY DIFFERS, so a run that changes nothing says so: comparing the whole object would
+   * report a difference every run, the API returning fields this program never sets.
    */
   const drift = COMPARED_FIELDS.filter(
     (f) => f in want.shape && !fieldInStep(f, match[f], want.shape[f]),
@@ -192,10 +148,8 @@ for (const want of desired) {
     process.exit(1);
   }
   /*
-   * RESUMED SEPARATELY, because `status` is NOT writable through PATCH: the
-   * API answers 400 `property status should not exist`. A paused monitor is a
-   * monitor somebody switched off, and this program's whole job is that the
-   * two monitors are on.
+   * RESUMED SEPARATELY, because `status` is NOT writable through the update verb. A paused monitor
+   * is one somebody switched off, and this program's whole job is that the two are on.
    */
   if (isPaused) {
     const started = await call(key, `/monitors/${match.id}/start`, { method: "POST", body: {} });
@@ -212,7 +166,7 @@ for (const want of desired) {
   );
 }
 
-/* ------------------------------------------------------------- manifest */
+/* manifest */
 
 if (dryRun) {
   console.log("\n--dry-run: nothing was written.\n");
@@ -230,9 +184,8 @@ if (Object.keys(manifest).length !== desired.length) {
 }
 
 /*
- * SORTED AND NEWLINE-TERMINATED, so a re-run that changed nothing produces a
- * byte-identical file and shows up as no diff at all. A manifest that churned
- * on key order would make every ship a spurious commit.
+ * SORTED AND NEWLINE-TERMINATED, so a re-run that changed nothing is byte-identical and shows up
+ * as no diff: a manifest that churned on key order would make every ship a spurious commit.
  */
 const ordered = Object.fromEntries(Object.keys(manifest).sort().map((k) => [k, manifest[k]]));
 writeFileSync(MANIFEST_PATH, `${JSON.stringify(ordered, null, 2)}\n`, "utf8");

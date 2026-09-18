@@ -4,22 +4,17 @@
  *   node scripts/operator-roundtrip.mjs a          steps 1 and 2
  *   node scripts/operator-roundtrip.mjs b          steps 3 to 9
  *
- * Split into two phases because step 3 is a HUMAN action: the first publication
- * of a post is reserved to the admin, so the round trip cannot be driven end to
- * end by the thing it is testing. That is the point of the test.
+ * Two phases because step 3 is a HUMAN action: the first publication of a post is reserved to the
+ * admin, so the round trip cannot be driven end to end by the thing it is testing, which is the
+ * point of the test.
  *
- * The token is read from a file whose path is given by OPERATOR_TOKEN_FILE, and
- * it is never printed, logged, or included in an error. Nothing here echoes a
- * request header.
+ * The token is read from a file named by an environment variable and is never printed, logged or
+ * included in an error. Every assertion that matters is checked against GitHub and the public
+ * surfaces, never against the API's own report: an endpoint saying "created" is not evidence that
+ * a commit exists.
  *
- * Every assertion that matters is checked against GitHub and the public
- * surfaces, not against the API's own report of what it did. An endpoint saying
- * "created" is not evidence that a commit exists.
- *
- * NOTE ON THE DASH FIXTURE: step 7 has to submit a wide dash on purpose. It is
- * built from its CODE POINT rather than typed, so this file contains no wide
- * dash of its own and stays clean under the house rule. Same treatment the
- * pipeline's WIDE_DASH regex gets, and the same reason.
+ * THE DASH FIXTURE is built from its CODE POINT rather than typed, so this file contains no wide
+ * dash of its own and stays clean under the house rule.
  */
 
 import { readFileSync } from "node:fs";
@@ -64,6 +59,7 @@ function check(label, ok, detail = "") {
 
 /**
  * Calls one operator tool. Never logs the Authorization header.
+ *
  * @param {string} name
  * @param {Record<string, unknown>} [args]
  * @returns {Promise<{status: number, body: any}>}
@@ -122,21 +118,16 @@ const draft = (published) =>
 
 /**
  * Is the slug visible anywhere a reader or an agent would find it?
+ *
  * @returns {Promise<Record<string, any>>}
  */
 async function publicSurfaces() {
   /** @type {Record<string, any>} */
   const out = {};
   /*
-   * SCOPED-BY: the whole document, deliberately, on all six surfaces. A slug
-   * present ANYWHERE on an index, a feed or a manifest is exactly the
-   * propagation being asserted; narrowing to one element would test the
-   * template rather than the propagation.
-   *
-   * Collapsed from six near-identical lines into one loop, so there is ONE
-   * assertion site to annotate. check:assertions reads one line up, and a rule
-   * that scanned far enough to cover a six-line block would let an annotation
-   * drift away from the site it excuses.
+   * SCOPED-BY the whole document on all six surfaces, deliberately: a slug present ANYWHERE on an
+   * index, a feed or a manifest is exactly the propagation being asserted. Collapsed into one loop
+   * so there is ONE assertion site to annotate, `check:assertions` reading one line up.
    */
   for (const [key, path] of /** @type {[string, string][]} */ ([
     ["blogIndex", "/blog"],
@@ -150,9 +141,8 @@ async function publicSurfaces() {
     out[key] = (await pub(path)).text.includes(SLUG);
   }
 
-  // Scope the search assertion to the results themselves. The zero state
-  // renders a recent-writing list carrying the same links, and a page-wide
-  // match would pass against a zero-result page.
+  // Scope the search assertion to the results themselves: the zero state renders a recent-writing
+  // list carrying the same links, so a page-wide match would pass against a zero-result page.
   const search = await pub(`/search?q=${encodeURIComponent("operator round trip probe")}`, {
     accept: "application/json",
   });
@@ -172,7 +162,7 @@ console.log(`Operator round trip, phase ${PHASE.toUpperCase()}, against ${ORIGIN
 console.log(`Throwaway slug: ${SLUG}\n`);
 
 if (PHASE === "a") {
-  /* --- 1. Operator creates a draft -------------------------------------- */
+  /* 1. Operator creates a draft */
   console.log("1. Operator creates a draft");
   const created = await tool("save_post", { slug: SLUG, raw: draft(false), isNew: true });
   check("save_post returns 200", created.status === 200, JSON.stringify(created.body).slice(0, 200));
@@ -182,7 +172,7 @@ if (PHASE === "a") {
   check("first_published is null on a draft", created.body?.data?.firstPublished === null);
   if (sha) console.log(`     commit ${sha}`);
 
-  /* --- verified against GitHub, not against the API's own report --------- */
+  /* verified against GitHub, not against the API's own report */
   if (sha) {
     const gh = await fetch(
       `https://api.github.com/repos/DrDustinEdwards/dustinedwards-info/commits/${sha}`,
@@ -192,9 +182,8 @@ if (PHASE === "a") {
       /** @type {any} */
       const c = await gh.json();
       const files = (c.files ?? []).map((/** @type {any} */ f) => f.filename).sort();
-      // INVERTED with the artifact arc: a save used to carry the markdown AND
-      // the regenerated corpus artifact; git holds markdown only now, so a
-      // second file in a save commit is a regression to the two-writer world.
+      // INVERTED with the artifact arc: git holds markdown only now, so a second file in a save commit
+      // is a regression to the two-writer world.
       check(
         "the commit carries EXACTLY the markdown and nothing else",
         files.length === 1 && files[0] === postPath(SLUG),
@@ -216,7 +205,7 @@ if (PHASE === "a") {
     }
   }
 
-  /* --- D1 row and draft exclusion --------------------------------------- */
+  /* D1 row and draft exclusion */
   const got = await tool("get_post", { slug: SLUG });
   check("get_post finds it", got.status === 200);
   check("operatorMayPublish is false", got.body?.data?.operatorMayPublish === false);
@@ -232,7 +221,7 @@ if (PHASE === "a") {
   check("draft is ABSENT from search", surfaces.search === false);
   check("the post page 404s while draft", surfaces.postPage === 404, `got ${surfaces.postPage}`);
 
-  /* --- 2. The refusal, which is a required pass ------------------------- */
+  /* 2. The refusal, which is a required pass */
   console.log("\n2. Operator attempts to publish it (MUST be refused)");
   const refused = await tool("save_post", { slug: SLUG, raw: draft(true) });
   check("refused with 403", refused.status === 403, `got ${refused.status}`);
@@ -258,7 +247,7 @@ if (PHASE === "a") {
 }
 
 if (PHASE === "b") {
-  /* --- 3. The human published it ---------------------------------------- */
+  /* 3. The human published it */
   console.log("3. Verifying the human publication");
   const after = await tool("get_post", { slug: SLUG });
   check("the post is no longer a draft", after.body?.data?.draft === false, String(after.body?.data?.draft));
@@ -278,7 +267,7 @@ if (PHASE === "b") {
   check("now PRESENT in sitemap.xml", live.sitemap === true);
   check("the post page serves 200", live.postPage === 200, `got ${live.postPage}`);
 
-  /* --- 4. Operator edits the live post ---------------------------------- */
+  /* 4. Operator edits the live post */
   console.log("\n4. Operator edits the now-live post");
   const edited = (after.body?.data?.raw ?? "").replace(
     "A throwaway post written through the operator API to verify the publish path.",
@@ -295,7 +284,7 @@ if (PHASE === "b") {
   // SCOPED-BY: the needle is a full distinctive sentence written into the post body for this probe, so it cannot appear in chrome or another post.
   check("the live page shows the edit", page.text.includes("Edited by the operator after publication"));
 
-  /* --- 5. Unpublish, then republish ------------------------------------- */
+  /* 5. Unpublish, then republish */
   console.log("\n5. Operator unpublishes, then republishes");
   const unpub = await tool("save_post", {
     slug: SLUG,
@@ -315,7 +304,7 @@ if (PHASE === "b") {
   const back = await pub(`/blog/${SLUG}`);
   check("the post is live again", back.status === 200, `got ${back.status}`);
 
-  /* --- 6. Forgery ------------------------------------------------------- */
+  /* 6. Forgery */
   console.log("\n6. Forgery: a NEW post carrying first_published in the payload");
   const forgedSlug = `${SLUG}-forged`;
   const forged = [
@@ -342,7 +331,7 @@ if (PHASE === "b") {
   const forgedGet = await tool("get_post", { slug: forgedSlug });
   check("and no file was created", forgedGet.status === 404, `got ${forgedGet.status}`);
 
-  /* --- 7. Wide dash ----------------------------------------------------- */
+  /* 7. Wide dash */
   console.log("\n7. Wide-dash save via the API");
   const withDash = edited.replace(
     "Edited by the operator after publication",
@@ -364,11 +353,10 @@ if (PHASE === "b") {
   const unchanged = await tool("get_post", { slug: SLUG });
   check("no commit happened: content unchanged", !(unchanged.body?.data?.raw ?? "").includes(EM_DASH));
 
-  /* --- 8. Rate limit, CONCURRENT ---------------------------------------- */
+  /* 8. Rate limit, CONCURRENT */
   console.log("\n8. Rate limit (concurrent burst, never sequential)");
-  // Sequential is the recorded trap: 36 sequential requests against 30 per 60s
-  // produced ZERO refusals, because the loop straddled the window boundary and
-  // reads exactly like a dead limiter.
+  // Sequential is the recorded trap: a sequential burst against the same limit produced ZERO
+  // refusals, the loop straddling the window boundary, which reads exactly like a dead limiter.
   const burst = await Promise.all(
     Array.from({ length: 45 }, () => tool("sync_status").then((r) => r.status).catch(() => 0)),
   );
@@ -381,10 +369,10 @@ if (PHASE === "b") {
   check("the burst produced 429s", (tally[429] ?? 0) > 0, JSON.stringify(tally));
   check("no 5xx under load", !Object.keys(tally).some((s) => Number(s) >= 500), JSON.stringify(tally));
 
-  /* --- 9. Delete -------------------------------------------------------- */
+  /* 9. Delete */
   console.log("\n9. Operator deletes the throwaway");
-  // The burst may have consumed the window, so wait it out rather than
-  // reporting a rate-limit refusal as a delete failure.
+  // The burst may have consumed the window, so wait it out rather than reporting a rate-limit
+  // refusal as a delete failure.
   console.log("     waiting out the rate-limit window");
   await new Promise((r) => setTimeout(r, 62000));
   const del = await tool("delete_post", { slug: SLUG });
