@@ -124,7 +124,10 @@ export function card(post) {
    */
   const date = longDateUTC(post.publishAt);
 
-  /* THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against. */
+  /*
+   * THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against, and
+   * the vertical is the smallest margin at which the mark still reads as placed rather than cropped.
+   */
   const PAD_Y = 64;
   const PAD_X = 72;
 

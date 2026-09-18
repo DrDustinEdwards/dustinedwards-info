@@ -5,6 +5,8 @@
  *
  * BOUNDARY, TWO LIMITS: it cannot tell whether the hand-written PROSE is true, only that the
  * binding it describes exists, and **it reads the EXAMPLE config, which is not what is deployed**.
+ * CI cannot close that gap, because a checkout bootstraps the real config by copying the example,
+ * so a green run there compares the example to itself and says nothing about production.
  */
 
 import { existsSync, readFileSync, statSync } from "node:fs";

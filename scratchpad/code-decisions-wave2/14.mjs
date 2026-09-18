@@ -190,7 +190,9 @@ closed still increments. MEASURED BY RUNNING IT, with no slack, the set being en
   npm run check:stack
 
 BOUNDARY, TWO LIMITS: it cannot tell whether the hand-written PROSE is true, only that the
-binding it describes exists, and **it reads the EXAMPLE config, which is not what is deployed**.`,
+binding it describes exists, and **it reads the EXAMPLE config, which is not what is deployed**.
+CI cannot close that gap, because a checkout bootstraps the real config by copying the example,
+so a green run there compares the example to itself and says nothing about production.`,
   ],
   "scripts/check-stack.mjs#2": ["CONTRACT", "both directions as one pair; already short"],
   "scripts/check-stack.mjs#3": ["CONTRACT", "section marker, rule padding cut", `fail closed first`],
@@ -454,7 +456,9 @@ discipline, and it was implemented nine times before this.
 
 BOUNDARY: it is a JAVASCRIPT TOKENIZER, so it reads an apostrophe in SVG text as opening a
 string and a slash after an operator as opening a regex, and the CSS readers, where \`//\` is
-never a comment, are not this job. A boundary note is a claim that ages, per hard rule 7, and
+never a comment, are not this job. Do not fold \`template-refs.mjs\`, \`check-urls.mjs\` or the CSS
+readers onto this one without a measurement: they are different jobs, and the second needs
+\`//host\` inside a string to survive. A boundary note is a claim that ages, per hard rule 7, and
 this one already aged once, in the commit that turned a regex into a tokenizer.
 
 @see test/strip-comments.test.mjs`,
