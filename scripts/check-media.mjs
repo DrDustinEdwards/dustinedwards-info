@@ -5,20 +5,8 @@
  *   npm run check:media -- --remote
  *
  * BOUNDARY: it reconciles KEYS, and except for the social cards it never FETCHES one, so an
- * object that exists with a row and 404s through the route passes. A boundary note is a claim
- * that ages, hard rule 7, and this file has aged one twice. **THE SOCIAL CARDS ARE THE ONE
- * EXCEPTION, because the key-only reading is what let them break.** IT NO LONGER READS THE ASSET
- * MANIFEST: it still detects a stale one, INDIRECTLY and only AFTER A REBUILD, naming a missing
- * ROW rather than the manifest.
- *
- * FOUR directions, and it fails on any of them:
- *   1. an R2 object with no D1 row          -> backfill it
- *   2. a D1 row with no R2 object           -> delete the row
- *   3. a public/ file with no row           -> backfill it
- *   4. a storage='static' row with no file  -> delete the row
- *
- * **R2 WINS**, and `public/` wins for static: a row is deleted because an object is absent, never
- * the reverse, which keeps D1 derived. FAILS CLOSED on an empty enumeration.
+ * object that exists with a row and 404s through the serving route passes. A boundary note is a
+ * claim that ages, hard rule 7, and this file has aged one twice.
  */
 
 import { spawnSync } from "node:child_process";

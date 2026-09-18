@@ -3,21 +3,10 @@
  *
  *   npm run build:stack
  *
- * The stack half of that page is DERIVABLE, so it is derived: bindings from the wrangler example,
- * pinned versions from package.json, migrations from `drizzle/`, gates from the `check:*`
- * scripts. A hand-written reference page goes wrong because manual regeneration means nobody
- * regenerates, and a page whose subject is what the site is built from is the densest surface for
- * that failure.
- *
- * THERE IS NO LIST IN THIS FILE. A generator carrying its own copy is a mirror, and a mirror goes
- * stale in the direction that fails silently. The binding surface comes from the same enumerator
- * `check:config` uses, so a kind neither knows about is invisible to both rather than to one.
- *
- * THE EXAMPLE CONFIG, NOT THE REAL ONE, which is gitignored: a generated artifact that only
- * regenerates on one machine is worse than none, and `check:config` keeps the example honest.
- *
- * WHAT IS NOT DERIVED is the prose for each layer, which is a MEASUREMENT rather than a fact about
- * the config; `check:stack` reconciles the two in both directions.
+ * BOUNDARY: everything is DERIVED and there is no list in this file, so a binding kind the shared
+ * enumerator does not know is invisible here too. It reads the EXAMPLE config, which is what a
+ * fresh clone has, and the hand-written prose beside each layer is reconciled by `check:stack`
+ * rather than produced here.
  */
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";

@@ -4,16 +4,8 @@
  *   npm run check:media-axes
  *
  * BOUNDARY: a SOURCE gate. It proves the axis list is derived rather than restated and that the
- * forwarding is a spread rather than a hand-copied key list. It does NOT run a query, so it sees
- * DROPPED, not MISBUILT; proving the SQL itself needs a database.
- *
- * An object SPREAD is exempt from TypeScript's excess-property check, so axes the options type
- * never declared compiled cleanly and were dropped on the floor while the page disagreed with
- * itself, the chip counts being separate queries that bypass the dropping layer.
- *
- * THE AXIS LIST IS DERIVED FROM THE SOURCE OF TRUTH, never restated here, which is the only
- * version worth having: a hardcoded list would be updated by whoever forgot the forwarding. FAILS
- * CLOSED, a zero-length axis list satisfying every per-axis assertion by having nothing to check.
+ * forwarding is a spread rather than a hand-copied key list, but it does NOT run a query, so it
+ * sees DROPPED, not MISBUILT.
  */
 
 import { readFileSync, existsSync } from "node:fs";

@@ -5,12 +5,7 @@
  *   npm run check:backup -- --remote
  *
  * BOUNDARY: it proves the export PATH works and that the table list matches the migrations. It
- * never restores. `wrangler d1 export` does not work on this database, refusing while any fts5
- * virtual table exists, so the documented path is per table and this keeps that claim honest.
- * THE TABLE LIST IS DERIVED and compared BOTH ways, a list that stops covering a new table being
- * the failure this guards, and every export is checked for real ROWS. IT ALSO PULLS THE MEDIA
- * OBJECTS to the same root: both bucket copies live in one account. `--remote` only, and it says
- * so rather than counting zero as a pass.
+ * never restores, so it cannot tell you the dump would reconstruct the database.
  */
 
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";

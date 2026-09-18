@@ -3,23 +3,10 @@
  *
  *   node scripts/health-repair.mjs --origin <origin> --body body.json
  *
- * Called by the health workflow when `/api/health` reports unhealthy. Decides through the shared
- * decision module, performs the repairs that decision allows, re-polls ONCE, and exits.
- *
- * EXIT CODES ARE THE ALERT: 0 means something drifted, this repaired it and the re-poll came back
- * healthy; 1 means a person is emailed. There is no third state.
- *
- * **`process.exitCode`, NEVER `process.exit()`**, measured: exiting immediately after a fetch
- * terminated node with a Windows exception rather than with the code, because the exit raced the
- * socket teardown, and an exit code nobody can explain is a bad thing to hand a monitor.
- *
- * ONE RE-POLL, NOT A LOOP. Both repairs derive their own converged verdict, so a successful call
- * has ALREADY proved the index agrees; the re-poll confirms the endpoint agrees too. A loop would
- * be a monitor arguing with itself. Ship polls because it reads counts back within milliseconds of
- * an upload; this runs at least one scheduled interval later.
- *
- * THE TOKEN is read from the environment, never logged, never an argument, and its ABSENCE is
- * reported as a named configuration state rather than as a failure to repair.
+ * BOUNDARY: it decides through the shared decision module, performs the repairs that decision
+ * allows, re-polls ONCE and exits, because a loop here would be a monitor arguing with itself.
+ * EXIT CODES ARE THE ALERT: 0 means repaired and healthy, 1 means a person is emailed, and there
+ * is no third state.
  */
 
 import { readFileSync } from "node:fs";

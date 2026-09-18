@@ -3,16 +3,10 @@
  *
  *   npm run check:floors
  *
- * WHY IT EXISTS: every counting gate fails when its count is BELOW its floor, and nothing
- * compared the two when it was ABOVE, so a floor set once sinks further under with every
- * assertion added. One reached far enough under to be decorative. HOW IT MEASURES: it READS under
- * `check:all`, where the floor lines are already in the captured output, and RUNS standalone,
- * because a gate that only works as somebody else's passenger cannot be re-run while fixing what
- * it found. READING FROM A PIPE IS NOT READING A STORED LOG, and hard rule 10's fixture
- * independence is the difference. FLOORS ARE NAMED PER BRANCH, a gate's count depending on how it
- * was invoked. FAILS CLOSED ON SILENCE: a floor whose block stopped executing emits nothing.
- * BOUNDARY: it compares two numbers a gate PRINTS and cannot tell whether the count is honest,
- * which hard rule 10 owns, nor see a gate with NO floor, which is why the absences are named.
+ * BOUNDARY: it compares two numbers a gate PRINTS, so it cannot tell whether the count is honest,
+ * which is hard rule 10's half, and it cannot see a gate with NO floor, which is why the absences
+ * are named here. It READS under `check:all` and RUNS standalone, and reading from a pipe rather
+ * than a stored log is what keeps hard rule 10's fixture independence.
  */
 
 import { readFileSync } from "node:fs";

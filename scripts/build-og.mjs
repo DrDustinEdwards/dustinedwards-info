@@ -3,10 +3,9 @@
  *
  *   npm run build:og -- --local|--remote
  *
- * BUILD TIME ONLY, in Node, because satori and resvg cannot run in the Worker: a post retitled
- * in the editor has no card until this runs and re-syncs. THE COUPLING LAW: it uploads AND
- * prunes against the keys the CURRENT artifact references while the live site serves what is in
- * D1, so run outside a ship window it deletes every card production points at.
+ * BOUNDARY: BUILD TIME ONLY, in Node, because satori and resvg cannot run in the Worker, and it
+ * uploads AND prunes against the keys the CURRENT artifact references while the live site serves
+ * what is in D1, so run outside a ship window it deletes every card production points at.
  */
 
 import { execSync } from "node:child_process";

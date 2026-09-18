@@ -1,14 +1,9 @@
 /**
- * The UptimeRobot v3 contract, in one place, shared by the writer and the gate: the same base
- * URL, auth header, monitor SHAPES and idea of what "paused" is, a second copy of any of those
- * being the drift rule 17 exists about.
+ * The UptimeRobot v3 contract, in one place, shared by the writer and the gate.
  *
- * EVERY VALUE BELOW WAS MEASURED, NOT READ OFF A BLOG POST. The v3 documentation returns no
- * specification to a fetch, so the contract was taken from the API by sending deliberately invalid
- * requests and reading the validation errors back: fixture independence applied to a third party.
- * Two counter-intuitive shapes: a keyword monitor is its own TYPE, and `status` is NOT writable
- * through the update verb. THE RATE LIMIT IS REAL AND IT IS SMALL, so nothing here loops or
- * retries tightly, a monitoring integration that throttles itself reporting nothing.
+ * BOUNDARY: every value here was MEASURED against the API rather than read off a description of
+ * it, the v3 documentation returning no specification to a fetch, so this is fixture independence
+ * applied to a third party and it ages the day the API does.
  */
 
 import { dirname, join } from "node:path";

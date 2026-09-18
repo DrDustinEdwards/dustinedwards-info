@@ -3,20 +3,9 @@
  *
  *   npm run check:mail
  *
- * NETWORK TIER. It resolves live DNS, which is why it is not in the tier ship runs.
- *
- * WHY IT EXISTS: the watchdog's whole value is one email arriving, and SPF, DKIM and DMARC decide
- * whether it is delivered or silently dropped from a dashboard where a click can remove one.
- *
- * TWO PATHS, NAMED SEPARATELY, BECAUSE THEY ARE DIFFERENT CLAIMS: SENDING puts its SPF and
- * selector on a bounce subdomain, ROUTING uses the apex and another selector, so a gate asserting
- * the apex SPF would stay green through the sending record being deleted. THE MAIL DOMAIN HAS ONE
- * OWNER AND IT IS NOT THIS FILE: it is read out of the watchdog's own constant.
- *
- * BOUNDARY: this proves the RECORDS ARE PUBLISHED AND WELL FORMED, never that a message
- * authenticates, and a published key that no longer matches the private one looks good here.
- * Resolution goes through a THIRD-PARTY resolver, every record being managed by one party, and a
- * resolver that cannot answer is a FAILURE.
+ * BOUNDARY: it proves the records are PUBLISHED AND WELL FORMED over live DNS, never that a
+ * message authenticates, which only a received message's headers can, and a published key that no
+ * longer matches the private one is indistinguishable from a good one here.
  */
 
 import { readFileSync } from "node:fs";

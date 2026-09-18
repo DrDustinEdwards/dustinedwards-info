@@ -1,23 +1,13 @@
 /**
  * Gate: the design sync's sheet list matches the stylesheets the public plane actually loads.
  *
- * THE DEFECT, AND THE NOTES PREDICTED IT IN WRITING: they said the list is hand-maintained and
- * should be diffed against the imports, and nobody ran that diff, so a sheet imported by the root
- * module never reached the canvas and it DEFINES the grid class the design agent was redesigning
- * against. A prediction written in prose is a prediction nothing re-checks.
+ *   npm run check:design-sheets
  *
- * BOTH DIRECTIONS, because one is silent: a sheet SYNCED but no longer LOADED tells the canvas
- * about a surface that no longer exists. WHAT IS DELIBERATELY NOT HERE: a copy of the sheet list,
- * parsed out of its one owner (hard rule 17), a mirror being the failure being gated. CASCADE
- * ORDER is checked for the root-imported sheets only. COMMENTS ARE STRIPPED BEFORE MATCHING, and
- * not for hygiene: a stylesheet carries prose about an `@import` it removed and the converter's
- * own validator failed that sentence twice, which is hard rule 10, strip comments before matching.
- *
- * TWO WAYS A SHEET REACHES A READER, and the first draft knew only one: a bare import joins the
- * bundled cascade, a side-load ships the sheet as its own file, and only the first has a POSITION.
- * THE ONE EXCLUSION IS THE NOTES', NOT THIS FILE'S, named as ONE path rather than a prefix,
- * because a pattern excludes everything that ever matches it, which is hard rule 10's enumerate
- * inside exclusions.
+ * BOUNDARY: it reads the list, the root module, the routes and the stylesheets they name, all off
+ * disk and both directions, and nothing here restates the list, whose one owner hard rule 17
+ * names. Comments are stripped before matching, which is hard rule 10: a stylesheet carries prose
+ * about an `@import` it removed. The one exclusion is named as ONE path rather than a prefix,
+ * which is hard rule 10 again, enumerate inside exclusions.
  */
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";

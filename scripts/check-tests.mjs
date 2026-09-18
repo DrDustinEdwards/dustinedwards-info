@@ -3,11 +3,9 @@
  *
  *   npm run check:tests
  *
- * IT RUNS `node --test` AND READS ITS SUMMARY: how many files were discovered and how many tests
- * reported, not whether those tests ASSERT anything, and not whether they cover the right
- * modules. WHY IT EXISTS: this was `npm test --silent`, and **node exits 0 when the glob matches
- * nothing**, so the only gate asserting BEHAVIOUR structurally could not fail closed. FAILS
- * CLOSED on zero files, on fewer files than are committed, and on fewer tests than measured.
+ * BOUNDARY: it runs `node --test` and reads its SUMMARY, so it knows how many files were
+ * discovered and how many tests reported, not whether those tests ASSERT anything and not whether
+ * they cover the right modules.
  */
 
 import { spawnSync } from "node:child_process";

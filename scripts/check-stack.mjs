@@ -1,21 +1,10 @@
 /**
- * Gate over the colophon's generated stack data.
+ * Gate over the colophon's generated stack data, reconciled against its sources both ways.
  *
  *   npm run check:stack
  *
- * THE SUBJECT IS A BUILD PRODUCT, NOT A COMMIT: the artifact is gitignored and written before the
- * gates, so this asserts that a build HAPPENED and reconciles with its sources. Comparing a
- * committed copy against a fresh derivation made every dependency bump a two-file change no bot
- * could complete.
- *
- * BOUNDARY, TWO LIMITS. It cannot tell whether the PROSE is true: a note is reconciled against
- * the binding it describes and nothing more. And **it reads the EXAMPLE config, which is not what
- * is deployed**: only `check:config` binds the two, on one machine, and **CI CANNOT CLOSE THIS
- * GAP**, a checkout bootstrapping the example into place.
- *
- * BOTH DIRECTIONS, ON EVERY SOURCE: a row with no binding is the one that actually happens, a
- * resource being removed while the page keeps advertising it. IT RE-DERIVES RATHER THAN TRUSTING
- * THE ARTIFACT, calling the builder's own exported derivations. FAILS CLOSED.
+ * BOUNDARY, TWO LIMITS: it cannot tell whether the hand-written PROSE is true, only that the
+ * binding it describes exists, and **it reads the EXAMPLE config, which is not what is deployed**.
  */
 
 import { existsSync, readFileSync, statSync } from "node:fs";

@@ -1,13 +1,9 @@
 /**
  * Killing a gate's long-running children, and clearing the ones a kill left behind last time.
  *
- * THE DEFECT: `check:browser` starts a preview server and a browser, cleaned up on every ORDERLY
- * exit and neither on a hard kill, which on Windows is not deliverable as a signal. TWO KILL
- * SHAPES LEAVE DIFFERENT WRECKAGE: kill the gate node and the preview side survives holding its
- * port; kill the wrappers above it and everything stands, self-clearing only if the orphan is
- * allowed to finish. WHY A REGISTRY AND NOT A SWEEP: scanning every process is too slow on
- * Windows and "looks like ours" gets to close a stranger's tabs when it is wrong. PID REUSE IS
- * THE WHOLE SAFETY PROBLEM, so the live command line is read first and must still match.
+ * BOUNDARY: a pid in the registry is a claim that the process WAS ours, and Windows reuses pids,
+ * so the live command line is read first and must still match. Nothing here kills on a pid alone,
+ * and a listing that cannot be taken leaves every entry untouched.
  */
 
 import { spawnSync } from "node:child_process";

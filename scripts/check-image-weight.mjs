@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 /**
- * Every image byte this site derives through the Images binding must be LOSSY, and the transform
- * ladder must be SHAPED like a transform ladder.
+ * Gate: every image byte derived through the Images binding is LOSSY, and the transform ladder is
+ * shaped like one.
  *
  *   node scripts/check-image-weight.mjs [--base <origin>]
  *
- * THE DEFECT: the binding defaults to LOSSLESS and the route asked for no quality, so every rung
- * came back heavier than the object it resizes. FOUR ASSERTIONS, AND NONE CARRIES A NUMBER, a
- * tuned constant being a second owner of a value that belongs to the image:
- *
- *   1. Every rung is lossy, by CHUNK TYPE. The defect verbatim, and it needs no threshold.
- *   2. Bytes per delivered pixel never rises as delivered pixels rise, equality allowed.
- *   3. The narrowest rung is smaller than the origin, catching the original served unresized.
- *   4. Every STORED placeholder is lossy, from the index rather than the wire.
- *
- * RAW BYTES WAS THE FIRST RULING AND THE MEASUREMENT CHANGED IT: a rung can be bigger than the
- * origin because re-encoding costs more, and one past the source width is capped and becomes a
- * native-size re-encode. Bytes per pixel falls through both. DELIVERED DIMENSIONS, NEVER THE
- * REQUESTED WIDTH, read out of the body's own header, and equal-pixel rungs are not compared, or
- * the verdict would depend on sort stability. TWO FLOORS, the subjects being different queries.
+ * BOUNDARY: four assertions over what the route actually served plus the stored placeholders, and
+ * NONE of them carries a number, a tuned constant being a second owner of a value that belongs to
+ * the image. It reads delivered dimensions out of each body, never the requested width.
  */
 
 import { spawnSync } from "node:child_process";

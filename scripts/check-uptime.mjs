@@ -1,20 +1,11 @@
 /**
- * Gate over the external uptime monitors.
+ * Gate: both monitors this repo asks for EXIST, are NOT PAUSED, and point at the CURRENT hostname.
  *
  *   npm run check:uptime
  *
- * Asserts that both monitors this repo asks for EXIST, are NOT PAUSED, and point at the CURRENT
- * hostname. BOUNDARY: it reads UptimeRobot's record of its own configuration, and does NOT prove a
- * check has ever run, that an alert would be delivered, or that the mailbox is read. It is also
- * NOT a check that the site is up: a `DOWN` monitor is one doing its job.
- *
- * THREE-WAY, BOTH DIRECTIONS. `SITE_ORIGIN` is the one owner of the hostname and the manifest is
- * a RECORD of what `uptime-ensure` last wrote, so code against manifest catches a stale or
- * hand-edited record and manifest against live catches a dashboard edit. Either alone passes on a
- * pair that agree with each other and with nothing else.
- *
- * FAILS CLOSED on a missing credential, an unreadable manifest, an API error or a wrong count: the
- * defect class is a monitoring system that reports nothing while looking configured. NETWORK ONLY.
+ * BOUNDARY: it reads UptimeRobot's record of its own configuration, so it does NOT prove a check
+ * has ever run, that an alert would be delivered, or that the mailbox is read. It is also not a
+ * check that the site is up: a DOWN monitor is one doing its job. NETWORK ONLY.
  */
 
 import { existsSync, readFileSync } from "node:fs";

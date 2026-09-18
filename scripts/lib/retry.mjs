@@ -1,16 +1,10 @@
 /**
- * One retry, for Cloudflare READ paths only.
+ * One retry, for Cloudflare READ paths only, wrapping a rejection AND a timeout because the class
+ * has appeared as both a fast death and a hang.
  *
- * THE CLASS, measured across four gates, wearing TWO OPPOSITE SYMPTOMS: some died in seconds and
- * one HUNG, taking a tier run past its timeout and clean on retry. A hang and a five-second death
- * are the same class, which is why this wraps both a rejection AND a timeout.
- *
- * IT PRINTS BEFORE IT RETRIES, and that is the load-bearing part: one incident reported a count of
- * failures with the failing gate's NAME never captured before the retry, so it could not be
- * diagnosed. A silent retry converts a diagnosable transient into an invisible one.
- *
- * READS ONLY. Never wrap a write: a retried write is a write that may have landed twice. A SECOND
- * failure propagates unchanged, so the gate fails exactly as it would have without this wrapper.
+ * BOUNDARY: READS ONLY, never a write, a retried write being one that may have landed twice. It
+ * PRINTS BEFORE IT RETRIES, and a SECOND failure propagates unchanged, so the caller fails exactly
+ * as it would have without this wrapper.
  */
 
 /** Generous: the R2 hang ran past ten minutes, and a slow read is not a hang. */

@@ -1,15 +1,10 @@
 /**
- * The site mark, as anything rendering it at build time embeds it.
+ * The site mark, as anything rendering it at build time embeds it: one definition, with the build
+ * and `check:logo` as its two readers.
  *
- * ONE definition with TWO readers, and the second is the point: nothing in this repo looks at the
- * SHAPE of a rendered raster, so a satori or resvg upgrade that resampled the embedded svg would
- * pass every gate. This is a real seam rather than an export added for a test: the build builds
- * its card from `markElement()` and `check:logo` renders that same node against the fixture.
- *
- * NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the Worker
- * renders, and the four `public/*.svg` are the fixtures `check:logo` binds it to in both
- * directions. A Node script cannot import the .tsx without a build step, so it reads those
- * fixtures: the same source one hop along a link something else keeps honest.
+ * BOUNDARY: NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the
+ * Worker renders, and this reads the fixtures `check:logo` binds that component to, which is the
+ * same source one hop along a link something else keeps honest.
  */
 
 import { readFileSync } from "node:fs";

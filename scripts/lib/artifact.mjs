@@ -1,8 +1,8 @@
 /**
- * The on-disk shape of the local content build product. ONE writer, the content build, whose
- * output is a gitignored local file the sync, the gates and the asset builders read. The editor
- * renders straight into D1 instead, which is why this lives beside the scripts rather than in the
- * app: the Worker imports nothing from it any more.
+ * The on-disk shape of the local content build product, with ONE writer.
+ *
+ * BOUNDARY: it lives beside the scripts rather than in the app because the Worker imports nothing
+ * from it: the editor renders straight into D1 instead of through this shape.
  */
 
 import {

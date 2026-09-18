@@ -1,15 +1,11 @@
 /**
- * Gate: the deploy hook blocks a deploy HERE and allows one elsewhere.
+ * Gate: the deploy hook blocks a deploy HERE and allows one elsewhere, which is hard rule 16's
+ * ship contract seen from the hook's side.
  *
  *   npm run check:hook-scope
  *
- * WHY IT EXISTS: the hook was scoped to this repo after it refused a deploy in a sibling repo,
- * which hard rule 16 has nothing to say about. A SCOPE CHANGE TO A GUARD IS THE MOST DANGEROUS
- * KIND OF EDIT THERE IS: the failure is SILENT and permissive, and the only symptom is a deploy
- * that should have been refused going through. So both directions are replayed against the REAL
- * hook, and EVERY LOOSENING IS PAIRED WITH A CONTROL. BOUNDARY: it does NOT prove the harness
- * invokes the hook at all, which is the settings file's business. THE INTERPRETER IS RESOLVED,
- * NOT NAMED, or this is green in every session whose harness supplies one and ENOENT under ship.
+ * BOUNDARY: every case drives the REAL hook with a REAL payload and reads its exit code, but it
+ * does NOT prove the harness invokes the hook at all, which is the settings file's business.
  */
 
 import { spawnSync } from "node:child_process";

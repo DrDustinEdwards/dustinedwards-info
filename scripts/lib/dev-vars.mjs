@@ -1,18 +1,9 @@
 /**
  * Reads ONE named value out of the gitignored `.dev.vars`.
  *
- * Two operator credentials are read by Node programs rather than by the Worker. Neither is a
- * wrangler secret, because neither is read by deployed code; both are machine-local operator
- * credentials, which is what `.dev.vars` already is.
- *
- * **IT TAKES A NAME AND RETURNS ONE STRING. It never returns the file, never returns a map, and
- * never logs a value.** A loader that returned every key would put credentials this caller has no
- * business holding into its scope, and the first one interpolated into an error message would be
- * in a log.
- *
- * ABSENT IS A NAMED ANSWER, NOT AN EMPTY STRING: it returns null and the CALLER decides what that
- * means, and the two callers decide differently. Returning an empty string would let a caller send
- * an empty bearer token and read the API's refusal as a site problem.
+ * BOUNDARY: **IT TAKES A NAME AND RETURNS ONE STRING. It never returns the file, never returns a
+ * map, and never logs a value.** Absent is a named answer rather than an empty string: it returns
+ * null and the CALLER decides what that means, and the two callers decide differently.
  */
 
 import { existsSync, readFileSync } from "node:fs";

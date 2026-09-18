@@ -1,18 +1,12 @@
 /**
- * Enumerates `public/` into a committed manifest.
+ * Enumerates `public/` into a committed manifest, because a Worker cannot list its own static
+ * assets.
  *
  *   npm run build:assets
  *
- * **This exists because a Worker cannot list its own static assets.** The binding has one method,
- * so it can serve any path and discover none. Bytes, mime and dimensions are derived by the
- * rebuild from the actual file, so putting them here would be a second copy to go stale.
- *
- * IT CARRIES ONE DERIVED VALUE, THE BODY PLACEHOLDER: the rendered HTML is a GATED ARTIFACT, so
- * what the Worker bakes in the Node build must bake in too, from a clone with no bindings, and a
- * committed artifact both resolvers read is the only shape that satisfies both. **The placeholder
- * D1 holds for the same file is NOT this one, and that is not a duplicate fact**: the rebuild
- * derives its own for the admin library, under rule 18. UPLOADED KEYS ARE EXCLUDED, here and in
- * the plugin: an uploaded object is not in the repository.
+ * BOUNDARY: it carries the paths and ONE derived value, the body placeholder the rendered HTML
+ * bakes in. Bytes, mime and dimensions are the rebuild's, and the placeholder D1 holds for the
+ * same file is a different derivation for a different consumer.
  */
 
 import { createHash } from "node:crypto";

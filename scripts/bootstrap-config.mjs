@@ -1,20 +1,11 @@
-// Bootstrap the local wrangler configs so a fresh clone can install and typecheck.
+// Bootstrap the local wrangler configs so a fresh clone can install and typecheck, the real ones
+// being gitignored and typegen being the first thing postinstall runs.
 //
-// The real configs are gitignored portfolio-wide, which leaves a fresh clone with no config at
-// all, and typegen is the first thing postinstall runs, so `npm install` itself fails before the
-// tree is usable.
+//   node scripts/bootstrap-config.mjs
 //
-// This copies each committed example into place once. It NEVER overwrites: the existence check and
-// the exclusive copy flag both guard that, so a file appearing between the two still cannot be
-// clobbered and a real config carrying live values survives any number of reinstalls.
-//
-// The copied files carry placeholder values, which is enough for typegen, since that reads binding
-// names and types and ignores the values. It is NOT enough to deploy or to run against real
-// resources.
-//
-// TWO PAIRS, AND THIS IS A LOOP rather than a second copy of the same twenty lines. A missing
-// example is fatal for EITHER pair, because a clone that silently ends up without one fails later
-// and further from the cause.
+// BOUNDARY: it copies each committed example into place once and NEVER overwrites, so a real
+// config carrying live values survives any number of reinstalls. The copies carry placeholders,
+// which is enough for typegen and is NOT enough to deploy or to run against real resources.
 
 import { constants, copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";

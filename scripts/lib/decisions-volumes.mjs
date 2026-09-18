@@ -2,20 +2,9 @@
  * WHICH DECISIONS VOLUME IS ACTIVE, AND HAS IT PASSED ITS OWN FREEZE POINT. Pure, so the replay
  * proof can drive it without a network; the fetching lives in the gate.
  *
- * THE DEFECT: every volume's header states its own limit, and one ran well past it for days.
- * Nothing gated it, the limit being a sentence inside the artifact it limited, enforced by whoever
- * happened to read it.
- *
- * THE LIMIT IS READ, NEVER HARD-CODED, hard rule 17: the number lives in the volume that owns it,
- * this parses it, and a volume that wants a different limit says so in its own header.
- *
- * "ACTIVE" IS THE HIGHEST NUMBER, NOT THE TITLE, AND THAT IS MEASURED: volumes frozen for days
- * still carry "(active)" in their titles, and the platform's own status field is no better. A
- * title is a written record read as a current property. The highest number is true by
- * construction, a new volume being opened by taking the next one.
- *
- * Everything below the highest is history and is NOT checked: failing on a frozen volume over its
- * limit would red the gate forever over something nobody can now change.
+ * BOUNDARY: the limit is READ from the volume that owns it and never restated here, hard rule 17,
+ * and ACTIVE is the highest NUMBER rather than the title, which is measured: volumes frozen for
+ * days still carry "(active)". Everything below the highest is history and is not checked.
  */
 
 /**

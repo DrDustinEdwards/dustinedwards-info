@@ -1,8 +1,10 @@
 /**
- * Gate over the operator publish policy: npm run check:policy.
+ * Gate over the operator publish policy.
+ *
+ *   npm run check:policy
  *
  * BOUNDARY: the decision function in isolation, and pure. It proves what the policy DECIDES,
- * never that a caller consults it before writing. Every rule carries its paired negative.
+ * never that a caller consults it before writing.
  */
 
 import { readFileSync, readdirSync } from "node:fs";

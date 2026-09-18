@@ -3,17 +3,9 @@
  *
  *   npm run build:publication-twins
  *
- * A BUILD PRODUCT, gitignored, on the same terms as the content artifact: it is derived entirely
- * from tracked sources, so committing it would make every corpus change a two-file change only a
- * machine running this script could complete. It runs where the content build runs.
- *
- * The twins are ASSETS rather than route output, and the reasoning is on the module that renders
- * one.
- *
- * IT PRUNES, AND THAT IS NOT TIDINESS: a gitignored file nothing deletes outlives its reason. A
- * paper removed, or a DOI corrected, leaves a twin this script would never overwrite, the gate
- * would never compare and the next deploy would upload, so every file directly under the directory
- * that this run did not write is removed. Directly under, never recursive: the subdirectories hold
+ * BOUNDARY: a gitignored BUILD PRODUCT, derived entirely from tracked sources, and it PRUNES: a
+ * paper removed or a DOI corrected leaves a twin this script would never overwrite and the next
+ * deploy would upload. Directly under the directory, never recursive, the subdirectories holding
  * the PDFs.
  */
 

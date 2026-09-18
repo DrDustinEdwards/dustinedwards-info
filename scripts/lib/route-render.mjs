@@ -1,13 +1,8 @@
 /**
  * Renders route components to static HTML in Node, so a gate can read the markup they produce.
  *
- * WHY IT EXISTS: /admin sits behind a real session, so no gate can reach those pages over HTTP,
- * and the property that matters most is invisible to a typecheck. A route may move a control
- * anywhere, but not change WHAT PRESSING IT SENDS, which is a fact about rendered markup.
- *
- * Server-only imports are stubbed at resolve time rather than executed, and that limit is worth
- * stating: this proves things about COMPONENTS and nothing about loaders or actions. TWO GATES
- * USE IT, a second copy of the bundler being how the two would disagree about what a stub is.
+ * BOUNDARY: server-only imports are stubbed at resolve time rather than executed, so this proves
+ * things about COMPONENTS and nothing about loaders, actions, or anything server-side.
  */
 
 import { existsSync } from "node:fs";

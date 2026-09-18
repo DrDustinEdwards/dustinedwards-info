@@ -1,14 +1,11 @@
 /**
- * Gate for the query parser and rank fusion.
+ * Gate for the query parser and rank fusion, every rule with its paired negative.
  *
  *   npm run check:search
  *
- * BOUNDARY: pure functions only, the parser and the fusion. It runs no SQL, so it cannot see an
- * index that is empty, drifted, or tokenising differently from what the parser assumes. It imports
- * the parser the Worker actually runs rather than a restatement of its rules.
- *
- * EVERY RULE HAS A PAIRED NEGATIVE: a rule that has only ever been seen matching has not been
- * verified, because a rule that fires on everything passes every positive test there is.
+ * BOUNDARY: pure functions only, imported from the module the Worker runs. It executes no SQL, so
+ * it cannot see an index that is empty, drifted, or tokenising differently from what the parser
+ * assumes.
  */
 
 import {

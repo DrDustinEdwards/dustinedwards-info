@@ -1,8 +1,10 @@
 /**
  * Reads the ratified colour tokens back out of the stylesheet that ships, so anything needing a
- * colour at BUILD time resolves it here rather than restating a hex. `check:contrast` deliberately
- * keeps its own copy of this parsing: it is the gate whose design is that two independent sources
- * argue, so sharing a reader would give the palette one implementation to be wrong in.
+ * colour at BUILD time resolves it here rather than restating a hex.
+ *
+ * BOUNDARY: `check:contrast` deliberately keeps its own copy of this parsing, being the gate whose
+ * design is that two independent sources argue, so sharing a reader would give the palette one
+ * implementation to be wrong in rather than two to disagree.
  */
 
 import { readFileSync, readdirSync } from "node:fs";

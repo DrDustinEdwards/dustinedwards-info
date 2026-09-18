@@ -1,22 +1,9 @@
 /**
  * The Ask index convergence window ship waits out before declaring a miss.
  *
- * Split out of ship so the DECISION is a pure loop over readings that tests can drive, while the
- * reading itself is a network call ship supplies: a poll loop that only exists inside a deploy
- * script is a poll loop nothing can exercise, and this repo has recorded the failure that hides
- * there, a single fetch wearing a loop.
- *
- * WHY THERE IS A WINDOW: the uploader reads its counts back immediately after two writes and the
- * index is eventually consistent, so the first reading can be early rather than wrong.
- *
- * THE READING MUST BE READ-ONLY, AND THAT IS THE WHOLE DESIGN. Polling by re-uploading repairs the
- * thing being measured, and a run that then converged could not be told apart from one that had
- * self-healed. This module cannot enforce that; what it does is refuse to do the reading itself,
- * so the choice is made at one visible call site.
- *
- * THE BOUND IS TWO INDEPENDENT LIMITS: a count, because a clock test alone would spin if the clock
- * never advanced, and a deadline, because a count alone would not honour the stated window if a
- * reading hung.
+ * BOUNDARY: the DECISION only, a pure loop over readings, while the reading itself is a network
+ * call ship supplies. This cannot enforce that the reading is read-only; what it does is refuse to
+ * do the reading itself, so that choice is made at one visible call site.
  */
 
 /** Polls, at most. Twelve at ten seconds each is the two-minute window. */

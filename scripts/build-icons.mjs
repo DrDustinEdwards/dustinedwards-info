@@ -3,14 +3,9 @@
  *
  *   node scripts/build-icons.mjs --out <dir>
  *
- * BOUNDARY: a GENERATOR, not a gate. It asserts nothing about what is already on disk; the
- * manifest comparison proves its output is committed and `check:logo` proves the output itself.
- * WHAT STILL NOTHING SEES: the SHAPE of a rendered raster. An icon whose mark is clipped,
- * mirrored or drawn in the wrong purple passes every assertion in this repo.
- *
- * WHY THIS EXISTS: the shipped icons came from a parametric builder that was never in this repo.
- * Path data is VERBATIM from the spec, the same source the component and the fixtures come from,
- * so a variation is a rebuild and never a hand edit.
+ * BOUNDARY: a GENERATOR, not a gate. It asserts nothing about what is already on disk, and
+ * nothing in this repo sees the SHAPE of a rendered raster, so an icon whose mark is clipped,
+ * mirrored or drawn in the wrong purple passes every assertion here.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";

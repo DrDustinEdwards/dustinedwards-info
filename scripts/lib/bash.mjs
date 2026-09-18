@@ -1,22 +1,9 @@
 /**
- * Resolving the bash binary a gate needs, ONCE, from any shell.
+ * Resolving the bash binary a gate needs, ONCE, from any shell, because a bare name is on PATH
+ * under git bash and absent under the PowerShell that runs ship.
  *
- * Spawning `bash` BY BARE NAME is a dependency on the shell the gate happened to be written in:
- * it is on PATH under git bash and absent under the PowerShell that runs ship, so a gate read as
- * green in every session and refused at a ship step, once per case.
- *
- * THE CANDIDATE ORDER: `bash` on PATH first, so a machine with a deliberate bash keeps using it;
- * then Git for Windows DERIVED from `git --exec-path`, git being a hard dependency already; then
- * the default install path literally. The second is a WALK UP THE ANCESTORS rather than a fixed
- * depth, because the depth is a property of the Git for Windows layout, which is not this repo's
- * to promise, and a fixed two lands inside a directory that ships no bash.
- *
- * EVERY CANDIDATE IS PROVEN BY RUNNING IT. Existence on disk is not the claim: the file in a Git
- * install is a launcher, so each candidate runs a trivial program and must exit 0 and print
- * exactly the expected word, an equality rather than a substring.
- *
- * FAILS CLOSED: it returns null, does not throw, does not fall back, and the caller prints ONE
- * line rather than six copies of a symptom.
+ * BOUNDARY: every candidate is PROVEN BY RUNNING IT rather than by existing on disk, and it FAILS
+ * CLOSED, returning null so the caller prints one line instead of a spawn error per case.
  */
 
 import { spawnSync } from "node:child_process";

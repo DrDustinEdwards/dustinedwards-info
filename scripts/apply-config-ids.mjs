@@ -1,24 +1,11 @@
 /**
- * Puts the redacted values into the bootstrapped wrangler configs.
+ * Puts the redacted values into the bootstrapped wrangler configs, for CI only.
  *
  *   node scripts/apply-config-ids.mjs
  *
- * FOR CI ONLY: each real `wrangler*.jsonc` is gitignored and its `.example` tracked,
- * `postinstall` bootstraps a checkout by COPYING the examples, and a deploy against a placeholder
- * database_id would bind a database that does not exist.
- *
- * THE WATCHDOG'S `ALERT_EMAIL` IS HERE FOR A SHARPER REASON THAN THE IDS. A placeholder
- * database_id fails LOUDLY; a placeholder ALERT_EMAIL deploys perfectly and mails every alert to a
- * reserved domain nobody reads, so the watchdog looks healthy while unable to reach anybody.
- *
- * WHY TWO SECRETS AND NOT THE WHOLE FILE: storing the real config as one secret would make GitHub
- * a SECOND OWNER of every binding, flag and migration, free to drift from the tracked example.
- *
- * IT REFUSES RATHER THAN PATCHING PARTIALLY, five ways, each named: a missing variable, an absent
- * config, a placeholder not found, more than one occurrence, or a placeholder surviving the write.
- *
- * THE IDS ARE NOT PRINTED, only WHICH field was patched: this runs in a public-by-default log. A
- * TEXT REPLACEMENT, never a parse-and-reserialise, which would strip load-bearing comments.
+ * BOUNDARY: it patches named placeholders by text and REFUSES rather than patching partially, five
+ * ways, each named. It never prints an id, only which field was patched, and it never
+ * parse-and-reserialises, which would strip comments this repo's configs depend on.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";

@@ -1,18 +1,12 @@
 /**
- * Export the Capsid documents the canvas needs into the guidelines directory.
+ * Export the Capsid documents the canvas needs into the guidelines directory, a copy being forced
+ * because the glob can only point at files inside the workspace while these are database rows.
  *
- * WHY A COPY EXISTS AT ALL, when hard rule 17 says one owner per fact: the glob can only point at
- * files inside the workspace and drops anything whose realpath escapes it, while Capsid documents
- * are database rows. So the design agent cannot be handed a pointer, only text, and a copy is
- * forced.
+ *   node scripts/build-capsid-guidelines.mjs
  *
- * The honest version of a forced copy is a DERIVED one: Capsid stays the owner, this writes a
- * gitignored export, every file carries the stamp it was taken at, and the gate fails when the
- * source has moved. Same shape as hard rule 18, the store derived and the repair a re-run.
- *
- * THE CREDENTIAL is machine-local and not a wrangler secret, being read by a Node program here
- * rather than by deployed code. Absent, this REFUSES rather than writing a partial directory: a
- * half-exported guidelines set that still globs is worse than none.
+ * BOUNDARY: the honest version of a forced copy is a DERIVED one, so hard rule 17's owner stays
+ * Capsid, every file carries the stamp it was taken at, and the drift is the gate's to see, which
+ * is hard rule 18's shape. Absent a credential it REFUSES rather than writing a partial directory.
  */
 
 import { writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";

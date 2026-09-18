@@ -3,19 +3,9 @@
  *
  *   npm run check:hook-syntax
  *
- * WHY IT EXISTS: a hook was broken twice by an APOSTROPHE. The checkers are embedded as
- * SINGLE-QUOTED strings, so one apostrophe ends the string, hands the remainder to the shell, and
- * the hook refuses every call in the session. A broken hook fails in the WORST direction: the
- * session stops working, or the guard silently stops guarding, and nothing else reads the hook
- * directory as CODE.
- *
- * WHAT IS ASSERTED: a parse-only shell check on every hook, and that every embedded checker
- * COMPILES. Both interpreters are RESOLVED rather than named, neither being on PATH in the shell
- * that runs ship. BOUNDARY: **PARSING IS NOT BEHAVING.** One hook has its behaviour replayed
- * elsewhere; the others have their behaviour checked nowhere, which is a real gap. It also cannot
- * see whether a hook is REGISTERED, which hard rule 15 puts off limits to an agent.
- *
- * FAILS CLOSED: no hooks found, no interpreter, or an unreadable file.
+ * BOUNDARY: **PARSING IS NOT BEHAVING.** A hook that parses can still block the wrong command,
+ * allow the right one, or read the wrong field off the payload, and it cannot see whether a hook
+ * is REGISTERED, which hard rule 15 puts off limits to an agent.
  */
 
 import { readFileSync, readdirSync } from "node:fs";

@@ -1,18 +1,10 @@
 /**
- * Gate for the chart directive.
+ * Gate for the chart directive: determinism, Node-versus-Worker parity and the emitted contract.
  *
- * BOUNDARY: determinism, Node-versus-Worker parity and the emitted contract. It bundles the chart
- * module ALONE and never looks at a chart in a browser, so nothing here sees whether one is
- * legible or correctly scaled.
+ *   npm run check:charts
  *
- *   1. DETERMINISM IN-PROCESS. Every fixture rendered many times must yield exactly one output.
- *   2. DETERMINISM ACROSS PROCESSES, module-level state and hash order only showing up there.
- *   3. NODE VERSUS WORKER PARITY, byte-identical or the editor commits HTML the next build will
- *      not reproduce. The Worker half runs the SAME module under real workerd.
- *   4. THE DIRECTIVE CONTRACT, every rule paired with its validation failure.
- *
- * SCOPE NOTE: the parity run deliberately does NOT re-bundle the markdown pipeline, which would
- * drag in a WASM module and end up testing the bundler's wasm handling.
+ * BOUNDARY: it bundles the chart module ALONE and never looks at a chart in a browser, so nothing
+ * here sees whether one is legible or correctly scaled.
  */
 
 import { execFileSync } from "node:child_process";

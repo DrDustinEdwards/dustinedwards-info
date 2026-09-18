@@ -1,11 +1,8 @@
 /**
  * Reading GitHub's verdict on a commit, and deciding whether it may deploy.
  *
- * Split out of ship so the DECISION is reachable without running one: the alternative was proving
- * this by shipping three times, including deploying a commit whose CI had deliberately been made
- * to look failed, and a gate that can only be tested by doing the dangerous thing does not get
- * tested. `apiBase` is injectable for the same reason, so the unreachable-host path runs against
- * a host that really is unreachable rather than against a mock of the failure it detects.
+ * BOUNDARY: the decision is pure and the fetch decides nothing, so the refusal paths can be driven
+ * by tests rather than by shipping a commit whose CI had deliberately been made to look failed.
  *
  * @see scripts/ship.mjs
  * @see test/ci-status.test.mjs

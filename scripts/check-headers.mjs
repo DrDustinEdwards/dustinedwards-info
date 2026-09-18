@@ -1,10 +1,10 @@
 /**
- * Gate over the security headers the Worker stamps on every response: npm run check:headers.
+ * Gate over the security headers the Worker stamps on every response.
  *
- * BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is hard rule 7
- * for this file; the wire is verify-live's. Two independent sources argue, the expected set
- * transcribed and the actual parsed, and two values are deliberately not the restrictive choice.
- * FAILS CLOSED on a missing constant.
+ *   npm run check:headers
+ *
+ * BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is this
+ * file's reading of hard rule 7; the wire is verify-live's.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";

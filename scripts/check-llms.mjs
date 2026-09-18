@@ -5,19 +5,9 @@
  *   npm run check:llms -- --local      also compare against the local D1 row
  *   npm run check:llms -- --remote     also compare against the remote D1 row
  *
- * BOUNDARY: it compares the committed file against the row it seeds, and does not fetch
- * `/llms.txt`, so it cannot see the route failing to serve what the row holds.
- *
- * WHY THIS EXISTS: the only thing that ever wrote that row was the initial migration, seeding copy
- * later retired, so a rebuilt site would have served a stale llms.txt with nothing to notice. The
- * route carried a second copy too, which had already drifted by its line endings alone, so the
- * site served different bytes depending on whether the row existed.
- *
- *   1. the tracked file exists, is non-empty, and is LF-only
- *   2. the route does not carry its own copy: it imports the file
- *   3. with --local or --remote, the D1 row is byte-identical to the file
- *
- * FAILS CLOSED on a missing file, an unparseable result or a wrangler failure.
+ * BOUNDARY: it compares the committed file against the row it seeds and against the route that
+ * serves it, but it does not fetch `/llms.txt`, so it cannot see the route failing to serve what
+ * the row holds.
  */
 
 import { readFileSync, existsSync } from "node:fs";

@@ -1,12 +1,9 @@
 /**
- * Listing an R2 bucket from a Node build script. ONE implementation, several callers.
+ * Listing an R2 bucket from a Node build script, through the platform proxy because the CLI has
+ * no `list` verb.
  *
- * **Why a platform proxy and not the CLI.** The CLI has three object verbs and no `list`, so the
- * one thing a reconciler cannot do without is the one thing it does not offer. The proxy hands a
- * Node script the same binding the Worker gets, over wrangler's existing OAuth.
- *
- * **The remote flag goes on the BINDING and nowhere else**, and the config carrying it is built
- * here and thrown away, so the flag cannot leak into the real config and point local development
+ * BOUNDARY: the remote flag goes on the BINDING and nowhere else, and the config carrying it is
+ * built here and thrown away, so it cannot leak into the real config and point local development
  * at production R2.
  */
 

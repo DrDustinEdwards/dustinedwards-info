@@ -4,17 +4,10 @@
  *   node scripts/operator-roundtrip.mjs a          steps 1 and 2
  *   node scripts/operator-roundtrip.mjs b          steps 3 to 9
  *
- * Two phases because step 3 is a HUMAN action: the first publication of a post is reserved to the
- * admin, so the round trip cannot be driven end to end by the thing it is testing, which is the
- * point of the test.
- *
- * The token is read from a file named by an environment variable and is never printed, logged or
- * included in an error. Every assertion that matters is checked against GitHub and the public
- * surfaces, never against the API's own report: an endpoint saying "created" is not evidence that
- * a commit exists.
- *
- * THE DASH FIXTURE is built from its CODE POINT rather than typed, so this file contains no wide
- * dash of its own and stays clean under the house rule.
+ * BOUNDARY: two phases because step 3 is a HUMAN action, the first publication of a post being
+ * reserved to the admin, which is the point of the test. Every assertion that matters is checked
+ * against GitHub and the public surfaces rather than against the API's own report, and the token
+ * is never printed, logged, or included in an error.
  */
 
 import { readFileSync } from "node:fs";
