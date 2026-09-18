@@ -1,42 +1,12 @@
 /**
- * Bundles every module in app/enhance/ into a self-contained asset.
+ * Bundles every module in app/enhance/ into a self-contained asset, because a `?url` import copies
+ * bytes verbatim and the thing it points at has to be finished JavaScript.
  *
  *   npm run build:enhance
  *
- * OBSERVATION BOUNDARY: this builds and then reads back its OWN output. It
- * proves each bundle is import-free and parses; it cannot prove the app build
- * actually serves these files (the ?url imports decide that, and
- * check:page-payload asserts it against build/client), and it cannot see the
- * wire.
- *
- * ## Why the enhancements are prebuilt
- *
- * The public plane stopped hydrating React (2026-08-26), so the effect loaders
- * that dynamically imported these modules stopped existing. What loads an
- * enhancement now is a plain nonced `<script type="module">` whose URL is a
- * `?url` import of the file this script writes. A `?url` import copies bytes
- * VERBATIM as an asset, with no compilation (measured 2026-07-28: pointing it
- * at the .ts source serves raw TypeScript), so the thing it points at has to
- * be finished JavaScript before the app build runs. That is this script's
- * whole job, and it is why it runs before the app build everywhere the
- * build-first pattern lives: check-all, check-head, ship, ci.yml, deploy.yml
- * and the dev script.
- *
- * ## Each bundle is SELF-CONTAINED, asserted rather than hoped
- *
- * A bundle with an import statement would make the browser fetch a sibling by
- * relative URL against /assets/, where only hashed names exist, so the
- * enhancement would die at runtime while the build stayed green. Every output
- * is therefore parsed (Rollup's own parser, via vite's parseAst) and refused
- * if any static import, dynamic import() or re-export-from survives.
- * `inlineDynamicImports` is what makes the palette's lazy `import("./ask")`
- * legal: the ask module is inlined into the palette bundle, which costs the
- * palette ask's bytes and buys it working under this rule. Both bundles carry
- * ask's DOM-guarded init, which is why that init is idempotent.
- *
- * The output directory is gitignored (see .gitignore for the reason) and is
- * DELETED and rebuilt on every run, so a renamed module cannot leave a stale
- * bundle behind for a ?url import to keep serving.
+ * BOUNDARY: it builds and then reads back its OWN output, proving each bundle is import-free and
+ * parses. It cannot prove the app build serves these files, which `check:page-payload` asserts,
+ * and it cannot see the wire.
  */
 
 import { readFileSync, readdirSync, rmSync, statSync } from "node:fs";
@@ -50,9 +20,8 @@ const ENHANCE_DIR = join(root, "app", "enhance");
 const DIST_DIR = join(ENHANCE_DIR, "dist");
 
 /**
- * True when the AST contains any statement that would reach the network for
- * another module: static import, dynamic import(), or a re-export with a
- * source. A plain `export {}` has no source and is fine in a module script.
+ * True when the AST contains any statement that would reach the network for another module. A
+ * plain `export {}` has no source and is fine in a module script.
  *
  * @param {any} node
  * @returns {string | null} a description of the offending node, or null
@@ -109,10 +78,8 @@ async function main() {
           output: {
             format: "es",
             entryFileNames: outName,
-            // One chunk per entry, dynamic imports inlined. This is what makes
-            // the palette's lazy import("./ask") legal under the no-imports
-            // rule below. (Rolldown's spelling; inlineDynamicImports is the
-            // deprecated alias.)
+            // One chunk per entry, dynamic imports inlined, which is what makes a lazy import legal under the
+            // no-imports rule below.
             codeSplitting: false,
           },
         },
@@ -135,8 +102,8 @@ async function main() {
     console.log(`  ${outName}  ${statSync(outPath).size} bytes`);
   }
 
-  // Both directions: a file in dist/ that no module produced is a stale
-  // bundle a ?url import could still be serving.
+  // Both directions: a file in the output directory that no module produced is a stale bundle a
+  // `?url` import could still be serving.
   const built = readdirSync(DIST_DIR).sort();
   const expected = modules.map((n) => n.replace(/\.ts$/, ".js")).sort();
   if (built.join(",") !== expected.join(",")) {

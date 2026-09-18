@@ -6,35 +6,9 @@
  *
  * The database is the read path; these files are the source of truth.
  *
- * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF
- * FIRST.** This comment used to claim "runs the gate first, so a stale or
- * hand-edited artifact can never reach the database", and that was false in
- * both halves: `main()` reads the artifact directly, and the npm script is a
- * bare `node` invocation with nothing in front of it. Nothing here has ever
- * checked the artifact against its source.
- *
- * A false safety claim is worse than no claim, because it is read as a reason
- * not to check. This is the one script in the repo that writes to production
- * D1, and the failure it falsely promised to prevent, a stale or hand-edited
- * artifact reaching the database, is exactly the one that matters here: the
- * bulk path DELETES `search_docs` outright and replaces `media_refs` for
- * `source_type='post'` wholesale, so a bad artifact does not merely add wrong
- * rows, it removes right ones.
- *
- * Left as an instruction rather than wired in, deliberately. Shelling out to
- * the gate from here would make the write path depend on the gate's exit code
- * being read correctly through two layers of npm, and this repo has already
- * been burned by an exit code masked by a pipe. The gate is one command; the
- * sequence is `npm run check:content && npm run sync:content -- --remote`.
- *
- * On the bulk path this issues one upsert per post and then rebuilds the FTS
- * index outright, rather than leaning on the three per-row triggers. The
- * triggers are correct for single edits and are left in place for the admin
- * editor that comes later; a rebuild is the honest choice for a full resync.
- *
- * Note on batch(): D1's batch() is a Worker binding API and is not reachable
- * from a build script. The equivalent here is a single generated SQL file
- * applied with `wrangler d1 execute --file`, which D1 runs as one unit.
+ * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF FIRST.** It is the
+ * one script that writes to production D1, and the bulk path DELETES the search index and
+ * replaces the media citations wholesale.
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -89,36 +63,21 @@ function buildSql(posts) {
   for (const post of posts) {
     const publishAt = Math.floor(Date.parse(post.publishAt) / 1000);
     const status = post.draft ? "draft" : "published";
-    // Revision date: explicit frontmatter wins, otherwise the last commit that
-    // touched the file. Applied here rather than in the build product because
-    // a render must depend on the sources alone (the determinism pass renders
-    // twice and compares, and both writers' render hashes must agree; the
-    // Worker has no git history to consult anyway). Falls back to now when
-    // there is no history to read.
+    // Revision date: explicit frontmatter wins, otherwise the last commit that touched the file.
+    // Applied here because a render must depend on the sources alone, and the Worker has no git.
     /*
-     * og_image IS SET ONLY WHEN A CARD ACTUALLY EXISTS, which is the same
-     * condition `build:og` renders under. Two rules, one predicate.
-     *
-     * A post with a cover never gets a generated card. NEITHER DOES A POST
-     * THE PUBLIC CANNOT SEE, since 2026-08-23: a draft's card was live and
-     * public in R2 while the post itself answered 404, and the card renders
-     * the title.
-     *
-     * This half matters beyond tidiness because `build:og`'s prune guard asks
-     * D1 which cards the live site points at, and refuses to delete any of
-     * them. While a draft's row advertised a card, that card could never be
-     * pruned: the guard would protect the very object the fix exists to
-     * remove. Writing null here is what lets the two agree.
+     * og_image IS SET ONLY WHEN A CARD ACTUALLY EXISTS, the same condition the generator renders
+     * under: two rules, one predicate. NEITHER A COVERED POST NOR ONE THE PUBLIC CANNOT SEE gets one,
+     * after a draft's card was live while the post answered 404. That half matters beyond tidiness:
+     * the prune guard asks D1 which cards the live site points at and refuses to delete them.
      */
     const hasCard =
       !post.cover &&
       isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt });
     const ogImage = hasCard ? `/media/${ogImageKey(post)}` : null;
     /*
-     * `revisedDate` OWNS THE RULE, and this call is what makes
-     * `check:microformats` able to feed a component the same value without
-     * restating it. The conversion to epoch seconds stays here, because that is
-     * this file's column format rather than the rule.
+     * `revisedDate` OWNS THE RULE, which is what lets `check:microformats` feed a component the same
+     * value without restating it. The epoch conversion stays here, being this file's column format.
      */
     const revised = revisedDate(post);
     const updatedAt = revised ? Math.floor(revised.getTime() / 1000) : null;
@@ -169,14 +128,9 @@ function buildSql(posts) {
     }
   }
 
-  // Media citations, replaced wholesale for source_type='post'.
-  //
-  // Wholesale rather than per post, because this writer already holds the WHOLE
-  // corpus: a per-post delete would leave refs behind for a post that has since
-  // been removed from the artifact, and that stale row would be enough to refuse
-  // the delete of an image nothing actually cites any more. The editor's save
-  // path is the incremental writer and scopes its delete to one slug, because
-  // one post is all it re-rendered.
+  // Media citations, replaced wholesale for posts, because this writer holds the WHOLE corpus: a
+  // per-post delete leaves refs for a post since removed, and that row refuses the delete of an
+  // image nothing cites. The editor's save path scopes to one slug, one post being all it rendered.
   out.push(`DELETE FROM media_refs WHERE source_type = 'post';`);
   const seenRefs = new Set();
   for (const post of posts) {
@@ -201,12 +155,9 @@ function buildSql(posts) {
 }
 
 /**
- * Rewrites the search index from the artifact's records.
- *
- * search_docs is fully derived, so it is replaced outright rather than
- * reconciled. Both FTS tables are then rebuilt, which is the documented bulk
- * pattern for external-content fts5 and the one that does not depend on trigger
- * ordering inside a batch. There are deliberately no triggers on search_docs.
+ * Rewrites the search index from the artifact's records. Fully derived, so replaced outright
+ * rather than reconciled, and both FTS tables are rebuilt, the documented bulk pattern for
+ * external-content fts5, which does not depend on trigger ordering inside a batch.
  *
  * @param {any[]} records
  */
@@ -252,38 +203,12 @@ function wrangler(args) {
 /**
  * A `d1 execute --file` import, RETRIED ONCE.
  *
- * ## THE NAMED EXEMPTION TO WRITES-ARE-NEVER-WRAPPED (ruled 2026-08-12)
- *
- * `scripts/lib/retry.mjs` wraps READS only, and its header says so, because a
- * retried write is a write that may have landed twice. The rule now reads:
- * writes are never wrapped, EXCEPT writes idempotent BY CONSTRUCTION, with the
- * argument stated where the wrapper is applied. This is that statement.
- *
- * Every file this runs is idempotent, measured rather than asserted:
- *
- *   posts    DELETE ... NOT IN (kept slugs), INSERT ... ON CONFLICT(slug) DO
- *            UPDATE, post_tags and media_refs deleted and rebuilt, then the
- *            fts index rebuilt with ('rebuild')
- *   llms     INSERT ... ON CONFLICT(key) DO UPDATE SET value = excluded.value
- *   search   DELETE FROM search_docs, re-INSERT every record, both fts indexes
- *            rebuilt
- *
- * None appends. A doubled run lands the same corpus, which is not a theory: ship
- * re-runs this whole sync over the existing corpus on EVERY deploy, and asserts
- * three-way docsize equality afterwards, so the doubled case is the normal case
- * and is already gated.
- *
- * ## WHY ALL THREE, not just the one that failed
- *
- * The seventh transient hit the llms import specifically. All three go through
- * the same `/d1/database/{id}/import` endpoint with the same exposure and the
- * same idempotency argument, and wrapping only the one that happened to fail is
- * the fix that lands in all but one affected site. Nothing else in this script
- * is wrapped: the verification read at the end is a read, and no other write in
- * the repo is touched.
- *
- * The FINAL result is returned rather than thrown, so each call site keeps its
- * own error message; those strings are quoted in the canon.
+ * THE NAMED EXEMPTION TO WRITES-ARE-NEVER-WRAPPED. The rule now reads: writes are never wrapped,
+ * EXCEPT writes idempotent BY CONSTRUCTION, with the argument stated where the wrapper is
+ * applied. Every file this runs deletes-and-replaces or upserts and none appends, and ship
+ * re-runs this sync over the existing corpus on EVERY deploy, so the doubled case is the normal
+ * case. WHY ALL THREE: same endpoint, same exposure, same argument, and wrapping only the one
+ * that failed is the fix that lands in all but one affected site.
  *
  * @param {string} args @param {string} label @returns {Promise<{stdout: string, status: number}>}
  */
@@ -318,40 +243,20 @@ async function main() {
   }
 
   /*
-   * THE SHIP-TIME DRIFT REPORT. What the committed artifact's byte gate used
-   * to prove at commit time, taken at the last moment it is still provable:
-   * the instant before this write overwrites the evidence.
-   *
-   * (slug, source_blob_sha, render_hash) is read for every file-backed row
-   * and compared against the fresh build product. Five classes per slug:
+   * THE SHIP-TIME DRIFT REPORT, taken the instant before this write overwrites the evidence. Five
+   * classes per slug:
    *
    *   unchanged       same source, same render.
-   *   source-changed  a different source_blob_sha: the repository moved and
-   *                   D1 had not caught up yet. Expected on every content
-   *                   ship; the write below is the catch-up.
-   *   RENDER DRIFT    the SAME source with a DIFFERENT render_hash: the
-   *                   Worker and the Node build rendered identical bytes
-   *                   differently. This is the Worker-versus-Node class the
-   *                   byte gate existed for. NOT a defect on its own: the
-   *                   commonest cause is the previously deployed Worker's
-   *                   content-drift poll rendering new markdown with the old
-   *                   renderer just before the deploy (ruling 30, vol 15),
-   *                   and this run's write is what repairs it. The verdict
-   *                   belongs to a SECOND run, which ship performs; one
-   *                   reading of this table cannot tell the two apart.
+   *   source-changed  the repository moved and D1 had not caught up; the write is the catch-up.
+   *   RENDER DRIFT    the SAME source with a DIFFERENT render hash, the Worker-versus-Node class.
+   *                   NOT a defect on its own, the commonest cause being the deployed Worker
+   *                   rendering new markdown with the old renderer. The verdict is a SECOND run's.
    *   missing-in-d1   a file with no row: a new post, or a lost row.
    *   extra-in-d1     a row with no file: a deleted post; the write cleans it.
    *
-   * THE WRITE STILL RUNS, whatever this finds. Converging D1 to the build IS
-   * the repair (rule 18), and refusing to write would preserve wrong rows to
-   * protect a report. The exit goes nonzero at the very END, after every
-   * write and verification, so ship can let the deploy stand, finish both
-   * index convergences, and still fail the run: the same shape as an index
-   * miss.
-   *
-   * A failed read THROWS rather than skipping the report. A drift report
-   * that could not read one side reports nothing, and nothing is exactly
-   * what a clean run reports.
+   * THE WRITE STILL RUNS, whatever this finds, because converging D1 to the build IS the repair,
+   * and the exit goes nonzero at the very END so ship can let the deploy stand. A failed read
+   * THROWS rather than skipping the report, since nothing is what a clean run reports.
    */
   /** @type {string[]} */
   const renderDrift = [];
@@ -420,17 +325,10 @@ async function main() {
     throw new Error("wrangler d1 execute failed");
   }
 
-  // The llms.txt settings row, from its tracked source file.
-  //
-  // Same shape as everything else here: the FILE is the source of truth and the
-  // row is derived, so a rebuild reproduces it. Before 2026-08-02 the only thing
-  // that ever wrote this row was 0001_init.sql, which seeds the virology copy
-  // retired on 2026-07-27, so a rebuilt site would have served a stale llms.txt
-  // with nothing to flag it. check:llms compares the two now.
-  //
-  // Read as a Buffer and decoded explicitly rather than with an encoding hint,
-  // because this file is compared byte for byte and the platform text layer is
-  // cp1252 on this host.
+  // The llms.txt settings row, from its tracked source file: the FILE is the source of truth. The
+  // only thing that ever wrote this row was the initial migration, seeding copy later retired. Read
+  // as a Buffer and decoded explicitly, this file being compared byte for byte and the platform
+  // text layer not UTF-8 here.
   const llms = (await readFile(LLMS_PATH)).toString("utf8");
   if (llms.includes("\r")) {
     throw new Error(
@@ -471,14 +369,9 @@ async function main() {
     throw new Error("wrangler d1 execute failed for the search index");
   }
 
-  // The index is only useful if it actually mirrors the table. Assert it rather
-  // than assume the rebuild worked.
-  // Counts the FTS shadow table, not posts_fts itself. On an external-content
-  // FTS5 table `COUNT(*) FROM posts_fts` reads through to the content table, so
-  // it equals COUNT(*) FROM posts no matter how broken the index is. Measured:
-  // after DELETE FROM posts_fts the count still read 1 of 1 while MATCH returned
-  // nothing. posts_fts_docsize holds one row per indexed document and went to 0,
-  // so it is the only one of the three that can actually fail.
+  // The index is only useful if it mirrors the table, so assert it. Counts the FTS SHADOW table: on
+  // an external-content fts5 table a count of the index reads through to the content table. The
+  // docsize shadow holds one row per indexed document and goes to zero.
   const verify = wrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
@@ -511,10 +404,8 @@ async function main() {
   if (row.posts < posts.length) {
     throw new Error(`expected at least ${posts.length} posts in D1, found ${row.posts}`);
   }
-  // Same trap as posts_fts: COUNT(*) on either search index reads through to
-  // search_docs and can never disagree with it. These count the docsize shadow
-  // tables, which hold one row per INDEXED document and go to zero on a failed
-  // rebuild, so they are the only counts here that can actually fail.
+  // Same trap as the post index: a count on either search index reads through to its content table.
+  // These count the docsize shadows, which go to zero on a failed rebuild.
   if (row.docs !== records.length) {
     throw new Error(
       `search_docs=${row.docs} but the artifact carries ${records.length} records.`,
@@ -529,11 +420,8 @@ async function main() {
   console.log("sync:content ok. FTS and search index row counts match.");
 
   /*
-   * NONZERO LAST, after every write stood. Render drift means the shared
-   * pipeline is not shared in practice, and a run that exits green on it is
-   * the green-light-meaning-nothing this report replaces the byte gate to
-   * avoid. The writes above already converged D1 to the build, so the state
-   * is repaired; the exit is the alarm, not the refusal.
+   * NONZERO LAST, after every write stood: render drift means the shared pipeline is not shared in
+   * practice, and a run that exits green on it is the green light meaning nothing.
    */
   if (renderDrift.length > 0) {
     console.error(

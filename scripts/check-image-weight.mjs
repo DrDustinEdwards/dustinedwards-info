@@ -1,99 +1,13 @@
 #!/usr/bin/env node
 /**
- * Every image byte this site derives through the Images binding must be LOSSY,
- * and the transform ladder must be SHAPED like a transform ladder.
+ * Gate: every image byte derived through the Images binding is LOSSY, and the transform ladder is
+ * shaped like one.
  *
- * ## The defect this was written for
+ *   node scripts/check-image-weight.mjs [--base <origin>]
  *
- * Measured 2026-09-01 on the first content object ever put in the bucket. A
- * 188,876 byte lossy WebP origin came back from every rung as LOSSLESS WebP,
- * because `.output()` in `app/routes/media.$.ts` carried no `quality` and the
- * Images binding defaults to lossless. The 640px rung was 404,020 bytes, the
- * 1024px 944,030, the 1408px 979,922: every rung heavier than the object it
- * resizes, which inverts the whole purpose of `srcset` and bills a
- * transformation for the privilege. The fix is `WEBP_QUALITY`, which lives in
- * `app/lib/media/encoding.mjs` since the second call site was found.
- *
- * ## THE FOUR ASSERTIONS, AND WHY NONE OF THEM CARRIES A NUMBER
- *
- *   1. **Every rung is lossy.** Chunk type `VP8`, never `VP8L`. This is the
- *      defect verbatim and it needs no threshold.
- *   2. **Bytes per delivered pixel never rises as delivered pixels rise.**
- *      Equality allowed. A bigger rendering that costs MORE per pixel than a
- *      smaller one is broken encoding whatever the absolute numbers are.
- *   3. **The narrowest rung is smaller than the origin.** Catches the gross
- *      case of serving the original unresized under a width parameter.
- *   4. **Every STORED placeholder is lossy**, decoded from the data URI in the
- *      `placeholder` column. Added 2026-09-06 when the same missing `quality`
- *      was found at its second call site, in the rebuild rather than the
- *      route, where nothing was watching it at all.
- *
- * A tuned constant here would be a second owner of a value that belongs to the
- * image, and would need re-tuning every time an asset was re-encoded.
- *
- * ## THE SUBJECT IS WIDER THAN THE ROUTE, AND ASSERTION 4 IS WHY
- *
- * One to three read what the transform route SERVES. Four reads what the
- * rebuild STORED, over every tier rather than over R2 alone, because the
- * function that derives a placeholder runs over static files in the same loop.
- * Both halves are the same defect: the Images binding emits lossless WebP when
- * no `quality` is given, and the constant that says otherwise now lives in
- * `app/lib/media/encoding.mjs` because there turned out to be two callers.
- *
- * ## ASSERTION 2 WAS RULED AS RAW BYTES FIRST, AND THE MEASUREMENT CHANGED IT
- *
- * The original ruling was "every rung smaller than the origin", then "bytes are
- * non-decreasing with width". Both fire on CORRECT output, and this is the
- * table that showed it, taken after the quality fix shipped:
- *
- *     rung      bytes    delivered   pixels    bytes/px
- *     origin   188,876   1080x810    874,800    0.2159
- *     w=160      8,500   160x120      19,200    0.4427
- *     w=320     28,446   320x240      76,800    0.3704
- *     w=640     91,488   640x480     307,200    0.2978
- *     w=1024   205,344   1024x768    786,432    0.2611
- *     w=1408   198,908   1080x810    874,800    0.2274
- *
- * Two things in that table break a raw-byte rule and neither is a defect.
- * `w=1024` and `w=1408` are BIGGER than the origin, because re-encoding at
- * quality 85 costs more than a source that was compressed harder than 85. And
- * `w=1408` is SMALLER than `w=1024` while being a larger image, because 1408
- * exceeds the source width, so the rung is capped and becomes a native-size
- * re-encode with no resampling, which reproduces an already-compressed source
- * very cheaply.
- *
- * Bytes per pixel falls monotonically down that whole column, which is what
- * healthy encoding looks like, and it was 6.1x the origin's rate when the
- * output was lossless. So it is the measure that separates the two cases
- * without a threshold.
- *
- * ## DELIVERED DIMENSIONS, NEVER THE REQUESTED WIDTH
- *
- * Read out of the response body's own header. `w=1408` against a 1080-wide
- * source delivers 1080, so a ladder ordered by REQUESTED width would compare
- * two rungs that are the same size and call the result an inversion.
- *
- * **Rungs with EQUAL delivered pixels are not compared at all.** The origin and
- * `w=1408` above are both 874,800 pixels, and their sort order relative to each
- * other would otherwise decide the verdict, which is a gate whose answer
- * depends on sort stability. The assertion is about what happens AS PIXELS
- * RISE; where they do not rise there is nothing to assert.
- *
- * ## The floors, one per subject
- *
- * A sweep that examined nothing prints what a clean sweep prints, so this FAILS
- * when it examined zero lossy-origin rows and reports what it found and skipped
- * either way.
- *
- * TWO floors rather than one, because the two subjects are selected by
- * different queries over different rows: a bucket full of gradeable ladders
- * satisfies the first while the `placeholder` column is empty, and an index
- * full of placeholders satisfies the second with no R2 image in it. One floor
- * covering both would be satisfied by either.
- *
- * Usage:
- *   node scripts/check-image-weight.mjs
- *   node scripts/check-image-weight.mjs --base http://localhost:8787
+ * BOUNDARY: four assertions over what the route actually served plus the stored placeholders, and
+ * NONE of them carries a number, a tuned constant being a second owner of a value that belongs to
+ * the image. It reads delivered dimensions out of each body, never the requested width.
  */
 
 import { spawnSync } from "node:child_process";
@@ -114,14 +28,9 @@ function argOf(flag) {
 const BASE = (argOf("--base") ?? process.env.PUBLIC_ORIGIN ?? SITE_ORIGIN).replace(/\/+$/, "");
 
 /**
- * One read against the media index.
- *
- * `wrangler r2 object` has no `list` verb, which is why every reconciliation in
- * this repo reads D1 for the key set.
- *
- * ONE COMMAND STRING, not an argv array. With `shell: true` on Windows an array
- * argument carrying spaces is split by the shell before wrangler sees it, and
- * the SQL arrives as twenty unknown positional arguments.
+ * One read against the media index: `wrangler r2 object` has no `list` verb, which is why every
+ * reconciliation here reads D1 for the key set. ONE COMMAND STRING, not an argv array: with
+ * `shell: true` the SQL arrives as a pile of positional arguments.
  *
  * @param {string} sql a SELECT, inlined so the repo's own hook can read it
  */
@@ -153,15 +62,9 @@ function r2ImageRows() {
 }
 
 /**
- * EVERY STORED PLACEHOLDER, whatever tier produced it.
- *
- * Deliberately NOT narrowed to `storage = 'r2'` the way the ladder query is,
- * and the width is the assertion rather than a convenience: `placeholderFor`
- * runs over R2 objects and over static files from the asset manifest in the
- * same rebuild, so a defect in it reaches both tiers at once. A query that
- * looked at one would report the other clean without examining it, which is
- * FAILURES.md's "a fix in N-1 of N sites is not a fix" reproduced inside the
- * gate written to catch it.
+ * EVERY STORED PLACEHOLDER, whatever tier produced it: the deriving function runs over R2 objects
+ * and static files in one rebuild, so a defect reaches both tiers and a query looking at one would
+ * report the other clean.
  */
 function placeholderRows() {
   return mediaRows(
@@ -171,17 +74,9 @@ function placeholderRows() {
 }
 
 /**
- * What a raster buffer IS, read from the container rather than from a mime
- * column or a file extension.
- *
- * A WebP is a RIFF file whose image data lives in a `VP8 ` chunk when lossy and
- * a `VP8L` chunk when lossless; `VP8X` is an extended header carrying neither,
- * and must be walked past to reach the chunk that decides. Reading the stored
- * mime instead would answer `image/webp` for both, which is precisely the
- * distinction assertion 1 exists to make.
- *
- * Dimensions come from the same parse, because the delivered size is what
- * assertion 2 orders by and it is not the requested width.
+ * What a raster buffer IS, read from the container rather than a mime column: a WebP's image data
+ * lives in a different chunk when lossy, and an extended header carries neither. The stored mime
+ * answers the same string for both, which is the distinction assertion 1 exists to make.
  *
  * @param {Buffer} buf
  * @returns {{ codec: string, lossy: boolean | null, width: number | null, height: number | null }}
@@ -303,39 +198,13 @@ export function ladderProblems(key, origin, rungs) {
 }
 
 /**
- * THE FOURTH ASSERTION, over a STORED placeholder rather than a served rung.
- *
- * TWO ARTIFACTS SATISFY THIS ONE FUNCTION: the `placeholder` column in D1,
- * swept below, and the `placeholders` map in `content/generated/assets.json`,
- * which `check:content` checks by importing this. One statement of what a
- * placeholder IS. A second copy over there is how the two would come to
- * disagree about the defect they were both written for.
- *
- * ## The defect this was written for
- *
- * `placeholderFor` in `app/lib/media/rebuild.server.ts` called the Images
- * binding with no `quality`, exactly as the transform route did before
- * 2026-09-01, so every LQIP in the index is a LOSSLESS VP8L data URI. The
- * column exists to hold something small enough to inline in a document, and
- * lossless is roughly three times the bytes of the lossy encoding of the same
- * twenty pixel wide image. The ladder fix landed at one of the two call sites
- * and this is the other.
- *
- * ## Why a pure function
- *
- * Same reason `ladderProblems` is one: the replay feeds it a placeholder read
- * out of the live index BEFORE the fix, with no network and no deploy, and
- * watches it name the defect. A gate whose red case can only be produced by
- * breaking production is a gate nobody proves.
- *
- * ## No threshold, again
- *
- * The assertion is the CHUNK TYPE, `VP8` and never `VP8L`, decoded from the
- * base64 payload of the data URI. A byte ceiling would be a second owner of a
- * number that belongs to the image, and would need re-tuning every time the
- * placeholder width moved. The prefix is asserted too, because a row holding
- * something that is not a WebP data URI at all would otherwise decode to
- * garbage and be reported as an unknown codec rather than as a wrong column.
+ * THE FOURTH ASSERTION, over a STORED placeholder rather than a served rung. TWO ARTIFACTS SATISFY
+ * THIS ONE FUNCTION, the D1 column and the asset manifest's map, because a second copy is how the
+ * two would disagree about the defect they were both written for. THE DEFECT: the same missing
+ * quality in the rebuild rather than the route, where nothing was watching. PURE, so the replay
+ * can feed it a placeholder read out of the live index BEFORE the fix: a gate whose red case can
+ * only be produced by breaking production is a gate nobody proves. NO THRESHOLD: the assertion is
+ * the CHUNK TYPE, and the prefix too, or a wrong column decodes to garbage.
  *
  * @param {string} key
  * @param {string} placeholder the stored data URI
@@ -406,10 +275,8 @@ async function main() {
       continue;
     }
     if (origin.lossy !== true) {
-      // A LOSSLESS ORIGIN IS SKIPPED, and the restriction is the point. A PNG
-      // re-encoded to WebP can legitimately grow or shrink, so every assertion
-      // here would be a coin toss and a gate that fails at random gets turned
-      // off. A lossy origin has already paid the compression cost.
+      // A LOSSLESS ORIGIN IS SKIPPED, and the restriction is the point: a PNG re-encoded to WebP can
+      // legitimately grow or shrink, and a gate that fails at random gets turned off.
       skipped.push(`${row.key} (${origin.codec}, not a lossy origin)`);
       continue;
     }
@@ -458,10 +325,8 @@ async function main() {
   console.log(`\n  examined ${examined} lossy-origin row(s), ${comparisons} rung fetch(es)`);
 
   /*
-   * THE FLOOR. Zero examined rows and zero problems produce the same output,
-   * and the whole point of this gate is that nobody was watching the thing it
-   * measures. An empty bucket, a changed storage tier, or a query that stopped
-   * matching all report a clean sweep without it.
+   * THE FLOOR: zero examined rows and zero problems produce the same output, and nobody was
+   * watching the thing this measures.
    */
   if (examined === 0) {
     problems.push(
@@ -474,11 +339,8 @@ async function main() {
   }
 
   /*
-   * ---- 4. EVERY STORED PLACEHOLDER IS LOSSY. -------------------------------
-   *
-   * Read out of the index rather than off the wire, because a placeholder is
-   * not served: it is a column, inlined into whatever renders it. The bytes
-   * under test are therefore the STORED bytes and nothing else.
+   * 4. EVERY STORED PLACEHOLDER IS LOSSY, read out of the index rather than off the wire: a
+   * placeholder is a column, inlined into whatever renders it.
    */
   const stored = placeholderRows();
   console.log(`\n  ${stored.length} stored placeholder(s) in the index`);
@@ -497,11 +359,8 @@ async function main() {
   }
 
   /*
-   * ITS OWN FLOOR, and it needs one for a reason the ladder's floor does not
-   * cover: the ladder query and this one select different rows, so a full
-   * bucket can satisfy the first while this one examines nothing. A rebuild
-   * that stopped deriving placeholders entirely would empty this column, and
-   * an empty column and a clean column print the same line.
+   * ITS OWN FLOOR: a full bucket satisfies the ladder query while this one examines nothing, and an
+   * empty column and a clean column print the same line.
    */
   if (placeholders === 0) {
     problems.push(

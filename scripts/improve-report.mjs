@@ -1,55 +1,26 @@
-// Trusted scoring glue for improve-score.yml, run from the DEFAULT branch in the
-// scorer's second job, from a copy stashed in $RUNNER_TEMP before any untrusted byte
-// exists on the runner. It never runs attempt-controlled code: it reads the TAP the
-// reporter produced and counts results from the TOP-LEVEL ok / not ok lines, not from
-// a process exit code. That is the fix for the 2026-09-06 CRITICAL where an attempt
-// forced holdout_pass_rate to 1.0 by calling process.exit(0) before assertions ran: an
-// early exit means the file's ok line is never written, so the pass it never earned is
-// absent rather than assumed.
+// Trusted scoring glue, run from the DEFAULT branch from a copy stashed before any untrusted byte
+// exists on the runner.
 //
-// TAP, not "json": node --test has no builtin json reporter (tap, spec, dot, junit,
-// lcov). TAP is the line-oriented one, and a top-level result is an `ok N` or `not ok
-// N` at column 0. Subtests are indented under `# Subtest:` and are not counted, so a
-// suite using subtests is not double-weighted.
-//
-// THE STREAM MODE IS THE 2026-09-07 FIX (Opus CRITICAL 5.1, Grok CRITICAL 2). Holdout
-// cases used to run with --test-reporter-destination pointed at a file inside the
-// attempt's own filesystem, which the attempt could rewrite from process.on('exit')
-// after the reporter flushed. There is no destination file now: the container writes
-// TAP to its stdout, the runner captures that pipe outside the container, and this
-// script splits the stream on the ##CAPSID-CASE markers the trusted container shell
-// emits. A test's own stdout is re-emitted by node's TAP reporter as `# ` comment
-// lines, so nothing a test prints can produce a result line or a marker at column 0.
-//
-// THIS FILE IS BYTE-IDENTICAL ACROSS ALL FIVE ROSTER REPOS, like the score job that
-// calls it. Only Job A differs per repo. Pure functions are exported for
-// test/improve-report.test.ts; the CLI modes are repo-agnostic.
+// BOUNDARY: IT NEVER RUNS ATTEMPT-CONTROLLED CODE. It reads the TAP the reporter produced and
+// counts top-level results, never an exit code.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
-// The marker the trusted container shell prints before each case file. Matched at
-// column 0, which a test cannot reach: node's TAP reporter prefixes every line a test
-// writes to stdout with "# ", so an injected "##CAPSID-CASE x" arrives as
-// "# ##CAPSID-CASE x" and does not match.
+// Matched at column 0, which a test cannot reach: node's reporter prefixes its lines with "# ".
 export const CASE_MARKER = "##CAPSID-CASE ";
 
-// THE NONCE (2026-09-07, secondaries-in-the-container). TAP escaping protects only
-// output that went through node's TAP reporter. The secondary phases pipe a lint
-// tool's RAW stdout into the same stream, and a lint diagnostic can carry attacker
-// text at column 0. Every marker is prefixed with a per-run nonce the trusted shell
-// holds in a shell variable and unsets from the environment before any attempt code
-// runs. Passing "" reproduces the original spelling, which the pre-nonce tests pin.
+// THE NONCE: TAP escaping protects only output that went through node's reporter, and the
+// secondary phases pipe a lint tool's RAW stdout into the same stream. Held in a shell variable
+// and unset from the environment before any attempt code runs.
 /** @param {string} nonce */
 export function markers(nonce = "") {
   const p = nonce ? `##CAPSID-${nonce}` : "##CAPSID";
   return { case: `${p}-CASE `, test: `${p}-TEST`, lint: `${p}-LINT`, status: `${p}-STATUS `, end: `${p}-END` };
 }
 
-// One segment of the container's output stream: a holdout case, or one of the two
-// secondary phases, plus the exit status the trusted shell printed after it. Declared
-// once because splitStream builds them and both readers narrow them.
+// One segment of the container's output stream with the status the trusted shell printed.
 /**
  * @typedef {object} Segment
  * @property {string} kind
@@ -58,24 +29,10 @@ export function markers(nonce = "") {
  * @property {number | null} status
  */
 
-// ---- the per-repo command map -----------------------------------------------
-//
-// WHY THE MAP LIVES HERE. The secondaries used to be measured by Job A, which runs
-// attempt code by design, and handed to the scorer as metrics.json. The 2026-09-07 CI
-// plant set test_pass_rate 1, lint_count 0 and bundle_size_bytes 1 in a signed report:
-// the anchors held, the tuning signal did not. The two metrics that CAN be recomputed
-// are recomputed inside the same --network none --read-only container as the holdout,
-// and this file, copied off the DEFAULT BRANCH before any untrusted byte exists, is
-// where the commands live.
-//
-// EVERY COMMAND MUST RUN OFFLINE. The container has no network, so nothing may
-// install, fetch or resolve. Binaries come from node_modules on the read-only
-// default-branch mount; scripts are invoked directly rather than through a package
-// manager, because corepack cannot provision one without a network.
-//
-// `verified` is the date the command was OBSERVED producing a real number in the
-// container. An unverified entry is still run, and a command that does not run yields
-// NULL rather than falling back to Job A's forgeable value.
+// The per-repo command map. The secondaries used to be measured by the job that runs attempt code
+// by design, and a plant set every one of them in a signed report. The two that CAN be recomputed
+// are recomputed inside the same `--network none --read-only` container as the holdout, and EVERY
+// COMMAND MUST RUN OFFLINE: one that does not run yields NULL, never the forgeable value.
 export const SECONDARY_COMMANDS = {
   capsid: {
     trees: ["src"],
@@ -100,18 +57,9 @@ export const SECONDARY_COMMANDS = {
   },
   foxing: {
     trees: ["packages/core", "packages/api", "apps/web"],
-    // UNIT TESTS ONLY, and that took two exclusions rather than one (ruled
-    // 2026-09-08). The bare `vitest run` swept in apps/web/e2e/*.spec.ts, playwright
-    // specs that cannot run behind --network none: 58 top-level results, 38 of them
-    // failing for the environment rather than the code, and the repo scored 0.3448.
-    //
-    // Excluding e2e by folder took it to 0.5263 and revealed the second set:
-    // *.integration.test.ts lives under test/ rather than e2e/, so a folder exclusion
-    // never reached it. Both are UNSCORED and foxing/improve/scores.md says so.
-    //
-    // Neither is excluded to make a number go up. A score the loop cannot move is noise
-    // it optimises against, and the hidden holdout suite covers what the unit tests do
-    // not.
+    // UNIT TESTS ONLY, which took two exclusions: the bare runner swept in playwright specs that
+    // cannot run behind `--network none`, and excluding them by folder revealed integration tests
+    // outside it. Neither is excluded to make a number go up, and both are UNSCORED on the record.
     test:
       'node_modules/.bin/vitest run --reporter=tap --exclude "**/e2e/**" --exclude "**/*.integration.test.ts"',
     lint: "node_modules/.bin/biome check .",
@@ -129,24 +77,11 @@ export const SECONDARY_COMMANDS = {
   },
 };
 
-// ---- the holdout import manifest --------------------------------------------
-//
-// NOT A SECURITY CONTROL. `improve/holdout/<ns>/imports.txt` lists every name the
-// hidden suite imports out of the repo's own source. Names only, one per line,
-// committed and deliberately NOT secret: an export name is already in the source.
-//
-// WHAT IT BUYS, ruled 2026-09-08 after it cost a broken anchor. The bloat pass removed
-// two exports on a scan that found no caller in src/ or test/. The holdout imports
-// both, and the holdout is structurally invisible to anything that runs in the repo.
-// The result was 28 of 30 against an anchor of min 1.0, which would have reverted
-// every attempt forever. The list is the missing third place to look.
-//
-// TWO CONSUMERS, pulling in opposite directions and both needed:
-//
-//   the dead-export check   treats a name here as a caller, so removing it is a build
-//                           failure rather than a surprise at 03:00.
-//   Job B                   refuses a holdout case importing a name that is NOT here,
-//                           so the list cannot fall behind the suite it describes.
+// The holdout import manifest: every name the hidden suite imports out of the repo's source. NOT
+// A SECURITY CONTROL and deliberately not secret. WHAT IT BUYS: a bloat pass removed two exports
+// on a scan that found no caller, and the holdout imports both while being invisible to anything
+// running in the repo. TWO CONSUMERS pull opposite ways, the dead-export check reading a name
+// here as a caller and the sync job refusing a case importing a name that is not.
 export const HOLDOUT_IMPORTS_FILE = "imports.txt";
 
 /** @param {string} namespace */
@@ -164,23 +99,14 @@ export function parseImportsManifest(text) {
     .filter((l) => l.length > 0 && !l.startsWith("#"));
 }
 
-// Every NAME a holdout case imports from the repo's own source. Matched on the import
-// specifier being relative (../src/..., ../../app/...): an import of a node builtin or
-// an npm package says nothing about this repo's exports.
-//
-// Default and namespace imports are reported under the names they bind, since removing
-// what they point at breaks the case just the same.
+// Matched on the specifier being RELATIVE: a builtin or a package says nothing about this repo's
+// exports. Default and namespace imports are reported under the names they bind.
 /** @param {string} text */
 export function importedNames(text) {
   /** @type {Set<string>} */
   const names = new Set();
-  // ANCHORED AT A STATEMENT START, and the clause may not cross a `;`.
-  //
-  // The first spelling used a lazy `[\s\S]*?` for the clause, which crossed statement
-  // boundaries: in a file whose first relative import is the third line, the match
-  // began at line one and swallowed the two node-builtin imports above it. The first
-  // five runs of this gate reported names like `assert`, `from` and `import`. An
-  // import clause never contains a semicolon, so `[^;]*?` is the boundary.
+  // ANCHORED AT A STATEMENT START, and the clause may not cross a `;`: a lazy match swallowed the
+  // builtin imports above the first relative one and reported names like `from` and `import`.
   const re = /(?:^|\n)\s*import\s+([^;]*?)\s+from\s+["'](\.[^"']*)["']/g;
   let m;
   while ((m = re.exec(text)) !== null) {
@@ -219,10 +145,8 @@ export function importedNames(text) {
   return names;
 }
 
-// The Job B gate. Returns the refusal to print and fail on, or null to proceed. It
-// NEVER names a case file: a filename is part of the hidden suite and this runs in a
-// job whose log is readable. It names the missing IMPORTS, which are source export
-// names and are what the operator has to add.
+// The gate on the holdout import manifest. It NEVER names a case file, a filename being part of
+// the hidden suite and this log readable; it names the missing IMPORTS, which are export names.
 /**
  * @param {string[]} caseTexts
  * @param {string[] | null} declared
@@ -251,17 +175,9 @@ ${sorted.join("\n")}`
   return null;
 }
 
-// The files the trusted step writes into $RUNNER_TEMP/trusted and the container reads
-// from a read-only mount. Files rather than an inlined string because the container
-// command is a single-quoted shell literal, and embedding a per-repo command into it is
-// a quoting hazard. A namespace with no command for a phase gets no file, and the
-// container skips it.
-//
-// `trees.txt` is the OTHER half of the trusted map. The container builds its working
-// tree as the default-branch checkout with these paths, and only these paths, replaced
-// by the attempt. Taking the list from the trusted map rather than from whatever
-// /attempt contains means an attempt cannot decide which of its own trees are believed,
-// and taking each declared tree WHOLE means a file the attempt deleted stays deleted.
+// Files rather than an inlined string: the container command is a single-quoted shell literal.
+// `trees.txt` is the OTHER half of the trusted map, so an attempt cannot decide which of its own
+// trees are believed, and taking each declared tree WHOLE keeps a file it deleted deleted.
 /** @param {string} namespace */
 export function secondaryScripts(namespace) {
   const spec = /** @type {Record<string, any>} */ (SECONDARY_COMMANDS)[namespace];
@@ -296,25 +212,17 @@ export function testPassRate(text) {
   return total > 0 ? pass / total : null;
 }
 
-// One holdout case file passes iff its report has at least one top-level ok and no
-// top-level not-ok. Zero results (the process.exit(0) case, or a load error) is NOT a
-// pass: silence cannot score.
+// One case passes iff its report has a top-level ok and no not-ok. Silence cannot score.
 /** @param {string} text */
 export function holdoutFilePassed(text) {
   const { pass, fail } = parseTestReport(text);
   return pass > 0 && fail === 0;
 }
 
-// Split a concatenated stream into its trusted segments. The container shell opens each
-// segment by printing a marker at column 0; everything until the next marker belongs to
-// it. Anything before the first marker is container preamble and is discarded.
-// `##CAPSID-END` bounds the stream, so a truncated one (a killed container) is visible
-// rather than silently scored on partial output.
-//
-// Four segment kinds: "case" (one holdout file), "test" and "lint" (the secondary
-// phases), and "status" (the exit code of the phase that just closed, printed by the
-// trusted shell so a phase that could not run is distinguishable from one that ran and
-// found nothing).
+// Split a concatenated stream into its trusted segments, discarding the preamble. `##CAPSID-END`
+// bounds it, so a truncated stream is visible rather than scored on partial output. Four kinds,
+// the three phases plus "status", so a phase that could not run is distinguishable from one that
+// ran and found nothing.
 /**
  * @param {string} text
  * @param {string} nonce
@@ -326,11 +234,8 @@ export function splitStream(text, nonce = "") {
   /** @type {Segment | null} */
   let current = null;
   let terminated = false;
-  // `open` RETURNS the segment and the loop assigns `current`, rather than assigning it
-  // from inside the closure. A checker cannot follow an assignment made in a callback,
-  // so the closure form narrowed `current` to `never` at every later use: it
-  // type-checks under this repo's config, which does not check .mjs bodies, and fails
-  // under dustinedwards-info's, which does.
+  // `open` RETURNS the segment and the loop assigns `current`: a checker cannot follow an
+  // assignment made in a callback and narrowed it to `never` at every later use.
   /**
    * @param {string} kind
    * @param {string} name
@@ -385,9 +290,8 @@ export function parseHoldoutStream(text, nonce = "") {
   return { cases, terminated };
 }
 
-// How many holdout cases passed. An unterminated stream scores ZERO, not a partial
-// count: a container killed halfway through is a failed measurement, and a failed
-// measurement must never look like a good one.
+// An unterminated stream scores ZERO, not a partial count: a failed measurement must never look
+// like a good one.
 /**
  * @param {string} text
  * @param {string} nonce
@@ -398,18 +302,13 @@ export function holdoutPassCount(text, nonce = "") {
   return cases.filter((c) => c.passed).length;
 }
 
-// THE RECOMPUTED SECONDARIES. Both numbers come out of the container, never out of
-// metrics.json.
+// THE RECOMPUTED SECONDARIES, out of the container and never out of the attempt's own artifact.
 //
-//   test_pass_rate  the top-level TAP ratio of the repo's OWN test command, run in the
-//                   sandbox. Null when nothing parseable ran.
-//   lint_count      how many lines of the lint command's output match this repo's
-//                   pattern. Null when the repo declares no lint command, when the
-//                   command could not be executed (126/127), or when the container did
-//                   not finish.
+//   test_pass_rate  the top-level TAP ratio of the repo's own test command, in the sandbox
+//   lint_count      how many lines of the lint output match this repo's pattern
 //
-// A phase that could not run yields null rather than falling back to Job A: an
-// unmeasured metric must never be readable as the number the attempt wrote down.
+// A phase that could not run yields null: an unmeasured metric must never read as the number the
+// attempt wrote down.
 /**
  * @param {string} text
  * @param {string} namespace
@@ -420,10 +319,8 @@ export function secondaryFromStream(text, namespace, nonce = "") {
   const spec = /** @type {Record<string, any>} */ (SECONDARY_COMMANDS)[namespace] ?? {};
   /** @param {string} kind @returns {Segment | null} */
   const find = (kind) => segments.find((/** @type {Segment} */ s) => s.kind === kind) ?? null;
-  // A phase RAN if the container finished and the phase reported an exit status that is
-  // not "could not execute" (126, 127). Written as an explicit null check rather than a
-  // predicate helper so the narrowing is visible to a checker: the callers below
-  // dereference `.lines` on the strength of it.
+  // A phase RAN if the container finished with a status that is not "could not execute". An
+  // explicit null check rather than a predicate helper, so the narrowing is visible to a checker.
   /** @param {Segment | null} seg */
   const ran = (seg) => terminated && seg !== null && seg.status !== null && seg.status < 126;
 
@@ -436,50 +333,34 @@ export function secondaryFromStream(text, namespace, nonce = "") {
   if (lintSeg !== null && ran(lintSeg) && spec.lint_pattern) {
     const re = new RegExp(spec.lint_pattern);
     const matches = lintSeg.lines.filter((/** @type {string} */ l) => re.test(l)).length;
-    // A CRASH IS NOT A CLEAN LINT. Measured on foxing 2026-09-08: biome could not
-    // resolve its platform binary, exited 1, printed a Node module-not-found dump, and
-    // NOTHING in that dump matched the count pattern, so "zero matches" read as "zero
-    // problems" and the report carried lint_count 0 for a lint that never ran. A clean
-    // lint exits 0; a lint that found problems exits nonzero AND matches the pattern.
-    // Nonzero with no matches is neither, so it is null.
+    // A CRASH IS NOT A CLEAN LINT: a linter that could not resolve its binary exited nonzero and
+    // matched no count pattern, so "zero matches" read as "zero problems". Nonzero with no matches
+    // is neither, so it is null.
     lint_count = matches > 0 || lintSeg.status === 0 ? matches : null;
   }
   return { test_pass_rate, lint_count };
 }
 
-// THE SECONDARY METRICS THIS SCORER ACTUALLY REPORTS, in report order.
-//
-// It used to be five. error_count and p95_latency_ms were emitted as a literal null on
-// every run, by every repo, since the loop was built, and were declared in all five
-// scores documents as though they were signals (audits 2026-09-07, MAJOR 5.7).
-// germomics' document read as five and behaved as one.
-//
-// test/null-metrics.test.ts derives seedScoresDoc's Secondary list from this array and
-// fails in BOTH directions, so a metric cannot be declared in the canon without
-// something reporting it, or reported without being declared.
+// THE SECONDARY METRICS THIS SCORER REPORTS, in report order. It was five: two were emitted as a
+// literal null by every repo while being declared as signals. The test derives that document's
+// list from this array and fails BOTH ways.
 export const REPORTED_SECONDARY = ["test_pass_rate", "lint_count", "bundle_size_bytes"];
 
-// A metric read from Job A's metrics.json: a finite number, or null for anything
-// else (missing, "", non-finite). Coercion is refused so a stray value cannot read
-// as a real measurement.
+// A finite number or null; coercion is refused so a stray value cannot read as a measurement.
 /** @param {unknown} value */
 function metric(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-// ---- CLI --------------------------------------------------------------------
-// Six modes, all trusted (this file runs from a stash taken off the default
-// branch), none of which runs attempt code:
+// CLI. Six modes, all trusted, none of which runs attempt code:
+//
 //   --holdout <reportPath>              exit 0 if that single report passed, 1 otherwise.
 //   --holdout-stream <tapPath> [nonce]  print how many cases passed in a piped stream.
 //   --rate <testReportPath>             print the top-level pass rate, or "" if nothing ran.
 //   --secondary-scripts <ns> <dir>      write this repo's sandbox commands as shell files.
 //   --secondary <tapPath> <ns> <nonce> <metricsPath>
-//                                       print GITHUB_OUTPUT lines for the RECOMPUTED
-//                                       secondaries, and report any disagreement with
-//                                       metrics.json on stderr.
-//   <metricsPath> <total> <passed>      emit the score-report body to stdout. The
-//                                       signing key never touches this.
+//                                       print the RECOMPUTED secondaries, and any disagreement.
+//   <metricsPath> <total> <passed>      emit the score-report body. The key never touches this.
 /** @param {string[]} argv */
 function main(argv) {
   if (argv[0] === "--holdout") {
@@ -491,12 +372,8 @@ function main(argv) {
     }
     process.exit(passed ? 0 : 1);
   }
-  // AN EMPTY STREAM IS NOT A RESULT. Exits 0 when the container printed its end
-  // marker and 1 when it did not, so the workflow can tell "every hidden test
-  // failed" from "no hidden test ever ran". holdoutPassCount returns 0 for both,
-  // which is correct for a SCORE and useless as a diagnosis: a container that fails
-  // to start reports a clean 0 of N, indistinguishable from an attempt that broke
-  // the whole suite, and the loop then reverts a change it never measured.
+  // AN EMPTY STREAM IS NOT A RESULT: 0 means both "every hidden test failed" and "none ever ran",
+  // which is correct for a SCORE and useless as a diagnosis.
   if (argv[0] === "--holdout-terminated") {
     let terminated = false;
     try {
@@ -579,11 +456,8 @@ function main(argv) {
     }
     const recomputed = secondaryFromStream(stream, namespace, nonce ?? "");
 
-    // WHY IT IS NULL, IN THE RUN LOG. A null that does not say why is the shape this
-    // change exists to stop. The four roster repos reported null on their first scored
-    // run and the log could not distinguish "the command was not found" from "it ran and
-    // produced no parseable result", which is the difference between a typo in the map
-    // and a reporter flag the tool no longer supports.
+    // WHY IT IS NULL, IN THE RUN LOG: the log could not tell "the command was not found" from "it
+    // ran and produced nothing parseable", which is a typo in the map against a dropped flag.
     const { segments, terminated } = splitStream(stream, nonce ?? "");
     if (!terminated) {
       process.stderr.write("SECONDARY: the container did not finish; every recomputed metric is null.\n");
@@ -600,16 +474,12 @@ function main(argv) {
           : seg.status >= 126
             ? `exit ${seg.status}, which is "could not execute": check the command in SECONDARY_COMMANDS`
             : `exit ${seg.status}`;
-      // HEAD AND TAIL. The tail of a Node crash is the version banner, which says
-      // nothing. The message naming the missing module is at the TOP, and printing only
-      // the tail turned "vitest could not resolve X" into three closing braces.
+      // HEAD AND TAIL: a Node crash's tail is the version banner, and the missing-module message is at
+      // the TOP, so printing only the tail turned a resolution failure into three closing braces.
       const nonEmpty = seg.lines.filter((l) => l.trim() !== "");
-      // ONE LEADING SPACE, AND IT IS DELIBERATE. These two lines echo the sandbox
-      // tool's raw output, and GitHub's tsc problem matcher, which actions/setup-node
-      // registers for the WHOLE job, anchors at `^([^\s].*)`. Without the space a lint
-      // phase that found type errors made every green CI run carry failure annotations
-      // against a path and a line nobody wrote. Guarded by
-      // test/secondary-recompute.test.ts, which holds the matcher regexp verbatim.
+      // ONE LEADING SPACE, AND IT IS DELIBERATE: the problem matcher the runner registers for the whole
+      // job anchors at a non-space column, so without it a lint phase that found type errors made every
+      // green run carry annotations against a path nobody wrote.
       process.stderr.write(
         ` SECONDARY ${kind}: ${seg.lines.length} lines, ${why}. First: ${JSON.stringify(nonEmpty.slice(0, 3))}\n`
       );
@@ -622,9 +492,8 @@ function main(argv) {
     } catch {
       claimed = {};
     }
-    // THE CROSS-CHECK. metrics.json is written on a runner that has already run attempt
-    // code, so a disagreement is what a forged artifact looks like. The container value
-    // wins in every case; the disagreement is printed so the run log carries it.
+    // THE CROSS-CHECK: the artifact is written on a runner that has already run attempt code, so a
+    // disagreement is what a forged one looks like. The container value wins; the disagreement prints.
     for (const name of ["test_pass_rate", "lint_count"]) {
       const mine = /** @type {Record<string, unknown>} */ (recomputed)[name];
       const theirs = metric(claimed[name]);
@@ -663,16 +532,11 @@ function main(argv) {
   }
   /** @param {unknown} v */
   const numOrNull = (v) => (v === undefined || v === "" || v === "null" ? null : Number(v));
-  // THE ANCHOR IS NOT READ FROM THE ARTIFACT (audit 2026-09-07, Grok MAJOR 3).
-  // BUILD_PASSES comes from Job A's job output, which the Actions runner sets from the
-  // build step's own outcome. metrics.json is written on a runner that has already
-  // executed attempt code and is treated as hostile for this field. Absent is 0, not 1.
+  // THE ANCHOR IS NOT READ FROM THE ARTIFACT: it comes from the build job's own outcome, the
+  // artifact being written on a machine that has executed attempt code. Absent is 0, not 1.
   const buildPasses = process.env.BUILD_PASSES === "1" ? 1 : 0;
-  // THE RECOMPUTED SECONDARIES ARE NOT READ FROM THE ARTIFACT EITHER (2026-09-07).
-  // test_pass_rate and lint_count come from the sandbox run, through the score
-  // job's own step outputs. metrics.json is read for bundle_size_bytes and for
-  // NOTHING else: it is the one secondary no offline container can recompute,
-  // because measuring it means running the repo's bundler.
+  // NOR ARE THE RECOMPUTED SECONDARIES. The artifact is read for bundle_size_bytes and nothing
+  // else: that is the one secondary no offline container can recompute.
   const body = {
     namespace: process.env.IMPROVE_NAMESPACE,
     run_id: process.env.RUN_ID,
@@ -686,10 +550,8 @@ function main(argv) {
       bundle_size_bytes: metric(m.bundle_size_bytes),
     },
     holdout: { total: numOrNull(holdoutTotal) ?? 0, passed: numOrNull(holdoutPassed) ?? 0 },
-    // WHETHER THE MACHINE WORKED. Set by the count step when the holdout container
-    // did not finish or the suite never synced. The Worker leaves an attempt
-    // carrying ok: false UNJUDGED rather than reverting it, because none of the
-    // numbers above describe the attempt in that case.
+    // WHETHER THE MACHINE WORKED: an attempt carrying `ok: false` is left UNJUDGED rather than
+    // reverted, none of the numbers above describing the attempt in that case.
     environment:
       process.env.ENV_FAILURE === "1"
         ? { ok: false, reason: String(process.env.ENV_FAILURE_REASON || "").slice(0, 512) || null }

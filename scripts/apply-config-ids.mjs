@@ -1,67 +1,11 @@
 /**
- * Puts the redacted values into the bootstrapped wrangler configs.
+ * Puts the redacted values into the bootstrapped wrangler configs, for CI only.
  *
  *   node scripts/apply-config-ids.mjs
  *
- * FOR CI ONLY, and it exists because of the split .gitignore already
- * documents: each real `wrangler*.jsonc` is gitignored and its `.example` is
- * tracked, differing in exactly the values that cannot live in the repository.
- * `postinstall` bootstraps a checkout by COPYING the examples, so a fresh
- * checkout holds placeholders, and `wrangler deploy` against a placeholder
- * database_id would bind a database that does not exist.
- *
- * ## TWO CONFIGS SINCE 2026-08-29, AND THE SECOND ONE FAILS QUIETLY
- *
- * The watchdog Worker's `ALERT_EMAIL` is here for a sharper reason than the
- * ids. A placeholder database_id fails LOUDLY: wrangler binds nothing and the
- * deploy falls over. A placeholder ALERT_EMAIL deploys perfectly and mails
- * every alert to `alerts@example.com`, which is a reserved domain nobody reads,
- * so the watchdog would look healthy while being unable to reach anybody. That
- * is the exact failure shape this whole arc exists to end, reintroduced by the
- * fix for it, and it is why this refuses rather than warns.
- *
- * ## WHY TWO SECRETS AND NOT THE WHOLE FILE
- *
- * The obvious alternative is to store the real `wrangler.jsonc` as one secret
- * and write it out. That is refused: the file describes every binding, the
- * compatibility date, the flags and the Durable Object migrations, and a copy
- * of it in GitHub is a SECOND OWNER of all of that, free to drift from the
- * tracked example that `check:config` reconciles. Rule 17. Only the values that
- * cannot live in the repository come from secrets; everything else still comes
- * from the examples, which are the one description of these Workers.
- *
- * ## IT REFUSES RATHER THAN PATCHING PARTIALLY
- *
- * Five ways to fail and each one is named, because every one of them otherwise
- * produces a deploy that looks fine and binds the wrong thing:
- *
- *   a missing variable        nothing is written
- *   a config that is absent   nothing is written
- *   a placeholder not found   the example changed shape and this would have
- *                             silently patched nothing
- *   more than one occurrence  ambiguous, so it refuses rather than guessing
- *   a placeholder surviving   the write did not take
- *
- * ## THE ACCOUNT ID IS PATCHED TOO, SINCE 2026-08-29
- *
- * It was not, and it had to be from the moment it became a placeholder in the
- * example on 2026-08-28. The Worker READS `CLOUDFLARE_ACCOUNT_ID` at runtime:
- * it is the account the Analytics Engine SQL API is queried against, so a
- * deploy carrying the placeholder would leave the cockpit's origin-requests
- * panel reading a URL for an account of thirty-two zeros. deploy.yml already
- * held the secret and already refused without it; nothing spent it.
- *
- * ## THE IDS ARE NOT PRINTED
- *
- * They are account-scoped identifiers rather than credentials, and they are
- * still not echoed: this runs in a public-by-default log, the repository keeps
- * them out of git deliberately, and a script that prints them makes the
- * gitignore rule pointless. What is printed is WHICH field was patched.
- *
- * A TEXT REPLACEMENT, never a parse-and-reserialise. Re-emitting the JSON would
- * strip every comment in a file whose comments are load bearing, and would turn
- * a two-value patch into a whole-file rewrite that `check:config` then has to
- * reconcile against the example line by line.
+ * BOUNDARY: it patches named placeholders by text and REFUSES rather than patching partially, five
+ * ways, each named. It never prints an id, only which field was patched, and it never
+ * parse-and-reserialises, which would strip comments this repo's configs depend on.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -77,9 +21,9 @@ function refuse(why) {
 }
 
 /**
- * The placeholders the tracked example carries. Stated here as the values this
- * script expects to REPLACE, so a change to the example fails loudly here
- * rather than leaving a deploy bound to a database that does not exist.
+ * The placeholders the tracked example carries, stated as the values this script expects to
+ * REPLACE, so a change to the example fails loudly here rather than leaving a deploy bound to a
+ * database that does not exist.
  */
 const FIELDS = [
   {
@@ -113,25 +57,11 @@ const FIELDS = [
 ];
 
 /**
- * The needle for one field: its JSON KEY and its placeholder together.
- *
- * ANCHORED TO THE KEY SINCE 2026-08-29, AND THE BARE FORM WAS ALREADY BROKEN.
- * The needle used to be the placeholder string alone, which was unambiguous
- * only while every placeholder differed. On 2026-08-28 `CLOUDFLARE_ACCOUNT_ID`
- * became a placeholder in the example and it is THIRTY-TWO ZEROS, exactly like
- * the KV namespace id, so the occurrence count for the KV field became 2 and
- * this script refused every run. The deploy button has been unable to complete
- * since that day.
- *
- * That refusal was the RIGHT behaviour and is why the defect is a stopped
- * deploy rather than a Worker bound to the wrong namespace: the ambiguity check
- * was added precisely so a duplicated placeholder could not be guessed at. What
- * was missing was a needle specific enough for two fields to share a value,
- * which they now legitimately do.
- *
- * Found 2026-08-29 by running the UNMODIFIED script from HEAD against the
- * tracked example, which is the control that proves this is not a defect the
- * same session introduced.
+ * The needle for one field: its JSON KEY and its placeholder together. The placeholder alone was
+ * unambiguous only while every placeholder differed, and two fields legitimately share a value of
+ * thirty-two zeros, so the occurrence count became 2 and this refused every run. That refusal was
+ * RIGHT, which is why the defect was a stopped deploy rather than a Worker bound to the wrong
+ * namespace; what was missing was a needle specific enough for two fields to share a value.
  *
  * @param {{ key: string, placeholder: string }} field
  */
@@ -165,9 +95,8 @@ for (const config of CONFIGS) {
       refuse(`${field.env} is the placeholder value itself, which patches nothing.`);
     }
 
-    // Counted before replacing. `replace` on a string swaps the FIRST match and
-    // reports nothing, so a needle that appears twice would leave one behind
-    // and this would print success.
+    // Counted before replacing: `replace` on a string swaps the FIRST match and reports nothing, so
+    // a needle appearing twice would leave one behind and this would print success.
     const needle = needleFor(field);
     const occurrences = text.split(needle).length - 1;
     if (occurrences === 0) {
@@ -191,8 +120,8 @@ for (const config of CONFIGS) {
   writeFileSync(path, text, "utf8");
 
   /*
-   * READ BACK, because a write that did not take is the failure this whole file
-   * exists to prevent, and it is invisible from the exit code of writeFileSync.
+   * READ BACK, because a write that did not take is the failure this file exists to prevent and is
+   * invisible from the exit code of writeFileSync.
    */
   const after = readFileSync(path, "utf8");
   for (const field of FIELDS.filter((f) => f.config === config)) {
