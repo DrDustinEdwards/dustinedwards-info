@@ -19,17 +19,15 @@ export default {
 
   npm run check:publications
 
-Pure: two committed JSON files, one generated module, and \`stat\` on the PDFs. It cannot see
-whether the registry data is still true, so the assertions needing the network stay in the
-pipeline; these run here because a check that runs on a refresh never runs on a clone. Every
-"no record has property X" carries the count that read, since a scan that examined nothing
-reports a clean sweep. Hard rule 18's shape, applied to a check.`,
+Pure: two committed JSON files, a generated module and \`stat\` on the PDFs. It cannot see
+whether the registry data is still true, so the networked assertions stay in the pipeline.
+Every "no record has property X" carries the count that read it, hard rule 18's shape.`,
   ],
   "scripts/check-publications.mjs#2": [
     "CONTRACT",
     "the argument order and the one reason for the name; section 17's mechanism and this file's own failed spelling go to the history document",
-    `Condition FIRST, and named \`ok\` because five other gates name it that: a call copied between
-gates is then a ReferenceError rather than a pass with the label in the condition slot.
+    `Condition FIRST, and named \`ok\` as five other gates name it, so a copied call is a
+ReferenceError rather than a pass with the label in the condition slot.
 
 @param {boolean} ok
 @param {string} label
@@ -39,15 +37,13 @@ gates is then a ReferenceError rather than a pass with the label in the conditio
   "scripts/check-publications.mjs#5": [
     "WHY",
     "the fail-closed scope rule with its citation, in one line",
-    `SCOPE FIRST: every "no record does X" assertion over an empty array passes, and proving the
-scope non-empty is hard rule 10's first discipline.`,
+    `SCOPE FIRST: every "no record does X" passes over an empty array, hard rule 10's first line.`,
   ],
   "scripts/check-publications.mjs#6": ["CONTRACT", "section marker, rule padding cut", `the artifact is fresh`],
   "scripts/check-publications.mjs#7": [
     "WHY",
     "why it is first, in one line",
-    `FIRST, because every other content assertion reads the SOURCES and only this one catches a
-hand-edit of the generated file.`,
+    `FIRST, because only this one catches a hand-edit of the generated file.`,
   ],
   "scripts/check-publications.mjs#8": ["CONTRACT", "section marker, rule padding cut", `identity`],
   "scripts/check-publications.mjs#9": ["CONTRACT", "section marker, rule padding cut", `the PDF set`],
@@ -60,20 +56,17 @@ hand-edit of the generated file.`,
   "scripts/check-publications.mjs#12": [
     "WHY",
     "the one way it goes stale, in one line; what it makes gateable and the extraction cost go to the history document",
-    `A committed derivative of a committed binary goes stale one way, the binary replaced and
-nothing re-run, so the claim is about bytes rather than existence.`,
+    `A committed derivative goes stale one way, so the claim is about bytes rather than existence.`,
   ],
   "scripts/check-publications.mjs#13": [
     "WHY",
     "both directions, one clause each",
-    `Both directions: a hosted PDF with no text loses its twin's full text, and an entry for an
-unhosted record is text this site no longer serves the source of.`,
+    `Both directions: a hosted PDF with no text loses its twin, and the reverse serves no source.`,
   ],
   "scripts/check-publications.mjs#14": [
     "WHY",
     "why bytes and not size, in one line",
-    `Hashed, never size or mtime: a re-exported PDF of the same length is the case that slips
-through, and the likely one.`,
+    `Hashed, never size or mtime: a re-exported PDF of the same length is the likely case.`,
   ],
   "scripts/check-publications.mjs#15": [
     "WHY",
@@ -83,55 +76,46 @@ through, and the likely one.`,
   "scripts/check-publications.mjs#18": [
     "NUMBER",
     "why the threshold is low; the measured smallest extraction goes to the history document",
-    `A scanned PDF with no text layer extracts to nothing and every assertion above still passes.
-The threshold looks for a failed extraction, not for length.`,
+    `A scanned PDF extracts to nothing and everything above still passes; this looks for that.`,
   ],
   "scripts/check-publications.mjs#19": [
     "WHY",
     "what the field is for, in one line",
-    `\`access\` exists so a record can move between self-hosted and external without a schema
-change; this stops it being moved halfway.`,
+    `\`access\` lets a record move between self-hosted and external; this stops a halfway move.`,
   ],
   "scripts/check-publications.mjs#20": ["CONTRACT", "section marker, rule padding cut", `external ids`],
   "scripts/check-publications.mjs#21": [
     "NUMBER",
     "which form and that it is a ruling; the oa.fcgi tally goes to the history document",
-    `LANDING-PAGE form, which is a ruling: it answers for every PMCID here, including the ones the
-open-access API refuses.`,
+    `LANDING-PAGE form, a ruling: it answers for every PMCID, including those the API refuses.`,
   ],
   "scripts/check-publications.mjs#22": ["CONTRACT", "section marker, rule padding cut", `abstracts`],
   "scripts/check-publications.mjs#23": [
     "WHY",
     "where the character lands and why the count is beside it; the decode history goes out",
-    `These land in a \`<script type="application/ld+json">\` block, where an unescaped \`<\` ends the
-element early. Counted too, because a sweep that read none reports a clean corpus.`,
+    `These land in a \`<script type="application/ld+json">\` block, where \`<\` ends the element early.`,
   ],
   "scripts/check-publications.mjs#24": ["CONTRACT", "section marker, rule padding cut", `topics`],
   "scripts/check-publications.mjs#25": [
     "WHY",
     "why the TOPICS block, in one line; the incident's tally goes to the history document",
-    `Out of the GENERATED module's TOPICS block, not the record list: a matcher anchored on indent
-swept in every publication id as a topic id.`,
+    `Out of the GENERATED module's TOPICS block: an indent-anchored matcher swept in every id.`,
   ],
   "scripts/check-publications.mjs#26": ["CONTRACT", "section marker, rule padding cut", `slugs, pages and PDFs`],
   "scripts/check-publications.mjs#27": [
     "WHY",
     "what a collision costs, in one line; the worked example goes out",
-    `The slug is LOSSY, so a collision means two papers sharing a URL, one unreachable and still
-in the sitemap.`,
+    `The slug is LOSSY, so a collision is two papers on one URL, one of them still in the sitemap.`,
   ],
   "scripts/check-publications.mjs#28": [
     "WHY",
     "why the path is a literal and the quiet symptom; the media-library reasoning goes to the history document",
-    `\`pdfPath\` stays a LITERAL because \`build:template-refs\` matches asset references as literal
-strings. The drift's symptom is \`citation_pdf_url\` outside the page's directory, which Scholar
-declines without saying so.`,
+    `\`pdfPath\` stays a LITERAL because \`build:template-refs\` matches asset references as literals.`,
   ],
   "scripts/check-publications.mjs#29": [
     "WHY",
     "the property against the mechanism, in one line",
-    `The PROPERTY Scholar cares about: point \`paperPdfPath\` elsewhere and the equality above still
-passes while this does not.`,
+    `The PROPERTY Scholar cares about: \`paperPdfPath\` can move while the equality above passes.`,
   ],
   "scripts/check-publications.mjs#30": ["CONTRACT", "section marker, rule padding cut", `the redirect map`],
   "scripts/check-publications.mjs#31": [
@@ -144,25 +128,16 @@ a 404.`,
   "scripts/check-publications.mjs#33": [
     "WHY",
     "what the list means and the three states, which nothing else records; the ruling's date, the review it overrode and the per-record tally go to the history document",
-    `AN ALLOWLIST, NOT A RULE. Every PDF stays up by ruling, so this keeps that deliberate: a
-hosted PDF with no licence and no entry reds naming the DOI. Not "these are fine", "these were
-looked at".
-
-\`licenseSource\` has three states and the middle is why it exists: a licence, tdm-only for
-terms that licence redistribution to nobody, or null for no terms recorded. Collapsing the
-middle into the last hides that those were checked.`,
+    `AN ALLOWLIST, NOT A RULE: every PDF stays up by ruling, so a hosted PDF with no licence and no
+entry reds. \`licenseSource\` has three states and the middle is why it exists, tdm-only being
+terms that licence redistribution to nobody; collapsing it hides that those were checked.`,
   ],
   "scripts/check-publications.mjs#34": [
     "WHY",
     "what bronze means, in one line; the per-paper tally goes out",
-    `Bronze is free to read on the publisher's site with no licence at all, which the publisher
-can reverse.`,
+    `Bronze is free to read on the publisher's site with no licence, which they can reverse.`,
   ],
-  "scripts/check-publications.mjs#35": [
-    "WHY",
-    "what this group is; the ruling number goes to the history document",
-    `Not open access at all.`,
-  ],
+  "scripts/check-publications.mjs#35": ["WHY", "what this group is; the ruling number goes to the history document", `Not open access at all.`],
   "scripts/check-publications.mjs#36": ["CONTRACT", "one line already; kept"],
   "scripts/check-publications.mjs#38": [
     "WHY",
@@ -172,17 +147,15 @@ can reverse.`,
   "scripts/check-publications.mjs#39": [
     "WHY",
     "what a null source would mean, in one line",
-    `A null source on an unlicensed record would mean nobody has looked, which is the state this
-block prevents.`,
+    `A null source on an unlicensed record would mean nobody has looked.`,
   ],
   "scripts/check-publications.mjs#40": ["CONTRACT", "section marker, rule padding cut", `the Highwire tag set`],
   "scripts/check-publications.mjs#41": [
     "CONTRACT",
     "why not the render, that both halves are needed, and why the builder throws; check:browser's boundary and Scholar's quoted minimum go to the history document",
-    `Not against the render: \`createRoutesStub\` never mounts \`<Meta />\`, so an assertion over it
-passes by finding nothing. Both halves are asserted, the builder and the route calling it,
-because either alone is green while the page is wrong. The builder THROWS rather than emit a
-partial set, since Scholar indexes nothing missing title, first author or year.`,
+    `Not against the render: \`createRoutesStub\` never mounts \`<Meta />\`. Both halves, the builder
+and the route calling it, since either alone is green while the page is wrong; and it THROWS
+rather than emit a partial set.`,
   ],
   "scripts/check-publications.mjs#43": [
     "WHY",
@@ -192,8 +165,7 @@ partial set, since Scholar indexes nothing missing title, first author or year.`
   "scripts/check-publications.mjs#44": [
     "CONTRACT",
     "Scholar's rule and why it is on the tag, in one line",
-    `Scholar's rule, asserted on the tag rather than the path helper because this is the string
-that ships.`,
+    `Scholar's rule, asserted on the tag rather than the helper, because that is what ships.`,
   ],
   "scripts/check-publications.mjs#45": [
     "WHY",
@@ -204,60 +176,51 @@ that ships.`,
   "scripts/check-publications.mjs#47": [
     "WHY",
     "what a gate can say here and why the count carries it; the tense-bound 'today every record is null' goes out",
-    `SHAPE ONLY: a gate cannot check that a sentence is any good, and a green gate here must not
-read as "the summaries are fine". While the field is unfilled every assertion below passes
-over an empty set, so the count of non-null summaries is reported.`,
+    `SHAPE ONLY: a green gate here must not read as "the summaries are fine", and while the field
+is unfilled everything below passes over an empty set, so the count is reported.`,
   ],
   "scripts/check-publications.mjs#48": [
     "WHY",
     "the rule and that it is deliberately loose, in one line",
-    `Terminal punctuation, space, capital. Deliberately loose: a nudge toward the format, not a
-grammar checker.`,
+    `Terminal punctuation, space, capital. Deliberately loose: a nudge, not a grammar checker.`,
   ],
   "scripts/check-publications.mjs#49": [
     "WHY",
     "why the hook cannot reach these, in one line",
-    `The PreToolUse hook cannot reach these: a person edits this JSON by hand. Written as escapes
-so this file stays greppable.`,
+    `The PreToolUse hook cannot reach these, and the escapes keep this file greppable.`,
   ],
   "scripts/check-publications.mjs#50": ["CONTRACT", "section marker, rule padding cut", `cited by`],
   "scripts/check-publications.mjs#51": [
     "WHY",
     "what a dated artifact can be checked for, in one line",
-    `DATED EVIDENCE, so these assert that it describes THIS corpus, is not truncated, and says
-when it was read, never its numbers.`,
+    `DATED EVIDENCE: these assert it describes THIS corpus and says when, never its numbers.`,
   ],
   "scripts/check-publications.mjs#52": [
     "WHY",
     "what each half catches; the 52-against-50 record goes to the history document",
-    `A list over the cap means the fetcher stopped honouring it; a \`total\` under the list length
-means the two came from different reads.`,
+    `A list over the cap means the fetcher stopped honouring it; a short \`total\` means two reads.`,
   ],
   "scripts/check-publications.mjs#53": [
     "WHY",
     "what would render, in one line",
-    `A BARE NAME: the page builds its own link, so a URL that slipped through renders a doubled
-\`https://doi.org/\`.`,
+    `A BARE NAME: the page builds its own link, so a URL renders a doubled \`https://doi.org/\`.`,
   ],
   "scripts/check-publications.mjs#56": ["CONTRACT", "section marker, rule padding cut", `exports`],
   "scripts/check-publications.mjs#57": [
     "CONTRACT",
     "the two properties, one clause each",
-    `DETERMINISTIC: a generation timestamp would defeat every byte comparison downstream, which is
-why the header carries none. COMPLETE: a writer that dropped a record silently produces a file
-that parses and is missing a paper.`,
+    `DETERMINISTIC, since a timestamp defeats every byte comparison downstream, and COMPLETE, since
+a writer that dropped a record produces a file that parses.`,
   ],
   "scripts/check-publications.mjs#58": [
     "WHY",
     "the prohibition and its because, in one line",
-    `Read as DATA, never by matching source text: a matcher anchored on indent matches whatever
-else sits there and goes wrong by counting too much.`,
+    `Read as DATA: an indent-anchored matcher matches whatever else sits there and counts too much.`,
   ],
   "scripts/check-publications.mjs#59": [
     "WHY",
     "why it is stated twice and what keeps them equal, in one line",
-    `Stated twice because importing the route module here would drag React along, so the route's
-literal is parsed out and compared against this one.`,
+    `Stated twice because importing the route module would drag React in, so its literal is parsed.`,
   ],
   "scripts/check-publications.mjs#60": [
     "WHY",
@@ -268,14 +231,12 @@ literal is parsed out and compared against this one.`,
   "scripts/check-publications.mjs#61": [
     "WHY",
     "why it matters here, in one line",
-    `Asserted where it MATTERS: a lowercased genus is wrong under the nomenclature codes rather
-than merely ugly.`,
+    `Asserted where it MATTERS: a lowercased genus is wrong under the nomenclature codes.`,
   ],
   "scripts/check-publications.mjs#62": [
     "WHY",
     "the prohibition and its because, in one line; the five-record tally goes out",
-    `Through \`organismsIn\`, the matcher the code uses: a gate that asks a different question
-reports a defect that is its own.`,
+    `Through \`organismsIn\`, the matcher the code uses, or the gate reports a defect of its own.`,
   ],
   "scripts/check-publications.mjs#63": [
     "NUMBER",
@@ -286,128 +247,108 @@ reports a defect that is its own.`,
   "scripts/check-publications.mjs#65": [
     "WHY",
     "why a count and why it is not merged; the July record goes to the history document",
-    `A COUNT, so a second preprint is a decision somebody makes here. Not merged into the
-published record, so every displayed citation figure matches the page a reader lands on.`,
+    `A COUNT, so a second preprint is a decision somebody makes here, and never merged, so every
+citation figure matches the page a reader lands on.`,
   ],
   "scripts/check-publications.mjs#66": ["CONTRACT", "section marker, rule padding cut", `the markdown twins`],
   "scripts/check-publications.mjs#67": [
     "WHY",
     "why build product needs this most and why nothing is written first",
-    `Nothing imports the twins, so a build that never ran fails no type check and the deploy
-uploads a site whose llms.txt advertises 404s. Compared in this process and never written
-first, because a gate that repairs its subject cannot fail.`,
+    `Nothing imports the twins, so a build that never ran ships an llms.txt advertising 404s.
+Compared in this process and never written first: a gate that repairs its subject cannot fail.`,
   ],
   "scripts/check-publications.mjs#68": [
     "WHY",
     "what the prune failing leaves, in one line",
-    `Asserts the prune ran: a corrected DOI leaves a file nothing overwrites. Not recursive; the
-subdirectories hold the PDFs.`,
+    `Asserts the prune ran: a corrected DOI leaves a file nothing overwrites.`,
   ],
   "scripts/check-publications.mjs#69": [
     "WHY",
     "why both directions and why not a count; the URL count goes to the history document",
-    `A hand-maintained list beside a generated set, so both directions: a twin absent from it is a
-file nothing points at, a line with no file tells an agent to fetch a 404. Matched on the URL,
+    `A hand-maintained list beside a generated set, so both directions, and matched on the URL,
 because a count passes on a list naming the wrong papers.`,
   ],
   "scripts/check-publications.mjs#70": [
     "WHY",
     "what a lost twin still does, in one line",
-    `A twin that lost its text would still generate, match on disk, and be advertised. Compared
-against the artifact's own count, so no threshold is invented.`,
+    `A twin that lost its text would still generate and be advertised. Against the artifact's count.`,
   ],
   "scripts/check-publications.mjs#71": ["WHY", "why half, and what the twin does to the pages; two lines already"],
   "scripts/check-publications.mjs#72": [
     "WHY",
     "which boundary and why the needle is anchored, in one line",
-    `Every boundary where text becomes something a reader reads decodes these. Anchored to the
-named references, not a bare \`&\`, because frontmatter URLs carry query strings.`,
+    `Anchored to the named references, not a bare \`&\`: frontmatter URLs carry query strings.`,
   ],
   "scripts/check-publications.mjs#73": ["CONTRACT", "section marker, rule padding cut", `search, the MCP and Ask, all three`],
   "scripts/check-publications.mjs#74": [
     "WHY",
     "what each half alone would assert, in one line",
-    `Building without reading asserts that the builders work; reading without building asserts
-that a file has lines in it.`,
+    `Building without reading asserts the builders work; reading without building asserts lines.`,
   ],
   "scripts/check-publications.mjs#77": ["WHY", "why the URL is compared rather than assumed; two lines already"],
   "scripts/check-publications.mjs#78": [
     "WHY",
     "why full text is out of the index and why no threshold; the index size goes to the history document",
-    `Classic search shows the line it matched, and two-column machine text would snippet the
-mangled line the term fell on. By SIZE against the artifact's own measurement, so no threshold
-is invented.`,
+    `Classic search shows the line it matched, so two-column text would snippet a mangled one.`,
   ],
   "scripts/check-publications.mjs#79": [
     "WHY",
     "why over the real corpus, in one line",
-    `The asymmetry between \`keyForUrl\` and \`urlForKey\` is why this runs over the real corpus: a
-key that did not round-trip uploads fine and cites a 404.`,
+    `The asymmetry between \`keyForUrl\` and \`urlForKey\`: a key that did not round-trip cites a 404.`,
   ],
   "scripts/check-publications.mjs#80": [
     "WHY",
     "which spelling the uploader uses, in one line",
-    `Against \`paperMarkdownPath\`, which is what the build writes and the uploader fetches through,
-rather than the literal the assertion above compares.`,
+    `Against \`paperMarkdownPath\`, what the build writes and the uploader fetches through.`,
   ],
   "scripts/check-publications.mjs#81": [
     "WHY",
     "what the two halves own, in one line",
-    `The one owner must produce a usable URL for every record, and the page must not have grown a
-second copy of it.`,
+    `The one owner must produce a usable URL, and the page must not have grown a second copy.`,
   ],
   "scripts/check-publications.mjs#82": [
     "WHY",
     "the property and why it is decoded; the failed first URL goes to the history document",
-    `THE QUOTED TITLE AND NOTHING ELSE, because the classic index ANDs its terms. Asserted by
-DECODING the query back, not by shape: a shape test passes on any quoted string, and what must
-be caught is a word creeping in beside the phrase.`,
+    `THE QUOTED TITLE AND NOTHING ELSE, because the classic index ANDs its terms, asserted by
+DECODING the query back: a shape test passes on any quoted string.`,
   ],
   "scripts/check-publications.mjs#83": [
     "WHY",
     "what a quote would do; the measured 'none of the 36' goes to the history document",
-    `\`query.mjs\` reads a quoted run as an exact phrase, so a title carrying its own quote would
-split it and search for something else.`,
+    `\`query.mjs\` reads a quoted run as a phrase, so a title carrying a quote splits it.`,
   ],
   "scripts/check-publications.mjs#84": [
     "WHY",
     "why stripped and the stripper's limit, in one line",
-    `Comments stripped, because the route's own comment names \`paperAskUrl\`. Whole-line and block
-only, so a trailing comment could still satisfy this.`,
+    `Comments stripped, because the route's own comment names \`paperAskUrl\`.`,
   ],
   "scripts/check-publications.mjs#85": ["CONTRACT", "section marker, rule padding cut", `retractions, corrections, versions`],
   "scripts/check-publications.mjs#86": [
     "WHY",
     "why the count is in the label and what the other half is; the sweep's tally goes to the history document",
-    `The count is in the label because a bare "none of them" from a scan that read nothing looks
-exactly like this. The render half is \`test/publication-update-notice.test.mjs\`.`,
+    `The count is in the label, or a scan that read nothing looks exactly like a clean corpus.`,
   ],
   "scripts/check-publications.mjs#87": [
     "WHY",
     "what it refuses when the set fills, in one line",
-    `Vacuous while the set is empty, which is why the count is beside it: it refuses a malformed
-notice before it renders \`https://doi.org/undefined\`.`,
+    `Vacuous while the set is empty, which is why the count is beside it.`,
   ],
   "scripts/check-publications.mjs#88": ["CONTRACT", "section marker, rule padding cut", `accessions, from the PDFs`],
   "scripts/check-publications.mjs#89": [
     "WHY",
     "why the anchor and why both directions; the per-paper accessions go to the history document",
-    `THE DATA-AVAILABILITY STATEMENT IS THE ANCHOR, because a plain regex over a PDF pulls in the
-COMPARISON phages' accessions, which are another paper's deposit. Both directions: one in the
-text and not the corpus is a deposit nothing links, one in the corpus the statement does not
-name is a claim the PDF does not support.`,
+    `THE DATA-AVAILABILITY STATEMENT IS THE ANCHOR: a plain regex pulls in the comparison phages'
+accessions. Both directions, a deposit nothing links and a claim the PDF does not support.`,
   ],
   "scripts/check-publications.mjs#91": [
     "WHY",
     "what a wrong registry URL looks like, in one line",
-    `An SRA run under a nuccore URL is a 404 that looks like a working link, and the two grammars
-are close enough that one builder would be the obvious mistake.`,
+    `An SRA run under a nuccore URL is a 404 that looks like a working link.`,
   ],
   "scripts/check-publications.mjs#92": ["CONTRACT", "section marker, rule padding cut", `done`],
   "scripts/check-publications.mjs#93": [
     "NUMBER",
     "the measurement rule and the slack convention; eleven dated re-measurements and both first-run findings go to the history document",
-    `MEASURED BY RUNNING THIS GATE, never summed. Slack of two: this count moves only when an
-assertion is written, so it needs no room to breathe.`,
+    `MEASURED BY RUNNING THIS GATE, never summed. Slack of two: it moves only on a new assertion.`,
   ],
 };
