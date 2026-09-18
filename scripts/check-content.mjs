@@ -1,18 +1,10 @@
 /**
  * Gate for the content build and the committed artifacts under `content/generated/`.
  *
+ *   npm run check:content
+ *
  * BOUNDARY: it renders and compares locally, never in a Worker and never against D1, so whether
  * the rows match what it rendered is ship's drift report's.
- *
- *   1. The corpus render is valid and DETERMINISTIC, rendered twice in one process and
- *      byte-compared, since nondeterminism surfaces later as false render drift.
- *   1b. The About page on the same footing, its bytes going into the WORKER BUNDLE.
- *   2. `template-refs.json`, byte-compared against a fresh scan.
- *   3. `assets.json`, against a walk of `public/`, with the gitignore tripwire.
- *   4. MATH OUTPUTS: one carries the rendered form and every other the TeX an author typed.
- *   5. `katex.generated.css` and its faces, derived fresh and reconciled both ways.
- *
- * Fails closed: a generator that throws is a failure, never a pass.
  */
 
 import { readFile, readdir, stat } from "node:fs/promises";

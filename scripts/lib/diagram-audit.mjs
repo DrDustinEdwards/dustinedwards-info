@@ -1,21 +1,10 @@
 /**
- * The tokens-only audit over a rendered diagram SVG.
+ * The tokens-only audit over a rendered diagram SVG, run by the build on every asset it writes and
+ * by the gate over every asset already committed.
  *
- * ONE implementation, two callers: the build runs it on every asset it writes, so an invented
- * colour fails at the moment it is invented, and the gate runs it over every committed asset, so
- * an asset written before a rule existed cannot survive by having been written first.
- *
- * WHAT IT ASSERTS: every colour on the part of the SVG a reader can SEE comes from the palette.
- * mermaid ships a stylesheet covering every feature it can draw, most of which this pipeline never
- * produces, and an allowlist of "black is fine" is what a real black hides behind. So reachability
- * is computed structurally: a CSS rule counts when its selector matches an element in THIS
- * document, and a colour attribute counts unless it sits in an unreferenced `<defs>` subtree or a
- * matching rule sets the same property.
- *
- * That last clause is the cascade, not a convenience: a presentation attribute is the weakest
- * author-level declaration in SVG, and mermaid writes a literal fill and then paints over it.
- * Reading the attribute as shipped reports violations on a correct diagram; reading it as dead
- * without checking for the rule that kills it lets a real one through.
+ * BOUNDARY: it asserts that every colour a reader can SEE comes from the palette, computing
+ * reachability structurally rather than from an allowlist, so what it cannot judge is a rule or an
+ * attribute this document never paints with.
  */
 
 import { parseHTML } from "linkedom";

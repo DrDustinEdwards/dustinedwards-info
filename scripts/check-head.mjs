@@ -4,11 +4,8 @@
  *   npm run check:head
  *   node scripts/check-head.mjs --ref <branch|sha>
  *
- * IT OBSERVES A CHECKOUT, NOT THE DEPLOY: it extracts a ref into a throwaway worktree and runs
- * gates there, catching work that is on disk and not committed, and line-ending divergence
- * between what you have and what a clone gets. IT INHERITS EVERY EXCLUDED GATE'S BLINDNESS, each
- * carrying its grounds at EXCLUDED. THE COUNTS ARE NOT WRITTEN HERE: they were, and went stale.
- * THE TYPECHECK IS COLD, ALWAYS: incremental state would skip against hashes taken from DISK.
+ * BOUNDARY: it observes a CHECKOUT, not the deploy, and it inherits every excluded gate's
+ * blindness, each carrying its grounds at EXCLUDED.
  */
 
 import { spawnSync } from "node:child_process";

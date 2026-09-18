@@ -4,14 +4,8 @@
  *   npm run check:diagrams
  *
  * BOUNDARY: the contract, asset coverage and a colour audit over committed bytes. It does NOT run
- * mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes.
- * `check:content` catches a REFERENCE that drifted; what it cannot catch is a key that changed
- * while the asset did not, which is a broken image in the middle of an article and invisible to
- * every other gate, the artifact being internally consistent.
- *
- *   1. The contract, every rule paired with its negative.
- *   2. Coverage, both directions between referenced keys and assets on disk.
- *   3. Colour, through the same module the build audits with.
+ * mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes as
+ * long as its key, its alt and its colours are right.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";

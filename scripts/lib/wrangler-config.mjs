@@ -1,13 +1,9 @@
 /**
- * Reads resource names out of the real wrangler config.
+ * Reads resource names out of the real wrangler config, because nothing that talks to a bucket may
+ * name one in a string literal: a stale literal aims a DELETE at whatever still answers to it.
  *
- * **Nothing that talks to a bucket may name one in a string literal.** That was latent while the
- * card builder only ever PUT objects and became live when the prune landed, because a stale
- * literal would then aim a DELETE at whatever bucket still answered to that name. Deriving it
- * makes a rename a rename everywhere, and a bucket that no longer exists an immediate error.
- *
- * This reads the REAL file, because the example carries placeholder ids and a build script needs
- * the truth; `check:config` is what keeps the two describing the same binding surface.
+ * BOUNDARY: it reads the REAL file, the example carrying placeholder ids that a build script
+ * cannot use, and `check:config` is what keeps the two describing the same binding surface.
  */
 
 import { readFileSync } from "node:fs";

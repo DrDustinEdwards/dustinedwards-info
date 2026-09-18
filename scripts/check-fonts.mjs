@@ -1,14 +1,11 @@
 /**
- * Gate over the self-hosted fonts: every `@font-face` DECLARATION must be true of the BINARY it
- * names.
+ * Gate: every `@font-face` DECLARATION must be true of the BINARY it names.
  *
- * THE HOLE THIS FILLS: `font-weight: 100 900` is a claim about a file and nothing checked it.
- * These faces were committed from a CDN, so they have no upstream to compare against, and a
- * browser CLAMPS an out-of-range axis value SILENTLY. Per block that names a file: weight range
- * against `wght` EXACTLY, style against the italic evidence, stretch against `wdth`, family
- * against the file's name table, and every axis requested anywhere must EXIST and CONTAIN the
- * value. THE BASELINE, because all of that survives a re-subset: each binary carries a pinned
- * digest, and `--update` rewrites it, deliberately loud. BOUNDARY: it reads DISK, never the wire.
+ *   npm run check:fonts [-- --update]
+ *
+ * BOUNDARY: it reads DISK, never the wire. Per block that names a file it compares the declared
+ * weight range, style, stretch and family against the file's own tables, and pins each binary by
+ * digest so a re-subset with its axes intact cannot pass.
  */
 
 import { createHash } from "node:crypto";

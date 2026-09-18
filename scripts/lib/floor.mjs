@@ -1,22 +1,10 @@
 /**
  * One owner for the floor comparison, and for the line that proves it ran.
  *
- * A floor set once and never re-measured sinks under its count as the gate grows, and the gap is
- * invisible, so a floor far under its count is a skipped block waiting to happen. The repair is to
- * make the gap MACHINE-READABLE on every successful run, which `check:floors` reads back.
- *
- * IT RETURNS A STRING RATHER THAN ASSERTING because three reporter shapes coexist BY DESIGN, named
- * differently so a call copied between gates is a ReferenceError rather than a silent pass. A
- * shared helper would have to pick one, or take a reporter callback beside a label and a count,
- * which re-creates the argument-order hazard the rename cured. So this owns the COMPARISON and
- * both MESSAGES and the call site keeps its own reporter.
- *
- * THE SUCCESS LINE IS THE PRODUCT, printed only when the floor HOLDS. The gate name is IN the line
- * rather than inferred from which process printed it, because `check:head` runs the tier inside a
- * worktree and every child gate's floor lines surface in ITS stdout. A breach already fails the
- * gate loudly, and a floor line there would let a number be read from a run that had refused.
- *
- * This is the tenth vacuity class, hard rule 10.
+ * BOUNDARY: it owns the COMPARISON and both MESSAGES and asserts nothing itself, returning a
+ * string so each call site keeps its own reporter, and the success line it prints on a HOLDING
+ * floor is what `check:floors` reads back. Making a shared helper assert instead would be the
+ * tenth vacuity class of hard rule 10.
  */
 
 /**

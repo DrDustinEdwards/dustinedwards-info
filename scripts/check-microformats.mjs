@@ -5,9 +5,7 @@
  *
  * BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
  * sees markup and nothing else, and hard rule 7 is why it is not folded into `check:content`.
- * A REAL PARSER, NOT A REGEX: `u-url` on an element with no href passes a search and gives a
- * reader nothing. FIXTURE INDEPENDENCE, hard rule 10: `dt-published` is compared against a
- * separate read of the markdown. FAILS CLOSED on an empty corpus or a parse that finds nothing.
+ * Its expected values come from a separate read of the markdown, which is hard rule 10.
  */
 
 import { readFile } from "node:fs/promises";

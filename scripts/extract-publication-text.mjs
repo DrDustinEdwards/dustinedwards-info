@@ -3,19 +3,9 @@
  *
  *   node scripts/extract-publication-text.mjs
  *
- * WHY A COMMITTED ARTIFACT AND NOT A BUILD STEP: it parses tens of megabytes of PDF to produce
- * bytes that change only when a PDF does, which no gate run should pay for, and it is EVIDENCE
- * about bytes that are themselves committed, so `check:publications` hashes each PDF and compares
- * against the digest recorded here.
- *
- * THE TEXT IS STORED VERBATIM, PER PAGE. The extraction is one owner and the PRESENTATION is
- * another, so a normalisation baked in here would be invisible to the twin and unfixable without
- * re-running over every PDF. And the obvious normalisation is wrong more often than it looks: a
- * hyphenated line break is sometimes a joined word and sometimes not, and nothing here can tell
- * those apart without a dictionary.
- *
- * WHAT IT IS FOR, WHICH BOUNDS HOW GOOD IT HAS TO BE: retrieval, not citation. Nothing on the
- * rendered page is derived from this file.
+ * BOUNDARY: the text is stored VERBATIM, per page, with no de-hyphenation or column repair, so
+ * what it is fit for is RETRIEVAL rather than citation; the presentation belongs to the twin that
+ * joins the pages, and nothing on the rendered page is derived from this file.
  */
 
 import { createHash } from "node:crypto";

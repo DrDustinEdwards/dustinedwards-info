@@ -1,7 +1,8 @@
 /**
- * Node adapter for the shared markdown pipeline. The pipeline itself lives where the Worker can
- * import it too, and everything Node-only stays here; the editor supplies its own resolver over
- * HTTP, so both callers render identical HTML from identical bytes.
+ * Node adapter for the shared markdown pipeline.
+ *
+ * BOUNDARY: the pipeline itself lives where the Worker can import it too and everything Node-only
+ * stays here, so the two callers differ in how they read a file and in nothing else.
  */
 
 import { readFile } from "node:fs/promises";

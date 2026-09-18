@@ -1,16 +1,10 @@
 /**
- * Resolving the Python a gate needs, the SAME WAY THE HOOKS DO.
+ * Resolving the Python a gate needs, the SAME WAY THE HOOKS DO, because the bare name resolves
+ * under git bash and is absent under the PowerShell that runs ship.
  *
- * WHY NOT A HARDCODED `python3`: measured on this machine, the name resolves under git bash and
- * is ABSENT under PowerShell, so a gate spawning it would be green in every session and absent at
- * `npm run ship`. The same shape a sibling module was written for hours earlier.
- *
- * AND WHY THE PROBE RUNS A PROGRAM rather than asking for a version: on Windows the bare name is
- * often a Store STUB, which satisfies `command -v`, prints a version-ish banner and is not an
- * interpreter. Matching the hooks' probe exactly is load-bearing for `check:hook-syntax`, which
- * must compile a hook with the interpreter that hook would have used.
- *
- * FAILS CLOSED: it returns null, and the caller prints one line and exits nonzero.
+ * BOUNDARY: the probe RUNS A PROGRAM and matches its output exactly, because the bare name on
+ * Windows is often a Store stub that satisfies a lookup and is not an interpreter. Matching the
+ * hooks' own probe is load-bearing for the gate that compiles what a hook embeds.
  */
 
 import { spawnSync } from "node:child_process";

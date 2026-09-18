@@ -4,17 +4,9 @@
  *   node scripts/uptime-ensure.mjs            create or update, write the manifest
  *   node scripts/uptime-ensure.mjs --dry-run  say what it would do, change nothing
  *
- * WHY AN EXTERNAL MONITOR AT ALL: everything else watches this site from inside Cloudflare or
- * does not reliably run. This is the off-platform half, run by somebody else's computer.
- *
- * TWO MONITORS, ANSWERING DIFFERENT QUESTIONS. The home page can be served from the edge cache
- * long after the Worker stops answering, so it proves REACHABILITY and is a weak liveness signal;
- * `/api/health` bypasses the cache and runs its checks, so it proves the Worker is ALIVE.
- *
- * IDEMPOTENT, AND MATCHED BY URL RATHER THAN BY NAME, the URL being what makes two monitors the
- * same monitor; a friendly name is a label a human edits. The manifest is written from what the
- * API RETURNED, never from what this intended. THE ALERT CONTACT IS RESOLVED, NEVER INVENTED, and
- * an account with no active contact REFUSES rather than alerting nobody.
+ * BOUNDARY: monitors are matched by the URL they point at rather than by name, the manifest is
+ * written from what the API RETURNED, and an account with no active alert contact REFUSES rather
+ * than creating a monitor that alerts nobody.
  *
  * @see scripts/check-uptime.mjs the gate that refuses when this has not run
  * @see scripts/lib/uptimerobot.mjs the measured v3 contract

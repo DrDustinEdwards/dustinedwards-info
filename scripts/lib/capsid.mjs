@@ -1,13 +1,9 @@
 /**
  * One client for Capsid's MCP endpoint, and one list of the documents the canvas is given.
  *
- * WHY THE DOCUMENT LIST LIVES HERE: one script exports these documents and a gate asserts the
- * exports are current. If each carried its own list, the gate would eventually be checking a set
- * the exporter no longer writes and would still pass, every document it knew about being in step.
- * That is the alias-blind failure hard rule 10 names.
- *
- * WHAT IS DELIBERATELY NOT HERE: credential handling. The caller reads the token and decides what
- * absent means, because the two callers decide differently.
+ * BOUNDARY: the list has one owner here, because an exporter and a gate each carrying their own
+ * would eventually check a set the exporter no longer writes and still pass, which is the
+ * alias-blind failure hard rule 10 names. Credential handling is deliberately the caller's.
  */
 
 export const NAMESPACE = "dustinedwards";

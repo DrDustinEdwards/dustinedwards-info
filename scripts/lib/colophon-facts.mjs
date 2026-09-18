@@ -2,17 +2,9 @@
  * Every discrete fact each colophon section's RECORD BODY was assembled from, as needles to match
  * against the RENDERED page.
  *
- * WHY A MODULE RATHER THAN A CLOSURE INSIDE verify-live: it is the colophon's SECOND registration
- * site. A section added without a body rule throws offline on every clone; one added without a
- * fact list here said nothing until `verify-live` ran against a deploy, which needs a deploy and
- * bills an Ask probe. Extracted so a test can assert offline that every section has one.
- *
- * WHAT WAS DELIBERATELY NOT DONE: deriving these needles from the record body. The indexer
- * produces one joined STRING per section for the search index and this produces DISCRETE needles
- * checked against the rendered HTML, and a gate whose expected values are produced by the process
- * it checks cannot fail (hard rule 10). Deriving would leave the page and the index agreeing with
- * each other and with nothing else, so the two lists stay independently authored and the test
- * asserts COVERAGE of the section set rather than equality of the values.
+ * BOUNDARY: these are authored independently of the record body rather than derived from it,
+ * because hard rule 10 is that a gate whose expected values are produced by the process it checks
+ * cannot fail, so the test asserts COVERAGE of the section set rather than equality of the values.
  *
  * @see app/lib/colophon-sections.mjs, scripts/verify-live.mjs
  */

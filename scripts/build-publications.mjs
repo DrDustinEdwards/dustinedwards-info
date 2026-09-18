@@ -1,11 +1,12 @@
 /**
- * Generates the publications module from the two source files.
+ * Generates the publications module from the canonical bibliographic record and the site-only
+ * fields keyed by DOI.
  *
  *   npm run build:publications
  *
- * Inputs: the canonical bibliographic record, and the site-only fields keyed by DOI as deposited.
- * Deterministic and offline. The generated module is a build artifact: do not hand-edit it, the
- * gate importing `generate()` from here and failing on drift.
+ * BOUNDARY: deterministic and offline, and the network refresh that produces those two files
+ * lives outside this repo. The generated module is a build artifact: the gate imports `generate()`
+ * from here and fails when the committed copy has drifted.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

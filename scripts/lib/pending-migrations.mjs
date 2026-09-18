@@ -1,17 +1,10 @@
 /**
  * Does the deployed database have every migration this repo carries?
  *
- * PURE: it takes what `wrangler d1 migrations list` printed plus the files on disk and returns a
- * verdict, which is what lets the RULE be unit tested against recorded output.
- *
- * Authoring a migration created an obligation nowhere: ship applies none and compares no schema,
- * `check:migrations` compares FILES to a manifest, and the gate that would have caught it is in
- * neither tier ship runs. IT REFUSES RATHER THAN APPLYING, because a deploy that silently mutates
- * the production schema is worse than one that stops and ship cannot classify SQL.
- *
- * THREE OUTCOMES, NOT TWO, because a parser that reads "nothing pending" from output it did not
- * understand is the danger: pending names refuse, a positive clean marker proceeds, and anything
- * unrecognised refuses as unreadable. An empty match set is never evidence of a clean database.
+ * BOUNDARY: PURE. It reads what `wrangler d1 migrations list` printed plus the files on disk and
+ * returns a verdict, running no command and touching no network, which is what lets the rule be
+ * tested against recorded output. THREE OUTCOMES, NOT TWO: an empty match set is never on its own
+ * evidence of a clean database.
  */
 
 /** What wrangler prints when it has nothing to do. Version-sensitive by nature. */

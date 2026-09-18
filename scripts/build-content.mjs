@@ -1,6 +1,10 @@
 /**
- * Renders the corpus into the LOCAL build product. Gitignored: git holds markdown, D1 holds the
- * only rendered copy, and everything that reads this file runs after a build.
+ * Renders the corpus into the LOCAL build product.
+ *
+ *   npm run build:content
+ *
+ * BOUNDARY: gitignored, because git holds the markdown and D1 holds the only rendered copy;
+ * everything that reads this file runs after a build.
  */
 
 import { execFileSync } from "node:child_process";

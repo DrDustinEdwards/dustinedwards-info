@@ -1,13 +1,8 @@
 /**
  * Ship's readiness verdict: does the health endpoint say this deploy is healthy.
  *
- * EXTRACTED because the decision is pure and `node:test` can drive every branch: a refusal path
- * that has never been executed is not a refusal path.
- *
- * WHAT THIS IS FOR: ship polled a page for five 200s and never asked the health endpoint. Five
- * 200s prove the Worker booted and the rollout finished, and are blind to every invariant this
- * site watches, all of which serve that page with a 200. THE VERDICT COMES FROM THE BODY, NOT THE
- * STATUS LINE, which would make this step depend on an agreement living in a different file.
+ * BOUNDARY: the decision only, pure, so `node:test` can drive every branch and a refusal path is
+ * not one that has never been executed. The reading itself is ship's.
  */
 
 /**

@@ -1,11 +1,10 @@
 /**
- * Gate over the wrangler configs: every committed `.example` declares the same BINDING SURFACE as
- * the real file beside it. Two pairs, the site and the watchdog; the real files are gitignored,
- * so the example is the only description a fresh clone can see.
+ * Gate: every committed `.example` declares the same BINDING SURFACE as the real config beside it.
  *
- * BOUNDARY: it compares each pair to itself, asks Cloudflare nothing, and knows only the kinds
- * `surfaceOf()` enumerates. WHAT IS COMPARED: names, kinds, non-identifying settings; NOT the
- * account-scoped identifiers. FAILS CLOSED: a missing or unparseable file is a failure.
+ *   npm run check:config [-- --remote]
+ *
+ * BOUNDARY: it compares each pair to itself, asks Cloudflare nothing without `--remote`, and knows
+ * only the binding kinds `surfaceOf()` enumerates.
  */
 
 import { execFileSync } from "node:child_process";

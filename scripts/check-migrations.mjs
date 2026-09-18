@@ -1,17 +1,12 @@
 /**
- * Gate: an applied migration is never edited.
+ * Gate: an applied migration is never edited, which is hard rule 14.
  *
  *   npm run check:migrations
  *   node scripts/check-migrations.mjs --write [--force]
  *
- * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** What stops a dishonest
- * manifest is the diff and `--write` refusing to alter an existing hash without `--force`; what
- * the LIVE database applied is `check:invariants --remote`'s half. IT HASHES NORMALIZED CONTENT,
- * NOT RAW BYTES: with autocrlf on, the working tree and its own committed blobs disagree about
- * line endings. WHY IT EXISTS: hard rule 14. The replay section catches an edit that MOVES A
- * COLUMN and nothing else, so seed data, an index, a trigger or FTS DDL is invisible elsewhere.
- * **RULE 12 CANNOT BE SATISFIED HERE:** no migration has ever been edited after being applied, so
- * this is verified by PLANTS ONLY, which that rule warns match the implementation not the bug.
+ * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** It does not prove the
+ * manifest was honest when written, and it does not know what the LIVE database applied, which is
+ * `check:invariants --remote`'s half.
  */
 
 import { createHash } from "node:crypto";

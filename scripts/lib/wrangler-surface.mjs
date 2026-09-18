@@ -1,10 +1,9 @@
 /**
- * The Worker's binding surface, derived from a wrangler config. ONE enumerator, imported by
- * everything that needs to know what this Worker binds: two walkers of the same config would be
- * the mirror `check:invariants` exists to prevent, failing by reporting a smaller surface.
+ * The Worker's binding surface, derived from a wrangler config. ONE enumerator, so two walkers of
+ * the same config cannot disagree about what this Worker binds.
  *
- * `assets.directory` is deliberately not part of it, the Vite plugin supplying it. Queue
- * CONSUMERS are keyed by queue name, a consumer being a subscription rather than a handle.
+ * BOUNDARY: it knows the binding kinds it enumerates and reports the rest separately, because a
+ * kind no reader understands is absent from both sides of every comparison built on this.
  */
 
 import { readFileSync } from "node:fs";

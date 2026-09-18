@@ -1,21 +1,11 @@
 /**
- * THE JS-SCAN COMMENT STRIPPER, in one place.
+ * THE JS-SCAN COMMENT STRIPPER, in one place: stripping comments before matching is hard rule 10's
+ * discipline, and it was implemented nine times before this.
  *
- * WHAT THIS IS FOR: a gate that searches source for a literal will find it in the PROSE explaining
- * why it is forbidden. Six gates here have hit it, one passing every row for the wrong reason.
- * Stripping comments before matching is hard rule 10's discipline, and it was implemented NINE
- * TIMES: nine copies of one job drift in STRENGTH, and a copy weaker than its siblings passes for
- * a reason nobody checks.
- *
- * IT IS A TOKENIZER, AND THE OLD BOUNDARY MOVED WITH IT. The colon guard that protected a URL
- * inside a string was load-bearing and was also the shape of the boundary. **THAT IS NO LONGER
- * TRUE, AND THE TESTS NOW ASSERT THE OPPOSITE**: a string literal is consumed whole. A boundary
- * note is a claim that ages, per hard rule 7, and this one aged in the commit that changed it.
- *
- * THE WEAK FORMS STAY ANYWAY, on a narrower argument: THIS IS A JAVASCRIPT TOKENIZER, so it reads
- * an apostrophe in SVG text as opening a string and a slash after an operator as opening a regex.
- * JOBS THAT ARE NOT THIS JOB: a string-aware scanner, a reader that needs `//host` inside strings
- * to survive, and the CSS readers where `//` is never a comment.
+ * BOUNDARY: it is a JAVASCRIPT TOKENIZER, so it reads an apostrophe in SVG text as opening a
+ * string and a slash after an operator as opening a regex, and the CSS readers, where `//` is
+ * never a comment, are not this job. A boundary note is a claim that ages, per hard rule 7, and
+ * this one already aged once, in the commit that turned a regex into a tokenizer.
  *
  * @see test/strip-comments.test.mjs
  */

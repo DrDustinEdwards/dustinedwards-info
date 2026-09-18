@@ -3,22 +3,10 @@
  *
  *   node scripts/measure/deps.mjs [--json]
  *
- * NOT A GATE, AND DELIBERATELY NOT IN `scripts/`, the runner deriving the gate list from the check
- * scripts. It exists so the next dependency session re-measures rather than re-reads a stale table.
- *
- * WHAT EACH COLUMN IS MEASURED WITH, the methods differing in strength:
- *
- *   pin          package.json, verbatim.
- *   kind         which block it sits in, NOT where it is used; the two disagreeing is a finding.
- *   transitive   distinct packages reachable in the REAL install, not what the lockfile resolves.
- *   disk         the package's OWN directory, NOT its unique subtree: the installer hoists.
- *   used         the first import site found, with file and line, or NOTHING IMPORTS IT.
- *   reach        derived from `used`: does any importer ship in the Worker.
- *
- * WHY THERE IS NO PER-PACKAGE BYTE COLUMN: there is no honest way to fill one from a single build
- * here, and a number in that column would be believed. The only precise method is a size-by-import
- * diff, which is over an hour at this dependency count, so this reports REACHABILITY, which is the
- * question that decides a lean-out: a measured zero, not an unknown.
+ * BOUNDARY: it reports REACHABILITY rather than bytes, because the only precise per-package byte
+ * method is a size-by-import diff over the whole dependency count, and a number in that column
+ * would be believed. NOT A GATE, and deliberately not in `scripts/`, the runner deriving its gate
+ * list from what is there.
  */
 
 import { execFileSync } from "node:child_process";

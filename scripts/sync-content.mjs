@@ -6,11 +6,9 @@
  *
  * The database is the read path; these files are the source of truth.
  *
- * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF FIRST.** This comment
- * used to claim it ran the gate, and a false safety claim is worse than no claim: this is the one
- * script that writes to production D1, and the bulk path DELETES the search index and replaces
- * the media citations wholesale. LEFT AS AN INSTRUCTION RATHER THAN WIRED IN: shelling out would
- * make the write path depend on an exit code read through two layers of npm.
+ * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF FIRST.** It is the
+ * one script that writes to production D1, and the bulk path DELETES the search index and
+ * replaces the media citations wholesale.
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";

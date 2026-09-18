@@ -1,17 +1,11 @@
 /**
- * How a script ADDRESSES the site database, which is not always its name.
+ * How a script ADDRESSES the site database, which is not always its name: a remote operation takes
+ * the account-side UUID, because the by-name spelling resolves through a config a clean checkout
+ * bootstraps with a placeholder.
  *
- * THE DEFECT: `wrangler d1 <cmd> <name>` resolves through the gitignored config's entry and uses
- * THAT entry's id, and a clean checkout bootstraps that file with a placeholder, so a remote run
- * addresses a database that does not exist. It fails ON A RUNNER AND ONLY THERE, which is the
- * worst shape a defect can have.
- *
- * `--local` KEEPS THE NAME, AND THAT IS NOT AN EXCEPTION: Miniflare keys its state by the
- * config's id and there is no account-side UUID to resolve, so the rule is not "never use the
- * name", it is "never let wrangler resolve the name for a REMOTE operation".
- *
- * FAILS CLOSED: a lookup that cannot produce a UUID throws. Falling back to the name would
- * substitute a different value for the one asked for, which is hard rule 13's shape.
+ * BOUNDARY: `--local` keeps the NAME deliberately, Miniflare having no account-side UUID to
+ * resolve, and a lookup that cannot produce one THROWS rather than falling back, which would be
+ * hard rule 13's substituted value wearing a passing lookup.
  *
  * @see scripts/check-d1-address.mjs, which refuses the by-name spelling
  */

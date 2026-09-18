@@ -1,15 +1,10 @@
 /**
- * PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it.
+ * PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it by a separate process, the
+ * tier's blocking spawn leaving no event loop here to sample from.
  *
- * The tier runs its gates with a BLOCKING spawn, so any sampler living in this event loop would
- * record nothing for exactly the span it exists to measure. The sampler is a separate process
- * writing to a FILE, and the runner attributes each sample to whichever gate owned the clock.
- *
- * WHY IT EXISTS: tier runs were killed by the OS for low memory, and every diagnosis was an
- * inference from which gate happened to be printing. WHAT IS COUNTED, STATED PLAINLY: the whole
- * descendant tree plus the root, summed, the runner's own resident set included, because the
- * number that matters for an OOM kill is what the machine was holding. FAILS SOFT, ALWAYS: this
- * is an instrument, not a gate.
+ * BOUNDARY: it counts the whole descendant tree plus the root, the runner's own resident set
+ * included, because the number that matters for an OOM kill is what the machine was holding. It
+ * FAILS SOFT, ALWAYS: this is an instrument, not a gate.
  */
 
 import { spawn } from "node:child_process";

@@ -3,9 +3,8 @@
  *
  *   npm run check:page-payload
  *
- * It reads the BUILD ON DISK and never builds, so a stale build is certified stale, and it
- * cannot see a RENDERED page. Enhancement assets match by BYTE EQUALITY, since a Vite hash may
- * contain a dash, and every .js asset goes through `node --check`.
+ * BOUNDARY: it reads the BUILD ON DISK and never builds, so a stale build is certified stale, and
+ * it cannot see a RENDERED page.
  */
 
 import {

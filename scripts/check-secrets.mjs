@@ -1,16 +1,12 @@
 /**
- * Gate over the secret-handling boundary.
+ * Gate over the secret-handling boundary hard rule 3 states.
  *
  *   npm run check:secrets
  *
- * THIS READS SOURCE TEXT, NOT THE BUNDLE: no file outside the server boundary may MENTION a
- * secret, so one read inside a `.server` module that a mis-split inlined into a client chunk is
- * invisible here. Scans `app/` and `workers/`, not `scripts/`. TWO INDEPENDENT SOURCES ARGUE:
- * the ratified list transcribed, what the code reads parsed out of the tree, what is DECLARED
- * parsed out of `app/env.d.ts`. THE BOUNDARY IS BY PATH, AND STRICTLY: loaders and actions are
- * not carved out even though hard rule 3's prose permits it, because nothing here needs it and
- * the honest move would be an ALLOWLIST entry. Hard rule 3 was PROSE until this gate existed.
- * FAILS CLOSED, the last case because "0 violations" from a broken matcher looks like success.
+ * BOUNDARY: IT READS SOURCE TEXT, NOT THE BUNDLE, so a secret read inside a legitimate `.server`
+ * module that a mis-split inlined into a client chunk is invisible here, and it says nothing
+ * about whether a secret is USED correctly once read. The boundary is BY PATH, and strictly:
+ * loaders and actions are not carved out even though hard rule 3's prose permits it.
  */
 
 import { spawnSync } from "node:child_process";

@@ -1,18 +1,11 @@
 /**
- * Renders every `:::diagram` in the corpus to a static SVG asset.
+ * Renders every `:::diagram` in the corpus to a static SVG asset, two per diagram, light and dark.
  *
  *   npm run build:diagrams [-- --force]
  *
- * BUILD TIME ONLY, in Node, driving a real browser, and that was decided by measurement: diagram
- * layout needs real font metrics, so the DOM-shim renderers die on the text measurement call.
- * Charts pass the both-writers rule and render inline; diagrams take the social-card pattern.
- * The gap is the same one social cards have: a diagram authored in the editor has no asset until
- * this runs, which is why the gate fails on a referenced asset that is not on disk.
- *
- * Nothing here touches the gated artifact: the SVG bytes come out of a browser engine and are
- * exactly what a byte-comparison gate must never be handed. TWO RENDERS PER DIAGRAM, LIGHT AND
- * DARK, forced rather than chosen: the renderer will not accept a custom property, an SVG
- * referenced by `<img>` resolves against nothing, and this site resolves its theme from a cookie.
+ * BOUNDARY: BUILD TIME ONLY, in Node, driving a real browser, and nothing here touches the gated
+ * artifact: the SVG bytes come out of a browser engine and are exactly the kind of input a
+ * byte-comparison gate must never be handed.
  */
 
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";

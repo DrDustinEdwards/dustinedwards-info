@@ -1,20 +1,12 @@
 /**
- * Scans the repository source for asset references into a committed manifest.
+ * Scans the repository source for asset references into a committed manifest, which is how the
+ * media library answers "does the SITE ITSELF place this".
  *
  *   npm run build:template-refs
  *
- * THE THIRD USAGE STATE DEPENDS ON THIS FILE. Two mechanisms answer "does a POST cite this" and
- * nothing answered "does the SITE ITSELF place this", so assets referenced by a data module read
- * as unreferenced next to a delete button.
- *
- * Every decision lives in a pure, unit-tested module; this file touches a filesystem and nothing
- * else, because a scan that decides things in the same function that walks directories cannot be
- * tested without a repository.
- *
  * BOUNDARY: it reads SOURCE TEXT and matches asset paths as literal strings, so a constructed path
- * reads as unattached, which is a false negative in the safe direction: this under-claims usage
- * and never invents it. The copy on the page says "no reference found" rather than "unused"
- * precisely because of this line.
+ * reads as unattached. That is a false negative in the safe direction: this under-claims usage and
+ * never invents it, which is why the page says "no reference found" rather than "unused".
  */
 
 import { readFileSync } from "node:fs";

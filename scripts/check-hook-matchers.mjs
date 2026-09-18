@@ -3,18 +3,9 @@
  *
  *   npm run check:hook-matchers
  *
- * WHY IT EXISTS: a PreToolUse matcher is a regex over the TOOL NAME, and the matchers here named
- * one shell tool while the session held pre-approved rules for another, so the deploy door, the
- * scoped-add check and the pre-push lint were reachable with no prompt for weeks. It had been
- * fixed once already, one tool name earlier.
- *
  * BOUNDARY, AND IT IS THE IMPORTANT HALF: **THE HARNESS TOOL LIST IS NOT IN THIS REPO**, so the
- * assertion a reader wants is not statically decidable here. What IS on disk is the PERMISSION
- * ALLOW LIST, a DIFFERENT file from the one under test, which is the fixture independence rule 10
- * asks for. THE RESIDUAL: a tool used under one-off approvals writes no rule, which is why the
- * required names carry a hard floor too. FAILS CLOSED ON AN UNKNOWN TOOL, the defect having been
- * a new tool name arriving and nothing noticing. TWO BRANCHES, the local settings file being
- * gitignored, printing DIFFERENT floor names.
+ * assertion a reader actually wants is not statically decidable here. What is on disk is the
+ * permission allow list, and a tool used under one-off approvals writes no rule at all.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";

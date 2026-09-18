@@ -1,15 +1,11 @@
 /**
- * Gate over the URL protocol allowlist.
+ * Gate over the URL protocol allowlist, at the predicate and through the renderer.
  *
  *   npm run check:urls
  *
- * BOUNDARY: the allowlist predicate over crafted inputs. It never fetches a URL and never scans
- * the live corpus. The finding it exists for: a `javascript:` href rendered LIVE and reached the
- * stored HTML, the artifact, D1 and the published page, agent-reachable with no human click.
- * TWO LEVELS: the PREDICATE, which can express obfuscations markdown would percent-encode, and
- * the RENDERER end to end, because a right predicate is worth nothing if the plugin is wired in
- * after the one that emits the href. FAILS CLOSED, and the `javascript` fixture entries are
- * PERMANENT NEGATIVES: removing one is removing the gate.
+ * BOUNDARY: the allowlist predicate over crafted inputs, plus one end-to-end render. It never
+ * fetches a URL and never scans the live corpus, so it proves the rule and not that every
+ * published href obeys it.
  */
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";

@@ -3,23 +3,10 @@
  *
  *   npm run ae-probe
  *
- * With the platform cache on, an edge HIT may never invoke the Worker, in which case the traffic
- * panel is counting ORIGIN REQUESTS rather than reads and has to say so. It needs a read-only
- * analytics token, fails closed without it, and NEVER PRINTS THE TOKEN, any request header, or any
- * URL carrying a credential.
- *
- * METHOD. Three fetches, each followed by its own poll, so a point is attributable to the fetch
- * that caused it: a plain GET to warm the edge, a second expected to HIT, and one sent with the
- * bypass header. The first exists because a cache-eligible fetch that MISSES reaches the origin by
- * definition and proves nothing; only the second answers the question. THE BYPASS MECHANISM IS NOT
- * INVENTED HERE, it is read from the live gate.
- *
- * EVERY COUNT IS SAMPLING WEIGHTED, the documented way to count events, because a raw count
- * silently undercounts the moment sampling engages; the row count is carried as a diagnostic.
- *
  * BOUNDARY: the write is fire and forget and a throw is swallowed, so a point that APPEARS is
- * strong evidence the Worker ran while one that does NOT is weaker evidence that it did not. The
- * report states that ambiguity whenever a fetch produces no point.
+ * strong evidence the Worker ran while one that does NOT is weaker evidence that it did not, and
+ * the report states that ambiguity whenever a fetch produces no point. It never prints the token,
+ * any request header, or any URL carrying a credential.
  */
 
 import { setTimeout as sleep } from "node:timers/promises";

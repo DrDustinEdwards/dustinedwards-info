@@ -5,12 +5,6 @@
  *
  * BOUNDARY: **IT RUNS VITEST IN WORKERD AND READS ITS SUMMARY**, so it knows how many files were
  * discovered and how many cases the runner counted, not whether those cases ASSERT anything.
- *
- * WHY IT EXISTS: an audit found hundreds of pure-function tests and a real-browser gate with
- * NOTHING BETWEEN THEM, so every route-level fact had to be established by probing production.
- * THE SAME FAILURE MODE AS `check:tests`, AND THE SAME REPAIR: **the runner exits 0 when its
- * include glob matches nothing**, so this gate discovers the files itself and floors both counts
- * before believing an exit code.
  */
 
 import { spawnSync } from "node:child_process";

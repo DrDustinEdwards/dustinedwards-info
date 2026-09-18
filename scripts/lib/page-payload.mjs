@@ -1,18 +1,10 @@
 /**
- * What a cold load of one public route actually fetches, resolved offline.
+ * What a cold load of one public route actually fetches, resolved offline from the browser
+ * manifest and a walk of the route's import graph.
  *
- * Split out of the gate because the DECISION is a pure function over a manifest and a set of
- * source files, and a pure function can be driven by tests. The gate supplies the disk.
- *
- * WHY DERIVED AND NOT DECLARED: a hand-kept list goes stale in the direction that hides bytes from
- * the gate. STYLESHEETS come from React Router's own browser manifest, root's plus the route's,
- * which is what the document carries. ENHANCEMENT BUNDLES come from a reachability walk over the
- * route's import graph, following `~/` and relative imports inside `app/`.
- *
- * WHAT THE WALK CANNOT SEE, stated because it bounds every count: reachability is not rendering,
- * so a bundle imported inside a branch the route never takes still counts, which over-approximates
- * in the safe direction for a ceiling. Nor can it see a bundle fetched at runtime rather than
- * imported, which is correctly not part of any page's cold load.
+ * BOUNDARY: reachability is not rendering, so a bundle imported inside a branch the route never
+ * takes still counts, which over-approximates in the safe direction for a byte ceiling, and a
+ * bundle fetched at runtime rather than imported is correctly not part of any cold load.
  */
 
 import { dirname, join } from "node:path";

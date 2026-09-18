@@ -1,19 +1,12 @@
 /**
- * Gate: the Capsid documents handed to the design agent are not stale, and the guidelines the
- * glob ships actually exist.
+ * Gate: the Capsid documents handed to the design agent are not stale, and the guidelines the glob
+ * ships actually exist.
  *
- * THE DEFECT: an export is a copy, and a copy has no way of knowing its source moved. Without an
- * instrument the canvas would be handed a ruling reversed a week ago and nothing would say so.
- * Every exported file carries the stamp it was taken at and this compares it to Capsid's CURRENT
- * value, which is hard rule 18's shape: the export is derived, the repair is re-running the
- * derivation, and the gate sees the DRIFT rather than policing how the copy got there.
+ *   npm run check:guidelines
  *
- * NETWORK TIER, AND IT CANNOT BE OTHERWISE: the current value lives in Capsid, so there is no disk
- * to read. THE CREDENTIAL FAILS CLOSED rather than skipping, an unchecked export not being an
- * export known to be current.
- *
- * WHY IT ALSO CHECKS THE GLOB: a stamp check over an empty directory passes, every export it found
- * being in step and it having found none, which is the zero-scope vacuity class.
+ * BOUNDARY: it compares each export's stamp against Capsid's current value, which is the shape of
+ * hard rule 18, the export being derived and the gate seeing DRIFT rather than policing how the
+ * copy got there. NETWORK TIER and it cannot be otherwise, the current value living in Capsid.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";

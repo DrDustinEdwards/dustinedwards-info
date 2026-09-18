@@ -1,14 +1,9 @@
 /**
  * Minimal readers for the two binary container formats the icon suite ships.
  *
- * Hand-rolled on purpose: the repo's existing libraries answer dimensions and ENCODE PNG, and
- * nothing here needs a decoder in the general sense, the gate asking for a header and one corner
- * pixel. Every function throws rather than returning a sentinel, because a gate that receives null
- * from a parser and carries on passes on a file it could not read.
- *
- * These readers are SELF-TESTED against files produced by a third-party encoder, not against
- * fixtures built on the same assumptions: a parser and its test agreeing about a format both got
- * wrong is not evidence.
+ * BOUNDARY: not a decoder in the general sense. The gate asks for a header and one corner pixel,
+ * both reachable without decompressing an image, and every function throws rather than returning a
+ * sentinel, because a gate that carries on past a null passes on a file it could not read.
  */
 
 import { inflateSync } from "node:zlib";

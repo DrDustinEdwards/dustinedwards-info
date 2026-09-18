@@ -1,19 +1,10 @@
 /**
- * Classifying `sqlite_master` rows into virtual, shadow and real tables.
+ * Classifying `sqlite_master` rows into virtual, shadow and real tables. ONE ENUMERATOR RULE, for
+ * the callers that read a live database and the one that replays the migrations into memory.
  *
- * ONE ENUMERATOR RULE, TWO SOURCES: three callers were applying the same classification
- * independently over rows read from a live database and from migrations replayed into memory. The
- * rules were already identical and the comments said so, but identical because two people wrote
- * them the same way is the shape this repo keeps converting into one module with several readers.
- * The classifier is source-agnostic: it takes rows, not a database.
- *
- * VIRTUAL: the DDL says so, never a name list, because the set has grown twice and a hardcoded
- * list is how the next one gets missed. SHADOW: the name is prefixed with a virtual table's name,
- * the per-index set differing by fts5 version, so the prefix is the durable rule. INTERNAL: the
- * reserved prefix SQLite keeps for its own bookkeeping.
- *
- * Platform bookkeeping is NOT handled here: it is a property of where the rows came from rather
- * than of SQLite, so it stays with the caller that reads a live database.
+ * BOUNDARY: source-agnostic, so it takes rows rather than a database, and each class is derived
+ * from the DDL or the naming rule rather than from a list. Platform bookkeeping is NOT handled
+ * here, being a property of where the rows came from rather than of SQLite.
  *
  * @param {{ name: string, sql: string | null }[]} rows
  * @returns {{ virtual: string[], shadow: string[], real: string[] }}

@@ -5,11 +5,7 @@
  *
  * BOUNDARY: a SOURCE gate. It proves the confirmation predicate is called inside the branch that
  * handles the intent; it does not run an action, so it cannot see a guard that is present and
- * wrong. WHY IT EXISTS: three destructive paths had their only confirmation in a client event
- * handler, so with scripting off the form posts and the action deletes. **THE SAME DEFECT HAD
- * ALREADY BEEN FOUND AND FIXED ONCE, AND CLOSED WITHOUT SWEEPING FOR SIBLINGS.** THE COMPLETENESS
- * HALF is what keeps working: an intent nobody classified FAILS BY NAME rather than defaulting to
- * safe. FAILS CLOSED on an unreadable file, an unparseable body, or an empty vocabulary.
+ * wrong.
  */
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";

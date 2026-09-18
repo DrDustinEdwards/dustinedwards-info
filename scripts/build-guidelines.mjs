@@ -1,25 +1,12 @@
 /**
- * Extract the stylesheets' reasoning into guidance the canvas can read.
+ * Extract the stylesheets' reasoning into guidance the design canvas can read, the bundle having
+ * stripped the comments on the way there.
  *
- * THE DEFECT: the bundle strips CSS comments on the way to the design canvas, and one of the
- * stripped comments was a warning not to simplify a deliberately specific selector. The redesign
- * simplified it away and shipped a wordmark in the wrong colour, because the canvas never saw it.
- *
- * THE STRIP STAYS: it exists for its own measured reason, the converter's validator greping the
- * bundle for `@import` without stripping comments, which a stylesheet's prose about a removed
- * `@import` failed twice. The repair is not to stop stripping, it is to stop DISCARDING, and this
- * is where the reasoning goes instead.
- *
- * IT IS NOT A GATE AND MAKES NO ASSERTION. Output is gitignored, a committed copy being a second
- * owner of prose the stylesheets already own (hard rule 17).
- *
- * WHAT IT DOES NOT SHIP: build-only narration, which tells a design agent nothing and spends the
- * budget the rules it CAN break need. A block is dropped when it reads as build talk and carries
- * no design signal, never on the build needle alone.
- *
- * THE CAP IS HONEST RATHER THAN SILENT: blocks are emitted strongest first and anything that does
- * not fit is NAMED with its source and line, a truncation nobody can see being the same class of
- * defect as a search over an empty scope.
+ * BOUNDARY: a build step that makes no assertion, with gitignored output, a committed copy being
+ * a second owner of prose the stylesheets already own (hard rule 17). The strip it compensates
+ * for stays, because the converter's validator greps the bundle for `@import` without stripping
+ * comments and a stylesheet's prose about a removed `@import` failed that twice. The cap is
+ * honest rather than silent: what does not fit is NAMED with its source and line.
  */
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";

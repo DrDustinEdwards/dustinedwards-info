@@ -5,9 +5,7 @@
  *
  * BOUNDARY: the component's path data against the four SVG fixtures, the fill BINDINGS against a
  * closed set, the icon suite's container shape and one tile pixel, and the mark AS RENDERED into
- * a social card against a rasterisation of the fixture. IT DOES NOT CHECK CONTRAST, and the icon
- * suite is still ONE PIXEL PER RASTER, so an upside-down mark passes. THE FOUR public/*.svg
- * FILES ARE THE FIXTURES: two sources argue and nothing restates a path, so it fails both ways.
+ * a social card. It does NOT check contrast, and one pixel per raster cannot see an inverted mark.
  */
 
 import { readFileSync } from "node:fs";

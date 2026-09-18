@@ -3,18 +3,10 @@
  *
  *   npm run build:katex
  *
- * `import "katex/dist/katex.min.css"` is wrong twice over. FIRST, a CSS import from a component
- * lands in that ROUTE's stylesheet, and `/blog/:slug` is one route serving every post, most of
- * which carry no math; hard rule 4 asks for the bytes a reader downloads, so the sheet has to be
- * separately addressable and linked conditionally. SECOND, upstream declares each face three
- * times and Vite emits every referenced url, so importing it verbatim shipped three formats where
- * every supported browser reads woff2.
- *
- * UNDER `app/` AND NOT `public/`, because a file under `public/` is walked into the asset
- * manifest and indexed as media, and a webfont is not media.
- *
- * THE OUTPUT IS COMMITTED AND `check:content` BYTE-COMPARES IT, which makes a katex bump that
- * nobody regenerated a NAMED gate failure. The version is read from the installed package.
+ * BOUNDARY: importing the upstream sheet from a component would land it in one route's stylesheet
+ * for every post, most of which carry no math, and hard rule 4 asks for the bytes a reader
+ * downloads; it would also ship three font formats where every supported browser reads one. The
+ * output is committed and `check:content` byte-compares it.
  */
 
 import { createHash } from "node:crypto";

@@ -3,10 +3,8 @@
  *
  *   npm run check:restore
  *
- * BOUNDARY, and why this sits beside `check:backup`: that gate proves an export was WRITTEN and
- * cannot say the dump would reconstruct anything. IT TAKES ITS OWN EXPORT, so the claim is that
- * the path round-trips, not that a kept artifact is restorable. IT NEVER TOUCHES PRODUCTION,
- * ENFORCED: every write goes through `scratch()`, the hook being blind inside a node script.
+ * BOUNDARY: it takes its OWN export, so the claim is that the path round-trips rather than that a
+ * kept artifact is restorable, and it never touches production, enforced by one guarded writer.
  */
 
 import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";

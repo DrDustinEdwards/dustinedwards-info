@@ -1,20 +1,11 @@
 /**
  * Gate: the ACTIVE decisions volume has not passed its own stated freeze point.
  *
- * THE DEFECT: every volume's header states its own limit, and one ran well past it for days,
- * because the limit was a sentence inside the artifact it limited, enforced by whoever happened to
- * read it. Third of that shape in two days, and the repair each time is an instrument.
+ *   npm run check:volumes
  *
- * NETWORK TIER, AND IT CANNOT BE OTHERWISE: a decisions volume is a Capsid document, so there is
- * no disk to read and a clean checkout cannot run this. A real limitation rather than a formality,
- * since a volume can pass its freeze point between runs.
- *
- * THE CREDENTIAL FAILS CLOSED rather than skipping: a gate that silently does not run is the thing
- * the runner exists to prevent, and an unread volume is not a volume under its limit.
- *
- * NOTHING RESTATES A LIMIT, hard rule 17: the number lives in the volume that owns it. The ACTIVE
- * volume is the highest-numbered one, never the title, and frozen volumes PASS, because two froze
- * far over before the rule existed and a gate that cannot go green is one somebody deletes.
+ * BOUNDARY: NETWORK TIER and it cannot be otherwise, a decisions volume being a Capsid document
+ * with no disk to read, so a volume can pass its freeze point between runs. Nothing here restates
+ * a limit, hard rule 17 putting that number in the volume that owns it, and frozen volumes PASS.
  */
 
 import { assertFloor } from "./lib/floor.mjs";

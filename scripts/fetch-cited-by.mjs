@@ -4,18 +4,9 @@
  *   node scripts/fetch-cited-by.mjs          report only
  *   node scripts/fetch-cited-by.mjs --write  update the artifact
  *
- * WHY A COMMITTED ARTIFACT AND NOT A RUNTIME FETCH, three ways. It is tens of kilobytes across the
- * corpus, so fetching per request would put a third-party round trip in front of a page that is
- * otherwise a pure function of committed data. It needs a LIST query, which is metered far above a
- * singleton lookup, and the ruling says singleton lookups only, so this is the one deliberate
- * departure and doing it at build keeps the departure small. And it is EVIDENCE, which carries a
- * date the page states.
- *
- * NOT A GATE, AND NEVER RUN BY ONE: a gate that fetches a third party is red on their bad day
- * rather than on ours. A human runs it, the result is committed, and the gate checks the file.
- *
- * NEWEST FIRST, CAPPED: the artifact records the true total beside the truncated list, so the page
- * can say how many of how many rather than implying it has them all.
+ * BOUNDARY: NOT A GATE, AND NEVER RUN BY ONE, because a gate that fetches a third party is red on
+ * their bad day rather than on ours. A human runs it, the result is committed with the date it was
+ * read, and the gate checks the committed file.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

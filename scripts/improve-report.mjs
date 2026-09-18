@@ -1,8 +1,8 @@
 // Trusted scoring glue, run from the DEFAULT branch from a copy stashed before any untrusted byte
-// exists on the runner. IT NEVER RUNS ATTEMPT-CONTROLLED CODE: it counts TOP-LEVEL ok / not ok
-// lines in the TAP, never an exit code, an early `process.exit(0)` leaving the ok line unwritten.
-// THE STREAM MODE has no destination file, the runner capturing the container's stdout from
-// outside, because a file inside the attempt's filesystem could be rewritten after the flush.
+// exists on the runner.
+//
+// BOUNDARY: IT NEVER RUNS ATTEMPT-CONTROLLED CODE. It reads the TAP the reporter produced and
+// counts top-level results, never an exit code.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

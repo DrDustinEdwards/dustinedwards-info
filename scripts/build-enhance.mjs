@@ -1,23 +1,12 @@
 /**
- * Bundles every module in app/enhance/ into a self-contained asset.
+ * Bundles every module in app/enhance/ into a self-contained asset, because a `?url` import copies
+ * bytes verbatim and the thing it points at has to be finished JavaScript.
  *
  *   npm run build:enhance
  *
  * BOUNDARY: it builds and then reads back its OWN output, proving each bundle is import-free and
  * parses. It cannot prove the app build serves these files, which `check:page-payload` asserts,
  * and it cannot see the wire.
- *
- * WHY PREBUILT: the public plane does not hydrate, so what loads an enhancement is a nonced module
- * script whose URL is a `?url` import. That copies bytes VERBATIM with no compilation, so the
- * thing it points at has to be finished JavaScript before the app build runs.
- *
- * EACH BUNDLE IS SELF-CONTAINED, ASSERTED RATHER THAN HOPED: a surviving import would make the
- * browser fetch a sibling by relative URL against a directory where only hashed names exist, so
- * the enhancement dies at runtime while the build stays green. Dynamic imports are inlined
- * instead, which costs one bundle the other's bytes and buys it working under this rule.
- *
- * The output directory is gitignored and is DELETED and rebuilt on every run, so a renamed module
- * cannot leave a stale bundle behind for a `?url` import to keep serving.
  */
 
 import { readFileSync, readdirSync, rmSync, statSync } from "node:fs";

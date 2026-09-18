@@ -3,18 +3,9 @@
  *
  *   npm run check:d1-address
  *
- * THE DEFECT: the by-name spelling resolves through the gitignored config's entry and uses THAT
- * entry's id, and a clean checkout bootstraps that file with a placeholder, so the name addresses
- * a database that does not exist ON A RUNNER AND ONLY THERE. Two gates had it and one had never
- * run in CI, so nothing had noticed; the repair is an instrument rather than a sweep.
- *
- * REFUSED: a `d1` subcommand whose database argument is the NAME, in a segment that is not
- * `--local`. ALLOWED, deliberately: `--local`, where Miniflare keys state by the config id and
- * there is no account-side UUID to resolve; `d1 list`, the lookup itself; and `d1 migrations`,
- * applied through wrangler by design.
- *
- * SCOPE IS PROVEN NON-EMPTY, this being a per-file loop over a glob, hard rule 10. COMMENTS ARE
- * STRIPPED FIRST: every one of these files DESCRIBES the defect in prose, this one included.
+ * BOUNDARY: a per-file scan over comment-stripped source, with scope proven non-empty first,
+ * which is hard rule 10. `--local` is allowed deliberately, Miniflare keying state by the config
+ * id, and so are the lookup itself and the migrations path.
  */
 
 import { readdir, readFile } from "node:fs/promises";
