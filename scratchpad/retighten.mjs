@@ -9,11 +9,22 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { commentBlocks } from "./code-blocks.mjs";
+
+const cites = (s) =>
+  [...s.matchAll(/hard rules? ((?:\d+)(?:\s*(?:,|and)\s*\d+)*)/gi)]
+    .flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean))
+    .sort()
+    .join(",");
 
 const [decisionsPath, fileKey, editsPath] = process.argv.slice(2);
 const abs = join(process.cwd(), decisionsPath);
 const before = (await import(pathToFileURL(abs).href)).default;
 const edits = JSON.parse(readFileSync(editsPath, "utf8"));
+const flat = (s) => s.replace(/\//g, "__");
+const blocks = commentBlocks(
+  readFileSync(join("scratchpad/code-history-before-wave2", flat(fileKey)), "utf8"),
+).map((b) => b.text);
 
 let src = readFileSync(decisionsPath, "utf8");
 let done = 0;
@@ -47,6 +58,21 @@ for (const [id, next] of Object.entries(edits)) {
   const wrapped = [...next.matchAll(/\bhard\s*\n\s*rules?\s+\d+/gi)];
   if (wrapped.length) {
     problems.push(`${key}: citation wrapped across a line break (${JSON.stringify(wrapped[0][0])})`);
+    continue;
+  }
+  // And a citation DROPPED outright, which wrapping's guard cannot see: a reflow that deletes
+  // the sentence carrying one leaves no wrapped text to catch.
+  //
+  // COMPARED AGAINST THE SOURCE BLOCK, never against the decision being replaced. The first
+  // spelling compared new against current, which refuses a RESTORE: a decision that had already
+  // lost a citation is the one case where the new text must differ from it. The source block is
+  // the authority, and it is the same multiset the apply validator uses.
+  if (blocks[id] === undefined) {
+    problems.push(`${key}: no block ${id} in the snapshot`);
+    continue;
+  }
+  if (cites(blocks[id]) !== cites(next)) {
+    problems.push(`${key}: citations ${cites(blocks[id]) || "none"} in source, ${cites(next) || "none"} in replacement`);
     continue;
   }
   src = src.replace(old, tick + escape(next) + tick);
