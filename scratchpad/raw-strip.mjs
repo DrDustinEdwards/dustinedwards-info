@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "../scripts/lib/strip-comments.mjs";
-import { WAVE2 } from "./code-wave2.mjs";
+import { FILES } from "./wave.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..");
@@ -23,7 +23,7 @@ const fromMain = (file) => execFileSync("git", ["show", `main:${file}`], { cwd: 
 
 let differ = 0;
 const causes = new Map();
-for (const file of WAVE2) {
+for (const file of FILES) {
   if (only && file !== only) continue;
   const before = stripComments(fromMain(file)).split("\n");
   const after = stripComments(readFileSync(join(REPO, file), "utf8")).split("\n");
@@ -50,5 +50,5 @@ for (const file of WAVE2) {
     console.log(`  context after : ${JSON.stringify(after.slice(Math.max(0, i - 2), i + 2))}`);
   }
 }
-console.log(`\nraw strip: ${differ} of ${only ? 1 : WAVE2.length} files differ`);
+console.log(`\nraw strip: ${differ} of ${only ? 1 : FILES.length} files differ`);
 for (const [cause, n] of causes) console.log(`  ${n}  ${cause}`);
