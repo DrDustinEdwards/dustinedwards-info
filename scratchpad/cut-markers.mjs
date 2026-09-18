@@ -8,9 +8,12 @@ const [decisionsPath, fileKey] = process.argv.slice(2);
 const flat = (s) => s.replace(/\//g, "__");
 const src = readFileSync(`scratchpad/code-history-before-wave2/${flat(fileKey)}`, "utf8");
 
+// A run of three, not six: check-page-payload has separators padded `---- label -` and
+// `---- label ---`, and a six-dash threshold silently skipped two of nine while reporting
+// "7 of 7", which is a clean sweep over a scope that was quietly narrowed.
 const labels = new Map();
 commentBlocks(src).forEach((b, id) => {
-  if (!/-{6}/.test(b.text)) return;
+  if (!/^\/\*+\s*-{3}/.test(b.text)) return;
   // Strip the comment markers and the run of dashes on either side, keep the label verbatim.
   const label = b.text
     .replace(/^\/\*+/, "")
