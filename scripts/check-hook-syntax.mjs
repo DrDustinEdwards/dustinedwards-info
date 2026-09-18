@@ -3,49 +3,9 @@
  *
  *   npm run check:hook-syntax
  *
- * ## Why this exists
- *
- * TWICE ON 2026-09-05 a hook was broken by an apostrophe. The checkers are
- * embedded in the shell script as SINGLE-QUOTED strings, so one apostrophe
- * inside the Python ends the string, hands the remainder of the program to bash
- * as commands, and the hook then refuses every call in the session with a shell
- * error. `no-direct-deploy.sh` carries the scar in a comment at its own line
- * 159.
- *
- * A broken hook fails in the WORST direction available. These are PreToolUse
- * guards: the session stops being able to work, or, when the breakage is in the
- * arm rather than the parser, the guard silently stops guarding. Neither is
- * visible to any other gate, because every other gate reads `app/`, `scripts/`
- * or `workers/`, and nothing reads `.claude/hooks/` as CODE. `check:hook-scope`
- * comes closest and is deliberately narrower: it replays ONE hook's decisions
- * and would not notice the other five failing to parse.
- *
- * ## WHAT IS ASSERTED
- *
- *   `bash -n` on every hook. Parse only, nothing executed.
- *   Every embedded Python checker string COMPILES, via `ast.parse`.
- *
- * Both interpreters are RESOLVED rather than named, through
- * `scripts/lib/bash.mjs` and `scripts/lib/python.mjs`. Measured 2026-09-05:
- * neither `bash` nor `python3` is on PATH in the PowerShell that runs `ship`,
- * and both are in the git bash a session runs. A gate naming either would be
- * green here and absent there.
- *
- * ## OBSERVATION BOUNDARY
- *
- * **PARSING IS NOT BEHAVING.** A hook that parses can still block the wrong
- * command, allow the right one, or read the wrong field off the payload.
- * `check:hook-scope` is the gate that drives real payloads through a real hook
- * and reads exit codes, and it covers ONE hook. The other five have their
- * syntax checked here and their behaviour checked nowhere, which is a real gap
- * and is stated rather than papered over.
- *
- * It also cannot see whether a hook is REGISTERED. `.claude/settings.json`
- * decides that, and hard rule 15 puts that file off limits to an agent, so an
- * unregistered hook parses cleanly here and protects nothing.
- *
- * FAILS CLOSED. No hooks found, no interpreter, or an unreadable file is a
- * failure, never a skip.
+ * BOUNDARY: **PARSING IS NOT BEHAVING.** A hook that parses can still block the wrong command,
+ * allow the right one, or read the wrong field off the payload, and it cannot see whether a hook
+ * is REGISTERED, which hard rule 15 puts off limits to an agent.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -74,7 +34,7 @@ function ok(label, condition, detail = "") {
   }
 }
 
-/* ---------------------------------------------------- the scope, asserted --- */
+/* the scope, asserted */
 
 /** @type {string[]} */
 let hookFiles = [];
@@ -95,7 +55,7 @@ if (hookFiles.length === 0) {
   process.exit(1);
 }
 
-/* --------------------------------------------------- interpreters, first --- */
+/* interpreters, first */
 
 const BASH = resolveBash();
 if (!BASH) {
@@ -117,7 +77,7 @@ console.log(`  bash:   ${BASH_PATH}  (${BASH.source})`);
 console.log(`  python: ${PYTHON_PATH}`);
 console.log(`  hooks:  ${hookFiles.length}\n`);
 
-/* ------------------------------------------------------ 1. bash -n each ----- */
+/* 1. bash -n each */
 
 console.log("  1. every hook parses as shell");
 
@@ -140,18 +100,12 @@ for (const name of hookFiles) {
   );
 }
 
-/* ------------------------------- 2. the embedded Python, resolved not named -- */
+/* 2. the embedded Python, resolved not named */
 
 /**
- * THE EXTRACTOR RESOLVES BINDINGS RATHER THAN SPELLINGS, hard rule 10.
- *
- * NOT ONE of these hooks contains the literal text `python3 -c`. Every one of
- * them probes three candidates into a variable and then calls `"$PY" -c`, so a
- * scan for the obvious spelling finds ZERO embedded checkers and, without the
- * floor below, reports a clean sweep of a file set it never opened.
- *
- * So the python-bearing tokens are HARVESTED from each file: the candidate loop
- * variable, anything assigned from it, and the bare interpreter names.
+ * THE EXTRACTOR RESOLVES BINDINGS RATHER THAN SPELLINGS, hard rule 10. NOT ONE of these hooks
+ * contains the obvious literal: every one probes candidates into a variable and calls through it,
+ * so a scan for the spelling finds ZERO embedded checkers and reports a clean sweep.
  *
  * @param {string} source
  * @returns {string[]} the token spellings that invoke Python in this file
@@ -179,17 +133,10 @@ function escapeRegExp(value) {
 }
 
 /**
- * Every `<python> -c '<source>'` in one file.
- *
- * The body is `[^']*` and that is EXACT rather than lazy: a POSIX single-quoted
- * string cannot contain an apostrophe, which is the entire reason the outage
- * happened. So this captures precisely what the shell would hand the
- * interpreter, including the truncation an apostrophe causes. A planted
- * apostrophe therefore surfaces here as Python that no longer parses, or at
- * `bash -n` above as an unterminated string, and both name the file.
- *
- * `after` is everything following the closing quote, which is what proves the
- * string ended where the shell thinks it did. See ALLOWED_AFTER.
+ * Every embedded checker in one file. The body pattern is EXACT rather than lazy: a POSIX
+ * single-quoted string cannot contain an apostrophe, so this captures precisely what the shell
+ * would hand the interpreter, truncation included. `after` is what follows the closing quote,
+ * which is what proves the string ended where the shell thinks it did.
  *
  * @param {string} source
  * @returns {{ code: string, after: string }[]}
@@ -207,30 +154,18 @@ function embeddedPython(source) {
 }
 
 /**
- * What may legitimately follow the closing quote of a `-c '...'` string.
+ * What may legitimately follow the closing quote.
  *
- * ## WHY COMPILING THE BODY IS NOT ENOUGH, and this was measured by a PLANT
- * ## THAT PASSED on 2026-09-05
+ * WHY COMPILING THE BODY IS NOT ENOUGH, AND THIS WAS MEASURED BY A PLANT THAT PASSED. An
+ * apostrophe planted inside a comment ends the quoted string early, so the interpreter receives
+ * only the prefix; that prefix was a COMPLETE PROGRAM whose last line was a comment, so the
+ * compile accepted it, and the shell check also exited 0 because the remaining apostrophes
+ * re-balanced into valid, meaningless shell. So the hook was BROKEN in exactly the way that caused
+ * two outages and both assertions passed: the truncation is invisible from either end alone, and
+ * only the JOIN between them is wrong.
  *
- * An apostrophe planted in a comment inside `no-em-dash.sh`'s checker read:
- *
- *     ti = d.get("tool_input") or {}  # the payload's tool_input, don't trust it
- *
- * The shell ends the single-quoted string at the apostrophe in `payload's`, so
- * the interpreter receives everything up to `# the payload`. That prefix is a
- * COMPLETE PYTHON PROGRAM whose last line is a comment, so `ast.parse` accepted
- * it. `bash -n` also exited 0, because the remaining apostrophes happened to
- * re-balance into syntactically valid, meaningless shell.
- *
- * So the hook was BROKEN in exactly the way that caused two outages, and both
- * assertions passed. The truncation is invisible from either end alone: the
- * body parses, the file parses, and only the JOIN between them is wrong.
- *
- * What catches it is asking where the string ENDED. A `-c '...'` in these hooks
- * is always followed by a command substitution's `)`, a redirection, a pipe, a
- * separator, or end of line. It is never followed by a bare word, because a
- * bare word there is the remainder of a Python program that the shell has
- * started reading as arguments.
+ * What catches it is asking where the string ENDED: one of these is never followed by a bare word,
+ * because a bare word there is the remainder of a program the shell reads as arguments.
  */
 const ALLOWED_AFTER = /^[ \t]*(\)|\||;|&|2>|>|<|#|$)/;
 
@@ -261,11 +196,7 @@ for (const name of hookFiles) {
           `it early and hands the rest of the program to bash; this has happened ` +
           `twice.\n        ${"error" in result ? result.error : ""}`,
     );
-    /*
-     * AND THE STRING ENDED WHERE IT SHOULD. See ALLOWED_AFTER: the body
-     * compiling proves only that the PREFIX is valid Python, and a truncation
-     * landing in a comment produces a valid prefix.
-     */
+    /* AND THE STRING ENDED WHERE IT SHOULD: the body compiling proves only the PREFIX is valid. */
     const tail = after.split("\n")[0];
     ok(
       `${name} embedded Python #${index + 1} ends where the shell thinks it does`,
@@ -281,18 +212,12 @@ for (const name of hookFiles) {
 
 console.log(`\n  ${hooksWithPython} hook(s) carry Python, ${compiled} string(s) compiled\n`);
 
-/* ------------------------------------------------------------- the floors --- */
+/* the floors */
 
 /*
- * TWO FLOORS, because the two scopes fail independently.
- *
- * The hook count catches a directory that stopped being read. The Python count
- * catches an extractor that stopped matching, which is the likelier failure:
- * the tokens are harvested by regex from shell source, and a hook rewritten to
- * call its interpreter a fourth way would silently contribute nothing.
- *
- * MEASURED 2026-09-05 by RUNNING this gate: 6 hooks, 10 Python strings (five
- * hooks carry a probe and a checker; stop-typecheck.sh carries neither).
+ * TWO FLOORS, the scopes failing independently. The hook count catches a directory that stopped
+ * being read; the token count catches an extractor that stopped matching, which is likelier, a
+ * hook rewritten to call its interpreter a fourth way contributing nothing.
  */
 const MINIMUM_HOOKS = 6;
 const MINIMUM_PYTHON_STRINGS = 10;

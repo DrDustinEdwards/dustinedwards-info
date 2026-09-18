@@ -1,71 +1,11 @@
 /**
- * Gate: the microformats2 annotations on the public plane, parsed rather than
- * grepped.
+ * Gate: the microformats2 annotations on the public plane, parsed rather than grepped.
  *
  *   npm run check:microformats
  *
- * Item I, ruling 50 as amended: microformats2 only. No `rel="me"`, no social
- * links; social presence lives with germomics. Section 5 holds that half.
- *
- * ## OBSERVATION BOUNDARY
- *
- * It RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node, through
- * `scripts/lib/route-render.mjs`, the same door `check:admin-ui` uses, and
- * parses the result with `microformats-parser`. So it sees markup and nothing
- * else: no loader, no action, no D1, no network, no CSS, no Worker.
- *
- * What that means in practice, stated so nobody reads a pass here as more than
- * it is. A post whose ROW carries a wrong date renders a wrong date and passes
- * section 1's format assertions; what section 1 actually catches is the route
- * disagreeing with the MARKDOWN, because the expected value is read from the
- * markdown file and the component is fed the pipeline's rendering of the same
- * file. A page that 500s in production still parses here. Enhancement asset
- * URLs are stubbed (see `URL_ASSET`), so nothing about a script `src` is
- * assertable through this harness.
- *
- * ## WHY NOT `check:content`, WHICH IS WHERE THE PROMPT PUT IT
- *
- * That gate's own header states it "never renders a page in a Worker", and its
- * five subjects are the corpus render and four committed artifacts. The
- * microformats classes are in `blog.$slug.tsx`, `blog._index.tsx`,
- * `home.tsx` and `post-card.tsx`, which check:content does not read. Widening
- * it would have meant deleting a boundary note in order to make the file's own
- * description of itself false, which is the failure hard rule 7 names.
- *
- * ## WHY A REAL PARSER AND NOT A REGEX
- *
- * A regex over `class="h-entry"` asserts that a STRING is present. The property
- * that matters is what a CONSUMER READS, and those are not the same claim:
- * `p-name` on a `<div>` wrapping the whole page, `u-url` on an element with no
- * `href`, a `dt-published` on a `<time>` with no `datetime`, an h-card nested
- * one level too deep so it becomes a child rather than an `author` property.
- * Every one of those passes a string search and gives a reader nothing.
- *
- * `microformats-parser` is an exact-pinned devDependency. It does not ship: the
- * Worker never parses its own pages, and `build:stack` reads `dependencies`
- * only, so it does not reach the colophon either.
- *
- * The webmention receiver's own reader was the other candidate and could not
- * do the job. `readAuthor` in `app/lib/webmention/verify.server.ts` is linkedom
- * plus three `querySelector` calls for `.h-card`, `.p-name` and `.u-url`; it
- * has no notion of h-entry, e-content, dt-published, h-feed or p-summary, and
- * it imports `~/db`, so a Node gate cannot load it at all. Measured 2026-09-10.
- *
- * ## FIXTURE INDEPENDENCE
- *
- * Hard rule 10: a gate's expected values are never produced by the process it
- * checks. `dt-published` is compared against the `date:` line read straight out
- * of `content/posts/<slug>.md` by `frontmatterDate` below, which is a
- * deliberately separate read from the pipeline's. The component is fed the
- * PIPELINE's `publishAt`. So the chain under test is markdown to pipeline to
- * component to attribute, and a defect anywhere along it reds by slug.
- *
- * ## FAILS CLOSED
- *
- * A corpus with no published posts, a route that renders nothing, a parse that
- * finds no items: each is a failure with a name, never an empty pass. Every
- * section pairs its assertions with a count, and the whole gate carries an
- * executed-count floor measured by running.
+ * BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
+ * sees markup and nothing else, and hard rule 7 is why it is not folded into `check:content`.
+ * Its expected values come from a separate read of the markdown, which is hard rule 10.
  */
 
 import { readFile } from "node:fs/promises";
@@ -89,10 +29,8 @@ const failures = [];
 let checks = 0;
 
 /**
- * The reporter. `assert(label, ok, detail)` argument order, which is one of the
- * three shapes in this repo and is deliberately not the other two: a call
- * copied out of a gate using `ok(label, condition, detail)` is a ReferenceError
- * here rather than a silent pass. Hard rule 10, ninth class.
+ * `assert(label, ok, detail)`, deliberately not the other two shapes here: a call copied out of a
+ * gate using `ok(label, condition)` is a ReferenceError rather than a silent pass. Hard rule 10.
  *
  * @param {string} label
  * @param {boolean} passed
@@ -104,23 +42,8 @@ function assert(label, passed, detail = "") {
 }
 
 /**
- * The `date:` line from a post's frontmatter, as an ISO instant.
- *
- * A SECOND, NARROW READ ON PURPOSE. The pipeline parses frontmatter with
- * gray-matter and produces `publishAt`; if this gate asked the pipeline for the
- * expected value it would be comparing the pipeline against itself and the
- * whole assertion would be `x === x`. So this reads the file's own bytes and
- * takes the first `date:` inside the opening `---` block.
- *
- * The scope is bounded to the frontmatter block rather than the whole file so a
- * `date:` written in prose cannot be mistaken for the field, and the needle is
- * anchored to the start of a line for the same reason.
- *
- * THE PATH COMES FROM `postPath()`, not from a join here. Hard rule 6 says the
- * `content/posts/<slug>.md` shape is stated once by that export, and the first
- * version of this file stated it four more times. `check:invariants` section
- * 15b caught all four on the first tier run, which is the gate doing exactly
- * what it exists for to a gate that had just been written.
+ * A SECOND, NARROW READ ON PURPOSE: asking the pipeline would make the assertion `x === x`.
+ * Bounded to the frontmatter block, and the path comes from `postPath()`, hard rule 6.
  *
  * @param {string} slug
  * @returns {Promise<string>} an ISO instant
@@ -170,18 +93,11 @@ function flatten(items) {
   return out;
 }
 
-// --- The corpus, and the scope proof --------------------------------------
+// The corpus, and the scope proof
 
 /*
- * BUILT HERE, not read off disk. `content/generated/posts.json` is a gitignored
- * local product and a stale one would have this gate certify a corpus nobody is
- * serving. `buildArtifact()` returns the SERIALISED artifact, which is the
- * shape the file has, so it is parsed back rather than used as an object.
- *
- * It reads `content/generated/stack.json`, which `build:stack` writes, so a
- * fresh checkout that has not built reaches this line with the file absent.
- * The failure is named rather than thrown as ENOENT, because "no such file"
- * about a generated path sends the reader looking for a missing source.
+ * BUILT HERE, not read off disk: the artifact is a gitignored local product, and a stale one
+ * would certify a corpus nobody serves. The missing-file failure is NAMED, not an ENOENT.
  */
 let artifact;
 try {
@@ -198,9 +114,8 @@ try {
 const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
 
 /*
- * SCOPE PROVEN NON-EMPTY BEFORE ANYTHING IS ASSERTED. A sweep over zero posts
- * reports exactly what a clean sweep reports, and this gate's whole first
- * section is a per-post loop. Hard rule 10, first discipline.
+ * SCOPE PROVEN NON-EMPTY FIRST: a sweep over zero posts reports what a clean sweep reports,
+ * which is hard rule 10's first discipline.
  */
 assert(
   "the corpus has published posts to render",
@@ -215,25 +130,9 @@ if (failures.length > 0) {
 }
 
 /*
- * `app/lib/seo.ts` RIDES THROUGH THE SAME BUNDLER as the routes, and that is
- * not a convenience. It is TypeScript, so Node cannot import it directly, and
- * the alternatives were both worse: restating `SITE.name` and `SITE_ORIGIN`
- * here would make this gate a second owner of the site's identity (hard rule
- * 17), and reading them out of a rendered page would mean comparing the page
- * against itself.
- *
- * So the expectation and the subject share ONE source, deliberately. The
- * assertion below is "the h-card names the site's author", not "the h-card
- * says a particular string": if `SITE.name` changes, the card must follow it,
- * and that is the property worth holding.
- *
- * IN ITS OWN BUNDLE CALL, and that is not tidiness. esbuild derives `outbase`
- * from the common parent of its entry points, so mixing `app/lib/seo.ts` in
- * with the three `app/routes/*` entries moves the outbase up to `app/` and
- * every output lands under `routes/` and `lib/` instead of flat. The helper
- * maps outputs by basename, so the first import then fails with
- * ERR_MODULE_NOT_FOUND on a path that looks correct. `check:admin-ui` carries
- * the same note at its own single-entry bundle; this is the second victim.
+ * `app/lib/seo.ts` RIDES THROUGH THE SAME BUNDLER, so expectation and subject share ONE source.
+ * IN ITS OWN BUNDLE CALL, because esbuild derives `outbase` from the entry points' common
+ * parent, and mixing it with the routes moves every output under a subdirectory.
  */
 const routes = await bundleRoutes([
   "app/routes/blog.$slug.tsx",
@@ -281,12 +180,7 @@ function postLoaderData(record) {
   return {
     toc: record.toc ?? [],
     seriesParts: [],
-    /*
-     * NO MENTIONS. The mentions block carries no microformats class and is the
-     * one region of the page whose text is a stranger's, so feeding it here
-     * would put third-party-shaped fixtures into a gate about first-party
-     * markup. `check:invariants` and the worker tests own that section.
-     */
+    /* NO MENTIONS: that block carries no microformats class and its text is a stranger's. */
     mentions: [],
     post: {
       slug: record.slug,
@@ -295,25 +189,10 @@ function postLoaderData(record) {
       html: record.html ?? "",
       publishAt: record.publishAt ?? null,
       /*
-       * THE SAME SOURCE THE SYNC USES, through the same function.
-       *
-       * This was `record.updated ?? null`, which is the FRONTMATTER field, and
-       * no post in this corpus carries one. So `dt-updated` was absent on every
-       * render here while the deployed page carried it on every post, and the
-       * gate was asserting a property it had arranged never to see. The live
-       * parse on 2026-09-10 is what exposed it.
-       *
-       * `revisedDate` is `sync-content.mjs`'s own rule, extracted: frontmatter
-       * `updated` if present, else the file's last commit date. Feeding it here
-       * means this gate renders what production renders rather than a value
-       * invented for the fixture.
-       *
-       * ONE HONEST DIFFERENCE, stated because it is not a bug in either place:
-       * when there is no revision date the SYNC writes `unixepoch()` rather
-       * than null, so a production row always carries something. Null here
-       * renders no revision, which is the same markup a page with no revision
-       * shows, and the assertion below is the PAIRING rather than the presence,
-       * so it holds either way.
+       * THE SAME SOURCE THE SYNC USES. This was the FRONTMATTER field, which no post carries, so the
+       * gate was asserting a property it had arranged never to see. ONE HONEST DIFFERENCE, a bug in
+       * neither place: with no revision date the sync writes `unixepoch()`, so the assertion is the
+       * PAIRING and holds either way.
        */
       updatedAt: revisedDate(record),
       coverImage: record.cover?.src ?? null,
@@ -333,7 +212,7 @@ function postLoaderData(record) {
   };
 }
 
-// --- 1. Every published post page is one complete h-entry -----------------
+// 1. Every published post page is one complete h-entry
 
 let postsParsed = 0;
 let updatedSeen = 0;
@@ -353,9 +232,8 @@ for (const record of published) {
   const entries = parsed.items.filter((/** @type {any} */ i) => i.type.includes("h-entry"));
 
   /*
-   * EXACTLY ONE, not at least one. A page that grew a second h-entry (a related
-   * card annotated by mistake, a mention marked up as an entry) publishes two
-   * competing answers to "what is this page", and a consumer takes the first.
+   * EXACTLY ONE, not at least one: two h-entries publish competing answers and a consumer takes
+   * the first.
    */
   assert(
     `${slug}: exactly one top-level h-entry`,
@@ -382,12 +260,8 @@ for (const record of published) {
   );
 
   /*
-   * e-content IS ASSERTED AS THE BODY, not merely as present. `content` parses
-   * to `{ value, html }`, and the html half is what a consumer republishes, so
-   * a class landed on an empty wrapper would still satisfy "has content".
-   * Compared against the rendered body's own length rather than byte-for-byte:
-   * the parser normalises whitespace and resolves relative URLs inside the
-   * fragment, so equality would be an assertion about the parser.
+   * e-content IS ASSERTED AS THE BODY: a class on an empty wrapper still satisfies "has content".
+   * By length rather than byte for byte, or the equality is an assertion about the parser.
    */
   const content = /** @type {any} */ (entry.properties?.content?.[0]);
   const bodyHtml = typeof content === "object" ? (content?.html ?? "") : "";
@@ -433,13 +307,8 @@ for (const record of published) {
   }
 
   /*
-   * dt-updated IS CONDITIONAL AND THE GATE IS CONDITIONAL WITH IT, in both
-   * directions. The route shows an updated date only when the revision is
-   * further from publication than its own threshold, so requiring the property
-   * everywhere would be an unfailable-in-reverse assertion: it would demand
-   * markup for a fact most posts do not have. What IS asserted is the pairing.
-   * A post whose page shows "Updated" and carries no `dt-updated` is a defect,
-   * and so is a `dt-updated` on a page that shows no revision.
+   * dt-updated IS CONDITIONAL AND THE GATE IS CONDITIONAL WITH IT, both ways: what is asserted is
+   * the pairing, a page showing "Updated" with no `dt-updated` and the reverse.
    */
   const showsUpdated = />\s*Updated\s*</.test(html) || /·\s*Updated/.test(html);
   const updated = prop(entry, "updated");
@@ -451,23 +320,10 @@ for (const record of published) {
       `(${JSON.stringify(updated)}).`,
   );
   /*
-   * THE VALUE ASSERTION RUNS ON EVERY POST, present or absent, and that is
-   * deliberate rather than tidy.
-   *
-   * Conditioning it on `updated !== undefined` made this gate's assertion count
-   * depend on the ENVIRONMENT: a full clone resolves a commit date for every
-   * post and ran it eleven times, CI's shallow clone resolves none and would
-   * have run it zero. A floor cannot sit under a count that moves with the
-   * checkout, and the gate would have gone red on CI for being CI.
-   *
-   * So the expectation is derived from what the PAGE rendered: if it shows a
-   * revision the property must equal the date the sync would write, and if it
-   * does not the property must be absent. That defers to the route's own
-   * threshold instead of restating it here, which keeps `REVISED_THRESHOLD_MS`
-   * owned by the route (hard rule 17) and keeps this count constant.
-   *
-   * Paired with the presence assertion above, the two cannot both be satisfied
-   * by a page that renders a revision it did not have.
+   * THE VALUE ASSERTION RUNS ON EVERY POST: conditioning it made the count depend on the CHECKOUT,
+   * a full clone resolving a commit date for every post and a shallow one none. The expectation is
+   * derived from what the PAGE rendered, which leaves hard rule 17's one owner of the threshold
+   * where it belongs, with the route.
    */
   if (updated === undefined) unrevisedSeen += 1;
   else updatedSeen += 1;
@@ -481,11 +337,8 @@ for (const record of published) {
   );
 
   /*
-   * NOTHING ELSE ON THE PAGE IS A MICROFORMAT. The mentions list is full of
-   * author names, source links and timestamps that LOOK like h-entry material,
-   * and annotating them would republish a stranger's text as this site's
-   * structured data. So the whole-page item count is pinned: one h-entry, one
-   * nested h-card, nothing more.
+   * NOTHING ELSE ON THE PAGE IS A MICROFORMAT: annotating the mentions list would republish a
+   * stranger's text as this site's structured data.
    */
   const all = flatten(parsed.items);
   assert(
@@ -504,26 +357,8 @@ assert(
 );
 
 /*
- * BOTH dt-updated BRANCHES, COUNTED AND PRINTED, and neither is fabricated.
- *
- * A synthetic control used to sit here. It rendered a real post twice with an
- * `updatedAt` this gate invented, thirty days and one hour past publication,
- * and asserted the route's threshold from both sides. It existed because the
- * gate fed `record.updated`, the FRONTMATTER field, which no post in this
- * corpus carries: the property was unreachable on real data and a fixture was
- * the only way to touch it. Meanwhile the deployed page carried `dt-updated` on
- * every post, so the gate was asserting the absence of something production
- * always published.
- *
- * Feeding `revisedDate` removed the need for the fixture. On a full clone every
- * post has a commit date well past its publication, so the PRESENT branch runs
- * against the value the sync would write. On CI's shallow clone
- * `lastCommitDate` legitimately answers null and the ABSENT branch runs. The
- * two environments cover the pair between them, on real inputs.
- *
- * NOT ASSERTED against a fixed split, because which branch runs is a property
- * of the clone rather than of the code, and a gate demanding eleven present
- * would go red on CI for being CI. Printed, so a reader can see which ran.
+ * BOTH dt-updated BRANCHES, COUNTED AND PRINTED, and neither fabricated. Not asserted against a
+ * fixed split, because which branch runs is a property of the clone rather than of the code.
  */
 console.log(
   `  dt-updated: ${updatedSeen} post(s) carried a revision, ${unrevisedSeen} did not, ` +
@@ -531,7 +366,7 @@ console.log(
     `clone has no history for most files and answers null, which is the absent branch.`,
 );
 
-// --- 2. The blog index is one h-feed, holding the page it rendered --------
+// 2. The blog index is one h-feed, holding the page it rendered
 
 const ordered = [...published].sort(
   (/** @type {any} */ a, /** @type {any} */ b) =>
@@ -540,13 +375,8 @@ const ordered = [...published].sort(
 const totalPages = pageCount(ordered.length);
 
 /**
- * The index's loader payload for one page, built THROUGH the route's own paging
- * helpers rather than by slicing to a literal.
- *
- * Hard rule 10: measure floors through the gate's own pipeline. The count this
- * section asserts is derived from `POSTS_PER_PAGE` and `splitFeatured`, the two
- * functions the loader itself calls, so a change to the page size moves the
- * expectation and the page together and this gate keeps meaning what it said.
+ * Built THROUGH the route's own paging helpers rather than by slicing to a literal, which is
+ * hard rule 10's measure-floors-through-the-pipeline: a page size change moves both together.
  *
  * @param {number} page
  */
@@ -570,15 +400,8 @@ function indexLoaderData(page) {
 let feedsParsed = 0;
 
 /*
- * BOTH ENDS OF THE PAGINATION, and the first page is not enough on its own.
- * Page 1 is the only page that can carry a featured post, and the last page is
- * the only one whose length is not the page size. A gate that read page 1 alone
- * would pass a route that rendered ten entries no matter what it was asked for.
- *
- * A SET, because a corpus that fits on one page makes those two the same page
- * and rendering it twice would double this section's count without doubling
- * what it knows. The final assertion compares against `INDEX_PAGES.size` for
- * the same reason: the floor has to be what was actually asked for.
+ * BOTH ENDS OF THE PAGINATION: page 1 is the only one that can carry a featured post and the
+ * last the only one not the page size. A SET, because a one-page corpus makes them the same page.
  */
 const INDEX_PAGES = new Set([1, totalPages]);
 for (const page of INDEX_PAGES) {
@@ -615,14 +438,8 @@ for (const page of INDEX_PAGES) {
   );
 
   /*
-   * THE COUNT IS THE LOADER'S, NOT A LITERAL AND NOT THE CORPUS SIZE.
-   *
-   * The prompt asked for "the published count", and that is refuted by this
-   * page: /blog paginates at POSTS_PER_PAGE and the corpus is larger, so the
-   * index has never carried every published post and an assertion that it does
-   * could only pass while the corpus stayed under the page size. What the page
-   * genuinely promises is that every post it SHOWS is in its feed, featured
-   * post included, and that is what this compares.
+   * THE COUNT IS THE LOADER'S: /blog paginates, so "the index carries every published post" could
+   * only pass while the corpus stayed under the page size. The promise is about what it SHOWS.
    */
   assert(
     `/blog page ${page}: the feed holds every entry the page rendered`,
@@ -661,13 +478,7 @@ for (const page of INDEX_PAGES) {
       `entry published is ${JSON.stringify(prop(child, "published"))}, ` +
         `${postPath(slug)} says ${await frontmatterDate(slug)}.`,
     );
-    /*
-     * p-summary IS PAIRED WITH THE DESCRIPTION, in both directions. A card
-     * renders the description only when the post has one, so requiring the
-     * property unconditionally would demand markup for absent data, and
-     * accepting its absence unconditionally would let the class fall off every
-     * card without a single red.
-     */
+    /* p-summary IS PAIRED WITH THE DESCRIPTION both ways, or the class falls off every card unseen. */
     assert(
       `/blog page ${page}: ${slug} carries p-summary exactly when it has a description`,
       (prop(child, "summary") !== undefined) === Boolean(record.description),
@@ -683,9 +494,8 @@ for (const page of INDEX_PAGES) {
     }
 
     /*
-     * A LISTING ENTRY CARRIES NO e-content, and this is the assertion that
-     * keeps a summary honest. A consumer that finds content on a card has been
-     * handed a description labelled as the article.
+     * A LISTING ENTRY CARRIES NO e-content: a consumer finding content on a card has a description
+     * labelled as the article.
      */
     assert(
       `/blog page ${page}: ${slug} publishes no e-content`,
@@ -702,22 +512,11 @@ assert(
   `${feedsParsed} of ${INDEX_PAGES.size} index page(s) parsed to one h-feed.`,
 );
 
-// --- 3. The home page carries the site author's h-card --------------------
+// 3. The home page carries the site author's h-card
 
 /*
- * THE HOME FIXTURE IS DERIVED, NOT SUPPLIED. Ruling 57.
- *
- * This used to be `ordered.find(p => p.featured) ?? ordered[0]` plus two more,
- * which is a THIRD statement of which post leads the front page, written by the
- * gate that is supposed to be checking it. It also asserted a section that
- * production did not render at all: the loader looked for the featured post
- * inside the four newest, the flagship sorts fifth, and the whole block was
- * dark on the live site while this gate reported four happy h-entries.
- *
- * Now the two arrays are built the way `listHomeStartHere`'s two statements
- * build them, `featured = 1` and `featured = 0`, each newest first, and
- * `startHere` makes the decision for both. The gate can no longer hand itself a
- * lead, and if the rule changes in one place this fixture changes with it.
+ * THE HOME FIXTURE IS DERIVED, NOT SUPPLIED: it was a third statement of which post leads the
+ * front page, written by the gate checking it, asserting a section production never rendered.
  */
 const homeFeaturedRows = ordered.filter((/** @type {any} */ p) => p.featured);
 const homeOtherRows = ordered.filter((/** @type {any} */ p) => !p.featured);
@@ -768,13 +567,8 @@ if (cards.length === 1) {
       `${EXPECTED_AUTHOR_URL}.`,
   );
   /*
-   * NO u-photo, ASSERTED. The site publishes no photograph of Dustin: the
-   * Person JSON-LD beside this card carries no image and the page renders none.
-   * A card claiming one would be pointing a consumer at something that does not
-   * exist, which is hard rule 13's substituted value wearing an h-card.
-   *
-   * This assertion INVERTS the day a photo lands, which is correct: adding one
-   * should be a deliberate edit here, not a silent inheritance.
+   * NO u-photo, ASSERTED: the site publishes no photograph, so a card claiming one is the
+   * substituted value hard rule 13 names, wearing an h-card. It INVERTS the day a photo lands.
    */
   assert(
     "/: the h-card claims no u-photo, because the site publishes none",
@@ -817,10 +611,8 @@ for (const record of homeExpected) {
 }
 
 /*
- * THE h-card MUST NOT SWALLOW THE ENTRIES. The card is on `.home-intro` and the
- * Start here list is a sibling, so the entries parse at the top level. If the
- * class ever moved up to `<main>` the entries would become the card's children
- * and every consumer would read three posts as properties of a person.
+ * THE h-card MUST NOT SWALLOW THE ENTRIES: on `<main>` every consumer reads three posts as
+ * properties of a person.
  */
 assert(
   "/: the Start here entries are siblings of the h-card, not children of it",
@@ -829,18 +621,11 @@ assert(
     `moved onto an ancestor of the post list.`,
 );
 
-// --- 4. No rel="me", no social links. Ruling 50. --------------------------
+// 4. No rel="me", no social links. Ruling 50.
 
 /*
- * ASSERTED ON THE RENDERED PAGES, not by grepping the source, because the
- * subject is what a consumer reads. `rel-urls` and `rels` are the parser's own
- * view of every rel on the document, so a `rel="me"` reaches this check however
- * it was written: a literal in JSX, a value composed at render time, or one
- * arriving through a component this gate does not know the name of.
- *
- * The social-network arm is the ruling's other half. It is a NAMED LIST rather
- * than a general "no outbound links" rule, because the site links out
- * constantly and always has; what ruling 50 forbids is these networks.
+ * ASSERTED ON THE RENDERED PAGES: the parser's view of every rel catches one however it was
+ * written. The social arm is a NAMED LIST, the site linking out constantly.
  */
 const FORBIDDEN_HOSTS = ["bsky.app", "bsky.social", "mastodon.social", "fed.brid.gy"];
 
@@ -874,41 +659,13 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
 
 await cleanup();
 
-// --- Report ---------------------------------------------------------------
+// Report
 
 /*
- * WHOLE-GATE EXECUTED-COUNT FLOOR.
- *
- * MEASURED BY RUNNING THIS GATE, never summed: 226 on 2026-09-10, over 11
- * published posts, two index pages and the home page. The count is a function
- * of the corpus size (roughly ten per post in section 1, four per card in
- * section 2, and a fixed tail), so it moves when a post is published and steps
- * DOWN when one is unpublished.
- *
- * FLOORED AT 216, AND `check:floors` CHOSE THAT NUMBER RATHER THAN TASTE. Its
- * tolerance is `max(3, ceil(count * 0.05))`, so 226 allows a gap of 12; 216
- * leaves 10. Two earlier values were refused by that gate by name: 190 was a
- * gap of 24, and 205 became a gap of 13 the moment ruling 57 landed.
- *
- * THREE RE-MEASUREMENTS, EACH BY RUNNING. 190 to 205 when the floor was first
- * refused; 205 to 208 at 218 when ruling 57 made the home section render four
- * real cards rather than the three this gate used to fabricate, and added the
- * lead assertion; 208 to 216 at 226 when the `dt-updated` value assertion
- * became unconditional. A number written here from arithmetic on the previous
- * one was wrong every time it was tried.
- *
- * THE COUNT DOES NOT MOVE WITH THE CHECKOUT, and that is load bearing for CI.
- * `revisedDate` answers null on a shallow clone, which is what CI has, so the
- * `dt-updated` branch flips. PROVEN by forcing `lastCommitDate` to return null
- * and re-running: 226 either way, with the branch report flipping from 11 and 0
- * to 0 and 11. A gate whose count depended on the clone would go red on CI for
- * being CI, and this floor would be unsettable.
- *
- * WHAT THAT TIGHTNESS COSTS, stated rather than discovered later: unpublishing
- * a post removes roughly thirteen assertions from this sweep and would breach
- * this floor. That is the repo-wide trade `check:floors` imposes, and the
- * repair is the same as everywhere else, a re-measured floor in the same commit
- * as the corpus change. Publishing a post only ever moves the count up.
+ * WHOLE-GATE EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE. It moves with the corpus size
+ * and steps DOWN when a post is unpublished, and it does NOT move with the checkout, which is
+ * load bearing for CI. WHAT THE TIGHTNESS COSTS: unpublishing breaches it, and the repair is a
+ * re-measured floor in the same commit.
  */
 const MINIMUM_CHECKS = 216;
 const floorBreach = assertFloor(

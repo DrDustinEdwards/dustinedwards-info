@@ -1,36 +1,13 @@
 /**
- * Gate: `content/llms.txt` is the source of truth for the `llms.txt` settings
- * row, and nothing may drift from it.
- *
- * OBSERVATION BOUNDARY: compares the committed llms.txt against the settings row
- * it seeds. It does not fetch /llms.txt, so it cannot see the route failing to
- * serve what the row holds.
+ * Gate: `content/llms.txt` is the source of truth for the `llms.txt` settings row.
  *
  *   npm run check:llms                 pure checks only
  *   npm run check:llms -- --local      also compare against the local D1 row
  *   npm run check:llms -- --remote     also compare against the remote D1 row
  *
- * Why this exists. Before 2026-08-02 the live row was 2371 bytes of current copy
- * and the ONLY thing that ever wrote it was `0001_init.sql`, which seeds 247
- * bytes of the virology copy retired on 2026-07-27. Nothing re-seeded it, so a
- * rebuilt site would have served a stale, wrong llms.txt and nothing could have
- * noticed. Found while writing RECOVERY.md.
- *
- * The route carried a second copy too, a hand-maintained template literal under
- * a comment reading "If you change one, change the other". It had already
- * drifted: byte-identical to the row except for 62 CRs, because that .ts file is
- * CRLF on a Windows checkout and the row is LF. So the site served different
- * bytes depending on whether the row existed.
- *
- * Three things are asserted, and the first two are PURE so they run everywhere
- * and cannot be skipped:
- *
- *   1. the tracked file exists, is non-empty, and is LF-only
- *   2. the route does not carry its own copy: it imports the file
- *   3. with --local or --remote, the D1 row is byte-identical to the file
- *
- * FAILS CLOSED. A missing file, an unparseable query result or a wrangler
- * failure is a failure, never a skip.
+ * BOUNDARY: it compares the committed file against the row it seeds and against the route that
+ * serves it, but it does not fetch `/llms.txt`, so it cannot see the route failing to serve what
+ * the row holds.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -71,12 +48,12 @@ if (!existsSync(LLMS_PATH)) {
   process.exit(1);
 }
 
-// Read as BYTES and decode explicitly. This file is compared byte for byte and
-// the platform text layer is cp1252 on this host.
+// Read as BYTES and decode explicitly: this file is compared byte for byte and the platform text
+// layer is not UTF-8 on this host.
 const fileBytes = readFileSync(LLMS_PATH);
 const fileText = fileBytes.toString("utf8");
 
-// ---- 1. the file itself -----------------------------------------------------
+// 1. the file itself
 
 assertThat(fileBytes.length > 0, "content/llms.txt is not empty");
 // An assertion that can pass by reading nothing is not an assertion.
@@ -93,7 +70,7 @@ assertThat(
 );
 assertThat(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
 
-// ---- 2. the route does not keep its own copy --------------------------------
+// 2. the route does not keep its own copy
 
 const route = readFileSync(ROUTE_PATH, "utf8");
 assertThat(
@@ -101,8 +78,8 @@ assertThat(
   "the route imports content/llms.txt",
   "Without the import the fallback is a second copy that will drift.",
 );
-// The specific shape that rotted: a multi-line template literal holding the
-// document. One line is fine (`const FALLBACK = llmsTxt;`); sixty is the bug.
+// The specific shape that rotted: a multi-line template literal holding the document. One line is
+// fine; sixty is the bug.
 const literals = route.match(/`[^`]*`/g) ?? [];
 const longLiteral = literals.find((l) => l.split("\n").length > 5);
 assertThat(
@@ -114,7 +91,7 @@ assertThat(
     : undefined,
 );
 
-// ---- 3. the D1 row ----------------------------------------------------------
+// 3. the D1 row
 
 const target = process.argv.includes("--remote")
   ? "--remote"
@@ -123,8 +100,8 @@ const target = process.argv.includes("--remote")
     : null;
 
 if (target) {
-  // RETRIED ONCE. Remote D1 reads have failed with Cloudflare error 10000
-  // twice, both clean immediately after. Read only.
+  // RETRIED ONCE: remote D1 reads have failed transiently and been clean immediately after. Read
+  // only.
   const result = await retryRead(
     () => {
       const r = spawnSync(
@@ -181,30 +158,18 @@ console.log(
   `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
 );
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 6 in
- * the pure offline tier. Never summed. Floored at 6, slack of ZERO, and the
- * zero is the point: this gate is SMALL, so one skipped assertion is a sixth of
- * it and there is no natural movement to absorb. The remote tier only ADDS the
- * D1 row comparison, so a floor set on the offline figure holds for both.
+ * EXECUTED-COUNT FLOOR, MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, never summed.
+ * Slack of ZERO, and the zero is the point: this gate is SMALL, so one skipped assertion is a
+ * sixth of it and there is no natural movement to absorb. The remote tier only ADDS a comparison,
+ * so a floor set on the offline figure holds for both.
  */
 /*
- * THE CONTACT URL IS BOUND TO SITE_ORIGIN, in both directions.
- *
- * `content/llms.txt` is a tracked literal, so it cannot import anything and its
- * contact line was typed by hand. It said `https://dustinedwards.info` while
- * `SITE_ORIGIN` is the workers.dev host, so the one machine-readable file whose
- * entire audience is crawlers pointed them at the LEGACY WORDPRESS SITE rather
- * than at this one.
- *
- * The gate is the binding a literal file cannot express. At DNS cutover
- * `SITE_ORIGIN` changes and this goes red until llms.txt follows, which is the
- * point: the two move together or the build says so.
- *
- * The heading on line 1 is deliberately NOT checked. `# dustinedwards.info` is
- * the site's NAME, which is that domain either way, and is not a claim about
- * where anything is served from.
+ * THE CONTACT URL IS BOUND TO SITE_ORIGIN, in both directions. A tracked literal cannot import
+ * anything, so its contact line was typed by hand and pointed the one machine-readable file whose
+ * whole audience is crawlers at a host this site is not served from. The gate is the binding a
+ * literal file cannot express, and at DNS cutover it goes red until llms.txt follows, which is the
+ * point. The heading is deliberately NOT checked: it is the site's NAME, not a claim about where
+ * anything is served from.
  */
 {
   const seoSource = readFileSync("app/lib/seo.ts", "utf8");
@@ -234,11 +199,9 @@ const MINIMUM_CHECKS = 9;
 const floorBreach = assertFloor(
   "check:llms",
   /*
-   * NAMED PER BRANCH, vol 15 binding, even though one VALUE covers both: 9
-   * offline and 11 with --remote, measured 2026-09-06, and 11 minus the
-   * tolerance is 8, so the offline floor of 9 is the stricter of the two and
-   * is kept for both. The names still differ, because a single name would let
-   * whichever branch ran last be judged against the other's reading.
+   * NAMED PER BRANCH even though one VALUE covers both, the offline figure being the stricter of
+   * the two and kept for both: a single name would let whichever branch ran last be judged against
+   * the other's reading.
    */
   target === "--remote" ? "checks-remote" : "checks-offline",
   checks,

@@ -1,37 +1,11 @@
 /**
- * Renders every `:::diagram` in the corpus to a static SVG asset.
+ * Renders every `:::diagram` in the corpus to a static SVG asset, two per diagram, light and dark.
  *
  *   npm run build:diagrams [-- --force]
  *
- * BUILD TIME ONLY, in Node, driving a real Chromium through mermaid-cli. That is
- * not a preference, it is the ruling (Capsid `dustinedwards/chart-stack.md`) and
- * it was decided by measurement: diagram layout needs real font metrics, so
- * mermaid on a DOM shim dies at `CSSStyleSheet is not defined` with
- * `SVGTextElement.getBBox()` behind it, and Pintora at `Cannot set properties of
- * null (setting 'font')`. Charts pass the both-writers rule and render inline;
- * diagrams cannot and take the social-card pattern instead.
- *
- * The gap that leaves is the same one social cards have and it is recorded
- * rather than papered over: a diagram authored or edited in the admin editor has
- * no asset until this runs. The post still renders, with a missing image, which
- * is why `check:diagrams` fails on a referenced asset that is not on disk.
- *
- * Nothing here touches the gated artifact. The KEY is deterministic content and
- * lives in the artifact; the SVG bytes come out of a browser engine and are
- * exactly the kind of input a byte-comparison gate must never be handed.
- *
- * Two renders per diagram, light and dark. Forced, not chosen, and both halves
- * were measured:
- *
- *   1. mermaid will not accept a custom property. `themeVariables:
- *      { primaryColor: "var(--surface)" }` fails the render outright with
- *      `Error: Unsupported color format: "var(--surface-2)"`, because khroma
- *      parses every value to derive the ones it was not given.
- *   2. An SVG referenced by `<img>` is an independent document, so even a
- *      successfully embedded `var()` would resolve against nothing. And this
- *      site resolves its theme from a cookie, not from the OS, so a
- *      `prefers-color-scheme` block inside the asset would hand a reader who
- *      chose light under a dark OS the wrong drawing.
+ * BOUNDARY: BUILD TIME ONLY, in Node, driving a real browser, and nothing here touches the gated
+ * artifact: the SVG bytes come out of a browser engine and are exactly the kind of input a
+ * byte-comparison gate must never be handed.
  */
 
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
@@ -55,11 +29,9 @@ import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 export const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
 /**
- * The id mermaid writes onto the SVG root and prefixes every internal id with.
- *
- * Set explicitly rather than left to mermaid-cli's default, so the bytes do not
- * move if that default ever does. Two diagrams on one page cannot collide on it:
- * each asset is its own document behind its own `<img>`.
+ * The id written onto the SVG root and prefixed onto every internal id, set explicitly so the
+ * bytes do not move if the tool's default does. Two diagrams on one page cannot collide: each
+ * asset is its own document behind its own `<img>`.
  */
 const SVG_ID = "diagram";
 
@@ -67,16 +39,9 @@ const SVG_ID = "diagram";
 const VIEWPORT = { width: 1200, height: 800, deviceScaleFactor: 1 };
 
 /**
- * The font stack the diagram is laid out with, and the one it is displayed in.
- *
- * A recorded limitation rather than a solved problem. The site's prose is Inter,
- * loaded as a webfont, and an SVG inside an `<img>` may not load external
- * resources, so a diagram cannot be set in Inter without embedding the font in
- * every asset. It is set in the system sans instead, which also means the
- * viewer's font is not guaranteed to be the one this build measured text with:
- * mermaid bakes box sizes from the metrics it sees. A wider font on the reader's
- * machine eats into node padding rather than being clipped, which is why the
- * padding below is generous rather than default.
+ * The font stack the diagram is laid out with, a recorded limitation rather than a solved problem:
+ * an SVG inside an `<img>` may not load external resources, so the viewer's font is not guaranteed
+ * to be the one this build measured text with, which is why the padding below is generous.
  */
 const FONT_FAMILY = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -94,18 +59,12 @@ function mermaidConfig(theme, colours) {
     // still gets derived, which is why the audit exists rather than trusting
     // this list to be complete.
     themeVariables: { ...colours, darkMode: theme === "dark", fontFamily: FONT_FAMILY },
-    // Labels as real <text>, never <foreignObject>. Measured: mermaid's default
-    // wraps flowchart labels in foreignObject, and foreignObject is not rendered
-    // at all when an SVG is loaded through <img>, so every node would come out
-    // blank on the page while looking correct in a standalone viewer.
+    // Labels as real text, never `<foreignObject>`: a foreignObject is not rendered at all through
+    // `<img>`, so every node would come out blank on the page while looking correct standalone.
     htmlLabels: false,
     flowchart: { htmlLabels: false, padding: 12, useMaxWidth: false },
-    // Tightened from mermaid's defaults, and the reason is layout rather than
-    // taste. The prose column is 44rem, so a drawing wider than about 700px is
-    // scaled down by `max-width: 100%` and takes its type with it: a default
-    // five-participant sequence diagram came out 1210px, which lands 16px text
-    // at an effective 9px. Narrowing the gaps shrinks the drawing without
-    // shrinking the text, which is the only lever that helps.
+    // Tightened from the defaults, for layout rather than taste: a wider drawing is scaled down and
+    // takes its type with it, and narrowing the gaps shrinks the drawing without shrinking the text.
     sequence: {
       useMaxWidth: false,
       wrap: false,
@@ -122,18 +81,10 @@ function mermaidConfig(theme, colours) {
 }
 
 /**
- * Makes the SVG sizeable by an `<img>`.
- *
- * mermaid emits `width="100%"` plus an inline `max-width`. Inside an `<img>`
- * that is an SVG with no intrinsic width, and the browser falls back to the
- * default 300x150 replaced-element size instead of the drawing's own. The
- * viewBox already carries the real size, so it is copied onto the root and the
- * `max-width` that would fight `app.css` is dropped.
- *
- * Done with a targeted rewrite of the ROOT TAG rather than by parsing and
- * re-serialising: an `.svg` file is served as XML and parsed strictly, so a
- * serialiser that emits one unclosed tag produces a file that renders as
- * nothing.
+ * Makes the SVG sizeable by an `<img>`: the renderer emits a percentage width, which inside an
+ * `<img>` is an SVG with no intrinsic width, so the viewBox's real size is copied onto the root.
+ * A targeted rewrite of the ROOT TAG rather than parsing and re-serialising: an `.svg` is parsed
+ * strictly, so one unclosed tag produces a file that renders as nothing.
  *
  * @param {string} svg
  * @param {string} label
@@ -158,19 +109,10 @@ function sizeRoot(svg, label) {
 }
 
 /**
- * Renders one source at one theme.
- *
- * mermaid-cli's own `renderMermaid` against a browser this script owns, rather
- * than the `mmdc` command. Three reasons, the first of them measured here:
- *
- *   1. Node refuses to spawn the `npx.cmd` shim without `shell: true`, exiting
- *      `spawnSync npx.cmd EINVAL`, and `shell: true` concatenates an argument
- *      array WITHOUT quoting, which has already split one value containing
- *      spaces into three arguments in this repo. Temp paths on this host sit
- *      under a user directory whose name can contain anything.
- *   2. One browser serves every render instead of one launch per file.
- *   3. The source and the config never touch a temp file or a command line, so
- *      nothing can be mangled on the way in.
+ * The renderer's own API against a browser this script owns, rather than its command line. Node
+ * refuses to spawn the shim without a shell, and a shell concatenates an argument array WITHOUT
+ * quoting, which has already split a value containing spaces here; one browser then serves every
+ * render, and neither the source nor the config touches a temp file.
  *
  * @param {import("puppeteer").Browser} browser
  * @param {string} source
@@ -271,10 +213,8 @@ async function main() {
     await browser?.close();
   }
 
-  // Prune. An upsert keyed by filename leaves a deleted diagram on disk forever,
-  // and the same reasoning already applies to the Ask index: the write path
-  // alone is not enough, something has to remove what the corpus no longer
-  // names.
+  // Prune: an upsert keyed by filename leaves a deleted diagram on disk forever, and the write path
+  // alone is not enough.
   const live = new Set(
     diagrams.flatMap((d) => DIAGRAM_THEMES.map((t) => `${d.key}-${t}.svg`)),
   );
@@ -291,16 +231,9 @@ async function main() {
       `${skipped} already current, ${pruned} pruned`,
   );
 
-  // `public/diagrams/` is in the MEDIA INDEX now, so rendering or pruning an
-  // asset here changes what `check:media` expects. Two things follow, and
-  // neither should have to be remembered.
-  //
-  // The manifest is regenerated automatically, because it is derived from the
-  // filesystem and there is no world in which a stale one is wanted. The index
-  // itself cannot be: the rebuild needs the ASSETS binding and therefore runs in
-  // the Worker, so this can only say so. Saying so loudly is the point: someone
-  // was always going to hit this cold, halfway through a content change, with a
-  // red gate and no obvious cause.
+  // These assets are in the MEDIA INDEX, so rendering or pruning one changes what `check:media`
+  // expects. The manifest is regenerated automatically, being derived from the filesystem; the index
+  // cannot be, needing the Worker's binding, so this can only say so loudly.
   if (written > 0 || pruned > 0) {
     const manifest = spawnSync("node scripts/build-assets.mjs", {
       encoding: "utf8",

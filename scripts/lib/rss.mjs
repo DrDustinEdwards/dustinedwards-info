@@ -1,42 +1,10 @@
 /**
- * PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it.
+ * PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it by a separate process, the
+ * tier's blocking spawn leaving no event loop here to sample from.
  *
- * `check:all` runs its gates with a BLOCKING `spawnSync`, so while a gate runs
- * this process cannot execute a timer, read a pipe, or do anything else. Any
- * sampler living in this event loop would therefore record nothing for exactly
- * the span it exists to measure. So the sampler is a separate process that
- * writes to a FILE, and the runner reads that file afterwards and attributes
- * each sample to whichever gate owned the clock when it was taken.
- *
- * ## WHY THIS EXISTS
- *
- * Five `check:all` runs were killed by the OS for low memory between 2026-09-05
- * and 2026-09-09, one of them taking the machine down with it. Every diagnosis
- * of those runs was an inference from which gate happened to be printing when
- * the run died. A gate that is merely SLOW and a gate that is holding a
- * gigabyte look identical in a log of gate names and durations, and the tier
- * had no instrument that could tell them apart.
- *
- * ## WHAT IS COUNTED, STATED PLAINLY
- *
- * The whole descendant tree of `rootPid`, plus `rootPid` itself, summed. That
- * includes the runner's own resident set (roughly 60 MB), so a gate's figure is
- * the tier's total while that gate ran, not the gate in isolation. Reporting
- * the total is the honest form: the number that matters for an out-of-memory
- * kill is what the machine was holding, and subtracting a baseline would invent
- * a figure nothing measured.
- *
- * WorkingSetSize is what Windows reports as resident, which is the quantity the
- * memory manager acts on. It is not the same as committed or virtual size, and
- * a process paged out shrinks here without having freed anything.
- *
- * ## FAILS SOFT, ALWAYS
- *
- * A sampler that cannot start, or a PowerShell that is not where it should be,
- * reports "not measured" and the tier runs exactly as before. This is an
- * instrument, not a gate: it must never be the reason a check run fails.
- * `command -v` is deliberately not consulted (presence is not capability); the
- * binary is resolved by absolute path and its absence is simply a null reading.
+ * BOUNDARY: it counts the whole descendant tree plus the root, the runner's own resident set
+ * included, because the number that matters for an OOM kill is what the machine was holding. It
+ * FAILS SOFT, ALWAYS: this is an instrument, not a gate.
  */
 
 import { spawn } from "node:child_process";
@@ -47,13 +15,8 @@ import { join } from "node:path";
 const isWindows = process.platform === "win32";
 
 /**
- * PowerShell BY ABSOLUTE PATH, never by bare name.
- *
- * `FAILURES.md`: a gate that spawns a tool by bare name is green in the shell
- * it was written in and absent in the one that ships. `check:hook-scope`
- * spawned `bash`, passed every session under the agent's git bash, and refused
- * six times at a ship step under PowerShell. The same trap is available here in
- * the other direction, so the interpreter is resolved from `SystemRoot`.
+ * BY ABSOLUTE PATH, never by bare name: a gate that spawns a tool by bare name is green in the
+ * shell it was written in and absent in the one that ships, which a sibling gate paid for.
  */
 function powershellPath() {
   const root = process.env.SystemRoot ?? process.env.windir ?? "C:\\Windows";
@@ -62,16 +25,9 @@ function powershellPath() {
 }
 
 /**
- * The sampling loop, as a PowerShell program.
- *
- * One `Get-CimInstance` per sample gives every process with its parent, and the
- * descendants of the root are collected by walking that map. Doing the walk in
- * the sampler rather than in node means the file already holds the answer, so a
- * reader that starts late still gets correct history.
- *
- * Appends `epochMilliseconds,bytes` per line and never truncates: a sample lost
- * to a crash is a gap, and a gap is visible, whereas a rewritten file would be
- * empty in exactly the case worth reading.
+ * The sampling loop. The descendant walk happens in the SAMPLER, so the file already holds the
+ * answer and a reader that starts late still gets correct history. Appends per line and never
+ * truncates: a gap is visible, whereas a rewritten file would be empty in the case worth reading.
  */
 const sampler = (
   /** @type {number} */ rootPid,
@@ -134,21 +90,16 @@ export function startRssSampler(outPath, intervalMs = 400) {
         "-ExecutionPolicy",
         "Bypass",
         /*
-         * THE VALUES ARE SUBSTITUTED INTO THE SCRIPT, not passed after it.
-         * `powershell -Command "<script>" -RootPid 123` does NOT bind those
-         * into a `param()` block: they are consumed as arguments to
-         * powershell.exe itself and the script sees nothing. Measured here on
-         * the first run of this file, which started cleanly and wrote zero
-         * samples, which is the shape a silent no-op takes.
+         * THE VALUES ARE SUBSTITUTED INTO THE SCRIPT, not passed after it, where they are consumed as
+         * arguments to the interpreter. Measured on the first run, which started cleanly and wrote zero
+         * samples.
          */
         "-Command",
         sampler(process.pid, outPath, intervalMs),
       ],
       {
-        // DETACHED IS WRONG HERE and the reason is the bug this file is part of:
-        // a detached sampler outlives a killed runner and becomes exactly the
-        // orphan the memory work exists to remove. It stays a child, so the
-        // runner's own tree kill takes it too.
+        // DETACHED IS WRONG HERE: a detached sampler outlives a killed runner and becomes exactly the
+        // orphan the memory work exists to remove. It stays a child, so the tree kill takes it too.
         detached: false,
         stdio: "ignore",
       },
@@ -171,12 +122,8 @@ export function startRssSampler(outPath, intervalMs = 400) {
 }
 
 /**
- * The peak sample inside a window, in bytes, or null when nothing was sampled.
- *
- * A window with NO samples returns null rather than 0, because zero is a
- * measurement and "nobody looked" is not. A gate faster than the sampling
- * interval legitimately lands here, and reporting 0 MB for it would be a
- * plausible number with nothing behind it.
+ * The peak sample inside a window, or null when nothing was sampled: zero is a measurement and
+ * "nobody looked" is not, a gate faster than the sampling interval landing here legitimately.
  *
  * @param {string} outPath
  * @param {number} fromMs inclusive, epoch milliseconds
@@ -214,22 +161,10 @@ export function mb(/** @type {number | null | undefined} */ bytes) {
 }
 
 /**
- * THE PIDS OF THE MOST RECENT SAMPLED TREE, excluding the runner itself.
- *
- * The sampler already walks the descendant tree every tick to sum it, so it
- * writes the membership beside the total and this reads it back. That makes the
- * sampler the tree ORACLE as well as the meter, which matters because
- * `spawnSync` blocks the runner: while a gate runs, this process cannot
- * enumerate anything, and after the gate returns its grandchildren are exactly
- * the processes nobody recorded.
- *
- * PIDS, NEVER NAMES. A sweep matching `node` or `chrome` by name on this
- * machine would reach Dustin's own browser and editor, which is not a cleanup,
- * it is an outage. Measured 2026-09-09: a bare name match over this host
- * selects 18 Chrome processes belonging to the user's own session.
- *
- * A pid is only meaningful while it is alive, and Windows reuses them, so a
- * caller kills only what it can still see and treats an absent pid as done.
+ * THE PIDS OF THE MOST RECENT SAMPLED TREE: the sampler already walks the tree every tick, so it
+ * writes the membership beside the total and becomes the tree ORACLE as well as the meter, which
+ * matters because the blocking spawn leaves this process unable to enumerate anything. PIDS,
+ * NEVER NAMES: a sweep matching a process name would reach the user's own browser and editor.
  *
  * @param {string} outPath
  * @returns {number[]}
@@ -257,29 +192,11 @@ export function lastTree(outPath) {
 }
 
 /**
- * EVERY PID SEEN IN THE LAST `windowMs` OF SAMPLING, as one set.
- *
- * `lastTree` reads a single sample, which is right for "what is the tree right
- * now" and WRONG for cleaning up after a run that died. Measured 2026-09-09,
- * and it is why this function exists: a `check:all` run exhausted the machine,
- * 14 processes holding 1678 MB survived it, and the final sample named two of
- * them. The heavy ones had been spawned by `check:head` minutes earlier and
- * were still resident; they were simply not in the last row.
- *
- * ## WHY A WINDOW RATHER THAN THE WHOLE FILE
- *
- * WINDOWS REUSES PIDS. A pid seen at the start of a twenty minute run may
- * belong to something else entirely by the end, and this list is fed to a
- * KILL. The window is anchored to the LAST sample rather than to the clock,
- * because the interesting case is a file written by a run that died a while
- * ago: what matters is what was alive as that run ended, not how long ago the
- * ending was.
- *
- * The window is a bound on the risk, not a proof against it. A caller kills
- * only pids that are still alive, and the residual case, a pid reused inside
- * the window by an unrelated process, is accepted and stated rather than
- * hidden. The alternative, matching on process NAMES, is worse by a wide
- * margin: on this machine it selects the user's own browser and editor.
+ * EVERY PID SEEN IN THE LAST WINDOW OF SAMPLING, as one set. A single sample is right for "what
+ * is the tree right now" and WRONG for cleaning up after a run that died, whose heavy processes
+ * were spawned minutes earlier. WHY A WINDOW RATHER THAN THE WHOLE FILE: WINDOWS REUSES PIDS and
+ * this list is fed to a KILL. The window bounds the risk rather than proving against it, and the
+ * residual is accepted and stated; matching on NAMES is worse by a wide margin.
  *
  * @param {string} outPath
  * @param {number} windowMs how far back from the last sample to gather

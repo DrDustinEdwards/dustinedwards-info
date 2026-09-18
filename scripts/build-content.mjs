@@ -1,12 +1,10 @@
 /**
- * Renders content/posts/*.md into the LOCAL build product at
- * content/generated/posts.json.
+ * Renders the corpus into the LOCAL build product.
  *
- * Gitignored since the artifact arc: git holds markdown, D1 holds the only
- * rendered copy, and everything that reads this file (sync-content, the
- * gates, build:og and build:diagrams) runs after a build. `check:content`
- * proves the render is valid and deterministic; ship's drift report compares
- * D1's hashes against what this wrote.
+ *   npm run build:content
+ *
+ * BOUNDARY: gitignored, because git holds the markdown and D1 holds the only rendered copy;
+ * everything that reads this file runs after a build.
  */
 
 import { execFileSync } from "node:child_process";
@@ -33,9 +31,8 @@ export const ABOUT_SOURCE = path.join("content", "about.md");
 export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json");
 
 /**
- * Renders every post and returns the artifact exactly as it should sit on disk.
- * Sorted by slug so the output depends on content alone, never on the order the
- * filesystem happened to hand back.
+ * Renders every post and returns the artifact exactly as it should sit on disk. Sorted by slug, so
+ * the output depends on content alone rather than on filesystem order.
  *
  * @returns {Promise<string>}
  */
@@ -70,18 +67,10 @@ export async function buildArtifact() {
   }
 
   /*
-   * The page half of the corpus. Ruling 3 of colophon-page.md.
-   *
-   * Read with `readFileSync` rather than imported: a JSON import needs
-   * `with { type: "json" }` for Node, and that attribute is rejected by this
-   * repo's tsc `module` setting, so the two would disagree about whether the
-   * file even compiles. The Worker's copy of this call imports them instead,
-   * which is the same environment split `makeResolveImage` has.
-   *
-   * BUILD ORDER: this now depends on `content/generated/stack.json`, so
-   * `build:stack` runs BEFORE `build:content`. A stale stack.json here produces
-   * page records that the next build will not reproduce, which `check:content`
-   * reports as a byte difference.
+   * The page half of the corpus. Read rather than imported, a JSON import needing an attribute this
+   * repo's compiler settings reject; the Worker's copy imports them instead. BUILD ORDER: this
+   * depends on the stack artifact, so that build runs FIRST, a stale one producing page records the
+   * next build will not reproduce.
    */
   const stack = JSON.parse(
     await readFile(path.join("content", "generated", "stack.json"), "utf8"),
@@ -99,12 +88,9 @@ export async function buildArtifact() {
   );
 
   /*
-   * THE PAPERS COME FROM A COMMITTED MODULE, not from a JSON file read above.
-   * `app/data/publications.ts` is generated from the two data files and
-   * byte-gated against them by `check:publications`, so it is the corpus by the
-   * time anything here can see it. Reading the JSON again would be a second
-   * assembly of the same records, which is what the generated module exists to
-   * prevent.
+   * THE PAPERS COME FROM A COMMITTED MODULE, not the JSON read above: that module is generated from
+   * the two data files and byte-gated against them. Reading the JSON again would be a second
+   * assembly of the same records.
    */
   return serializeArtifact(
     withRelated(posts),
@@ -118,14 +104,8 @@ export async function buildArtifact() {
 }
 
 /**
- * The date of the last commit that touched a file, as YYYY-MM-DD.
- *
- * Deliberately NOT written into the build product. A render must be a pure
- * function of the sources (the determinism pass renders twice and compares,
- * and the Worker writer has no git to consult), so git dates are applied at
- * sync time instead, where the two writers already legitimately differ.
- *
- * Exported for `sync:content`.
+ * The date of the last commit that touched a file. Deliberately NOT written into the build product:
+ * a render must be a pure function of the sources, and the Worker writer has no git.
  *
  * @param {string} file
  * @returns {string | null}
@@ -145,30 +125,13 @@ export function lastCommitDate(file) {
 }
 
 /**
- * The revision date a post's row carries, or null.
- *
- * ONE OWNER for `post.updated ?? lastCommitDate(post.sourcePath)`. That
- * expression was written once, inline in `sync-content.mjs`, and it is what
- * decides whether a reader sees an "Updated" line and what `dt-updated`
- * publishes. `check:microformats` renders that markup offline and has to feed
- * the component the value production would write; computing it there would have
- * been a second statement of the rule, and hard rule 17 gives a measured value
- * to one place or to nowhere.
- *
- * A `Date` rather than the `YYYY-MM-DD` string, because the two consumers want
- * different shapes of it: the sync converts to epoch seconds for the column,
- * the gate hands it to a component that calls `new Date()` on it. Returning the
- * string would leave both of them parsing, which is where a timezone gets in.
- *
- * MIDNIGHT UTC, explicitly. `new Date("2026-09-09")` is already UTC by spec,
- * but the sync spelled the time out and this keeps that spelling rather than
- * relying on a default nobody should have to look up.
- *
- * NULL IS A REAL ANSWER AND NOT A FAILURE. A shallow clone has no history for
- * most files, so CI legitimately gets null here where a full local clone gets a
- * date. Both are correct: the row then carries no `updated_at`, the page shows
- * no revision, and `dt-updated` is absent. The gate asserts the PAIRING rather
- * than the presence, so it holds in both environments.
+ * The revision date a post's row carries, or null. ONE OWNER for the rule, which decides whether a
+ * reader sees an "Updated" line: the gate that renders that markup offline feeds the component the
+ * value production would write, and computing it there would be a second statement, where a
+ * measured value goes to one place or to nowhere, which is hard rule 17. A `Date` rather than a
+ * string, because returning the string leaves both consumers parsing, which is where a timezone
+ * gets in. NULL IS A REAL ANSWER: a shallow clone has no history for most files, so the gate
+ * asserts the PAIRING rather than the presence.
  *
  * @param {{ updated?: string | null, sourcePath: string }} post
  * @returns {Date | null}
@@ -181,33 +144,12 @@ export function revisedDate(post) {
 /**
  * The About page, rendered from markdown into the shape its route imports.
  *
- * ## WHY IT IS MARKDOWN AND NOT JSX
- *
- * `/privacy` and `/colophon` are prose in JSX, which is fine for pages whose
- * sentences are each tied to a file the reader can go and check. About is not
- * that: it is one person's description of themselves, it will be revised on
- * taste rather than on a code change, and the person revising it should not
- * have to edit a component to move a comma. So it edits the way a post does.
- *
- * ## WHY IT IS RENDERED HERE AND NOT IN THE WORKER
- *
- * The public plane must not grow a second markdown renderer, and it must not
- * pay for the first one on a static page: `renderBody` pulls shiki, KaTeX and
- * the directive plugins, which is most of the build's weight for four
- * paragraphs that contain none of them. Rendering at build time means the
- * route imports a string.
- *
- * THE SAME `renderBody` THE CORPUS USES, never a lighter second pass. A page
- * rendered by a different pipeline would drift from the posts beside it in
- * exactly the ways nobody checks: heading ids, link handling, the URL
- * allowlist. The mailto in the contact line is live because `isAllowedUrl`
- * permits `mailto:`, which is a property of the shared renderer and not of a
- * special case written here.
- *
- * `resolveImage` REFUSES. This page has no images and must not acquire one by
- * accident: an image here would need a build-time measurement this function
- * does not do, and would render without `width` and `height` (check:invariants
- * section 28). A named throw is a better answer than a silent unsized image.
+ * WHY MARKDOWN AND NOT JSX: this one is a person's description of themselves, revised on taste,
+ * and they should not have to edit a component to move a comma. WHY RENDERED HERE AND NOT IN THE
+ * WORKER: the public plane must not grow a second markdown renderer, nor pay for the first on a
+ * static page. THE SAME RENDERER THE CORPUS USES, or the page drifts from the posts beside it in
+ * exactly the ways nobody checks. The image resolver REFUSES: one here would need a build-time
+ * measurement this function does not do, and would render unsized.
  *
  * @returns {Promise<string>} the artifact exactly as it should sit on disk
  */

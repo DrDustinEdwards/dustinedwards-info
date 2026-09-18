@@ -1,49 +1,11 @@
 /**
- * Gate: `no-direct-deploy.sh` blocks a deploy HERE and allows one elsewhere.
+ * Gate: the deploy hook blocks a deploy HERE and allows one elsewhere, which is hard rule 16's
+ * ship contract seen from the hook's side.
  *
  *   npm run check:hook-scope
  *
- * ## Why this exists
- *
- * The hook was scoped to the site repo on 2026-09-05 (ruling 20) after it
- * refused `cd ../dustinedwards-mcp && npm run deploy`, a command hard rule 16
- * has nothing to say about. A scope change to a guard is the most dangerous
- * kind of edit there is: the failure it introduces is SILENT and in the
- * permissive direction, and the only symptom is a deploy that should have been
- * refused going through.
- *
- * So both directions are replayed. `check:hooks` was deleted once as vacuous;
- * this is not that, because every case below drives the REAL hook file with a
- * REAL payload and reads its exit code, rather than asserting that some prose
- * about the hook is present.
- *
- * ## OBSERVATION BOUNDARY
- *
- * It runs the hook the way the harness does: the payload on stdin, exit 2 for
- * a block and 0 for an allow. It does NOT prove the harness invokes the hook at
- * all, which is `.claude/settings.json`'s business and is asserted there by the
- * file existing in the matcher list. A hook unregistered in settings would pass
- * every case here and protect nothing.
- *
- * FOUR CASES ARE PAIRED WITH A CONTROL and are read together: a dry run allowed
- * beside the same deploy still refused; a SELECT ending in a semicolon allowed
- * beside an UPDATE still blocked; a tilde path resolved beside an unresolvable
- * variable still failing closed; and a `.exe` deploy refused inside beside the
- * same `.exe` deploy allowed in the sibling repo. Each loosening alone would
- * pass on a hook that had simply stopped checking, which is the failure a
- * loosening introduces and the one that is silent.
- *
- * FAILS CLOSED. An unreadable hook, a missing interpreter or an unexpected exit
- * code is a failure, never a skip.
- *
- * ## THE INTERPRETER IS RESOLVED, NOT NAMED
- *
- * This spawned `bash` by bare name until 2026-09-05, which made it a gate that
- * depended on the shell it was written in: green in every Claude Code session,
- * because that harness runs git bash, and `spawnSync bash ENOENT` six times over
- * at `npm run ship` step 4, because ship runs from PowerShell where `bash` is
- * not on PATH. `scripts/lib/bash.mjs` finds a bash once and PROVES it runs; a
- * machine with none fails here, in one line, before any case is read.
+ * BOUNDARY: every case drives the REAL hook with a REAL payload and reads its exit code, but it
+ * does NOT prove the harness invokes the hook at all, which is the settings file's business.
  */
 
 import { spawnSync } from "node:child_process";
@@ -78,13 +40,8 @@ if (!existsSync(HOOK)) {
 }
 
 /*
- * RESOLVED BEFORE THE FIRST CASE, and a failure is ONE line.
- *
- * The order matters as much as the resolution. Resolving inside `runHook` would
- * report a missing interpreter once per case, which is what the ENOENT run
- * looked like: six failures describing the same single fact, none of which named
- * it. This is a precondition of the gate, so it is stated where preconditions
- * are, next to the missing-hook check and in the same voice.
+ * RESOLVED BEFORE THE FIRST CASE, and a failure is ONE line: resolving inside the runner reported
+ * six failures describing the same single fact, none of which named it.
  */
 const BASH = resolveBash();
 if (!BASH) {
@@ -93,21 +50,16 @@ if (!BASH) {
   process.exit(1);
 }
 /*
- * The path is bound to its own const rather than read off `BASH` at the call
- * site. `runHook` is a hoisted function declaration, so the compiler cannot
- * carry the null check above into a body that could in principle run before it,
- * and a non-null assertion there would be the check written twice with only one
- * of them enforced.
+ * The path is bound to its own const rather than read at the call site: the runner is hoisted, so
+ * the compiler cannot carry the null check into it, and an assertion there would be the check
+ * written twice with one of them enforced.
  */
 const BASH_PATH = BASH.path;
 console.log(`  bash: ${BASH_PATH}  (${BASH.source})\n`);
 
 /**
- * Run the hook against one command, from one working directory.
- *
- * `cwd` is what the PreToolUse payload carries: the SESSION's directory, not
- * the command's. The command's own `cd` is what moves it, which is the whole
- * subject of this gate.
+ * Run the hook against one command, from one working directory. `cwd` is what the payload
+ * carries: the SESSION's directory, not the command's, whose own `cd` is this gate's subject.
  *
  * @param {string} command
  * @param {string} cwd
@@ -129,13 +81,8 @@ function runHook(command, cwd) {
 }
 
 /*
- * THE NINETEEN CASES, and each one names the defect it would catch.
- *
- * The parent directory is derived rather than written, so this reads correctly
- * from any clone path. `../dustinedwards-mcp` is a real sibling on the machine
- * that runs the deploy, and the hook resolves it whether or not it exists,
- * which is correct: a deploy into a directory that is not there fails at the
- * shell rather than at this guard.
+ * The cases, each naming the defect it would catch. The parent is DERIVED so this reads correctly
+ * from any clone path, and the sibling resolves whether or not it exists.
  */
 const CASES = [
   {
@@ -159,19 +106,10 @@ const CASES = [
   {
     label: "the LAST cd wins, so cd out then back is blocked",
     /*
-     * THE RETURN PATH IS DERIVED FROM THE CHECKOUT, not written out as
-     * `dustinedwards-info`.
-     *
-     * CAUGHT BY `check:head` ON THIS CASE'S FIRST RUN. That gate replays the
-     * offline tier against a fresh checkout of HEAD in a temp directory, where
-     * `cd ../dustinedwards-info` lands somewhere genuinely outside the repo, so
-     * the hook correctly ALLOWED the deploy and this case failed. The hook was
-     * right and the fixture was wrong.
-     *
-     * The case had been asserting something about the checkout's NAME rather
-     * than about the behaviour under test: a fixture that holds only while the
-     * world is arranged the way its author happened to find it. Deriving the
-     * name is what makes it a statement about the last `cd` winning.
+     * THE RETURN PATH IS DERIVED FROM THE CHECKOUT: caught on its first run by the gate that replays
+     * the tier against a fresh extraction, where the written name lands genuinely outside the repo, so
+     * the hook correctly ALLOWED and the fixture was wrong. It had been asserting something about the
+     * checkout's NAME rather than the behaviour under test.
      */
     command: `cd ../dustinedwards-mcp && cd ../${basename(root)} && npm run deploy`,
     cwd: root,
@@ -224,11 +162,8 @@ const CASES = [
   {
     label: "a real deploy BESIDE a dry run is still blocked",
     /*
-     * THE PAIR IS THE ASSERTION. The case above alone would pass on a hook
-     * that had simply stopped blocking deploys, which is the failure the
-     * loosening could introduce and the one that is silent. This is the same
-     * command with the flag removed, so the two differ in exactly the thing
-     * under test and nothing else.
+     * THE PAIR IS THE ASSERTION: the case above alone would pass on a hook that had stopped blocking
+     * deploys. Same command, flag removed, so the two differ in exactly the thing under test.
      */
     command: "npx wrangler deploy --outdir ./out",
     cwd: root,
@@ -240,15 +175,8 @@ const CASES = [
   {
     label: "a d1 SELECT whose SQL ends in a semicolon is allowed",
     /*
-     * THE SEMICOLON IS THE WHOLE CASE. The hook cuts each wrangler invocation
-     * out of the command with a segment regex, and that regex stopped at the
-     * first `;` ANYWHERE, including one inside the quoted SQL. The tail then
-     * held an unterminated quote, no `--command` could be read off it, and the
-     * arm exited 9: "SQL this check cannot read". A read was refused for
-     * ending the way SQL normally ends.
-     *
-     * The split on `;` inside the SQL was never the problem and is unchanged;
-     * it already skips the empty trailing statement.
+     * THE SEMICOLON IS THE WHOLE CASE: the segment regex stopped at the first `;` ANYWHERE, including
+     * one inside the quoted SQL, so a read was refused for ending the way SQL normally ends.
      */
     command: `npx wrangler d1 execute dustinedwards --remote --command "SELECT count(*) FROM posts;"`,
     cwd: root,
@@ -260,10 +188,8 @@ const CASES = [
   {
     label: "a d1 UPDATE ending in a semicolon is STILL blocked",
     /*
-     * THE PAIR, on the dry-run pair's grounds. The case above alone would pass
-     * on a hook that had simply stopped reading d1 statements at all, which is
-     * exactly what a widened segment regex could cause and is the silent
-     * direction. Same shape, same semicolon, one verb different.
+     * THE PAIR: the case above alone would pass on a hook that had stopped reading these statements,
+     * which is what a widened segment regex causes. Same shape, one verb different.
      */
     command: `npx wrangler d1 execute dustinedwards --remote --command "UPDATE posts SET title = 'x';"`,
     cwd: root,
@@ -276,11 +202,8 @@ const CASES = [
   {
     label: "wrangler d1 execute --help is allowed",
     /*
-     * USAGE TEXT IS NOT A STATEMENT. It carries no SQL, which is precisely why
-     * it hit the unverifiable arm and exited 9. Same class as --dry-run above
-     * and ruled on the same grounds: refusing a read is the safe direction and
-     * is still wrong, because the workaround is a session running d1 commands
-     * outside the guard.
+     * USAGE TEXT IS NOT A STATEMENT: it carries no SQL, so it hit the unverifiable arm. Refusing a
+     * read is safe and still wrong, the workaround being a session running these outside the guard.
      */
     command: "npx wrangler d1 execute --help",
     cwd: root,
@@ -292,14 +215,9 @@ const CASES = [
   {
     label: "a tilde path is expanded, so a deploy at home is allowed",
     /*
-     * `cd ~` USED TO BE UNRESOLVABLE. The hook returned None for it, the caller
-     * reads None as INSIDE this repo, and a deploy anywhere reachable only by a
-     * tilde was refused for a rule that has nothing to say about it. That is
-     * ruling 20 again, one spelling of the path along.
-     *
-     * HOME, NOT A SIBLING PATH, deliberately: it is somewhere this gate can
-     * name from any clone without assuming where the checkout sits relative to
-     * it. The sibling case above already covers the relative form.
+     * `cd ~` USED TO BE UNRESOLVABLE: the hook returned nothing, the caller reads nothing as INSIDE
+     * this repo, and a deploy reachable only by a tilde was refused for a rule with nothing to say
+     * about it. HOME, NOT A SIBLING PATH: somewhere this gate can name from any clone.
      */
     command: "cd ~ && npm run deploy",
     cwd: root,
@@ -311,11 +229,9 @@ const CASES = [
   {
     label: "an UNRESOLVABLE variable still fails closed",
     /*
-     * THE PAIR FOR THE TILDE CASE, and it is the one that matters. Accepting
-     * `$` and `%` is a loosening, and the unsafe way to implement it is to let
-     * an unresolved `$NOPE` normalise into a path that is not this repo, read
-     * as OUTSIDE, and unblock a deploy. Expanding first and testing the RESULT
-     * is what prevents that, and this is what proves it.
+     * THE PAIR FOR THE TILDE CASE, and the one that matters: accepting shell variables is a
+     * loosening, and an unresolved one normalises into a path that is not this repo and unblocks a
+     * deploy. Expanding first and testing the RESULT is what prevents that.
      */
     command: "cd $DUSTINEDWARDS_NO_SUCH_VARIABLE/x && npm run deploy",
     cwd: root,
@@ -326,23 +242,10 @@ const CASES = [
       "undefined environment variable wide.",
   },
   /*
-   * THE SIX EXECUTABLE-NAME CASES, added 2026-09-15 for a live bypass of all
-   * four arms at once.
-   *
-   * `\bwrangler\b` matches INSIDE `wrangler.exe`, because the dot is a word
-   * boundary. The segment capture therefore began at `.exe`, the first token was
-   * `.exe` rather than the verb, and every arm below reads a verb slot. Measured
-   * before the fix: `wrangler.exe deploy` deployed, `.cmd`, `.bat` and `.ps1`
-   * did too, `wrangler.exe versions upload` uploaded, and a `DELETE FROM posts`
-   * reached the REMOTE database through the one arm that is global rather than
-   * scoped.
-   *
-   * The case half is the same defect wearing Windows: PATH lookup ignores case,
-   * so `WRANGLER deploy` and `NPM RUN DEPLOY` both ran and both were allowed.
-   * Folding the checker was not enough on its own and the replay is what caught
-   * it: the hook opens with a CHEAP PREFILTER, `grep -qE wrangler|deploy`, which
-   * ran first, matched neither spelling, and exited 0 before the folded checker
-   * was reached. Both halves are needed and both are replayed here.
+   * THE EXECUTABLE-NAME CASES, added for a live bypass of all four arms at once: the bare word
+   * matches INSIDE the executable's full name, the dot being a word boundary, so the capture began
+   * at the extension. FOLDING THE CHECKER WAS NOT ENOUGH: the hook opens with a CHEAP PREFILTER
+   * which ran first, matched neither spelling, and exited before the folded checker was reached.
    */
   {
     label: "a .exe deploy INSIDE the site repo is blocked",
@@ -357,9 +260,8 @@ const CASES = [
   {
     label: "a .exe deploy in a SIBLING repo is still allowed",
     /*
-     * THE CONTROL FOR THE CASE ABOVE. Widening the name must not widen the
-     * SCOPE: ruling 20 still exempts a sibling repo, and a fix that blocked
-     * both would pass the case above while breaking the admin MCP deploy.
+     * THE CONTROL FOR THE CASE ABOVE: widening the NAME must not widen the SCOPE, the ruling still
+     * exempting a sibling repo.
      */
     command: "cd ../dustinedwards-mcp && wrangler.exe deploy",
     cwd: root,
@@ -390,10 +292,8 @@ const CASES = [
   {
     label: "an UPPERCASE npm run deploy is blocked",
     /*
-     * THE PREFILTER CASE. This is the one that stayed green through the first
-     * attempt at the fix, because the prefilter is a separate statement of the
-     * same needle and was still case-sensitive. Two owners of one fact, which is
-     * what rule 17 is about, and the cost was a fold that could not fire.
+     * THE PREFILTER CASE, which stayed green through the first attempt at the fix: the prefilter is a
+     * second statement of the same needle and was still case-sensitive.
      */
     command: "NPM RUN DEPLOY",
     cwd: root,
@@ -406,11 +306,9 @@ const CASES = [
   {
     label: "a .exe dry run is still allowed",
     /*
-     * THE CONTROL FOR THE FOLD. A fold that over-blocks is the cheapest way to
-     * pass every blocking case above while breaking the 2026-09-06 loosening,
-     * and `--dry-run` is deliberately NOT folded: yargs reads flags
-     * case-sensitively, so accepting a `--DRY-RUN` would stand the guard down
-     * for a flag wrangler itself would reject.
+     * THE CONTROL FOR THE FOLD: over-blocking is the cheapest way to pass every blocking case while
+     * breaking the earlier loosening. The flag is deliberately NOT folded, the argument parser reading
+     * flags case-sensitively.
      */
     command: "wrangler.exe deploy --dry-run",
     cwd: root,
@@ -426,9 +324,8 @@ for (const { label, command, cwd, expect, why } of CASES) {
   const verdict = expect === 2 ? "blocked" : "allowed";
   const got = code === 2 ? "blocked" : code === 0 ? "allowed" : `exit ${code}`;
   /*
-   * EACH VERDICT IS PRINTED, not only the failures. A guard whose replay says
-   * nothing when it passes is a replay nobody reads, and the whole value of
-   * this gate is that somebody changing the hook can see both directions move.
+   * EACH VERDICT IS PRINTED, not only the failures: the value here is that somebody changing the
+   * hook can see both directions move.
    */
   console.log(`  ${got === verdict ? "ok  " : "FAIL"}  ${got.padEnd(7)} ${command}`);
   ok(
@@ -441,15 +338,9 @@ for (const { label, command, cwd, expect, why } of CASES) {
 console.log("");
 
 /*
- * EXECUTED-COUNT FLOOR. Every case above comes from one array, which is exactly
- * the shape that fails quietly: an array that stopped parsing would run zero
- * cases and report a clean sweep of a security guard.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-15 by RUNNING it: 19.
- * It was 13, and 8 before that, and 6 before the dry-run pair landed with the
- * 2026-09-06 loosening. Slack of zero, because the set is a fixed enumeration
- * of the ruling's own cases and a drop is a removed case rather than natural
- * movement.
+ * EXECUTED-COUNT FLOOR. Every case comes from one array, which fails quietly: one that stopped
+ * parsing runs zero cases and reports a clean sweep of a security guard. Slack of zero, the set
+ * being a fixed enumeration of the ruling's own cases.
  */
 const MINIMUM_CHECKS = 19;
 const floorBreach = assertFloor(

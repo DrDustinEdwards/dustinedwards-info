@@ -1,33 +1,18 @@
 /**
- * One client for Capsid's MCP endpoint, and one list of the documents the
- * canvas is given.
+ * One client for Capsid's MCP endpoint, and one list of the documents the canvas is given.
  *
- * ## WHY THE DOCUMENT LIST LIVES HERE
- *
- * `build-capsid-guidelines.mjs` exports these documents and `check:guidelines`
- * asserts the exports are current. If each carried its own list, the gate would
- * eventually be checking a set the exporter no longer writes, and it would
- * still pass: every document it knew about would be in step. That is the
- * alias-blind failure hard rule 10 names, so the list has one owner.
- *
- * ## WHAT IS DELIBERATELY NOT HERE
- *
- * No credential handling. The caller reads `CAPSID_TOKEN` and decides what
- * absent means, because the two callers decide differently: the gate fails
- * closed and names the credential, the build step refuses before it writes a
- * half-empty directory.
+ * BOUNDARY: the list has one owner here, because an exporter and a gate each carrying their own
+ * would eventually check a set the exporter no longer writes and still pass, which is the
+ * alias-blind failure hard rule 10 names. Credential handling is deliberately the caller's.
  */
 
 export const NAMESPACE = "dustinedwards";
 export const CAPSID_MCP = "https://capsid.dustin-edwards.workers.dev/ops/mcp";
 
 /**
- * The Capsid documents the design agent is given, and why each one earns a
- * place in a budget the canvas actually reads.
- *
- * Deliberately NOT here: `feature-inventory-2026-09.md`, which answers what to
- * build rather than how it should look, and `docs/RUNBOOK.md`, which is 2am
- * operational procedure with no design content.
+ * The Capsid documents the design agent is given, and why each one earns a place in a budget the
+ * canvas actually reads. Deliberately NOT here: the inventory that answers what to build rather
+ * than how it should look, and the runbook, which is operational procedure with no design content.
  */
 export const EXPORTED_DOCS = [
   {
@@ -45,11 +30,8 @@ export const EXPORTED_DOCS = [
 ];
 
 /**
- * One JSON-RPC call against Capsid's MCP endpoint.
- *
- * The endpoint may answer as SSE. This takes the LAST `data:` line rather than
- * the first, because a stream can carry progress frames ahead of the result and
- * reading the first would parse a notification as the answer.
+ * One JSON-RPC call against Capsid's MCP endpoint. The endpoint may answer as SSE and this takes
+ * the LAST `data:` line, because a stream can carry progress frames ahead of the result.
  *
  * @param {string} token
  * @param {string} name
@@ -82,12 +64,10 @@ export async function callTool(token, name, args) {
 }
 
 /**
- * The stamp an exported file carries, and the parser that reads it back.
- *
- * The gate compares the stamp to Capsid's CURRENT `updated_at`. That is the
- * whole mechanism: an export is a copy, a copy has no way of knowing its source
- * moved, and the stamp is what makes the drift visible instead of silent
- * (hard rule 18, a derived store and the gate that sees the drift).
+ * The stamp an exported file carries, and the parser that reads it back. The gate compares it to
+ * Capsid's CURRENT value, which is the whole mechanism: an export is a copy, a copy has no way of
+ * knowing its source moved, and hard rule 18's stamp is what makes the drift visible rather than
+ * silent.
  */
 export const STAMP_PREFIX = "capsid-source:";
 

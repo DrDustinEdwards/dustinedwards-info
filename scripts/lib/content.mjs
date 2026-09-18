@@ -1,11 +1,8 @@
 /**
  * Node adapter for the shared markdown pipeline.
  *
- * The pipeline itself lives in `app/lib/content/pipeline.mjs` so the Worker can
- * import it too. Everything Node-only stays here: reading files from disk and
- * measuring images with the filesystem. The editor supplies its own resolver
- * over HTTP, and both callers therefore render identical HTML from identical
- * bytes.
+ * BOUNDARY: the pipeline itself lives where the Worker can import it too and everything Node-only
+ * stays here, so the two callers differ in how they read a file and in nothing else.
  */
 
 import { readFile } from "node:fs/promises";
@@ -26,16 +23,10 @@ export { ContentError };
 const PUBLIC_DIR = "public";
 
 /**
- * The committed manifest, READ rather than imported, once per process.
- *
- * Read for two reasons. It is what the Worker side does, so the two resolvers
- * differ in the path they read and in nothing else. And an `import ... with {
- * type: "json" }` gives TypeScript a type with nine literal keys, so indexing
- * it by a variable is an error that has to be cast away, which is a cast around
- * the only interesting property of the lookup.
- *
- * Module scope, not per resolver: `build:content` makes one resolver per post
- * and the artifact does not change under a build.
+ * The committed manifest, READ rather than imported, once per process. Read because it is what
+ * the Worker side does, so the two resolvers differ in the path they read and in nothing else, and
+ * because an import attribute gives a type whose literal keys make a variable lookup an error that
+ * has to be cast away. Module scope, because the build makes one resolver per post.
  *
  * @type {Promise<Record<string, { sha: string, lqip: string }>> | null}
  */
@@ -48,26 +39,17 @@ function assetPlaceholders() {
 }
 
 /**
- * Builds a resolver that measures an image on disk. A missing or unreadable
- * file is a build failure, never a silently absent attribute, because the whole
- * point is preventing layout shift.
+ * Builds a resolver that measures an image on disk. A missing file is a build failure, never a
+ * silently absent attribute, the whole point being to prevent layout shift.
  *
- * `/media/*` is resolved from the KEY, not from bytes, and that is finding
- * B002. Those blobs live only in R2, so this build cannot read them at all; the
- * Worker could, and did, which meant the first `/media/` citation would commit
- * HTML that `build:content` could not reproduce. The key now carries
- * `-<w>x<h>` and both resolvers parse it with the same `dimensionsFromKey`, so
- * neither reads bytes and there is nothing left to disagree about.
+ * A media blob is resolved from the KEY, not from bytes: those live only in R2, so this build
+ * cannot read them at all while the Worker could, which meant the first such citation would commit
+ * HTML the build could not reproduce. The key now carries the dimensions and both resolvers parse
+ * it the same way.
  *
- * THE PLACEHOLDER COMES FROM THE COMMITTED MANIFEST, for the same reason and
- * with the same shape. It cannot be derived here: this side has sharp and the
- * Worker does not, so a value computed at render time would be a value the two
- * writers could never agree on. `build:assets` derives it once, commits it, and
- * both resolvers look it up. `/media/` gets none, which is the exclusion stated
- * in `rehypeImageSources`.
- *
- * Exported so `check:invariants` can compare it against the Worker's resolver
- * directly rather than inferring their agreement from rendered HTML.
+ * THE PLACEHOLDER COMES FROM THE COMMITTED MANIFEST, for the same reason: this side has an encoder
+ * the Worker does not, so a value computed at render time is one the two writers could never agree
+ * on. Exported so the invariants gate can compare it against the Worker's resolver directly.
  *
  * @param {string} file source markdown path, for the error message
  * @returns {(src: string) => Promise<{ width: number, height: number, placeholder?: string }>}
@@ -103,9 +85,8 @@ export function makeResolveImage(file) {
     if (!size.width || !size.height) {
       throw new ContentError(file, `image "${src}" has no readable dimensions`);
     }
-    // Absent for anything the manifest does not cover, which is every static
-    // asset that is not a content raster. Absent is a real answer: the image
-    // renders without a placeholder, exactly as it did before this existed.
+    // Absent for anything the manifest does not cover. Absent is a real answer: the image renders
+    // without a placeholder, exactly as it did before this existed.
     const placeholder = (await assetPlaceholders())[src]?.lqip;
     return { width: size.width, height: size.height, ...(placeholder ? { placeholder } : {}) };
   };

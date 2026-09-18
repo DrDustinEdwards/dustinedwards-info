@@ -1,8 +1,12 @@
-// File the two history documents into Capsid, reading the bytes OFF DISK so a verbatim archive
-// never passes through a model. That is the whole reason this is a script: both documents hold
-// deleted comment blocks verbatim, and a model retyping 1.1 MB of them is not verbatim.
+// File the history documents into Capsid, reading the bytes OFF DISK so a verbatim archive
+// never passes through a model. That is the whole reason this is a script: every one of them
+// holds deleted comment blocks verbatim, and a model retyping two megabytes is not verbatim.
 //
-//   node scratchpad/run-with-capsid.mjs scratchpad/file-history.mjs [--dry]
+//   node scratchpad/run-with-capsid.mjs scratchpad/file-history.mjs [--dry] [path ...]
+//
+// A trailing path files only the documents it names. Re-filing one that has not changed is not
+// free: a write moves `updated_at`, and `check:guidelines` reads that against the stamp on
+// every export taken from it, so an idle rewrite reds that gate.
 //
 // IT NEEDS A WRITE-SCOPED TOKEN AND THE REPO'S IS NOT ONE. CAPSID_TOKEN in the main checkout's
 // .dev.vars resolves to agent:dustinedwards-guidelines-gate, whose tool scope is read and list,
@@ -36,7 +40,21 @@ const DOCS = [
     title: "Code comment history, September 2026, wave 1",
     type: "reference",
   },
+  {
+    file: "scratchpad/code-history-2026-09-wave2.md",
+    path: "code-history-2026-09-wave2.md",
+    title: "Code comment history, September 2026, wave 2",
+    type: "reference",
+  },
 ];
+
+/** Which documents this run files. Empty means all of them, which is the original behaviour. */
+const named = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const selected = named.length ? DOCS.filter((d) => named.includes(d.path)) : DOCS;
+if (named.length && selected.length !== named.length) {
+  console.error(`no such document: ${named.filter((n) => !DOCS.some((d) => d.path === n)).join(", ")}`);
+  process.exit(2);
+}
 
 /**
  * `callTool` in scripts/lib/capsid.mjs parses the tool's text as JSON, and an authorization
@@ -75,7 +93,7 @@ if (!token) {
   process.exit(2);
 }
 
-for (const doc of DOCS) {
+for (const doc of selected) {
   const abs = join(REPO, doc.file);
   if (!existsSync(abs)) {
     console.error(`missing: ${doc.file}`);

@@ -3,57 +3,10 @@
  *
  *   npm run check:restore
  *
- * OBSERVATION BOUNDARY, and it is the whole reason this file exists beside
- * `check:backup` rather than inside it. That gate proves an export was WRITTEN:
- * its own header says so, "it never restores, so it cannot tell you the dump
- * would reconstruct the database". This one takes the dump the other one
- * produces, builds an empty database from the migrations, loads it, and asks
- * the restored copy the same integrity questions `/api/health` asks production.
- * A dump that exports cleanly and restores to a database that disagrees with
- * production is the failure neither gate could see before this one.
- *
- * ## WHAT IT RESTORES FROM, AND WHY NOT "THE NEWEST BACKUP"
- *
- * There is no backup store. `check:backup` exports to a temp directory per
- * invocation and leaves nothing behind, so there is no newest artifact to
- * restore and no retention to measure. Measured 2026-09-08, and it is the
- * reason this drill takes its OWN export rather than reading one: what can be
- * proven today is that the export-and-restore path round-trips. That is a
- * strictly weaker claim than "the artifact we are keeping is restorable", and
- * it is stated here rather than implied, because a drill that reads a store
- * nobody built would be asserting about nothing.
- *
- * A durable backup job, its R2 key pattern and its retention are a separate
- * decision. When one exists, the export step below is the only part that
- * changes and every assertion after it still holds.
- *
- * ## D1 TIME TRAVEL IS THE OTHER PATH AND CANNOT BE DRILLED HERE
- *
- * Time Travel is on for this database (a bookmark reads back today) and is the
- * first thing to reach for at 2am, which is why `docs/RUNBOOK.md` puts it
- * ahead of this. It restores a database IN PLACE to a bookmark; there is no
- * form of it that targets a different database. So a non-destructive drill
- * cannot exercise it, and no gate here can. The runbook says that in the same
- * words rather than leaving a reader to discover it under load.
- *
- * ## IT NEVER TOUCHES PRODUCTION, AND THAT IS ENFORCED RATHER THAN INTENDED
- *
- * Production is READ from, twice: the per-table export, and the integrity
- * queries, both of which are reads. Every WRITE in this file goes through
- * `scratch()`, which refuses any database name that is not the scratch name
- * this run generated. The guard is a function rather than a convention because
- * the failure it prevents is unrecoverable and would look like a successful
- * drill: a `d1 execute --file` aimed at the wrong name restores production
- * onto itself.
- *
- * The Claude Code hook that blocks a non-SELECT `d1 execute` cannot see inside
- * a node script, so it is NOT what protects production here. `scratch()` is.
- *
- * ## THE SCRATCH DATABASE IS ALWAYS DELETED
- *
- * In a `finally`, so a failed assertion does not leave a database behind, and
- * the deletion is REPORTED rather than assumed: a drill that leaks a database
- * per run is a slow resource leak that no assertion in it would ever notice.
+ * BOUNDARY: it takes its OWN export, so the claim is that the path round-trips rather than that a
+ * kept artifact is restorable, and it never touches production, enforced by one guarded writer.
+ * D1 Time Travel is the other restore path and cannot be drilled here at all, because it restores
+ * a database IN PLACE and no form of it targets a different one.
  */
 
 import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";
@@ -70,28 +23,9 @@ import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 const PRODUCTION_DB = "dustinedwards";
 
 /**
- * Production's UUID, resolved at runtime, because THE NAME IS NOT ADDRESSABLE
- * FROM CI and this is measured rather than defensive.
- *
- * `wrangler d1 export <name>` resolves the name through the `d1_databases`
- * entry in `wrangler.jsonc` and uses that entry's `database_id`. That file is
- * gitignored, so CI's `postinstall` bootstraps it from `wrangler.jsonc.example`,
- * whose `database_id` is the placeholder `00000000-0000-0000-0000-000000000000`.
- * The first two CI runs of this drill therefore died on the first export with
- * "The database 00000000-0000-0000-0000-000000000000 could not be found
- * [code: 7404]", deterministically, while the identical command exited 0 on a
- * developer machine holding the real `wrangler.jsonc`.
- *
- * The asymmetry is the trap: the config poisons EXACTLY the database this
- * drill reads. `d1 list` is account-scoped and reads no binding, so the sweep
- * works. The scratch database is in no config at all, so its create, execute
- * and delete fall back to an account lookup by name and work. Only production
- * has an entry, and only production gets hijacked.
- *
- * This is the same class as the `d1 migrations apply` note further down: a
- * wrangler subcommand silently resolving a value out of a file this gate does
- * not control. A UUID is resolved from `d1 list --json`, which needs only the
- * API token, and addresses the database the account actually has.
+ * Production's UUID at runtime, because THE NAME IS NOT ADDRESSABLE FROM CI: the export resolves
+ * through the gitignored config, which CI bootstraps with a placeholder id. The asymmetry is the
+ * trap: it poisons exactly this database while the scratch one, in no config, works.
  *
  * @type {string | null}
  */
@@ -100,13 +34,7 @@ const MIGRATIONS_DIR = "drizzle";
 const MEDIA_BUCKET = "dustinedwards-media";
 const MEDIA_BACKUP_BUCKET = "dustinedwards-media-backup";
 
-/**
- * The scratch database name for this run.
- *
- * Dated rather than random so a leaked database is identifiable by eye in
- * `wrangler d1 list`, and prefixed so the guard below has something to anchor
- * on that production's name can never satisfy.
- */
+/** Dated rather than random so a leaked database is identifiable, and prefixed for the guard. */
 const SCRATCH_PREFIX = "restore-drill-";
 const SCRATCH_DB = `${SCRATCH_PREFIX}${new Date().toISOString().slice(0, 10)}-${process.pid}`;
 
@@ -114,9 +42,7 @@ let checks = 0;
 let failures = 0;
 
 /**
- * `ok(label, condition, detail)`, the argument order every gate in this repo
- * uses. A string in the condition slot is always truthy, which is the shape
- * `check:invariants` section 17 refuses and FAILURES.md carries.
+ * The argument order every gate here uses: a string in the condition slot is always truthy.
  *
  * @param {string} label
  * @param {boolean} condition
@@ -131,11 +57,7 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * Runs wrangler as one already-quoted command string.
- *
- * Passing an args array alongside `shell: true` concatenates without quoting,
- * which has split an argument containing a space twice in this repo
- * (FAILURES.md, `spawnSync` with `shell: true`).
+ * One already-quoted command string: with `shell: true` an array concatenates without quoting.
  *
  * @param {string} args
  * @returns {{ stdout: string, status: number }}
@@ -150,13 +72,7 @@ function wrangler(args) {
 }
 
 /**
- * The END of wrangler's output, which is where its error is.
- *
- * `stdout.slice(0, 300)` was the first version and it reported the BANNER on
- * every failure: the version line, the resource location and the "to execute
- * locally" hint, three hundred characters of it, with the actual SQLite error
- * below the cut. A failure detail that cannot carry the failure is the same
- * class as an assertion that cannot fail.
+ * The END of wrangler's output, which is where its error is: a head slice reported the banner.
  *
  * @param {string} text
  * @param {number} [max]
@@ -170,14 +86,8 @@ function tail(text, max = 400) {
 }
 
 /**
- * THE GUARD. Returns the scratch name, or throws rather than returning a name
- * that could reach production.
- *
- * Every write path in this file calls this instead of naming a database, so
- * there is exactly one place where a write can learn what to aim at. It checks
- * both directions: the name must carry the scratch prefix AND must not be
- * production's. The second half is redundant today and is kept because the
- * first half's correctness depends on a constant somebody could edit.
+ * THE GUARD: one place a write can learn what to aim at. Both directions, the scratch prefix AND
+ * not production's, the second kept because the first depends on an editable constant.
  *
  * @param {string} name
  * @returns {string}
@@ -189,13 +99,7 @@ function scratch(name) {
         `Every write goes to the scratch database.`,
     );
   }
-  /*
-   * PRODUCTION NOW HAS TWO SPELLINGS, so the guard needs both. Before the UUID
-   * lookup above existed, refusing the name was refusing the database; now a
-   * write handed `PRODUCTION_ID` would carry no name at all and the check above
-   * would wave it through. Resolving bindings rather than spellings, on the
-   * guard whose whole job is that nothing reaches production.
-   */
+  /* PRODUCTION NOW HAS TWO SPELLINGS: a write handed `PRODUCTION_ID` carries no name. */
   if (PRODUCTION_ID !== null && name === PRODUCTION_ID) {
     throw new Error(
       `refusing to write to ${name}: that is ${PRODUCTION_DB}'s UUID. This ` +
@@ -212,10 +116,7 @@ function scratch(name) {
 }
 
 /**
- * Runs one SELECT and returns its rows.
- *
- * `--json` rather than parsing the table wrangler prints, because that table
- * is a display format and has changed shape between wrangler versions.
+ * `--json` rather than the table wrangler prints, a display format that has changed shape.
  *
  * @param {string} db
  * @param {string} sql must be a SELECT; nothing here writes
@@ -230,11 +131,7 @@ async function query(db, sql) {
     },
     { label: `check:restore query (${db})` },
   );
-  /*
-   * The JSON is preceded by wrangler's banner, so the payload is located by its
-   * first `[` rather than by parsing the whole stream. A banner that changes
-   * shape then costs nothing, where `JSON.parse(stdout)` would fail on it.
-   */
+  /* The payload is located by its first `[`, so a banner that changes shape costs nothing. */
   const start = result.stdout.indexOf("[");
   if (start === -1) throw new Error(`no JSON in wrangler output for: ${sql}`);
   const parsed = JSON.parse(result.stdout.slice(start));
@@ -243,23 +140,11 @@ async function query(db, sql) {
 }
 
 /**
- * The migration files, in apply order.
- *
- * `wrangler d1 migrations apply` CANNOT be used against the scratch database
- * and this is not a preference. Measured 2026-09-08 in the installed wrangler:
- * that subcommand resolves `migrations_dir` out of the d1_databases entry whose
- * name or binding matches, and refuses with "Couldn't find a D1 DB with the
- * name or binding" for anything absent from the config file. A database created
- * at runtime is absent by construction, and adding it would mean writing to
- * `wrangler.jsonc`, which is gitignored and is not this gate's to edit.
- *
- * So the files are applied directly, in sorted order, which is the same order
- * and the same bytes the migrations runner would have used. The one thing that
- * is lost is the `d1_migrations` bookkeeping table, which is why the integrity
- * query does not compare it: it would be 0 against production's row per file,
- * and "fixing" that with a hand INSERT would write a second truth into a
- * derived store (hard rule 18). What replaces it is the SCHEMA comparison
- * below, which is the assertion the row count was standing in for anyway.
+ * `wrangler d1 migrations apply` CANNOT run against the scratch database: it resolves
+ * `migrations_dir` from a d1_databases entry and refuses one absent from the config. So the files
+ * are applied directly in sorted order. What is lost is `d1_migrations`, which is why the
+ * integrity query skips it: hard rule 18 makes a hand INSERT a second truth in a derived store,
+ * and the schema comparison below is what the row count stood in for.
  *
  * @returns {Promise<string[]>}
  */
@@ -270,44 +155,14 @@ async function migrationFiles() {
 }
 
 /**
- * The tables the migrations create, minus the fts5 virtual tables.
- *
- * DERIVED from `drizzle/`, never hardcoded, for the reason `check:backup`
- * states: a hardcoded list that silently stops covering a new table is the
- * exact failure a backup gate exists to catch, and it has happened in this
- * portfolio.
+ * DERIVED from `drizzle/`: a hardcoded list that stops covering a new table is the failure.
  *
  * @returns {Promise<string[]>}
  */
 /**
- * The tables in DEPENDENCY ORDER, parents before children.
- *
- * ## WHY ORDER, WHEN THE EXPORT ALREADY DEFERS FOREIGN KEYS
- *
- * Every file `wrangler d1 export` writes opens with its own
- * `PRAGMA defer_foreign_keys=TRUE`, so the obvious reading is that order does
- * not matter. It does, and this cost two full drill runs to see.
- *
- * MEASURED 2026-09-08. Alphabetical order failed on `account` and `post_tags`,
- * which are exactly the two tables whose parents (`user`, `posts` and `tags`)
- * sort after them. Concatenating everything into one file with the PRAGMA at
- * the top then failed differently: D1 reported "the application left the
- * database in a state where constraints were violated" and rolled the whole
- * thing back, with production carrying ZERO orphans in all three relations,
- * confirmed by a LEFT JOIN count per relation.
- *
- * `defer_foreign_keys` is reset at every COMMIT, and `d1 execute --file`
- * batches a file across more than one transaction. So the deferral only ever
- * covers one batch, and a child that lands in an earlier batch than its parent
- * fails whatever the PRAGMA says. Order is the thing that actually works, and
- * it is the instruction `docs/RUNBOOK.md` gives a human for the same reason.
- *
- * ## DERIVED, NOT LISTED
- *
- * The edges are parsed out of the `REFERENCES` clauses in `drizzle/`. A
- * hardcoded order would be correct today and silently wrong the first time a
- * migration adds a relation, which is the same failure mode `check:backup`
- * refuses for its table list.
+ * Tables in DEPENDENCY ORDER despite the export's PRAGMA: `defer_foreign_keys` resets at every
+ * COMMIT and `--file` batches across transactions. DERIVED from the `REFERENCES` clauses, since
+ * a hardcoded order is correct today and silently wrong at the next relation.
  *
  * @returns {Promise<string[]>}
  */
@@ -334,10 +189,8 @@ async function orderedTables() {
   }
 
   /*
-   * A NON-EMPTY EDGE SET IS ASSERTED BY THE CALLER, not here, because this
-   * function's failure mode is a silent zero: a regex that stops matching the
-   * CREATE TABLE shape returns every table with no parents, which sorts
-   * alphabetically and reproduces the exact defect this exists to fix.
+   * A NON-EMPTY EDGE SET IS ASSERTED BY THE CALLER: a regex that stops matching returns every
+   * table with no parents, which sorts alphabetically and reproduces the defect this fixes.
    */
   /** @type {string[]} */
   const order = [];
@@ -387,14 +240,8 @@ async function migrationTables() {
 }
 
 /**
- * The integrity questions, IN THE SPELLING `/api/health` USES.
- *
- * The three index counts are taken on the `_docsize` shadow tables, because
- * `COUNT(*)` on an external-content fts5 table reads through to its content
- * table and can never disagree with it. That is `check:invariants` section 7's
- * rule and the reason `app/lib/health/checks.server.ts` is written this way; a
- * drill that counted the virtual tables directly would compare two numbers that
- * are the same number by construction and pass on a broken index.
+ * IN THE SPELLING `/api/health` USES. Counts come off the `_docsize` shadow tables, because
+ * `COUNT(*)` on an external-content fts5 table reads through and can never disagree.
  */
 const INTEGRITY_SQL =
   "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +
@@ -403,21 +250,10 @@ const INTEGRITY_SQL =
   "(SELECT COUNT(*) FROM search_identity_docsize) AS identity, " +
   "(SELECT COUNT(*) FROM search_prose_docsize) AS prose";
 
-/**
- * Every table SQLite itself knows about, for the schema comparison.
- *
- * `sqlite_master` rather than a name list, and the DDL comes with it so
- * `classifySqliteTables` can separate virtual tables from their shadows by the
- * rule rather than by a suffix list that differs across fts5 versions.
- */
+/** `sqlite_master` with its DDL, so shadows are separated by the rule rather than by a suffix list. */
 const SCHEMA_SQL = "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name";
 
-/**
- * Tables D1 and wrangler create for their own bookkeeping. Not ours, no
- * migration declares them, and they are not part of a content restore. The
- * same set `check:backup` excludes, and `d1_migrations` is in it here for the
- * additional reason given on `migrationFiles`.
- */
+/** D1 and wrangler's bookkeeping, the same set `check:backup` excludes. */
 const PLATFORM_TABLES = new Set(["_cf_KV", "sqlite_sequence", "d1_migrations", "_cf_METADATA"]);
 
 async function main() {
@@ -427,37 +263,23 @@ async function main() {
   await mkdir(dir, { recursive: true });
 
   /*
-   * SWEEP FIRST. The `finally` below deletes this run's database, and a
-   * `finally` does not run on a hard kill.
-   *
-   * MEASURED, twice, while building this gate: killing the drill mid-run left
-   * `restore-drill-2026-09-08-16944` and `restore-drill-2026-09-08-788` behind,
-   * and nothing in the drill would ever have noticed. That is the same shape as
-   * the queued `check:browser` child-cleanup item: cleanup that only exists on
-   * the happy path is cleanup that accumulates.
-   *
-   * Only databases carrying the prefix, and only ones older than the window, so
-   * a concurrent run cannot delete the database another run is using. The count
-   * is REPORTED rather than silent: a sweep that is quietly removing something
-   * every week is a leak nobody is fixing.
+   * SWEEP FIRST, because the `finally` does not run on a hard kill. Only the prefix and only older
+   * than the window, so a concurrent run is safe, and the count is REPORTED: a weekly sweep of
+   * something is a leak nobody is fixing.
    */
   const SWEEP_AFTER_MS = 2 * 60 * 60 * 1000;
   const listed = wrangler("d1 list --json");
   /*
-   * PARSED ONCE, OUTSIDE THE SWEEP'S `if`, because two things need it and they
-   * need it with opposite tolerances. The sweep is best-effort: a failed list
-   * means nothing gets swept this run and the next run catches up. The UUID
-   * resolution below is load-bearing and fails closed, so it cannot sit inside
-   * a branch that a failed list silently skips.
+   * PARSED ONCE, OUTSIDE THE SWEEP'S `if`: the sweep is best-effort and the UUID resolution fails
+   * closed, so it cannot sit inside a branch a failed list skips.
    */
   const listedStart = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
   /** @type {Array<{ uuid?: string, name?: string, created_at?: string }>} */
   const databases = listedStart === -1 ? [] : JSON.parse(listed.stdout.slice(listedStart));
 
   /*
-   * FAILS CLOSED, and loudly. Falling back to the name here would substitute a
-   * different value for the one that was asked for and reintroduce exactly the
-   * 7404 this lookup exists to remove, except now wearing a passing lookup.
+   * FAILS CLOSED, and loudly: falling back to the name substitutes a different value and
+   * reintroduces the lookup failure this removes, wearing a passing lookup.
    */
   const production = databases.find((d) => d.name === PRODUCTION_DB);
   if (typeof production?.uuid !== "string" || production.uuid.length === 0) {
@@ -497,7 +319,7 @@ async function main() {
   const timings = {};
 
   try {
-    /* ---- 1. the export, from production, READ ONLY ---------------------- */
+    /* 1. the export, from production, READ ONLY */
 
     const tables = await orderedTables();
     ok(
@@ -507,14 +329,7 @@ async function main() {
         "comparison below would compare 0 against 0 and pass.",
     );
 
-    /*
-     * THE EDGE PARSE IS PROVEN NON-EMPTY, because its failure is a silent
-     * alphabetical fallback. A `REFERENCES` regex that stops matching returns
-     * every table with no parents, `orderedTables` then emits them in the
-     * order `migrationTables` found them, and the load fails exactly the way
-     * it failed before the ordering existed. This repo has shipped that shape:
-     * a zero from a search proves nothing until the scope is proven non-empty.
-     */
+    /* THE EDGE PARSE IS PROVEN NON-EMPTY: its failure is a silent alphabetical fallback. */
     const edges = await referenceCount();
     ok(
       "[scope] the migrations parse to at least one foreign key",
@@ -531,19 +346,9 @@ async function main() {
     for (const table of tables) {
       const out = path.join(dir, `${table}.sql`);
       /*
-       * NO STATUS CHECK AFTER THIS, and the absence is deliberate.
-       *
-       * There was one: `if (exported.status !== 0) throw`. It could not fire.
-       * `retryRead` returns whatever the inner function RETURNED, and that
-       * function throws on a non-zero status, so the only value that can reach
-       * a caller here already has `status === 0`; every other path rejects out
-       * of `retryRead` and never reaches the next line. Hard rule 10's first
-       * class, an unfailable condition, and the second reader of this file
-       * would have taken it for the failure handling.
-       *
-       * The throw INSIDE the callback is the load-bearing one: wrangler returns
-       * on a failed command rather than rejecting, so without it `retryRead`
-       * would have nothing to catch and would retry nothing.
+       * NO STATUS CHECK AFTER THIS: `retryRead` returns what the inner function returned and that
+       * throws on non-zero, so a check would be hard rule 10's unfailable condition. The throw INSIDE
+       * the callback is load-bearing, wrangler returning rather than rejecting on a failed command.
        */
       await retryRead(
         () => {
@@ -559,12 +364,7 @@ async function main() {
       dumps.push({ name: table, inserts: (body.match(/^INSERT INTO/gim) ?? []).length });
     }
     timings.export = Date.now() - exportStart;
-    /*
-     * PROGRESS, because this gate is minutes of network round trips and the
-     * first version printed nothing between its banner and its first failure.
-     * A long silence is indistinguishable from a hang, and the reader's only
-     * recourse was to go and look in `wrangler d1 list`.
-     */
+    /* PROGRESS: this gate is minutes of round trips and a long silence looks like a hang. */
     console.log(
       `  exported ${dumps.length} table(s) from ${PRODUCTION_DB} in ${timings.export}ms`,
     );
@@ -577,7 +377,7 @@ async function main() {
         `below would then be measuring the wrong thing.`,
     );
 
-    /* ---- 2. production's own answers, READ ONLY -------------------------- */
+    /* 2. production's own answers, READ ONLY */
 
     const [live] = await query(String(PRODUCTION_ID), INTEGRITY_SQL);
     ok(
@@ -589,7 +389,7 @@ async function main() {
     );
     if (live === undefined) throw new Error("production integrity query returned no row");
 
-    /* ---- 3. build the scratch database ---------------------------------- */
+    /* 3. build the scratch database */
 
     const restoreStart = Date.now();
     const create = wrangler(`d1 create ${scratch(SCRATCH_DB)}`);
@@ -622,29 +422,13 @@ async function main() {
         `comparison below a statement about a database that was never built.`,
     );
 
-    /* ---- 3a. a migrated database is NOT an empty one --------------------- */
+    /* 3a. a migrated database is NOT an empty one */
 
     /*
-     * MIGRATIONS SEED, AND A SEED COLLIDES WITH A RESTORE.
-     *
-     * MEASURED 2026-09-08, on the run after the load order was fixed:
-     * "UNIQUE constraint failed: settings.key". `drizzle/0001_init.sql` inserts
-     * a `settings` row, so applying the migrations leaves a database that is
-     * schema-correct and already carries data. The dump then tries to insert
-     * the same primary key and the whole transaction rolls back.
-     *
-     * This is not an artefact of the drill. It is what happens to a human
-     * following the restore steps, and it presents as "the backup is corrupt"
-     * rather than as "the schema step seeded a row". `docs/RUNBOOK.md` carries
-     * the same clearing step for the same reason.
-     *
-     * REVERSE dependency order, so a child is emptied before its parent and no
-     * delete trips a foreign key.
-     *
-     * ONLY REAL TABLES. `orderedTables` is built from `CREATE TABLE`, which
-     * does not match `CREATE VIRTUAL TABLE`, so no fts5 index can reach this
-     * list. That matters: hard rule 2 forbids `DELETE FROM` against an index,
-     * and the repair there is `('rebuild')`, which step 4 does.
+     * MIGRATIONS SEED, AND A SEED COLLIDES WITH A RESTORE: applying them leaves a schema-correct
+     * database already carrying a `settings` row, and the dump then trips a UNIQUE constraint,
+     * presenting as "the backup is corrupt". REVERSE dependency order, and ONLY REAL TABLES, since
+     * hard rule 2 forbids `DELETE FROM` on an index.
      */
     const clear = wrangler(
       `d1 execute ${scratch(SCRATCH_DB)} --remote --yes --command ` +
@@ -658,28 +442,12 @@ async function main() {
         `collides on that row unless the seed is cleared first.`,
     );
 
-    /* ---- 4. load the dump ------------------------------------------------ */
+    /* 4. load the dump */
 
     /*
-     * ONE FILE, WITH FOREIGN KEYS DEFERRED, and both halves were measured
-     * rather than chosen.
-     *
-     * The first version of this drill loaded one file per table in the sorted
-     * order the export produced. `account` and `post_tags` both failed, and
-     * they are exactly the two tables with a parent: `account` references
-     * `user` and `post_tags` references `posts`, and both parents sort AFTER
-     * their child. A per-table restore is therefore order-dependent in a way
-     * that alphabetical order gets wrong, which is a defect in the RUNBOOK's
-     * instructions as much as in this gate.
-     *
-     * `PRAGMA defer_foreign_keys = true` holds enforcement until the end of
-     * the transaction, so the whole set lands and the constraints are checked
-     * once everything is present. That is what makes the order irrelevant, and
-     * it is a real restore rather than a restore with the checks turned off:
-     * a genuinely broken reference still fails at commit.
-     *
-     * `docs/RUNBOOK.md` documents THIS path, not the per-table one, because
-     * this is the path that has been rehearsed.
+     * ONE FILE, WITH FOREIGN KEYS DEFERRED: a per-table restore is order-dependent in a way
+     * alphabetical order gets wrong. The PRAGMA holds enforcement to the end of the transaction, so
+     * a broken reference still fails at commit.
      */
     const combined = path.join(dir, "_restore.sql");
     /** @type {string[]} */
@@ -703,11 +471,8 @@ async function main() {
     );
 
     /*
-     * THE INDEXES ARE REBUILT, NOT RESTORED. Hard rule 2: an fts5 virtual table
-     * cannot be exported, and the repair is `('rebuild')` rather than a
-     * `DELETE FROM`. So the restore's index half is a derivation from the
-     * content tables, which is also what makes the equality assertions below
-     * meaningful: they compare a rebuilt index against restored content.
+     * THE INDEXES ARE REBUILT, NOT RESTORED, hard rule 2: an fts5 virtual table cannot be exported.
+     * That is also what makes the equalities below meaningful.
      */
     const rebuild = wrangler(
       `d1 execute ${scratch(SCRATCH_DB)} --remote --yes --command ` +
@@ -731,7 +496,7 @@ async function main() {
         `an empty production would report a clean restore of nothing.`,
     );
 
-    /* ---- 5. the restored database answers the same questions ------------- */
+    /* 5. the restored database answers the same questions */
 
     const [restored] = await query(scratch(SCRATCH_DB), INTEGRITY_SQL);
     ok(
@@ -742,13 +507,7 @@ async function main() {
     );
 
     if (restored !== undefined) {
-      /*
-       * ONE NAMED ASSERTION PER COLUMN, rather than one deep-equal over the
-       * row. A single "the rows match" assertion fails with both objects
-       * printed and leaves the reader to diff them at 2am; these fail by the
-       * name of the thing that disagreed, which is what the prompt for this
-       * gate asked for and what makes a red run actionable.
-       */
+      /* ONE NAMED ASSERTION PER COLUMN: a single "the rows match" leaves the reader diffing at 2am. */
       const COLUMNS = /** @type {const} */ ([
         ["posts", "the post count"],
         ["docs", "the search_docs count"],
@@ -763,13 +522,7 @@ async function main() {
         );
       }
 
-      /*
-       * THE INDEX EQUALITIES ARE ASSERTED WITHIN THE RESTORED DATABASE, not
-       * against production. Production's own equality is `/api/health`'s job
-       * and is checked every fifteen minutes; what this drill can say that
-       * nothing else can is whether a REBUILD over RESTORED content produces
-       * an index that agrees with it.
-       */
+      /* ASSERTED WITHIN THE RESTORED DATABASE, not against production, which is `/api/health`'s job. */
       ok(
         "RESTORED posts_fts EQUALS RESTORED posts",
         restored.postsFts === restored.posts,
@@ -788,21 +541,12 @@ async function main() {
       }
     }
 
-    /* ---- 5a. the SCHEMA, both sides ------------------------------------- */
+    /* 5a. the SCHEMA, both sides */
 
     /*
-     * THE ASSERTION `d1_migrations` WAS STANDING IN FOR, made directly.
-     *
-     * RECOVERY.md records this comparison as a DATED observation: "measured
-     * 2026-08-04 by applying every migration then present to an empty database
-     * and diffing object by object against the live schema. 57 of 57 matched."
-     * Its own next sentence says two migrations have landed since, so it is a
-     * record and not a current claim. This makes it re-runnable, which is what
-     * hard rule 17 asks of any number somebody wants to keep believing.
-     *
-     * Both sides are classified by the same function, so a virtual table and
-     * its shadows are separated by the DDL rather than by a suffix list, and
-     * the platform's own bookkeeping is excluded from both sides identically.
+     * THE ASSERTION `d1_migrations` WAS STANDING IN FOR, made directly and re-runnably, which is
+     * what hard rule 17 asks of a number somebody wants to keep believing. One classifier on both
+     * sides, so the platform's bookkeeping is excluded identically.
      */
     const classify = (/** @type {Array<Record<string, unknown>>} */ rows) => {
       const typed = rows.map((r) => ({ name: String(r.name), sql: r.sql ? String(r.sql) : null }));
@@ -842,21 +586,12 @@ async function main() {
         `${restoredSchema.real.length} table(s), ${restoredSchema.virtual.length} FTS index(es)`,
     );
 
-    /* ---- 6. the media mirror, EVERY key -------------------------------- */
+    /* 6. the media mirror, EVERY key */
 
     /*
-     * EVERY KEY, NOT A SAMPLE.
-     *
-     * The prompt for this gate asked for a random sample of 20 keys with
-     * matching etags. Measured 2026-09-08: `dustinedwards-media` holds ONE
-     * object. A sample of 20 drawn from a population of 1 is the zero-scope
-     * vacuity hard rule 10 forbids, and it would report a plausible number
-     * having verified one object. It is also strictly weaker than what already
-     * runs: `media-backup-drift` compares both key sets and every etag in full
-     * on every health poll, and `app/lib/media/backup.server.ts` owns that
-     * comparison rule. This reads the same two buckets from outside the Worker,
-     * so the mirror is asserted by something that is not the thing maintaining
-     * it, and it counts what it examined so a zero cannot read as a sweep.
+     * EVERY KEY, NOT A SAMPLE: a sample from a population this small is hard rule 10's zero-scope
+     * vacuity. What this adds over the health poll is that it reads the buckets from OUTSIDE the
+     * Worker, so the mirror is asserted by something that is not maintaining it.
      */
     const [sources, twins] = await Promise.all([
       retryRead(() => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }), {
@@ -876,10 +611,8 @@ async function main() {
         continue;
       }
       /*
-       * ETAG, corroborated by SIZE, and degrading to size for a multipart
-       * etag. The same rule `backup.server.ts` states, restated here only
-       * because this runs outside the Worker and cannot import it; the reason
-       * lives there and is not duplicated.
+       * ETAG, corroborated by SIZE, degrading to size for a multipart etag. `backup.server.ts` holds
+       * the reason; this runs outside the Worker and cannot import it.
        */
       const multipart = source.etag.includes("-") || twin.etag.includes("-");
       const identical = multipart
@@ -905,7 +638,7 @@ async function main() {
         (sources.length === 0 ? " (the bucket is empty, so this verified nothing)" : ""),
     );
   } finally {
-    /* ---- 7. the scratch database always goes away ---------------------- */
+    /* 7. the scratch database always goes away */
 
     if (created) {
       const dropped = wrangler(`d1 delete ${scratch(SCRATCH_DB)} --skip-confirmation`);
@@ -923,14 +656,8 @@ async function main() {
   timings.total = Date.now() - started;
 
   /*
-   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, never summed: 35
-   * on the first fully green run, 2026-09-08. Floor 32, which is the count
-   * minus the `check:floors` tolerance at that count.
-   *
-   * The count moves with the number of MIGRATION FILES, since each one is its
-   * own assertion, and that only ever goes up. It does NOT move with the table
-   * list any more: the load is one assertion over one combined file rather
-   * than one per table, which is why the first two runs read 42 and 33.
+   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it. It moves with the number of MIGRATION
+   * FILES and not with the table list, the load being one assertion over one combined file.
    */
   const MINIMUM_CHECKS = 32;
   const breach = assertFloor("check:restore", "checks", checks, MINIMUM_CHECKS);
@@ -942,11 +669,7 @@ async function main() {
   );
   console.log(`${checks} checks, ${failures} failures\n`);
 
-  /*
-   * `exitCode` rather than `process.exit()`, on check:uptime's measurement:
-   * `process.exit()` tears the process down while libuv still holds queued
-   * stdout writes on Windows and the gate exits 127 with its output lost.
-   */
+  /* `exitCode` rather than `process.exit()`, which tears the process down mid stdout write. */
   process.exitCode = failures > 0 ? 1 : 0;
 }
 
