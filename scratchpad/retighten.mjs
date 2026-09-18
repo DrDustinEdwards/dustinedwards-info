@@ -30,13 +30,18 @@ for (const [id, next] of Object.entries(edits)) {
     continue;
   }
   const tick = String.fromCharCode(96);
-  const old = tick + dec[2] + tick;
+  // The module hands back the EVALUATED string; the file holds its SOURCE form, where a
+  // backtick and a `${` are escaped. Searching for the evaluated form finds nothing in any
+  // entry that quotes an identifier, which is most of them, and the batch refuses rather than
+  // reporting a clean run over the few that happen to contain neither.
+  const escape = (s) => s.split("\\").join("\\\\").split(tick).join("\\" + tick).split("${").join("\\${");
+  const old = tick + escape(dec[2]) + tick;
   const hits = src.split(old).length - 1;
   if (hits !== 1) {
     problems.push(`${key}: old text found ${hits} times, expected 1`);
     continue;
   }
-  src = src.replace(old, tick + next + tick);
+  src = src.replace(old, tick + escape(next) + tick);
   done += 1;
 }
 
