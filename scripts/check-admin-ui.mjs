@@ -1,42 +1,11 @@
 /**
- * Gate over what the admin's forms SUBMIT.
- *
- * OBSERVATION BOUNDARY: reduces each page to the set of requests it can SUBMIT.
- * It renders components with stubbed loaders, so it sees no server behaviour, no
- * styling and no layout: a page that submits correctly and is unusable passes.
- * A component that CALLS a stubbed .server export throws here, because the stub
- * is a Proxy with no own keys.
+ * Gate over what the admin's forms submit: each page reduces to `METHOD action | intent |
+ * field names`, so a control may move but must send what it sent before. Server imports are
+ * stubbed; no server behaviour, styling or layout is seen. Fails closed: a missing fixture is
+ * an error, and every comparison is paired with a count.
  *
  *   npm run check:admin-ui
  *   npm run check:admin-ui -- --update    (rewrites the baseline, deliberately loud)
- *
- * The admin redesign is a UI-only change running under one hard rule: a control
- * may move anywhere, but pressing it must send exactly what it sent before.
- * Nothing else in the check family can see that. A typecheck cannot: the form
- * fields are strings in JSX. check:content cannot: no content changes. And no
- * gate can reach /admin over HTTP, because it is behind a real Google session.
- *
- * So this renders the three admin routes as components and reads their markup
- * back, reducing each page to the set of requests it can issue:
- *
- *     METHOD action | intent | comma-joined field names
- *
- * That tuple is what the server actually consumes. `handleEditorAction`
- * dispatches on `intent`, and `fieldsFromForm` reads a fixed set of keys, so
- * two different-looking pages with the same tuple set are the same API client.
- *
- * The baseline in scripts/fixtures/admin-ui-payloads.json was generated from
- * the editor as it stood BEFORE the Session 2 redesign, which is the whole
- * point: the fixture is the checkbox era's payload shape, and the gate passing
- * today means the redesign did not change it.
- *
- * FAILS CLOSED. A missing fixture is an error, not an empty pass, and every
- * comparison is paired with a count so "0 differences" can never quietly mean
- * "0 pages rendered".
- *
- * Pure: no database, no network, no session. It does bundle with esbuild, and
- * it stubs the routes' server-only imports rather than running them, so it
- * proves things about components and nothing about loaders or actions.
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -48,16 +17,12 @@ import { stripComments } from "./lib/strip-comments.mjs";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
-// The retention windows are asserted against the CONSTANTS, not against a copy
-// of the sentence, for the same reason CACHE_SENTENCE below is: a paraphrase in
-// the route that hard-coded the two numbers would pass a text comparison and
-// would be a second owner of a fact hard rule 17 gives to one module.
+// Asserted against the constants: a copy would be a second owner (hard rule 17).
 import {
   FAILED_RETENTION_DAYS,
   REJECTED_RETENTION_DAYS,
 } from "../app/lib/webmention/retention.mjs";
-// The caveat is asserted against the CONSTANT, not against a copy of its text,
-// so a paraphrase in the route fails here rather than becoming a second owner.
+// Asserted against the constant, not a copy.
 import { CACHE_SENTENCE } from "../app/lib/admin/origin-requests.mjs";
 import { decide, readState } from "../app/lib/editor/publish-policy.mjs";
 import {
@@ -86,16 +51,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "admin-ui-payloads.json");
 const update = process.argv.includes("--update");
 
-/*
- * THE OPERATOR'S NAMES FOR THE HEALTH CHECKS, read from the module that owns
- * them rather than retyped here. A list of five strings in this file would be a
- * second owner of the mapping, and the two would agree with each other while
- * both drifted from the page.
- *
- * Dynamically imported because this script's tsconfig project does not include
- * the app tree, and a static import would have to be added to that project's
- * file list to typecheck.
- */
+/* Read from the owner, never retyped. Dynamic: this tsconfig omits the app tree. */
 const { CHECK_COPY: checkCopy } = await import("../app/lib/admin/check-copy.mjs");
 
 let checks = 0;
@@ -111,35 +67,21 @@ function assert(label, ok, detail = "") {
   if (!ok) fail(`${label}${detail ? `\n    ${detail}` : ""}`);
 }
 
-/* -------------------------------------------------------------------------
- * The loader states each route is rendered in.
- *
- * These describe the SHAPES a loader can hand a component, not real data. A
- * state exists here when it changes which controls render: a drafted post and
- * a published one offer different transitions, a drifted Ask index adds an
- * alert that owns a repair, a conflict replaces the feedback slot.
- * ---------------------------------------------------------------------- */
+/* Loader states: one per shape that changes which controls render. */
 
 const POSTS = [
-  // FEATURED, and it is the only row that is. The list marks the hero, so the
-  // fixture needs one row where the mark appears and rows where it does not:
-  // a fixture with the flag on every row, or on none, would satisfy a component
-  // that ignored the flag entirely.
+  // Exactly one featured row, so an ignored flag fails.
   { slug: "live-one", title: "A live post", status: "published", state: "published", publishAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare"], scheduledInDays: null, featured: true },
-  // `scheduledInDays` arrives PRE-COMPUTED, which is the contract the loader
-  // owes: the component may not read the clock, so a fixture that made it
-  // derive one from the date would be testing a rule the code must not follow.
+  // Pre-computed: the component may not read the clock.
   { slug: "soon", title: "A scheduled post", status: "published", state: "scheduled", publishAt: "2099-01-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z", tags: ["cloudflare", "d1"], scheduledInDays: 12, featured: false },
   { slug: "wip", title: "A draft post", status: "draft", state: "draft", publishAt: null, updatedAt: "2026-07-02T00:00:00.000Z", tags: [], scheduledInDays: null, featured: false },
 ];
 
-/** One object in the media library, overridable per scenario. */
+/** One media object. */
 const MEDIA_OBJECT = (over = {}) => ({
   key: "1234abcd5678ef90.png",
   url: "/media/1234abcd5678ef90.png",
-  // The THUMBNAIL url, carrying the transform width. The gate renders it, so a
-  // regression that started serving originals into the grid would show here as
-  // a changed src.
+  // The thumbnail url, so serving originals changes the src.
   thumb: "/media/1234abcd5678ef90.png?w=320",
   size: 51234,
   uploaded: "2026-08-01T10:00:00.000Z",
@@ -152,37 +94,23 @@ const MEDIA_OBJECT = (over = {}) => ({
   role: "content",
   mime: "image/png",
   originalName: "a-picture.png",
-  // A row WITH an LQIP. The null-placeholder case is its own scenario below,
-  // because it is 11 of the 70 real rows and renders a different tile.
+  // Null placeholders are their own scenario.
   placeholder: "data:image/webp;base64,UklGRg==",
   deletable: true,
   viewable: true,
   citations: [],
   refCount: 0,
-  /** Parsed by the loader, so the component never sees the delimited form. */
+  /** Parsed by the loader. */
   tags: [],
-  /** Rows carrying identical bytes. Exact content identity only. */
+  /** Byte-identical rows. */
   twinCount: 0,
-  /*
-   * THE THIRD USAGE STATE and its evidence, decided by the loader from
-   * `media_refs`, the artifact scan and `template-refs.json`. `unattached` is
-   * the default because it is the state a fresh upload is in; the roster case is
-   * its own scenario below, and it is the one the state exists for.
-   */
+  /* A fresh upload is `unattached`. */
   usage: "unattached",
   templateRefs: [],
   ...over,
 });
 
-/**
- * The loader's non-object fields.
- *
- * One helper so a change to the loader's shape is one edit rather than five.
- * These went stale once already and it was not caught: Phase 3 replaced
- * `cursor`/`truncated`/`unannotated` with `page`/`hasMore`/`counts`, this gate
- * was not run in that session or the next, and every media scenario had been
- * failing with "Cannot read properties of undefined" ever since.
- */
+/** The loader's non-object fields, in one helper. */
 const MEDIA_SHELL = (over = {}) => ({
   picker: false,
   page: 1,
@@ -192,20 +120,12 @@ const MEDIA_SHELL = (over = {}) => ({
   scanFailed: [],
   counts: [{ storage: "r2", kind: "image", n: 1 }],
   roleCounts: [{ role: "content", n: 1 }],
-  /* The v1 library's additions. `q` is echoed so the search input, the chips
-   * and the pager all carry it; `unusedCount` is the chip's number, from the
-   * same predicate the filter uses; `detail` is the `?key=` view, which is
-   * where alt editing and delete moved to; `uploaded` and `uploadError` are the
-   * flash the upload route redirects back with. */
+  /* `q` is echoed so the input, chips and pager carry it. */
   q: "",
   detail: null,
   uploaded: null,
   uploadError: null,
-  /* ---- media v6 --------------------------------------------------------
-   * The whole view state, echoed by the loader so the component can build
-   * every link from it. Handed over as an OBJECT rather than spread, because
-   * that is what the component receives and what makes `hrefWith(view, ...)`
-   * the natural call. */
+  /* Passed as an object, as the component receives it. */
   view: {
     view: "list",
     group: "folder",
@@ -225,19 +145,14 @@ const MEDIA_SHELL = (over = {}) => ({
   trashedCount: 0,
   tagCounts: [],
   lensCounts: { all: 1, unattached: 1, noAlt: 1, large: 0, duplicates: 0 },
-  /* INPUT, not an expectation: the loader owns this sentence and the component
-     echoes it. It carried the pre-scan wording ("an asset referenced only by
-     route code has no citation here") until the repository scan made that false,
-     and the component went on rendering it because a fixture is a copy. The
-     WORDING is asserted against the route source below, where it actually
-     lives; this only has to be a note so the paragraph renders at all. */
+  /* Input only: the wording is asserted against the route source. */
   usageNote:
     "Usage is asked three ways: what a post cites, what the artifact scan " +
     "finds, and what repository code references.",
   ...over,
 });
 
-/** The `?key=` view's loader shape, overridable per scenario. */
+/** The `?key=` view's loader shape. */
 const MEDIA_DETAIL = (over = {}) => ({
   found: true,
   key: "1234abcd5678ef90.png",
@@ -264,10 +179,6 @@ const MEDIA_DETAIL = (over = {}) => ({
   trashedAt: null,
   hash: "1234abcd5678ef90",
   twins: [],
-  /* Same three the row carries, plus the two the inspector alone shows. These
-     went missing for exactly one run and the gate said so by THROWING on
-     `templateRefs.length`, which is the failure a shared fixture helper exists
-     to make loud rather than silent. */
   usage: "unattached",
   templateRefs: [],
   altSuggestion: "a picture",
@@ -275,7 +186,7 @@ const MEDIA_DETAIL = (over = {}) => ({
   ...over,
 });
 
-/** The unfiltered view: every filter empty, nothing narrowed. */
+/** Every filter empty. */
 const NO_FILTERS = {
   filters: { q: "", status: "", tag: "" },
   filtered: false,
@@ -284,30 +195,20 @@ const NO_FILTERS = {
   tagOptions: ["cloudflare", "d1", "workers"],
 };
 
-/*
- * READERSHIP FIXTURES. Roadmap G, and there are four because the column has
- * four outcomes and three of them are absences that must not look alike.
- *
- * The whole point of the column is that a missing number is not a zero, so a
- * harness that only ever rendered one of these would be asserting the easy
- * half. `live-complete` and `live-truncated` differ ONLY in `complete`, and the
- * same slug is missing from `byPath` in both, so the two states are a
- * controlled pair: same data, one flag, two different renderings.
- */
+/* A missing number is not a zero; the live pair differs only in `complete`. */
 const READERSHIP_LIVE = {
   status: "live",
   fetchedAt: "2026-09-04T00:00:00.000Z",
   data: {
     windowDays: 7,
-    // `live-one` has a count, `soon` has none. `wip` is absent from both this
-    // and the truncated fixture below, which is what makes the pair work.
+    // `wip` is absent from both live fixtures.
     byPath: { "/blog/live-one": 1234, "/blog/soon": 7 },
     pathsReturned: 2,
     complete: true,
   },
 };
 
-/** Same rows, cut short. The missing slug is now UNKNOWN rather than zero. */
+/** Same rows, cut short: the missing slug is unknown. */
 const READERSHIP_TRUNCATED = {
   status: "live",
   fetchedAt: "2026-09-04T00:00:00.000Z",
@@ -319,7 +220,7 @@ const READERSHIP_TRUNCATED = {
   },
 };
 
-/** The ordinary state on a development machine: no token, so no number. */
+/** No token, so no number. */
 const READERSHIP_ERROR = {
   status: "error",
   data: null,
@@ -333,20 +234,7 @@ const ASK_DRIFTED = { present: 90, expected: 93, missing: ["a", "b", "c"], stale
 const BUDGET = { count: 4, limit: 200, day: "2026-07-31" };
 
 /** @param {Partial<Record<string, unknown>>} over */
-/*
- * THE WHOLE `PostFields` SHAPE, since 2026-09-03.
- *
- * This omitted the seven B004 keys (`featured` through `updated`) for as long
- * as the editor relayed them through hidden inputs, because a hidden input
- * handed `undefined` renders without a value attribute and nothing complains.
- * The moment they became real controls the omission became a crash: a control
- * reads its own value, and `splitReading(undefined)` threw on every state.
- *
- * The loader has always returned all of them, so the fixture was describing a
- * loader that does not exist. The drawer's own docblock states the rule this
- * violated: a loader shape the gate does not supply is a loader shape it is not
- * actually testing.
- */
+/* The whole `PostFields` shape: an unsupplied loader field is untested. */
 const fields = (over = {}) => ({
   title: "A post",
   slug: "a-post",
@@ -371,23 +259,11 @@ const fields = (over = {}) => ({
 
 const HEAD = "abc1234def5678";
 
-/*
- * TWO PREVIEW LINKS, hand-authored. Feature G.
- *
- * The tokens are 43 base64url characters, which is what `mintToken` produces,
- * and they are WRITTEN OUT rather than minted here. Rule 10's fixture
- * independence: a gate whose expected values come from the code under test is a
- * mirror, and a randomly minted token would also make the payload baseline
- * non-deterministic.
- *
- * Their first six characters DIFFER, deliberately. The list prints six and the
- * whole point of printing six is telling two links apart; a pair sharing a
- * prefix would pass a truncation assertion while proving nothing about it.
- */
+/* Hand-written (fixture independence); first six characters differ, as the list prints six. */
 const TOKEN_TAIL = "0123456789012345678901234567890123456";
 const PREVIEW_TOKENS = [`AbCdEf${TOKEN_TAIL}`, `ZyXwVu${TOKEN_TAIL}`];
 
-/** The origin the loader builds absolute preview URLs against. */
+/** Origin for absolute preview URLs. */
 const PREVIEW_ORIGIN = "https://example.test";
 
 const PREVIEW_LINKS = PREVIEW_TOKENS.map((token, i) => ({
@@ -400,54 +276,31 @@ const PREVIEW_LINKS = PREVIEW_TOKENS.map((token, i) => ({
   note: "",
 }));
 
-/** Everything the edit route's loader hands its component. */
+/** The edit route's loader data. */
 const editLoader = (over = {}) => ({
   fields: fields(),
   headSha: HEAD,
   slug: "a-post",
   saved: null,
   tagOptions: ["cloudflare", "d1", "workers"],
-  // The Cmd+K palette's corpus. It renders nothing until the palette opens, so
-  // it changes no submission here; it is present because the component reads it
-  // and a loader shape the gate does not supply is a loader shape it is not
-  // actually testing.
+  // The component reads it.
   linkTargets: [
     { slug: "live-one", title: "A live post", state: "published" },
     { slug: "wip", title: "A draft post", state: "draft" },
   ],
-  // The drawer's revision list, RENDERED rather than omitted, and that is the
-  // point. Ruling 1 says a restore loads and never writes; the way this gate
-  // can hold that rule is by rendering the control and observing that the
-  // page's submission set does not grow. An empty list would have proved
-  // nothing, because a control that is not rendered submits nothing either.
+  // Rendered, so a restore is proven to add no submission.
   revisions: [
     { sha: "1111111111111111111111111111111111111111", message: "Latest edit", author: "Dustin Edwards", date: "2026-08-01T10:00:00Z" },
     { sha: "2222222222222222222222222222222222222222", message: "An earlier edit", author: "Dustin Edwards", date: "2026-07-30T09:00:00Z" },
   ],
   everPublished: false,
   state: "draft",
-  /*
-   * Live preview links. EMPTY by default, which is the state a draft is in
-   * until somebody makes one, and the state a published post is permanently in
-   * because the publish path revoked them.
-   *
-   * The loader supplies this and the component decides the section from
-   * `state`, not from the array's length: an empty array on a draft still
-   * renders the section, with the create control and a sentence saying there
-   * are none. Only a non-draft loses the section entirely.
-   */
+  /* The section follows `state`, not the length. */
   previewLinks: [],
   ...over,
 });
 
-/*
- * The origin-requests panel's three SourceResult shapes.
- *
- * Hand-authored rather than produced by the source module, per rule 10's
- * fixture-independence clause: a gate whose expected values come out of the
- * code under test is a mirror. `originRequests` differs from `rows` in the live
- * fixture on purpose, so the sampling-weighted path is the one exercised.
- */
+/* Hand-authored (fixture independence); `originRequests` differs from `rows`. */
 const TRAFFIC_LIVE = {
   status: "live",
   fetchedAt: "2026-08-14T12:00:00.000Z",
@@ -478,16 +331,7 @@ const TRAFFIC_ERROR = {
     "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn it on.",
 };
 
-/*
- * THE COCKPIT'S FIXTURES, and every string in them is shaped like what the
- * INSTRUMENT returns rather than like what the page should say.
- *
- * `detail` is the verdict module's own sentence, carrying its own numbers, on
- * both the passing and the failing path. That shape is the whole point of the
- * assertions below: the page is supposed to RENDER the instrument's sentence,
- * not compose its own from the same parts, and the only way to check that is
- * to give it a sentence no page-side template could have produced.
- */
+/* `detail` is the instrument's sentence, which the page must render, not compose. */
 const HEALTH_OK = [
   { name: "ask-index-drift", ok: true, detail: "Ask index agrees with D1: 99 expected, 99 present." },
   { name: "media-index-drift", ok: true, detail: "Media index agrees with R2 and public/: 70 expected, 70 present." },
@@ -496,8 +340,7 @@ const HEALTH_OK = [
   { name: "fts-equality", ok: true, detail: "FTS shadows agree: 122 docs, 122 identity, 122 prose." },
 ];
 
-/** One check failing, the rest passing. A run where everything fails cannot
- *  tell a per-check verdict from a page-wide one. */
+/** One failing, so per-check and page-wide verdicts differ. */
 const HEALTH_ONE_FAILING = [
   HEALTH_OK[0],
   {
@@ -522,7 +365,7 @@ const STORES_CLEAN = {
   divergences: { known: true, entries: [] },
 };
 
-/** D1 behind the artifact, and one commit recorded as not applied. */
+/** D1 behind, one commit not applied. */
 const STORES_BEHIND = {
   ...STORES_CLEAN,
   d1Posts: 11,
@@ -539,15 +382,7 @@ const STORES_BEHIND = {
   },
 };
 
-/**
- * One row per status the moderation queue groups by, plus the two hostile
- * shapes the render is the boundary for.
- *
- * `receivedAt` and friends are `Date` objects because that is what the loader
- * hands the component: the columns are drizzle `timestamp` mode, and single
- * fetch preserves a Date across the wire. A string here would render through a
- * different branch than production takes.
- */
+/** Dates are `Date` objects, as the loader hands them. */
 const MENTIONS = [
   {
     id: 1,
@@ -618,7 +453,7 @@ const MENTIONS = [
 
 /** @type {Array<{ name: string, entry: string, path: string, url: string, loaderData: unknown, actionData?: unknown, params?: Record<string,string>, props?: Record<string,unknown> }>} */
 const STATES = [
-  // ---- posts index --------------------------------------------------------
+  // Posts index.
   {
     name: "posts index, clean",
     entry: "app/routes/admin.posts._index.tsx",
@@ -676,37 +511,12 @@ const STATES = [
       tagOptions: [],
     },
   },
-  // The two filtered views exist here because they change WHICH CONTROLS
-  // RENDER, which is this gate's admission test: a filtered list gains a Clear
-  // link, and a filtered list that matched nothing replaces the table with an
-  // empty state carrying a second way out. An empty RESULT is not an empty
-  // corpus and the two must not collapse into one scenario.
+  // An empty result is not an empty corpus.
   /*
-   * SELECTION IS A STATE, and until 2026-08-12 this gate could not reach it.
-   *
-   * The harness renders one static pass and dispatches no events, so the bulk
-   * bar never mounted and the three bulk intents contributed NO payload: the
-   * most destructive surface in the admin was outside the fixture entirely.
-   * Session D shipped with that stated; this closes it.
-   *
-   * `props` seeds the route's own useState through route-render.mjs. The route
-   * takes an optional prop with a production default, so nothing on the wire
-   * can set it.
-   *
-   * TWO selected rather than one, deliberately: a single selection would render
-   * "1 selected" and hide any plural or count-formatting defect, and the delete
-   * confirmation reads the count.
+   * `props` seeds selection, since a static render dispatches no events. Two selected, so
+   * the count and plural are exercised.
    */
-  /*
-   * THE THREE CONFIRMATION STEPS, which are the no-script half of the delete
-   * guards. The action refuses an unconfirmed destructive POST and returns what
-   * it would have destroyed; these states render that return.
-   *
-   * They exist because the guards' whole failure mode is being reachable only
-   * with script. A confirmation step that never rendered would leave the
-   * refusal a dead end, and nothing else here would notice: the submission
-   * baseline only sees forms that are on the page.
-   */
+  /* The no-script half of the delete guards. */
   {
     name: "posts index, ask sync awaiting confirmation",
     entry: "app/routes/admin.posts._index.tsx",
@@ -734,24 +544,7 @@ const STATES = [
     loaderData: { posts: POSTS, ask: ASK_CLEAN, budget: BUDGET, ...NO_FILTERS },
     props: { initialSelection: [POSTS[0].slug, POSTS[1].slug] },
   },
-  /*
-   * FILTERED **AND** SELECTED, the combination D.1 left uncovered and the
-   * decisions log folded into this session.
-   *
-   * Two states existed separately: filtered-with-matches (no selection, so no
-   * bulk bar) and two-selected (unfiltered, so the select-all label reads
-   * "Select all 3" with no "shown"). Neither could see the ruled behaviour,
-   * which only appears where both hold at once: the label must say SHOWN
-   * whenever a filter is active, because select-all reaches only the rows on
-   * screen and a bare "all" would claim the corpus.
-   *
-   * TWO posts visible and ONE selected, deliberately. Two so the count is not
-   * the degenerate 1, and one selected so `allShown` is false, which is the
-   * state where a reader is most likely to mistake the control's reach.
-   *
-   * No new harness seam: this reuses `initialSelection`, so the seam count
-   * stays at ONE against the ruled ceiling of three.
-   */
+  /* Filtered, two visible, one selected: select-all must say shown. */
   {
     name: "posts index, filtered and selected",
     entry: "app/routes/admin.posts._index.tsx",
@@ -796,16 +589,7 @@ const STATES = [
     },
   },
 
-  // ---- media library ------------------------------------------------------
-  //
-  // The grid states render the same controls as each other now: the v1 redesign
-  // moved alt editing and delete OUT of the tiles and into the `?key=` detail
-  // view, so what a grid state proves is the search form, the upload form and
-  // the maintenance menu, and what a DETAIL state proves is the two per-asset
-  // mutations. Both matter: a regression that put a delete button back on
-  // seventy tiles would change every grid state's payload set and fail here.
-  //
-  // A failed scan is still its own state, because it is what ruling 4 turns on.
+  // Media library. Detail states own the per-asset mutations.
   {
     name: "media, unused object",
     entry: "app/routes/admin.media._index.tsx",
@@ -834,8 +618,7 @@ const STATES = [
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
     url: "/admin/media",
-    // Ruling 4's state: usage is unknown, so nothing is labelled unused and the
-    // action refuses every delete.
+    // Usage unknown: nothing is unused, every delete refused.
     loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
       scanComplete: false,
@@ -850,9 +633,7 @@ const STATES = [
     loaderData: MEDIA_SHELL({ objects: [], counts: [], roleCounts: [] }),
   },
   {
-    // A DOCUMENT: 31 of the 70 real rows. It has no thumbnail the Images
-    // binding can produce, so the tile renders a label instead of an <img>
-    // pointed at something that cannot exist.
+    // A document has no thumbnail, so the tile shows a label.
     name: "media, document row",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -877,11 +658,7 @@ const STATES = [
     }),
   },
   {
-    // A STATIC row: not deletable through the UI, so it renders the explanation
-    // instead of the delete form. The refusal itself lives in the action and is
-    // not what this proves; this proves the page stops OFFERING the control, so
-    // a regression that put the button back would change this scenario's
-    // payload set and fail here.
+    // A static row: no delete offered.
     name: "media, static row",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -892,16 +669,13 @@ const STATES = [
         MEDIA_OBJECT({
           key: "/logo.svg",
           url: "/logo.svg",
-          // A static asset is its OWN url. Prefixing /media/ produced
-          // `/media//logo.svg` and 404'd every one of the 58 static rows.
+          // A static asset is its own url; never prefix /media/.
           thumb: "/logo.svg",
           storage: "static",
           role: "brand",
           mime: "image/svg+xml",
           originalName: null,
-          // EVERY SVG HAS A NULL PLACEHOLDER: the Images binding does not
-          // rasterize vectors. 11 of the 70 real rows are in this state, so the
-          // tile must degrade to a plain surface rather than a blank hole.
+          // Images does not rasterize SVGs.
           placeholder: null,
           deletable: false,
         }),
@@ -909,22 +683,7 @@ const STATES = [
       roleCounts: [{ role: "brand", n: 1 }],
     }),
   },
-  /* ---- media v6 session 4 -------------------------------------------------
-   *
-   * Three states the redesign added, each because it changes what RENDERS.
-   *
-   * A DOCUMENT IN THE GRID is not the same state as a document in a row: the
-   * list gives a PDF a 44px extension chip, and the grid gives it a card with a
-   * title, a suggestion of text and a size. 31 of the 70 real rows are here.
-   *
-   * A SELECTED TILE grows a caption bar carrying the name, the size and the
-   * copy control, and the body's copy control goes so the card has exactly one.
-   * That swap is invisible to the payload baseline, because a copy button is
-   * `type="button"` and submits nothing, so it needs a structural assertion.
-   *
-   * A SORTED LIST is the state the column headers exist for: one heading is
-   * active and carries an arrow, four are not, and one is not a link at all.
-   * ---------------------------------------------------------------------- */
+  /* A copy button submits nothing, so these need structural assertions. */
   {
     name: "media, document in the grid",
     entry: "app/routes/admin.media._index.tsx",
@@ -940,9 +699,7 @@ const STATES = [
           storage: "static",
           kind: "document",
           mime: "application/pdf",
-          // NULL, which is the real shape: a static PDF has no originalName, so
-          // the title has to come off the KEY. A fixture that supplied a tidy
-          // name here would test a path the corpus never takes.
+          // Real shape: the title comes off the key.
           originalName: null,
           placeholder: null,
           width: null,
@@ -963,9 +720,7 @@ const STATES = [
       view: { ...MEDIA_SHELL().view, view: "grid" },
       objects: [MEDIA_OBJECT()],
     }),
-    // The harness seam, per admin queue ruling 8. One static render dispatches
-    // no events, so without a seeded selection the caption bar never mounts and
-    // the state would assert the absence of something that cannot appear.
+    // Seeded: no events are dispatched.
     props: { initialSelection: ["1234abcd5678ef90.png"] },
   },
   {
@@ -979,16 +734,8 @@ const STATES = [
       objects: [MEDIA_OBJECT()],
     }),
   },
-  /* ---- media v6 session 5: the usage model and everything it feeds --------
-   *
-   * Nine states, each because it changes what RENDERS and none of them visible
-   * to the payload baseline on its own. The usage states are the point: the page
-   * could express two of them and the third was the one the roster photographs
-   * needed.
-   * ---------------------------------------------------------------------- */
   {
-    // THE CASE THE THIRD STATE EXISTS FOR. Referenced by repository code, cited
-    // by no post. Before this it rendered identically to a genuine orphan.
+    // Used by repository code, cited by no post.
     name: "media, placed by page code",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1026,8 +773,7 @@ const STATES = [
     }),
   },
   {
-    // THE INSPECTOR ON A TEMPLATE-PLACED FILE: the claim, its boundary, and the
-    // source file that is the evidence for it.
+    // Template-placed: the claim and its source file.
     name: "media, inspector on a template-placed file",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1050,8 +796,7 @@ const STATES = [
     }),
   },
   {
-    // A DOCUMENT IN THE INSPECTOR. The copy labels change here and nowhere else:
-    // an <img> tag pointed at a PDF is a broken page.
+    // Document copy labels differ here only.
     name: "media, inspector on a document",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1076,9 +821,7 @@ const STATES = [
     }),
   },
   {
-    // THE DUPLICATE SURFACE: the byte-identical sentence and the named trash
-    // offer. This is the one place the page proposes removing something on the
-    // strength of a comparison, so the copy is what makes it safe to accept.
+    // Removal proposed on a comparison.
     name: "media, inspector on a duplicate",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1092,9 +835,7 @@ const STATES = [
     }),
   },
   {
-    // AN IMAGE WITH ALT ALREADY WRITTEN. The suggestion must NOT be offered
-    // here: a suggestion beside somebody's sentence invites overwriting it with
-    // a filename. This is the negative half of the suggestion assertion.
+    // Alt written: no suggestion offered.
     name: "media, inspector with alt already written",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1106,13 +847,7 @@ const STATES = [
     }),
   },
   {
-    /*
-     * A LARGE FILE THAT IS CITED, DESCRIBED AND UNIQUE. The flag list is
-     * non-empty ("over 1 MB") and the tile precedence selects NOTHING, which is
-     * the only shape where "one dot by precedence" and "a dot whenever any flag
-     * exists" disagree. A plant proved the previous assertion could not tell
-     * them apart.
-     */
+    /* Where precedence and any-flag disagree. */
     name: "media, large but attached",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1130,7 +865,7 @@ const STATES = [
     }),
   },
   {
-    // A NARROWED LENS, which owes the reader the boundary of its own claim.
+    // A narrowed lens states its boundary.
     name: "media, unattached lens with its note",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1142,8 +877,7 @@ const STATES = [
     }),
   },
   {
-    // THE LIBRARY IS EMPTY. The only empty state that gets a heading and an
-    // action, because it is the only one where the reader has nothing to undo.
+    // The only empty state with an action.
     name: "media, library empty",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1156,8 +890,7 @@ const STATES = [
     }),
   },
   {
-    // A SEARCH MISS, which is a different thing from an empty library and needs
-    // a different next step. It names the query back and says what was searched.
+    // Names the query back.
     name: "media, search matched nothing",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1165,8 +898,7 @@ const STATES = [
     loaderData: MEDIA_SHELL({ objects: [], q: "zzzz" }),
   },
   {
-    // A LENS THAT FOUND NOTHING, which is GOOD NEWS and reads as an error unless
-    // it says so.
+    // Good news must not read as an error.
     name: "media, lens matched nothing",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1177,18 +909,8 @@ const STATES = [
       modified: true,
     }),
   },
-  /* ---- media v6 session 6: the drawer, the modals, the revealed chrome ----
-   *
-   * Four states for four surfaces that a static render can otherwise not see,
-   * two of them destructive.
-   * ---------------------------------------------------------------------- */
   {
-    /*
-     * THE EMPTY-TRASH CONFIRMATION, which is now a URL rather than a
-     * `prompt()`. The destructive submission moved BEHIND this state: the trash
-     * view itself no longer carries `intent=empty-trash`, which is the payload
-     * change this state accounts for and the gate reported as GONE.
-     */
+    /* The destructive submit lives behind this state. */
     name: "media, empty trash confirmation",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1201,11 +923,7 @@ const STATES = [
     }),
   },
   {
-    /*
-     * THE BULK-TRASH CONFIRMATION, reached only through the third harness seam
-     * because it opens from client state. It hides many files in one press, so
-     * it belongs in the fixture more than almost anything else here.
-     */
+    /* Opens from client state, via a seam. */
     name: "media, bulk trash confirmation",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1214,10 +932,7 @@ const STATES = [
     props: { initialSelection: ["1234abcd5678ef90.png"], initialConfirmingTrash: true },
   },
   {
-    /*
-     * A SELECTION, for the floating bar. It carries the bulk intents, the size
-     * total and the trash trigger, and the bar does not exist without one.
-     */
+    /* The bar needs a selection. */
     name: "media, selection bar",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1229,9 +944,7 @@ const STATES = [
     props: { initialSelection: ["1234abcd5678ef90.png", "b.png"] },
   },
   {
-    // SEARCH WITH RESULTS. `q` is echoed back, so the input renders its value,
-    // the chips carry it and the pager carries it; the Clear link only exists
-    // in this state.
+    // Clear exists only here.
     name: "media, search with results",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1239,8 +952,7 @@ const STATES = [
     loaderData: MEDIA_SHELL({ q: "picture", objects: [MEDIA_OBJECT()], unusedCount: 1 }),
   },
   {
-    // SEARCH THAT FOUND NOTHING. A different empty state from an empty bucket:
-    // it offers to widen the group or clear the search rather than to upload.
+    // Offers widen or clear, not upload.
     name: "media, search with nothing found",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1266,16 +978,7 @@ const STATES = [
     }),
     actionData: { confirmDelete: "1234abcd5678ef90.png" },
   },
-  /*
-   * TAGS ON THE DETAIL, both branches, because until 2026-08-17 no state
-   * carried any and the whole chip region rendered in NO state. A blank
-   * submit clearing every tag was invisible here for that reason.
-   *
-   * Two states, because the chip has two shapes: with several tags a chip
-   * carries the remaining list and a separate Clear all appears, and at
-   * exactly one tag the chip itself becomes the clear, since an empty `tags`
-   * value no longer means clear.
-   */
+  /* Both chip shapes: several tags, and exactly one. */
   {
     name: "media, detail with several tags",
     entry: "app/routes/admin.media._index.tsx",
@@ -1297,9 +1000,7 @@ const STATES = [
     }),
   },
   {
-    // THE DETAIL VIEW, where set-alt and delete now live. Both mutations must
-    // appear HERE and nowhere else, which is exactly what comparing this
-    // scenario against the grid ones asserts.
+    // Set-alt and delete appear here only.
     name: "media, detail open",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1317,10 +1018,7 @@ const STATES = [
     }),
   },
   {
-    // A DETAIL for a STATIC row. It is not deletable through the UI, so the
-    // page stops OFFERING the control and explains why instead. The action
-    // refuses it regardless; this proves the offer is gone, so a regression
-    // that put the button back changes this payload set.
+    // No delete offered.
     name: "media, detail for a static row",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1346,9 +1044,7 @@ const STATES = [
     }),
   },
   {
-    // A KEY THE INDEX DOES NOT HAVE, which is what a bookmarked detail link
-    // becomes after the object is deleted. It must render a way back rather
-    // than a blank panel or a crash.
+    // Must render a way back.
     name: "media, detail for a missing key",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1359,8 +1055,7 @@ const STATES = [
     }),
   },
   {
-    // UPLOAD ACCEPTED. The form itself renders in every state; this is the one
-    // where the route's redirect has landed, so the flash and its link render.
+    // The flash renders.
     name: "media, upload accepted",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1371,8 +1066,7 @@ const STATES = [
     }),
   },
   {
-    // UPLOAD REFUSED. The route redirects with a CODE and the loader turns it
-    // into the sentence; the page renders whatever it was handed.
+    // Renders the loader's sentence.
     name: "media, upload refused",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1383,14 +1077,7 @@ const STATES = [
     }),
   },
 
-  /* ---- media v6: the new structure ---------------------------------------
-   *
-   * Each of these renders a DIFFERENT CONTROL SET, which is this gate's
-   * admission test. A view mode changes a data attribute and no submissions, so
-   * the two layout states are here to prove exactly that: one markup tree, two
-   * layouts, payload identical. If a future refactor split the list into its
-   * own JSX branch, one of the two would drift and the fixture would say so.
-   * ---------------------------------------------------------------------- */
+  /* View modes: one tree, identical payload. */
   {
     name: "media, list view",
     entry: "app/routes/admin.media._index.tsx",
@@ -1399,8 +1086,7 @@ const STATES = [
     loaderData: MEDIA_SHELL({ objects: [MEDIA_OBJECT()] }),
   },
   {
-    // FLAT, which is now the non-default. It renders no heading at all, which
-    // is what makes a heading a signal when grouping is on.
+    // Flat renders no heading.
     name: "media, flat view",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1430,8 +1116,7 @@ const STATES = [
     loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
       view: { ...MEDIA_SHELL().view, group: "folder", sort: "size", dir: "asc", size: "l" },
-      // The Reset link exists ONLY when something is modified, which is what
-      // makes this a state rather than a variant of the default one.
+      // Reset exists only when modified.
       modified: true,
     }),
   },
@@ -1448,9 +1133,7 @@ const STATES = [
     }),
   },
   {
-    // A trash view with NOTHING in it. Empty trash must not be offered, and the
-    // explanation must still appear: an author arriving at an empty bin still
-    // needs to know what putting something in it would do.
+    // No empty-trash offer; explanation kept.
     name: "media, trash view empty",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1478,9 +1161,7 @@ const STATES = [
     }),
   },
   {
-    // A tag that matched nothing. A different empty state from an empty bucket
-    // and from an empty search, and it must offer a way out that is not
-    // "upload something".
+    // A way out other than upload.
     name: "media, tag filter with no results",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1493,8 +1174,7 @@ const STATES = [
     }),
   },
   {
-    // TWINS PRESENT. The only state that offers to remove something on the
-    // strength of a comparison, so it is the only one where that copy renders.
+    // The only twin-removal copy.
     name: "media, detail with a twin",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1509,8 +1189,7 @@ const STATES = [
     }),
   },
   {
-    // A TRASHED row open in the inspector. It offers Restore and must NOT offer
-    // Move to trash, which is the pair this fixture pins.
+    // Restore, never Move to trash.
     name: "media, detail for a trashed row",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1524,11 +1203,8 @@ const STATES = [
     }),
   },
 
-  /* ---- media v6 session 3: grouping and bulk tagging ---------------------- */
   {
-    // GROUPED BY FOLDER. Two rows in one folder and one in another, so a
-    // grouper that emitted one bucket per ROW would render three headings and
-    // this state would fail rather than merely look odd.
+    // Two folders, so a per-row grouper fails.
     name: "media, grouped by folder",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1537,8 +1213,7 @@ const STATES = [
       objects: [
         MEDIA_OBJECT({ key: "/publications/a.pdf", url: "/publications/a.pdf", storage: "static", kind: "document", deletable: false }),
         MEDIA_OBJECT({ key: "/publications/b.pdf", url: "/publications/b.pdf", storage: "static", kind: "document", deletable: false }),
-        // The roster photograph, which is the row whose NOTE is the whole
-        // reason this grouping exists.
+        // The roster photograph.
         MEDIA_OBJECT({ key: "/phage-hunters/2019/a.jpg", url: "/phage-hunters/2019/a.jpg", storage: "static", deletable: false }),
       ],
       view: { ...MEDIA_SHELL().view, group: "folder" },
@@ -1546,8 +1221,7 @@ const STATES = [
     }),
   },
   {
-    // GROUPED BY MONTH, including a row with NO upload date, which gets its own
-    // bucket rather than being folded into the nearest month.
+    // An undated row gets its own bucket.
     name: "media, grouped by month",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1563,19 +1237,7 @@ const STATES = [
     }),
   },
   {
-    /*
-     * TWO SELECTED, which is the only state that can issue the bulk intents.
-     *
-     * Seeded through `initialSelection`, the optional prop with a production
-     * default, per queue ruling 8. The harness renders one static pass and
-     * dispatches no events, so without this seam the bulk bar never mounts and
-     * the two bulk intents contribute NO payload, which is exactly how the
-     * posts index left its most destructive surface outside the fixture for a
-     * session.
-     *
-     * TWO rather than one: a single selection renders "1 selected" and hides
-     * any plural or count-formatting defect.
-     */
+    /* The only state issuing bulk intents; two for the plural. */
     name: "media, two selected",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1585,9 +1247,7 @@ const STATES = [
         MEDIA_OBJECT(),
         MEDIA_OBJECT({ key: "second.png", url: "/media/second.png" }),
       ],
-      // role=all is what makes this genuinely UNFILTERED. The default view is
-      // filtered to content, so the bare select-all label only ever appears
-      // here, which is the distinction the two assertions below pin.
+      // `role=all` is unfiltered; the default is not.
       filter: "all",
       view: { ...MEDIA_SHELL().view, role: "all" },
       modified: true,
@@ -1596,9 +1256,7 @@ const STATES = [
     props: { initialSelection: ["1234abcd5678ef90.png", "second.png"] },
   },
   {
-    // FILTERED AND SELECTED. The select-all label must say SHOWN whenever a
-    // filter is active, because it only ever reaches the rows on screen. Same
-    // ruled wording the posts index carries, asserted structurally below.
+    // Select-all must say shown.
     name: "media, filtered and selected",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
@@ -1615,7 +1273,7 @@ const STATES = [
     props: { initialSelection: ["1234abcd5678ef90.png"] },
   },
 
-  // ---- new post -----------------------------------------------------------
+  // New post.
   {
     name: "new post, fresh",
     entry: "app/routes/admin.posts.new.tsx",
@@ -1644,7 +1302,7 @@ const STATES = [
     loaderData: { headSha: "", fields: fields(), tagOptions: [] },
   },
 
-  // ---- edit ---------------------------------------------------------------
+  // Edit.
   {
     name: "edit, draft that never published",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
@@ -1679,12 +1337,7 @@ const STATES = [
     actionData: { kind: "confirm-delete", slug: "a-post" },
   },
   {
-    /*
-     * The action refused an unconfirmed first publication and handed the fields
-     * back. Same shape as the delete confirmation above: a `kind` the route
-     * turns into a server-rendered second step, on a post whose loader state is
-     * the one that can reach it.
-     */
+    /* A refused unconfirmed first publication. */
     name: "edit, first publication awaiting confirmation",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
     path: "/admin/posts/:slug/edit",
@@ -1732,24 +1385,8 @@ const STATES = [
     }),
   },
   {
-    /*
-     * A POST THAT ALREADY HAS FURTHER READING, one external link and one
-     * internal, which is the only state where the picker's checkbox is TICKED.
-     *
-     * Without it `frInternal` never reaches a submission, because an unticked
-     * checkbox is not submitted and every other state leaves the list empty. It
-     * would then be the one field of the new control that the baseline does not
-     * pin, which is the same blindness the fixture exists to remove.
-     *
-     * `live-one` is the published entry in `editLoader`'s `linkTargets`, so the
-     * checkbox this state ticks is a real offer rather than an invented one.
-     */
-    /*
-     * A FEATURED POST. The negative for the checkbox assertions: every other
-     * state has `featured: false`, so without this the "renders unchecked"
-     * assertion would be satisfied by a control that is incapable of rendering
-     * checked at all.
-     */
+    /* Ticks the picker, so `frInternal` is submitted. */
+    /* The negative for the unchecked box. */
     name: "edit, featured",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
     path: "/admin/posts/:slug/edit",
@@ -1795,25 +1432,10 @@ const STATES = [
     loaderData: editLoader({ headSha: "" }),
   },
 
-  /* ---- draft preview links (feature G) ------------------------------------
-   *
-   * THREE states, and they are three because the feature has exactly three
-   * shapes and each renders a different control set:
-   *
-   *   a draft with NO links      the create control and a sentence
-   *   a draft WITH links         the create control plus one revoke per link
-   *   a published post           NEITHER control, which is the ruling
-   *
-   * The middle one carries TWO links rather than one. One link would render a
-   * revoke control and prove the tuple exists; two also proves the tuple is the
-   * SAME for both, which is the property the per-link form design was chosen
-   * for. If the token ever leaked into the submission set, two links would
-   * produce two tuples and this state would fail while a one-link state passed.
-   *
-   * The published state duplicates "edit, published" in loader shape and is kept
-   * separate on purpose: that state exists to prove the publish transitions, and
-   * folding a second claim into it would mean a failure there could be either.
-   * ---------------------------------------------------------------------- */
+  /*
+   * Preview links: none, two, and published (neither control). Two links prove the tuple is
+   * shared, so a token leaking into the submission fails.
+   */
   {
     name: "edit, draft with no preview links",
     entry: "app/routes/admin.posts.$slug.edit.tsx",
@@ -1840,20 +1462,12 @@ const STATES = [
       fields: fields({ draft: false, firstPublished: "2026-06-01" }),
       everPublished: true,
       state: "published",
-      // The loader would hand back [] for a published post regardless. Handing
-      // it the TWO links instead is the stronger fixture: it proves the section
-      // is gated on state and not on emptiness, so a future edit that started
-      // rendering the list whenever it is non-empty fails here.
+      // Proves the section follows state, not emptiness.
       previewLinks: PREVIEW_LINKS,
     }),
   },
 
-  // ---- origin requests ----------------------------------------------------
-  //
-  // Three states, and the ERROR one is not hypothetical: the read token is
-  // optional by contract and a development machine never carries it, so the
-  // error is what this route renders locally every single time. It is covered
-  // first for that reason rather than last.
+  // Origin requests. Error is the local state: no read token.
   {
     name: "origin requests, loaded",
     entry: "app/routes/admin.origin-requests.tsx",
@@ -1876,33 +1490,10 @@ const STATES = [
     loaderData: { result: TRAFFIC_ERROR },
   },
   /*
-   * ---- the webmention moderation queue ------------------------------------
-   *
-   * FOUR STATES, and the two CONFIRMATION states are the reason this route is
-   * here at all rather than being left to a live click. Both destructive
-   * intents on this page refuse in the ACTION and render a second step, which
-   * is what makes the ceremony real for a reader without JavaScript; a
-   * confirmation that only exists in a handler is the exact defect
-   * `app/lib/destructive.mjs` was written for, and the only instrument that can
-   * see the rendered form is this one.
-   *
-   * The rows carry a `<script>` in an author name and a very long source URL,
-   * because everything on this page came from a stranger and the render is the
-   * boundary. Section 3's escaping assertions read the markup back.
+   * Mentions. Destructive intents refuse in the action and render a second step for no-script
+   * readers. Rows carry hostile input because the render is the boundary.
    */
-  /*
-   * ---- ruling 21: one queue behind a status filter -------------------------
-   *
-   * `status` ARRIVES IN loaderData because the route resolves the filter in its
-   * LOADER rather than from a hook, so a state here declares the filter the
-   * same way the server would hand it over. `expiring` arrives for the same
-   * reason: the sweep button is LABELLED with the count, so the label is a
-   * loader fact and a state can choose it.
-   *
-   * The populated queue is rendered at `all` rather than at the default,
-   * because every escaping assertion below reads MENTIONS[0] and a state that
-   * filtered it out would leave those cases green over a row they never saw.
-   */
+  /* At `all`, so the escaping assertions see `MENTIONS[0]`. */
   {
     name: "mentions, populated queue",
     entry: "app/routes/admin.mentions.tsx",
@@ -1917,13 +1508,7 @@ const STATES = [
     url: "/admin/mentions?status=pending",
     loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "pending" },
   },
-  /*
-   * AN EMPTY FILTER WITH ROWS BEHIND IT, which is the state the old page could
-   * not produce at all and the one ruling 21a is about. It must show the quiet
-   * line and NOT the four rows that exist under other statuses, so it can fail
-   * in both directions: a filter that stopped filtering and a filter that
-   * stopped saying why the list is empty.
-   */
+  /* Fails both ways: not filtering, or not explaining. */
   {
     name: "mentions, empty pending filter",
     entry: "app/routes/admin.mentions.tsx",
@@ -1942,16 +1527,10 @@ const STATES = [
     url: "/admin/mentions",
     loaderData: { mentions: [], expiring: { failed: 0, rejected: 0 }, status: "all" },
   },
-  /* Nothing expired, so the sweep control is disabled and still carries its
-     count.
-
-     ITS PAYLOAD IS UNCHANGED, and the baseline records that rather than an
-     absence: the BUTTON is disabled, the hidden `intent` field beside it is
-     not, so the form still reports `intent` here. A browser will not submit it
-     at all while the button is the only submitter and it is disabled, which is
-     a fact about the browser that this harness does not model and this comment
-     must not claim it does. What the state is really for is the LABEL, which
-     the structural case below reads. */
+  /*
+   * The hidden `intent` stays enabled, so the payload is unchanged; browser submission is not
+   * modelled. The state exists for the label.
+   */
   {
     name: "mentions, nothing expired",
     entry: "app/routes/admin.mentions.tsx",
@@ -1975,13 +1554,7 @@ const STATES = [
     loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
     actionData: { confirmSweep: { failed: 2, rejected: 1 } },
   },
-  /*
-   * THE TWO FEEDBACK STATES, and they are separate states rather than one,
-   * because the property under ruling 21c is that the BOX MATCHES THE OUTCOME.
-   * One state could only ever assert that some box rendered. Two can assert
-   * that each renders its own and not the other, which is what fails when a
-   * success goes back into the error box.
-   */
+  /* Each box asserted against the other. */
   {
     name: "mentions, success notice",
     entry: "app/routes/admin.mentions.tsx",
@@ -1998,17 +1571,6 @@ const STATES = [
     loaderData: { mentions: MENTIONS, expiring: { failed: 2, rejected: 1 }, status: "all" },
     actionData: { ok: false, message: "That mention id is not valid." },
   },
-  /*
-   * ---- the cockpit ---------------------------------------------------------
-   *
-   * UNCOVERED UNTIL 2026-08-25, and the gap was invisible in exactly the way
-   * this gate exists to prevent. `/admin` rendered a hard-coded card whose
-   * green dot was a constant, and no state here ever rendered the route, so
-   * the page could have said anything at all and this gate would have reported
-   * the same 442 checks. It was rewired to real instruments in the same commit
-   * as these states; a page that reports on everything else deserves to be
-   * reported on itself.
-   */
   {
     name: "overview, all healthy",
     entry: "app/routes/admin._index.tsx",
@@ -2051,31 +1613,14 @@ const STATES = [
   },
 ];
 
-/* ---------------------------------------------------------------------- */
+/* Checks. */
 
 console.log("\ncheck:admin-ui\n");
 
-/* -------------------------------------------------------------------------
- * Section 1: the publish state machine, as a table rather than as pixels.
- *
- * Rendering cannot see what a button does when it is clicked, so the mapping
- * from post state to transition lives in a module and is asserted here, exactly
- * as check:policy asserts publish-policy.mjs. `wantsDraft` is the whole
- * contract with the server.
- *
- * SINCE 2026-09-03 THAT CONTRACT IS VISIBLE IN THE MARKUP, which changes what
- * this gate can prove. It used to read: true means the request carries
- * `draft=on`, false means it carries no `draft` key. That field is gone. Each
- * button now submits its transition id as `intent`, and `fieldsFromForm`
- * derives `draft` from it through `draftForIntent`, so section 3 can assert the
- * whole chain off the rendered page instead of taking a click handler on trust.
- * That is the point of the change as much as the no-script path is: the old
- * shape was unassertable by construction, and the three defects it produced
- * lived in the gap.
- *
- * Every rule is paired with its negative, because a table that only ever
- * asserts what SHOULD be there passes just as happily when everything is there.
- * ---------------------------------------------------------------------- */
+/*
+ * Section 1: the publish state machine. Buttons submit their transition id as `intent`.
+ * Every rule is paired with its negative.
+ */
 
 const HOUR = 3600_000;
 const NOW = Date.parse("2026-07-31T12:00:00.000Z");
@@ -2092,12 +1637,11 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
   t("fresh draft can still be saved as a draft", fresh.some((x) => x.id === "save-draft" && x.wantsDraft === true));
   t("fresh draft offers no unpublish", !fresh.some((x) => x.id === "unpublish"));
 
-  // A draft that was public once and was withdrawn.
+  // A withdrawn draft.
   const back = transitionsFor("draft", true);
   t("withdrawn draft leads with Republish", back[0].label === "Republish", back[0].label);
   t("withdrawn draft republish clears the draft flag", back[0].wantsDraft === false);
-  // The negative that matters: asking twice for a republication is not a
-  // ceremony, it is a habit, and habits get clicked through.
+  // A repeated ask becomes a habit.
   t("republishing is NOT ceremonial", back[0].ceremony === false);
   t("withdrawn draft can still be saved as a draft", back.some((x) => x.id === "save-draft" && x.wantsDraft === true));
 
@@ -2110,7 +1654,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
   t("unpublish is marked as the consequential one", live.find((x) => x.id === "unpublish")?.danger === true);
   t("published is never ceremonial", live.every((x) => x.ceremony === false));
 
-  // Scheduled behaves as published: it is already draft:false.
+  // Scheduled is already draft:false.
   const soon = transitionsFor("scheduled", true);
   t(
     "scheduled matches published",
@@ -2118,20 +1662,14 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     `${JSON.stringify(soon.map((x) => x.id))} vs ${JSON.stringify(live.map((x) => x.id))}`,
   );
 
-  // Exactly one primary, always, and every transition names itself.
+  // Exactly one primary.
   for (const [label, list] of /** @type {Array<[string, ReturnType<typeof transitionsFor>]>} */ ([
     ["fresh draft", fresh], ["withdrawn draft", back], ["published", live], ["scheduled", soon],
   ])) {
     t(`${label} offers at least two transitions`, list.length >= 2, `${list.length}`);
     t(`${label} labels every transition`, list.every((x) => x.label.trim().length > 0));
     t(`${label} has unique ids`, new Set(list.map((x) => x.id)).size === list.length);
-    /*
-     * EVERY TRANSITION IS AN INTENT THE SERVER WILL ACCEPT, and it means the
-     * same thing on both sides. `fieldsFromForm` reads the draft flag off the
-     * intent now, so a transition missing from the map would be refused as
-     * unknown, and one present with the wrong value would publish or unpublish
-     * against its own label. Both directions, per state.
-     */
+    /* Each transition is a known intent with the same draft meaning. */
     for (const transition of list) {
       t(
         `${label} / ${transition.id} is an intent the server knows`,
@@ -2145,12 +1683,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     }
   }
 
-  /*
-   * THE CONFIRMED PUBLISH, which is the one intent that is not a transition.
-   * It has to mean draft:false like the ask it answers; an intent that
-   * confirmed a publication and then saved a draft would be the quietest
-   * possible failure.
-   */
+  /* The confirmed publish means draft:false. */
   t("the confirmed publish is a known intent", PUBLISH_CONFIRMED_INTENT in DRAFT_BY_INTENT);
   t("the confirmed publish publishes", draftForIntent(PUBLISH_CONFIRMED_INTENT) === false);
   t(
@@ -2158,14 +1691,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     ![...fresh, ...back, ...live, ...soon].some((x) => x.id === PUBLISH_CONFIRMED_INTENT),
   );
 
-  /*
-   * CMD+S PRESERVES PUBLICATION STATE, per state.
-   *
-   * The shortcut is the one submit with no submitter, so it names its own
-   * intent, and naming the wrong one would publish a draft from a keystroke
-   * that has always meant "save". Asserted against `draftForIntent` rather than
-   * against the id, because what matters is the flag it produces.
-   */
+  /* Cmd+S has no submitter, so it names its intent; asserted on the flag it produces. */
   for (const [label, state, isDraft] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
     ["draft", "draft", true],
     ["published", "published", false],
@@ -2184,39 +1710,19 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     );
   }
 
-  /*
-   * FAIL CLOSED. An intent nothing recognises is a draft. This is the direction
-   * that decides whether a future bug leaks a private post or refuses a save,
-   * and only one of those is recoverable.
-   */
+  /* Fail closed: a leaked private post is unrecoverable, a refused save is not. */
   t("an unknown intent is a draft", draftForIntent("not-a-real-intent") === true);
   t("an absent intent is a draft", draftForIntent(null) === true);
   t("the empty string is a draft", draftForIntent("") === true);
 }
 
-/* -------------------------------------------------------------------------
- * THE LAST LINK: `fieldsFromForm` ACTUALLY READS THE INTENT.
- *
- * Everything above asserts `draftForIntent`, and everything in section 3
- * asserts the markup. Between them sits the one line that joins the two, and
- * until 2026-09-03 NOTHING reached it: a replay that reverted that line to the
- * old `form.get("draft") === "on"` left this gate at 513 checks and 0 failures
- * and the whole test suite at 630 passing. The mechanism was different from the
- * one this change removed and the blind spot was the same shape, which is the
- * argument for closing it in the commit that found it rather than filing it.
- *
- * Bundled rather than imported: `frontmatter.ts` is TypeScript, so `node:test`
- * cannot reach it, which is why the rule lives here and not in `test/`. It is
- * bundled ALONE because esbuild derives its outbase from the common parent of
- * its entry points, and mixing it with the route entries writes the output into
- * subdirectories the flat name would not find.
- * ---------------------------------------------------------------------- */
+/* `fieldsFromForm` reads the intent. Bundled alone: mixed entries shift esbuild's outbase. */
 
 {
   const fmBundle = await bundleRoutes(["app/lib/editor/frontmatter.ts"]);
   const { fieldsFromForm } = /** @type {any} */ (await importBundled(fmBundle.files[0]));
 
-  /** The request a browser sends when a submitter carrying `intent` is pressed. */
+  /** The request a submitter sends. */
   const draftSentBy = (/** @type {string | null} */ intent) => {
     const form = new FormData();
     for (const name of ["title", "slug", "body", "description", "date", "tags", "publishAt", "coverSrc", "coverAlt", "series", "part", "furtherReading", "ogTitle", "ogDescription", "updated", "firstPublished"]) {
@@ -2226,7 +1732,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     return fieldsFromForm(form).draft;
   };
 
-  // Every intent the buttons can send, through the real parser, both directions.
+  // Every intent, through the real parser.
   let intentsChecked = 0;
   for (const [intent, wantsDraft] of Object.entries(DRAFT_BY_INTENT)) {
     intentsChecked += 1;
@@ -2236,16 +1742,10 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
       `${draftSentBy(intent)}`,
     );
   }
-  // An assertion that can pass by reading nothing is not an assertion: an empty
-  // table would have satisfied the loop above without examining one intent.
+  // An empty table passes the loop.
   t("the intent table was non-empty", intentsChecked >= 6, `${intentsChecked} intents`);
 
-  /*
-   * AND IT READS NOTHING ELSE. This is the half that actually pins the defect:
-   * the assertions above still pass if the parser ALSO honours a `draft` field,
-   * which is the state a half-applied revert leaves behind and the one where
-   * the two mechanisms disagree about the same request.
-   */
+  /* A parser that also honours `draft` is a half-applied revert. */
   const withDraftField = (/** @type {string} */ intent) => {
     const form = new FormData();
     form.set("intent", intent);
@@ -2261,8 +1761,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     "a stray draft=on cannot un-publish a confirmed publish",
     withDraftField(PUBLISH_CONFIRMED_INTENT) === false,
   );
-  // The discriminating control. Without it every assertion here would pass on a
-  // parser that returned a constant.
+  // Without it a parser returning a constant passes.
   t(
     "the parser discriminates: publish and unpublish differ",
     draftSentBy("publish") !== draftSentBy("unpublish"),
@@ -2274,8 +1773,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
 }
 
 {
-  // stateOf must agree with publiclyVisible(): draft is draft, a future
-  // publish_at is scheduled, everything else is published.
+  // Agrees with publiclyVisible().
   t("a draft is a draft", stateOf({ draft: true, publishAt: "" }, NOW) === "draft");
   t(
     "a draft with a future date is STILL a draft",
@@ -2290,8 +1788,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
     "a past publish_at is published",
     stateOf({ draft: false, publishAt: new Date(NOW - HOUR).toISOString() }, NOW) === "published",
   );
-  // The boundary, stated rather than left to chance: publiclyVisible() uses
-  // `publish_at <= now`, so a post due exactly now is live, not scheduled.
+  // `publish_at <= now` is live.
   t(
     "publish_at exactly now is published, not scheduled",
     stateOf({ draft: false, publishAt: new Date(NOW).toISOString() }, NOW) === "published",
@@ -2302,30 +1799,10 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
   );
 }
 
-/* -------------------------------------------------------------------------
- * Section 1b: the WELD between the transition table and the policy.
- *
- * publish-transition.mjs decides what the button says and what it sends.
- * publish-policy.mjs decides what the server then does with it. They are
- * separate modules on purpose (one is UI, before the fact; one is server, after
- * it) and they are driven by the same two facts, so they agree today. Nothing
- * structural stops them drifting apart tomorrow.
- *
- * This welds them, in both directions:
- *
- *   Forward.  Every transition in the table is LEGAL under the policy. Pressing
- *             it as the admin must not throw, and the outcome the policy
- *             computes must be the one the table's label promised.
- *   Backward. Every outcome the policy can produce is REACHABLE from some table
- *             state. An outcome no button can cause is either dead policy or a
- *             missing control, and both are worth failing over.
- *
- * The policy is driven through its real entry point with real frontmatter, not
- * a stub, so a change to how `decide` reads a file is caught here too.
- * ---------------------------------------------------------------------- */
+/* Section 1b: every transition is legal under the policy, and every outcome is reachable. */
 
 /**
- * The markdown a save would carry for a given draft flag.
+ * Markdown a save carries.
  * @param {boolean} draft
  * @param {string | null} firstPublished
  */
@@ -2345,7 +1822,7 @@ const raw = (draft, firstPublished) =>
   ].join("\n");
 
 {
-  /** Every state the table can be asked about, with the prior file it implies. */
+  /** Every table state. */
   const SITUATIONS = /** @type {const} */ ([
     { label: "fresh draft", state: "draft", ever: false, priorDraft: true, priorFirst: null },
     { label: "withdrawn draft", state: "draft", ever: true, priorDraft: true, priorFirst: "2026-06-01" },
@@ -2353,7 +1830,7 @@ const raw = (draft, firstPublished) =>
     { label: "scheduled", state: "scheduled", ever: true, priorDraft: false, priorFirst: "2026-06-01" },
   ]);
 
-  /** What the table's transition id claims the save will do. */
+  /** Claimed outcomes. */
   const CLAIMS = {
     publish: "published-first",
     republish: "republished",
@@ -2368,18 +1845,7 @@ const raw = (draft, firstPublished) =>
   for (const situation of SITUATIONS) {
     const prior = raw(situation.priorDraft, situation.priorFirst);
     for (const transition of transitionsFor(situation.state, situation.ever)) {
-      /*
-       * ONE assertion whose condition varies, not a pair of literals.
-       *
-       * This was `assert(label, false, …)` in the catch and
-       * `assert(label, true)` on the success path. The success half COULD NOT
-       * FAIL: reaching the line was the entire signal, and the literal made the
-       * assertion count claim coverage it did not have.
-       *
-       * Found by check:assertions on the run immediately after its rule (a) was
-       * fixed to span lines. It is the eighth instance of hard rule 10's class
-       * in this repo and the FIRST found by a machine rather than by a person.
-       */
+      /* One varying condition: a literal `true` on the success path cannot fail (hard rule 10). */
       let result;
       /** @type {unknown} */
       let thrown = null;
@@ -2408,8 +1874,7 @@ const raw = (draft, firstPublished) =>
         `label "${transition.label}" implies ${claimed}, policy says ${result.outcome}`,
       );
 
-      // The one fact the whole publish story rests on: draft-ness in the
-      // committed file must be what the transition asked for.
+      // The committed draft flag is what was sent.
       assert(
         `weld: ${situation.label} / ${transition.id} lands the draft flag it sent`,
         readState(result.raw).draft === transition.wantsDraft,
@@ -2417,7 +1882,7 @@ const raw = (draft, firstPublished) =>
     }
   }
 
-  // Backward: no orphan outcomes in the policy.
+  // No orphan outcomes.
   const POLICY_OUTCOMES = ["saved", "published-first", "republished", "unpublished"];
   for (const outcome of POLICY_OUTCOMES) {
     assert(
@@ -2426,8 +1891,7 @@ const raw = (draft, firstPublished) =>
       `reachable: ${[...reached].sort().join(", ")}`,
     );
   }
-  // And the reverse orphan check, so a table that grew a transition the policy
-  // does not model shows up here rather than at runtime.
+  // And none unmodelled.
   for (const outcome of reached) {
     assert(
       `weld: table outcome "${outcome}" is one the policy defines`,
@@ -2437,9 +1901,7 @@ const raw = (draft, firstPublished) =>
   assert("weld: the two modules were actually exercised", reached.size === POLICY_OUTCOMES.length, `${reached.size} of ${POLICY_OUTCOMES.length}`);
 }
 
-/* -------------------------------------------------------------------------
- * Section 2: what the rendered pages can submit.
- * ---------------------------------------------------------------------- */
+/* Section 2: what the pages submit. */
 
 const entries = [...new Set(STATES.map((s) => s.entry))];
 const bundle = await bundleRoutes(entries);
@@ -2450,13 +1912,13 @@ for (let i = 0; i < entries.length; i += 1) {
   modules.set(entries[i], await importBundled(bundle.files[i]));
 }
 
-/** Rendered markup per state, kept for the no-script fallback section. */
+/** Markup per state. */
 /** @type {Map<string, string>} */
 const renderedHtml = new Map();
 
 /** @type {Record<string, string[]>} */
 const actual = {};
-/** Raw markup per state, kept for the structural assertions in section 3. */
+/** Raw markup per state. */
 /** @type {Record<string, string>} */
 const renders = {};
 let rendered = 0;
@@ -2482,9 +1944,7 @@ for (const state of STATES) {
     continue;
   }
 
-  // An assertion that can pass by reading nothing is not an assertion. A state
-  // that rendered an empty string would otherwise report an empty submission
-  // set and match a baseline that was also generated from a broken render.
+  // An empty render would match a baseline generated from a broken render.
   assert(`${state.name} produced markup`, html.length > 400, `${html.length} chars`);
   rendered += 1;
   renders[state.name] = html;
@@ -2503,8 +1963,7 @@ if (update) {
   process.exit(0);
 }
 
-// Fail closed. A gate whose expectation is missing must block and say so, never
-// pass for want of anything to compare against.
+// Fail closed.
 if (!existsSync(FIXTURE)) {
   console.log("  FAIL  baseline fixture is missing: scripts/fixtures/admin-ui-payloads.json");
   console.log("        Generate it with: npm run check:admin-ui -- --update\n");
@@ -2542,36 +2001,8 @@ for (const name of Object.keys(actual)) {
 }
 
 /*
- * Same rule again, one level up: a baseline of empty arrays would compare equal
- * to a render that found no forms at all.
- *
- * **THE FLOOR WAS 20 AGAINST A MEASURED 351, WHICH IS NOT A FLOOR.** It is the
- * shape hard rule 10 calls an unreachable threshold and VERIFICATION.md records
- * as a 10,000-character ceiling on an 8,479-character file: this page's whole
- * submission surface could have gone dark, taking 94% of the comparison with
- * it, and the assertion that exists to notice exactly that would have passed.
- * It was written when the harness compared one route.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE by running it, 2026-09-03: 404.
- * Never summed over the fixtures. The floor is 383, so the slack is 21, which
- * absorbs a state being retired and does not absorb a route going quiet: the
- * media library alone contributes far more than 21.
- *
- * It read 351 against a floor of 330 until 2026-09-03, when splitting the
- * editor's `intent=save` into one intent per transition added 25 submissions
- * and a state. Left alone the floor would still have PASSED, which is why it is
- * moved here rather than noticed later: the number stayed true as a historical
- * measurement and stopped being true as a floor, because the slack this comment
- * calls load-bearing had quietly become 46.
- *
- * It read 388 against a floor of 367 until later the same day, when the posts
- * index grew per-row duplicate and unpublish controls: two tuples on each of
- * the eight states that render at least one row, so 16 submissions. Moved for
- * the reason above rather than left to drift, and the slack is still 21.
- *
- * It read 404 against a floor of 383 until 2026-09-05 and ruling 21, which
- * added five mentions states carrying 38 submissions between them. RE-MEASURED
- * BY RUNNING, never summed: 442. The slack is still 21.
+ * Empty baselines equal a render with no forms. The floor is measured by running this gate,
+ * never summed (hard rule 10).
  */
 assert(
   "the comparison actually read submissions",
@@ -2579,53 +2010,20 @@ assert(
   `${submissionsCompared} compared, floor 421, measured 442`,
 );
 
-/*
- * AND THE STATES THEMSELVES ARE FLOORED, which the baseline cannot do.
- *
- * "baseline covers exactly the states rendered" above looks like it protects
- * this and does not, for one reason: `--update` REWRITES the baseline. A state
- * dropped from STATES and then blessed by an update run leaves that assertion
- * comparing two shortened lists and agreeing. The floor is the copy `--update`
- * cannot reach, which is the whole difference between a fixture and a gate.
- *
- * Measured by running this gate, 2026-09-03: 82. Floor 77. Moved with the
- * submission floor above and for the same reason: the first-publication
- * confirmation step added a state, and a floor whose slack doubles is a floor
- * that has stopped meaning what its own comment says it means.
- *
- * RE-MEASURED BY RUNNING, 2026-09-05: 94. It read 89 against 77 until ruling 21
- * split the mentions page's four states into nine, and a slack of 17 is a floor
- * that would sit through the whole of that section being deleted. Floor 89,
- * slack 5, which is the width it has always had.
- */
+/* Floored because `--update` rewrites the baseline and cannot reach this copy. */
 assert(
   "the harness rendered its full set of states",
   STATES.length >= 89,
   `${STATES.length} state(s), floor 89, measured 94`,
 );
 
-/* -------------------------------------------------------------------------
- * Section 3: the editor's structure, from the same renders.
- *
- * Not interaction. A focus trap, Escape, Cmd+S and the draft buffer are all
- * browser behaviour and none of them can be observed here; that gap is real and
- * is stated rather than papered over. What CAN be asserted is that the elements
- * those behaviours depend on exist, are the right elements, and carry the
- * names and states assistive technology reads. A <dialog> that is not a
- * <dialog> has no trap to test in the first place.
- * ---------------------------------------------------------------------- */
+/* Section 3: editor structure, not interaction. */
 
 /** @param {string} name @returns {string} */
 const htmlFor = (name) => renders[name] ?? "";
 
 /**
- * React's escaping, mirrored, so a needle taken from a fixture matches the
- * markup it produced.
- *
- * None of today's fixture sentences contain an escapable character, and that
- * is exactly why this exists: an assertion that only works while nobody writes
- * an apostrophe is an assertion waiting to go quietly false.
- *
+ * React's escaping, mirrored.
  * @param {string} text
  * @returns {string}
  */
@@ -2664,8 +2062,7 @@ for (const state of [
   structural("the settings button reports its state", state, (h) =>
     /aria-expanded="false"[^>]*aria-haspopup="dialog"|aria-haspopup="dialog"[^>]*aria-expanded="false"/.test(h),
   );
-  // The one guarantee the feedback slot has always carried: it is in the DOM
-  // before it has anything to say, or a screen reader announces nothing.
+  // Present before it speaks.
   structural("the feedback slot is a live region and always present", state, (h) =>
     /class="editor-feedback-slot"[^>]*role="status"[^>]*aria-live="polite"/.test(h),
   );
@@ -2677,9 +2074,7 @@ for (const state of [
   );
 }
 
-// The primary button's LABEL must be the one the table names. This is the
-// bridge between section 1 and the rendered page: the table can be right and
-// the component can still show the wrong word.
+// The label matches the table.
 for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
   ["edit, draft that never published", "draft", false],
   ["edit, draft that published before", "draft", true],
@@ -2692,22 +2087,8 @@ for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"schedul
   );
 }
 
-/* -------------------------------------------------------------------------
- * THE DRAFT FLAG, AS THE MARKUP CARRIES IT. Rewritten 2026-09-03.
- *
- * What stood here asserted that the first-publication primary was
- * `type="button"`. It was a faithful description of the code and it PINNED THE
- * DEFECT: a button that does not submit cannot be pressed by a browser with no
- * script, so the gate's green run was the reason nobody looked. The assertion
- * that replaces it holds the property the old one was reaching for, which was
- * never "does not submit" but "cannot publish in one press", and holds it
- * somewhere a no-script reader also lives: the ask and the answer are DIFFERENT
- * intents, and the page only ever offers the ask.
- * ---------------------------------------------------------------------- */
 
-// Every transition button submits its own id. This is the whole contract with
-// `fieldsFromForm` now, so it is asserted on the rendered page for each state
-// rather than inferred from the table it was built from.
+// Each button submits its own id.
 for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"scheduled"|"published", boolean]>} */ ([
   ["edit, draft that never published", "draft", false],
   ["edit, draft that published before", "draft", true],
@@ -2727,14 +2108,7 @@ for (const [stateName, post, ever] of /** @type {Array<[string, "draft"|"schedul
   }
 }
 
-/*
- * THE NEGATIVE THAT MAKES THE POSITIVES MEAN SOMETHING.
- *
- * The `draft` field is gone from every editor page. Without this, every
- * assertion above would pass just as happily on a page that ALSO still shipped
- * the old hidden input, which is the state a half-applied revert leaves behind
- * and the one where the two mechanisms disagree.
- */
+/* No `draft` field, or a half revert passes. */
 for (const stateName of [
   "edit, draft that never published",
   "edit, draft that published before",
@@ -2747,8 +2121,7 @@ for (const stateName of [
   );
 }
 
-// A never-published draft must not publish in one press. The primary sends the
-// ASK, and only the ceremony's own submits send the ANSWER.
+// First publication sends the ask.
 structural("first publication asks rather than publishes", "edit, draft that never published", (h) => {
   const button = /<button[^>]*class="btn"[^>]*>Publish<\/button>/.exec(h)?.[0] ?? "";
   return button.includes('type="submit"') && button.includes('value="publish"');
@@ -2761,9 +2134,7 @@ structural(
     return button.length > 0 && !button.includes(PUBLISH_CONFIRMED_INTENT);
   },
 );
-// And the answer exists exactly where the ceremony is, so the ask has somewhere
-// to go. Asserted as a count, so "not found" cannot pass as "found nowhere it
-// should not be".
+// Counted, so absence cannot pass.
 structural(
   "the confirmed intent is offered only inside the ceremony dialog",
   "edit, draft that never published",
@@ -2778,27 +2149,14 @@ structural("a republication IS a plain submit", "edit, draft that published befo
   const button = /<button[^>]*class="btn"[^>]*>Republish<\/button>/.exec(h)?.[0] ?? "";
   return button.includes('type="submit"') && button.includes('value="republish"');
 });
-/*
- * A WITHDRAWN DRAFT CARRIES NO RESCHEDULE DIALOG. It shares the non-ceremony
- * arm with a published post, and that arm's dialog submits the in-place `save`,
- * which on a draft means draft:false. Nothing can open it there, so the only
- * thing an unconditional render would produce is a publication in the markup
- * that no control reaches, which is exactly what this gate reads as the page's
- * request surface.
- */
+/* Its dialog's `save` would mean draft:false on a draft. */
 structural("a withdrawn draft ships no ceremony dialog", "edit, draft that published before", (h) =>
   !/<dialog[^>]*class="ceremony"/.test(h),
 );
 
 /*
- * THE SERVER-RENDERED SECOND STEP.
- *
- * Asserted by SUBTRACTING the ceremony dialog rather than by extracting the
- * step, because both render the identical button: same type, same intent, same
- * label. An end anchor on the step's own markup would be a needle whose closing
- * `</div>` is one of four, which is the neighbour-satisfies-the-match shape in
- * FAILURES.md. Removing the dialog leaves exactly the submits a scriptless
- * reader can reach, and the count is what makes "found" mean "found here".
+ * Subtracted, not extracted: both render the same button, and an end anchor would match a
+ * neighbour.
  */
 /** @param {string} h @returns {string} everything outside the ceremony dialog */
 const withoutCeremonyDialog = (h) =>
@@ -2815,11 +2173,7 @@ structural(
   (h) =>
     withoutCeremonyDialog(h).split(`value="${PUBLISH_CONFIRMED_INTENT}"`).length - 1 === 1,
 );
-/*
- * THE NEGATIVE, on the state the step does NOT belong to. Without it the
- * assertion above passes on a component that renders the step unconditionally,
- * which would put a one-press publication on every fresh draft.
- */
+/* Without it an unconditional step, a one-press publication, passes. */
 structural(
   "no confirmed submit is reachable without script before the ask",
   "edit, draft that never published",
@@ -2832,14 +2186,7 @@ structural(
   (h) => h.includes("which needs scripting"),
 );
 
-/* -------------------------------------------------------------------------
- * THE FEATURED MARK ON THE ADMIN LIST.
- *
- * Counted, not merely found. `POSTS` carries exactly one featured row, so a
- * component that marked every row would satisfy "the mark is present" and fail
- * this; that is the whole difference between the assertion and its negative,
- * and it is why the fixture carries both values rather than one.
- * ---------------------------------------------------------------------- */
+/* Counted: one featured row. */
 
 structural("the featured row is marked", "posts index, clean", (h) =>
   (h.match(/class="posts-featured"/g) ?? []).length === 1,
@@ -2851,21 +2198,7 @@ structural("an empty corpus marks nothing", "posts index, empty corpus", (h) =>
   !h.includes("posts-featured"),
 );
 
-/* -------------------------------------------------------------------------
- * THE ROW ACTIONS, and every property here is one the payload baseline cannot
- * see.
- *
- * The baseline records that this page can POST `intent=unpublish` with a
- * `slug`. It cannot record WHICH ROWS offer it, because the tuple set is
- * DISTINCT by design and one row contributes the same entry as ten. So a
- * regression that put an unpublish control on a draft, or a publish control on
- * the list at all, would move nothing in the fixture.
- *
- * The state fixture carries exactly one published, one scheduled and one draft
- * row, which is what makes counting meaningful: a component that ignored the
- * state entirely would render three of each and fail here, and one that
- * rendered none would fail too.
- * ---------------------------------------------------------------------- */
+/* The tuple set is distinct, so it cannot show which rows offer a control; counts do. */
 structural("every row offers a duplicate", "posts index, clean", (h) =>
   (h.match(/value="duplicate"/g) ?? []).length === POSTS.length,
 );
@@ -2873,31 +2206,15 @@ structural("unpublish is offered on the two public rows and no others", "posts i
   (h.match(/value="unpublish"/g) ?? []).length ===
   POSTS.filter((post) => post.state === "published" || post.state === "scheduled").length,
 );
-/*
- * The needle is the ID WITHOUT its attribute, so it matches the form AND any
- * button pointing at it. Anchoring on `id="` was the first cut and it was too
- * narrow, proven by planting: rendering the button on every row while leaving
- * the forms state-gated left the draft row carrying a control aimed at a form
- * that does not exist, and an assertion that read only the form said nothing.
- * A dangling control is the worse defect of the two, because it renders.
- */
+/* The bare id matches the form and any button aimed at it. */
 structural("the draft row is offered a duplicate and NOT an unpublish", "posts index, clean", (h) =>
   h.includes("row-duplicate-wip") && !h.includes("row-unpublish-wip"),
 );
-/*
- * BUTTONS AND FORMS PAIR UP EXACTLY, in both directions.
- *
- * A browser resolves `form="..."` by string equality and says nothing when it
- * fails: the button submits the enclosing form instead, which here is the BULK
- * SELECTION form, so a typo in `rowFormId` turns Unpublish into a bulk
- * submission carrying every ticked slug. Nothing renders differently and
- * nothing throws. This is the assertion that sees it.
- */
+/* A broken `form=` silently submits the bulk selection form instead. */
 structural("every row-action control pairs with the form it names", "posts index, clean", (h) => {
   const targets = [...h.matchAll(/form="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
   const ids = [...h.matchAll(/id="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
-  // Non-empty scope first: an empty page satisfies "every" vacuously, which is
-  // the zero-scope class hard rule 10 names.
+  // Scope first: an empty page satisfies every vacuously (hard rule 10).
   if (targets.length === 0 || ids.length === 0) return false;
   return (
     new Set(ids).size === ids.length &&
@@ -2905,13 +2222,7 @@ structural("every row-action control pairs with the form it names", "posts index
     ids.every((id) => targets.includes(id))
   );
 });
-/*
- * THE CEREMONY IS NOT REACHABLE FROM THIS PAGE, which is the one that would
- * cost something if it broke. First publication is reserved to the editor, and
- * the reservation is worth nothing if a list row can send the transition. The
- * needles are the transition ids `publish-transition.mjs` hands out, anchored
- * on the attribute so a word inside prose cannot satisfy or break them.
- */
+/* First publication is reserved to the editor, so no list row may send it. */
 structural("the list offers no publication transition at all", "posts index, clean", (h) =>
   !/value="publish"/.test(h) &&
   !/value="republish"/.test(h) &&
@@ -2921,17 +2232,9 @@ structural("an empty corpus offers no row actions", "posts index, empty corpus",
   !h.includes("posts-row-form") && !h.includes('value="duplicate"'),
 );
 
-/* -------------------------------------------------------------------------
- * THE FRONTMATTER CONTROLS, and the two properties the payload cannot show.
- *
- * The baseline pins WHICH fields are submitted. It cannot pin that `featured`
- * is a checkbox paired with a hidden "false", nor that the section is reachable
- * without script, and those are the two things this work is actually about.
- * ---------------------------------------------------------------------- */
+/* Frontmatter controls. */
 
-// Reachable with no script. A <details> opens on its own; a <dialog> does not.
-// This is the whole reason the section is not in the settings drawer, so it is
-// asserted rather than left to the component's comment.
+// A details opens without script.
 structural("the metadata section is a details disclosure", "edit, published", (h) =>
   /<details[^>]*class="post-metadata"/.test(h),
 );
@@ -2940,15 +2243,7 @@ structural("the metadata section is NOT inside the drawer dialog", "edit, publis
   return dialog.length > 0 && !dialog.includes('class="post-metadata"');
 });
 
-/*
- * THE FEATURED PAIRING, both halves, because either alone is the defect.
- *
- * A lone hidden input is the old relay with no control. A lone checkbox is the
- * B004 loss: unticked, it submits nothing and absence reads as cleared. The
- * order matters too, and is asserted, because `fieldsFromForm` takes the LAST
- * value: a checkbox rendered BEFORE the hidden "false" would be overridden by
- * it and the control would silently do nothing.
- */
+/* The hidden false renders first: `fieldsFromForm` takes the last value. */
 structural("featured carries a hidden false", "edit, published", (h) =>
   /<input[^>]*type="hidden"[^>]*name="featured"[^>]*value="false"/.test(h),
 );
@@ -2960,8 +2255,7 @@ structural("the hidden false precedes the checkbox", "edit, published", (h) => {
   const box = h.search(/<input[^>]*type="checkbox"[^>]*name="featured"/);
   return hidden !== -1 && box !== -1 && hidden < box;
 });
-// And the checkbox reflects the stored value in both directions, or it would
-// be a control that always reads false no matter what the post says.
+// Reflects the stored value.
 structural("an unfeatured post renders the box unchecked", "edit, published", (h) => {
   const box = /<input[^>]*type="checkbox"[^>]*name="featured"[^>]*>/.exec(h)?.[0] ?? "";
   return box.length > 0 && !box.includes("checked");
@@ -2971,18 +2265,14 @@ structural("a featured post renders the box checked", "edit, featured", (h) => {
   return box.includes("checked");
 });
 
-/*
- * FURTHER READING. The marker is the field that makes an empty list mean the
- * author's emptiness rather than a form that never offered the control, so its
- * absence is the data-loss bug and it is asserted by name.
- */
+/* Without the marker an empty list reads as never offered, and data is lost. */
 structural("further reading carries its marker", "edit, published", (h) =>
   /<input[^>]*type="hidden"[^>]*name="frControl"/.test(h),
 );
 structural("further reading still carries the stored JSON", "edit, published", (h) =>
   /<input[^>]*type="hidden"[^>]*name="furtherReading"/.test(h),
 );
-// One spare row on a post with no links, so a link can be added without script.
+// A spare row.
 structural("an empty list still offers a row", "edit, published", (h) =>
   (h.match(/name="frUrl"/g) ?? []).length === 1,
 );
@@ -2993,19 +2283,14 @@ structural("an existing external link renders as a row", "edit, with further rea
 structural("filled rows plus one spare", "edit, with further reading set", (h) =>
   (h.match(/name="frUrl"/g) ?? []).length === 2,
 );
-/*
- * THE PICKER. Its checkbox value carries slug and title together, which is what
- * keeps the tuple one field wide no matter how many posts exist; asserting the
- * shape is what stops that quietly becoming a field per post.
- */
+/* One field wide. */
 structural("the picker ticks the post already linked", "edit, with further reading set", (h) => {
   const box = /<input[^>]*name="frInternal"[^>]*>/.exec(h)?.[0] ?? "";
   return box.includes("checked") && box.includes("live-one");
 });
 structural("the picker offers only published posts", "edit, published", (h) => {
   const boxes = h.match(/<input[^>]*name="frInternal"[^>]*>/g) ?? [];
-  // editLoader offers one published post and one draft; only the live one may
-  // be offered, because further reading renders to the public.
+  // Only published posts are offered.
   return boxes.length === 1 && boxes[0].includes("live-one") && !boxes[0].includes("wip");
 });
 structural("a post is not offered as its own further reading", "edit, published", (h) => {
@@ -3013,8 +2298,7 @@ structural("a post is not offered as its own further reading", "edit, published"
   return boxes.every((box) => !box.includes('slug\\":\\"a-post'));
 });
 
-// The OG fields say what happens when they are left empty. A note that does not
-// name the fallback is the kind of help that sends somebody to read the source.
+// Names its fallback.
 structural("the OG title names its fallback", "edit, published", (h) =>
   h.includes("cards use the post title"),
 );
@@ -3022,23 +2306,10 @@ structural("the OG description names its fallback", "edit, published", (h) =>
   h.includes("cards use the description"),
 );
 
-// The slug is editable in exactly one place: a new post. An existing post
-// renders no slug input at all, which is why only the fresh state is asserted.
+// Only a new post has a slug input.
 /*
- * THE SLUG INPUT'S PATTERN, BOTH DIRECTIONS, and the second direction is the
- * one with a history.
- *
- * The attribute was derived inline from `SLUG_PATTERN.source` by a strip that
- * silently did nothing, so the anchored source shipped as the attribute. An
- * HTML `pattern` anchors implicitly, so this validated identically and no
- * render, typecheck or gate could see it. The POSITIVE assertion alone would
- * still not have seen it, because it was written against a constant that did
- * not exist yet; what catches that exact shape is the negative, which names
- * the anchored form and refuses it.
- *
- * Needles are plain `includes` rather than a built RegExp on purpose: the
- * pattern is full of regex metacharacters, and interpolating it into a RegExp
- * would compile the rule instead of looking for it.
+ * An HTML `pattern` anchors implicitly, so only the negative catches an anchored source.
+ * `includes`, not a RegExp: the pattern is full of metacharacters.
  */
 /** @param {string} h @returns {string} */
 const slugInput = (h) => /<input[^>]*name="slug"[^>]*>/.exec(h)?.[0] ?? "";
@@ -3052,21 +2323,11 @@ structural(
   "new post, fresh",
   (h) => {
     const input = slugInput(h);
-    // Scope proven non-empty first: with no slug input the negative below is
-    // true of the empty string and this passes having examined nothing.
+    // Scope first.
     return input.length > 0 && !input.includes('pattern="' + SLUG_PATTERN.source + '"');
   },
 );
-/*
- * THE RULED SELECT-ALL LABEL, gated because the fixture structurally cannot
- * see it: the payload baseline records METHOD, intent and field NAMES, and this
- * is text. A ruled behaviour with no instrument is a behaviour that drifts.
- *
- * Both directions, because the positive alone would pass on a label that said
- * "Select all 2 shown all" or that had grown a second, bare copy elsewhere.
- * The negative names the exact bare form the ruling forbids, closed with the
- * element boundary so "Select all 2 shown" cannot satisfy it as a prefix.
- */
+/* Text the baseline cannot see. */
 structural(
   "a filtered select-all says SHOWN, never bare all",
   "posts index, filtered and selected",
@@ -3077,8 +2338,7 @@ structural(
   "posts index, filtered and selected",
   (h) => !h.includes("Select all 2</span>"),
 );
-/* And the unfiltered case keeps the bare form, so the rule above is a
-   DISTINCTION rather than a blanket rename. */
+/* Unfiltered keeps the bare form. */
 structural(
   "an unfiltered select-all says the plain count",
   "posts index, two selected",
@@ -3088,40 +2348,12 @@ structural(
 structural("new posts get a slug input", "new post, fresh", (h) => h.includes('id="field-slug"'));
 structural("existing posts do not", "edit, published", (h) => !h.includes('id="field-slug"'));
 
-/* -------------------------------------------------------------------------
- * MEDIA v6: THE PARAMETER THAT MUST NOT EVAPORATE.
- *
- * **THIS IS THE INSTRUMENT THE TWO PREVIOUS INCIDENTS DID NOT HAVE.** `q` fell
- * off the pagination links once and `role` fell off the chips once. Neither was
- * visible to this gate, and that is structural rather than an oversight: the
- * payload baseline records METHOD, action and field names, and every one of
- * these links is a `GET` with no fields at all. `GET /admin/media` is the tuple
- * whether the href carries ten parameters or one.
- *
- * So this reads the rendered HREFS instead. It takes a state where every
- * parameter is set, renders the page, and asserts that each internal link back
- * to this page carries the whole set. A link built by hand, outside `hrefWith`,
- * fails here by name.
- *
- * The needle set is DERIVED from the module's own PARAM_NAMES rather than typed
- * again, because a hand-written list of parameters going stale against the real
- * one is precisely what both incidents were.
- * ---------------------------------------------------------------------- */
+/* View links are fieldless GETs, so hrefs are read. Needles derive from `PARAM_NAMES`. */
 
 {
   const { DEFAULTS, PARAM_NAMES } = await import("../app/lib/media/view.mjs");
 
-  /*
-   * Every parameter non-default, so every one MUST appear in every link.
-   *
-   * **`view` IS "list" AND THAT IS LOAD BEARING, not a default left alone.**
-   * It was "grid", and the column headers introduced in session 4 render only
-   * in the list, so the newest link builder on the page was the one link
-   * builder this scan could not see. A header that dropped `q` would have been
-   * the third instance of the exact bug this block exists for, passing green.
-   * The grid loses nothing by not being the scanned view: its tile links are
-   * the same links the list draws, and the view toggle emits both either way.
-   */
+  /* Every parameter non-default. `view` is list because column headers render only there. */
   const FULL_VIEW = {
     view: "list",
     group: "folder",
@@ -3178,27 +2410,13 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
     fail(`${state.name}: render threw\n    ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  /*
-   * Every href pointing back at this page, which is the set that has to carry
-   * the state. External links and the upload endpoint are not view links.
-   *
-   * THE SEARCH FORM IS CUT OUT FIRST, and that is a real exemption rather than
-   * a convenience: the form OWNS `q`, so the Clear control inside it is the one
-   * link on the page whose whole job is to drop it. Scanning it would make the
-   * assertion below forbid the only correct way to clear a search.
-   *
-   * Found when the clear control started working: before this design pass the
-   * Clear link was built from the role chip helper and CARRIED q, so pressing
-   * Clear did not clear. The assertion caught the fix, which is the right way
-   * round.
-   */
+  /* The search form is cut out: it owns `q`, and its Clear link must drop it. */
   const outsideSearch = html.replace(/<form[^>]*role="search"[\s\S]*?<\/form>/g, "");
   const hrefs = [...outsideSearch.matchAll(/href="(\/admin\/media\?[^"]*)"/g)].map((m) =>
     m[1].replace(/&amp;/g, "&"),
   );
 
-  // NON-EMPTY SCOPE FIRST. Zero links found would make every assertion below
-  // pass by examining nothing, which is this repo's most-repeated defect class.
+  // Scope first.
   assert(
     "the evaporation scan found view links to examine",
     hrefs.length >= 26,
@@ -3206,16 +2424,13 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
   );
 
   /**
-   * Parameters a link is ALLOWED to drop, with the reason.
-   *
+   * Droppable parameters.
    * @type {Record<string, string>}
    */
   const MAY_DROP = {
-    // A chip goes back to page one, deliberately: page 3 of one filter is not
-    // page 3 of another. So `page` may be absent from any link.
+    // Pages differ per filter.
     page: "a filter change resets to page one",
-    // The parameter each control OWNS is the one it changes, and changing it to
-    // the default legitimately removes it from the query.
+    // An owner drops its default.
     view: "the view toggle owns it",
     group: "the Display popover owns it",
     sort: "the Display popover owns it",
@@ -3232,15 +2447,7 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
       "that did would re-open a destructive confirmation on every navigation.",
   };
 
-  /*
-   * THE ASSERTION, and it is deliberately about `q` above all.
-   *
-   * `q` is the one parameter NO control on this page owns: nothing here is a
-   * "clear the search" link except the explicit one, so a link that drops it is
-   * always the bug. The other parameters each have exactly one owner and are
-   * checked as a set instead: at least one link must carry each, which catches
-   * a parameter that vanished from the page entirely.
-   */
+  /* No control owns `q`, so dropping it is always the bug. Others need one carrier each. */
   const withoutQ = hrefs.filter((h) => !new URLSearchParams(h.split("?")[1]).has("q"));
   assert(
     "every view link carries the search, which no control on this page owns",
@@ -3259,19 +2466,9 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
   }
 }
 
-/* -------------------------------------------------------------------------
- * MEDIA v6 session 4: the document card, the caption bar, and the table.
- *
- * NONE OF THIS IS VISIBLE TO THE PAYLOAD BASELINE, and that is why it is here
- * rather than left to the fixture. The baseline records `METHOD action | intent
- * | field names`. A document card is text, a caption bar is text, a column
- * heading is a `GET` link with no fields, and the copy control is a
- * `type="button"` that submits nothing at all. Every one of the four things
- * this session shipped could be deleted outright without moving a single tuple
- * in `admin-ui.json`.
- * ---------------------------------------------------------------------- */
+/* Media structure the baseline cannot see. */
 
-/* ---- 1. THE DOCUMENT CARD ---------------------------------------------- */
+/* The document card. */
 
 structural(
   "a document tile renders a card, not an empty labelled box",
@@ -3279,23 +2476,14 @@ structural(
   (h) => h.includes('class="media-doc"') && h.includes('class="media-doc-title"'),
 );
 
-/*
- * THE TITLE IS THE WORDS, and this is the assertion the whole item turns on.
- * The fixture's key is `/publications/edwards-2024-phage-genomics.pdf`, so the
- * expected string is written out HERE rather than produced by calling
- * `docTitle`, per rule 10's fixture-independence clause: a gate whose expected
- * value comes out of the code under test is a mirror.
- */
+/* Written out, not produced by `docTitle`: fixture independence. */
 structural(
   "the document title is sentence-spaced words derived from the key",
   "media, document in the grid",
   (h) => h.includes(">edwards 2024 phage genomics<"),
 );
 
-/* BOTH DIRECTIONS. The positive above passes on a card that ALSO printed the
-   raw filename somewhere, which is exactly the duplication this design removed:
-   `edwards 2024 phage genomics` over `edw...omics.pdf` is the same file twice,
-   one of them in the elided form. */
+/* No raw filename too. */
 structural(
   "a document tile does not also print the slug or the extension as a title",
   "media, document in the grid",
@@ -3310,60 +2498,27 @@ structural(
   (h) => /class="media-doc-ext"[^>]*>PDF</.test(h),
 );
 
-/*
- * THE RULED LINES ARE DECORATION AND ARE MARKED AS SUCH. Three empty spans
- * suggesting text is exactly the kind of thing that reads as three blank list
- * items to a screen reader if nobody hides it.
- */
+/* Hidden decoration. */
 structural(
   "the ruled lines are hidden from anything that reads rather than looks",
   "media, document in the grid",
   (h) => /class="media-doc-rules" aria-hidden="true"|aria-hidden="true" class="media-doc-rules"/.test(h),
 );
 
-/*
- * THE PAGE COUNT IS NOT FAKED, and this is the honest half of item 1.
- *
- * The mockup's document card ends with "24 pages". Nothing in this system
- * stores a page count: `media` carries bytes, mime, width and height, and width
- * and height are null for every PDF. The card carries the SIZE instead, and
- * this asserts both halves: the size is there, and no page count was invented
- * to fill the space. A future column can turn this around; until then a gate
- * saying so is what stops somebody adding a plausible number.
- */
+/* Nothing stores a page count, so none may be invented. */
 structural(
   "no page count is invented, because nothing stores one",
   "media, document in the grid",
   (h) => !/\d+\s+pages?/i.test(h),
 );
 
-/*
- * THE CARD DOES NOT REPEAT THE TILE'S OWN META LINE.
- *
- * The card carried a size along its bottom for one render, in the slot the
- * mockup fills with a page count, and the tile's meta line prints the size too,
- * so `1.4 MB` appeared twice inside sixty pixels and read as a bug on a
- * screenshot. The mockup has no such problem because its tile has NO BODY: the
- * card is the whole tile. This one has always had a body.
- *
- * **SCOPED TO THE CARD, and the first draft was not, which cost a red run
- * worth keeping.** It counted the string across the whole tile and expected
- * one, and found three: the list's Size column and its Dims column are in the
- * markup on every render by the one-tree rule and hidden by CSS in the grid.
- * Counting rendered TEXT to prove something about LAYOUT is a category error
- * this gate is especially prone to, because it renders with no stylesheet at
- * all and cannot see `display: none`. The property is about the card, so the
- * assertion reads the card.
- *
- * Paired with a scope check, because a `.media-doc` regex that stopped matching
- * would make the absence below pass over an empty string.
- */
+/* Scoped to the card: there is no stylesheet, so CSS-hidden text elsewhere still counts. */
 structural("the document card does not repeat the size", "media, document in the grid", (h) => {
   const card = /<span class="media-doc">[\s\S]*?<\/span><\/span>/.exec(h)?.[0] ?? "";
   return card.includes("edwards 2024 phage genomics") && !card.includes("1.4 MB");
 });
 
-/* ---- 2. THE CAPTION BAR ------------------------------------------------- */
+/* 2. Caption bar */
 
 structural(
   "a selected tile grows a caption bar",
@@ -3379,11 +2534,7 @@ structural(
     /class="media-caption-meta"[^>]*>50 kB · 1200×630</.test(h),
 );
 
-/*
- * AN UNSELECTED GRID HAS NO CAPTION. Without this the assertion above passes on
- * a page that draws the bar over all seventy tiles, which is a different design
- * and not the one that was approved.
- */
+/* Without this, a bar drawn over every tile passes the assertion above. */
 structural(
   "an unselected tile has no caption bar",
   "media, document in the grid",
@@ -3391,14 +2542,8 @@ structural(
 );
 
 /*
- * EXACTLY ONE COPY CONTROL PER CARD, in both states.
- *
- * The caption carries the copy button, and the body's copy button is not
- * rendered when it does. Two controls with the same accessible name on one card
- * is read twice by a screen reader and chosen between for no reason by a
- * pointer. The payload baseline cannot see this at all: `type="button"` is not
- * a submission, so a tile with two copy buttons and a tile with one produce
- * byte-identical tuples.
+ * One copy control per card, in both states. The payload baseline cannot see this:
+ * `type="button"` is not a submission.
  */
 for (const [state, note] of [
   ["media, grid with a selected tile", "the caption owns it"],
@@ -3411,7 +2556,7 @@ for (const [state, note] of [
   });
 }
 
-/* ---- 3. THE LIST HEADER, AND THE URLS IT PRODUCES ----------------------- */
+/* 3. List header and its URLs */
 
 structural(
   "the list renders a header row",
@@ -3425,12 +2570,7 @@ structural(
   (h) => !h.includes('class="media-list-head"'),
 );
 
-/*
- * DIMS IS A LABEL RATHER THAN A DEAD LINK, both directions. There is no `dims`
- * sort key: half the library has no dimensions, so every document and every SVG
- * would pile up at one end of that order. A disabled-looking anchor would still
- * be focusable and still navigate.
- */
+/* No `dims` sort key: half the library has no dimensions. */
 structural("Dims is not a link", "media, list sorted by size", (h) => {
   const head = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(h)?.[0] ?? "";
   return (
@@ -3439,13 +2579,7 @@ structural("Dims is not a link", "media, list sorted by size", (h) => {
   );
 });
 
-/*
- * EXACTLY ONE ACTIVE COLUMN, and it is the one the view is sorted by.
- *
- * The state sorts by size, so Size carries `aria-sort="descending"` and the
- * other three carry `none`. Counting BOTH is what makes this fail on a
- * regression that marked every column active as easily as one that marked none.
- */
+/* Counting both catches every column marked active as well as none. */
 structural("exactly one column reports itself sorted", "media, list sorted by size", (h) => {
   const head = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(h)?.[0] ?? "";
   const sorted = (head.match(/aria-sort="(ascending|descending)"/g) ?? []).length;
@@ -3458,24 +2592,11 @@ structural("the sorted column is the one the view names", "media, list sorted by
   return /aria-sort="descending"[^>]*>Size|data-sort="size"[^>]*aria-sort="descending"/.test(head);
 });
 
-/* -------------------------------------------------------------------------
- * THE SORT-LINK TUPLES, and this is the assertion the item was specified on.
- *
- * "Header sorts are GET links producing the same URLs the Display popover
- * already produces, so clicking a header and choosing from the popover must
- * land on identical URLs."
- *
- * READ OFF THE RENDERED MARKUP, both sides, and compared as STRINGS. Nothing
- * here recomputes an expected href: the property is that the page's two sort
- * controls agree with EACH OTHER, so both sides of the comparison have to come
- * out of the page. Calling `sortHref` to produce an expectation would assert
- * that the function equals itself.
- *
- * The active column is exempt and named: a header press on the column you are
- * already sorted by REVERSES it, which every table does and which the popover
- * deliberately does not, so those two hrefs are supposed to differ. Asserting
- * they matched would forbid the toggle.
- * ---------------------------------------------------------------------- */
+/*
+ * Header and popover sort links land on identical URLs, both read off the markup; never
+ * build an expectation with `sortHref`, which would assert it equals itself. The active
+ * column is exempt: its header reverses direction and the popover does not.
+ */
 
 {
   const { SORTS, readView } = await import("../app/lib/media/view.mjs");
@@ -3491,42 +2612,22 @@ structural("the sorted column is the one the view names", "media, list sorted by
   const hrefsIn = (block) =>
     [...block.matchAll(/href="(\/admin\/media[^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
 
-  /*
-   * RESOLVED THROUGH `readView`, never read off the query string.
-   *
-   * `hrefWith` OMITS a parameter equal to its default, so the sort a link MEANS
-   * and the sort it SPELLS are different questions, and the loader answers the
-   * first one. Asking the second is how the header filter above went wrong.
-   */
+  /* Via `readView`: `hrefWith` omits defaults, so the spelled sort is not the meant sort. */
   /** @param {string} href @returns {string} */
   const sortOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).sort;
   /** @param {string} href @returns {string} */
   const dirOf = (href) => readView(new URLSearchParams(href.split("?")[1] ?? "")).dir;
 
-  /* The header's children are spans and anchors and nothing nests inside it, so
-     the first `</div>` is its own. */
+  /* Nothing nests in the header, so the first `</div>` is its own. */
   const headBlock = /<div class="media-list-head"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
-  /* The popover's SORT group only. The Direction group next to it also emits
-     links back to this page, and they resolve to the CURRENT sort key, so
-     scanning the whole panel would put a direction link in the name column's
-     slot and compare two unrelated controls. */
+  /* Sort group only: Direction links resolve to the current key. */
   const sortNav = /<nav[^>]*aria-label="Sort"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? "";
 
-  /*
-   * NOT FILTERED ON `sort=` APPEARING IN THE QUERY STRING, and the first draft
-   * of this was. That draft cost a red run and was worth it: `hrefWith` OMITS a
-   * parameter equal to its default, so the Added column at the default
-   * direction produces a BARE `/admin/media` carrying neither token. The filter
-   * dropped exactly one column, reported it as MISSING FROM THE HEADER rather
-   * than as filtered out of the scan, and would have gone on hiding it. Every
-   * anchor in this block is a column heading; there is nothing to filter.
-   */
+  /* Never filter on `sort=` in the href: the default column links to a bare `/admin/media`. */
   const headHrefs = hrefsIn(headBlock);
   const popoverHrefs = hrefsIn(sortNav);
 
-  // SCOPE FIRST, BOTH SIDES. Either block failing to match its regex would make
-  // every comparison below pass over an empty list, which is this repo's most
-  // repeated defect class and the reason rule 10 exists.
+  // Scope first: an empty list passes every comparison below.
   assert(
     "the header block yielded sort links to compare",
     headHrefs.length === 4,
@@ -3568,12 +2669,7 @@ structural("the sorted column is the one the view names", "media, list sorted by
       `ACTIVE that stopped naming a real key, would make this loop pass over nothing.`,
   );
 
-  /*
-   * THE TOGGLE, asserted rather than assumed. The active column's header must
-   * REVERSE the direction; the popover's option for the same column must not.
-   * Without this the exemption above is a hole somebody could drive the whole
-   * header through by making every column non-toggling.
-   */
+  /* Asserted, or the exemption above lets every column stop toggling. */
   assert(
     "the active column's header reverses the direction",
     head[ACTIVE] !== undefined && dirOf(head[ACTIVE]) === "asc",
@@ -3586,31 +2682,12 @@ structural("the sorted column is the one the view names", "media, list sorted by
   );
 }
 
-/* -------------------------------------------------------------------------
- * MEDIA v6 session 5: THE THREE-STATE USAGE MODEL and everything it feeds.
- *
- * **NONE OF THIS IS VISIBLE TO THE PAYLOAD BASELINE.** Three usage states, four
- * lens notes, three empty states, a suggestion, a duplicate sentence and a set
- * of copy labels are all TEXT, and the baseline records `METHOD action | intent
- * | field names`. The whole model could be reverted to the old binary without
- * moving a single tuple.
- *
- * The assertions below are therefore about SENTENCES, and about the one thing
- * that makes a sentence dangerous: a page can say "unattached" truthfully and
- * "unused" falsely with the same layout.
- * ---------------------------------------------------------------------- */
+/* Three-state usage model: text the payload baseline cannot see. */
 
 {
   const { USAGE_STATES, LENS_NOTES } = await import("../app/lib/media/usage.mjs");
 
-  /*
-   * THE MODEL AND THE RENDER AGREE ON THE VOCABULARY.
-   *
-   * Derived from the module rather than typed here, for the reason the
-   * evaporation needles are derived from PARAM_NAMES: a hand-written list of
-   * states going stale against the real one is exactly how a fourth state would
-   * ship undocumented, or a retired one keep an assertion alive.
-   */
+  /* Derived from the module so the state list cannot drift. */
   assert(
     "the usage model declares exactly three states",
     Object.keys(USAGE_STATES).length === 3,
@@ -3623,7 +2700,7 @@ structural("the sorted column is the one the view names", "media, list sorted by
   );
 }
 
-/* ---- 1. THE THIRD STATE, ON EVERY SURFACE ------------------------------- */
+/* 1. Third state */
 
 structural(
   "a file placed by page code reads as in template, not unattached",
@@ -3635,8 +2712,7 @@ structural(
   "media, placed by page code",
   (h) => /data-usage="template"/.test(h) && !/data-usage="unattached"/.test(h),
 );
-/* THE NEGATIVE, on a row that genuinely has no reference, so the assertion
-   above is known to discriminate rather than to match every row. */
+/* The negative, on a row with no reference, proves the assertion above discriminates. */
 structural(
   "a file with no reference anywhere still reads as unattached",
   "media, unused object",
@@ -3648,58 +2724,38 @@ structural(
   (h) => h.includes(">used<") && /data-usage="used"/.test(h),
 );
 
-/* ---- 2. THE INSPECTOR NAMES ITS EVIDENCE -------------------------------- */
+/* 2. Inspector evidence */
 
 structural(
-  // NARROWED 2026-08-21. "Placed by page code" is the usage STATE and is a
-  // fact: it has to agree with the data-usage="template" assertion below.
-  // "Found by scanning the repository" was the boundary sentence's WORDING, and
-  // pinning wording makes an equally true rephrasing a build failure.
+  // The state, not the wording, so a true rephrasing passes.
   "the inspector states the usage claim",
   "media, inspector on a template-placed file",
   (h) => h.includes("Placed by page code"),
 );
-/*
- * AND IT NAMES THE FILE. A claim with no evidence behind it is the thing the old
- * two-state model had: it said "nothing cites this" and could not say what it
- * had looked at.
- */
+/* A claim names its source file. */
 structural(
   "the inspector names the source file that places it",
   "media, inspector on a template-placed file",
   (h) => h.includes("app/data/phage-hunters.ts") && h.includes("references this address"),
 );
 /*
- * THE SENTENCE THE WHOLE FEATURE EXISTS TO STOP. An unattached file must never
- * be described as unused, because the scan cannot see a constructed path and an
- * external site can link anything. Asserted as an ABSENCE, with the positive
- * above proving the panel renders at all.
+ * Never call an unattached file "unused": the scan cannot see constructed paths or
+ * external links.
  */
 structural(
   "the unattached note refuses to call the file unused",
   "media, detail open",
   (h) => h.includes("not the same as") && !/\bis unused\b/.test(h),
 );
-/* The paragraph RENDERS on every listing, so a reader who never opens the
-   inspector still gets a caveat. */
+/* Renders on every listing. */
 structural(
   "the standing usage note renders on the listing",
   "media, unused object",
   (h) => h.includes('class="media-usage-note"') && h.includes("repository code references"),
 );
 /*
- * AND ITS WORDING IS ASSERTED AT SOURCE, not through the fixture.
- *
- * The note is loader data, so the fixture supplies one and the component echoes
- * it: asserting the words through a render would be asserting that the gate's
- * own copy says what the gate expects. The shipped sentence lives in the route,
- * so that is where it is read from.
- *
- * **THE OLD SENTENCE WAS TRUE UNTIL THIS COMMIT AND IS NOW FALSE.** It said an
- * asset referenced only by route code "has no citation here", which was the
- * honest confession of a two-state tracker. The scan sees route code now, so the
- * absence half of this assertion is what stops the confession being restored by
- * a future edit that has forgotten the scan exists.
+ * Read at source, not through the fixture: the note is loader data, so a render only
+ * echoes the gate's own copy.
  */
 {
   const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
@@ -3725,28 +2781,10 @@ structural(
   );
 }
 
-/* -------------------------------------------------------------------------
- * THE FORBIDDEN WORD, guarded on the RENDERED PAGE.
- *
- * The usage ruling says this page may never call a file "unused": the
- * repository scan cannot see a path the code builds at runtime, and nothing
- * here can see an external site linking a file. "unattached" is an absence of
- * evidence and says so; "unused" is a claim about the world that no check here
- * can support.
- *
- * The standing usage-note sentence has been guarded at source since the note
- * was rewritten. **THE TILE META LINE WAS NOT, and it kept the word for two
- * windows**: `cited ? " used" : " unused"` was written when the page had two
- * states, survived the three-state model landing, and rendered
- * `content 189 kB, unused` on the same nine roster photographs the list view
- * beneath it called "in template". Found by looking at a screenshot, not by any
- * gate.
- *
- * ASSERTED OVER MARKUP rather than over source, because the defect was a
- * rendered string. Scoped to the tile's meta element so the word remains legal
- * in the prose that EXPLAINS why it is illegal, which is the trap a bare
- * page-wide search would fall into.
- * ---------------------------------------------------------------------- */
+/*
+ * No "unused" in the rendered tile meta. Scoped to that element so the prose explaining
+ * the rule may still use the word.
+ */
 
 for (const state of [
   "media, unused object",
@@ -3758,25 +2796,13 @@ for (const state of [
     const metas = [...h.matchAll(/class="media-meta">([\s\S]*?)<\/p>/g)].map((m) =>
       m[1].replace(/<[^>]*>/g, ""),
     );
-    // SCOPE FIRST: zero meta lines would make the absence below pass by
-    // examining nothing, which is this repo's most repeated defect class.
+    // Scope first: zero meta lines would pass the absence by examining nothing.
     if (metas.length === 0) return false;
     return metas.every((t) => !/\bunused\b/.test(t));
   });
 }
 
-/*
- * AND THE POSITIVE, so the absence above cannot pass on a tile that stopped
- * printing usage at all. A plant proved it could: deleting the label left the
- * gate green.
- *
- * **THROUGH THE SAME EXTRACTION AS THE NEGATIVE, and the first draft was not.**
- * It matched `class="media-meta">[\s\S]*?unattached[\s\S]*?</p>`, and a
- * non-greedy run of `[\s\S]` happily crosses `</p>` to reach the word in the
- * list view's usage cell further down the document, then finds some later
- * closing tag. The assertion passed on a meta line that said nothing at all.
- * An element-bounded read is the only way to assert about one element.
- */
+/* Element-bounded, like the negative: a lazy `[\s\S]*?` crosses `</p>` into later markup. */
 /** @param {string} h @returns {string[]} */
 const metaText = (h) =>
   [...h.matchAll(/class="media-meta">([\s\S]*?)<\/p>/g)].map((m) =>
@@ -3794,22 +2820,14 @@ for (const [state, label] of [
   });
 }
 
-/* ---- 3. PER-ROW FLAGS AND THE TILE DOT ---------------------------------- */
+/* 3. Row flags and tile dot */
 
 structural(
   "a row prints its flags",
   "media, unused object",
   (h) => /class="media-row-flags"[^>]*>no alt</.test(h),
 );
-/*
- * SCOPED TO THE FLAGS ELEMENT, and the first draft was not.
- *
- * `!h.includes("no alt")` over the whole page matched the no-alt LENS CHIP's own
- * hint, "Images with no alt text written yet", which is present on every render
- * and says nothing about this row. The assertion failed on correct markup, which
- * is the right direction to be wrong in but is still a broken instrument: it
- * would have gone on failing whatever the row did.
- */
+/* Scoped: the no-alt lens hint says "no alt" on every page. */
 structural(
   "a document row is never flagged for missing alt",
   "media, document row",
@@ -3824,39 +2842,25 @@ structural(
   (h) => (h.match(/class="media-tile-flag"/g) ?? []).length === 1,
 );
 /*
- * **AND A TILE WITH NOTHING WORTH FLAGGING CARRIES NO DOT.**
- *
- * The assertion above cannot fail on its own and a plant proved it. Replacing
- * `tileFlagFor` with `flags.length > 0` left it green, because on that fixture
- * both expressions render exactly one dot: the document is over 1 MB, so the
- * flag list is non-empty AND the precedence picks a member.
- *
- * The two only disagree where the flag list is non-empty and the PRECEDENCE
- * selects nothing: a large file that is cited by a post, has alt text and has no
- * twin. `flagsFor` returns ["large"], `tileFlagFor` returns null, and a tile
- * should be quiet. This is that state.
+ * A tile with nothing worth flagging has no dot. This is the state where `tileFlagFor`
+ * and `flags.length > 0` disagree.
  */
 structural(
   "a large but attached and described tile carries no dot at all",
   "media, large but attached",
   (h) => !h.includes('class="media-tile-flag"'),
 );
-/* And the flag itself is still REACHABLE on that same row, in the list, so the
-   assertion above is about the tile being quiet rather than about the flag
-   having been dropped everywhere. */
+/* Quiet tile, not a dropped flag. */
 structural(
   "and the row still prints the flag as words",
   "media, large but attached",
   (h) => /class="media-row-flags"[^>]*>over 1 MB</.test(h),
 );
 
-/* ---- 4. LENS NOTES AND EMPTY STATES ------------------------------------- */
+/* 4. Lens notes, empty states */
 
 structural(
-  // NARROWED 2026-08-21 to the note's PRESENCE and its escape control. The
-  // sentence inside it was pinned word for word, which is the class tier 4.1
-  // named. That the note exists at all, and that it offers a way out, are the
-  // properties worth holding; its exact phrasing is the writer's.
+  // Presence and escape only; phrasing is the writer's.
   "a narrowed lens renders its note, with a way out",
   "media, unattached lens with its note",
   (h) => h.includes('class="media-lens-note"') && h.includes("Show everything"),
@@ -3867,50 +2871,38 @@ structural(
   (h) => !h.includes('class="media-lens-note"'),
 );
 
-/* THE THREE EMPTY STATES, each asserted to be the RIGHT one. A single assertion
-   that "an empty state rendered" would pass on any of the three appearing in
-   all three situations, which is the defect this replaces. */
+/* Each is the right empty state. */
 structural(
   "an empty library explains what the library is for",
   "media, library empty",
-  // NARROWED 2026-08-21: the state attribute and the call to action are facts.
-  // "Nothing here yet" was the headline's wording.
   (h) => h.includes('data-empty="library"') && h.includes("Upload the first file"),
 );
 structural(
   "a search miss names the query and says what was searched",
   "media, search matched nothing",
-  // NARROWED 2026-08-21: echoing the QUERY back is the property, since a miss
-  // that does not say what was searched for is the defect. The list of searched
-  // FIELDS was prose and is also a claim that ages: adding a searched field
-  // would mean editing this gate rather than the page.
+  // Echoing the query is the property.
   (h) => h.includes('data-empty="search"') && h.includes("zzzz"),
 );
 structural(
   "an empty lens reads as good news rather than as an error",
   "media, lens matched nothing",
-  // NARROWED 2026-08-21 to the state attribute. Telling the three empty states
-  // apart is what the data-empty values do, and the mutual-exclusion assertions
-  // directly below are what make that binding load-bearing.
   (h) => h.includes('data-empty="lens"'),
 );
-/* AND THEY ARE MUTUALLY EXCLUSIVE. Without this, one state rendering in all
-   three situations would satisfy all three assertions above. */
+/* Mutually exclusive. */
 structural(
   "a search miss is not also the library-empty state",
   "media, search matched nothing",
   (h) => !h.includes("Upload the first file"),
 );
 
-/* ---- 5. SUGGESTIONS, OFFERED AND NOT APPLIED ---------------------------- */
+/* 5. Suggestions */
 
 structural(
   "an empty alt field offers the filename as a suggestion",
   "media, inspector on a template-placed file",
   (h) => h.includes("Use suggested: 2019"),
 );
-/* THE NEGATIVE, and it is the one that matters: a suggestion beside text
-   somebody already wrote is an invitation to overwrite their sentence. */
+/* Never suggest over written alt. */
 structural(
   "a written alt field offers no suggestion",
   "media, inspector with alt already written",
@@ -3921,15 +2913,14 @@ structural(
   "media, inspector on a template-placed file",
   (h) => (h.match(/class="media-tag-suggestion"/g) ?? []).length === 2,
 );
-/* A DOCUMENT TAKES NO ALT TEXT, so the field is not offered at all. It was on
-   all 70 rows, which invents an obligation on the 31 that cannot discharge it. */
+/* Documents take no alt. */
 structural(
   "a document is offered no alt field",
   "media, inspector on a document",
   (h) => !h.includes('id="detail-alt"') && h.includes("A document takes no alt text"),
 );
 
-/* ---- 6. COPY LABELS THAT ADAPT ------------------------------------------ */
+/* 6. Copy labels */
 
 structural(
   "an image offers an HTML tag",
@@ -3942,7 +2933,7 @@ structural(
   (h) => h.includes("HTML link") && !h.includes("HTML tag"),
 );
 
-/* ---- 7. THE DUPLICATE SURFACE ------------------------------------------- */
+/* 7. Duplicates */
 
 structural(
   "a duplicate states that both addresses resolve to the same content",
@@ -3957,13 +2948,8 @@ structural(
   (h) => h.includes("Keep this, trash headshot-final-v2.png"),
 );
 
-/* ---- 8. THE PALETTE, THE SHORTCUTS AND THE Cmd+K BADGE ------------------ */
+/* 8. Palette and shortcuts */
 
-/*
- * THE RULING THIS SATISFIES: an absent shortcut must not be advertised. The
- * badge was held back for a whole session with that reason written down, so
- * asserting it now is asserting that the binding it advertises exists.
- */
 structural(
   "the search bar advertises the shortcut that now exists",
   "media, unused object",
@@ -3973,19 +2959,11 @@ structural(
   "the shortcuts panel documents every binding",
   "media, unused object",
   (h) => {
-    // NARROWED 2026-08-21 to the row COUNT, which is what "documents every
-    // binding" means. The two descriptions were prose samples of nine rows and
-    // proved nothing the count does not. The real coverage is the assertion
-    // below binding the rendered count to MEDIA_SHORTCUTS in both directions.
+    // Row count; the binding is asserted below.
     return (h.match(/class="media-shortcut"/g) ?? []).length >= 9;
   },
 );
-/*
- * THE SHORTCUTS PANEL AND THE SHORTCUT TABLE NAME THE SAME SET, so a binding
- * cannot be documented without existing or exist without being documented. The
- * count is read out of the RENDERED markup and compared against the module's own
- * table length, neither of them typed here.
- */
+/* Panel rows equal MEDIA_SHORTCUTS. */
 {
   const html = htmlFor("media, unused object");
   const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
@@ -3998,17 +2976,8 @@ structural(
   );
 
   /*
-   * **AND EVERY DOCUMENTED SHORTCUT IS ACTUALLY WIRED.**
-   *
-   * The assertion above is a tautology on its own and a plant proved it: adding
-   * a fake row ("ctrl D, delete everything instantly") increments BOTH counts,
-   * so they stayed equal and the gate stayed green. It can only ever catch the
-   * panel failing to render, which is not the rule.
-   *
-   * The rule is that this page must not advertise a binding nobody wired, which
-   * is why the Cmd+K badge was withheld for a session with that reason written
-   * down. So each row names the expression that implements it and this greps the
-   * two islands for it. A fake row has no expression to name.
+   * Never advertise an unwired binding. Equal counts pass a fake row, so each row names its
+   * expression and it must appear in an island.
    */
   const islands = ["media-palette", "media-keyboard"]
     .map((f) => readFileSync(join(root, `app/components/admin/${f}.tsx`), "utf8"))
@@ -4032,22 +3001,10 @@ structural(
   );
 }
 
-/* -------------------------------------------------------------------------
- * THE LOADER WIRING, ASSERTED AT SOURCE, because this harness cannot run a
- * loader and says so in its own header.
- *
- * A plant proved the gap: replacing the loader's `templateRefs` lookup with a
- * literal `0` left every assertion green. The states supply `usage` as fixture
- * INPUT, so the component renders whatever it is given and the model can be
- * disconnected without a single rendered byte changing. That is the harness
- * boundary working exactly as documented, and it means the wiring needs a
- * different instrument.
- *
- * These are source greps, which is a weaker instrument than a render and is the
- * strongest one available here. They assert the three joins exist: the artifact
- * is imported, the row usage is computed from it, and BOTH readers of the
- * unattached predicate are handed the same key list.
- * ---------------------------------------------------------------------- */
+/*
+ * Loader wiring, by source grep: the harness cannot run a loader and states supply `usage`
+ * as input, so a disconnected model renders identically.
+ */
 {
   const source = readFileSync(join(root, "app/routes/admin.media._index.tsx"), "utf8");
 
@@ -4068,11 +3025,7 @@ structural(
     /usageStateOf\(\{[\s\S]{0,260}?templateRefs: \(TEMPLATE_REFS\[row\.key\] \?\? \[\]\)\.length/.test(source),
     "the panel and the row must not disagree about one file.",
   );
-  /*
-   * BOTH READERS OF THE PREDICATE GET THE SAME LIST. The listing and the lens
-   * count are separate queries, and the Unused chip already shipped once with a
-   * count from one predicate and a filter from another.
-   */
+  /* Listing and lens count share one key list. */
   assert(
     "the listing filters unattached against the repository keys",
     /templateKeys: TEMPLATE_REF_KEYS/.test(source),
@@ -4086,49 +3039,24 @@ structural(
   );
 }
 
-/* ---- 8b. THE COCKPIT RENDERS THE INSTRUMENT, NOT ITS OWN ARITHMETIC ------ */
+/* 8b. Cockpit */
 
 /*
- * The page is the human-readable view of the health run and `sync_status`, and
- * rule 17 says a view renders what an instrument reports rather than computing
- * a second answer beside it. These assertions are what make that checkable
- * from outside the file.
- *
- * THE VERDICT SENTENCE IS THE TEST. Each fixture check carries a `detail`
- * string with its own numbers, and the page must put THAT STRING on the page.
- * A page that formatted its own sentence from `expected` and `present` would
- * render something that looks identical today and drifts the first time a
- * verdict is reworded, which is precisely the failure this repo keeps paying
- * for. Asserting the sentence catches it; asserting "a number appears" does
- * not.
+ * A view renders what the instrument reports (rule 17): print each check's own `detail`,
+ * since a sentence rebuilt from its numbers drifts on the first rewording.
  */
 for (const state of ["overview, all healthy", "overview, one check failing"]) {
-  /*
-   * EVERY CHECK IS ON THE PAGE, NAMED IN THE OPERATOR'S WORDS. Ruling 54: the
-   * instrument ids are what the source calls these, and four of the five do not
-   * name the thing they are about. The mapping is CHECK_COPY, and asserting
-   * against it rather than against a list retyped here is what stops this gate
-   * becoming a second owner of the names.
-   */
+  /* Names come from CHECK_COPY, never retyped here. */
   structural("every health check is named on the page", state, (h) =>
     Object.values(checkCopy).every((copy) => h.includes(escapeHtml(copy.name))),
   );
-  /*
-   * AND THE INSTRUMENT IDS ARE GONE. The positive half above would pass on a
-   * page that printed both, which is the state this ruling was written against.
-   */
+  /* The positive half passes on a page printing both names and ids. */
   structural("no instrument id reaches the operator's page", state, (h) =>
     !["ask-index-drift", "media-index-drift", "media-backup-drift", "content-drift", "fts-equality"].some(
       (name) => h.includes(name),
     ),
   );
-  /*
-   * THE FIGURES ARE STILL THE INSTRUMENT'S. check-copy.mjs owns nouns and verbs
-   * only: a failing check's sentence substitutes from the verdict's own
-   * `counts`, and a check that ships none renders its own `detail`. So this
-   * asserts the count SURVIVED the rewording, which is the half rule 17 cares
-   * about, rather than the wording itself.
-   */
+  /* The counts stay the verdict's own. */
   structural("a failing check still reports the instrument's own numbers", state, (h) => {
     /** @type {Array<{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }>} */
     const checks = state === "overview, all healthy" ? HEALTH_OK : HEALTH_ONE_FAILING;
@@ -4143,29 +3071,17 @@ for (const state of ["overview, all healthy", "overview, one check failing"]) {
   });
 }
 
-/*
- * A FAILING CHECK IS DISTINGUISHABLE FROM A PASSING ONE, in the markup and not
- * only in a colour. `StatusDot` carries `data-status` plus a visually hidden
- * word, so this asserts the state reaches assistive technology rather than
- * asserting a hue.
- */
+/* State by word, not hue. */
 structural("a healthy run marks no card as failing", "overview, all healthy", (h) =>
   !h.includes("FAILING") && !/data-status="error"/.test(h),
 );
-/*
- * ONE ROW IS MARKED FAILING AND EXACTLY ONE. The verdict is a WORD first, then
- * a colour, then a border style, so it survives forced-colors; the check is on
- * the word, because that is the channel that cannot be taken away.
- */
+/* The word survives forced-colors. */
 structural("a failing check is marked failing, and only it", "overview, one check failing", (h) =>
   (h.match(/>failing</g) ?? []).length === 1 &&
   (h.match(/>passing</g) ?? []).length === 4,
 );
 
-/*
- * AND ONLY THE FAILING ROW OFFERS A REPAIR. A kebab on a passing row opens onto
- * nothing, which is the empty-Maintenance defect one level down.
- */
+/* No empty menus. */
 structural("only a row with a repair carries a menu", "overview, one check failing", (h) =>
   (h.match(/class="row-menu"/g) ?? []).length === 1,
 );
@@ -4173,20 +3089,7 @@ structural("a healthy overview offers no row menus at all", "overview, all healt
   !h.includes('class="row-menu"'),
 );
 
-/*
- * THE STORE COUNTS ARE THE ONES HANDED IN. A page that hard-coded a plausible
- * number would pass every assertion above.
- */
-/*
- * THE FIGURES ARE THE ONES HANDED IN. A page that hard-coded a plausible number
- * would pass every assertion above.
- *
- * TWO OF THEM ARE ON THE SURFACE since ruling 54, and the other two are under a
- * disclosure: what the repository holds and what the site is serving are the
- * pair that can disagree, and the disagreement is why the panel exists. The
- * search count still has to be PRESENT, which is what stops "moved it under a
- * details" becoming "dropped it".
- */
+/* Figures are the ones handed in, not hard-coded. */
 structural("the two figures are the ones sync_status reported", "overview, all healthy", (h) =>
   h.includes(">12<") && h.includes("11 of them public to readers"),
 );
@@ -4194,20 +3097,12 @@ structural("the quieter counts survive under the disclosure", "overview, all hea
   /<details class="admin-explain">[\s\S]*122[\s\S]*<\/details>/.test(h),
 );
 
-/*
- * D1 BEHIND THE ARTIFACT IS SHOWN AS A DISAGREEMENT rather than left for the
- * reader to spot by comparing two cards. Amber, not red: the ship-time sync
- * repairs it, so a gap is usually a window.
- */
+/* Amber: the ship sync repairs it. */
 structural("D1 behind the artifact is flagged", "overview, one check failing", (h) =>
   /data-status="warn"/.test(h),
 );
 
-/*
- * DIVERGENCES ARE ABSENT WHEN THERE ARE NONE. An empty list is the normal
- * answer, and a permanently empty panel is furniture that trains a reader to
- * stop looking at the place the real answer will appear.
- */
+/* No permanently empty panel. */
 structural("no divergence panel when the list is empty", "overview, all healthy", (h) =>
   !h.includes("Divergences"),
 );
@@ -4218,11 +3113,7 @@ structural("a recorded divergence names its commit and its reason", "overview, o
   h.includes("D1 write failed after the commit landed"),
 );
 
-/*
- * THE SECRETS AUDIT REPORTS PRESENCE AND NEVER A VALUE, which is the property
- * `test/secrets-audit.test.mjs` asserts on the payload and this asserts on the
- * rendered page: the two together cover the module and its render.
- */
+/* Names, never values. */
 structural("every ratified secret is listed by name", "tools, all secrets set", (h) =>
   h.includes("GITHUB_TOKEN") && h.includes("OPERATOR_TOKEN") && h.includes("SMOKE_TOKEN"),
 );
@@ -4233,20 +3124,9 @@ structural("a missing secret is named and counted", "tools, one secret missing",
   h.includes("1 of 3 missing") && h.includes("NOT SET"),
 );
 
-/* ---- 9. THE NO-SCRIPT FLOOR --------------------------------------------- */
+/* 9. No-script floor */
 
-/*
- * **EVERY ENHANCEMENT IS ADDITIVE, ASSERTED RATHER THAN CLAIMED.**
- *
- * The palette, the toast and the keyboard navigator all need script, which is
- * accepted for this page. What is NOT accepted is any of them becoming the only
- * way to do something. The harness renders with no script at all, which makes it
- * the right instrument for exactly this: whatever it can see is what a reader
- * with scripting off gets.
- *
- * So the search form must still be a real GET form, and the suggestion and tag
- * chips must still be real submit buttons rather than click handlers.
- */
+/* Enhancements are additive; the scriptless render is the proof. */
 structural(
   "search is still a native GET form with no script",
   "media, unused object",
@@ -4268,18 +3148,9 @@ structural(
   (h) => /<button[^>]*type="submit"[^>]*class="media-tag-suggestion"/.test(h),
 );
 
-/* -------------------------------------------------------------------------
- * MEDIA v6 session 6: THE DRAWER, THE MODALS, AND THE NO-SCRIPT FLOOR UNDER
- * BOTH.
- *
- * The whole point of these surfaces is that they overlay the page, and an
- * overlay is exactly the shape that becomes unreachable or undismissable if one
- * piece is missing. The harness renders with NO script and NO stylesheet, which
- * makes it the right instrument for the half that must not depend on either:
- * the markup, the roles, and whether a control is a real link or a handler.
- * ---------------------------------------------------------------------- */
+/* Drawer and modals, rendered with no script or stylesheet. */
 
-/* ---- 1. THE DRAWER ------------------------------------------------------ */
+/* 1. Drawer */
 
 structural(
   "the inspector is a dialog with a scrim",
@@ -4288,12 +3159,7 @@ structural(
     /<section[^>]*class="media-detail"[^>]*role="dialog"|<section[^>]*role="dialog"[^>]*class="media-detail"/.test(h) &&
     h.includes('class="media-detail-scrim"'),
 );
-/*
- * THE SCRIM IS A LINK, not a div with a handler, which is the difference
- * between a drawer you can dismiss with no script and one you cannot. Asserted
- * as an ANCHOR carrying an href, because a div would render identically here in
- * every way except the one that matters.
- */
+/* An anchor dismisses without script. */
 structural(
   "the scrim is a real link, so clicking away works with no script",
   "media, detail open",
@@ -4310,16 +3176,11 @@ structural(
   (h) => !h.includes("media-detail-scrim") && !h.includes('role="dialog"'),
 );
 
-/* ---- 2. THE CONFIRMATIONS ----------------------------------------------- */
+/* 2. Confirmations */
 
 /*
- * **THE DESTRUCTIVE SUBMISSION MOVED BEHIND A CONFIRMATION, and this pair is
- * what proves it moved rather than vanished.**
- *
- * `prompt()` ran from an `onSubmit` handler, so with scripting off the handler
- * never ran and the form submitted straight through: every trashed object
- * deleted with no confirmation at all. The trash view therefore must NOT carry
- * the intent any more, and the confirmation state MUST.
+ * Delete sits behind a confirmation state: an `onSubmit` `prompt()` never runs without
+ * script, so the form submitted straight through.
  */
 structural(
   "the trash view no longer submits the delete directly",
@@ -4333,13 +3194,7 @@ structural(
     h.includes('class="media-modal"') &&
     /<input[^>]*name="intent"[^>]*value="empty-trash"/.test(h),
 );
-/*
- * AND THE BUTTON IS ENABLED IN THE SERVER RENDER. This looks backwards and is
- * the load-bearing half of the no-script path: rendering it disabled would
- * leave a reader without script unable to ever enable it, because nothing runs
- * to observe what they typed. The ACTION is the gate; the disabled state is
- * earlier feedback once hydrated.
- */
+/* Enabled in the server render: nothing enables it without script. The action is the check. */
 structural(
   "the confirm button is reachable without script",
   "media, empty trash confirmation",
@@ -4351,18 +3206,10 @@ structural(
 structural(
   "the typed count is a named field, so the server can check it",
   "media, empty trash confirmation",
-  /*
-   * THE NEEDLE IS BUILT FROM CONFIRM_FIELD, not from the literal it happens to
-   * equal. The rendered attribute really is the literal, so a hardcoded needle
-   * WORKS today; what it cannot survive is a rename. Renaming the constant
-   * moves the component and the server together and leaves this assertion
-   * looking for a name nothing emits, which passes vacuously in the negative
-   * assertion below and fails confusingly here. Derived, a rename moves all
-   * three at once.
-   */
+  /* Built from CONFIRM_FIELD, not its literal, so a rename moves the needle with the code. */
   (h) => new RegExp("<input[^>]*name=\"" + CONFIRM_FIELD + "\"").test(h),
 );
-/* Cancel is a link, for the same reason the scrim is. */
+/* Cancel is a link. */
 structural(
   "cancel is a link back to the same view",
   "media, empty trash confirmation",
@@ -4370,15 +3217,7 @@ structural(
 );
 
 /**
- * The MODAL'S OWN form, extracted before anything is asserted about it.
- *
- * The first draft of the assertion below searched the whole page for
- * `name="key" value="..."`, and every tile in the grid renders a form carrying
- * exactly that: a plant that dropped the modal's hidden keys entirely left this
- * green, because the needle was still on the page somewhere else. Only the
- * payload baseline caught it, which is a different assertion doing this one's
- * job. Unanchored needle, hard rule 10, and the fourth of that class here.
- *
+ * The modal's own form; tiles carry the same `key` fields (hard rule 10).
  * @param {string} h
  * @returns {string}
  */
@@ -4396,20 +3235,14 @@ structural(
     );
   },
 );
-/*
- * AND IT ASKS NO COUNT. The ladder is unchanged: trashing is reversible and
- * touches neither R2 nor a public URL, so the type-the-count ceremony is spent
- * only where the action cannot be undone. A confirmation that asked for a count
- * here would be ceremony people learn to click through, which is what makes the
- * one on empty-trash stop working.
- */
+/* Trash is reversible, so no typed count. */
 structural(
   "the bulk confirmation asks for no typed count",
   "media, bulk trash confirmation",
   (h) => modalForm(h).length > 0 && !modalForm(h).includes('name="' + CONFIRM_FIELD + '"'),
 );
 
-/* ---- 3. THE FLOATING SELECTION BAR -------------------------------------- */
+/* 3. Selection bar */
 
 structural(
   "a selection renders the bar with its size total and its trash trigger",
@@ -4426,28 +3259,12 @@ structural(
   (h) => !h.includes('class="posts-bulk"'),
 );
 
-/* ---- 4. THE TILE CHROME IS IN THE MARKUP AT REST ------------------------ */
+/* 4. Tile chrome */
 
+/* Hidden by CSS only; keyboard and scan need the markup. */
 /*
- * The name and the checkbox are HIDDEN BY CSS until hover, focus or selection,
- * and hiding them in the markup instead would be a different and worse thing: a
- * keyboard reader would have nothing to tab to and the evaporation scan would
- * lose the tile links. The harness renders with no stylesheet, so what it sees
- * is exactly what must still be present.
- */
-/*
- * THE LABEL BELOW SAYS "its checkbox" RATHER THAN "checkbox", and that is not
- * style. `check:invariants` scans string literals for raw SQL, and its scanner
- * does not understand REGEX literals: `/<form[^>]*role="search"...` desyncs its
- * quote matching at stripped index 46569 of this very file, so everything after
- * it is read as one enormous phantom string. Inside that phantom, its bare
- * column extraction reads `AND <word> IN` as a WHERE clause, and the phrase
- * "name link and checkbox in the markup" made `checkbox` a column name that
- * exists in no table. Measured: one failure, 105 checks, from prose.
- *
- * Rewording is the small half. The real defect is the scanner, which can also
- * SWALLOW genuine SQL inside a phantom and check nothing: it consumed 3308
- * characters here. That belongs in the gate backlog, not in a rename.
+ * Keep "its checkbox" in the label: the `check:invariants` raw-SQL scanner misreads regex
+ * literals here and parses `AND checkbox IN` as a column.
  */
 structural(
   "the tile keeps its name link and its checkbox in the markup",
@@ -4458,13 +3275,7 @@ structural(
     /class="media-check-label"/.test(h),
 );
 
-/* -------------------------------------------------------------------------
- * MEDIA v6 session 3: grouping headings and the ruled select-all wording.
- *
- * The payload fixture cannot see either. Headings are text, and the select-all
- * label is text; both are ruled behaviour, and a ruled behaviour with no
- * instrument drifts.
- * ---------------------------------------------------------------------- */
+/* Grouping headings and select-all wording. */
 
 structural(
   "grouping by folder renders one heading per folder, not one per row",
@@ -4474,15 +3285,7 @@ structural(
     return headings === 2;
   },
 );
-/*
- * THE HEADING IS A TITLE AND THE NOTE IS THE POINT.
- *
- * It used to assert the raw prefix appeared. That was the shipped page's
- * behaviour and it was the thing Dustin's verdict was about: a heading reading
- * `/phage-hunters` explains nothing, and "Cohort photographs, placed by the
- * roster page template" explains everything. So the assertion moved with the
- * design rather than being deleted.
- */
+/* Titles, not raw prefixes. */
 structural(
   "folder headings are TITLES from the table, not raw prefixes",
   "media, grouped by folder",
@@ -4498,17 +3301,13 @@ structural(
   "media, grouped by month",
   (h) => h.includes("March 2026") && h.includes("No upload date"),
 );
-/*
- * THE COUNT IS PAGE-LOCAL AND SAYS SO. This is the assertion that stops the
- * over-promise coming back: a heading count that read as a library total would
- * be the same defect session 2 shipped and this session was called to close.
- */
+/* Not a library total. */
 structural(
   "a group heading counts THIS PAGE in words",
   "media, grouped by folder",
   (h) => h.includes("on this page"),
 );
-/* Flat renders NO heading at all, which is what makes the heading a signal. */
+/* Flat has no heading. */
 structural(
   "the flat view renders no group heading",
   "media, flat view",
@@ -4525,44 +3324,21 @@ structural(
   "media, filtered and selected",
   (h) => !h.includes("Select all 2<"),
 );
-/* And the unfiltered case keeps the bare form, so the rule above is a
-   DISTINCTION rather than a blanket rename. */
+/* Unfiltered keeps the bare form. */
 structural(
   "an unfiltered select-all says the plain count",
   "media, two selected",
   (h) => h.includes("Select all 2<") && !h.includes("Select all 2 shown"),
 );
 
-/* -------------------------------------------------------------------------
- * Draft preview links: the two rulings the payload fixture cannot see.
- *
- * The baseline records METHOD, intent and field NAMES. It can see that a
- * published post issues neither request, because that is a payload difference.
- * It CANNOT see that the list prints six characters rather than the whole
- * token, because that is text, and a token is a capability: printing it is the
- * difference between a list you can screen-share and one you cannot.
- *
- * Every absence assertion below is PAIRED with the positive that proves its
- * needle can match, on a state where the thing is present. An absence check
- * whose needle is a typo passes on every page ever rendered.
- * ---------------------------------------------------------------------- */
+/*
+ * Draft preview links. A printed token is a capability, invisible to the payload baseline.
+ * Every absence below pairs with a positive proving its needle can match.
+ */
 
 const [PREVIEW_A, PREVIEW_B] = PREVIEW_TOKENS;
 
-/*
- * THE REVOCATION SENTENCE, gated because it carries a MEASURED BOUND.
- *
- * The payload fixture records METHOD, intent and field names, so it cannot see
- * copy at all. This sentence is not decoration: it tells the author how long a
- * revoked link keeps working, and the number in it was measured on production
- * 2026-08-15 rather than chosen. A ruled behaviour with no instrument drifts,
- * and the specific drift to fear here is somebody tightening the prose back to
- * "the moment you revoke it" because it reads better.
- *
- * BOTH DIRECTIONS. The positive alone passes on a page that says both things;
- * the negative alone passes on a page that says neither. The forbidden phrase
- * is the exact wording that shipped and was measurably false.
- */
+/* Revoke copy carries a measured bound; both directions. */
 structural(
   "the revoke clause states the measured within-a-minute bound",
   "edit, draft with no preview links",
@@ -4573,8 +3349,7 @@ structural(
   "edit, draft with no preview links",
   (h) => !h.includes("the moment you revoke it"),
 );
-/* Publication IS immediate, because the read path re-asks D1, so that clause
-   must survive the correction rather than being softened alongside it. */
+/* Publication is immediate; keep that clause. */
 structural(
   "the publication clause still claims the moment, because that one is true",
   "edit, draft with no preview links",
@@ -4608,23 +3383,15 @@ structural(
   (h) => h.includes("Revoke"),
 );
 /*
- * THE CAPABILITY IS NOT PRINTED. The absolute URL appears in the markup only
- * on the response that minted it, which is an actionData state and not this
- * one; here it lives in the copy control's handler and nowhere a reader or a
- * screen recording can see it.
- *
- * The token itself IS in the markup, once, as the revoke form's hidden field.
- * That is unavoidable: revoking has to name what it revokes. So this asserts
- * the absence of the URL, which is the thing somebody could paste, rather than
- * the absence of the token, which would be a false claim.
+ * The absolute URL is never printed. The token appears once, as the revoke form's hidden
+ * field, so the URL's absence is asserted.
  */
 structural(
   "the absolute preview URL is never printed in the list",
   "edit, draft with two preview links",
   (h) => !h.includes(`${PREVIEW_ORIGIN}/preview/`),
 );
-// The needle validated against the state where it MUST match, so the absence
-// above is known to be capable of failing.
+// The needle can match.
 assert(
   "preview URL needle: the fixture's own URL contains the pattern",
   PREVIEW_LINKS[0].url.includes(`${PREVIEW_ORIGIN}/preview/`),
@@ -4643,60 +3410,14 @@ structural(
   (h) => !h.includes("Preview links") && !h.includes(PREVIEW_A),
 );
 
-/* -------------------------------------------------------------------------
- * The origin-requests panel: the copy law, asserted on the RENDERED PAGE.
- *
- * ASSERTED AGAINST MARKUP, NOT SOURCE, and the distinction is the whole point.
- * The module is named `traffic.server.ts`, the type is `TrafficRow` and the
- * stylesheet uses `.traffic-table`, so a grep for the forbidden word over the
- * source finds nine hits and every one of them is an identifier no reader ever
- * sees. The law is about what the page SAYS. Rendering the route and reading
- * the output is the only form of this check that means anything, and it is
- * strictly stronger: it would also catch the word arriving from a component
- * this route merely imports.
- *
- * The needles are word-anchored so "traffic" cannot be matched inside a longer
- * token, and each is validated against a decoy below so a typo in the pattern
- * cannot make the absence vacuous.
- *
- * ## THE CAPTION IS EXEMPT, SINCE 2026-08-21, AND THE AUDIT WAS RIGHT
- *
- * Tier 4.1 ruled this block out entirely, on the grounds that it "rejected the
- * sentence written to explain the metric it polices". That happened and is
- * recorded in `app/lib/admin/origin-requests.mjs`: the first draft of
- * CACHE_SENTENCE said "real traffic is therefore higher" and this gate refused
- * it.
- *
- * DELETING THE BLOCK IS THE WRONG REPAIR, because the defect is not the rule, it
- * is the SCOPE. A word ban cannot tell "this panel counts visits" from "this
- * number is not visits", and those two sentences live in different parts of the
- * page. Labels CLAIM. Prose EXPLAINS.
- *
- * So the ban runs against the markup with the EXPLAINING element removed. Every
- * label surface stays covered: the panel heading, the column headers, the chips,
- * the rows and the empty and error states. The one element whose job is to say
- * what the number is and is not stays free to name the thing it contrasts
- * against.
- *
- * THAT ELEMENT WAS A `<caption>` AND IS NOW A `<details>`, 2026-09-10. Ruling 54
- * took prose out of every admin table, because a caption is announced before
- * EVERY row: this five-sentence caveat was read once per path. It moved under
- * the table and the exemption followed it there, rather than being widened or
- * dropped. Same scope, different element.
- *
- * The positive half below is unchanged and is what actually guarantees the
- * honest label: every state must SAY "origin requests".
- * ---------------------------------------------------------------------- */
+/*
+ * Copy law, asserted on rendered markup: source identifiers such as `TrafficRow` are never
+ * seen by a reader. Labels claim, prose explains, so the explaining `<details>` is exempt.
+ * Each needle is word-anchored and checked against a decoy.
+ */
 
 /**
- * Whether a menu item with this label is in the markup.
- *
- * ATTRIBUTE ORDER IS NOT SOURCE ORDER. React reorders them, measured on this
- * repo's own render: a button written `type`, `name`, `value`, `className`
- * came back `type`, `value`, `class`, `name`. So the question is asked as "a
- * button element that carries both marks and has this label", never as one
- * literal string.
- *
+ * Whether a menu item has this label. React reorders attributes.
  * @param {string} html @param {string} label
  */
 function hasMenuItem(html, label) {
@@ -4712,17 +3433,11 @@ function hasMenuItem(html, label) {
 const FORBIDDEN_COPY = ["visits", "visitors", "traffic", "page views"];
 const TRAFFIC_STATES = ["origin requests, loaded", "origin requests, empty", "origin requests, error"];
 
-/** The rendered markup minus the one element allowed to name what this is not. */
+/** Markup minus the exempt element. */
 const withoutCaption = (/** @type {string} */ h) =>
   h.replace(/<details class="admin-explain origin-explain">[\s\S]*?<\/details>/gi, " ");
 
-/*
- * THE EXEMPTION IS ITSELF ASSERTED. A `<caption>` regex that matched nothing
- * would leave the ban exactly as wide as before and this narrowing would be a
- * comment describing a change that did not happen; one that matched too much
- * would exempt the whole panel and every absence check below would pass by
- * examining an empty string.
- */
+/* The exemption is neither empty nor total. */
 {
   const loaded = htmlFor("origin requests, loaded");
   const stripped = withoutCaption(loaded);
@@ -4739,8 +3454,7 @@ const withoutCaption = (/** @type {string} */ h) =>
 
 for (const word of FORBIDDEN_COPY) {
   const pattern = new RegExp(`\\b${word}\\b`, "i");
-  // A NEEDLE THAT CANNOT MATCH PROVES NOTHING. Validated against a decoy first,
-  // so the absence assertions below are known to be capable of failing.
+  // Decoy first.
   assert(
     `copy law: the needle for "${word}" can match`,
     pattern.test(`a sample ${word} here`),
@@ -4755,23 +3469,7 @@ for (const word of FORBIDDEN_COPY) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * THE READERSHIP COLUMN. Roadmap item G, first half.
- *
- * The payload baseline cannot see any of this: a `<td>` submits nothing, so
- * every one of the three new states records the identical tuple set and the
- * fixture moved only by gaining three names. What is actually at stake here is
- * whether a MISSING number renders as a missing number, and that is a rendering
- * property or it is nothing.
- *
- * ## THE PAIR THAT MAKES IT MEAN SOMETHING
- *
- * `readership live` and `readership truncated` carry the SAME `byPath`, with
- * the same slug absent from both, and differ in one boolean. So the assertions
- * below are a controlled comparison rather than two independent readings: if
- * the component ignored `complete` entirely, one of the two would fail, and a
- * gate that only ever rendered one of them would pass while it did.
- * ---------------------------------------------------------------------- */
+/* Readership: `live` and `truncated` differ only in `complete`. */
 
 const READERSHIP_STATES = [
   "posts index, readership live",
@@ -4779,17 +3477,7 @@ const READERSHIP_STATES = [
   "posts index, readership unavailable",
 ];
 
-/*
- * The honest label, on every state, including the ones with no number to show.
- *
- * IT IS "Reads counted" SINCE RULING 54, and the change is the meeting point of
- * two rulings rather than a rewording. Ruling 54 takes "origin requests" off the
- * operator's page; the copy law below forbids "views", "visits", "visitors" and
- * "traffic" here, because a cached read never reaches the Worker and any of
- * those would overstate readership. The participle is what satisfies both: it
- * claims only what was counted, and the disclosure under the table says what was
- * not. The forbidden list is UNCHANGED, so the old overstatement is still gated.
- */
+/* Cached reads never reach the Worker. */
 for (const state of READERSHIP_STATES) {
   structural("readership: the column claims only what was counted", state, (h) =>
     /<th[^>]*>Reads counted<\/th>/.test(h),
@@ -4802,22 +3490,14 @@ structural(
   (h) => h.includes("1,234"),
 );
 
-/*
- * THE MEASURED ZERO. `wip` is absent from `byPath` and the source is complete,
- * so zero is the answer and the column says zero.
- */
+/* Complete and absent is zero. */
 structural(
   "readership: absent from a COMPLETE result renders as zero",
   "posts index, readership live",
   (h) => /class="posts-readership-count">0</.test(h),
 );
 
-/*
- * THE SAME ABSENCE, NOT ZERO, because the result was cut. This is the assertion
- * ruling 2 exists for and the one a careless implementation fails: the easy
- * version of this feature renders `byPath[path] ?? 0` and passes everything
- * above while failing here.
- */
+/* Absent from a truncated result is not zero; `byPath[path] ?? 0` fails here. */
 structural(
   "readership: absent from a TRUNCATED result is NOT zero",
   "posts index, readership truncated",
@@ -4829,11 +3509,7 @@ structural(
   (h) => h.includes("Not zero.") && h.includes("posts-readership-absent"),
 );
 
-/*
- * THE DISCRIMINATION CONTROL. The two states differ only in `complete`, so if
- * their rendered readership cells are identical the flag is not being read and
- * every assertion above is passing for the wrong reason.
- */
+/* Identical cells mean `complete` is ignored. */
 {
   const cells = (/** @type {string} */ h) =>
     (h.match(/<td class="posts-readership">[\s\S]*?<\/td>/g) ?? []).join("");
@@ -4848,10 +3524,7 @@ structural(
   );
 }
 
-/*
- * THE SOURCE BEING DOWN. Every row carries the reason and NO row carries a
- * number, which is the pair that stops an absence being read as a zero.
- */
+/* A reason, never a number. */
 structural(
   "readership: an unavailable source gives every row a reason",
   "posts index, readership unavailable",
@@ -4863,24 +3536,14 @@ structural(
   (h) => !/class="posts-readership-count"/.test(h),
 );
 
-/*
- * THE CAVEAT IS THE SHARED SENTENCE, not a second telling of it. Asserted
- * against the constant itself, so a paraphrase written here later fails rather
- * than quietly becoming a second owner of a measured claim. Rule 17.
- */
+/* One owner (rule 17). */
 for (const state of READERSHIP_STATES) {
   structural("readership: the caveat is CACHE_SENTENCE verbatim", state, (h) =>
     h.includes(escapeHtml(CACHE_SENTENCE)) || h.includes(CACHE_SENTENCE),
   );
 }
 
-/*
- * THE COPY LAW REACHES THIS PAGE TOO, on the same terms as the panel it takes
- * its number from: labels claim, prose explains, so the caption is exempt and
- * every other surface is not. Enumerating the second site is the point; a rule
- * enforced on one of the two pages showing this number is the "fix in N-1 of N
- * sites" shape.
- */
+/* Both pages obey the copy law. */
 for (const word of FORBIDDEN_COPY) {
   const pattern = new RegExp(`\\b${word}\\b`, "i");
   for (const state of READERSHIP_STATES) {
@@ -4897,14 +3560,14 @@ for (const state of READERSHIP_STATES) {
   );
 }
 
-// The required half. An absence check alone would pass on a blank page.
+// The required half.
 for (const state of TRAFFIC_STATES) {
   structural(`copy law: ${state} says origin requests`, state, (h) =>
     /origin requests/i.test(h),
   );
 }
 
-/* The three states are genuinely different pages, not one page three times. */
+/* Three distinct pages. */
 structural(
   "loaded state renders a row per path",
   "origin requests, loaded",
@@ -4931,7 +3594,7 @@ structural(
   "origin requests, empty",
   (h) => !h.includes("<table"),
 );
-/* The error state is visible prose, and the rest of the panel survives it. */
+/* Errors are visible prose. */
 structural(
   "error state renders the message as visible prose",
   "origin requests, error",
@@ -4948,19 +3611,7 @@ structural(
   (h) => !h.includes("<table") && !h.includes("empty-state"),
 );
 
-/*
- * THE CACHE SENTENCE, AND THE DAY THIS ASSERTION INVERTED.
- *
- * It read "the unmeasured cache sentence is still declared as a stated
- * absence" and required the placeholder to be PRESENT, so the gap was visible
- * in the product and here rather than quietly forgotten. `scripts/ship.mjs`
- * refused to deploy while it was there, which made ship day loud.
- *
- * `npm run ae-probe` ran on 2026-08-14 and the sentence is now measured, so
- * the assertion turns over: the answer must be present and the placeholder's
- * wording must be gone. BOTH halves, because either alone is satisfiable by a
- * page that says nothing at all.
- */
+/* Answer present, placeholder gone. */
 structural(
   "the caption answers whether a cached serve is counted",
   "origin requests, loaded",
@@ -4972,15 +3623,7 @@ structural(
   (h) => !h.includes("has not been measured yet"),
 );
 
-/* -------------------------------------------------------------------------
- * The webmention moderation queue.
- *
- * EVERY VALUE ON THIS PAGE CAME FROM A STRANGER, so the render IS the boundary
- * and the fixture carries the hostile shapes on purpose. An assertion that only
- * checked the page renders would make that fixture decoration: the `<script>`
- * in `MENTIONS[0].authorName` has to be read back, in both directions, or a
- * page that stripped it and a page that executed it would score the same.
- * ---------------------------------------------------------------------- */
+/* Mentions: stranger input, read back both ways. */
 
 const MENTION_STATES = [
   "mentions, populated queue",
@@ -4992,38 +3635,25 @@ for (const state of MENTION_STATES) {
   structural("a stranger's author name is ESCAPED, not stripped", state, (h) =>
     h.includes(escapeHtml("<script>alert(1)</script>")),
   );
-  /* The other direction, and it is the one that matters: the escaped form
-     being present does not by itself prove the live form is absent, because a
-     page could render both. */
+  /* Escaped present is not live absent. */
   structural("no live script element reaches the markup", state, (h) =>
     !h.includes("<script>alert(1)</script>"),
   );
-  /* The source URL is TEXT. An admin page is not a place to put a one-click
-     navigation to a URL an unauthenticated POST chose; H2's public render is
-     the one that gets an anchor, with rel="nofollow ugc noopener". */
+  /* A stranger's URL stays text. */
   structural("a stranger's source URL is not an anchor", state, (h) =>
     !/<a[^>]*href="https:\/\/elsewhere\.example/.test(h),
   );
-  /* The target IS a link, to the post's editor, because that slug came from
-     this site's own corpus rather than from the sender. */
+  /* The post's own slug may link. */
   structural("the target slug links to its editor", state, (h) =>
     h.includes('href="/admin/posts/a-post/edit"'),
   );
-  /* RULING 21b: the excerpt LEADS, and it leads as a quotation. A row whose
-     evidence rendered as another paragraph would read as the page's own prose
-     rather than as something a stranger wrote. */
+  /* Quoted, not page prose. */
   structural("the excerpt is a blockquote", state, (h) =>
     h.includes('<blockquote class="mention-quote">'),
   );
 }
 
-/*
- * THE FILTER ROW, which is ruling 21a and is the whole shape of the redesign.
- *
- * Asserted as five chips WITH THEIR COUNTS rather than as five links, because
- * a row of chips carrying no numbers is the same navigation with the reason to
- * look at it removed, and that is exactly what a refactor drops first.
- */
+/* Chips with counts. */
 /** @type {Array<[string, number]>} */
 const FILTER_CHIPS = [
   ["Pending", 1],
@@ -5041,20 +3671,14 @@ for (const [label, count] of FILTER_CHIPS) {
   );
 }
 
-/*
- * THE ALL COUNT IS THE WHOLE TABLE, which is what makes the row honest: four
- * status counts plus the unverified chip equals it. MENTIONS carries one row of
- * every status including `unverified`, so an `all` that quietly excluded the
- * unverified row would read 4 here and this would fail. That is the assertion,
- * not the number: the fixture has five rows and the chip says five.
- */
+/* All includes `unverified`. */
 structural(
   "the All count is every row in the fixture, so the chips account for all of them",
   "mentions, populated queue",
   (h) => h.includes('<span class="admin-chip-count">5</span>'),
 );
 
-/* Exactly one chip is current, and it is the one the loader resolved. */
+/* One current chip. */
 structural(
   "the current filter is the only one marked aria-current",
   "mentions, pending filter",
@@ -5068,39 +3692,26 @@ structural(
   (h) => h.includes('class="admin-chip is-active"'),
 );
 
-/* RULING 21f. The unverified count is a chip on the same row, and it is NOT a
-   link, because there is no decision to make about a row that has not been
-   verified yet. */
+/* No link: nothing to decide. */
 structural(
   "unverified mentions are a chip on the filter row",
   "mentions, populated queue",
   (h) => /<span class="chip mention-unverified">\s*1 unverified\s*<\/span>/.test(h),
 );
-/* And it is ABSENT rather than reading zero. A chip saying 0 is an alarm about
-   nothing, which is the rule the media library's lens dots already follow. */
+/* Absent, not zero. */
 structural(
   "the unverified chip is absent when there are none",
   "mentions, empty queue",
   (h) => !h.includes("mention-unverified"),
 );
 
-/*
- * NO PANEL HEADINGS. The four `<h2>` group headings are what ruling 21a
- * removed, and their absence is asserted rather than assumed: a redesign that
- * kept the filter row AND the headings would look finished and would still be
- * the page the operator rejected.
- */
+/* Headings asserted gone. */
 for (const heading of ["Pending", "Failed verification", "Approved", "Rejected"]) {
   structural(`the ${heading} group heading is gone`, "mentions, populated queue", (h) =>
     !h.includes(`>${heading}</h2>`),
   );
 }
 
-/*
- * THE EMPTY FILTER IS ONE QUIET LINE. Three properties, because the failure
- * this replaces had three parts: a heading, a box, and rows that should have
- * been filtered out.
- */
 structural(
   "an empty filter says which filter is empty",
   "mentions, empty pending filter",
@@ -5122,12 +3733,7 @@ structural(
   (h) => h.includes("No mentions yet.") && !h.includes("empty-state"),
 );
 
-/*
- * RULING 21c: THE BOX MATCHES THE OUTCOME, and both directions are asserted on
- * both states. The defect this closes rendered every message in `panel-error`,
- * so an assertion that only checked "the success text appears" was green
- * throughout it.
- */
+/* Box matches outcome. */
 structural(
   "a success renders in the notice box",
   "mentions, success notice",
@@ -5149,13 +3755,7 @@ structural(
   (h) => !h.includes("editor-notice"),
 );
 
-/*
- * RULING 21d: THE ACTION HIERARCHY, read as classes because that is what the
- * weight is made of. `.btn` is the brand fill, `.btn-ghost` is the bordered
- * secondary and `.btn-text` is the text weight; three buttons all wearing
- * `.btn` is the page as it was, where Delete was a filled red control shouting
- * on every row including the ones with nothing wrong with them.
- */
+/* Weight is the class. */
 structural(
   "Approve is the primary",
   "mentions, populated queue",
@@ -5171,24 +3771,17 @@ structural(
   "mentions, populated queue",
   (h) => hasMenuItem(h, "Delete"),
 );
-/* And nothing on a row is the danger fill any more. The confirmation step still
-   is, which is why this reads the ordinary queue and not that one. */
+/* No danger fill on rows. */
 structural(
   "no row action is a danger fill",
   "mentions, populated queue",
   (h) => !h.includes("btn-danger"),
 );
 
-/* RULING 21e AS AMENDED 2026-09-06: the clause is stated ONCE, under the filter
-   row, on the pending filter. It was rendered per pending row, so a queue of
-   twelve said the same sentence twelve times; it states a property of the
-   filter rather than of any one mention. The old paragraph is gone with its
-   minute count.
-
-   A LITERAL STRING, never a /g regex. A global regex carries lastIndex between
-   calls, so the same `.test()` alternates true and false across the four
-   assertions below and two of them would be reading the previous one's
-   leftovers. */
+/*
+ * Stated once, on the pending filter. A literal string, never a /g regex: `lastIndex`
+ * carries between the `.test()` calls below.
+ */
 const PURGE_CLAUSE = "Approving appears on the post within seconds.";
 const purgeCount = (/** @type {string} */ h) => h.split(PURGE_CLAUSE).length - 1;
 
@@ -5197,8 +3790,7 @@ structural(
   "mentions, pending filter",
   (h) => purgeCount(h) === 1,
 );
-/* PLACEMENT, not just presence: it has to sit ABOVE the queue, or "once" would
-   also be satisfied by a clause on the single last row. */
+/* Above the queue. */
 structural(
   "the purge clause sits above the queue, not inside it",
   "mentions, pending filter",
@@ -5208,9 +3800,7 @@ structural(
     return clause !== -1 && queue !== -1 && clause < queue;
   },
 );
-/* BOTH NEGATIVES. A clause on every filter is the essay back in a different
-   shape, and one over an empty queue is advice about an action nobody can
-   take. */
+/* Both negatives: not on every filter, not over an empty queue. */
 structural(
   "the purge clause is absent on the all filter",
   "mentions, populated queue",
@@ -5227,13 +3817,7 @@ structural(
   (h) => !h.includes("Approving purges") && !h.includes("within 10 minutes"),
 );
 
-/*
- * THE RETENTION FOOTNOTE, which is the essay reduced to one line and a button.
- *
- * The two windows are read from the CONSTANTS, so a paraphrase in the route
- * that hard-coded 30 and 90 would pass and a drift in the constants would fail
- * here rather than shipping a label that disagrees with the sweep.
- */
+/* Windows come from the constants. */
 structural(
   "the retention line names both windows, from the constants",
   "mentions, populated queue",
@@ -5248,8 +3832,7 @@ structural(
   "mentions, populated queue",
   (h) => !h.includes("are never swept") && !h.includes("open-queue cap"),
 );
-/* The button carries the count, which is the whole of ruling 21e's second half:
-   a verb with no object became a quantity. 2 failed plus 1 rejected is 3. */
+/* The label carries the count. */
 structural(
   "the sweep button is labelled with what it would remove",
   "mentions, populated queue",
@@ -5262,11 +3845,7 @@ structural(
     /<button type="submit" class="btn-secondary" disabled="">Remove 0 expired<\/button>/.test(h),
 );
 
-/*
- * THE VERIFIED STAMP IS GONE and the other three are not. Asserted together,
- * because "verified is absent" alone would pass on a row that rendered no
- * stamps at all.
- */
+/* Asserted together: "verified is absent" alone passes a row with no stamps. */
 structural(
   "the row stamps received, and drops verified",
   "mentions, populated queue",
@@ -5283,16 +3862,7 @@ structural(
   (h) => h.includes(", reason no-link"),
 );
 
-/*
- * THE TWO DESTRUCTIVE CONFIRMATIONS, AND THIS IS THE ONLY INSTRUMENT THAT CAN
- * SEE THEM.
- *
- * `check:destructive` proves the ACTION calls `confirmationSatisfied`, and the
- * worker layer proves the action refuses without it. Neither can see whether
- * the refusal renders a form a person without JavaScript can actually complete,
- * which is the whole point of putting the guard in the action rather than in a
- * handler. A refusal with no second step is a dead end, not a ceremony.
- */
+/* Only a render shows a scriptless second step. */
 structural(
   "the delete refusal renders a typed-confirmation field",
   "mentions, delete awaiting confirmation",
@@ -5315,9 +3885,7 @@ structural(
   "mentions, sweep awaiting confirmation",
   (h) => h.includes(`name="${CONFIRM_FIELD}"`),
 );
-/* And the ordinary page does NOT: a confirmation field rendered before the
-   action asked for one would train the operator to type into it and make the
-   second step meaningless. */
+/* No field before it is asked for. */
 structural(
   "no confirmation field is rendered before the action asks for one",
   "mentions, populated queue",
@@ -5327,152 +3895,14 @@ structural(
 console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submission(s) compared`);
 
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * This gate BUNDLES and RENDERS routes, so its failure mode is a whole state
- * dropping out: a route that stops bundling, a render that throws and is
- * caught, a STATES entry quietly removed. Those already fail individually, but
- * the total is the only witness to a structural block that stopped running over
- * states that all still render.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-15 by RUNNING it: 285.
- * Never summed. It was 185 against a floor of 170 until the media library's v1
- * redesign added seven states, and the seven were counted by running the gate
- * rather than by adding up what they looked like they would contribute. The
- * cache sentence inverting from one assertion into two took it to 200, floored
- * at 187. Feature G's three preview-link states and their structural
- * assertions took it to 215, measured the same way.
- *
- * BEFORE and AFTER, both run rather than reasoned:
- *
- *   before  200 checks, 34 state(s), 111 submission(s)   floor 187
- *   after   215 checks, 37 state(s), 128 submission(s)   floor 202
- *   then    218 checks, 37 state(s), 128 submission(s)   floor 204
- *   v6      249 checks, 46 state(s), 169 submission(s)   floor 234
- *   v6.3    280 checks, 50 state(s), 204 submission(s)   floor 263
- *   v6.4    285 checks, 51 state(s), 208 submission(s)   floor 267
- *   v6.5    270 checks, 51 state(s), 208 submission(s)   (deduplicated)
- *   v6.5    302 checks, 54 state(s), 221 submission(s)   floor 283
- *   v6.6    370 checks, 65 state(s), 280 submission(s)   floor 347
- *
- * **THE LAST 11 CHECKS AND THE 65TH STATE ARE WHAT SIX SILENT PLANTS BOUGHT.**
- * Twenty-two plants ran against this session's work and six left the suite
- * green, each naming a real hole: the shortcut cross-check was a tautology (a
- * fake row increments both sides of the count it compared); the one-dot-per-tile
- * assertion could not distinguish precedence from `flags.length > 0`, because on
- * its fixture both render one dot; and the loader wiring is invisible to a
- * harness that supplies loader data as input. The first two are now real
- * assertions, and the third is a set of source greps, which is a weaker
- * instrument and the strongest one available inside this boundary.
- *
- * **v6.6 IS THE USAGE MODEL AND EVERYTHING IT FEEDS.** Ten states and 57
- * assertions: three usage states on four surfaces, per-row flags, the tile dot,
- * four lens notes, three empty states, the two suggestion controls, the adaptive
- * copy labels, the duplicate sentence, the shortcuts panel and the no-script
- * floor. Almost none of it is visible to the payload baseline, which is why the
- * assertion count moved five times as far as the submission count.
- *
- * **THE 59 NEW SUBMISSIONS ARE 55 FROM THE TEN NEW STATES AND FOUR REAL ONES.**
- * The four are the alt-suggestion button appearing on each existing inspector
- * state, and they are a genuine payload addition: a second control that writes
- * through the SAME `set-alt` intent, carrying its value on the button. Nothing
- * was removed and no existing tuple changed, which is the evidence that the rest
- * of this session was presentation over a model that already worked.
- *
- * THREE DEFECTS THIS GATE FOUND, none of which any other instrument could see:
- * the loader gained three fields and the shared fixture did not, so four detail
- * states threw on `templateRefs.length`; the adaptive copy LABELS were computed,
- * passed in and rendered nowhere, because `CopyButton` is glyph-only by design
- * and nobody had asked it to show a word; and the standing usage note still told
- * the reader that an asset referenced only by route code "has no citation here",
- * which the repository scan had just made false.
- *
- * **v6.5 IS TWO MOVEMENTS AND THE FIRST ONE IS DOWNWARD, WHICH IS THE POINT.**
- *
- * The evaporation section existed TWICE in this file, 155 lines duplicated
- * verbatim, confirmed byte-identical by hashing both ranges before either was
- * touched. It rendered the same state twice and applied the same 15 assertions
- * twice, so 15 of the 285 could not fail independently: if the first copy
- * passed, the second was guaranteed to. That is rule 10's own class, "a pass
- * count is not coverage", sitting inside the gate that enforces it, and it had
- * inflated the floor by 15 for two sessions. Removing it read 270.
- *
- * Then session 4 added the document card, the caption bar and the column
- * headers: three states and 32 assertions, taking it to 302. Floored at 283,
- * which is 94 percent.
- *
- * **SUBMISSIONS MOVED 208 TO 221 AND ALL OF IT IS THE THREE NEW STATES.** Not
- * one existing state's tuple changed, and that is the evidence that a redesign
- * this size was presentational: the copy control moved between two parents and
- * is conditionally not rendered, the tile grew a caption, and the list grew a
- * header row of links, and none of it is a submission. The 13 added are the
- * upload form, the wrapping bulk form and rebuild on each new state, plus the
- * two bulk intents on the one state that seeds a selection.
- *
- * v6.4 is the design pass: folder grouping as the default with its notes, the
- * quality lenses replacing the role chips, and one wide search bar. Submissions
- * moved because the search form now carries EVERY view parameter as a hidden
- * field rather than just `role`, which is the evaporation rule applied to a
- * form instead of a link.
- *
- * The v6.3 line is grouping, bulk tagging and the selection surface. The
- * submission jump is real payload: every media state gained the wrapping bulk
- * form, and the two seeded-selection states gained bulk-add-tag and
- * bulk-remove-tag, which are the intents the harness seam exists to reach.
- *
- * The v6 line is the media page rebuilt to the mockup's structure: nine new
- * states plus the evaporation section. Submissions moved 128 to 169 because the
- * page genuinely gained intents (set-tags, trash, restore, empty-trash), which
- * is the one kind of payload growth this baseline exists to record loudly.
- *
- * The third line is the revocation-sentence assertions. **STATES AND
- * SUBMISSIONS DID NOT MOVE, and that is the correct result rather than a
- * suspicious one:** the payload baseline records METHOD, intent and field
- * names, and a corrected sentence changes none of them. A copy change that DID
- * move the submission count would mean the copy was carried in a form field.
- *
- * Floored at 374 against 398 measured through this gate's own pipeline, roughly
- * 94 percent: the count moves in steps of a few per state, and the three
- * origin-requests states once added 34 at once, so the slack has to absorb a
- * state being added mid-session without hiding one being lost.
- *
- * Raised from 347 when the drawer, the two confirmations and the floating
- * selection bar landed with three new states behind them. A floor left at the
- * old measurement is a floor that has stopped being able to notice anything.
- */
-/* ------------------------------------------------------------------ *
- * NO-SCRIPT FALLBACK: the display axes are REAL LINKS carrying their
- * parameter.
- * ------------------------------------------------------------------ *
- *
- * Standing ruling, 2026-08-16: every control stays a real link or form that
- * works with scripting off, and nothing is built the slow way to preserve that.
- * `view`, `size` and `group` are handled on the CLIENT by the route's
- * `shouldRevalidate`, which is exactly the arrangement where the fallback rots
- * silently: the scripted path keeps working while the anchor behind it decays
- * into a button, and nobody notices until somebody arrives without script.
- *
- * So the anchor is asserted, from RENDERED MARKUP rather than from source. The
- * vocabularies are IMPORTED from view.mjs, never restated, so adding a fourth
- * tile size is covered here the moment it is declared.
- *
- * Defaults are omitted from emitted hrefs by `hrefWith`, deliberately, so the
- * default value is asserted as an anchor to the BARE url and every other value
- * as an anchor carrying `axis=value`. Asserting `view=list` would fail against
- * correct markup.
+ * No-script fallback: the display axes stay real links. `shouldRevalidate` handles them on
+ * the client, so a rotted anchor goes unseen. `hrefWith` omits defaults, so a default value
+ * is an anchor to the bare URL.
  */
 
 /*
- * Each axis is owned by ONE control group, and the assertion is scoped to it.
- *
- * The first version of this section searched every href on the page and was
- * satisfied by any link that happened to carry the axis. A plant that turned
- * the layout toggle into a `<button>` passed it cleanly, because on a state
- * whose URL already has `view=grid` every OTHER link carries `view=grid` too:
- * `hrefWith` preserves the whole state by design. That is hard rule 10's
- * "count matches, not containers" in its most literal form.
- *
- * Both control groups render a `<nav aria-label>`, so the label is the seam.
+ * Scoped to each axis nav: every link preserves the view state, so a page-wide search
+ * passes a toggle that became a button (hard rule 10).
  */
 /** @type {Record<string, { nav: string, values: string[] }>} */
 const AXIS_CONTROL = {
@@ -5482,7 +3912,7 @@ const AXIS_CONTROL = {
 };
 
 /**
- * The markup of the `<nav>` carrying this aria-label, or "" when absent.
+ * The labelled `<nav>` markup, or "".
  * @param {string} html
  * @param {string} ariaLabel
  */
@@ -5495,20 +3925,12 @@ function navNamed(html, ariaLabel) {
   return html.slice(start, end);
 }
 
-/*
- * SCOPED-BY: `navNamed` delimits to the <nav aria-label="Layout"> ELEMENT, so
- * this is a match on the layout control itself and not on the string appearing
- * anywhere in the document (a class name in an inline style block, say).
- */
+/* SCOPED-BY: `navNamed`. */
 const displayStates = [...renderedHtml.entries()].filter(
   ([, html]) => navNamed(html, "Layout").length > 0,
 );
 
-/*
- * SCOPE NON-EMPTINESS. Every assertion below reads this list, so a rename of
- * the toggle class would otherwise turn the whole section into 0 findings over
- * 0 states and still pass.
- */
+/* Scope non-empty: a renamed control would otherwise pass over zero states. */
 assert(
   "the no-script section found states that render the display controls",
   displayStates.length >= 44,
@@ -5526,7 +3948,7 @@ for (const axis of DISPLAY_AXES) {
     continue;
   }
 
-  // The owning control has to EXIST before its options can be asserted.
+  // Control first.
   const owning = displayStates
     .map(([name, html]) => [name, navNamed(html, control.nav)])
     .filter(([, nav]) => nav.length > 0);
@@ -5561,14 +3983,8 @@ for (const axis of DISPLAY_AXES) {
 }
 
 /*
- * THE SERVER STILL RESOLVES THE DISPLAY AXES FROM THE URL.
- *
- * The component reads these three from `useSearchParams()` so a client-side
- * flip re-renders without the loader. On the server both sides read the same
- * request URL, so the overlay must be a NO-OP there. If it ever is not, the
- * scripted path keeps working and the no-script path silently renders the
- * default layout for everybody, which is the exact failure this whole section
- * exists to catch. Asserted from the markup the grid actually emits.
+ * The server resolves display axes from the URL; if the client overlay is not a no-op
+ * there, scriptless readers get the default layout.
  */
 const gridStates = STATES.filter(
   (state) => typeof state.url === "string" && state.url.includes("view=grid"),
@@ -5589,24 +4005,9 @@ for (const state of gridStates) {
   );
 }
 
-/* ------------------------------------------------------------------ *
- * PENDING TRANSITIONS: router-driven, and OFF when nothing is in flight.
- * ------------------------------------------------------------------ *
- *
- * A data-changing control on this plane costs a round trip plus a D1 query,
- * MEASURED at 1629ms median on production, so the results region carries
- * `data-pending` and `aria-busy` while `useNavigation` reports a load.
- *
- * WHAT THIS HARNESS CAN SEE: it renders ONE static pass, so `useNavigation`
- * is always idle here and a genuine in-flight state cannot be produced. What
- * it can prove is the half that actually rots, and the half a reader would
- * suffer: that the mark is CONDITIONAL. A hardcoded `data-pending` dims the
- * grid and swallows every pointer event forever, on every state, and no test
- * that only checks "the attribute exists" would notice.
- *
- * The complement, that the attribute APPEARS while loading, is not observable
- * offline. It is carried by the router's own `navigation.state` and is stated
- * here as a boundary rather than left to look covered.
+/*
+ * Pending transitions. One static pass keeps `useNavigation` idle, so this proves only that
+ * `data-pending` is conditional; a hardcoded mark would dim every page.
  */
 let pendingStatesChecked = 0;
 for (const [name, html] of renderedHtml) {
@@ -5624,35 +4025,24 @@ assert(
   `${pendingStatesChecked} state(s) carried data-pending in a static render`,
 );
 
-/*
- * AND IT COMES FROM THE ROUTER, not from a hand-rolled timer or a useState
- * somebody flips on click. That is the "do not build a spinner system" half.
- */
+/* From the router, not local state. */
 for (const routeFile of [
   "app/routes/admin.media._index.tsx",
   "app/routes/admin.posts._index.tsx",
 ]) {
   const src = readFileSync(join(root, routeFile), "utf8");
-  // The subject is a MODULE, not a rendered document, so the question is
-  // file-level by construction: does this module anywhere set data-pending
-  // without anywhere importing useNavigation. Delimiting to one element would
-  // let a second, hand-rolled pending mark elsewhere in the file pass unseen.
-  // SCOPED-BY: the whole source file, deliberately, per the note above.
+  // SCOPED-BY: the whole file, so any hand-rolled mark fails.
   const marks = src.includes("data-pending");
   assert(
     `pending: ${routeFile} drives data-pending from useNavigation`,
-    // SCOPED-BY: the whole source file, for the reason given above the match.
+    // SCOPED-BY: the whole file.
     !marks || src.includes("useNavigation"),
     `the route sets data-pending without importing useNavigation, so the ` +
       `pending signal is hand-rolled state rather than the router's.`,
   );
 }
 
-/*
- * AND THE SEARCH FORM IS STILL A FORM. It is the one control on this page that
- * carries free text, so it cannot degrade to a link, and a GET form is the only
- * shape that submits without script.
- */
+/* Free text needs a GET form. */
 assert(
   "no-script: the media search renders as a GET form naming its action",
   displayStates.some(([, html]) =>
@@ -5662,22 +4052,11 @@ assert(
   "no rendered state contains a GET form posting to /admin/media",
 );
 
-/* =========================================================================
- * RULING 54. Five assertions the redesign turns on, and none of them is a
- * restatement of the fixture: each one is a property that was FALSE before
- * this session and would be false again if the code regressed.
- * ====================================================================== */
+/* Ruling 54 */
 
 /*
- * (1) THE CONFIRMATION DIALOG.
- *
- * Five properties, and the first is the one that makes the other four
- * possible. A disabled submitter contributes NO name and NO value, so a
- * confirmation whose intent rides on `<button name="intent">` sends no intent
- * the moment that button is disabled: the posts and editor confirmations both
- * did exactly that, which is why neither could adopt disable-until-it-matches
- * while the media modal could. Asserting the intent is a FIELD is therefore
- * asserting that the ceremony is implementable at all.
+ * (1) Confirmation dialog. A disabled submitter sends no name or value, so the intent must
+ * be a field for disable-until-match to work.
  */
 const confirmState = renders["posts index, bulk delete awaiting confirmation"] ?? "";
 const confirmDialog = confirmState.slice(
@@ -5712,15 +4091,8 @@ assert(
 );
 
 /*
- * THE SERVER RENDERS IT ENABLED AND INLINE, which is the no-script path and is
- * the opposite of what the design does once hydrated.
- *
- * `data-inline` is what gives a dialog a box at all without `showModal()`: a
- * `<dialog>` with neither `open` nor that attribute is `display: none`, so a
- * reader with scripting off would lose the confirmation entirely. And the
- * button must arrive ENABLED, because `typed` never becomes anything without
- * script and a server-disabled button would leave that reader unable to
- * confirm at all. The action re-checks the count either way.
+ * Inline and enabled on the server: a `<dialog>` without `open` or `data-inline` is hidden,
+ * and nothing enables the button without script.
  */
 assert(
   "confirmation: renders inline on the server, so no script still reaches it",
@@ -5734,12 +4106,7 @@ assert(
   "a server-disabled button can never be enabled without script",
 );
 
-/*
- * AND THE COMPONENT ACTUALLY MODALISES AND DISABLES. The render above cannot
- * see either, because this harness never dispatches an effect: it reports the
- * server pass only. So these two read the component's source with comments
- * stripped, which is the only place the behaviour exists.
- */
+/* No effects run here; read the source. */
 const confirmSource = stripComments(
   readFileSync(join(root, "app/components/admin/confirm-dialog.tsx"), "utf8"),
 );
@@ -5761,13 +4128,8 @@ assert(
 );
 
 /*
- * (2) THE DRAWER'S OPENER EXISTS AT 375.
- *
- * This harness has no viewport, so "at 375" is asserted where it is decided:
- * the opener is in the shell's markup unconditionally and the stylesheet
- * reveals it inside the narrow breakpoint. The failure this guards is the one
- * the mockups made first, hiding the rail with `display: none` and leaving a
- * narrow reader with no way to reach any other section.
+ * (2) Drawer opener at 375. No viewport here, so the markup and breakpoint are checked;
+ * hiding the rail strands a narrow reader.
  */
 const shellSource = stripComments(readFileSync(join(root, "app/routes/admin.tsx"), "utf8"));
 const shellCss = stripComments(
@@ -5791,22 +4153,13 @@ assert(
   "the sidebar is hidden rather than moved off canvas at the narrow width",
 );
 
-/*
- * (3) THE STATUS SENTENCE AGREES WITH THE NOTICE.
- *
- * Ruling 54 makes this a rule because the two were separate computations and
- * drifted: /admin/posts described itself as "Every post, drafts included"
- * while a drift alert underneath said search was answering from stale text,
- * and /admin said "every check the scheduled poll runs, answered here" over a
- * failing check. Both directions are asserted, because a page that never
- * renders a notice would satisfy the first half trivially.
- */
+/* (3) Status sentence agrees with the notice. */
 /** The one status sentence a page opens with. @param {string} html */
 function statusLine(html) {
   const m = html.match(/<p class="admin-page-status">([\s\S]*?)<\/p>/);
   return m ? m[1].replace(/<[^>]*>/g, "") : "";
 }
-/** Whether the page is showing a notice that something is wrong. @param {string} html */
+/** @param {string} html */
 function hasProblemNotice(html) {
   return /<section class="admin-notice" data-tone="(warning|error)"/.test(html);
 }
@@ -5832,9 +4185,7 @@ for (const [state, expectProblem] of STATUS_AGREEMENT) {
     `notice ${hasProblemNotice(html) ? "present" : "absent"}, expected ` +
       `${expectProblem ? "present" : "absent"}; sentence read "${line.trim().slice(0, 90)}"`,
   );
-  /* The sentence must not claim everything is fine while a notice says
-     otherwise. Matched on the words the clean branches use, because those are
-     the ones that would be wrong beside a problem. */
+  /* No clean claim under a notice. */
   const claimsClean = /up to date|Everything agrees/i.test(line);
   assert(
     `${state}: the status sentence does not claim health under a notice`,
@@ -5844,15 +4195,8 @@ for (const [state, expectProblem] of STATUS_AGREEMENT) {
 }
 
 /*
- * (4) NO PROSE INSIDE A TABLE, ON ANY ADMIN ROUTE.
- *
- * A `<caption>` is announced before EVERY row, so a five-sentence caveat is a
- * five-sentence caveat once per post; a `<p>` in a cell is the same defect one
- * level down. Both were live on /admin/posts and /admin/origin-requests.
- *
- * CROSS-ROUTE BY CONSTRUCTION, over every state this gate rendered, so a table
- * added to a route tomorrow is covered on the day it is written rather than on
- * the day somebody remembers to extend this. The failure NAMES THE ROUTE.
+ * (4) No prose in any admin table: a `<caption>` is announced before every row. Runs over
+ * every rendered state, so a new table is covered at once.
  */
 for (const state of STATES) {
   const html = renders[state.name];
@@ -5869,18 +4213,8 @@ for (const state of STATES) {
 }
 
 /*
- * (5) NO 0.375rem IN THE STYLESHEETS THIS DESIGN PASS OWNS.
- *
- * Two radii, 0.25rem on controls and 0.5rem on containers, and 0.375rem was a
- * sixth of a scale nobody had written down. COMMENTS ARE STRIPPED FIRST, which
- * is not a formality: this file's own explanation of the rule contains the
- * literal, and a naive scan would fail on the sentence describing the check.
- *
- * SCOPED, and the scope is stated rather than implied. admin-editor.css,
- * admin-media.css and the three others carry 69 more occurrences between them,
- * a third of which are paddings and gaps rather than radii. Sweeping those
- * blind, with no gate that can see admin layout, is the shape FAILURES.md
- * records as "a correct rule applied to a category nobody verified".
+ * (5) No 0.375rem in the sheets this pass owns. Comments are stripped first because the
+ * rule's own explanation quotes the literal.
  */
 const OWNED_SHEETS = ["app/styles/admin-shell.css", "app/styles/admin-posts.css"];
 for (const sheet of OWNED_SHEETS) {
@@ -5897,8 +4231,7 @@ for (const sheet of OWNED_SHEETS) {
     `off-scale value at ${hits.join(", ")}`,
   );
 }
-/* The scope is proven non-empty: a search over a file that failed to load
-   reports exactly what a clean sweep reports. */
+/* Scope non-empty: an unread file reports what a clean sweep reports. */
 assert(
   "the 0.375rem scan read both owned stylesheets",
   OWNED_SHEETS.every(
@@ -5908,48 +4241,11 @@ assert(
 );
 
 /*
- * FLOOR RAISED 435 -> 591 by the webmention moderation queue's four states.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-04 by RUNNING it: 619,
- * over 89 states. Never summed. It was 435 against 463 over 79 states, measured
- * 2026-08-25. Slack of 28 is kept at the width it has always had, for the
- * reason it was chosen: it absorbs a state being retired, and dropping the
- * whole mentions section is 21 assertions, which still fails.
- *
- * BOTH COPIES OF THE OLD NUMBER WERE STALE, in the same direction. The
- * comment and the message below each said 438 and the gate had been running
- * 439 since before this session; the change that added the 439th did not
- * touch either number. That is the point the previous note tried to make and
- * could not: stating a number TWICE is not a check on it, because the two
- * copies drift together and agreeing with each other is all they can do. The
- * only thing that reads the count is the comparison against MINIMUM_CHECKS,
- * and it passed throughout. Re-measured here rather than carried.
- *
- * RAISED 591 -> 634 by ruling 21's redesign of that same queue, 2026-09-05.
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE BY RUNNING IT: 662, over 94
- * states. Never summed. Slack of 28 is unchanged, and it still absorbs a state
- * being retired: dropping the whole mentions section is now 40 assertions,
- * which fails by a wide margin.
- *
- * RAISED 634 -> 682 by ruling 54's admin design pass, 2026-09-10.
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE BY RUNNING IT: 710, over the same
- * 94 states. Never summed, and never arrived at by adding the new block's
- * assertions to the old floor: the redesign also RETIRED assertions (the
- * caption exemption's shape, the two mentions button weights) and replaced
- * others one-for-two, so arithmetic on 634 would have produced a number that
- * was never true of any run. Slack of 28 is unchanged for the reason it has
- * always had: it absorbs a state being retired without absorbing a section.
+ * Executed-count floor: the total is the only witness to a block that stopped running.
+ * Measured by running this gate, never summed; the slack absorbs a retired state.
  */
 const MINIMUM_CHECKS = 682;
-/*
- * The literal "Measured: N" that used to close this message is GONE, and its
- * removal is the point rather than tidying. It went stale here first: plant (d)
- * raised the floor to 202, fired correctly, and printed "Measured: 200" while
- * the docblock said 215. A number a failure prints is an instrument, and that
- * one was reporting a previous session's reading to whoever the gate stopped.
- * `assertFloor` now prints the live count on every passing run instead, so the
- * only copy of the number is the one that re-derives itself (hard rule 17).
- */
+/* `assertFloor` prints the live count (hard rule 17). */
 const floorBreach = assertFloor("check:admin-ui", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) fail(`this gate executed its assertions: ${floorBreach}`);
 
