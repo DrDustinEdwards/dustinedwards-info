@@ -144,14 +144,33 @@ function decide(b, decisions) {
   return null;
 }
 
-/** The code with comments stripped, whitespace-only lines and trailing blanks dropped. */
+/**
+ * The code with comments stripped and the leftover blank lines dropped. ONE normalisation,
+ * and it is the only one needed: every surviving line compares byte for byte, and the trailing
+ * blanks the first draft also stripped turned out to be redundant (0 of 10 files need it).
+ *
+ * The blank lines cannot be avoided here the way PR #40 avoided them in the sheets. The CSS
+ * regex replaces a comment with NOTHING, so keeping the emptied line made the raw strips equal;
+ * this tokenizer replaces one with A SPACE, so a `//` run that loses a line loses a
+ * whitespace-only line from the strip and no blank line in the source can put the space back.
+ */
 function codeOnly(src) {
   return stripComments(src)
     .split("\n")
-    .map((l) => l.replace(/[ \t]+$/, ""))
     .filter((l) => l.trim() !== "")
     .join("\n");
 }
+
+/**
+ * THE ONE FILE WHOSE CODE MOVES, named here so the exemption is a decision rather than a red
+ * row nobody reads. admin.media._index.tsx's early return goes below its hooks, the repair for
+ * check:slop's seven react-hooks/rules-of-hooks errors. Its code is compared as a MULTISET of
+ * lines instead: nothing added, removed or edited, only reordered. That is weaker on purpose
+ * and it is the weaker half only for this file; `scratchpad/hooks-diff.mjs` prints what the
+ * multiset compares and carries the control. Adding a name here is how the weakening stays
+ * visible, so never add one without the reason.
+ */
+const REORDERED = new Set(["app/routes/admin.media._index.tsx"]);
 
 const mode = process.argv[2];
 
@@ -323,7 +342,9 @@ if (mode === "prove") {
   for (const file of WAVE1) {
     const before = readFileSync(join(BEFORE, flat(file)), "utf8");
     const after = readFileSync(join(REPO, file), "utf8");
-    const same = codeOnly(before) === codeOnly(after);
+    const same = REORDERED.has(file)
+      ? sameMultiset(codeOnly(before).split("\n"), codeOnly(after).split("\n"))
+      : codeOnly(before) === codeOnly(after);
     // The comparison must be able to tell two things apart (hard rule 12):
     // change one character of code and it has to disagree.
     const spans = commentBlocks(before);
@@ -353,7 +374,7 @@ if (mode === "prove") {
     ta += ab;
     tac += ca;
     rows.push(
-      `| ${file} | ${same ? "identical" : "DIFFERS"} | ${discriminates ? "yes" : "NO"} | ${citeB} / ${citeA} | ${headsB.length} / ${headsA.length} | ${markB} / ${markA} | ${bb} | ${ab} | ${((100 * cb) / bb).toFixed(1)}% | ${((100 * ca) / ab).toFixed(1)}% |`,
+      `| ${file} | ${same ? (REORDERED.has(file) ? "reordered" : "identical") : "DIFFERS"} | ${discriminates ? "yes" : "NO"} | ${citeB} / ${citeA} | ${headsB.length} / ${headsA.length} | ${markB} / ${markA} | ${bb} | ${ab} | ${((100 * cb) / bb).toFixed(1)}% | ${((100 * ca) / ab).toFixed(1)}% |`,
     );
   }
   console.log("| file | code only | control differs | citations | JSDoc heads | markers | bytes before | bytes after | comment before | comment after |");
