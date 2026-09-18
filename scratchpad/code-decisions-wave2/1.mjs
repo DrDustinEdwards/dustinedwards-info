@@ -44,11 +44,10 @@ says otherwise, and the prior file is the only thing consulted.`,
   "scripts/check-policy.mjs#19": [
     "CONTRACT",
     "the claim, its two instruments and the N-1-of-N reason; the tabulated restatement cut",
-    `THE CLAIM UNDER TEST: the smoke actor appears in NO WRITE BRANCH. Two halves, proven by
-different instruments: decide() and decideDelete() refuse it, proven by RUNNING them; every
-other action is refused by the /admin method gate, proven by reading that guard out of the
-route source. Asserting only the first leaves the larger half unexamined while reading like a
-complete answer.`,
+    `THE CLAIM UNDER TEST: the smoke actor appears in NO WRITE BRANCH. Two halves by two
+instruments, decide() and decideDelete() refusing it when RUN, and every other action refused
+by the /admin method gate read out of the route source. Asserting only the first leaves the
+larger half unexamined while reading like a complete answer.`,
   ],
   "scripts/check-policy.mjs#20": [
     "WHY",
@@ -116,21 +115,18 @@ already done, which is a 403 that lies.`,
     "why both files are named rather than one excluded",
     `THE OTHER DIRECTION: the smoke actor is CONSTRUCTED in exactly one place, so a caller that
 believed it could write fails the day it is written rather than at the throw. TWO FILES ARE
-NAMED, not one excluded: the needle matches the type union that DECLARES the shape as well as
-the literal that CONSTRUCTS it, and an exclusion naming a file excludes everything else in
-it. A third file still fails, which is the property.`,
+NAMED, not one excluded, because an exclusion naming a file excludes everything else in it. A
+third file still fails, which is the property.`,
   ],
   "scripts/check-policy.mjs#36": ["WHY", "zero-scope arm; two lines already"],
   "scripts/check-policy.mjs#37": [
     "WHY",
     "the unbounded-window trap and fail-closed; the plant and its date to Capsid",
-    `THE ONE WAY A SMOKE GET COULD STILL 500. adminSessionContext is set for the HUMAN ADMIN
-ONLY and context.get on an unset context THROWS, so a LOADER reading it is fine for Dustin
-and a 500 for every smoke request, on a page that renders in every other gate.
-
-SCOPED TO THE ACTION'S BRACE-MATCHED BODY: "after the action export begins" is a window to
-end-of-file, and a helper declared below the action but called from the loader sits inside
-it. Fail closed, so a read the action delegates to a sibling is refused too.`,
+    `THE ONE WAY A SMOKE GET COULD STILL 500: adminSessionContext is set for the HUMAN ADMIN ONLY
+and context.get on an unset context THROWS, so a LOADER reading it is fine for Dustin and a
+500 for every smoke request, on a page that renders in every other gate. SCOPED TO THE
+ACTION'S BRACE-MATCHED BODY, because "after the action export begins" is a window to
+end-of-file; fail closed, so a read delegated to a sibling is refused too.`,
   ],
   "scripts/check-policy.mjs#39": ["CONTRACT", "how a body's end is found here; two lines already"],
   "scripts/check-policy.mjs#40": ["WHY", "zero-scope arm; two lines already"],
@@ -204,32 +200,26 @@ hand-made GET the moment somebody restores a loader.`,
     "WHY",
     "the attack and why order is the assertion",
     `THE ORIGIN GATE, AND ITS POSITION IS THE ASSERTION. Ask is anonymous, so this is not CSRF:
-there is no session to borrow. What a hostile page can do is make its own readers spend the
-shared Ask budget, and the per-IP limiter is blind to it because a thousand readers are a
-thousand IPs. Asserting the check EXISTS passes on a version running it after the Durable
-Object has been consulted, which is most of the cost. Comment-stripped, because the docblock
-names the limiter and the attack in prose.`,
+what a hostile page can do is make its own readers spend the shared budget, and the per-IP
+limiter is blind because a thousand readers are a thousand IPs. Asserting the check EXISTS
+passes on a version running it after the Durable Object, which is most of the cost.`,
   ],
   "scripts/check-policy.mjs#60": [
     "WHY",
     "hard rule 19's chain, why position beats presence, and the stated exclusion",
     `THE REST OF THE CHAIN: RATE, then CACHE, then BUDGET, then MODEL, which is hard rule 19's
-order. All four calls exist in any arrangement of them, so presence passes on an action that
-reserves budget before reading the cache, or reaches the model before either; the ORDER is
-the property and the names are only how it is located. Cheapest refusal first: rate is one
-Durable Object call and sits in front of the cache because hammering for cached answers is
-still hammering; cache is one KV read; budget is the second Durable Object call; model is
-the only billed step. ABSENT Origin IS ALLOWED and is not asserted here; test/origin.test.mjs
-owns it.`,
+order. All four calls exist in any arrangement, so presence passes on an action that reserves
+budget before reading the cache; the ORDER is the property and the names only locate it.
+Cheapest refusal first: rate is one Durable Object call, cache one KV read, budget the second
+call, model the only billed step. ABSENT Origin is test/origin.test.mjs's.`,
   ],
   "scripts/check-policy.mjs#61": [
     "WHY",
     "the measured framework boundary and the four routes it leaves; the rename story cut",
-    `EVERY MUTATING SURFACE TAKES THE SAME PREDICATE. Measured rather than assumed, because it
-decides what these are for: throwIfPotentialCSRFAttack refuses a foreign origin on every
-mutating DOCUMENT request before middleware, and does NOT run for resource routes, which is
-what admin.logout, admin.media.upload, admin.preview and /theme are. Asserted on the SOURCE
-calling the predicate rather than on a status code, which is check:browser's to observe.`,
+    `EVERY MUTATING SURFACE TAKES THE SAME PREDICATE, measured rather than assumed:
+throwIfPotentialCSRFAttack refuses a foreign origin on mutating DOCUMENT requests and does NOT
+run for resource routes, which is what these four are. Asserted on the SOURCE calling the
+predicate rather than on a status code, which is check:browser's to observe.`,
   ],
   "scripts/check-policy.mjs#62": [
     "WHY",
@@ -257,29 +247,26 @@ neither.`,
     "WHY",
     "the raw-text escape, the no-hand-list rule and the stated exclusion",
     `EVERY JSON-LD BLOCK GOES THROUGH THE ESCAPING SERIALISER: a script element's contents are
-RAW TEXT, so a title carrying the closing sequence ends the element early and the rest is
-parsed as markup. FOUND BY SCANNING rather than from a list, because the fifth emitter would
-be added without it. The speculation-rules blocks are out of scope: their payload is built
-from HEADER_PATHS and a pathname, and their own test owns them.`,
+RAW TEXT, so a title carrying the closing sequence ends the element early. FOUND BY SCANNING
+rather than from a list, because the fifth emitter would be added without it. The
+speculation-rules blocks are out of scope and their own test owns them.`,
   ],
   "scripts/check-policy.mjs#67": ["CONTRACT", "one line already; kept"],
   "scripts/check-policy.mjs#68": [
     "WHY",
     "why an offline half exists beside a stronger wire case that skips",
     `THE LIGHTBOX IS A REAL MODAL DIALOG, asserted on source. check:browser has the better
-instrument, asking the platform whether dialog:modal matches, and it SKIPS: no published post
-carries a body image. A wire assertion that never runs is not a gate, so this is the offline
-half, weaker because source text is a claim about behaviour. The div spelling is refused by
-name, because that is what this replaced.`,
+instrument and SKIPS, because no published post carries a body image, and a wire assertion
+that never runs is not a gate. The div spelling is refused by name, because that is what this
+replaced.`,
   ],
   "scripts/check-policy.mjs#69": [
     "WHY",
     "the same offline-half argument, and each property asserted by its mechanism",
-    `WCAG 2.2 1.4.13 ON SOURCE, for the same reason as the lightbox: no post here uses footnote
-syntax, so the browser case matches nothing. Each property is asserted by the MECHANISM that
-provides it rather than by a comment claiming it: a scheduled hide (hoverable), an Escape
-listener (dismissible), and the ABSENCE of a scroll listener (persistent), the only one whose
-defect is a line that exists rather than one that is missing.`,
+    `WCAG 2.2 1.4.13 ON SOURCE, the same offline-half argument as the lightbox. Each property is
+asserted by the MECHANISM that provides it rather than by a comment claiming it: a scheduled
+hide, an Escape listener, and the ABSENCE of a scroll listener, the only one whose defect is a
+line that exists rather than one that is missing.`,
   ],
   "scripts/check-policy.mjs#70": [
     "WHY",
@@ -293,15 +280,14 @@ of NAME, or a pseudo-element, which is not in the accessibility tree.`,
     `And the permalink LANDS on the heading. Its comment claimed the anchor still navigated while
 the code called preventDefault below it, so the assertion is on the focus move.`,
   ],
-  "scripts/check-policy.mjs#72": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#72": ["CONTRACT", "section marker, rule padding cut", `the Ask index is kept in step by ship`],
   "scripts/check-policy.mjs#73": [
     "WHY",
     "why the index fell behind, and what position plus failure-path buys; the measurement to Capsid",
-    `sync:content REBUILDS D1 AND BOTH FTS INDEXES AND DOES NOT TOUCH AI SEARCH. Its only writers
-were savePost and a human clicking sync-ask, and this site's writing mostly lands by COMMIT,
-so the index fell behind on every content ship. Asserted on POSITION and on the FAILURE PATH:
-a call before the deploy uploads to a Worker about to be replaced, and a call nobody checks
-is a step that cannot fail.`,
+    `sync:content REBUILDS D1 AND BOTH FTS INDEXES AND DOES NOT TOUCH AI SEARCH, so the index
+fell behind on every content ship, this site's writing landing mostly by COMMIT. Asserted on
+POSITION and on the FAILURE PATH: a call before the deploy uploads to a Worker about to be
+replaced, and a call nobody checks cannot fail.`,
   ],
   "scripts/check-policy.mjs#74": [
     "WHY",
@@ -333,9 +319,8 @@ version that is live, which is the one thing an operator needs then.`,
     "what five 200s are blind to, and why position is the assertion",
     `READINESS, BETWEEN THE DEPLOY AND THE FIRST WRITE. Five 200s prove the Worker answers and
 are blind to a drifted Ask index, a media index that lost its rows, D1 out of step with the
-repository, and an empty FTS index beside a full content table, all four of which /api/health
-reports. POSITION: before the deploy it reports on the build being replaced, after the sync
-it refuses with production half converged.`,
+repository and an empty FTS index, all of which /api/health reports. POSITION: earlier it
+reports on the build being replaced, later it refuses with production half converged.`,
   ],
   "scripts/check-policy.mjs#79": [
     "WHY",
@@ -406,18 +391,16 @@ tool writing rows itself would make the index a second truth.`,
     `AND THE VERDICT IS READ BACK: rebuildMediaIndex returns what its loops think they wrote, and
 only mediaIndexStatus re-enumerates the sources and reads D1 afterwards.`,
   ],
-  "scripts/check-policy.mjs#90": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#90": ["CONTRACT", "section marker, rule padding cut", `the cache split, in config`],
   "scripts/check-policy.mjs#91": [
     "WHY",
     "the failure mode on each side, and why the value is a policy question check:config cannot answer",
-    `WHICH ENTRYPOINT THE PLATFORM MAY CACHE. check:config reconciles the example against the real
-file, but does not know which VALUE is correct, and that is a policy decision with a failure
-mode on each side: with the gateway cache ENABLED the platform can answer without running the
-gateway, and readership silently becomes a count of cache misses; with the Renderer cache
-DISABLED every request renders and nothing says so. cross_version_cache STAYS OFF so the
-Worker version is part of the key and a deploy invalidates every entry; with it on, a
-response can be served from a build several generations old, asking for a stylesheet the
-current manifest no longer has. Asserted against the EXAMPLE, the tracked file.`,
+    `WHICH ENTRYPOINT THE PLATFORM MAY CACHE, which check:config cannot judge: it reconciles the
+two files and does not know which VALUE is right. A failure mode on each side: the gateway
+cache ENABLED lets the platform answer without running the gateway, so readership becomes a
+count of cache misses; the Renderer cache DISABLED renders every request silently.
+cross_version_cache STAYS OFF so a deploy invalidates every entry, or a response can be served
+from a build several generations old asking for a stylesheet the manifest no longer has.`,
   ],
   "scripts/check-policy.mjs#92": ["CONTRACT", "one line already; kept"],
   "scripts/check-policy.mjs#93": [
@@ -444,11 +427,10 @@ set back to draft, must be REMOVED rather than skipped on the next sync.`,
   "scripts/check-policy.mjs#98": [
     "WHY",
     "the comment-satisfied anchor; the stale limit corrected to the shared tokenizer",
-    `COMMENTS STRIPPED BEFORE MATCHING, and not for tidiness: an earlier form counted two calls to
-the filter, and when one caller stopped calling it and wrote a comment EXPLAINING that it
-used to, the count stayed at two and the gate went green on prose. That is hard rule 10's
-comment-satisfied anchor. The stripper is the gates' tokenizer, so trailing comments go too
-and a string literal survives.`,
+    `COMMENTS STRIPPED BEFORE MATCHING, and not for tidiness: a caller that stopped calling the
+filter and wrote a comment EXPLAINING that it used to kept the count at two and the gate went
+green on prose, which is hard rule 10's comment-satisfied anchor. The stripper is the gates'
+tokenizer, so trailing comments go too and a string literal survives.`,
   ],
   "scripts/check-policy.mjs#99": [
     "HISTORY",
@@ -473,11 +455,10 @@ that re-grew its own SELECT, or a reader that lost the clause, is the leak again
   "scripts/check-policy.mjs#102": [
     "WHY",
     "compose rather than restate, and why the scope is the function body",
-    `THE FILTER COMPOSES THE SHARED PREDICATE RATHER THAN RESTATING IT. The assertions above
+    `THE FILTER COMPOSES THE SHARED PREDICATE RATHER THAN RESTATING IT: the assertions above
 prove it is CALLED and cannot see what it DOES, and what it did was restate the rule in a
-third shape, agreeing with publiclyVisible() by inspection and by nothing else. Scoped to its
-own body by brace matching, because the module's prose names both symbols and a whole-file
-match reads the comment as the code.`,
+third shape, agreeing with publiclyVisible() by inspection alone. Scoped by brace matching,
+because the module's prose names both symbols.`,
   ],
   "scripts/check-policy.mjs#103": [
     "WHY",
@@ -527,12 +508,10 @@ predicate that is present, and one returning the whole file makes them pass on a
   "scripts/check-policy.mjs#114": [
     "NUMBER",
     "the floor is asserted on the line below; the seven dated re-measurements go to Capsid",
-    `EXECUTED-COUNT FLOOR. This gate stands between an operator and the one operation reserved for
-the human, and covers hard rule 19's ordered cost chain, so a version that quietly stopped
-asserting would keep its shape while nothing tested the transitions through it. RE-MEASURED
-BY RUNNING THIS GATE, never by summing, and the floor MOVES WITH THE MEASUREMENT: slack is
-the defect, and a floor left behind while the count climbs has been a third of this gate able
-to stop running unnoticed. Where a flat percentage and the tolerance check disagree, the
-tolerance wins.`,
+    `EXECUTED-COUNT FLOOR. This gate stands between an operator and the one operation reserved
+for the human and covers hard rule 19's ordered cost chain, so a version that quietly stopped
+asserting would keep its shape while nothing tested the transitions. RE-MEASURED BY RUNNING
+THIS GATE, never by summing, and the floor MOVES WITH IT: slack is the defect, and one left
+behind has been a third of this gate able to stop running unnoticed.`,
   ],
 };
