@@ -16,10 +16,9 @@ export default {
 
   npm run build:og -- --local|--remote
 
-BUILD TIME ONLY, in Node, because satori and resvg cannot run in the Worker: a post retitled
-in the editor has no card until this runs and re-syncs. THE COUPLING LAW: it uploads AND
-prunes against the keys the CURRENT artifact references while the live site serves what is in
-D1, so run outside a ship window it deletes every card production points at.`,
+BOUNDARY: BUILD TIME ONLY, in Node, because satori and resvg cannot run in the Worker, and it
+uploads AND prunes against the keys the CURRENT artifact references while the live site serves
+what is in D1, so run outside a ship window it deletes every card production points at.`,
   ],
   "scripts/build-og.mjs#1": [
     "WHY",
@@ -180,18 +179,10 @@ cards while D1 names none IS the unsynced state this guards.`,
     "the boundary and the five subjects, each to its claim; the artifact-arc narrative and the per-subject argument go to the history document",
     `Gate for the content build and the committed artifacts under \`content/generated/\`.
 
+  npm run check:content
+
 BOUNDARY: it renders and compares locally, never in a Worker and never against D1, so whether
-the rows match what it rendered is ship's drift report's.
-
-  1. The corpus render is valid and DETERMINISTIC, rendered twice in one process and
-     byte-compared, since nondeterminism surfaces later as false render drift.
-  1b. The About page on the same footing, its bytes going into the WORKER BUNDLE.
-  2. \`template-refs.json\`, byte-compared against a fresh scan.
-  3. \`assets.json\`, against a walk of \`public/\`, with the gitignore tripwire.
-  4. MATH OUTPUTS: one carries the rendered form and every other the TeX an author typed.
-  5. \`katex.generated.css\` and its faces, derived fresh and reconciled both ways.
-
-Fails closed: a generator that throws is a failure, never a pass.`,
+the rows match what it rendered is ship's drift report's.`,
   ],
   "scripts/check-content.mjs#1": [
     "WHY",

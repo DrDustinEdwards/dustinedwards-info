@@ -9,12 +9,11 @@ export default {
   "scripts/lib/wrangler-surface.mjs#0": [
     "CONTRACT",
     "what it enumerates and the two deliberate omissions; the move and its date go to the history document",
-    `The Worker's binding surface, derived from a wrangler config. ONE enumerator, imported by
-everything that needs to know what this Worker binds: two walkers of the same config would be
-the mirror \`check:invariants\` exists to prevent, failing by reporting a smaller surface.
+    `The Worker's binding surface, derived from a wrangler config. ONE enumerator, so two walkers of
+the same config cannot disagree about what this Worker binds.
 
-\`assets.directory\` is deliberately not part of it, the Vite plugin supplying it. Queue
-CONSUMERS are keyed by queue name, a consumer being a subscription rather than a handle.`,
+BOUNDARY: it knows the binding kinds it enumerates and reports the rest separately, because a
+kind no reader understands is absent from both sides of every comparison built on this.`,
   ],
   "scripts/lib/wrangler-surface.mjs#1": [
     "CONTRACT",
@@ -94,22 +93,10 @@ not exist yet is still caught. A declaration is one of exactly three shapes:
     "what it owns and why it returns a string; the drift measurement, the ruling and the worked example go to the history document",
     `One owner for the floor comparison, and for the line that proves it ran.
 
-A floor set once and never re-measured sinks under its count as the gate grows, and the gap is
-invisible, so a floor far under its count is a skipped block waiting to happen. The repair is to
-make the gap MACHINE-READABLE on every successful run, which \`check:floors\` reads back.
-
-IT RETURNS A STRING RATHER THAN ASSERTING because three reporter shapes coexist BY DESIGN, named
-differently so a call copied between gates is a ReferenceError rather than a silent pass. A
-shared helper would have to pick one, or take a reporter callback beside a label and a count,
-which re-creates the argument-order hazard the rename cured. So this owns the COMPARISON and
-both MESSAGES and the call site keeps its own reporter.
-
-THE SUCCESS LINE IS THE PRODUCT, printed only when the floor HOLDS. The gate name is IN the line
-rather than inferred from which process printed it, because \`check:head\` runs the tier inside a
-worktree and every child gate's floor lines surface in ITS stdout. A breach already fails the
-gate loudly, and a floor line there would let a number be read from a run that had refused.
-
-This is the tenth vacuity class, hard rule 10.`,
+BOUNDARY: it owns the COMPARISON and both MESSAGES and asserts nothing itself, returning a
+string so each call site keeps its own reporter, and the success line it prints on a HOLDING
+floor is what \`check:floors\` reads back. Making a shared helper assert instead would be the
+tenth vacuity class of hard rule 10.`,
   ],
   "scripts/lib/floor.mjs#1": [
     "CONTRACT",
@@ -155,16 +142,8 @@ is the failure this exists to catch, and \`NaN < minimum\` is false.`,
   npm run check:media-axes
 
 BOUNDARY: a SOURCE gate. It proves the axis list is derived rather than restated and that the
-forwarding is a spread rather than a hand-copied key list. It does NOT run a query, so it sees
-DROPPED, not MISBUILT; proving the SQL itself needs a database.
-
-An object SPREAD is exempt from TypeScript's excess-property check, so axes the options type
-never declared compiled cleanly and were dropped on the floor while the page disagreed with
-itself, the chip counts being separate queries that bypass the dropping layer.
-
-THE AXIS LIST IS DERIVED FROM THE SOURCE OF TRUTH, never restated here, which is the only
-version worth having: a hardcoded list would be updated by whoever forgot the forwarding. FAILS
-CLOSED, a zero-length axis list satisfying every per-axis assertion by having nothing to check.`,
+forwarding is a spread rather than a hand-copied key list, but it does NOT run a query, so it
+sees DROPPED, not MISBUILT.`,
   ],
   "scripts/check-media-axes.mjs#2": [
     "CONTRACT",
@@ -233,26 +212,13 @@ retiring a genuinely dead axis does not fail the floor while dropping a whole BL
   "scripts/apply-config-ids.mjs#0": [
     "CONTRACT",
     "what it patches, why not the whole file, and the five refusals; the dates, the secret's history and the panel symptom go to the history document",
-    `Puts the redacted values into the bootstrapped wrangler configs.
+    `Puts the redacted values into the bootstrapped wrangler configs, for CI only.
 
   node scripts/apply-config-ids.mjs
 
-FOR CI ONLY: each real \`wrangler*.jsonc\` is gitignored and its \`.example\` tracked,
-\`postinstall\` bootstraps a checkout by COPYING the examples, and a deploy against a placeholder
-database_id would bind a database that does not exist.
-
-THE WATCHDOG'S \`ALERT_EMAIL\` IS HERE FOR A SHARPER REASON THAN THE IDS. A placeholder
-database_id fails LOUDLY; a placeholder ALERT_EMAIL deploys perfectly and mails every alert to a
-reserved domain nobody reads, so the watchdog looks healthy while unable to reach anybody.
-
-WHY TWO SECRETS AND NOT THE WHOLE FILE: storing the real config as one secret would make GitHub
-a SECOND OWNER of every binding, flag and migration, free to drift from the tracked example.
-
-IT REFUSES RATHER THAN PATCHING PARTIALLY, five ways, each named: a missing variable, an absent
-config, a placeholder not found, more than one occurrence, or a placeholder surviving the write.
-
-THE IDS ARE NOT PRINTED, only WHICH field was patched: this runs in a public-by-default log. A
-TEXT REPLACEMENT, never a parse-and-reserialise, which would strip load-bearing comments.`,
+BOUNDARY: it patches named placeholders by text and REFUSES rather than patching partially, five
+ways, each named. It never prints an id, only which field was patched, and it never
+parse-and-reserialises, which would strip comments this repo's configs depend on.`,
   ],
   "scripts/apply-config-ids.mjs#2": [
     "CONTRACT",
@@ -288,22 +254,13 @@ invisible from the exit code of writeFileSync.`,
   "scripts/check-uptime.mjs#0": [
     "CONTRACT",
     "the boundary, the three-way comparison and the fail-closed rule; nothing here is dated",
-    `Gate over the external uptime monitors.
+    `Gate: both monitors this repo asks for EXIST, are NOT PAUSED, and point at the CURRENT hostname.
 
   npm run check:uptime
 
-Asserts that both monitors this repo asks for EXIST, are NOT PAUSED, and point at the CURRENT
-hostname. BOUNDARY: it reads UptimeRobot's record of its own configuration, and does NOT prove a
-check has ever run, that an alert would be delivered, or that the mailbox is read. It is also
-NOT a check that the site is up: a \`DOWN\` monitor is one doing its job.
-
-THREE-WAY, BOTH DIRECTIONS. \`SITE_ORIGIN\` is the one owner of the hostname and the manifest is
-a RECORD of what \`uptime-ensure\` last wrote, so code against manifest catches a stale or
-hand-edited record and manifest against live catches a dashboard edit. Either alone passes on a
-pair that agree with each other and with nothing else.
-
-FAILS CLOSED on a missing credential, an unreadable manifest, an API error or a wrong count: the
-defect class is a monitoring system that reports nothing while looking configured. NETWORK ONLY.`,
+BOUNDARY: it reads UptimeRobot's record of its own configuration, so it does NOT prove a check
+has ever run, that an alert would be delivered, or that the mailbox is read. It is also not a
+check that the site is up: a DOWN monitor is one doing its job. NETWORK ONLY.`,
   ],
   "scripts/check-uptime.mjs#2": ["CONTRACT", "section marker, rule padding cut", `fail closed first`],
   "scripts/check-uptime.mjs#4": [
@@ -357,17 +314,9 @@ branches above still exit directly and are safe, both running BEFORE any fetch.`
     `Every discrete fact each colophon section's RECORD BODY was assembled from, as needles to match
 against the RENDERED page.
 
-WHY A MODULE RATHER THAN A CLOSURE INSIDE verify-live: it is the colophon's SECOND registration
-site. A section added without a body rule throws offline on every clone; one added without a
-fact list here said nothing until \`verify-live\` ran against a deploy, which needs a deploy and
-bills an Ask probe. Extracted so a test can assert offline that every section has one.
-
-WHAT WAS DELIBERATELY NOT DONE: deriving these needles from the record body. The indexer
-produces one joined STRING per section for the search index and this produces DISCRETE needles
-checked against the rendered HTML, and a gate whose expected values are produced by the process
-it checks cannot fail (hard rule 10). Deriving would leave the page and the index agreeing with
-each other and with nothing else, so the two lists stay independently authored and the test
-asserts COVERAGE of the section set rather than equality of the values.
+BOUNDARY: these are authored independently of the record body rather than derived from it,
+because hard rule 10 is that a gate whose expected values are produced by the process it checks
+cannot fail, so the test asserts COVERAGE of the section set rather than equality of the values.
 
 @see app/lib/colophon-sections.mjs, scripts/verify-live.mjs`,
   ],
@@ -419,18 +368,10 @@ offline, the test being the early warning and this the guarantee.`,
 
   npm run build:katex
 
-\`import "katex/dist/katex.min.css"\` is wrong twice over. FIRST, a CSS import from a component
-lands in that ROUTE's stylesheet, and \`/blog/:slug\` is one route serving every post, most of
-which carry no math; hard rule 4 asks for the bytes a reader downloads, so the sheet has to be
-separately addressable and linked conditionally. SECOND, upstream declares each face three
-times and Vite emits every referenced url, so importing it verbatim shipped three formats where
-every supported browser reads woff2.
-
-UNDER \`app/\` AND NOT \`public/\`, because a file under \`public/\` is walked into the asset
-manifest and indexed as media, and a webfont is not media.
-
-THE OUTPUT IS COMMITTED AND \`check:content\` BYTE-COMPARES IT, which makes a katex bump that
-nobody regenerated a NAMED gate failure. The version is read from the installed package.`,
+BOUNDARY: importing the upstream sheet from a component would land it in one route's stylesheet
+for every post, most of which carry no math, and hard rule 4 asks for the bytes a reader
+downloads; it would also ship three font formats where every supported browser reads one. The
+output is committed and \`check:content\` byte-compares it.`,
   ],
   "scripts/build-katex.mjs#1": ["CONTRACT", "what the file is; one line already"],
   "scripts/build-katex.mjs#2": ["CONTRACT", "what the marker separates; one line already"],
@@ -499,23 +440,12 @@ nothing.`,
   "scripts/lib/diagram-audit.mjs#0": [
     "CONTRACT",
     "the two callers, what reachability means and why the cascade clause; nothing here is dated",
-    `The tokens-only audit over a rendered diagram SVG.
+    `The tokens-only audit over a rendered diagram SVG, run by the build on every asset it writes and
+by the gate over every asset already committed.
 
-ONE implementation, two callers: the build runs it on every asset it writes, so an invented
-colour fails at the moment it is invented, and the gate runs it over every committed asset, so
-an asset written before a rule existed cannot survive by having been written first.
-
-WHAT IT ASSERTS: every colour on the part of the SVG a reader can SEE comes from the palette.
-mermaid ships a stylesheet covering every feature it can draw, most of which this pipeline never
-produces, and an allowlist of "black is fine" is what a real black hides behind. So reachability
-is computed structurally: a CSS rule counts when its selector matches an element in THIS
-document, and a colour attribute counts unless it sits in an unreferenced \`<defs>\` subtree or a
-matching rule sets the same property.
-
-That last clause is the cascade, not a convenience: a presentation attribute is the weakest
-author-level declaration in SVG, and mermaid writes a literal fill and then paints over it.
-Reading the attribute as shipped reports violations on a correct diagram; reading it as dead
-without checking for the rule that kills it lets a real one through.`,
+BOUNDARY: it asserts that every colour a reader can SEE comes from the palette, computing
+reachability structurally rather than from an allowlist, so what it cannot judge is a rule or an
+attribute this document never paints with.`,
   ],
   "scripts/lib/diagram-audit.mjs#1": ["CONTRACT", "what the set holds; one line already"],
   "scripts/lib/diagram-audit.mjs#2": [
@@ -590,24 +520,11 @@ points at is never painted; the markers that draw arrowheads ARE pointed at, so 
   "scripts/lib/bash.mjs#0": [
     "CONTRACT",
     "the candidate order, why a walk, and the proof-by-running rule; the defect, its date and the measured paths go to the history document",
-    `Resolving the bash binary a gate needs, ONCE, from any shell.
+    `Resolving the bash binary a gate needs, ONCE, from any shell, because a bare name is on PATH
+under git bash and absent under the PowerShell that runs ship.
 
-Spawning \`bash\` BY BARE NAME is a dependency on the shell the gate happened to be written in:
-it is on PATH under git bash and absent under the PowerShell that runs ship, so a gate read as
-green in every session and refused at a ship step, once per case.
-
-THE CANDIDATE ORDER: \`bash\` on PATH first, so a machine with a deliberate bash keeps using it;
-then Git for Windows DERIVED from \`git --exec-path\`, git being a hard dependency already; then
-the default install path literally. The second is a WALK UP THE ANCESTORS rather than a fixed
-depth, because the depth is a property of the Git for Windows layout, which is not this repo's
-to promise, and a fixed two lands inside a directory that ships no bash.
-
-EVERY CANDIDATE IS PROVEN BY RUNNING IT. Existence on disk is not the claim: the file in a Git
-install is a launcher, so each candidate runs a trivial program and must exit 0 and print
-exactly the expected word, an equality rather than a substring.
-
-FAILS CLOSED: it returns null, does not throw, does not fall back, and the caller prints ONE
-line rather than six copies of a symptom.`,
+BOUNDARY: every candidate is PROVEN BY RUNNING IT rather than by existing on disk, and it FAILS
+CLOSED, returning null so the caller prints one line instead of a spawn error per case.`,
   ],
   "scripts/lib/bash.mjs#1": [
     "WHY",
@@ -675,18 +592,9 @@ git from one whose Git install is somewhere this does not look.
 
   npm run check:d1-address
 
-THE DEFECT: the by-name spelling resolves through the gitignored config's entry and uses THAT
-entry's id, and a clean checkout bootstraps that file with a placeholder, so the name addresses
-a database that does not exist ON A RUNNER AND ONLY THERE. Two gates had it and one had never
-run in CI, so nothing had noticed; the repair is an instrument rather than a sweep.
-
-REFUSED: a \`d1\` subcommand whose database argument is the NAME, in a segment that is not
-\`--local\`. ALLOWED, deliberately: \`--local\`, where Miniflare keys state by the config id and
-there is no account-side UUID to resolve; \`d1 list\`, the lookup itself; and \`d1 migrations\`,
-applied through wrangler by design.
-
-SCOPE IS PROVEN NON-EMPTY, this being a per-file loop over a glob, hard rule 10. COMMENTS ARE
-STRIPPED FIRST: every one of these files DESCRIBES the defect in prose, this one included.`,
+BOUNDARY: a per-file scan over comment-stripped source, with scope proven non-empty first,
+which is hard rule 10. \`--local\` is allowed deliberately, Miniflare keying state by the config
+id, and so are the lookup itself and the migrations path.`,
   ],
   "scripts/check-d1-address.mjs#1": ["CONTRACT", "read from its one owner; one line already"],
   "scripts/check-d1-address.mjs#2": [

@@ -11,10 +11,12 @@ export default {
   "scripts/check-policy.mjs#0": [
     "CONTRACT",
     "the boundary and the paired-negative rule kept; the restatement of both, cut",
-    `Gate over the operator publish policy: npm run check:policy.
+    `Gate over the operator publish policy.
+
+  npm run check:policy
 
 BOUNDARY: the decision function in isolation, and pure. It proves what the policy DECIDES,
-never that a caller consults it before writing. Every rule carries its paired negative.`,
+never that a caller consults it before writing.`,
   ],
   "scripts/check-policy.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/check-policy.mjs#10": ["CONTRACT", "section marker, rule padding cut", `readState`],

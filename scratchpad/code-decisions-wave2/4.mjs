@@ -19,9 +19,9 @@ export default {
 
   npm run check:publications
 
-Pure: two committed JSON files, a generated module and \`stat\` on the PDFs. It cannot see
-whether the registry data is still true, so the networked assertions stay in the pipeline.
-Every "no record has property X" carries the count that read it, hard rule 18's shape.`,
+BOUNDARY: two committed JSON files, a generated module and \`stat\` on the PDFs. It cannot see
+whether the registry data is still true, so the networked assertions stay in the pipeline, and
+every "no record has property X" carries the count that read it, hard rule 18's shape.`,
   ],
   "scripts/check-publications.mjs#2": [
     "CONTRACT",

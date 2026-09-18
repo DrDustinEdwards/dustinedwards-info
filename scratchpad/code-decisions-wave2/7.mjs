@@ -17,9 +17,7 @@ export default {
 
 BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
 sees markup and nothing else, and hard rule 7 is why it is not folded into \`check:content\`.
-A REAL PARSER, NOT A REGEX: \`u-url\` on an element with no href passes a search and gives a
-reader nothing. FIXTURE INDEPENDENCE, hard rule 10: \`dt-published\` is compared against a
-separate read of the markdown. FAILS CLOSED on an empty corpus or a parse that finds nothing.`,
+Its expected values come from a separate read of the markdown, which is hard rule 10.`,
   ],
   "scripts/check-microformats.mjs#2": [
     "CONTRACT",
@@ -199,9 +197,7 @@ re-measured floor in the same commit.`,
 
 BOUNDARY: the component's path data against the four SVG fixtures, the fill BINDINGS against a
 closed set, the icon suite's container shape and one tile pixel, and the mark AS RENDERED into
-a social card against a rasterisation of the fixture. IT DOES NOT CHECK CONTRAST, and the icon
-suite is still ONE PIXEL PER RASTER, so an upside-down mark passes. THE FOUR public/*.svg
-FILES ARE THE FIXTURES: two sources argue and nothing restates a path, so it fails both ways.`,
+a social card. It does NOT check contrast, and one pixel per raster cannot see an inverted mark.`,
   ],
   "scripts/check-logo.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/check-logo.mjs#2": ["CONTRACT", "one line already; kept"],

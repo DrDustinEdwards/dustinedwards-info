@@ -13,18 +13,9 @@ export default {
 
   npm run check:hook-matchers
 
-WHY IT EXISTS: a PreToolUse matcher is a regex over the TOOL NAME, and the matchers here named
-one shell tool while the session held pre-approved rules for another, so the deploy door, the
-scoped-add check and the pre-push lint were reachable with no prompt for weeks. It had been
-fixed once already, one tool name earlier.
-
 BOUNDARY, AND IT IS THE IMPORTANT HALF: **THE HARNESS TOOL LIST IS NOT IN THIS REPO**, so the
-assertion a reader wants is not statically decidable here. What IS on disk is the PERMISSION
-ALLOW LIST, a DIFFERENT file from the one under test, which is the fixture independence rule 10
-asks for. THE RESIDUAL: a tool used under one-off approvals writes no rule, which is why the
-required names carry a hard floor too. FAILS CLOSED ON AN UNKNOWN TOOL, the defect having been
-a new tool name arriving and nothing noticing. TWO BRANCHES, the local settings file being
-gitignored, printing DIFFERENT floor names.`,
+assertion a reader actually wants is not statically decidable here. What is on disk is the
+permission allow list, and a tool used under one-off approvals writes no rule at all.`,
   ],
   "scripts/check-hook-matchers.mjs#2": [
     "CONTRACT",
@@ -106,20 +97,9 @@ branch gains an assertion per matcher and the other gains none.`,
 
   npm run check:mail
 
-NETWORK TIER. It resolves live DNS, which is why it is not in the tier ship runs.
-
-WHY IT EXISTS: the watchdog's whole value is one email arriving, and SPF, DKIM and DMARC decide
-whether it is delivered or silently dropped from a dashboard where a click can remove one.
-
-TWO PATHS, NAMED SEPARATELY, BECAUSE THEY ARE DIFFERENT CLAIMS: SENDING puts its SPF and
-selector on a bounce subdomain, ROUTING uses the apex and another selector, so a gate asserting
-the apex SPF would stay green through the sending record being deleted. THE MAIL DOMAIN HAS ONE
-OWNER AND IT IS NOT THIS FILE: it is read out of the watchdog's own constant.
-
-BOUNDARY: this proves the RECORDS ARE PUBLISHED AND WELL FORMED, never that a message
-authenticates, and a published key that no longer matches the private one looks good here.
-Resolution goes through a THIRD-PARTY resolver, every record being managed by one party, and a
-resolver that cannot answer is a FAILURE.`,
+BOUNDARY: it proves the records are PUBLISHED AND WELL FORMED over live DNS, never that a
+message authenticates, which only a received message's headers can, and a published key that no
+longer matches the private one is indistinguishable from a good one here.`,
   ],
   "scripts/check-mail.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/check-mail.mjs#2": ["CONTRACT", "one line already; kept"],
@@ -205,23 +185,12 @@ closed still increments. MEASURED BY RUNNING IT, with no slack, the set being en
   "scripts/check-stack.mjs#0": [
     "CONTRACT",
     "what the subject is, both boundary limits, both directions and the re-derivation; the ruling number, the CI argument's history and the deleted entry go to the history document",
-    `Gate over the colophon's generated stack data.
+    `Gate over the colophon's generated stack data, reconciled against its sources both ways.
 
   npm run check:stack
 
-THE SUBJECT IS A BUILD PRODUCT, NOT A COMMIT: the artifact is gitignored and written before the
-gates, so this asserts that a build HAPPENED and reconciles with its sources. Comparing a
-committed copy against a fresh derivation made every dependency bump a two-file change no bot
-could complete.
-
-BOUNDARY, TWO LIMITS. It cannot tell whether the PROSE is true: a note is reconciled against
-the binding it describes and nothing more. And **it reads the EXAMPLE config, which is not what
-is deployed**: only \`check:config\` binds the two, on one machine, and **CI CANNOT CLOSE THIS
-GAP**, a checkout bootstrapping the example into place.
-
-BOTH DIRECTIONS, ON EVERY SOURCE: a row with no binding is the one that actually happens, a
-resource being removed while the page keeps advertising it. IT RE-DERIVES RATHER THAN TRUSTING
-THE ARTIFACT, calling the builder's own exported derivations. FAILS CLOSED.`,
+BOUNDARY, TWO LIMITS: it cannot tell whether the hand-written PROSE is true, only that the
+binding it describes exists, and **it reads the EXAMPLE config, which is not what is deployed**.`,
   ],
   "scripts/check-stack.mjs#2": ["CONTRACT", "both directions as one pair; already short"],
   "scripts/check-stack.mjs#3": ["CONTRACT", "section marker, rule padding cut", `fail closed first`],
@@ -267,13 +236,7 @@ times. MEASURED BY RUNNING IT, and it tracks the colophon's declared inventory.`
   npm run test:worker
 
 BOUNDARY: **IT RUNS VITEST IN WORKERD AND READS ITS SUMMARY**, so it knows how many files were
-discovered and how many cases the runner counted, not whether those cases ASSERT anything.
-
-WHY IT EXISTS: an audit found hundreds of pure-function tests and a real-browser gate with
-NOTHING BETWEEN THEM, so every route-level fact had to be established by probing production.
-THE SAME FAILURE MODE AS \`check:tests\`, AND THE SAME REPAIR: **the runner exits 0 when its
-include glob matches nothing**, so this gate discovers the files itself and floors both counts
-before believing an exit code.`,
+discovered and how many cases the runner counted, not whether those cases ASSERT anything.`,
   ],
   "scripts/check-worker.mjs#1": [
     "NUMBER",
@@ -327,20 +290,13 @@ being consulted and nothing would say so. Slack of ZERO, a fixed set of properti
   "scripts/build-diagrams.mjs#0": [
     "CONTRACT",
     "why build time, the gap it leaves, why the bytes are never gated and why two renders; the two engine errors and the ruling reference go to the history document",
-    `Renders every \`:::diagram\` in the corpus to a static SVG asset.
+    `Renders every \`:::diagram\` in the corpus to a static SVG asset, two per diagram, light and dark.
 
   npm run build:diagrams [-- --force]
 
-BUILD TIME ONLY, in Node, driving a real browser, and that was decided by measurement: diagram
-layout needs real font metrics, so the DOM-shim renderers die on the text measurement call.
-Charts pass the both-writers rule and render inline; diagrams take the social-card pattern.
-The gap is the same one social cards have: a diagram authored in the editor has no asset until
-this runs, which is why the gate fails on a referenced asset that is not on disk.
-
-Nothing here touches the gated artifact: the SVG bytes come out of a browser engine and are
-exactly what a byte-comparison gate must never be handed. TWO RENDERS PER DIAGRAM, LIGHT AND
-DARK, forced rather than chosen: the renderer will not accept a custom property, an SVG
-referenced by \`<img>\` resolves against nothing, and this site resolves its theme from a cookie.`,
+BOUNDARY: BUILD TIME ONLY, in Node, driving a real browser, and nothing here touches the gated
+artifact: the SVG bytes come out of a browser engine and are exactly the kind of input a
+byte-comparison gate must never be handed.`,
   ],
   "scripts/build-diagrams.mjs#1": [
     "CONTRACT",
@@ -417,17 +373,12 @@ cannot be, needing the Worker's binding, so this can only say so loudly.`,
   "scripts/lib/rss.mjs#0": [
     "CONTRACT",
     "why a separate process, what is counted, what the metric is and that it fails soft; the five killed runs and the dates go to the history document",
-    `PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it.
+    `PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it by a separate process, the
+tier's blocking spawn leaving no event loop here to sample from.
 
-The tier runs its gates with a BLOCKING spawn, so any sampler living in this event loop would
-record nothing for exactly the span it exists to measure. The sampler is a separate process
-writing to a FILE, and the runner attributes each sample to whichever gate owned the clock.
-
-WHY IT EXISTS: tier runs were killed by the OS for low memory, and every diagnosis was an
-inference from which gate happened to be printing. WHAT IS COUNTED, STATED PLAINLY: the whole
-descendant tree plus the root, summed, the runner's own resident set included, because the
-number that matters for an OOM kill is what the machine was holding. FAILS SOFT, ALWAYS: this
-is an instrument, not a gate.`,
+BOUNDARY: it counts the whole descendant tree plus the root, the runner's own resident set
+included, because the number that matters for an OOM kill is what the machine was holding. It
+FAILS SOFT, ALWAYS: this is an instrument, not a gate.`,
   ],
   "scripts/lib/rss.mjs#1": ["CONTRACT", "one platform; one line already"],
   "scripts/lib/rss.mjs#2": [
@@ -498,23 +449,13 @@ residual is accepted and stated; matching on NAMES is worse by a wide margin.
   "scripts/lib/strip-comments.mjs#0": [
     "CONTRACT",
     "the trap, the drift-in-strength argument, that the old boundary moved, why the weak forms stay and what is not this job; the six victims, the measurements and the dates go to the history document",
-    `THE JS-SCAN COMMENT STRIPPER, in one place.
+    `THE JS-SCAN COMMENT STRIPPER, in one place: stripping comments before matching is hard rule 10's
+discipline, and it was implemented nine times before this.
 
-WHAT THIS IS FOR: a gate that searches source for a literal will find it in the PROSE explaining
-why it is forbidden. Six gates here have hit it, one passing every row for the wrong reason.
-Stripping comments before matching is hard rule 10's discipline, and it was implemented NINE
-TIMES: nine copies of one job drift in STRENGTH, and a copy weaker than its siblings passes for
-a reason nobody checks.
-
-IT IS A TOKENIZER, AND THE OLD BOUNDARY MOVED WITH IT. The colon guard that protected a URL
-inside a string was load-bearing and was also the shape of the boundary. **THAT IS NO LONGER
-TRUE, AND THE TESTS NOW ASSERT THE OPPOSITE**: a string literal is consumed whole. A boundary
-note is a claim that ages, per hard rule 7, and this one aged in the commit that changed it.
-
-THE WEAK FORMS STAY ANYWAY, on a narrower argument: THIS IS A JAVASCRIPT TOKENIZER, so it reads
-an apostrophe in SVG text as opening a string and a slash after an operator as opening a regex.
-JOBS THAT ARE NOT THIS JOB: a string-aware scanner, a reader that needs \`//host\` inside strings
-to survive, and the CSS readers where \`//\` is never a comment.
+BOUNDARY: it is a JAVASCRIPT TOKENIZER, so it reads an apostrophe in SVG text as opening a
+string and a slash after an operator as opening a regex, and the CSS readers, where \`//\` is
+never a comment, are not this job. A boundary note is a claim that ages, per hard rule 7, and
+this one already aged once, in the commit that turned a regex into a tokenizer.
 
 @see test/strip-comments.test.mjs`,
   ],

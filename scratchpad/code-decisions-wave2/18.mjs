@@ -10,19 +10,13 @@ export default {
   "scripts/lib/d1-address.mjs#0": [
     "CONTRACT",
     "the rule, why --local keeps the name, and the fail-closed direction; the defect, the run id and the dates go to the history document",
-    `How a script ADDRESSES the site database, which is not always its name.
+    `How a script ADDRESSES the site database, which is not always its name: a remote operation takes
+the account-side UUID, because the by-name spelling resolves through a config a clean checkout
+bootstraps with a placeholder.
 
-THE DEFECT: \`wrangler d1 <cmd> <name>\` resolves through the gitignored config's entry and uses
-THAT entry's id, and a clean checkout bootstraps that file with a placeholder, so a remote run
-addresses a database that does not exist. It fails ON A RUNNER AND ONLY THERE, which is the
-worst shape a defect can have.
-
-\`--local\` KEEPS THE NAME, AND THAT IS NOT AN EXCEPTION: Miniflare keys its state by the
-config's id and there is no account-side UUID to resolve, so the rule is not "never use the
-name", it is "never let wrangler resolve the name for a REMOTE operation".
-
-FAILS CLOSED: a lookup that cannot produce a UUID throws. Falling back to the name would
-substitute a different value for the one asked for, which is hard rule 13's shape.
+BOUNDARY: \`--local\` keeps the NAME deliberately, Miniflare having no account-side UUID to
+resolve, and a lookup that cannot produce one THROWS rather than falling back, which would be
+hard rule 13's substituted value wearing a passing lookup.
 
 @see scripts/check-d1-address.mjs, which refuses the by-name spelling`,
   ],
@@ -66,20 +60,11 @@ before its JSON on a runner, and parsing the whole stream fails there and only t
     "the tier limitation, the credential rule and what is not restated; the volumes, the byte counts and the sibling defects go to the history document",
     `Gate: the ACTIVE decisions volume has not passed its own stated freeze point.
 
-THE DEFECT: every volume's header states its own limit, and one ran well past it for days,
-because the limit was a sentence inside the artifact it limited, enforced by whoever happened to
-read it. Third of that shape in two days, and the repair each time is an instrument.
+  npm run check:volumes
 
-NETWORK TIER, AND IT CANNOT BE OTHERWISE: a decisions volume is a Capsid document, so there is
-no disk to read and a clean checkout cannot run this. A real limitation rather than a formality,
-since a volume can pass its freeze point between runs.
-
-THE CREDENTIAL FAILS CLOSED rather than skipping: a gate that silently does not run is the thing
-the runner exists to prevent, and an unread volume is not a volume under its limit.
-
-NOTHING RESTATES A LIMIT, hard rule 17: the number lives in the volume that owns it. The ACTIVE
-volume is the highest-numbered one, never the title, and frozen volumes PASS, because two froze
-far over before the rule existed and a gate that cannot go green is one somebody deletes.`,
+BOUNDARY: NETWORK TIER and it cannot be otherwise, a decisions volume being a Capsid document
+with no disk to read, so a volume can pass its freeze point between runs. Nothing here restates
+a limit, hard rule 17 putting that number in the volume that owns it, and frozen volumes PASS.`,
   ],
   "scripts/check-volumes.mjs#1": ["CONTRACT", "what the floor means; one line already"],
   "scripts/check-volumes.mjs#4": [
@@ -121,19 +106,9 @@ that cannot be false, which is the class this gate was written in response to.`,
 
   node scripts/extract-publication-text.mjs
 
-WHY A COMMITTED ARTIFACT AND NOT A BUILD STEP: it parses tens of megabytes of PDF to produce
-bytes that change only when a PDF does, which no gate run should pay for, and it is EVIDENCE
-about bytes that are themselves committed, so \`check:publications\` hashes each PDF and compares
-against the digest recorded here.
-
-THE TEXT IS STORED VERBATIM, PER PAGE. The extraction is one owner and the PRESENTATION is
-another, so a normalisation baked in here would be invisible to the twin and unfixable without
-re-running over every PDF. And the obvious normalisation is wrong more often than it looks: a
-hyphenated line break is sometimes a joined word and sometimes not, and nothing here can tell
-those apart without a dictionary.
-
-WHAT IT IS FOR, WHICH BOUNDS HOW GOOD IT HAS TO BE: retrieval, not citation. Nothing on the
-rendered page is derived from this file.`,
+BOUNDARY: the text is stored VERBATIM, per page, with no de-hyphenation or column repair, so
+what it is fit for is RETRIEVAL rather than citation; the presentation belongs to the twin that
+joins the pages, and nothing on the rendered page is derived from this file.`,
   ],
   "scripts/extract-publication-text.mjs#1": ["CONTRACT", "read rather than typed; one line already"],
   "scripts/extract-publication-text.mjs#2": [
@@ -158,18 +133,12 @@ claim that can go stale. Rule 17's exception for evidence.`,
   "scripts/lib/python.mjs#0": [
     "CONTRACT",
     "why resolved, why the probe runs a program and the fail-closed rule; the per-shell measurements and the dates go to the history document",
-    `Resolving the Python a gate needs, the SAME WAY THE HOOKS DO.
+    `Resolving the Python a gate needs, the SAME WAY THE HOOKS DO, because the bare name resolves
+under git bash and is absent under the PowerShell that runs ship.
 
-WHY NOT A HARDCODED \`python3\`: measured on this machine, the name resolves under git bash and
-is ABSENT under PowerShell, so a gate spawning it would be green in every session and absent at
-\`npm run ship\`. The same shape a sibling module was written for hours earlier.
-
-AND WHY THE PROBE RUNS A PROGRAM rather than asking for a version: on Windows the bare name is
-often a Store STUB, which satisfies \`command -v\`, prints a version-ish banner and is not an
-interpreter. Matching the hooks' probe exactly is load-bearing for \`check:hook-syntax\`, which
-must compile a hook with the interpreter that hook would have used.
-
-FAILS CLOSED: it returns null, and the caller prints one line and exits nonzero.`,
+BOUNDARY: the probe RUNS A PROGRAM and matches its output exactly, because the bare name on
+Windows is often a Store stub that satisfies a lookup and is not an interpreter. Matching the
+hooks' own probe is load-bearing for the gate that compiles what a hook embeds.`,
   ],
   "scripts/lib/python.mjs#1": [
     "CONTRACT",
@@ -215,22 +184,9 @@ repo has already been bitten by.
     "why there is a window, why the reading must be read-only and why two bounds; the measurement and its date go to the history document",
     `The Ask index convergence window ship waits out before declaring a miss.
 
-Split out of ship so the DECISION is a pure loop over readings that tests can drive, while the
-reading itself is a network call ship supplies: a poll loop that only exists inside a deploy
-script is a poll loop nothing can exercise, and this repo has recorded the failure that hides
-there, a single fetch wearing a loop.
-
-WHY THERE IS A WINDOW: the uploader reads its counts back immediately after two writes and the
-index is eventually consistent, so the first reading can be early rather than wrong.
-
-THE READING MUST BE READ-ONLY, AND THAT IS THE WHOLE DESIGN. Polling by re-uploading repairs the
-thing being measured, and a run that then converged could not be told apart from one that had
-self-healed. This module cannot enforce that; what it does is refuse to do the reading itself,
-so the choice is made at one visible call site.
-
-THE BOUND IS TWO INDEPENDENT LIMITS: a count, because a clock test alone would spin if the clock
-never advanced, and a deadline, because a count alone would not honour the stated window if a
-reading hung.`,
+BOUNDARY: the DECISION only, a pure loop over readings, while the reading itself is a network
+call ship supplies. This cannot enforce that the reading is read-only; what it does is refuse to
+do the reading itself, so that choice is made at one visible call site.`,
   ],
   "scripts/lib/ask-converge.mjs#1": ["NUMBER", "what the attempts mean; one line already"],
   "scripts/lib/ask-converge.mjs#2": ["NUMBER", "why the wait comes first; one line already"],
@@ -268,22 +224,14 @@ not-yet-converged reading continues the loop.`,
   "scripts/build-template-refs.mjs#0": [
     "CONTRACT",
     "the third usage state, the split and the observation boundary; the photograph count goes to the history document",
-    `Scans the repository source for asset references into a committed manifest.
+    `Scans the repository source for asset references into a committed manifest, which is how the
+media library answers "does the SITE ITSELF place this".
 
   npm run build:template-refs
 
-THE THIRD USAGE STATE DEPENDS ON THIS FILE. Two mechanisms answer "does a POST cite this" and
-nothing answered "does the SITE ITSELF place this", so assets referenced by a data module read
-as unreferenced next to a delete button.
-
-Every decision lives in a pure, unit-tested module; this file touches a filesystem and nothing
-else, because a scan that decides things in the same function that walks directories cannot be
-tested without a repository.
-
 BOUNDARY: it reads SOURCE TEXT and matches asset paths as literal strings, so a constructed path
-reads as unattached, which is a false negative in the safe direction: this under-claims usage
-and never invents it. The copy on the page says "no reference found" rather than "unused"
-precisely because of this line.`,
+reads as unattached. That is a false negative in the safe direction: this under-claims usage and
+never invents it, which is why the page says "no reference found" rather than "unused".`,
   ],
   "scripts/build-template-refs.mjs#1": [
     "WHY",
@@ -329,11 +277,8 @@ worst shape a build step can have.`,
     "why split out and why apiBase is injectable",
     `Reading GitHub's verdict on a commit, and deciding whether it may deploy.
 
-Split out of ship so the DECISION is reachable without running one: the alternative was proving
-this by shipping three times, including deploying a commit whose CI had deliberately been made
-to look failed, and a gate that can only be tested by doing the dangerous thing does not get
-tested. \`apiBase\` is injectable for the same reason, so the unreachable-host path runs against
-a host that really is unreachable rather than against a mock of the failure it detects.
+BOUNDARY: the decision is pure and the fetch decides nothing, so the refusal paths can be driven
+by tests rather than by shipping a commit whose CI had deliberately been made to look failed.
 
 @see scripts/ship.mjs
 @see test/ci-status.test.mjs`,
@@ -380,14 +325,9 @@ caller is told the repo does not exist. A token is REQUIRED, not an optimisation
     "why hand-rolled, why every function throws and what self-tests them",
     `Minimal readers for the two binary container formats the icon suite ships.
 
-Hand-rolled on purpose: the repo's existing libraries answer dimensions and ENCODE PNG, and
-nothing here needs a decoder in the general sense, the gate asking for a header and one corner
-pixel. Every function throws rather than returning a sentinel, because a gate that receives null
-from a parser and carries on passes on a file it could not read.
-
-These readers are SELF-TESTED against files produced by a third-party encoder, not against
-fixtures built on the same assumptions: a parser and its test agreeing about a format both got
-wrong is not evidence.`,
+BOUNDARY: not a decoder in the general sense. The gate asks for a header and one corner pixel,
+both reachable without decompressing an image, and every function throws rather than returning a
+sentinel, because a gate that carries on past a null passes on a file it could not read.`,
   ],
   "scripts/lib/raster.mjs#1": ["CONTRACT", "what the table holds; one line already"],
   "scripts/lib/raster.mjs#3": [
@@ -424,9 +364,10 @@ to get wrong. A deliberate limit, not an unfinished decoder.
   "scripts/lib/content.mjs#0": [
     "CONTRACT",
     "the split and what it buys",
-    `Node adapter for the shared markdown pipeline. The pipeline itself lives where the Worker can
-import it too, and everything Node-only stays here; the editor supplies its own resolver over
-HTTP, so both callers render identical HTML from identical bytes.`,
+    `Node adapter for the shared markdown pipeline.
+
+BOUNDARY: the pipeline itself lives where the Worker can import it too and everything Node-only
+stays here, so the two callers differ in how they read a file and in nothing else.`,
   ],
   "scripts/lib/content.mjs#1": ["CONTRACT", "what it resolves from; one line already"],
   "scripts/lib/content.mjs#2": [
@@ -474,25 +415,14 @@ without a placeholder, exactly as it did before this existed.`,
   "scripts/build-enhance.mjs#0": [
     "CONTRACT",
     "the boundary, why prebuilt and why self-contained is asserted; the dates and the measured serve go to the history document",
-    `Bundles every module in app/enhance/ into a self-contained asset.
+    `Bundles every module in app/enhance/ into a self-contained asset, because a \`?url\` import copies
+bytes verbatim and the thing it points at has to be finished JavaScript.
 
   npm run build:enhance
 
 BOUNDARY: it builds and then reads back its OWN output, proving each bundle is import-free and
 parses. It cannot prove the app build serves these files, which \`check:page-payload\` asserts,
-and it cannot see the wire.
-
-WHY PREBUILT: the public plane does not hydrate, so what loads an enhancement is a nonced module
-script whose URL is a \`?url\` import. That copies bytes VERBATIM with no compilation, so the
-thing it points at has to be finished JavaScript before the app build runs.
-
-EACH BUNDLE IS SELF-CONTAINED, ASSERTED RATHER THAN HOPED: a surviving import would make the
-browser fetch a sibling by relative URL against a directory where only hashed names exist, so
-the enhancement dies at runtime while the build stays green. Dynamic imports are inlined
-instead, which costs one bundle the other's bytes and buys it working under this rule.
-
-The output directory is gitignored and is DELETED and rebuilt on every run, so a renamed module
-cannot leave a stale bundle behind for a \`?url\` import to keep serving.`,
+and it cannot see the wire.`,
   ],
   "scripts/build-enhance.mjs#1": [
     "CONTRACT",
@@ -519,24 +449,12 @@ no-imports rule below.`,
   "scripts/require-clean-tree.mjs#0": [
     "CONTRACT",
     "the boundary, why a refusal rather than an archive build and why no override; the audit item goes to the history document",
-    `Refuses a deploy from a working tree that is not clean. Wired as \`predeploy\`.
+    `Refuses a deploy from a working tree that is not clean, because the build reads the WORKING TREE
+rather than HEAD. Wired as \`predeploy\`.
 
 BOUNDARY: it reads \`git status --porcelain\` and nothing else. It proves the tree matches HEAD;
-it does NOT prove HEAD is pushed, or that the deployed Worker corresponds to the commit it names.
-
-WHY IT EXISTS: the build reads the WORKING TREE, so an uncommitted edit ships and the deployed
-Worker corresponds to no commit anywhere. Ship refused that from its first version, but ship is
-a wrapper and the primitive it wraps refused nothing.
-
-WHY NOT BUILD FROM AN EXTRACTION OF HEAD: the wrangler config is gitignored, so an extraction
-carries only the example, whose ids are placeholders. Deploying from a pure archive would
-deploy the EXAMPLE bindings, or require copying the real config back in, which reintroduces a
-working-tree dependency for the one file where it is most dangerous. So the smaller fix wins:
-the tree must equal HEAD, and then building the tree IS building HEAD.
-
-NO OVERRIDE FLAG: an escape hatch is a bypass people learn to type, and the whole finding is
-that a bypass existed. Anyone who means it can invoke wrangler directly, which is an explicit
-act outside the wrapper.`,
+it does NOT prove HEAD is pushed, or that the deployed Worker corresponds to the commit it
+names.`,
   ],
   "scripts/require-clean-tree.mjs#2": [
     "WHY",
@@ -547,18 +465,12 @@ both mean the tree cannot be compared to anything, and "I could not check" must 
   "scripts/lib/retry.mjs#0": [
     "CONTRACT",
     "the class, why it prints first and the reads-only rule; the five incidents, their errors and the dates go to the history document",
-    `One retry, for Cloudflare READ paths only.
+    `One retry, for Cloudflare READ paths only, wrapping a rejection AND a timeout because the class
+has appeared as both a fast death and a hang.
 
-THE CLASS, measured across four gates, wearing TWO OPPOSITE SYMPTOMS: some died in seconds and
-one HUNG, taking a tier run past its timeout and clean on retry. A hang and a five-second death
-are the same class, which is why this wraps both a rejection AND a timeout.
-
-IT PRINTS BEFORE IT RETRIES, and that is the load-bearing part: one incident reported a count of
-failures with the failing gate's NAME never captured before the retry, so it could not be
-diagnosed. A silent retry converts a diagnosable transient into an invisible one.
-
-READS ONLY. Never wrap a write: a retried write is a write that may have landed twice. A SECOND
-failure propagates unchanged, so the gate fails exactly as it would have without this wrapper.`,
+BOUNDARY: READS ONLY, never a write, a retried write being one that may have landed twice. It
+PRINTS BEFORE IT RETRIES, and a SECOND failure propagates unchanged, so the caller fails exactly
+as it would have without this wrapper.`,
   ],
   "scripts/lib/retry.mjs#1": ["NUMBER", "why generous; one line already"],
   "scripts/lib/retry.mjs#2": ["CONTRACT", "the signature; type annotation only"],
@@ -568,7 +480,11 @@ failure propagates unchanged, so the gate fails exactly as it would have without
     `\`fn\` may be synchronous, as the wrangler spawns are, and normalising both here avoids forcing
 every call site to become async.`,
   ],
-  "scripts/lib/retry.mjs#5": ["WHY", "named before the retry; one line already", `NAMED AND PRINTED BEFORE THE RETRY: an undiagnosable transient is worse than a visible one.`],
+  "scripts/lib/retry.mjs#5": [
+    "WHY",
+    "named before the retry; one line already",
+    `NAMED AND PRINTED BEFORE THE RETRY: an undiagnosable transient is worse than a visible one.`,
+  ],
   "scripts/lib/retry.mjs#6": ["CONTRACT", "the second failure propagates; one line already"],
   "scripts/fetch-cited-by.mjs#0": [
     "CONTRACT",
@@ -578,18 +494,9 @@ every call site to become async.`,
   node scripts/fetch-cited-by.mjs          report only
   node scripts/fetch-cited-by.mjs --write  update the artifact
 
-WHY A COMMITTED ARTIFACT AND NOT A RUNTIME FETCH, three ways. It is tens of kilobytes across the
-corpus, so fetching per request would put a third-party round trip in front of a page that is
-otherwise a pure function of committed data. It needs a LIST query, which is metered far above a
-singleton lookup, and the ruling says singleton lookups only, so this is the one deliberate
-departure and doing it at build keeps the departure small. And it is EVIDENCE, which carries a
-date the page states.
-
-NOT A GATE, AND NEVER RUN BY ONE: a gate that fetches a third party is red on their bad day
-rather than on ours. A human runs it, the result is committed, and the gate checks the file.
-
-NEWEST FIRST, CAPPED: the artifact records the true total beside the truncated list, so the page
-can say how many of how many rather than implying it has them all.`,
+BOUNDARY: NOT A GATE, AND NEVER RUN BY ONE, because a gate that fetches a third party is red on
+their bad day rather than on ours. A human runs it, the result is committed with the date it was
+read, and the gate checks the committed file.`,
   ],
   "scripts/fetch-cited-by.mjs#1": ["NUMBER", "the ruled cap and its shape consequence; one line already"],
   "scripts/fetch-cited-by.mjs#2": ["CONTRACT", "what identifies the caller; one line already"],
@@ -613,17 +520,9 @@ the artifact carries one form.`,
 
   npm run build:publication-twins
 
-A BUILD PRODUCT, gitignored, on the same terms as the content artifact: it is derived entirely
-from tracked sources, so committing it would make every corpus change a two-file change only a
-machine running this script could complete. It runs where the content build runs.
-
-The twins are ASSETS rather than route output, and the reasoning is on the module that renders
-one.
-
-IT PRUNES, AND THAT IS NOT TIDINESS: a gitignored file nothing deletes outlives its reason. A
-paper removed, or a DOI corrected, leaves a twin this script would never overwrite, the gate
-would never compare and the next deploy would upload, so every file directly under the directory
-that this run did not write is removed. Directly under, never recursive: the subdirectories hold
+BOUNDARY: a gitignored BUILD PRODUCT, derived entirely from tracked sources, and it PRUNES: a
+paper removed or a DOI corrected leaves a twin this script would never overwrite and the next
+deploy would upload. Directly under the directory, never recursive, the subdirectories holding
 the PDFs.`,
   ],
   "scripts/build-publication-twins.mjs#2": [
@@ -658,18 +557,9 @@ compare.`,
     "why it takes a name and why absent is null; the two callers go to the history document",
     `Reads ONE named value out of the gitignored \`.dev.vars\`.
 
-Two operator credentials are read by Node programs rather than by the Worker. Neither is a
-wrangler secret, because neither is read by deployed code; both are machine-local operator
-credentials, which is what \`.dev.vars\` already is.
-
-**IT TAKES A NAME AND RETURNS ONE STRING. It never returns the file, never returns a map, and
-never logs a value.** A loader that returned every key would put credentials this caller has no
-business holding into its scope, and the first one interpolated into an error message would be
-in a log.
-
-ABSENT IS A NAMED ANSWER, NOT AN EMPTY STRING: it returns null and the CALLER decides what that
-means, and the two callers decide differently. Returning an empty string would let a caller send
-an empty bearer token and read the API's refusal as a site problem.`,
+BOUNDARY: **IT TAKES A NAME AND RETURNS ONE STRING. It never returns the file, never returns a
+map, and never logs a value.** Absent is a named answer rather than an empty string: it returns
+null and the CALLER decides what that means, and the two callers decide differently.`,
   ],
   "scripts/lib/dev-vars.mjs#1": ["CONTRACT", "one path, named once; one line already"],
   "scripts/lib/dev-vars.mjs#2": ["CONTRACT", "the signature; type annotation only"],
@@ -690,21 +580,12 @@ whitespace. A \`#\` inside quotes is part of the value.`,
   "scripts/lib/sqlite-tables.mjs#0": [
     "CONTRACT",
     "the three rules and why each is derived; the three call sites and the date go to the history document",
-    `Classifying \`sqlite_master\` rows into virtual, shadow and real tables.
+    `Classifying \`sqlite_master\` rows into virtual, shadow and real tables. ONE ENUMERATOR RULE, for
+the callers that read a live database and the one that replays the migrations into memory.
 
-ONE ENUMERATOR RULE, TWO SOURCES: three callers were applying the same classification
-independently over rows read from a live database and from migrations replayed into memory. The
-rules were already identical and the comments said so, but identical because two people wrote
-them the same way is the shape this repo keeps converting into one module with several readers.
-The classifier is source-agnostic: it takes rows, not a database.
-
-VIRTUAL: the DDL says so, never a name list, because the set has grown twice and a hardcoded
-list is how the next one gets missed. SHADOW: the name is prefixed with a virtual table's name,
-the per-index set differing by fts5 version, so the prefix is the durable rule. INTERNAL: the
-reserved prefix SQLite keeps for its own bookkeeping.
-
-Platform bookkeeping is NOT handled here: it is a property of where the rows came from rather
-than of SQLite, so it stays with the caller that reads a live database.
+BOUNDARY: source-agnostic, so it takes rows rather than a database, and each class is derived
+from the DDL or the naming rule rather than from a list. Platform bookkeeping is NOT handled
+here, being a property of where the rows came from rather than of SQLite.
 
 @param {{ name: string, sql: string | null }[]} rows
 @returns {{ virtual: string[], shadow: string[], real: string[] }}`,
@@ -723,15 +604,11 @@ the content table, which is why the health checks count the docsize shadow inste
   "scripts/lib/wrangler-config.mjs#0": [
     "CONTRACT",
     "the rule and why the real file; the prune's arrival goes to the history document",
-    `Reads resource names out of the real wrangler config.
+    `Reads resource names out of the real wrangler config, because nothing that talks to a bucket may
+name one in a string literal: a stale literal aims a DELETE at whatever still answers to it.
 
-**Nothing that talks to a bucket may name one in a string literal.** That was latent while the
-card builder only ever PUT objects and became live when the prune landed, because a stale
-literal would then aim a DELETE at whatever bucket still answered to that name. Deriving it
-makes a rename a rename everywhere, and a bucket that no longer exists an immediate error.
-
-This reads the REAL file, because the example carries placeholder ids and a build script needs
-the truth; \`check:config\` is what keeps the two describing the same binding surface.`,
+BOUNDARY: it reads the REAL file, the example carrying placeholder ids that a build script
+cannot use, and \`check:config\` is what keeps the two describing the same binding surface.`,
   ],
   "scripts/lib/wrangler-config.mjs#1": [
     "CONTRACT",
@@ -773,10 +650,10 @@ typo cannot become \`undefined\` interpolated into a wrangler command line.
   "scripts/lib/artifact.mjs#0": [
     "CONTRACT",
     "one writer and where it moved; the arc goes to the history document",
-    `The on-disk shape of the local content build product. ONE writer, the content build, whose
-output is a gitignored local file the sync, the gates and the asset builders read. The editor
-renders straight into D1 instead, which is why this lives beside the scripts rather than in the
-app: the Worker imports nothing from it any more.`,
+    `The on-disk shape of the local content build product, with ONE writer.
+
+BOUNDARY: it lives beside the scripts rather than in the app because the Worker imports nothing
+from it: the editor renders straight into D1 instead of through this shape.`,
   ],
   "scripts/lib/artifact.mjs#1": ["CONTRACT", "the signature; type annotation only"],
   "scripts/lib/artifact.mjs#2": [

@@ -17,14 +17,8 @@ export default {
   npm run check:diagrams
 
 BOUNDARY: the contract, asset coverage and a colour audit over committed bytes. It does NOT run
-mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes.
-\`check:content\` catches a REFERENCE that drifted; what it cannot catch is a key that changed
-while the asset did not, which is a broken image in the middle of an article and invisible to
-every other gate, the artifact being internally consistent.
-
-  1. The contract, every rule paired with its negative.
-  2. Coverage, both directions between referenced keys and assets on disk.
-  3. Colour, through the same module the build audits with.`,
+mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes as
+long as its key, its alt and its colours are right.`,
   ],
   "scripts/check-diagrams.mjs#3": ["CONTRACT", "what it asserts; one line already"],
   "scripts/check-diagrams.mjs#7": ["CONTRACT", "section marker, rule padding cut", `1. The contract`],
@@ -98,23 +92,13 @@ MEASURED BY RUNNING IT, never summed.`,
     "the defect a written prediction did not prevent, both directions, what is not here, the two import forms and the one exclusion; the quoted notes and the sheet names go to the history document",
     `Gate: the design sync's sheet list matches the stylesheets the public plane actually loads.
 
-THE DEFECT, AND THE NOTES PREDICTED IT IN WRITING: they said the list is hand-maintained and
-should be diffed against the imports, and nobody ran that diff, so a sheet imported by the root
-module never reached the canvas and it DEFINES the grid class the design agent was redesigning
-against. A prediction written in prose is a prediction nothing re-checks.
+  npm run check:design-sheets
 
-BOTH DIRECTIONS, because one is silent: a sheet SYNCED but no longer LOADED tells the canvas
-about a surface that no longer exists. WHAT IS DELIBERATELY NOT HERE: a copy of the sheet list,
-parsed out of its one owner (hard rule 17), a mirror being the failure being gated. CASCADE
-ORDER is checked for the root-imported sheets only. COMMENTS ARE STRIPPED BEFORE MATCHING, and
-not for hygiene: a stylesheet carries prose about an \`@import\` it removed and the converter's
-own validator failed that sentence twice, which is hard rule 10, strip comments before matching.
-
-TWO WAYS A SHEET REACHES A READER, and the first draft knew only one: a bare import joins the
-bundled cascade, a side-load ships the sheet as its own file, and only the first has a POSITION.
-THE ONE EXCLUSION IS THE NOTES', NOT THIS FILE'S, named as ONE path rather than a prefix,
-because a pattern excludes everything that ever matches it, which is hard rule 10's enumerate
-inside exclusions.`,
+BOUNDARY: it reads the list, the root module, the routes and the stylesheets they name, all off
+disk and both directions, and nothing here restates the list, whose one owner hard rule 17
+names. Comments are stripped before matching, which is hard rule 10: a stylesheet carries prose
+about an \`@import\` it removed. The one exclusion is named as ONE path rather than a prefix,
+which is hard rule 10 again, enumerate inside exclusions.`,
   ],
   "scripts/check-design-sheets.mjs#1": [
     "CONTRACT",
@@ -160,20 +144,14 @@ constrained here.`,
   "scripts/build-assets.mjs#0": [
     "CONTRACT",
     "why a Worker cannot list its assets, why the placeholder is here and why D1's is not a duplicate; the finding reference and the dimensions precedent go to the history document",
-    `Enumerates \`public/\` into a committed manifest.
+    `Enumerates \`public/\` into a committed manifest, because a Worker cannot list its own static
+assets.
 
   npm run build:assets
 
-**This exists because a Worker cannot list its own static assets.** The binding has one method,
-so it can serve any path and discover none. Bytes, mime and dimensions are derived by the
-rebuild from the actual file, so putting them here would be a second copy to go stale.
-
-IT CARRIES ONE DERIVED VALUE, THE BODY PLACEHOLDER: the rendered HTML is a GATED ARTIFACT, so
-what the Worker bakes in the Node build must bake in too, from a clone with no bindings, and a
-committed artifact both resolvers read is the only shape that satisfies both. **The placeholder
-D1 holds for the same file is NOT this one, and that is not a duplicate fact**: the rebuild
-derives its own for the admin library, under rule 18. UPLOADED KEYS ARE EXCLUDED, here and in
-the plugin: an uploaded object is not in the repository.`,
+BOUNDARY: it carries the paths and ONE derived value, the body placeholder the rendered HTML
+bakes in. Bytes, mime and dimensions are the rebuild's, and the placeholder D1 holds for the
+same file is a different derivation for a different consumer.`,
   ],
   "scripts/build-assets.mjs#1": [
     "CONTRACT",
@@ -236,19 +214,9 @@ build instead of failing inside a Worker where the symptom is a missing row.`,
 
   npm run check:hook-syntax
 
-WHY IT EXISTS: a hook was broken twice by an APOSTROPHE. The checkers are embedded as
-SINGLE-QUOTED strings, so one apostrophe ends the string, hands the remainder to the shell, and
-the hook refuses every call in the session. A broken hook fails in the WORST direction: the
-session stops working, or the guard silently stops guarding, and nothing else reads the hook
-directory as CODE.
-
-WHAT IS ASSERTED: a parse-only shell check on every hook, and that every embedded checker
-COMPILES. Both interpreters are RESOLVED rather than named, neither being on PATH in the shell
-that runs ship. BOUNDARY: **PARSING IS NOT BEHAVING.** One hook has its behaviour replayed
-elsewhere; the others have their behaviour checked nowhere, which is a real gap. It also cannot
-see whether a hook is REGISTERED, which hard rule 15 puts off limits to an agent.
-
-FAILS CLOSED: no hooks found, no interpreter, or an unreadable file.`,
+BOUNDARY: **PARSING IS NOT BEHAVING.** A hook that parses can still block the wrong command,
+allow the right one, or read the wrong field off the payload, and it cannot see whether a hook
+is REGISTERED, which hard rule 15 puts off limits to an agent.`,
   ],
   "scripts/check-hook-syntax.mjs#2": ["CONTRACT", "section marker, rule padding cut", `the scope, asserted`],
   "scripts/check-hook-syntax.mjs#4": ["CONTRACT", "section marker, rule padding cut", `interpreters, first`],
@@ -309,13 +277,14 @@ hook rewritten to call its interpreter a fourth way contributing nothing.`,
   "scripts/build-publications.mjs#0": [
     "CONTRACT",
     "the inputs, that it is deterministic and that the artifact is generated; the moved flag goes to the history document",
-    `Generates the publications module from the two source files.
+    `Generates the publications module from the canonical bibliographic record and the site-only
+fields keyed by DOI.
 
   npm run build:publications
 
-Inputs: the canonical bibliographic record, and the site-only fields keyed by DOI as deposited.
-Deterministic and offline. The generated module is a build artifact: do not hand-edit it, the
-gate importing \`generate()\` from here and failing on drift.`,
+BOUNDARY: deterministic and offline, and the network refresh that produces those two files
+lives outside this repo. The generated module is a build artifact: the gate imports \`generate()\`
+from here and fails when the committed copy has drifted.`,
   ],
   "scripts/build-publications.mjs#1": [
     "CONTRACT",
@@ -388,14 +357,11 @@ about, and the gate would pass by repairing its own subject.`,
   "scripts/lib/r2.mjs#0": [
     "CONTRACT",
     "why one implementation, why a proxy and why the flag stays off the tracked config; the measured object counts go to the history document",
-    `Listing an R2 bucket from a Node build script. ONE implementation, several callers.
+    `Listing an R2 bucket from a Node build script, through the platform proxy because the CLI has
+no \`list\` verb.
 
-**Why a platform proxy and not the CLI.** The CLI has three object verbs and no \`list\`, so the
-one thing a reconciler cannot do without is the one thing it does not offer. The proxy hands a
-Node script the same binding the Worker gets, over wrangler's existing OAuth.
-
-**The remote flag goes on the BINDING and nowhere else**, and the config carrying it is built
-here and thrown away, so the flag cannot leak into the real config and point local development
+BOUNDARY: the remote flag goes on the BINDING and nowhere else, and the config carrying it is
+built here and thrown away, so it cannot leak into the real config and point local development
 at production R2.`,
   ],
   "scripts/lib/r2.mjs#1": [
@@ -473,22 +439,10 @@ a caller states how many objects it expects to still be there:
 
   node scripts/measure/deps.mjs [--json]
 
-NOT A GATE, AND DELIBERATELY NOT IN \`scripts/\`, the runner deriving the gate list from the check
-scripts. It exists so the next dependency session re-measures rather than re-reads a stale table.
-
-WHAT EACH COLUMN IS MEASURED WITH, the methods differing in strength:
-
-  pin          package.json, verbatim.
-  kind         which block it sits in, NOT where it is used; the two disagreeing is a finding.
-  transitive   distinct packages reachable in the REAL install, not what the lockfile resolves.
-  disk         the package's OWN directory, NOT its unique subtree: the installer hoists.
-  used         the first import site found, with file and line, or NOTHING IMPORTS IT.
-  reach        derived from \`used\`: does any importer ship in the Worker.
-
-WHY THERE IS NO PER-PACKAGE BYTE COLUMN: there is no honest way to fill one from a single build
-here, and a number in that column would be believed. The only precise method is a size-by-import
-diff, which is over an hour at this dependency count, so this reports REACHABILITY, which is the
-question that decides a lean-out: a measured zero, not an unknown.`,
+BOUNDARY: it reports REACHABILITY rather than bytes, because the only precise per-package byte
+method is a size-by-import diff over the whole dependency count, and a number in that column
+would be believed. NOT A GATE, and deliberately not in \`scripts/\`, the runner deriving its gate
+list from what is there.`,
   ],
   "scripts/measure/deps.mjs#1": [
     "WHY",
@@ -531,8 +485,12 @@ version reported.`,
   "scripts/build-content.mjs#0": [
     "CONTRACT",
     "what it writes, why gitignored and who proves it; the artifact-arc reference goes to the history document",
-    `Renders the corpus into the LOCAL build product. Gitignored: git holds markdown, D1 holds the
-only rendered copy, and everything that reads this file runs after a build.`,
+    `Renders the corpus into the LOCAL build product.
+
+  npm run build:content
+
+BOUNDARY: gitignored, because git holds the markdown and D1 holds the only rendered copy;
+everything that reads this file runs after a build.`,
   ],
   "scripts/build-content.mjs#1": ["CONTRACT", "why markdown; one line already"],
   "scripts/build-content.mjs#2": [
