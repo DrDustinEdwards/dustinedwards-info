@@ -1,0 +1,51 @@
+// Replace the third element of named decisions in place, keyed by block id.
+//
+// The old text is read back out of the module itself and matched verbatim in the file source,
+// so a stale or mistyped needle fails loudly rather than writing nothing and reporting success.
+// Every replacement is confirmed by count, and the file is re-imported at the end to prove it
+// still parses before anything downstream reads it.
+//
+//   node scratchpad/retighten.mjs <decisions-file> <file-key> <edits.json>
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const [decisionsPath, fileKey, editsPath] = process.argv.slice(2);
+const abs = join(process.cwd(), decisionsPath);
+const before = (await import(pathToFileURL(abs).href)).default;
+const edits = JSON.parse(readFileSync(editsPath, "utf8"));
+
+let src = readFileSync(decisionsPath, "utf8");
+let done = 0;
+const problems = [];
+for (const [id, next] of Object.entries(edits)) {
+  const key = `${fileKey}#${id}`;
+  const dec = before[key];
+  if (!dec) {
+    problems.push(`${key}: no such decision`);
+    continue;
+  }
+  if (dec.length !== 3 || typeof dec[2] !== "string") {
+    problems.push(`${key}: not a string replacement`);
+    continue;
+  }
+  const tick = String.fromCharCode(96);
+  const old = tick + dec[2] + tick;
+  const hits = src.split(old).length - 1;
+  if (hits !== 1) {
+    problems.push(`${key}: old text found ${hits} times, expected 1`);
+    continue;
+  }
+  src = src.replace(old, tick + next + tick);
+  done += 1;
+}
+
+if (problems.length) {
+  for (const p of problems) console.error(p);
+  console.error(`${problems.length} problems; wrote nothing`);
+  process.exit(1);
+}
+
+writeFileSync(decisionsPath, src, "utf8");
+const after = (await import(pathToFileURL(abs).href + `?v=${Date.now()}`)).default;
+console.log(`${fileKey}: rewrote ${done} of ${Object.keys(edits).length}; module re-parses with ${Object.keys(after).length} decisions`);

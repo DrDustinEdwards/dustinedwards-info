@@ -11,14 +11,17 @@ const src = readFileSync(`scratchpad/code-history-before-wave2/${flat(fileKey)}`
 // A run of three, not six: check-page-payload has separators padded `---- label -` and
 // `---- label ---`, and a six-dash threshold silently skipped two of nine while reporting
 // "7 of 7", which is a clean sweep over a scope that was quietly narrowed.
+// BOTH COMMENT KINDS. check-policy writes its separators as `// --- label ---`, and a
+// block-only pattern left all seven of them at full width while reporting a count that only
+// ever counted what it had already matched. A scan states which spellings it covers.
 const labels = new Map();
 commentBlocks(src).forEach((b, id) => {
-  if (!/^\/\*+\s*-{3}/.test(b.text)) return;
-  // Strip the comment markers and the run of dashes on either side, keep the label verbatim.
+  if (!/^(?:\/\*+|\/\/)\s*-{3}/.test(b.text)) return;
   // Strip runs of two or more, then a lone dash left at either end: one separator pads as
   // `---- label -`, and a single trailing dash reads as a typo in the converted label.
   const label = b.text
     .replace(/^\/\*+/, "")
+    .replace(/^\/\//, "")
     .replace(/\*\/$/, "")
     .replace(/-{2,}/g, "")
     .trim()
