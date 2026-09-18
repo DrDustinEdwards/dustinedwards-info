@@ -41,6 +41,14 @@ for (const [id, next] of Object.entries(edits)) {
     problems.push(`${key}: old text found ${hits} times, expected 1`);
     continue;
   }
+  // A citation split across a line break resolves to nothing: the counter and check:invariants
+  // section 15 both match on one line. Six instances in this wave, every one introduced by a
+  // rewrite and every one caught only after the write. Catching it here costs one comparison.
+  const wrapped = [...next.matchAll(/\bhard\s*\n\s*rules?\s+\d+/gi)];
+  if (wrapped.length) {
+    problems.push(`${key}: citation wrapped across a line break (${JSON.stringify(wrapped[0][0])})`);
+    continue;
+  }
   src = src.replace(old, tick + escape(next) + tick);
   done += 1;
 }
