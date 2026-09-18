@@ -8,12 +8,12 @@ export default {
   "scripts/check-headers.mjs#0": [
     "CONTRACT",
     "the boundary, the two-sources design and the fail-closed rule; the CI aside and the restatement cut",
-    `Gate over the security headers the Worker stamps on every response: npm run check:headers.
+    `Gate over the security headers the Worker stamps on every response.
 
-BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is hard rule 7
-for this file; the wire is verify-live's. Two independent sources argue, the expected set
-transcribed and the actual parsed, and two values are deliberately not the restrictive choice.
-FAILS CLOSED on a missing constant.`,
+  npm run check:headers
+
+BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is this
+file's reading of hard rule 7; the wire is verify-live's.`,
   ],
   "scripts/check-headers.mjs#1": ["CONTRACT", "type annotation plus the not-read-from-source rule; two lines already"],
   "scripts/check-headers.mjs#3": [

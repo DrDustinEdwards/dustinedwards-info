@@ -9,16 +9,13 @@ export default {
   "scripts/check-fonts.mjs#0": [
     "CONTRACT",
     "the hole, what it asserts, why the baseline and the boundary; the type-scale motivation, the opsz range and the overlap paragraph go to the history document",
-    `Gate over the self-hosted fonts: every \`@font-face\` DECLARATION must be true of the BINARY it
-names.
+    `Gate: every \`@font-face\` DECLARATION must be true of the BINARY it names.
 
-THE HOLE THIS FILLS: \`font-weight: 100 900\` is a claim about a file and nothing checked it.
-These faces were committed from a CDN, so they have no upstream to compare against, and a
-browser CLAMPS an out-of-range axis value SILENTLY. Per block that names a file: weight range
-against \`wght\` EXACTLY, style against the italic evidence, stretch against \`wdth\`, family
-against the file's name table, and every axis requested anywhere must EXIST and CONTAIN the
-value. THE BASELINE, because all of that survives a re-subset: each binary carries a pinned
-digest, and \`--update\` rewrites it, deliberately loud. BOUNDARY: it reads DISK, never the wire.`,
+  npm run check:fonts [-- --update]
+
+BOUNDARY: it reads DISK, never the wire. Per block that names a file it compares the declared
+weight range, style, stretch and family against the file's own tables, and pins each binary by
+digest so a re-subset with its axes intact cannot pass.`,
   ],
   "scripts/check-fonts.mjs#1": [
     "CONTRACT",
@@ -145,12 +142,7 @@ the gate already knows. MEASURED ON A PLAIN RUN, and that distinction cost a wro
   npm run check:backup -- --remote
 
 BOUNDARY: it proves the export PATH works and that the table list matches the migrations. It
-never restores. \`wrangler d1 export\` does not work on this database, refusing while any fts5
-virtual table exists, so the documented path is per table and this keeps that claim honest.
-THE TABLE LIST IS DERIVED and compared BOTH ways, a list that stops covering a new table being
-the failure this guards, and every export is checked for real ROWS. IT ALSO PULLS THE MEDIA
-OBJECTS to the same root: both bucket copies live in one account. \`--remote\` only, and it says
-so rather than counting zero as a pass.`,
+never restores, so it cannot tell you the dump would reconstruct the database.`,
   ],
   "scripts/check-backup.mjs#1": [
     "WHY",
@@ -309,13 +301,9 @@ objects. THE FLOOR IS THE LIST, NOT A CONSTANT: downloaded against what R2 liste
     "the two kill shapes, why a registry and not a sweep, what the port probe adds and the pid-reuse rule; every process count goes to the history document",
     `Killing a gate's long-running children, and clearing the ones a kill left behind last time.
 
-THE DEFECT: \`check:browser\` starts a preview server and a browser, cleaned up on every ORDERLY
-exit and neither on a hard kill, which on Windows is not deliverable as a signal. TWO KILL
-SHAPES LEAVE DIFFERENT WRECKAGE: kill the gate node and the preview side survives holding its
-port; kill the wrappers above it and everything stands, self-clearing only if the orphan is
-allowed to finish. WHY A REGISTRY AND NOT A SWEEP: scanning every process is too slow on
-Windows and "looks like ours" gets to close a stranger's tabs when it is wrong. PID REUSE IS
-THE WHOLE SAFETY PROBLEM, so the live command line is read first and must still match.`,
+BOUNDARY: a pid in the registry is a claim that the process WAS ours, and Windows reuses pids,
+so the live command line is read first and must still match. Nothing here kills on a pid alone,
+and a listing that cannot be taken leaves every entry untouched.`,
   ],
   "scripts/lib/child-processes.mjs#1": [
     "CONTRACT",

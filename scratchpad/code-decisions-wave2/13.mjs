@@ -12,17 +12,13 @@ export default {
   "scripts/check-hook-scope.mjs#0": [
     "CONTRACT",
     "why a scope change is the dangerous edit, why the cases are paired, the boundary and why the interpreter is resolved; the ruling number, the ENOENT run and the deleted gate go to the history document",
-    `Gate: the deploy hook blocks a deploy HERE and allows one elsewhere.
+    `Gate: the deploy hook blocks a deploy HERE and allows one elsewhere, which is hard rule 16's
+ship contract seen from the hook's side.
 
   npm run check:hook-scope
 
-WHY IT EXISTS: the hook was scoped to this repo after it refused a deploy in a sibling repo,
-which hard rule 16 has nothing to say about. A SCOPE CHANGE TO A GUARD IS THE MOST DANGEROUS
-KIND OF EDIT THERE IS: the failure is SILENT and permissive, and the only symptom is a deploy
-that should have been refused going through. So both directions are replayed against the REAL
-hook, and EVERY LOOSENING IS PAIRED WITH A CONTROL. BOUNDARY: it does NOT prove the harness
-invokes the hook at all, which is the settings file's business. THE INTERPRETER IS RESOLVED,
-NOT NAMED, or this is green in every session whose harness supplies one and ENOENT under ship.`,
+BOUNDARY: every case drives the REAL hook with a REAL payload and reads its exit code, but it
+does NOT prove the harness invokes the hook at all, which is the settings file's business.`,
   ],
   "scripts/check-hook-scope.mjs#2": [
     "WHY",
@@ -143,9 +139,11 @@ being a fixed enumeration of the ruling's own cases.`,
     "CONTRACT",
     "what it is for and why check:contrast keeps its own copy",
     `Reads the ratified colour tokens back out of the stylesheet that ships, so anything needing a
-colour at BUILD time resolves it here rather than restating a hex. \`check:contrast\` deliberately
-keeps its own copy of this parsing: it is the gate whose design is that two independent sources
-argue, so sharing a reader would give the palette one implementation to be wrong in.`,
+colour at BUILD time resolves it here rather than restating a hex.
+
+BOUNDARY: \`check:contrast\` deliberately keeps its own copy of this parsing, being the gate whose
+design is that two independent sources argue, so sharing a reader would give the palette one
+implementation to be wrong in rather than two to disagree.`,
   ],
   "scripts/lib/tokens.mjs#1": [
     "CONTRACT",
@@ -253,20 +251,12 @@ comparison reports colours missing from output that carries them.
   "scripts/check-charts.mjs#0": [
     "CONTRACT",
     "the boundary, the four assertions and the scope note; the shiki incident and the corpus-gate aside go to the history document",
-    `Gate for the chart directive.
+    `Gate for the chart directive: determinism, Node-versus-Worker parity and the emitted contract.
 
-BOUNDARY: determinism, Node-versus-Worker parity and the emitted contract. It bundles the chart
-module ALONE and never looks at a chart in a browser, so nothing here sees whether one is
-legible or correctly scaled.
+  npm run check:charts
 
-  1. DETERMINISM IN-PROCESS. Every fixture rendered many times must yield exactly one output.
-  2. DETERMINISM ACROSS PROCESSES, module-level state and hash order only showing up there.
-  3. NODE VERSUS WORKER PARITY, byte-identical or the editor commits HTML the next build will
-     not reproduce. The Worker half runs the SAME module under real workerd.
-  4. THE DIRECTIVE CONTRACT, every rule paired with its validation failure.
-
-SCOPE NOTE: the parity run deliberately does NOT re-bundle the markdown pipeline, which would
-drag in a WASM module and end up testing the bundler's wasm handling.`,
+BOUNDARY: it bundles the chart module ALONE and never looks at a chart in a browser, so nothing
+here sees whether one is legible or correctly scaled.`,
   ],
   "scripts/check-charts.mjs#1": ["CONTRACT", "where the number comes from; one line already"],
   "scripts/check-charts.mjs#2": ["CONTRACT", "where the number comes from; one line already"],
@@ -361,13 +351,8 @@ MEASURED BY RUNNING IT, never summed.`,
     "why it is extracted, what five 200s are blind to and why the body rather than the status; the schedule aside goes to the history document",
     `Ship's readiness verdict: does the health endpoint say this deploy is healthy.
 
-EXTRACTED because the decision is pure and \`node:test\` can drive every branch: a refusal path
-that has never been executed is not a refusal path.
-
-WHAT THIS IS FOR: ship polled a page for five 200s and never asked the health endpoint. Five
-200s prove the Worker booted and the rollout finished, and are blind to every invariant this
-site watches, all of which serve that page with a 200. THE VERDICT COMES FROM THE BODY, NOT THE
-STATUS LINE, which would make this step depend on an agreement living in a different file.`,
+BOUNDARY: the decision only, pure, so \`node:test\` can drive every branch and a refusal path is
+not one that has never been executed. The reading itself is ship's.`,
   ],
   "scripts/lib/readiness.mjs#2": ["CONTRACT", "the verdict shape; type annotation only"],
   "scripts/lib/readiness.mjs#3": ["CONTRACT", "one line already; kept"],
@@ -457,14 +442,9 @@ KEY, naming the step, which is the test to apply before adding another.`,
 
   node scripts/build-icons.mjs --out <dir>
 
-BOUNDARY: a GENERATOR, not a gate. It asserts nothing about what is already on disk; the
-manifest comparison proves its output is committed and \`check:logo\` proves the output itself.
-WHAT STILL NOTHING SEES: the SHAPE of a rendered raster. An icon whose mark is clipped,
-mirrored or drawn in the wrong purple passes every assertion in this repo.
-
-WHY THIS EXISTS: the shipped icons came from a parametric builder that was never in this repo.
-Path data is VERBATIM from the spec, the same source the component and the fixtures come from,
-so a variation is a rebuild and never a hand edit.`,
+BOUNDARY: a GENERATOR, not a gate. It asserts nothing about what is already on disk, and
+nothing in this repo sees the SHAPE of a rendered raster, so an icon whose mark is clipped,
+mirrored or drawn in the wrong purple passes every assertion here.`,
   ],
   "scripts/build-icons.mjs#1": [
     "CONTRACT",

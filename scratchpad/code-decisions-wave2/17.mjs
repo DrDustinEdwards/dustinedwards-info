@@ -10,17 +10,10 @@ export default {
     "what it is pure over, why it refuses and the three outcomes; the ship window, the migration and the dates go to the history document",
     `Does the deployed database have every migration this repo carries?
 
-PURE: it takes what \`wrangler d1 migrations list\` printed plus the files on disk and returns a
-verdict, which is what lets the RULE be unit tested against recorded output.
-
-Authoring a migration created an obligation nowhere: ship applies none and compares no schema,
-\`check:migrations\` compares FILES to a manifest, and the gate that would have caught it is in
-neither tier ship runs. IT REFUSES RATHER THAN APPLYING, because a deploy that silently mutates
-the production schema is worse than one that stops and ship cannot classify SQL.
-
-THREE OUTCOMES, NOT TWO, because a parser that reads "nothing pending" from output it did not
-understand is the danger: pending names refuse, a positive clean marker proceeds, and anything
-unrecognised refuses as unreadable. An empty match set is never evidence of a clean database.`,
+BOUNDARY: PURE. It reads what \`wrangler d1 migrations list\` printed plus the files on disk and
+returns a verdict, running no command and touching no network, which is what lets the rule be
+tested against recorded output. THREE OUTCOMES, NOT TWO: an empty match set is never on its own
+evidence of a clean database.`,
   ],
   "scripts/lib/pending-migrations.mjs#1": ["CONTRACT", "what it matches; one line already"],
   "scripts/lib/pending-migrations.mjs#2": ["CONTRACT", "what it matches; one line already"],
@@ -87,17 +80,9 @@ migrations" and makes the operator go looking is a refusal that gets worked arou
   node scripts/uptime-ensure.mjs            create or update, write the manifest
   node scripts/uptime-ensure.mjs --dry-run  say what it would do, change nothing
 
-WHY AN EXTERNAL MONITOR AT ALL: everything else watches this site from inside Cloudflare or
-does not reliably run. This is the off-platform half, run by somebody else's computer.
-
-TWO MONITORS, ANSWERING DIFFERENT QUESTIONS. The home page can be served from the edge cache
-long after the Worker stops answering, so it proves REACHABILITY and is a weak liveness signal;
-\`/api/health\` bypasses the cache and runs its checks, so it proves the Worker is ALIVE.
-
-IDEMPOTENT, AND MATCHED BY URL RATHER THAN BY NAME, the URL being what makes two monitors the
-same monitor; a friendly name is a label a human edits. The manifest is written from what the
-API RETURNED, never from what this intended. THE ALERT CONTACT IS RESOLVED, NEVER INVENTED, and
-an account with no active contact REFUSES rather than alerting nobody.
+BOUNDARY: monitors are matched by the URL they point at rather than by name, the manifest is
+written from what the API RETURNED, and an account with no active alert contact REFUSES rather
+than creating a monitor that alerts nobody.
 
 @see scripts/check-uptime.mjs the gate that refuses when this has not run
 @see scripts/lib/uptimerobot.mjs the measured v3 contract`,
@@ -139,17 +124,12 @@ as no diff: a manifest that churned on key order would make every ship a spuriou
   "scripts/lib/mark.mjs#0": [
     "CONTRACT",
     "the seam and why no path data is stated here; the deleted harness and the session history go to the history document",
-    `The site mark, as anything rendering it at build time embeds it.
+    `The site mark, as anything rendering it at build time embeds it: one definition, with the build
+and \`check:logo\` as its two readers.
 
-ONE definition with TWO readers, and the second is the point: nothing in this repo looks at the
-SHAPE of a rendered raster, so a satori or resvg upgrade that resampled the embedded svg would
-pass every gate. This is a real seam rather than an export added for a test: the build builds
-its card from \`markElement()\` and \`check:logo\` renders that same node against the fixture.
-
-NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the Worker
-renders, and the four \`public/*.svg\` are the fixtures \`check:logo\` binds it to in both
-directions. A Node script cannot import the .tsx without a build step, so it reads those
-fixtures: the same source one hop along a link something else keeps honest.`,
+BOUNDARY: NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the
+Worker renders, and this reads the fixtures \`check:logo\` binds that component to, which is the
+same source one hop along a link something else keeps honest.`,
   ],
   "scripts/lib/mark.mjs#1": ["CONTRACT", "what everything else is derived from; one line already"],
   "scripts/lib/mark.mjs#2": [
@@ -211,21 +191,10 @@ rather than believed.
 
   npm run build:stack
 
-The stack half of that page is DERIVABLE, so it is derived: bindings from the wrangler example,
-pinned versions from package.json, migrations from \`drizzle/\`, gates from the \`check:*\`
-scripts. A hand-written reference page goes wrong because manual regeneration means nobody
-regenerates, and a page whose subject is what the site is built from is the densest surface for
-that failure.
-
-THERE IS NO LIST IN THIS FILE. A generator carrying its own copy is a mirror, and a mirror goes
-stale in the direction that fails silently. The binding surface comes from the same enumerator
-\`check:config\` uses, so a kind neither knows about is invisible to both rather than to one.
-
-THE EXAMPLE CONFIG, NOT THE REAL ONE, which is gitignored: a generated artifact that only
-regenerates on one machine is worse than none, and \`check:config\` keeps the example honest.
-
-WHAT IS NOT DERIVED is the prose for each layer, which is a MEASUREMENT rather than a fact about
-the config; \`check:stack\` reconciles the two in both directions.`,
+BOUNDARY: everything is DERIVED and there is no list in this file, so a binding kind the shared
+enumerator does not know is invisible here too. It reads the EXAMPLE config, which is what a
+fresh clone has, and the hand-written prose beside each layer is reconciled by \`check:stack\`
+rather than produced here.`,
   ],
   "scripts/build-stack.mjs#1": [
     "WHY",
@@ -277,16 +246,13 @@ loudly rather than reading undefined.`,
   "scripts/check-search.mjs#0": [
     "CONTRACT",
     "the boundary and the paired-negative rule; the worked example goes to the history document",
-    `Gate for the query parser and rank fusion.
+    `Gate for the query parser and rank fusion, every rule with its paired negative.
 
   npm run check:search
 
-BOUNDARY: pure functions only, the parser and the fusion. It runs no SQL, so it cannot see an
-index that is empty, drifted, or tokenising differently from what the parser assumes. It imports
-the parser the Worker actually runs rather than a restatement of its rules.
-
-EVERY RULE HAS A PAIRED NEGATIVE: a rule that has only ever been seen matching has not been
-verified, because a rule that fires on everything passes every positive test there is.`,
+BOUNDARY: pure functions only, imported from the module the Worker runs. It executes no SQL, so
+it cannot see an index that is empty, drifted, or tokenising differently from what the parser
+assumes.`,
   ],
   "scripts/check-search.mjs#4": ["CONTRACT", "why fixed; one line already"],
   "scripts/check-search.mjs#5": ["CONTRACT", "section marker, rule padding cut", `Rule 1: quoted phrases`],
@@ -347,27 +313,14 @@ and the count moves only when a case is written.`,
   "scripts/build-guidelines.mjs#0": [
     "CONTRACT",
     "why the strip stays and the discard goes, what is dropped and why the cap is loud; the ruling, the quoted lines and the shipped defect go to the history document",
-    `Extract the stylesheets' reasoning into guidance the canvas can read.
+    `Extract the stylesheets' reasoning into guidance the design canvas can read, the bundle having
+stripped the comments on the way there.
 
-THE DEFECT: the bundle strips CSS comments on the way to the design canvas, and one of the
-stripped comments was a warning not to simplify a deliberately specific selector. The redesign
-simplified it away and shipped a wordmark in the wrong colour, because the canvas never saw it.
-
-THE STRIP STAYS: it exists for its own measured reason, the converter's validator greping the
-bundle for \`@import\` without stripping comments, which a stylesheet's prose about a removed
-\`@import\` failed twice. The repair is not to stop stripping, it is to stop DISCARDING, and this
-is where the reasoning goes instead.
-
-IT IS NOT A GATE AND MAKES NO ASSERTION. Output is gitignored, a committed copy being a second
-owner of prose the stylesheets already own (hard rule 17).
-
-WHAT IT DOES NOT SHIP: build-only narration, which tells a design agent nothing and spends the
-budget the rules it CAN break need. A block is dropped when it reads as build talk and carries
-no design signal, never on the build needle alone.
-
-THE CAP IS HONEST RATHER THAN SILENT: blocks are emitted strongest first and anything that does
-not fit is NAMED with its source and line, a truncation nobody can see being the same class of
-defect as a search over an empty scope.`,
+BOUNDARY: a build step that makes no assertion, with gitignored output, a committed copy being
+a second owner of prose the stylesheets already own (hard rule 17). The strip it compensates
+for stays, because the converter's validator greps the bundle for \`@import\` without stripping
+comments and a stylesheet's prose about a removed \`@import\` failed that twice. The cap is
+honest rather than silent: what does not fit is NAMED with its source and line.`,
   ],
   "scripts/build-guidelines.mjs#1": ["CONTRACT", "what the cap is; one line already"],
   "scripts/build-guidelines.mjs#2": ["CONTRACT", "what the floor separates; one line already"],
@@ -430,20 +383,12 @@ stylesheet extractor never sees because it reads only CSS.
   "scripts/lib/page-payload.mjs#0": [
     "CONTRACT",
     "why derived, from which two sources, and what the walk cannot see",
-    `What a cold load of one public route actually fetches, resolved offline.
+    `What a cold load of one public route actually fetches, resolved offline from the browser
+manifest and a walk of the route's import graph.
 
-Split out of the gate because the DECISION is a pure function over a manifest and a set of
-source files, and a pure function can be driven by tests. The gate supplies the disk.
-
-WHY DERIVED AND NOT DECLARED: a hand-kept list goes stale in the direction that hides bytes from
-the gate. STYLESHEETS come from React Router's own browser manifest, root's plus the route's,
-which is what the document carries. ENHANCEMENT BUNDLES come from a reachability walk over the
-route's import graph, following \`~/\` and relative imports inside \`app/\`.
-
-WHAT THE WALK CANNOT SEE, stated because it bounds every count: reachability is not rendering,
-so a bundle imported inside a branch the route never takes still counts, which over-approximates
-in the safe direction for a ceiling. Nor can it see a bundle fetched at runtime rather than
-imported, which is correctly not part of any page's cold load.`,
+BOUNDARY: reachability is not rendering, so a bundle imported inside a branch the route never
+takes still counts, which over-approximates in the safe direction for a byte ceiling, and a
+bundle fetched at runtime rather than imported is correctly not part of any cold load.`,
   ],
   "scripts/lib/page-payload.mjs#1": [
     "CONTRACT",
@@ -508,17 +453,10 @@ family is used, which on this site is every page.
   node scripts/operator-roundtrip.mjs a          steps 1 and 2
   node scripts/operator-roundtrip.mjs b          steps 3 to 9
 
-Two phases because step 3 is a HUMAN action: the first publication of a post is reserved to the
-admin, so the round trip cannot be driven end to end by the thing it is testing, which is the
-point of the test.
-
-The token is read from a file named by an environment variable and is never printed, logged or
-included in an error. Every assertion that matters is checked against GitHub and the public
-surfaces, never against the API's own report: an endpoint saying "created" is not evidence that
-a commit exists.
-
-THE DASH FIXTURE is built from its CODE POINT rather than typed, so this file contains no wide
-dash of its own and stays clean under the house rule.`,
+BOUNDARY: two phases because step 3 is a HUMAN action, the first publication of a post being
+reserved to the admin, which is the point of the test. Every assertion that matters is checked
+against GitHub and the public surfaces rather than against the API's own report, and the token
+is never printed, logged, or included in an error.`,
   ],
   "scripts/operator-roundtrip.mjs#1": ["CONTRACT", "what it is; one line already"],
   "scripts/operator-roundtrip.mjs#4": [
@@ -590,19 +528,9 @@ refusal as a delete failure.`,
   npm run check:llms -- --local      also compare against the local D1 row
   npm run check:llms -- --remote     also compare against the remote D1 row
 
-BOUNDARY: it compares the committed file against the row it seeds, and does not fetch
-\`/llms.txt\`, so it cannot see the route failing to serve what the row holds.
-
-WHY THIS EXISTS: the only thing that ever wrote that row was the initial migration, seeding copy
-later retired, so a rebuilt site would have served a stale llms.txt with nothing to notice. The
-route carried a second copy too, which had already drifted by its line endings alone, so the
-site served different bytes depending on whether the row existed.
-
-  1. the tracked file exists, is non-empty, and is LF-only
-  2. the route does not carry its own copy: it imports the file
-  3. with --local or --remote, the D1 row is byte-identical to the file
-
-FAILS CLOSED on a missing file, an unparseable result or a wrangler failure.`,
+BOUNDARY: it compares the committed file against the row it seeds and against the route that
+serves it, but it does not fetch \`/llms.txt\`, so it cannot see the route failing to serve what
+the row holds.`,
   ],
   "scripts/check-llms.mjs#3": [
     "WHY",
@@ -658,23 +586,10 @@ the other's reading.`,
 
   npm run ae-probe
 
-With the platform cache on, an edge HIT may never invoke the Worker, in which case the traffic
-panel is counting ORIGIN REQUESTS rather than reads and has to say so. It needs a read-only
-analytics token, fails closed without it, and NEVER PRINTS THE TOKEN, any request header, or any
-URL carrying a credential.
-
-METHOD. Three fetches, each followed by its own poll, so a point is attributable to the fetch
-that caused it: a plain GET to warm the edge, a second expected to HIT, and one sent with the
-bypass header. The first exists because a cache-eligible fetch that MISSES reaches the origin by
-definition and proves nothing; only the second answers the question. THE BYPASS MECHANISM IS NOT
-INVENTED HERE, it is read from the live gate.
-
-EVERY COUNT IS SAMPLING WEIGHTED, the documented way to count events, because a raw count
-silently undercounts the moment sampling engages; the row count is carried as a diagnostic.
-
 BOUNDARY: the write is fire and forget and a throw is swallowed, so a point that APPEARS is
-strong evidence the Worker ran while one that does NOT is weaker evidence that it did not. The
-report states that ambiguity whenever a fetch produces no point.`,
+strong evidence the Worker ran while one that does NOT is weaker evidence that it did not, and
+the report states that ambiguity whenever a fetch produces no point. It never prints the token,
+any request header, or any URL carrying a credential.`,
   ],
   "scripts/ae-probe.mjs#1": [
     "WHY",
@@ -733,20 +648,9 @@ it is a config var and not a secret, and \`check:config\` refuses to find it any
     `WHICH DECISIONS VOLUME IS ACTIVE, AND HAS IT PASSED ITS OWN FREEZE POINT. Pure, so the replay
 proof can drive it without a network; the fetching lives in the gate.
 
-THE DEFECT: every volume's header states its own limit, and one ran well past it for days.
-Nothing gated it, the limit being a sentence inside the artifact it limited, enforced by whoever
-happened to read it.
-
-THE LIMIT IS READ, NEVER HARD-CODED, hard rule 17: the number lives in the volume that owns it,
-this parses it, and a volume that wants a different limit says so in its own header.
-
-"ACTIVE" IS THE HIGHEST NUMBER, NOT THE TITLE, AND THAT IS MEASURED: volumes frozen for days
-still carry "(active)" in their titles, and the platform's own status field is no better. A
-title is a written record read as a current property. The highest number is true by
-construction, a new volume being opened by taking the next one.
-
-Everything below the highest is history and is NOT checked: failing on a frozen volume over its
-limit would red the gate forever over something nobody can now change.`,
+BOUNDARY: the limit is READ from the volume that owns it and never restated here, hard rule 17,
+and ACTIVE is the highest NUMBER rather than the title, which is measured: volumes frozen for
+days still carry "(active)". Everything below the highest is history and is not checked.`,
   ],
   "scripts/lib/decisions-volumes.mjs#1": [
     "CONTRACT",
@@ -806,23 +710,10 @@ anchor-every-needle discipline arriving as a number.`,
 
   node scripts/health-repair.mjs --origin <origin> --body body.json
 
-Called by the health workflow when \`/api/health\` reports unhealthy. Decides through the shared
-decision module, performs the repairs that decision allows, re-polls ONCE, and exits.
-
-EXIT CODES ARE THE ALERT: 0 means something drifted, this repaired it and the re-poll came back
-healthy; 1 means a person is emailed. There is no third state.
-
-**\`process.exitCode\`, NEVER \`process.exit()\`**, measured: exiting immediately after a fetch
-terminated node with a Windows exception rather than with the code, because the exit raced the
-socket teardown, and an exit code nobody can explain is a bad thing to hand a monitor.
-
-ONE RE-POLL, NOT A LOOP. Both repairs derive their own converged verdict, so a successful call
-has ALREADY proved the index agrees; the re-poll confirms the endpoint agrees too. A loop would
-be a monitor arguing with itself. Ship polls because it reads counts back within milliseconds of
-an upload; this runs at least one scheduled interval later.
-
-THE TOKEN is read from the environment, never logged, never an argument, and its ABSENCE is
-reported as a named configuration state rather than as a failure to repair.`,
+BOUNDARY: it decides through the shared decision module, performs the repairs that decision
+allows, re-polls ONCE and exits, because a loop here would be a monitor arguing with itself.
+EXIT CODES ARE THE ALERT: 0 means repaired and healthy, 1 means a person is emailed, and there
+is no third state.`,
   ],
   "scripts/health-repair.mjs#2": ["CONTRACT", "what it renders as; one line already"],
   "scripts/health-repair.mjs#4": [

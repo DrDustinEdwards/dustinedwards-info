@@ -9,17 +9,13 @@ export default {
   "scripts/check-urls.mjs#0": [
     "CONTRACT",
     "the boundary, the two levels and the permanent negatives; the finding, the ruling reference and the import argument go to the history document",
-    `Gate over the URL protocol allowlist.
+    `Gate over the URL protocol allowlist, at the predicate and through the renderer.
 
   npm run check:urls
 
-BOUNDARY: the allowlist predicate over crafted inputs. It never fetches a URL and never scans
-the live corpus. The finding it exists for: a \`javascript:\` href rendered LIVE and reached the
-stored HTML, the artifact, D1 and the published page, agent-reachable with no human click.
-TWO LEVELS: the PREDICATE, which can express obfuscations markdown would percent-encode, and
-the RENDERER end to end, because a right predicate is worth nothing if the plugin is wired in
-after the one that emits the href. FAILS CLOSED, and the \`javascript\` fixture entries are
-PERMANENT NEGATIVES: removing one is removing the gate.`,
+BOUNDARY: the allowlist predicate over crafted inputs, plus one end-to-end render. It never
+fetches a URL and never scans the live corpus, so it proves the rule and not that every
+published href obeys it.`,
   ],
   "scripts/check-urls.mjs#1": ["WHY", "one line already; kept"],
   "scripts/check-urls.mjs#2": ["CONTRACT", "the fixture's shape; type annotation only"],
@@ -118,11 +114,7 @@ hard rule 17's rot in its ordinary form.`,
 
 BOUNDARY: a SOURCE gate. It proves the confirmation predicate is called inside the branch that
 handles the intent; it does not run an action, so it cannot see a guard that is present and
-wrong. WHY IT EXISTS: three destructive paths had their only confirmation in a client event
-handler, so with scripting off the form posts and the action deletes. **THE SAME DEFECT HAD
-ALREADY BEEN FOUND AND FIXED ONCE, AND CLOSED WITHOUT SWEEPING FOR SIBLINGS.** THE COMPLETENESS
-HALF is what keeps working: an intent nobody classified FAILS BY NAME rather than defaulting to
-safe. FAILS CLOSED on an unreadable file, an unparseable body, or an empty vocabulary.`,
+wrong.`,
   ],
   "scripts/check-destructive.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/check-destructive.mjs#2": ["CONTRACT", "what destructive means here; two lines already"],
@@ -258,16 +250,10 @@ being slack.`,
 
   npm run check:floors
 
-WHY IT EXISTS: every counting gate fails when its count is BELOW its floor, and nothing
-compared the two when it was ABOVE, so a floor set once sinks further under with every
-assertion added. One reached far enough under to be decorative. HOW IT MEASURES: it READS under
-\`check:all\`, where the floor lines are already in the captured output, and RUNS standalone,
-because a gate that only works as somebody else's passenger cannot be re-run while fixing what
-it found. READING FROM A PIPE IS NOT READING A STORED LOG, and hard rule 10's fixture
-independence is the difference. FLOORS ARE NAMED PER BRANCH, a gate's count depending on how it
-was invoked. FAILS CLOSED ON SILENCE: a floor whose block stopped executing emits nothing.
-BOUNDARY: it compares two numbers a gate PRINTS and cannot tell whether the count is honest,
-which hard rule 10 owns, nor see a gate with NO floor, which is why the absences are named.`,
+BOUNDARY: it compares two numbers a gate PRINTS, so it cannot tell whether the count is honest,
+which is hard rule 10's half, and it cannot see a gate with NO floor, which is why the absences
+are named here. It READS under \`check:all\` and RUNS standalone, and reading from a pipe rather
+than a stored log is what keeps hard rule 10's fixture independence.`,
   ],
   "scripts/check-floors.mjs#1": [
     "NUMBER",
@@ -380,11 +366,9 @@ locally, which selects the identical gate SET.`,
 
 The database is the read path; these files are the source of truth.
 
-**THIS SCRIPT DOES NOT RUN ANY GATE. RUN \`npm run check:content\` YOURSELF FIRST.** This comment
-used to claim it ran the gate, and a false safety claim is worse than no claim: this is the one
-script that writes to production D1, and the bulk path DELETES the search index and replaces
-the media citations wholesale. LEFT AS AN INSTRUCTION RATHER THAN WIRED IN: shelling out would
-make the write path depend on an exit code read through two layers of npm.`,
+**THIS SCRIPT DOES NOT RUN ANY GATE. RUN \`npm run check:content\` YOURSELF FIRST.** It is the
+one script that writes to production D1, and the bulk path DELETES the search index and
+replaces the media citations wholesale.`,
   ],
   "scripts/sync-content.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/sync-content.mjs#2": ["CONTRACT", "one line already; kept"],

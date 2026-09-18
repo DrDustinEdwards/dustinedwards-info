@@ -12,25 +12,14 @@ export default {
   "scripts/check-image-weight.mjs#0": [
     "CONTRACT",
     "the four assertions, why no thresholds, why bytes per pixel, why delivered dimensions and why two floors; the defect's byte table, the ladder table and the dated measurements go to the history document",
-    `Every image byte this site derives through the Images binding must be LOSSY, and the transform
-ladder must be SHAPED like a transform ladder.
+    `Gate: every image byte derived through the Images binding is LOSSY, and the transform ladder is
+shaped like one.
 
   node scripts/check-image-weight.mjs [--base <origin>]
 
-THE DEFECT: the binding defaults to LOSSLESS and the route asked for no quality, so every rung
-came back heavier than the object it resizes. FOUR ASSERTIONS, AND NONE CARRIES A NUMBER, a
-tuned constant being a second owner of a value that belongs to the image:
-
-  1. Every rung is lossy, by CHUNK TYPE. The defect verbatim, and it needs no threshold.
-  2. Bytes per delivered pixel never rises as delivered pixels rise, equality allowed.
-  3. The narrowest rung is smaller than the origin, catching the original served unresized.
-  4. Every STORED placeholder is lossy, from the index rather than the wire.
-
-RAW BYTES WAS THE FIRST RULING AND THE MEASUREMENT CHANGED IT: a rung can be bigger than the
-origin because re-encoding costs more, and one past the source width is capped and becomes a
-native-size re-encode. Bytes per pixel falls through both. DELIVERED DIMENSIONS, NEVER THE
-REQUESTED WIDTH, read out of the body's own header, and equal-pixel rungs are not compared, or
-the verdict would depend on sort stability. TWO FLOORS, the subjects being different queries.`,
+BOUNDARY: four assertions over what the route actually served plus the stored placeholders, and
+NONE of them carries a number, a tuned constant being a second owner of a value that belongs to
+the image. It reads delivered dimensions out of each body, never the requested width.`,
   ],
   "scripts/check-image-weight.mjs#2": [
     "CONTRACT",
@@ -108,19 +97,14 @@ empty column and a clean column print the same line.`,
   "scripts/check-migrations.mjs#0": [
     "CONTRACT",
     "both boundary halves, why normalized content and why rule 12 cannot be satisfied; the CRLF discovery and the backlog reference go to the history document",
-    `Gate: an applied migration is never edited.
+    `Gate: an applied migration is never edited, which is hard rule 14.
 
   npm run check:migrations
   node scripts/check-migrations.mjs --write [--force]
 
-BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** What stops a dishonest
-manifest is the diff and \`--write\` refusing to alter an existing hash without \`--force\`; what
-the LIVE database applied is \`check:invariants --remote\`'s half. IT HASHES NORMALIZED CONTENT,
-NOT RAW BYTES: with autocrlf on, the working tree and its own committed blobs disagree about
-line endings. WHY IT EXISTS: hard rule 14. The replay section catches an edit that MOVES A
-COLUMN and nothing else, so seed data, an index, a trigger or FTS DDL is invisible elsewhere.
-**RULE 12 CANNOT BE SATISFIED HERE:** no migration has ever been edited after being applied, so
-this is verified by PLANTS ONLY, which that rule warns match the implementation not the bug.`,
+BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** It does not prove the
+manifest was honest when written, and it does not know what the LIVE database applied, which is
+\`check:invariants --remote\`'s half.`,
   ],
   "scripts/check-migrations.mjs#1": [
     "NUMBER",
@@ -201,16 +185,11 @@ migration, which is append-only by hard rule 14.`,
   "scripts/lib/uptimerobot.mjs#0": [
     "CONTRACT",
     "why one module, that the contract was measured from the API, and the rate limit; the verbatim validation errors and the endpoint inventory go to the history document",
-    `The UptimeRobot v3 contract, in one place, shared by the writer and the gate: the same base
-URL, auth header, monitor SHAPES and idea of what "paused" is, a second copy of any of those
-being the drift rule 17 exists about.
+    `The UptimeRobot v3 contract, in one place, shared by the writer and the gate.
 
-EVERY VALUE BELOW WAS MEASURED, NOT READ OFF A BLOG POST. The v3 documentation returns no
-specification to a fetch, so the contract was taken from the API by sending deliberately invalid
-requests and reading the validation errors back: fixture independence applied to a third party.
-Two counter-intuitive shapes: a keyword monitor is its own TYPE, and \`status\` is NOT writable
-through the update verb. THE RATE LIMIT IS REAL AND IT IS SMALL, so nothing here loops or
-retries tightly, a monitoring integration that throttles itself reporting nothing.`,
+BOUNDARY: every value here was MEASURED against the API rather than read off a description of
+it, the v3 documentation returning no specification to a fetch, so this is fixture independence
+applied to a third party and it ages the day the API does.`,
   ],
   "scripts/lib/uptimerobot.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/lib/uptimerobot.mjs#2": [
@@ -326,13 +305,8 @@ should surface as a mismatch naming both sides, which is hard rule 13.`,
     "why it exists, what the stubbing limits it to and what the second consumer brought; the redesign framing goes to the history document",
     `Renders route components to static HTML in Node, so a gate can read the markup they produce.
 
-WHY IT EXISTS: /admin sits behind a real session, so no gate can reach those pages over HTTP,
-and the property that matters most is invisible to a typecheck. A route may move a control
-anywhere, but not change WHAT PRESSING IT SENDS, which is a fact about rendered markup.
-
-Server-only imports are stubbed at resolve time rather than executed, and that limit is worth
-stating: this proves things about COMPONENTS and nothing about loaders or actions. TWO GATES
-USE IT, a second copy of the bundler being how the two would disagree about what a stub is.`,
+BOUNDARY: server-only imports are stubbed at resolve time rather than executed, so this proves
+things about COMPONENTS and nothing about loaders, actions, or anything server-side.`,
   ],
   "scripts/lib/route-render.mjs#1": [
     "WHY",

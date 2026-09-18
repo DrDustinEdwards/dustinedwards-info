@@ -10,10 +10,10 @@ export default {
     "CONTRACT",
     "where it runs, what it never reads, why TAP and the stream mode; the two audit findings and the byte-identical note go to the history document",
     `Trusted scoring glue, run from the DEFAULT branch from a copy stashed before any untrusted byte
-exists on the runner. IT NEVER RUNS ATTEMPT-CONTROLLED CODE: it counts TOP-LEVEL ok / not ok
-lines in the TAP, never an exit code, an early \`process.exit(0)\` leaving the ok line unwritten.
-THE STREAM MODE has no destination file, the runner capturing the container's stdout from
-outside, because a file inside the attempt's filesystem could be rewritten after the flush.`,
+exists on the runner.
+
+BOUNDARY: IT NEVER RUNS ATTEMPT-CONTROLLED CODE. It reads the TAP the reporter produced and
+counts top-level results, never an exit code.`,
   ],
   "scripts/improve-report.mjs#1": [
     "WHY",
@@ -220,11 +220,8 @@ reverted, none of the numbers above describing the attempt in that case.`,
   npm run check:head
   node scripts/check-head.mjs --ref <branch|sha>
 
-IT OBSERVES A CHECKOUT, NOT THE DEPLOY: it extracts a ref into a throwaway worktree and runs
-gates there, catching work that is on disk and not committed, and line-ending divergence
-between what you have and what a clone gets. IT INHERITS EVERY EXCLUDED GATE'S BLINDNESS, each
-carrying its grounds at EXCLUDED. THE COUNTS ARE NOT WRITTEN HERE: they were, and went stale.
-THE TYPECHECK IS COLD, ALWAYS: incremental state would skip against hashes taken from DISK.`,
+BOUNDARY: it observes a CHECKOUT, not the deploy, and it inherits every excluded gate's
+blindness, each carrying its grounds at EXCLUDED.`,
   ],
   "scripts/check-head.mjs#1": [
     "CONTRACT",

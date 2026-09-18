@@ -15,11 +15,9 @@ export default {
 
   npm run check:tests
 
-IT RUNS \`node --test\` AND READS ITS SUMMARY: how many files were discovered and how many tests
-reported, not whether those tests ASSERT anything, and not whether they cover the right
-modules. WHY IT EXISTS: this was \`npm test --silent\`, and **node exits 0 when the glob matches
-nothing**, so the only gate asserting BEHAVIOUR structurally could not fail closed. FAILS
-CLOSED on zero files, on fewer files than are committed, and on fewer tests than measured.`,
+BOUNDARY: it runs \`node --test\` and reads its SUMMARY, so it knows how many files were
+discovered and how many tests reported, not whether those tests ASSERT anything and not whether
+they cover the right modules.`,
   ],
   "scripts/check-tests.mjs#1": [
     "NUMBER",
@@ -119,18 +117,14 @@ nowhere else, this gate asserting a fixed set of properties about one run.`,
   "scripts/check-secrets.mjs#0": [
     "CONTRACT",
     "the boundary, the two arguing sources, the strict path rule and fail-closed; the founding defect, the audit's ranking and the cost paragraph go to the history document",
-    `Gate over the secret-handling boundary.
+    `Gate over the secret-handling boundary hard rule 3 states.
 
   npm run check:secrets
 
-THIS READS SOURCE TEXT, NOT THE BUNDLE: no file outside the server boundary may MENTION a
-secret, so one read inside a \`.server\` module that a mis-split inlined into a client chunk is
-invisible here. Scans \`app/\` and \`workers/\`, not \`scripts/\`. TWO INDEPENDENT SOURCES ARGUE:
-the ratified list transcribed, what the code reads parsed out of the tree, what is DECLARED
-parsed out of \`app/env.d.ts\`. THE BOUNDARY IS BY PATH, AND STRICTLY: loaders and actions are
-not carved out even though hard rule 3's prose permits it, because nothing here needs it and
-the honest move would be an ALLOWLIST entry. Hard rule 3 was PROSE until this gate existed.
-FAILS CLOSED, the last case because "0 violations" from a broken matcher looks like success.`,
+BOUNDARY: IT READS SOURCE TEXT, NOT THE BUNDLE, so a secret read inside a legitimate \`.server\`
+module that a mis-split inlined into a client chunk is invisible here, and it says nothing
+about whether a secret is USED correctly once read. The boundary is BY PATH, and strictly:
+loaders and actions are not carved out even though hard rule 3's prose permits it.`,
   ],
   "scripts/check-secrets.mjs#1": [
     "WHY",
@@ -289,20 +283,8 @@ wrong in the direction that matters.`,
   npm run check:media -- --remote
 
 BOUNDARY: it reconciles KEYS, and except for the social cards it never FETCHES one, so an
-object that exists with a row and 404s through the route passes. A boundary note is a claim
-that ages, hard rule 7, and this file has aged one twice. **THE SOCIAL CARDS ARE THE ONE
-EXCEPTION, because the key-only reading is what let them break.** IT NO LONGER READS THE ASSET
-MANIFEST: it still detects a stale one, INDIRECTLY and only AFTER A REBUILD, naming a missing
-ROW rather than the manifest.
-
-FOUR directions, and it fails on any of them:
-  1. an R2 object with no D1 row          -> backfill it
-  2. a D1 row with no R2 object           -> delete the row
-  3. a public/ file with no row           -> backfill it
-  4. a storage='static' row with no file  -> delete the row
-
-**R2 WINS**, and \`public/\` wins for static: a row is deleted because an object is absent, never
-the reverse, which keeps D1 derived. FAILS CLOSED on an empty enumeration.`,
+object that exists with a row and 404s through the serving route passes. A boundary note is a
+claim that ages, hard rule 7, and this file has aged one twice.`,
   ],
   "scripts/check-media.mjs#1": [
     "WHY",

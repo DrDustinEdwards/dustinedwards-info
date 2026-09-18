@@ -15,10 +15,8 @@ export default {
 
   npm run check:restore
 
-BOUNDARY, and why this sits beside \`check:backup\`: that gate proves an export was WRITTEN and
-cannot say the dump would reconstruct anything. IT TAKES ITS OWN EXPORT, so the claim is that
-the path round-trips, not that a kept artifact is restorable. IT NEVER TOUCHES PRODUCTION,
-ENFORCED: every write goes through \`scratch()\`, the hook being blind inside a node script.`,
+BOUNDARY: it takes its OWN export, so the claim is that the path round-trips rather than that a
+kept artifact is restorable, and it never touches production, enforced by one guarded writer.`,
   ],
   "scripts/restore-drill.mjs#1": ["CONTRACT", "one line already; kept"],
   "scripts/restore-drill.mjs#2": [
@@ -249,13 +247,12 @@ FILES and not with the table list, the load being one assertion over one combine
   "scripts/check-config.mjs#0": [
     "CONTRACT",
     "the subject, the two pairs, the boundary and what is and is not compared; the images-binding incident, the conventions quotation and the aged boundary note go to the history document",
-    `Gate over the wrangler configs: every committed \`.example\` declares the same BINDING SURFACE as
-the real file beside it. Two pairs, the site and the watchdog; the real files are gitignored,
-so the example is the only description a fresh clone can see.
+    `Gate: every committed \`.example\` declares the same BINDING SURFACE as the real config beside it.
 
-BOUNDARY: it compares each pair to itself, asks Cloudflare nothing, and knows only the kinds
-\`surfaceOf()\` enumerates. WHAT IS COMPARED: names, kinds, non-identifying settings; NOT the
-account-scoped identifiers. FAILS CLOSED: a missing or unparseable file is a failure.`,
+  npm run check:config [-- --remote]
+
+BOUNDARY: it compares each pair to itself, asks Cloudflare nothing without \`--remote\`, and knows
+only the binding kinds \`surfaceOf()\` enumerates.`,
   ],
   "scripts/check-config.mjs#1": [
     "WHY",
