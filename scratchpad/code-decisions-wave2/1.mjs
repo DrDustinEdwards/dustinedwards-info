@@ -4,34 +4,30 @@
 // half that matters and every one of them stays. What goes is the change log written beside
 // them: which session re-scoped a needle, which plant caught it, which date a ruling landed.
 //
-// CALIBRATION, learned here and true for the rest of the wave: the budget is 19% of COMMENT
-// BYTES, not 19% of the file, which works out at about one line per block once the section
-// markers and one-liners that stay byte-identical are paid for. A first pass at eight lines a
-// block came out 3.7x over. A why is one sentence; two only when the prohibition needs its
-// because.
+// Re-cut to wave 1's rule after the measurement: a surviving block is ONE LINE, statement then
+// the because as a clause, separators keep their label and lose the dashes, and the
+// justification for CHOOSING one approach over another is deleted rather than compressed.
 export default {
   "scripts/check-policy.mjs#0": [
     "CONTRACT",
     "the boundary and the paired-negative rule kept; the restatement of both, cut",
     `Gate over the operator publish policy: npm run check:policy.
 
-OBSERVATION BOUNDARY: the decision function in isolation. It proves what the policy DECIDES,
-never that a caller consults it before writing. Pure: no GitHub, no database, no network.
-
-EVERY RULE HAS A PAIRED NEGATIVE. A policy that only refuses has not been shown to permit
-anything, and one that only permits is not a policy.`,
+BOUNDARY: the decision function in isolation. It proves what the policy DECIDES, never that a
+caller consults it before writing. Pure: no GitHub, no database, no network. EVERY RULE HAS A
+PAIRED NEGATIVE, because a policy that only refuses has not been shown to permit anything.`,
   ],
   "scripts/check-policy.mjs#1": ["CONTRACT", "one line already; kept"],
-  "scripts/check-policy.mjs#10": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#10": ["CONTRACT", "section marker, rule padding cut", `readState`],
   "scripts/check-policy.mjs#11": [
     "WHY",
     "the state the policy exists to tell apart, in one line",
     `The negative: a post withdrawn after publication is draft:true but HAS a date, which is the
 state the whole policy exists to tell apart from a new draft.`,
   ],
-  "scripts/check-policy.mjs#12": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#12": ["CONTRACT", "section marker, rule padding cut", `forceFirstPublished`],
   "scripts/check-policy.mjs#13": ["WHY", "one line already; kept"],
-  "scripts/check-policy.mjs#14": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#14": ["CONTRACT", "section marker, rule padding cut", `The policy: operator`],
   "scripts/check-policy.mjs#15": [
     "WHY",
     "the forgery case in one line: the prior file is the only thing consulted",
@@ -39,8 +35,8 @@ state the whole policy exists to tell apart from a new draft.`,
 says otherwise, and the prior file is the only thing consulted.`,
   ],
   "scripts/check-policy.mjs#16": ["WHY", "one line already; kept"],
-  "scripts/check-policy.mjs#17": ["CONTRACT", "section marker; kept byte-identical"],
-  "scripts/check-policy.mjs#18": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#17": ["CONTRACT", "section marker, rule padding cut", `The policy: admin`],
+  "scripts/check-policy.mjs#18": ["CONTRACT", "section marker, rule padding cut", `The policy: smoke, the read-only machine actor`],
   "scripts/check-policy.mjs#19": [
     "CONTRACT",
     "the claim, its two instruments and the N-1-of-N reason; the tabulated restatement cut",
@@ -52,9 +48,8 @@ larger half unexamined while reading like a complete answer.`,
   "scripts/check-policy.mjs#20": [
     "WHY",
     "the drift prohibition alone",
-    `Driven off a TABLE, so these are the cases the permitting blocks above use: a refusal list
-that drifted out of step would leave a transition permitted for the machine actor and
-unasserted.`,
+    `Driven off a TABLE: a refusal list that drifted out of step would leave a transition
+permitted for the machine actor and unasserted.`,
   ],
   "scripts/check-policy.mjs#21": ["WHY", "zero-scope class, cites hard rule 10; two lines already"],
   "scripts/check-policy.mjs#23": [
@@ -86,10 +81,9 @@ consulting it.`,
   "scripts/check-policy.mjs#28": [
     "WHY",
     "an import is a mention not a use; the story of catching it, cut",
-    `THE EXIT, located in COMMENT-STRIPPED source and NOT at the first mention: the first is the
-IMPORT, which sits above every if in the module, and an import is a mention rather than a
-use. Skipped by the line it sits on, not by taking the last occurrence, which breaks the day
-a second refusal is added.`,
+    `THE EXIT, located in COMMENT-STRIPPED source and NOT at the first mention, which is the
+IMPORT above every if in the module. Skipped by the line it sits on, not by taking the last
+occurrence, which breaks the day a second refusal is added.`,
   ],
   "scripts/check-policy.mjs#29": ["WHY", "one line already; kept"],
   "scripts/check-policy.mjs#30": [
@@ -130,16 +124,16 @@ end-of-file; fail closed, so a read delegated to a sibling is refused too.`,
   ],
   "scripts/check-policy.mjs#39": ["CONTRACT", "how a body's end is found here; two lines already"],
   "scripts/check-policy.mjs#40": ["WHY", "zero-scope arm; two lines already"],
-  "scripts/check-policy.mjs#41": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#41": ["CONTRACT", "section marker, rule padding cut", `What decide() stamps`],
   "scripts/check-policy.mjs#42": ["WHY", "one line already; kept"],
   "scripts/check-policy.mjs#43": ["WHY", "one line already; kept"],
   "scripts/check-policy.mjs#44": ["WHY", "the lockout this prevents; two lines already"],
   "scripts/check-policy.mjs#45": [
     "CONTRACT",
     "the two cases state cannot tell apart, in two lines",
-    `What a save DID, which is what the editor reports back. Both cases current state cannot tell
-apart are asserted with their negatives: a withdrawn post republished is NOT a first
-publication, and a live post edited again is NOT a republication.`,
+    `What a save DID. Both cases current state cannot tell apart are asserted with their
+negatives: a withdrawn post republished is NOT a first publication, and a live post edited
+again is NOT a republication.`,
   ],
   "scripts/check-policy.mjs#47": [
     "WHY",
@@ -149,14 +143,13 @@ a first publication, or the editor performs the ceremony a second time.`,
   ],
   "scripts/check-policy.mjs#48": ["WHY", "one line already; kept"],
   "scripts/check-policy.mjs#49": ["WHY", "one line already; kept"],
-  "scripts/check-policy.mjs#50": ["CONTRACT", "section marker; kept byte-identical, and its title is reported"],
+  "scripts/check-policy.mjs#50": ["CONTRACT", "boxed heading, rule padding cut", `The Ask index is a public surface`],
   "scripts/check-policy.mjs#51": [
     "WHY",
     "least privilege and the real-module rule; the date and the narrative cut",
     `OPERATORS CANNOT DELETE. An actor refused a first publish through decide() was once
-permitted to DESTROY the post over the network, because deletePost used it only for a commit
-message. Least privilege: the destructive verb needs more authority than the publishing one,
-not less. Driven through the REAL decide and decideDelete, never a copy of the rule.`,
+permitted to DESTROY the post over the network. Least privilege: the destructive verb needs
+more authority than the publishing one, not less. Driven through the REAL predicates.`,
   ],
   "scripts/check-policy.mjs#52": [
     "WHY",
@@ -179,10 +172,9 @@ which slugs exist by the difference between two error messages.`,
   "scripts/check-policy.mjs#56": [
     "WHY",
     "why the method is the only defensible line",
-    `ASK IS BILLED, SO IT MUST NOT BE REACHABLE BY A GET. A crawler, a link prefetch, an unfurler
-or an img src on somebody else's page all issue one without a person deciding to, and the
-METHOD is the only part of that a third party cannot choose for us; robots.txt is advisory on
-top. Asserted from SOURCE.`,
+    `ASK IS BILLED, SO IT MUST NOT BE REACHABLE BY A GET: a crawler, a prefetch, an unfurler or
+an img src on somebody else's page all issue one without a person deciding to, and the METHOD
+is the only part a third party cannot choose for us. Asserted from SOURCE.`,
   ],
   "scripts/check-policy.mjs#57": [
     "WHY",
@@ -224,17 +216,16 @@ predicate rather than on a status code, which is check:browser's to observe.`,
   "scripts/check-policy.mjs#62": [
     "WHY",
     "the exemption hard rule 9 requires, and that it is the easiest thing to tighten by accident",
-    `AND THE ABSENT-ORIGIN EXEMPTION SURVIVES. A scriptless form post carries no Origin, so
+    `AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries no Origin, so
 refusing it breaks the no-script door hard rule 9 requires, and it is the easiest thing to
-tighten by accident while fixing a cross-origin hole.`,
+tighten by accident.`,
   ],
   "scripts/check-policy.mjs#63": [
     "WHY",
     "the work an unauthenticated caller can ask for, and the boundary",
-    `REFUSED ON LENGTH BEFORE IT IS HASHED. constantTimeEqual hashes BOTH operands, so a megabyte
+    `REFUSED ON LENGTH BEFORE IT IS HASHED: constantTimeEqual hashes BOTH operands, so a megabyte
 of bearer token is a megabyte of SHA-256 before anything has checked who is asking. Asserted
-by POSITION, the instrument hard rule 19's ordering uses: a length check that merely exists
-could run after the hash. BOUNDARY: source position, not a runtime measurement.`,
+by POSITION, the instrument hard rule 19's ordering uses; source position, not runtime.`,
   ],
   "scripts/check-policy.mjs#64": [
     "WHY",
@@ -306,7 +297,7 @@ cannot fail, and this exists because a green ship over a stale index is the defe
     "the window-around-an-anchor class; the plant and its date cut",
     `THE EXIT CONDITION ITSELF, never a mention of the variable near the exit: a block that still
 PRINTS the miss on the way out keeps the name inside the window while control flow no longer
-consults it. Extracted by walking back from the last exit to the if that guards it.`,
+consults it.`,
   ],
   "scripts/check-policy.mjs#77": [
     "WHY",
@@ -325,9 +316,8 @@ reports on the build being replaced, later it refuses with production half conve
   "scripts/check-policy.mjs#79": [
     "WHY",
     "read the verdict from the body and act on it; why the decision is its own module",
-    `THE VERDICT IS READ OUT OF THE BODY, never inferred from the status line, and it is ACTED ON.
-The decision lives in readiness.mjs so node:test can drive every branch, so the assertion is
-split: ship consults the verdict, the module decides from the parsed body.`,
+    `THE VERDICT IS READ OUT OF THE BODY, never inferred from the status line, and it is ACTED
+ON. The decision lives in readiness.mjs so node:test can drive every branch.`,
   ],
   "scripts/check-policy.mjs#80": [
     "WHY",
@@ -338,9 +328,9 @@ health report carries a checks array.`,
   "scripts/check-policy.mjs#81": [
     "WHY",
     "both halves and what each alone costs; the dated deadlock to Capsid",
-    `CONTENT-DRIFT IS DEFERRED AT READINESS AND ASSERTED AFTER THE SYNC, both halves: deferring
-without the late assertion drops the check, and asserting late without deferring leaves the
-deadlock, a drifted corpus refusing at the step that runs before its own repair.`,
+    `BOTH HALVES: deferring without the late assertion drops the check, and asserting late
+without deferring leaves the deadlock, a drifted corpus refusing at the step that runs before
+its own repair.`,
   ],
   "scripts/check-policy.mjs#82": [
     "HISTORY",
@@ -375,9 +365,9 @@ deadlock again.`,
   "scripts/check-policy.mjs#87": [
     "WHY",
     "the N-1-of-N prohibition; the date it was added goes to Capsid",
-    `THE MEDIA INDEX, ASSERTED SEPARATELY rather than by widening a regex to match either name:
-the two steps fail independently, and an assertion satisfied by whichever is present passes
-on the commit that deleted the other.`,
+    `THE MEDIA INDEX, ASSERTED SEPARATELY rather than by widening a regex: the two steps fail
+independently, and an assertion satisfied by whichever is present passes on the commit that
+deleted the other.`,
   ],
   "scripts/check-policy.mjs#88": [
     "WHY",
@@ -412,10 +402,10 @@ a default, and the default is the safe direction.`,
   "scripts/check-policy.mjs#94": [
     "CONTRACT",
     "why Ask cannot filter at query time; the dated leak goes to Capsid",
-    `Drafts must never reach the AI index. /search/ask is unauthenticated and cites what it
+    `Drafts must never reach the AI index: /search/ask is unauthenticated and cites what it
 answered from, so an uploaded draft is publicly readable by anyone who asks the right
-question. The classic index filters at QUERY time; Ask cannot, because AI Search has no
-per-item status, so the exclusion happens at UPLOAD time. A regression test for a real leak.`,
+question. The classic index filters at QUERY time and Ask cannot, so the exclusion happens at
+UPLOAD time.`,
   ],
   "scripts/check-policy.mjs#96": [
     "WHY",
@@ -440,17 +430,16 @@ tokenizer, so trailing comments go too and a string literal survives.`,
   "scripts/check-policy.mjs#100": [
     "WHY",
     "the guard's job; the dated ratio measurement goes to Capsid",
-    `SCOPE, ASSERTED: stripping is only safe if it left something to match, and an over-eager
-stripper empties the file while every assertion below reports a missing filter that is
-present. The fraction is loose on purpose, because this module is comment-heavy.`,
+    `SCOPE, ASSERTED: an over-eager stripper empties the file while every assertion below reports
+a missing filter that is present. The fraction is loose on purpose, this module being
+comment-heavy.`,
   ],
   "scripts/check-policy.mjs#101": [
     "WHY",
     "the binding this gate owns, and the shape that leaks if either half goes",
     `The uploader reads askCorpusRecords, whose SQL composes visibilityClause (rule 1). What this
-gate owns is the BINDING: the uploader sources from that one reader and nothing unfiltered,
-and the reader scopes to type=post with the shared predicate concatenated in. An uploader
-that re-grew its own SELECT, or a reader that lost the clause, is the leak again.`,
+gate owns is the BINDING: the uploader sources from that one reader and nothing unfiltered. An
+uploader that re-grew its own SELECT, or a reader that lost the clause, is the leak again.`,
   ],
   "scripts/check-policy.mjs#102": [
     "WHY",
@@ -463,26 +452,23 @@ because the module's prose names both symbols.`,
   "scripts/check-policy.mjs#103": [
     "WHY",
     "the property that moved with the mechanism; the round-trip measurement to Capsid",
-    `THE EXPECTED SET comes from search_docs rather than from recomputing the corpus, which cost a
-large GitHub round trip on every admin page load. The property moved with it: from that
-query, composing the shared predicate rather than hand-copying it, and posts-only, or the
-page records read as permanently stale.`,
+    `THE EXPECTED SET comes from search_docs rather than from recomputing the corpus, which cost
+a large GitHub round trip on every admin page load. The property moved with it: from that
+query, composing the shared predicate, and posts-only, or the records read as stale.`,
   ],
   "scripts/check-policy.mjs#106": ["CONTRACT", "where a top-level function ends here; two lines already"],
   "scripts/check-policy.mjs#107": [
     "WHY",
     "assert the binding, never one spelling of one line; the re-scoping story to Capsid",
-    `ASSERTED AS THE BINDING, never as a LINE ARRANGEMENT: a needle pinning one spelling breaks on
-a legitimate refactor while the property is intact, because it cannot tell "reads the expected
-set from D1" from "reads it from D1 on one physical line".`,
+    `ASSERTED AS THE BINDING, never as a LINE ARRANGEMENT: a needle pinning one spelling breaks
+on a legitimate refactor while the property is intact.`,
   ],
   "scripts/check-policy.mjs#108": ["WHY", "both zero-scope arms; two lines already"],
   "scripts/check-policy.mjs#109": [
     "WHY",
     "the half that keeps a widening honest; the dated widening to Capsid",
-    `The expected set is posts from D1 plus papers from the committed corpus, so it is asserted in
-two halves, and the second keeps the widening honest: the paper half comes from the module
-and NOT from a query this function grew.`,
+    `Asserted in two halves, and the second keeps the widening honest: the paper half comes from
+the module and NOT from a query this function grew.`,
   ],
   "scripts/check-policy.mjs#110": [
     "WHY",
@@ -495,8 +481,7 @@ corpus-recomputing producer this moved away from, caught anywhere in the body.`,
     "a neighbour composing the same predicate satisfies a character window; the plant story cut",
     `SCOPED TO THE FUNCTION BODY, never to a character window after its name: zeroState sits
 directly below and composes visibilityClause itself, so a window reaching into it finds a
-neighbour's compliance and a hand-copied predicate passes. That is hard rule 10's unanchored
-needle.`,
+neighbour's compliance. That is hard rule 10's unanchored needle.`,
   ],
   "scripts/check-policy.mjs#112": [
     "WHY",
@@ -504,7 +489,7 @@ needle.`,
     `SCOPE, ASSERTED: an extractor returning nothing makes all three below report a missing
 predicate that is present, and one returning the whole file makes them pass on a neighbour.`,
   ],
-  "scripts/check-policy.mjs#113": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-policy.mjs#113": ["CONTRACT", "section marker, rule padding cut", `Report`],
   "scripts/check-policy.mjs#114": [
     "NUMBER",
     "the floor is asserted on the line below; the seven dated re-measurements go to Capsid",
