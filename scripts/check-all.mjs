@@ -1,36 +1,7 @@
 /**
- * Runs every gate and reports one table.
- *
- *   npm run check         the offline tier: everything that needs no network
- *   npm run check:all     adds the gates that need a deployed database or bucket
- *
- * OBSERVATION BOUNDARY: this runs gates and reports their exit codes. It does
- * not know what any of them checks, cannot tell a gate that passed from one that
- * passed vacuously, and a gate that exits 0 while examining nothing is invisible
- * here. That property belongs to each gate, and it is why every one of them
- * carries its own boundary note.
- *
- * ## Why this exists
- *
- * Two defects shipped in three sessions because a gate was silently not run.
- * `check:admin-ui` was red for two full sessions after a loader-shape change,
- * and nobody noticed because running gates meant remembering which ones the
- * change touched. Remembering is not a mechanism. One command that runs all of
- * them is.
- *
- * ## It runs everything, then reports
- *
- * A runner that stops at the first failure hides every gate behind it, which is
- * exactly how one red gate masks a second. Every gate runs, always, and the
- * table at the end is the whole picture.
- *
- * ## The list is DERIVED
- *
- * Parsed out of package.json's `check:*` scripts, on the same rule
- * `check-backup.mjs` follows for its table list: a hardcoded list is how the
- * next gate gets forgotten. That is not hypothetical here. The instruction that
- * asked for this runner named eleven gates and listed twelve, and the repo has
- * THIRTEEN: `check:llms` appeared in neither count.
+ * Runs every gate and reports one table: `npm run check` (offline) or `npm run check:all`.
+ * It sees exit codes only, runs every gate even after a failure, and derives the list from
+ * package.json so a new gate cannot be forgotten.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -46,73 +17,19 @@ import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * WHERE THE MEMORY SAMPLES GO, and why this run keeps the previous one's file.
- *
- * The OS killed five `check:all` runs for low memory between 2026-09-05 and
- * 2026-09-09 and rebooted the machine once. An OS kill under memory pressure
- * does not take the tree: it takes the process it picked, so the runner dies
- * and its grandchildren keep their pages. The heaviest of them is not small.
- * Measured 2026-09-09 during `check:browser`: a `vite preview` host holding
- * 952 MB with two `workerd` children beside it.
- *
- * So the previous run's file is READ BEFORE this run truncates it. It is the
- * only record of what that run was holding when it died.
- *
- * The read is a UNION over the last stretch of sampling rather than the final
- * row, and that distinction was paid for on 2026-09-09: a run exhausted the
- * machine, 14 processes holding 1678 MB survived it, and the final row named
- * two of them. The heavy ones came from `check:head` minutes earlier and were
- * still resident. Grounds on `treeSince`.
+ * The previous run's samples are read before truncation: after an OS kill they are the only
+ * record of what it held.
  */
 const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
 
-/**
- * The floor. Fails closed when fewer gates are discovered than this.
- *
- * A count, not a list, so it cannot go stale in the direction that matters: a
- * gate deleted, a script renamed out of the `check:` namespace, or a glob that
- * quietly stops matching all show up as a smaller number. It only ever moves UP,
- * and moving it is a deliberate edit in the same commit as the gate.
- *
- * MEASURED BY RUNNING, 2026-09-12, which is the only way this number is allowed
- * to move. It read 35 against a discovered 36, so one gate could already have
- * been deleted and the floor would have held: exactly the shape FAILURES.md
- * records as "a limit positioned where it cannot bite". Adding
- * `check:publications` took the count to 37 and the arithmetic answer would
- * have been 36, preserving the gap. The run said 37, so it is 37.
- *
- * `check:fonts` took it to 38 on 2026-09-12, and the number came the same way:
- * the run printed `gates-discovered executed=38`, so it is 38.
- *
- * `check:volumes` took it to 39 on 2026-09-15, by the same method: the run
- * printed `gates-discovered executed=39`. It is the freeze-point gate for the
- * decisions volumes, and it is NETWORK tiered because a volume is a Capsid
- * document with no disk to read.
- *
- * `check:hook-matchers` took it to 40 later the same day, by the same method:
- * the run printed `gates-discovered executed=40`. It reads the PreToolUse
- * matchers against the permission allow lists, so it is offline and IN CI.
- */
+/** Fails closed below this. Moves up only to the count a run printed, never to a sum. */
 const MINIMUM_GATES = 40;
 
-/**
- * The one gate this runner does not spawn like the others, because its input is
- * the other gates' output. Named once so the hold-out and the feed cannot come
- * to disagree about which gate that is.
- */
+/** check:floors reads the other gates' output, so it is not spawned like them. */
 const FLOOR_READER = "check:floors";
 
 /**
- * Gates whose output the floor reader must NOT be fed, with the reason.
- *
- * `check:head` runs the whole offline tier inside an extraction of HEAD, so its
- * stdout carries a full second set of floor lines belonging to OTHER gates and
- * measured against a different tree. Fed in, they arrive after the same gates'
- * own lines and win the dedupe, so a dirty working tree would be judged by the
- * checkout's counts with nothing saying so. `check-floors.mjs` excludes the same
- * gate from its standalone run, for the recursion reason recorded there; this is
- * the same exclusion arriving by a different road.
- *
+ * check:head's stdout carries floor lines measured on a checkout, which would win the dedupe.
  * @type {Record<string, string>}
  */
 const FLOOR_OUTPUT_EXCLUDED = {
@@ -120,296 +37,76 @@ const FLOOR_OUTPUT_EXCLUDED = {
 };
 
 /**
- * Gates a CLEAN CHECKOUT cannot run, each with the reason it cannot.
- *
- * MEASURED 2026-08-20, not guessed: HEAD was extracted with `git archive`,
- * `npm ci` was run in it, and the offline tier was run there. 22 passed, 4
- * failed. Two of those four are real and permanent, and they are here. The other
- * two, `check:content` and `check:head`, failed only because `git archive`
- * produces no `.git` directory; `actions/checkout` provides a real repository,
- * so both work in CI and neither is excluded for that reason.
- *
- * Same shape and the same discipline as `check-head.mjs`'s own EXCLUDED map:
- * a named reason per entry, so an exclusion has to be argued rather than
- * accumulated.
- *
+ * Gates a clean checkout cannot run, each with its reason.
  * @type {Record<string, string>}
  */
 export const CI_EXCLUDED = {
-  /*
-   * MEASURED in the clean checkout. It asserts the tracked example DIFFERS from
-   * the real `wrangler.jsonc` in the two account-scoped ids. A checkout has no
-   * real config, `postinstall` bootstraps one BY COPYING the example, so real
-   * equals example by construction and the gate cannot pass. Verbatim:
-   *
-   *   FAIL  example's database_id is not the real one
-   *   FAIL  example's KV id is not the real one
-   *
-   * That is the gate being CORRECT, not a limitation to work around, and it is
-   * why this gate is load-bearing on exactly one machine. `check-head.mjs`
-   * excludes it for the identical reason.
-   */
+  /* Bootstrap copies the example, so real equals example and the gate fails in any checkout. */
   "check:config": "cannot pass in any checkout: bootstrap copies the example, so real == example.",
-  /*
-   * MEASURED in the clean checkout. Defaults to `--local`, which reads
-   * miniflare state under `.wrangler/`. That directory is gitignored and absent
-   * from a checkout. Verbatim:
-   *
-   *   SENTRY_DO SQLite failed; dbErrorMess...
-   *
-   * Provisioning a local D1 in CI to satisfy it would be inventing state to
-   * check a backup path against, which asserts nothing about the real database.
-   */
+  /* Provisioning a CI D1 would invent the state the backup path is checked against. */
   "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
-  /*
-   * NOT a capability problem. It would very likely RUN in CI, since
-   * `actions/checkout` gives a real repository and node ignores the "junction"
-   * link type off Windows.
-   *
-   * It is excluded because it is VACUOUS there. This gate exists to catch disk
-   * disagreeing with HEAD, and CI has only HEAD: it checks out the ref into an
-   * empty machine, so there is no working tree to diverge. Running it would
-   * extract HEAD from a checkout of HEAD and compare it to itself, then report
-   * a green it could not have failed. That is the vacuity class this repo names
-   * everywhere else, and running it in CI would be adding an instance.
-   */
+  /* Vacuous in CI: there is only HEAD to compare disk against. */
   "check:head": "vacuous in CI: it compares disk to HEAD, and CI has only HEAD.",
   /*
-   * Not runnable in CI as it stands, and since 2026-08-25 for ONE reason, not
-   * two. The public cases drive a preview build that reads local D1 state, and
-   * that state is gitignored, so the aria-current case would find no post to
-   * open.
-   *
-   * The second reason this entry used to carry, "its admin case needs a real
-   * session cookie, which CI has no way to hold without a stored credential
-   * nobody has ruled on", was FALSIFIED by the smoke credential: the ruling
-   * happened (decisions vol 8, 2026-08-24), SMOKE_TOKEN is a stored CI secret,
-   * and the admin cases authenticate with it against the DEPLOYED origin, no
-   * session cookie involved. Verified on a live run 2026-08-25: 59 checks, the
-   * admin block fully executed under the smoke token.
-   *
-   * So the admin HALF of this gate is CI-capable today and only the public
-   * half is not. Splitting the tiers so CI runs the admin sweep, or wiring the
-   * whole gate into ship, was Dustin's recorded open call (vol 8).
-   *
-   * ## THE CALL IS MADE, 2026-09-14: IT STAYS ON THE NETWORK TIER.
-   *
-   * NOT ship-capable, and the ground is the readiness wait rather than the
-   * minutes. The public cases drive a `vite preview` host: MEASURED 51s to
-   * first answer on a clear machine and past the 180s ceiling on a loaded one,
-   * so on a busy machine this gate reports a red that says nothing about the
-   * site. A ship gate that fails on the state of the laptop is worse than no
-   * ship gate, because the first thing it teaches is to re-run it.
-   *
-   * It runs on the daily schedule instead, where a slow boot costs a retry and
-   * not a deploy. The readiness probe now classifies WHY it timed out, so a
-   * scheduled red is readable without a second run; that is the half that was
-   * missing, and it is what made this gate's reputation "broken on this host"
-   * for weeks while the measured answer was a slow boot.
+   * Public cases need gitignored local D1 content. Kept off ship: a slow preview boot on a loaded
+   * machine would fail a ship for a reason that is not the site.
    */
   "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
-  /*
-   * Reads build/client, which is gitignored build output; the CI job runs
-   * `npm ci` and the gates with no client build in front of them. Building in
-   * CI to satisfy it would measure a build nothing deploys, since deploys run
-   * from this machine's working tree. Same class as check:backup: the input is
-   * state a checkout does not have.
-   */
+  /* A CI client build would measure a build nothing deploys. */
   "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
 };
 
 /**
- * Which gates need something this machine may not have.
- *
- * Every discovered gate MUST appear here or the runner refuses to start. That is
- * the same fail-closed shape as the count above, applied to classification: a
- * new gate that nobody tiered would otherwise be silently dropped from the
- * offline run and never noticed, which is the failure this whole file exists
- * about.
- *
- *   offline  no network, no deployed resources. Safe on a plane.
- *   network  reads a deployed D1 database or R2 bucket.
- *
+ * Every discovered gate must be tiered here or the runner refuses to start.
  * @type {Record<string, "offline" | "network" | undefined>}
  */
 export const TIERS = {
   /*
-   * THE TYPECHECK IS A GATE, ruled 2026-08-20 after the suite certified a build
-   * it had never compiled.
-   *
-   * `tsc -b` was a separate npm script and a Stop hook, and neither is the
-   * suite. So `npm run check` reported 25 passed 0 failed over source with two
-   * TS7006 errors in it, and `check:head` inherited exactly the same blind spot
-   * and certified 32 checks 0 failures against the same red build. A suite that
-   * certifies a build it never compiled is this repo's own vacuity class raised
-   * to the top level: the runner cannot tell a gate that passed from one that
-   * passed over code that cannot run.
-   *
-   * It made it past four separate checks, which is the part worth recording:
-   * tsc was not re-run after the change, `npm run check` does not typecheck,
-   * `check:head` runs that same offline tier, and the Stop hook reported "No
-   * stderr output" because tsc writes diagnostics to STDOUT.
-   *
-   * OFFLINE, and that is the load-bearing half rather than a formality:
-   * `check:head` derives its list from the offline tier, so tiering this here
-   * is what makes an extracted HEAD get typechecked too. The worktree already
-   * has node_modules by junction and a bootstrapped wrangler.jsonc, which is
-   * what `npm run typecheck` needs.
-   *
-   * IT DELEGATES rather than restating `wrangler types && react-router typegen
-   * && tsc -b`, on the same anti-mirror rule the Stop hook follows:
-   * package.json is the one place that defines what a typecheck is, and a
-   * mirror drifts. This repo has already run a bare `npx tsc -b` against stale
-   * generated types for exactly that reason.
-   *
-   * ALPHABETICAL, NOT FIRST, and the alternative was considered. Running it
-   * first would surface the most fundamental failure earliest in a five minute
-   * run. It was rejected because this runner's stated principle is that EVERY
-   * gate runs and the table at the end is the whole picture, so position
-   * changes only when a watcher sees the line, never whether the failure is
-   * reported. Hoisting one name would also cost the derivation property that
-   * keeps a new gate from being forgotten, which is a worse trade than a later
-   * line in a table that is read whole.
+   * The typecheck is a gate, tiered offline so check:head typechecks an extracted HEAD. It
+   * delegates to `npm run typecheck`, which package.json defines.
    */
-  /*
-   * NETWORK, and it cannot be otherwise: a decisions volume is a Capsid
-   * document and there is no disk to read. A clean checkout cannot run it, so
-   * --ci does not, which is the same reason check:uptime is tiered here.
-   */
+  /* Network: a decisions volume is a Capsid document. */
   "check:volumes": "network",
   "check:types": "offline",
   "check:content": "offline",
-  /*
-   * OFFLINE, and it is the purest offline gate here: it reads two committed
-   * JSON files, regenerates `app/data/publications.ts` in memory and compares.
-   * No network, no binding, no clock. The network half of the publication
-   * pipeline is `pubs-pipeline`, which lives outside this repo on purpose and
-   * is never a gate, because a gate that fetches Crossref fails on Crossref's
-   * bad day rather than on ours.
-   */
+  /* Offline. The network half, `pubs-pipeline`, is never a gate: it would fail on Crossref's bad day. */
   "check:publications": "offline",
   "check:config": "offline",
   "check:search": "offline",
   "check:policy": "offline",
   "check:contrast": "offline",
-  /*
-   * OFFLINE: it reads font binaries off disk and the stylesheets beside them,
-   * and asks nothing of the network. Beside check:logo because they are the two
-   * gates that open a binary asset rather than read text about one.
-   */
+  /* Offline: reads font binaries and their stylesheets. */
   "check:fonts": "offline",
-  /*
-   * OFFLINE. It reads `.design-sync/build-inputs.mjs`, `app/root.tsx`, the
-   * non-admin routes and components, and the stylesheets they name -- all off
-   * disk, no network, no binding, so `--ci` runs it too.
-   *
-   * It exists because NOTES.md predicted this drift in prose and nothing
-   * re-checked it: `app/styles/shell.css` was imported by root.tsx, absent
-   * from SHEETS, and so never reached the canvas -- and that is the sheet
-   * defining `.tracks`, the grid the redesign is built on (ruling 111).
-   */
+  /* Reads its inputs off disk, so `--ci` runs it (ruling 111). */
   "check:design-sheets": "offline",
-  /*
-   * OFFLINE by tier, and the caveat is in the name of the thing it runs:
-   * `npx --yes aislop@latest` FETCHES the package, so a machine with no
-   * network cannot run it even though nothing it reads is deployed. It is
-   * tiered offline because it reads only the working tree and a git ref, and
-   * because the alternative, network, is where the gates that need a deployed
-   * database live and this is not one of them.
-   *
-   * IT SCORES THE DIFF, not the tree (`--changes --base origin/main`). The
-   * audit reviewed all 83 in-scope findings and every one opened was a false
-   * positive on this codebase, so a gate pointed at the tree would be
-   * permanently red on the Workers logging API and on prose containing the
-   * word PLACEHOLDER. Scoring the diff makes it a ratchet on new code, which
-   * is the only shape that is worth having here.
-   */
+  /* Scores the diff, not the tree: on the tree its findings here are false positives. */
   "check:slop": "offline",
-  /*
-   * NETWORK, and it cannot be otherwise for the same reason check:volumes is
-   * tiered there: the current `updated_at` it compares against lives in Capsid
-   * and there is no disk to read, so a clean checkout cannot run it.
-   *
-   * It asserts that the Capsid documents shipped to the design agent are still
-   * current. An export is a copy, a copy cannot know its source moved, and
-   * without this the canvas would be handed a reversed ruling with nothing
-   * anywhere saying so (ruling 109).
-   */
+  /* Network: the `updated_at` it compares lives in Capsid (ruling 109). */
   "check:guidelines": "network",
   "check:logo": "offline",
   "check:charts": "offline",
   "check:diagrams": "offline",
   "check:admin-ui": "offline",
-  /*
-   * OFFLINE, and it can be because it renders rather than fetches. It bundles
-   * the three public route components with esbuild and parses the markup with
-   * `microformats-parser`, through the same `scripts/lib/route-render.mjs`
-   * check:admin-ui uses, so it needs no D1, no bucket and no deployed site.
-   *
-   * It DOES build the corpus (`buildArtifact`), which needs
-   * `content/generated/stack.json`; the tier's preflight already builds
-   * content, so the ordering is satisfied for anyone running the tier and named
-   * in the gate's own failure text for anyone running it alone.
-   */
-  /*
-   * OFFLINE. It reads scripts/ as SOURCE and runs no wrangler command, which is
-   * the whole point: the defect it refuses is invisible until a --remote run on
-   * a runner, and a gate that had to reproduce it would need the runner.
-   */
+  /* Offline because it renders rather than fetches; it needs the stack.json the preflight builds. */
+  /* Offline: reads scripts/ as source and runs no wrangler command. */
   "check:d1-address": "offline",
   "check:microformats": "offline",
   "check:urls": "offline",
-  // Reads the two media modules as source and proves every listing axis
-  // `listMediaPage` declares is both READ there and FORWARDED by `listMedia`.
-  // It runs no query, so it sees an axis DROPPED and not one built into wrong
-  // SQL; the query itself is check:media's and verify-live's subject.
+  // Sees an axis dropped, not wrong SQL.
   "check:media-axes": "offline",
-  // Reads the build on disk under build/client: the manifest, the chunks, and
-  // app/enhance/blog.ts as source. No network, but it measures whatever the
-  // last `npm run build` produced, and a stale build is certified as itself;
-  // the deployed page's script set is verify-live's assertion.
+  // Certifies the last local build, stale or not.
   "check:page-payload": "offline",
   // Reads each route's action as SOURCE and proves every destructive intent
   // calls the confirmation predicate inside its own branch. It runs no action,
   // so it sees a guard ABSENT, not a guard present and wrong.
   "check:destructive": "offline",
-  /*
-   * OFFLINE, and it has to be: it replays a PreToolUse hook against constructed
-   * payloads and reads exit codes. No network, no build, no deployment, and
-   * nothing it does depends on which machine it runs on.
-   *
-   * IN CI TOO, deliberately not excluded. The hook is the only thing standing
-   * between a session and an unreproducible deploy of this Worker, and its
-   * scope was narrowed on 2026-09-05; a scope change to a guard fails silently
-   * and in the permissive direction, which is exactly the class CI should be
-   * watching for rather than one machine.
-   */
+  /* In CI: a guard's scope change fails silently and permissively. */
   "check:hook-scope": "offline",
-  /*
-   * Runs `bash -n` over every hook and compiles the Python each one embeds. No
-   * network, no build. IN CI for the same reason check:hook-scope is: a hook
-   * that stops parsing takes the session's guards with it, and twice on
-   * 2026-09-05 one did.
-   */
+  /* In CI: a hook that stops parsing takes the guards with it. */
   "check:hook-syntax": "offline",
-  /*
-   * Reads `.claude/settings.json`, the hooks directory, and the permission allow
-   * lists. No network, no build, no spawned hook.
-   *
-   * IN CI, and the reason is the same as its two siblings with one addition: the
-   * local settings file is gitignored, so the CI run reads the tracked half and
-   * says which half it read. The half CI CAN see is the one that matters most,
-   * because a matcher regressing to a Bash-only spelling is a tracked change.
-   */
+  /* In CI it reads only the tracked half of the settings, and says so. */
   "check:hook-matchers": "offline",
-  /*
-   * OFFLINE, and it is the slowest gate here by a wide margin because it RUNS
-   * the other counting gates to read their floor lines back. That cost is the
-   * price of comparing a floor against a count rather than against another
-   * number in the same file; the alternatives are argued in the gate's own
-   * header. `check-head.mjs` EXCLUDES it, or an extraction would run every
-   * counting gate inside a gate that is running every counting gate.
-   */
+  /* Runs the counting gates to read their floors; check:head excludes it. */
   "check:floors": "offline",
   // Reads the tracked example config, package.json and drizzle/. No network.
   "check:stack": "offline",
@@ -418,38 +115,19 @@ export const TIERS = {
   // Reads workers/app.ts and nothing else. It asserts what the SOURCE declares
   // and cannot see the wire; the deployed headers are verify-live's assertions.
   "check:headers": "offline",
-  // Reads source text under app/ and workers/ and asserts the secret-handling
-  // boundary. It cannot see the emitted bundle, so a secret inlined into a
-  // client chunk by a mis-split is invisible here; the header says so.
+  // Cannot see a secret inlined into a client chunk.
   "check:secrets": "offline",
-  // sha256s drizzle/*.sql against drizzle/manifest.json, both directions. Reads
-  // files and nothing else. It proves the files match the manifest, NOT that
-  // the manifest was honest when written and NOT what the live database
-  // applied; that half is check:invariants --remote.
+  // Live database drift is check:invariants --remote.
   "check:migrations": "offline",
-  // Extracts a ref into a throwaway worktree and runs the offline tier THERE.
-  // Offline: git plus a node_modules junction, no network. It is the only gate
-  // that observes a CHECKOUT rather than the disk, so it sees uncommitted work
-  // and line-ending divergence; it cannot see the deployed build, and it
-  // inherits the blindness of the two gates it must exclude.
+  // Sees uncommitted work and line endings, never the deployed build.
   "check:head": "offline",
   // node:test over test/. The ONE gate here that asserts BEHAVIOUR rather than
   // the repo's shape: it imports shipped modules and checks what they do with a
   // given input. See test/README.md for the three-instrument split.
   "check:tests": "offline",
   /*
-   * The SECOND behavioural gate, and it observes a different subject.
-   * `check:tests` imports pure modules into node; this runs the Worker's own
-   * modules inside workerd against miniflare-local D1, KV, R2, a Durable
-   * Object and the Cache API, so it sees a loader, an action and the entry
-   * itself. It cannot see the deployed build or the platform's cache, which
-   * are verify-live's and check:browser's.
-   *
-   * OFFLINE, and asserted rather than asserted-by-hope: `test/worker/setup.ts`
-   * installs a `fetch` that THROWS on any outbound call, and
-   * `foundation.test.ts` proves it is installed. The layer found its own
-   * violation of this on its first run, when /api/health's content-drift check
-   * reached api.github.com for real.
+   * Runs the Worker's modules in workerd against local bindings. `test/worker/setup.ts` makes any
+   * outbound fetch throw, so offline is enforced.
    */
   "check:worker": "offline",
   // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
@@ -461,59 +139,19 @@ export const TIERS = {
   // Defaults to --local, which reads miniflare state on disk rather than the
   // deployed database. `check:all` re-runs it against --remote.
   "check:backup": "offline",
-  // NO OFFLINE MODE THAT MEANS ANYTHING. It reconciles D1 against two R2
-  // buckets, and --local reads an empty miniflare bucket, so a local run would
-  // report drift that does not exist. Network tier, always.
+  // No meaningful offline mode: `--local` reads an empty bucket. Network, always.
   /*
-   * NETWORK, and the tiering was the hardest call in this gate.
-   *
-   * It wants to be offline: it drives localhost and asserts nothing about a
-   * deployed resource. Two measured facts stop it. Starting the preview server
-   * prints "Establishing remote connection" because the AI_SEARCH binding
-   * always reaches a real instance even in local dev, so the offline tier's
-   * contract, safe on a plane, would be false. And it costs 67s measured,
-   * against a 26-gate tier, which is a large tax on every run of the tier ship
-   * executes.
-   *
-   * The consequence is stated rather than hidden: `npm run check` does NOT run
-   * this, so neither does `ship`. Layout defects can still ship. Wiring it into
-   * ship is a one-line change and is RECOMMENDED, not taken here, because
-   * changing what ship refuses is a decision about the release path rather than
-   * part of building an instrument.
+   * Network: the preview server's AI_SEARCH binding reaches a real instance. Ship does not run
+   * it, so layout defects can ship.
    */
   "check:browser": "network",
   "check:media": "network",
-  /*
-   * NETWORK, and it could not be anything else. It fetches the transform route
-   * and compares what comes back against the origin object, so it needs both a
-   * deployed Worker and the R2 objects behind it. `--local` would read an empty
-   * bucket and report a clean sweep, which is the vacuity its own floor exists
-   * to refuse.
-   */
+  /* `--local` would read an empty bucket and report a clean sweep. */
   "check:image-weight": "network",
-  /*
-   * NETWORK, and there is no local form of it to fall back to. It reads the
-   * monitors off UptimeRobot's API with an operator credential from `.dev.vars`,
-   * and a clean checkout has neither the credential nor anything local to read:
-   * an "offline" mode could only report that it did not look, which is the
-   * vacuity its own fail-closed branches exist to refuse.
-   */
+  /* An offline mode could only report that it did not look. */
   "check:uptime": "network",
   "check:mail": "network",
-  /*
-   * NETWORK, and there is no offline form of it that means anything.
-   *
-   * It creates a real D1 database, applies the migrations to it, loads an
-   * export taken from the deployed database, and deletes it again. A `--local`
-   * form would restore miniflare state into miniflare state and compare an
-   * empty database with an empty database, which is the vacuity every floor in
-   * this repo exists to refuse.
-   *
-   * It is also the most EXPENSIVE gate here by wall clock, because every step
-   * is a round trip to the platform rather than a local read. That is why the
-   * weekly workflow runs it and `check:all` reaches it only when somebody asks
-   * for the whole tier.
-   */
+  /* A local form would compare two empty databases. Weekly, because it is the slowest gate. */
   "check:restore": "network",
 };
 
@@ -529,13 +167,7 @@ const REMOTE_ARGS = {
   // third source, the live database, which is where an unapplied migration or a
   // hand-altered column would show up and nowhere else.
   "check:invariants": ["--remote"],
-  /*
-   * Its config-against-example comparison is pure and stays in the offline tier
-   * ship runs. `--remote` adds the third source, the cron triggers actually
-   * REGISTERED on the two Workers, which is where a trigger that exists on the
-   * platform and in no config shows up and nowhere else. One did, hourly, for
-   * fifteen days.
-   */
+  /* `--remote` adds the cron triggers registered on the platform. */
   "check:config": ["--remote"],
 };
 
@@ -546,14 +178,7 @@ const ci = process.argv.includes("--ci");
 /** Every `check:*` script package.json declares, minus the runners themselves. */
 function discoverGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  /*
-   * ONE DERIVATION, imported rather than restated. This file and
-   * `build-stack.mjs` both used to filter `check:*` themselves, agreeing until
-   * one of them gained a case: `check:ci` is the second aggregate runner, and
-   * the colophon's copy would have listed it as a gate and claimed 28 where 27
-   * exist. Excluding a runner here is not tidiness either, it is what stops the
-   * runner invoking itself forever.
-   */
+  /* Shared with build-stack.mjs; excluding the runners stops this one invoking itself. */
   const names = gateNames(pkg);
 
   const gatesFloorBreach = assertFloor(
@@ -590,66 +215,15 @@ function runGate(name, args) {
     maxBuffer: 64 * 1024 * 1024,
   });
   /*
-   * A GATE THAT COULD NOT RUN IS NOT A GATE THAT FAILED, and the table must not
-   * say it was.
-   *
-   * ## MEASURED, and it cost three diagnoses
-   *
-   * A `ship` run recorded `check:types FAILED (2.5s)`, `check:urls FAILED
-   * (0.0s)` and `check:worker FAILED (0.0s)`, each with an EMPTY output
-   * section, immediately after a 258.6s `check:head`. Nothing ran, so nothing
-   * was asserted about the subject either way. The same shape is recorded in
-   * `check-head.mjs` from 2026-08-20, where fourteen consecutive gates
-   * "failed" in 0.0 to 0.2s and every one was green when re-run alone.
-   *
-   * Reported as FAILED, that is a lie in the direction that wastes the most
-   * time: somebody goes looking for a defect in a gate's subject when the
-   * finding is that the machine ran out of room. It is also the direction that
-   * can hide a real regression, because three noisy reds train the reader to
-   * re-run rather than read.
-   *
-   * ## THE TEST IS THE SHAPE, NOT AN EXIT CODE, AND THAT IS THE SECOND ATTEMPT
-   *
-   * The first version tested for a `spawnSync` error, a null status, a signal,
-   * or exit 143. It was proven by planting a gate that exits 143, it passed
-   * that plant, AND IT DID NOTHING WHEN THE REAL CASCADE HAPPENED: a killed
-   * ship on 2026-08-31 reproduced all sixteen empty gates and the summary still
-   * read `9 passed, 16 failed`. The plant had confirmed the model rather than
-   * the world, which is hard rule 12's own warning about a dichotomy
-   * inheriting its author's frame.
-   *
-   * The measured signature of the real event is: `error` undefined, `signal`
-   * null, `status` a number that is neither 0 nor 143, and BOTH STREAMS EMPTY.
-   * Only the last of those distinguishes it from an ordinary failure, so it is
-   * the whole test. An exit code list can always be one code short; "it printed
-   * nothing at all" cannot.
-   *
-   * ## WHAT LICENSES THE SHAPE IS A MEASUREMENT, NOT AN ARGUMENT
-   *
-   * Every offline gate was run and both streams were counted in bytes, on
-   * 2026-08-31: 25 of 25 wrote to stdout, none produced zero bytes on both
-   * streams, and the quietest wrote 81. So an empty pair cannot be a gate that
-   * ran, because no gate in this repo is capable of running silently.
-   *
-   * BOTH streams, never either: 23 of those 25 wrote nothing to stderr on a
-   * clean pass, so testing either one alone would call almost every green gate
-   * an error. If a future gate is ever written to succeed silently, this
-   * misreports it, and the repair is to make that gate say something, which
-   * every other gate here already does.
-   *
-   * NOT FOLDED INTO `ok`. An errored gate is not a pass, so `ok` stays false and
-   * every caller that gates on it, including the two builds above, still
-   * refuses.
+   * A gate that could not run is not a gate that failed. The test is both streams empty: every
+   * gate here prints on a pass, and an exit-code list missed a real cascade after passing its
+   * plant (hard rule 12). An errored gate is still not `ok`.
    */
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
   const errored = stdout.length === 0 && stderr.length === 0;
 
-  /*
-   * The reason REPORTS the disposition; it never decides it. Whatever the exit
-   * code turns out to be on the next host, the classification above already
-   * happened and this only says what was seen alongside it.
-   */
+  /* The reason reports the disposition; it never decides it. */
   const seen = [
     `status ${result.status === null ? "null" : result.status}`,
     result.signal ? `signal ${result.signal}` : null,
@@ -662,22 +236,13 @@ function runGate(name, args) {
     name,
     ok: !errored && result.status === 0,
     errored,
-    /*
-     * THE STATUS AS A NUMBER, not only inside the reason sentence below.
-     * The environment classifier correlates it across gates, and parsing it
-     * back out of human prose would make that sentence's wording
-     * load-bearing.
-     */
+    /* A number, so the classifier does not parse the reason sentence. */
     status: typeof result.status === "number" ? result.status : null,
     reason: errored ? `wrote nothing to either stream (${seen})` : "",
     ms: Date.now() - started,
     output: `${stdout}${stderr}`,
     /*
-     * Filled in by the caller, which owns the clock: this function cannot see
-     * the sample file's window because it IS the window. Null means the
-     * sampler did not run or the gate finished inside one sampling interval,
-     * and null is deliberately not zero.
-     *
+     * Filled in by the caller. Null means not sampled, not zero.
      * @type {number | null}
      */
     peakRss: /** @type {number | null} */ (null),
@@ -685,69 +250,16 @@ function runGate(name, args) {
 }
 
 /*
- * ENVIRONMENT FAILURE: ONE FACT ABOUT THE MACHINE, NOT N FACTS ABOUT THE REPO.
- *
- * MEASURED 2026-09-15, twice on this host. First `check:floors` alone, under a
- * low-memory kill. Then all 32 offline gates at once, immediately after an
- * `npm ci` pushed 760 packages through the filesystem cache and a full build
- * ran. Every one of the 32 ended in 0.0s, wrote nothing to either stream, and
- * carried status 3221225794, which is 0xC0000142 STATUS_DLL_INIT_FAILED: a
- * process that never reached main. The four SEQUENTIAL build steps in the same
- * run spawned fine and a single gate run by hand a minute later passed, so the
- * discriminator was concurrency, not the repo.
- *
- * The tier reported "0 passed, 0 failed, 32 errored" above thirty-two separate
- * no-verdict banners. Every word of that is true and it reads like the repo
- * broke. The paragraph under the summary already said the usual cause is a
- * saturated machine; nobody reaches it after thirty-two banners.
- *
- * ## FOUR CONDITIONS IN CONJUNCTION, AND ONE OF THEM DOES THE SAFETY WORK
- *
- *   1. BOTH STREAMS EMPTY. The existing `errored` test, and the ONLY one that
- *      can keep a real failure out of this branch. Licensed by the measurement
- *      recorded in runGate above: 25 of 25 offline gates wrote to stdout on a
- *      clean pass and the quietest wrote 81 bytes, so no gate here is capable
- *      of running silently. A gate that RAN has something to say.
- *   2. A STATUS AT OR ABOVE 0xC0000000, the NTSTATUS failure range. This is
- *      NOT load-bearing on its own and this comment will not pretend it is: on
- *      Windows a process CAN exit with such a value deliberately, because the
- *      exit code is a full DWORD rather than a byte. What it adds is the
- *      distinction between the OS ending a process at init and an ordinary
- *      nonzero exit. Condition 1 is what makes the pair safe.
- *   3. FASTER THAN ONE SECOND. A process that never reached main cannot have
- *      taken longer. Measured at 0.0s for all 32; the threshold is loose on
- *      purpose, because tightening it toward the measurement would make a
- *      slower host silently stop matching.
- *   4. MORE THAN ONE GATE, SAME STATUS, SAME RUN. This is the condition that
- *      earns the word "environment". One gate erroring is ambiguous and stays
- *      ambiguous. Thirty-two erroring identically at the same instant cannot
- *      be thirty-two independent facts about thirty-two different subjects.
- *
- * ## WHAT IT DELIBERATELY DOES NOT CLAIM
- *
- * It does NOT cover the POSIX shape of the same event, where a process killed
- * before exec arrives with `signal` set or a spawn error rather than an
- * NTSTATUS. That variant has not been measured here, and a branch written for
- * a signature nobody has seen is a condition nobody can show firing, which is
- * the class this repo spent 2026-09-14 closing in check:invariants section 31.
- * The platform-neutral half is `errored` itself, unchanged, and it still
- * catches that case and reports it as an errored gate.
- *
- * It does NOT change the verdict. An unrun gate covers nothing, so the tier
- * still exits nonzero. Only the exit CODE differs, so a caller can tell the
- * machine from the repo without parsing prose.
- *
- * PROVEN IN BOTH DIRECTIONS by test/check-all-environment.test.mjs, and the
- * second direction is the one that matters: a synthetic gate that genuinely
- * failed, with a non-empty stderr and status 1, must still report as a gate
- * failure. A classifier that calls everything the machine agrees with
- * everything, which is hard rule 10's unfailable-condition class.
+ * Environment failure: one machine fact, not N repo facts. All four must hold: both streams
+ * empty (the only condition that keeps a real failure out), an NTSTATUS-range status, under one
+ * second, and more than one gate with that status. It changes the exit code (2), never the
+ * verdict. A classifier that calls everything the machine is hard rule 10's unfailable class.
  */
 const NTSTATUS_FAILURE_FLOOR = 0xc0000000;
 const ENVIRONMENT_MAX_MS = 1000;
 
 /**
- * The ones seen or expected on this host; anything else prints as bare hex.
+ * Known on this host; anything else prints as bare hex.
  * @type {Record<number, string>}
  */
 const NTSTATUS_NAMES = {
@@ -798,17 +310,7 @@ export function classifyEnvironmentFailure(results) {
 function main() {
   const gates = discoverGates();
 
-  /*
-   * THE STACK ARTIFACT, BUILT FIRST, and the order is load-bearing rather than
-   * tidy: `build:content` reads content/generated/stack.json to emit the
-   * colophon's page records, so a run that built the corpus first would render
-   * pages from whatever stack.json a previous run left behind.
-   *
-   * Gitignored since ruling 39a. It was committed and byte-gated until then,
-   * which made every package.json change a two-file change and put every
-   * Renovate PR red on check:stack with no defect in it. Same class of step as
-   * the two below: not a gate, no table row, no floor.
-   */
+  /* Built first: `build:content` reads stack.json. Not a gate. */
   process.stdout.write("  build:stack (the colophon artifact build:content reads) ... ");
   const stacked = runGate("build:stack", []);
   if (!stacked.ok) {
@@ -821,19 +323,8 @@ function main() {
   }
   console.log(`ok (${(stacked.ms / 1000).toFixed(1)}s)`);
   /*
-   * THE LOCAL BUILD PRODUCT IS BUILT BEFORE ANY GATE READS IT. Since the
-   * artifact arc, content/generated/posts.json is gitignored: git holds
-   * markdown, D1 holds the rendered copy, and this file exists on disk only
-   * because something built it. Several offline gates read it
-   * (check:content's determinism pass builds its own, check:diagrams,
-   * check:features and the sync path read the file), so a runner that did
-   * not build first would read whatever a previous run left behind, or
-   * nothing. Refused loudly rather than left to each gate's own missing-file
-   * message, because "the build is broken" and "a gate is red" are different
-   * findings and the table below should carry the second kind only.
-   *
-   * Not a gate: it appears in no table and counts toward no floor. It is the
-   * same class of step as `actions/checkout`.
+   * Built before any gate reads it (posts.json is gitignored), and refused here: a broken build
+   * is not a red gate.
    */
   process.stdout.write("  build:content (the local build product the tier reads) ... ");
   const built = runGate("build:content", []);
@@ -846,15 +337,7 @@ function main() {
     );
   }
   console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
-  /*
-   * THE PUBLICATION TWINS, same class again: public/publications/*.md is
-   * gitignored build product, and `check:publications` compares what is on disk
-   * against a fresh generation. Without this step that comparison reads
-   * whatever the last run left, which on a fresh clone is nothing and on a
-   * stale tree is the previous corpus. Both are the drift the comparison exists
-   * to find, arriving as the comparison's own input. Not a gate: no table row,
-   * no floor.
-   */
+  /* Gitignored; check:publications compares it against a fresh generation. */
   process.stdout.write("  build:publication-twins (the twins check:publications compares) ... ");
   const twinned = runGate("build:publication-twins", []);
   if (!twinned.ok) {
@@ -866,14 +349,7 @@ function main() {
     );
   }
   console.log(`ok (${(twinned.ms / 1000).toFixed(1)}s)`);
-  /*
-   * THE ENHANCEMENT BUNDLES, same class as build:content: app/enhance/dist/ is
-   * gitignored build product, the app build's ?url imports refuse to resolve
-   * without it, and a stale bundle on disk would be certified as itself by any
-   * gate that reads the build. Built here so the tier never depends on a
-   * previous run having left the right bytes behind. Not a gate: no table row,
-   * no floor.
-   */
+  /* Gitignored; the app build's `?url` imports need them. */
   process.stdout.write("  build:enhance (the bundles the app build's ?url imports serve) ... ");
   const enhanced = runGate("build:enhance", []);
   if (!enhanced.ok) {
@@ -885,15 +361,7 @@ function main() {
     );
   }
   console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
-  /*
-   * THE CI TIER IS THE OFFLINE TIER MINUS CI_EXCLUDED, derived rather than
-   * listed, so a gate added tomorrow is in CI by default and has to be argued
-   * OUT rather than remembered IN. That direction is the whole point: the
-   * failure this file exists about is a gate silently not running.
-   *
-   * `--all` and `--ci` are not combinable, and nothing tries: `--all` adds the
-   * network tier, which is exactly what CI has no credentials for.
-   */
+  /* Derived, so a new gate is in CI unless argued out. */
   const offline = gates.filter((name) => TIERS[name] === "offline");
   const selected = all ? gates : ci ? offline.filter((name) => !CI_EXCLUDED[name]) : offline;
   const skipped = gates.filter((name) => !selected.includes(name));
@@ -924,36 +392,12 @@ function main() {
   );
 
   /*
-   * PREFLIGHT: WHAT THE LAST RUN LEFT ALIVE.
-   *
-   * Reads the previous run's final sample and tree-kills anything in it that
-   * is still running. This is the half that addresses the actual incident:
-   * gates inside one run cannot overlap (the loop below is a blocking
-   * `spawnSync`, measured, not assumed), so the memory that accumulates comes
-   * from RUNS, not from gates racing each other. A killed run's orphans are
-   * still holding their pages when the next run starts, and the next run then
-   * starts that much closer to the ceiling.
-   *
-   * BY PID, NEVER BY NAME. `killTree` is `taskkill /F /T /PID`. A name match
-   * for `node` or `chrome` on this machine reaches Dustin's own editor and
-   * browser: measured 2026-09-09, a bare name match selects 18 Chrome
-   * processes belonging to his session. An absent pid is simply done, and pids
-   * are reused, so anything that will not die is reported rather than chased.
+   * Preflight: tree-kill what the previous run left alive. By pid, never by name: a name match
+   * for `node` or `chrome` reaches Dustin's own editor and browser.
    */
   const recorded = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
   if (recorded.length > 0) {
-    /*
-     * LIVENESS FIRST, IN ONE READ. Most recorded pids are already gone: a run
-     * that ended normally leaves a full window of them. Calling `killTree` on
-     * each would spawn a `taskkill` per dead pid, and a burst of dozens of
-     * process creations is the one thing this machine has just demonstrated it
-     * handles badly. Measured 2026-09-09: a preflight over 47 recorded pids ran
-     * 47 kills and every gate after it failed to start with 0xC0000142, which
-     * is Windows refusing to initialise a process.
-     *
-     * One process table read answers the question for all of them, and it is
-     * the same read `descendantPids` already uses.
-     */
+    /* One process table read: a `taskkill` per dead pid makes later gates fail to start. */
     const table = readProcessTable();
     const leftovers = recorded.filter((pid) => table.has(pid));
     let reaped = 0;
@@ -975,16 +419,7 @@ function main() {
   writeFileSync(RSS_FILE, "");
   const sampler = startRssSampler(RSS_FILE);
 
-  /**
-   * KILLS THIS RUN'S OWN TREE. Registered for a normal exit and for both
-   * signals, so a Ctrl+C stops leaving the heavy children behind.
-   *
-   * It cannot cover every case and says so rather than pretending: a
-   * `taskkill /F` of this process, and an OS kill under memory pressure, run
-   * no handler at all. That is precisely why the preflight above exists, and
-   * between the two the orphan either dies now or dies at the start of the
-   * next run.
-   */
+  /** Kills this run's tree on exit and signals; an OS kill is covered by the next preflight. */
   let cleanedUp = false;
   const cleanUp = () => {
     if (cleanedUp) return;
@@ -1008,41 +443,19 @@ function main() {
 
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
-  /*
-   * check:floors RUNS LAST AND READS, RATHER THAN RUNNING EVERYTHING AGAIN.
-   *
-   * It compares each floor against the count the owning gate printed, and every
-   * one of those lines is already in the output captured just below. Spawning it
-   * as an ordinary gate made it re-run the whole offline tier to reproduce text
-   * this loop had already collected: 223.3s of a 1065s tier, measured 2026-09-06,
-   * paid on every ship.
-   *
-   * So it is held out of the loop and fed afterwards. Held out rather than
-   * reordered in the list, because the list is DERIVED and sorting it by hand
-   * would be a second opinion about what runs.
-   */
+  /* Runs last and reads the captured output instead of re-running the tier. */
   const readsFloorLines = selected.includes(FLOOR_READER);
   const spawnable = selected.filter((name) => name !== FLOOR_READER);
 
   for (const name of spawnable) {
-    // JUSTIFIED SUBSTITUTION (hard rule 13). `REMOTE_ARGS` is DELIBERATELY
-    // PARTIAL: most gates take no remote arguments, and their absence from the
-    // map means exactly that. The empty array is the correct value for a gate
-    // with no extra args, not a stand-in for a missing one, so nothing is being
-    // masked. Contrast WHY_LABEL and STATUS_LABEL, where every key was supposed
-    // to be present and the fallback hid the omission.
+    // JUSTIFIED SUBSTITUTION (hard rule 13). Partial on purpose: absence means no extra args.
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
     // EVERY gate runs, including after a failure. Stopping at the first red hides
     // every gate behind it, which is how one failure masks a second.
     const from = Date.now();
     const result = runGate(name, args);
-    /*
-     * The window closes AFTER the gate returns, so a sample taken while its
-     * children were still dying belongs to the gate that spawned them rather
-     * than to whichever gate runs next. The gates cannot overlap, so the
-     * windows cannot either.
-     */
+    /* Closes after the gate returns, so its dying children count against it. */
     result.peakRss = peakBetween(RSS_FILE, from, Date.now());
     results.push(result);
     const seconds = (result.ms / 1000).toFixed(1);
@@ -1057,17 +470,8 @@ function main() {
   }
 
   /*
-   * THE FLOOR READER, fed the run that just happened.
-   *
-   * `gates` is passed separately and is not derivable from the text: the
-   * silent-gate assertion asks which gates printed NO floor line, and a gate
-   * that printed nothing leaves no trace in a concatenation of what was
-   * printed.
-   *
-   * Only gates that PASSED contribute. A floor line from a gate that then
-   * refused is a number the producing gate disowned, and check:all is already
-   * reporting that gate as red; letting its floors through would have the same
-   * failure argued twice, in two voices, one of them wrong about the cause.
+   * Fed only passing gates' output; `gates` is passed separately because a silent gate leaves no
+   * trace in the text.
    */
   if (readsFloorLines) {
     process.stdout.write(`  ${FLOOR_READER} ... `);
@@ -1115,35 +519,21 @@ function main() {
   const errored = results.filter((r) => r.errored);
   const failed = results.filter((r) => !r.ok && !r.errored);
 
-  // The failing output, in full, AFTER the run rather than interleaved. A
-  // failure buried in the middle of thirteen gates' output is a failure nobody
-  // reads.
+  // Failing output in full, after the run, where it is read.
   for (const result of failed) {
     console.log(`\n${"=".repeat(72)}\n${result.name}\n${"=".repeat(72)}`);
     console.log(result.output.trimEnd());
   }
 
-  /*
-   * CORRELATED FIRST. When the whole errored set is one machine event, thirty
-   * two banners below would bury the finding under its own symptoms.
-   */
+  /* Correlated first, so one machine event is not buried under its own banners. */
   const environment = classifyEnvironmentFailure(results);
   const environmentNames = new Set(environment ? environment.names : []);
 
-  // Errored gates get their own block, and the empty output IS the evidence: a
-  // gate that never started has nothing to say, and printing that emptiness
-  // under its own heading is what distinguishes it from a silent failure.
-  // Gates inside a correlated environment event are listed once, together,
-  // under the banner further down instead of once each up here.
+  // Errored gates get their own block; a correlated event is listed once under its banner.
   for (const result of errored.filter((r) => !environmentNames.has(r.name))) {
     console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
     console.log(`  ${result.reason}`);
-    /*
-     * There is deliberately nothing to print after that line. An errored gate
-     * is DEFINED by both its streams being empty, so a branch here for the case
-     * where it said something would be a condition that cannot be true, which
-     * is hard rule 10's first class. The emptiness IS the evidence.
-     */
+    /* An errored gate has no output by definition; a branch for it could not fire (hard rule 10). */
   }
 
   console.log(`\n${"-".repeat(52)}`);
@@ -1161,11 +551,7 @@ function main() {
   }
   console.log(`${"-".repeat(52)}`);
 
-  /*
-   * PEAK MEMORY IN THE SUMMARY LINE, because the number that matters for an
-   * out-of-memory kill is the highest point the tier reached, and which gate
-   * was holding it. A per-gate table nobody totals is a table nobody reads.
-   */
+  /* Peak memory and the gate holding it are what an out-of-memory kill needs. */
   /** @type {{ name: string, peakRss: number } | null} */
   let worst = null;
   for (const result of results) {
@@ -1221,56 +607,20 @@ function main() {
     );
   }
 
-  // An errored run exits nonzero too. It did not prove the tier green, and the
-  // one thing that must never happen is a ship reading "0 failed" off a tier
-  // where three gates never started.
+  // An errored run exits nonzero: a ship must never read "0 failed" off it.
   /*
-   * THE EXIT CODE IS SET, NOT TAKEN, on the precedent check-config.mjs records.
-   *
-   * That gate measured process.exit() tearing its process down while sockets
-   * were still closing: it printed a clean table and then exited 127, and its
-   * own comment names the consequence, that "check-all.mjs reads exit codes and
-   * cannot see the clean table above one". It and check:uptime were converted
-   * to process.exitCode for that reason, and check:fonts was written that way.
-   * This process writes the tier report every ship reads, and it was the last
-   * one still tearing itself down at the end of writing it.
-   *
-   * NOT CLAIMED TO FIX ANYTHING OBSERVED. Three runs on 2026-09-13 ended after
-   * the banner with a partial report and exit 1, and that symptom was NEVER
-   * REPRODUCED: not by the tier under the same redirect, not by a controlled
-   * 2000-line process.exit() reproduction, and no resource-exhaustion event
-   * backs the alternative reading. This change is precedent conformance and
-   * hang safety, and nothing more. The symptom is QUEUED rather than diagnosed,
-   * with three preserved logs: before-fix.log, check-g3b.log and check-g3c.log.
-   *
-   * cleanUp() IS CALLED EXPLICITLY, and that is what makes this safe rather
-   * than a hang. The sampler is spawned with detached:false and is never
-   * unref()d, so the event loop cannot drain while it lives, and the
-   * process.on("exit") handler that would stop it never runs, because the
-   * process never reaches exiting. The cleanedUp guard makes the later call
-   * from that handler a no-op.
+   * Exit code set, not taken: process.exit() can cut the report short. cleanUp() is explicit
+   * because the live sampler would keep the exit handler from ever running.
    */
   cleanUp();
-  /*
-   * TWO IS THE MACHINE, ONE IS THE REPO, AND BOTH ARE NONZERO. A real gate
-   * failure outranks an environment event: if anything actually reported
-   * red, that is the finding and the exit code says so.
-   */
+  /* Two is the machine, one is the repo; a real failure outranks an environment event. */
   process.exitCode =
     failed.length > 0 ? 1 : environment ? 2 : errored.length > 0 ? 1 : 0;
 }
 
 /*
- * MAIN GUARD, so `TIERS` above can be imported without running the suite.
- *
- * `check:floors` needs the tier map: it runs gates to read their floor lines
- * back, and it must run the OFFLINE ones only, or an offline tier would reach
- * the network through it. Without this guard, importing that map would start a
- * full check run inside the gate that was asking which gates to run.
- *
- * `pathToFileURL` rather than string surgery on process.argv[1], and the reason
- * is measured in `build-stack.mjs`: on Windows the hand-built `file://C:\...`
- * form never equals import.meta.url, so the guard silently never fires.
+ * Main guard, so check:floors can import `TIERS`. `pathToFileURL`, because a hand-built
+ * `file://C:\...` URL never equals import.meta.url on Windows.
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   try {

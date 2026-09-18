@@ -3,50 +3,9 @@
  *
  *   npm run ship
  *
- * OBSERVATION BOUNDARY: this runs the steps and reads their output. It does not
- * know whether a gate is meaningful, and it proves the deploy by POLLING rather
- * than by inspecting the built bundle, so a build that succeeded and shipped the
- * wrong thing looks identical here. Proving WHICH build answered is
- * `verify-live`'s job and is deliberately not folded in: it bills money per Ask
- * probe and must stay a decision, not a side effect.
- *
- * ## THE TWO ORDERING RULES, AND WHY THIS FILE IS NOW WHERE THEY LIVE
- *
- * Both were carried in session prompts six times before this existed. A rule
- * that survives only because someone remembers to type it is not a rule, and
- * the cost of getting either wrong is paid by readers rather than by the person
- * shipping.
- *
- * **1. DEPLOY BEFORE SYNC.** `sync:content --remote` writes the corpus and
- * `llms.txt` into D1, and `llms.txt` advertises URLs. Sync first and the index
- * plus the machine-readable manifest describe pages the running Worker does not
- * serve yet, so every agent that reads `llms.txt` in that window gets a 404 on
- * a URL the site told it to fetch. Deploying first means the worst case is a
- * page that exists and is not yet indexed, which is invisible.
- *
- * **2. `check:content` BEFORE SYNC, EXPLICITLY.** `sync-content.mjs` RUNS NO
- * GATE. Its own header says so in capitals, and it says so because it once
- * implied the opposite. It is the largest write path into production D1 in the
- * repo, and it will happily push a stale or hand-edited artifact. The gate is
- * three seconds; the failure is a corpus that disagrees with the repo and is
- * only found by a byte comparison nobody runs until the next build.
- *
- * ## FAIL CLOSED AT EVERY STEP
- *
- * A dirty tree refuses before building. A red gate refuses to deploy. A failed
- * poll refuses to sync. Each refusal names the step and what to do.
- *
- * The dirty-tree refusal is the one that has actually been needed. **`npm run
- * deploy` builds from the WORKING TREE, not from HEAD**, so a deploy with
- * uncommitted files ships code that exists on no commit and that no clone can
- * reproduce. That happened on 2026-08-07 and ran in production for two days
- * before anyone noticed, because every instrument in the repo reported health.
- *
- * ## A SHIP THAT CANNOT PROVE WHAT IT SHIPPED DID NOT SHIP
- *
- * The Version ID and the sync line are both parsed out of the real output and
- * printed at the end. If either is missing this exits nonzero even when every
- * command succeeded, because "it seemed to work" is not a deploy record.
+ * Deploy before sync, so `llms.txt` never advertises unserved pages. `check:content` before
+ * sync, because `sync-content.mjs` runs no gate. Every step fails closed. A missing Version ID
+ * or sync line exits nonzero. `verify-live` stays separate: its probes are billed.
  */
 
 import {
@@ -89,58 +48,18 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 /* ------------------------------------------------ ship's own transcript --- */
 
 /**
- * Where the transcript goes. GITIGNORED, and `.gitignore` carries the two
- * independent reasons: ship refuses a dirty tree, so an untracked log it wrote
- * itself would make the next ship refuse because of the last one; and the log
- * carries the account-scoped ids wrangler prints in its binding table.
+ * Gitignored: an untracked log would make the next ship refuse a dirty tree, and the log
+ * carries account-scoped ids.
  */
 const LOG_DIR = join(root, ".ship-logs");
 
-/**
- * PRUNED BY AGE, NEVER BY COUNT.
- *
- * A count is only a duration if the write rate is fixed, and ship's is not: a
- * bad afternoon writes a dozen runs and a quiet fortnight writes none, so
- * "keep the last twenty" is two weeks in one case and one afternoon in the
- * other, and it is the afternoon that deletes the log somebody wanted. Fourteen
- * days is long enough that a Monday can still read the previous Monday's
- * refusal.
- */
+/** Pruned by age, never by count: ship's write rate varies, so a count is no fixed duration. */
 const LOG_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 /**
- * Ship writes its own transcript, every run, pass or fail.
- *
- * ## WHY THIS IS A RE-EXEC AND NOT A WRAPPER AROUND `console`
- *
- * Almost everything a person needs from a failed ship is printed by a CHILD
- * rather than by this file: the gate tier, the build, wrangler. `run()` hands
- * those children `stdio: "inherit"` so their output streams live, which means
- * this process never sees the bytes and cannot write them anywhere. Capturing
- * them instead would buy the log at the price of a seven-minute silence during
- * the gate tier, which is the span somebody is most likely to be watching.
- *
- * So the first invocation re-execs itself with stdout and stderr piped, and
- * forwards every chunk to the real stream AND to the file as it arrives.
- * Liveness survives because the forwarding streams; grandchildren are captured
- * because they inherit the pipe rather than the terminal.
- *
- * ## WHY IT HAD TO EXIST
- *
- * The evidence survived only when whoever ran ship remembered to pipe it. Three
- * sessions running diagnosed a refusal out of a log that existed by luck, and
- * one of those refusals named a gate whose failing test name had already been
- * thrown away upstream. A record that depends on being remembered is not a
- * record, and this is the same argument the two ordering rules above make about
- * rules carried in session prompts.
- *
- * ## THE BOUNDARY
- *
- * It records what ship and its children PRINTED. It is not a deploy record and
- * proves nothing about the running Worker; that is still `verify-live`'s job.
- * And a parent killed by the host may leave the child running, which the signal
- * forwarding below reduces and does not eliminate: a killed ship was always
- * able to leave work in flight, and this does not change that either way.
+ * Re-execs ship with piped stdio and tees every chunk to the terminal and the log.
+ * Children run with inherited stdio, so wrapping `console` would miss their output.
+ * Records what was printed only; it proves nothing about the running Worker.
  *
  * @returns {Promise<number>} the child's exit code
  */
@@ -193,14 +112,7 @@ async function teeSelfToLog() {
     child.on("error", () => resolve(1));
   });
 
-  /*
-   * THE PATH IS THE LAST THING PRINTED ON A FAILURE, deliberately after every
-   * refusal message. A reader scrolling back from the bottom of a red run finds
-   * the transcript before they find anything else, which is the one moment they
-   * need it. On success it is not printed: a green ship already said what it
-   * did, and a line nobody needs at the end of every good run is how people
-   * learn to stop reading the end of the run.
-   */
+  /* Printed last and only on failure, where a reader scrolling back finds it first. */
   if (code !== 0) {
     const line = `\n  transcript: ${logPath}\n`;
     process.stderr.write(line);
@@ -214,32 +126,13 @@ if (!process.env.SHIP_TRANSCRIPT) {
   process.exit(await teeSelfToLog());
 }
 
-/*
- * THE ORIGIN, IMPORTED rather than restated.
- *
- * It was a literal here and a literal in `app/lib/seo.ts`, and this is the
- * script that polls the deploy it just made: the copy that goes stale is the
- * one that then polls the wrong host and reports a healthy site nobody is
- * looking at. `check:llms` and `check:invariants` both already read the value
- * out of seo.ts to hold other documents to it; this one can simply import it,
- * because Node strips the types and the module has no bindings to resolve.
- *
- * At the DNS cutover this follows seo.ts by construction. Rule 17.
- */
+/* Imported from `app/lib/seo.ts`, never restated: a stale copy would poll the wrong host. */
 const ORIGIN = SITE_ORIGIN;
 const POLL_PATH = "/colophon";
 const POLL_COUNT = 5;
 const POLL_GAP_MS = 10_000;
 
-/**
- * What ship asks whether the deploy is READY, as opposed to merely answering.
- *
- * A named constant rather than an inline path, so the plant that proves this
- * step can fail has one place to point somewhere else. `check:policy` asserts
- * that it is this endpoint and that the step runs between the deploy and the
- * sync, so pointing it elsewhere permanently is a failing gate rather than a
- * quiet downgrade.
- */
+/** `check:policy` asserts this endpoint and that the step runs between deploy and sync. */
 const READINESS_PATH = "/api/health";
 
 
@@ -252,11 +145,7 @@ function announce(title) {
 }
 
 /**
- * Refuse, loudly, naming the step and the remedy. Never a bare exit.
- *
- * Declared `never` because it genuinely never returns: it exits the process.
- * Saying so lets a caller narrow a value it has just refused on, instead of
- * casting around a check that has already happened.
+ * Refuse, naming the step and the remedy, and exit.
  *
  * @param {string} why @param {string} remedy
  * @returns {never}
@@ -286,22 +175,8 @@ function run(command, args, { capture = false } = {}) {
 
 
 /*
- * THE OPERATOR TOKEN IS CHECKED BEFORE ANYTHING DEPLOYS, and the split is
- * deliberate.
- *
- * Step 10 calls the operator API to bring the Ask index into step, because
- * `sync:content` rebuilds D1 and both FTS indexes and does not touch AI Search.
- * A CONFIGURATION problem is not the same as a failed call: missing the token
- * is fixable in a second and should not cost a deploy, so it refuses here,
- * before the build. A call that FAILS after the deploy is a different thing and
- * is handled where it happens, loudly, with the deploy left standing.
- *
- * Sourced the way `operator-roundtrip.mjs` already sources it: a path in
- * OPERATOR_TOKEN_FILE pointing at a file holding the token. The token itself is
- * never an argument, never an environment value that a child process inherits
- * by name, and never printed. The length floor is the one `auth.server.ts`
- * enforces, so a truncated file is refused here rather than 401ing after a
- * deploy.
+ * Checked before the build, so a missing token costs no deploy. Never an argument or printed.
+ * The length floor matches `auth.server.ts`.
  */
 const TOKEN_FILE = process.env.OPERATOR_TOKEN_FILE;
 if (!TOKEN_FILE) {
@@ -332,31 +207,8 @@ if (OPERATOR_TOKEN.length < 32) {
 /* ------------------------------------------------------------ 0. preflight */
 
 /*
- * PULL FIRST, AND REFUSE IF ANYTHING IS STILL RUNNING.
- *
- * Two failures, both measured, both cheap to prevent and expensive to find:
- *
- *   THE PULL. Ship deploys LOCAL HEAD. A seat-side commit this clone does not
- *   have is a deploy of code nobody asked for, and the `ship` skill has said
- *   "git pull --ff-only" as its step 1 since it was written, which means it was
- *   a human's job to remember. `--ff-only` and never a merge: a merge commit
- *   created here would be a commit CI has never seen, and the CI gate three
- *   steps down would then refuse the very thing this step just made.
- *
- *   THE ORPHANS. On 2026-09-10 ship failed with EBUSY on build/client because
- *   `vite preview --port 4173` processes, orphaned by killed `check:all` runs,
- *   still held the directory. `check:all`'s preflight reaper only knows runs it
- *   recorded, and a killed run records nothing. A live `check:all` or
- *   `check:browser` is the same hazard from the other end: it rewrites
- *   build/client under a ship that is reading it.
- *
- * BY COMMAND LINE, BY PID, NEVER BY NAME. Every one of these is `node` or a
- * child of it, so a name match would refuse on this ship's own process and on
- * every unrelated editor. `readProcessTable` supplies the command line, and a
- * process it cannot read a command line for can never satisfy a needle, which
- * is the fail-closed direction: it is left alone rather than killed.
- *
- * REPORTED AND REFUSED, NEVER KILLED. Ship does not know whose run that is.
+ * Pull `--ff-only`: a merge commit has no CI run. Refuse while another run holds build/client,
+ * matched by command line, never by name (all are `node`). Never killed: whose run is unknown.
  */
 announce("Preflight: up to date, and nothing else holding the tree");
 
@@ -388,19 +240,10 @@ announce("Preflight: up to date, and nothing else holding the tree");
   }
   console.log(`  ${pullOut.split("\n")[0] || "already up to date"}`);
 
-  /*
-   * THE NEEDLES LIVE IN `child-processes.mjs`, not here, so the test can import
-   * the list ship actually uses rather than a copy of it. `normaliseCommand`
-   * lower-cases and turns every backslash into a forward slash, so one needle
-   * matches on both platforms without a second spelling.
-   */
+  /* Needles live in `child-processes.mjs` so the test imports the list ship uses. */
   const table = readProcessTable();
   if (table.size === 0) {
-    /*
-     * CANNOT VERIFY IS NOT CLEAR. The listing failed, so this step proved
-     * nothing; said out loud rather than passed over, because a silent skip
-     * here is the "zero from a search over an empty scope" shape.
-     */
+    /* Cannot verify is not clear: say so rather than pass silently. */
     console.log("  could not read the process table, so nothing was proven about orphans.");
   } else {
     const busy = busyProcesses(table, SHIP_BUSY_NEEDLES, process.pid);
@@ -420,13 +263,7 @@ announce("Preflight: up to date, and nothing else holding the tree");
 
 announce("Working tree must be clean");
 
-/*
- * A SECOND DIRTY CHECK, AFTER THE PULL RATHER THAN INSTEAD OF IT. Step 0
- * refuses a dirty tree so the fast-forward is safe to attempt; this one is
- * about what will be BUILT, and the pull between them can fail in ways that
- * leave files behind. Two cheap `git status` calls are worth less than one
- * unreproducible deploy.
- */
+/* Checked again after the pull: a failed pull can leave files, and this is what gets built. */
 const porcelain = spawnSync("git", ["status", "--porcelain"], {
   cwd: root,
   encoding: "utf8",
@@ -447,77 +284,24 @@ console.log("  clean.");
 
 const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" });
 const sha = (head.stdout ?? "").trim();
-// The FULL sha as well: `actions/runs?head_sha=` matches on the 40-character
-// form and returns an empty list for an abbreviated one, which would read as
-// "no CI run for this commit" on every ship.
+// Full sha: `head_sha=` returns nothing for an abbreviated one.
 const headFull = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
 const shaFull = (headFull.stdout ?? "").trim();
 console.log(`  HEAD is ${sha}`);
 
 /*
- * STEP 1b, THE STATED-ABSENCE PLACEHOLDER CHECK, WAS DELETED 2026-08-21.
- *
- * It iterated `const PLACEHOLDERS = []` and printed "no stated-absence
- * placeholders are declared, so nothing was checked here." It had carried
- * exactly one entry, `CACHE_SENTENCE_PENDING_PROBE`, and that entry was
- * resolved on 2026-08-14. It was kept as a mechanism for the next one.
- *
- * **A dead loop kept for a hypothetical successor is not a mechanism, it is a
- * shape.** Re-adding it when a second stated absence appears is six lines and a
- * comment, and writing those six lines with a real subject in hand produces a
- * better check than reviving a generalisation drawn from one case.
- *
- * The property it guarded is NOT lost. `check:admin-ui` asserts both halves on
- * the rendered page: the measured answer is present, and the placeholder
- * wording is gone. That is the assertion with teeth, because it reads the
- * product rather than a list somebody has to remember to add to.
+ * NEVER PUT THE STATED-ABSENCE PLACEHOLDERS LOOP BACK. It iterated an empty array and printed
+ * that nothing had been checked, kept as a mechanism for a successor that never came: a dead
+ * loop kept for a hypothetical is a shape, not a mechanism. Writing it again with a real
+ * subject in hand produces a better check than reviving a generalisation drawn from one case.
+ * The property it guarded is not lost, and is asserted on the rendered page by check:admin-ui.
  */
 
 /* ------------------------------------------------- 1b. CI's verdict, early */
 
 /*
- * **RULING 52, 2026-09-09 (Dustin). SHIP TRUSTS CI.**
- *
- * CI already runs the offline tier on a clean checkout of this exact sha, on a
- * machine that has never seen this repo. When it concluded success there, the
- * local build-for-gates and the local offline tier are a second opinion about a
- * question already answered, and they are the expensive half of a ship: about
- * twelve minutes falls to about four, and the local memory peak that killed
- * five `check:all` runs goes with it.
- *
- * ## THIS READ DECIDES A PATH. IT NEVER DECIDES A DEPLOY.
- *
- * That separation is the whole safety argument and it is worth stating plainly.
- * The verdict here chooses between the fast path and the local path, and
- * NOTHING ELSE: a non-green answer, of any kind, takes the local path rather
- * than refusing. The authoritative check is the unchanged step below, which
- * runs on EVERY path and refuses on anything but success. So the worst this
- * read can do when it is wrong is make ship do MORE work, never less.
- *
- * ## WHY THE SECOND READ IS NOT REDUNDANT WITH THIS ONE
- *
- * Because a pending run is the common case, not an edge. Push, run ship, and CI
- * is still in flight: this read says "not green yet", ship runs the local build
- * and tier for ten minutes, and by the time the step below reads again the run
- * has concluded. The two reads are minutes apart on purpose, and the later one
- * is the one with teeth. A run that was FAILED here and re-run to green in the
- * meantime is caught by the same mechanism, in the same direction.
- *
- * ## WHAT IS NOT SKIPPED, AND WHY IT CANNOT BE
- *
- * `build:stack` and `build:enhance` run on BOTH paths. They write gitignored
- * files that `react-router build` imports statically, so the deploy's own build
- * fails on a missing file without them. They are not part of the gate tier's
- * cost; they are preconditions of building at all.
- *
- * ## OBSERVATION BOUNDARY, INHERITED
- *
- * Unchanged from the step below and restated because this read now has a
- * consequence of its own: it reads GitHub's view of a sha. It cannot see
- * whether CI's assertions are meaningful, nor whether the workflow was edited
- * to assert nothing in the same commit. A green CI on a commit that gutted CI
- * would skip the local tier, and the local tier would have run that same gutted
- * workflow's checks. The property is the same on both paths.
+ * Green CI for this sha skips the local tier. This read picks a path, never a deploy:
+ * non-green takes the local path, and the read at step 4 decides.
  */
 
 announce("CI's verdict on this exact commit");
@@ -534,17 +318,8 @@ if (slug.length !== 2) {
 const [owner, repo] = slug;
 
 /*
- * **THE TOKEN IS REQUIRED, and the brief that specified this check assumed it
- * was not.** The assumption was that the repository is public, so Actions runs
- * would be readable unauthenticated. MEASURED 2026-08-23: `private=true`. An
- * unauthenticated read answers 404, because GitHub returns 404 rather than 403
- * for a private resource you may not see, so the fallback would refuse every
- * ship while reporting that the repository does not exist.
- *
- * `gh auth token` is the token path. Ship has no token of its own: GITHUB_TOKEN
- * is a wrangler secret and is not in this process's environment. If `gh` is
- * absent or logged out, the step below refuses, which is the correct direction:
- * a check that cannot read CI has not confirmed CI.
+ * The repo is private, so an unauthenticated read answers 404. The token comes from
+ * `gh auth token`; without it the CI step refuses.
  */
 const ghToken = (() => {
   const t = spawnSync("gh", ["auth", "token"], { cwd: root, encoding: "utf8", shell: process.platform === "win32" });
@@ -552,30 +327,16 @@ const ghToken = (() => {
 })();
 
 /**
- * One read of GitHub's verdict on HEAD. Called twice, minutes apart.
- *
- * Returns rather than refusing, because the two callers want opposite things
- * from the same failure: this one takes the slow path, the one below refuses.
- * A single function with a `shouldRefuse` flag would be one helper with two
- * meanings, which is the shape hard rule 10 names.
+ * One read of GitHub's verdict on HEAD. Returns rather than refuses because the two callers
+ * want opposite things; a `shouldRefuse` flag is the shape hard rule 10 names.
  *
  * @returns {Promise<{ verdict: { ok: boolean, why: string, remedy: string } | null, error: string }>}
  */
 async function readCi() {
   try {
     /*
-     * THROUGH `retryRead`, AND THE THROW INSIDE IS WHAT MAKES THAT WORK.
-     *
-     * Ruling 52 doubled the number of CI reads a ship makes, and the new early
-     * one refused on a transient TWICE in one day. A GitHub API read is the
-     * textbook case this helper exists for: it is idempotent, it writes
-     * nothing, and a single failed request is not evidence about CI.
-     *
-     * The failure still lands in the `catch` below rather than throwing out of
-     * ship, because both callers want to DECIDE on it: the early one takes the
-     * local path, the authoritative one refuses. `retryRead` gives them one
-     * more chance to get a real answer first, and prints the transient it
-     * swallowed so a retry is never invisible.
+     * A read, so `retryRead` may retry a transient; the final failure still reaches the catch
+     * so each caller decides.
      */
     const runs = await retryRead(
       () => fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken }),
@@ -605,41 +366,8 @@ if (ciGreenEarly) {
 /* ------------------------------------------ 1c. the deployed schema is current */
 
 /*
- * **NO MIGRATION MAY BE PENDING WHEN A DEPLOY GOES OUT.**
- *
- * SHIP WINDOW 5 is why this exists. It deployed with every offline gate green
- * and the media admin page returned a 500 on its first load, because
- * `0011_media_trash_tags.sql` had been pending on the remote database since the
- * session that authored it, four sessions earlier. `trashed_at` and `tags` did
- * not exist, and every media loader query threw.
- *
- * Nothing in the repo could see it. Ship applies no migrations and compares no
- * schema. `check:migrations` compares FILES to a hash manifest and never to a
- * database. `check:admin-ui` renders the route with every `.server` import
- * stubbed, so the loader never runs. Authoring a migration created an
- * obligation in no instrument anywhere.
- *
- * ## IT REFUSES. IT DOES NOT APPLY.
- *
- * `0011` happened to be additive, two `ADD COLUMN` and an index, and ship
- * cannot tell that from a `DROP` or a rewrite without reading and classifying
- * SQL. Being wrong about that once is unrecoverable, and a deploy that silently
- * mutates the production schema is worse than one that stops. The operator
- * decides; this makes sure they are ASKED rather than finding out from a 500.
- *
- * ## BEFORE THE BUILD, not merely before the deploy
- *
- * The ruling says before deploy. This is earlier than it has to be, and that is
- * deliberate: the answer cannot change during a build on a single-operator
- * system, and refusing in five seconds is kinder than refusing after two
- * minutes of build and gates. It sits with the other preconditions about the
- * state of the world, beside the clean-tree check.
- *
- * FAIL CLOSED. Three outcomes, not two: pending refuses naming the files,
- * clean proceeds, and anything unreadable, including a non-zero exit from a
- * network or auth failure, refuses saying so. `readMigrationList` owns that
- * decision and is unit tested against wrangler output recorded from a real
- * database in both states.
+ * No migration may be pending when a deploy goes out. It refuses and never applies: ship cannot
+ * tell an additive migration from a destructive one. Pending or unreadable both refuse.
  */
 
 announce("The deployed database has every migration");
@@ -647,32 +375,8 @@ announce("The deployed database has every migration");
 const DATABASE = "dustinedwards";
 
 /*
- * WRAPPED IN `retryRead`, and this is the EIGHTH incident in that class.
- *
- * The guard refused on its first live use, in SHIP WINDOW 6, with
- * `The given account is not valid or is not authorized to access this service
- * [code: 7403]`. It was not a credential fault: `wrangler whoami` reported the
- * right account with `d1 (write)` scope and no overriding env var, and the
- * identical command re-run immediately returned `No migrations to apply!`. A
- * transient on a Cloudflare control-plane READ, which is exactly the class
- * `retry.mjs` already wraps at 27 other sites, at the one site nobody had
- * wrapped. It cost a ship attempt.
- *
- * A READ, so this is inside the documented policy rather than an exception to
- * it: the wrapper's own header says reads only, never a write, and listing
- * migrations mutates nothing.
- *
- * **ONLY `unreadable` IS RETRIED, and the distinction is the whole implementation.**
- * `readMigrationList` RETURNS its verdict and never throws, so wrapping the
- * spawn alone would have retried nothing at all: a 7403 exits non-zero, the
- * parser reports `unreadable`, and `retryRead` sees a perfectly resolved
- * promise. So the wrapped function throws on that verdict and only that one.
- * `pending` is a real answer about the world, not a transient, and retrying it
- * would spend 90 seconds re-asking a question already correctly answered before
- * a refusal that was always going to happen.
- *
- * The second failure propagates unchanged and lands in the same refusal it
- * would have without this, which is what the `catch` below preserves.
+ * `readMigrationList` never throws, so the wrapper throws on `unreadable` only. `pending`
+ * is a real answer and is not retried.
  */
 let migrations;
 try {
@@ -728,42 +432,17 @@ console.log(`  ${migrations.reason}.`);
 /* --------------------------------------------------------------- 2. build */
 
 announce("Build");
-/*
- * THE STACK ARTIFACT FIRST, and it has to be inside the build step rather than
- * beside build:content at step 12. content/generated/stack.json is gitignored
- * since ruling 39a, and three route modules import it statically, so the Worker
- * bundle carries its bytes. A run that derived it after the deploy would ship
- * whatever a previous run left on disk, or fail the build outright on a clean
- * clone. Deriving it here also serves the two later readers for free: the gates
- * at step 3 and build:content at step 12 both find it already written.
- */
+/* Gitignored and imported statically by routes, so it is built before the app build. */
 if (run("npm", ["run", "build:stack"]).code !== 0) {
   refuse("the stack artifact build failed", "Fix build:stack. Nothing was deployed.");
 }
-/*
- * THE ABOUT ARTIFACT, for exactly the reason the stack artifact is above it.
- * content/generated/about.json is gitignored and app/routes/about.tsx imports
- * it statically, so the Worker bundle carries its bytes and a clean clone
- * fails the build without this. It reads content/generated/stack.json, so it
- * goes after build:stack and not before it.
- *
- * This also writes content/generated/posts.json, which step 12 re-derives
- * before the sync. Running it twice is a few seconds and is the honest
- * ordering: the deploy needs the About bytes now, and the sync needs a corpus
- * built from the tree that was actually deployed.
- */
+/* Gitignored and imported by `about.tsx`; reads stack.json, so it runs after build:stack. */
 if (run("npm", ["run", "build:content"]).code !== 0) {
   refuse("the content build failed", "Fix build:content. Nothing was deployed.");
 }
 /*
- * THE PUBLICATION TWINS, and this one is different from its neighbours in a way
- * worth stating: nothing imports them, so the build does not fail without them.
- * They are gitignored files under public/, which Vite copies into build/client,
- * so a run that skipped this step would deploy a site whose llms.txt advertises
- * 36 markdown twins that answer 404, and every gate would stay green because
- * every gate reads disk. The tier at step 3 does catch it, since
- * check:publications compares the twins on disk against a fresh generation, but
- * only on the path where the tier runs.
+ * Nothing imports the twins, so the build passes without them and `llms.txt` would
+ * advertise 404s.
  */
 if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
   refuse(
@@ -777,13 +456,7 @@ if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
 if (run("npm", ["run", "build:enhance"]).code !== 0) {
   refuse("the enhancement bundle build failed", "Fix build:enhance. Nothing was deployed.");
 }
-/*
- * THE APP BUILD IS THE GATE TIER'S, not the deploy's, and that is why ruling 52
- * can skip it. `npm run deploy` is `npm run build && wrangler deploy`, so the
- * bundle that ships is built below either way. What this call exists for is
- * `check:page-payload`, which reads `build/client` and is in the tier that the
- * next step runs. Skip the tier and this build has no reader.
- */
+/* This build feeds only `check:page-payload`; `npm run deploy` builds what ships. */
 if (ciGreenEarly) {
   console.log("  skipped: react-router build. Its only local reader is the tier below, which CI ran.");
   console.log("  the deploy builds the bundle it ships, on this path and on the other one.");
@@ -795,12 +468,6 @@ if (ciGreenEarly) {
 
 announce("Gates, offline tier");
 if (ciGreenEarly) {
-  /*
-   * RULING 52. Not "the gates did not run": they ran, on a clean checkout of
-   * this sha, on a machine with no local node_modules and no generated types.
-   * VERIFICATION.md names those as two different instruments, and this is the
-   * stronger of the two for everything except the handful of gates CI excludes.
-   */
   console.log(`  skipped: CI ran this tier on a clean checkout of ${sha}.`);
   console.log("  re-read below, and a CI that is no longer green refuses there.");
 } else if (run("npm", ["run", "check"]).code !== 0) {
@@ -813,71 +480,15 @@ if (ciGreenEarly) {
 /* ------------------------------------------------------------- 4. CI green */
 
 /*
- * **CI IS ENFORCED HERE, AT THE DEPLOY PRIMITIVE, AND NOWHERE ELSE.**
- *
- * The 2026-08-22 audit, section 8: "CI runs on push to main, after the fact.
- * Nothing prevents a push that fails CI from being deployed, because deploy is
- * manual and local. The gate tier runs in `ship`, so in practice the same checks
- * run, but CI is advisory only." Verified true: nothing consulted CI before.
- *
- * Branch protection was the obvious alternative and does not solve this. It
- * governs what may MERGE; it has no opinion about a local `npm run deploy`, and
- * this repo is mainline-only until cutover, so there is no merge to protect.
- * The deploy is the primitive that matters, so the check belongs immediately in
- * front of it.
- *
- * ## WHY IT IS NOT REDUNDANT WITH THE LOCAL TIER, WHEN THE LOCAL TIER RAN
- *
- * The local tier runs the offline gates ON THIS DISK, with this machine's
- * node_modules, generated types and real wrangler.jsonc. CI runs them on a
- * clean checkout that has never seen the repo. They answer different questions,
- * and VERIFICATION.md names them as two of the four instruments. A dependency
- * installed locally and absent from the lockfile is invisible to the local tier
- * and fatal in CI.
- *
- * Since ruling 52 the local tier runs only when CI has not already answered for
- * this sha, so on the fast path there is no second opinion to be redundant
- * with, and the reason above is exactly why the fast path is the safe direction
- * to drop: it drops the WEAKER of the two instruments and keeps the stronger.
- *
- * ## FAIL CLOSED, IN EVERY DIRECTION, AND NO OVERRIDE FLAG
- *
- *   no run for this sha    refuse. Unpushed, or CI never triggered.
- *   run still in progress  refuse. A green-so-far run is not a green run.
- *   conclusion not success refuse, naming the conclusion.
- *   API unreachable        refuse. Ship already needs the network to deploy, so
- *                          "the network is down" cannot be a reason to skip a
- *                          safety check and proceed to a step that needs it.
- *
- * There is deliberately no `--force`. A flag would be used, and it would be used
- * on exactly the day the check was right.
- *
- * ## OBSERVATION BOUNDARY
- *
- * It reads GitHub's view of a sha. It cannot see whether CI's assertions are
- * meaningful, whether the workflow was edited to assert nothing in the same
- * commit, or whether a run was re-run until it passed. It proves a green run
- * exists for this exact commit, which is strictly more than nothing knew before.
+ * No run, a run in progress, any non-success, or an unreachable API refuses. No `--force`:
+ * it would be used on the day the check was right.
  */
 
 announce("CI must be green for this exact commit");
 
 /*
- * **THIS IS THE READ WITH TEETH, ON EVERY PATH.** Ruling 52 changed which work
- * runs before it; it did not change this step, and that is the point. The early
- * read at step 2 chose a path. This one decides the deploy, and refuses in the
- * four directions `ciVerdict` names whether or not the tier ran locally.
- *
- * It is a SECOND read rather than the early verdict reused, on BOTH paths, and
- * the uniformity is deliberate. On the local path ten minutes have passed and a
- * run that was pending then may have concluded in either direction; reusing the
- * early answer would refuse a ship whose CI went green while the gates ran, and
- * would be a stale claim besides. On the fast path the two reads are seconds
- * apart and will agree, so the call buys no information and buys something
- * better: this step reads fresh and decides, with no branch, so there is no
- * arrangement of the code in which a deploy is authorised by a verdict that was
- * not re-read here. One extra API call against eight minutes saved is not a
- * trade worth thinking about twice.
+ * Read fresh on every path, never reused from the early read, so no deploy is authorised by
+ * a stale verdict.
  */
 console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
 const { verdict, error: ciError } = await readCi();
@@ -949,43 +560,8 @@ console.log(`  ${POLL_COUNT} consecutive 200s.`);
 /* ------------------------------------------------------- 5b. readiness */
 
 /*
- * FIVE 200s SAY THE WORKER ANSWERS. THEY DO NOT SAY IT IS HEALTHY.
- *
- * The poll above requests `/colophon` and reads a status line. That is a real
- * check and it catches a Worker that failed to boot, a broken route table and
- * a rollout that has not finished. It is blind to every invariant this site
- * actually watches: a drifted Ask index, a media index that lost its rows, D1
- * out of step with the repository, an FTS index that is empty while its
- * content table is full. All five of those serve `/colophon` with a 200.
- *
- * `/api/health` answers exactly those questions and ship has never once asked
- * it, which is the odd half: the scheduled workflow reads that endpoint every
- * fifteen minutes and alerts on it, so the deploy path was the ONLY path that
- * shipped without consulting the instrument the site trusts the rest of the
- * time.
- *
- * ## WHY HERE, BETWEEN THE POLL AND THE SYNC
- *
- * After the poll, because a Worker that is still rolling out would answer this
- * from the previous version and the verdict would be about the wrong build.
- * Before the D1 sync, because the sync is the first thing in this script that
- * WRITES, and a refusal after it has run leaves production half converged.
- * Refusing here costs nothing: the deploy stands and serves, and the index
- * still describes the previous build, which is the same safe direction the
- * poll's own refusal takes.
- *
- * ## THE STATUS LINE IS NOT ENOUGH, AND THAT IS DELIBERATE
- *
- * `ok: true` is read out of the BODY rather than inferred from a 200. The two
- * agree today, and relying on that agreement would make this step depend on a
- * property of the endpoint that lives in a different file. The endpoint's own
- * docblock says the status line is the contract for the WORKFLOW, which reads
- * it with `curl --fail`; this reads a parsed body because it can, and because
- * printing the five verdicts is most of the value when it refuses.
- *
- * A 429 is called out separately. Since the rate limit landed, a burst from
- * this address can refuse the check, and "rate limited" and "unhealthy" need
- * different repairs.
+ * A 200 from `/colophon` is not health. Runs after the poll so the new build answers, and
+ * before the sync, the first write. `ok` is read from the body; a 429 is reported apart.
  */
 announce(`Readiness: ${READINESS_PATH} reports ok`);
 
@@ -1018,12 +594,7 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
 
   if (!verdict.ok) refuse(verdict.why, verdict.remedy);
 
-  /*
-   * A DEFERRED CHECK THAT IS FAILING RIGHT NOW IS SAID OUT LOUD, so the table
-   * above cannot be read as a clean sweep. It is not a refusal here and it is
-   * not forgiven either: the assertion moves to after the sync, which is the
-   * step that repairs it.
-   */
+  /* A failing deferred check is printed, not refused; it is asserted after its repair step. */
   const deferredFailing = verdict.deferredFailing ?? [];
   for (const name of deferredFailing) {
     console.log(
@@ -1039,39 +610,8 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
 /* ------------------------------------------- 5c. the watchdog Worker */
 
 /*
- * THE SECOND DEPLOY, AND IT IS DELIBERATELY NOT A REFUSAL.
- *
- * `workers/watchdog.ts` is a separate Worker with its own config and its own
- * Cron Trigger. It has to be deployed by something, and ship is the only thing
- * that deploys anything here, so a watchdog left to a remembered manual command
- * is a watchdog that silently runs an old build until somebody notices it did
- * not repair something.
- *
- * ## WHY AFTER THE SITE, AND AFTER THE READINESS CHECK
- *
- * Deploy-first ordering, and there are two reasons rather than one.
- *
- * The watchdog binds to the site through a SERVICE BINDING, so the site has to
- * exist for its config to resolve. That alone would only argue for "after the
- * site deploy". It runs after READINESS as well because a watchdog pointed at a
- * Worker this run has not yet proven healthy is a watchdog whose first firing
- * reports a fault it was deployed into, which is noise from a monitor on the
- * day it lands and is exactly the shape that gets monitors muted.
- *
- * ## AND WHY A MISS RATHER THAN A REFUSAL
- *
- * This runs after the deploy has LANDED. Refusing here would abandon the sync
- * with production half converged, and it would do so over the watcher rather
- * than over the thing being watched. The site is serving; a stale watchdog is a
- * degraded monitor, not a degraded site.
- *
- * So it takes the same shape as the Ask and media steps: the deploy STANDS, the
- * record prints, and ship exits nonzero at the very end with the miss named
- * beside any others. LOUD AND LAST, which is the property the ruling asked for.
- *
- * The failure is not silent in the other direction either: the previous
- * watchdog build keeps firing, so the site stays watched by the code that was
- * already there.
+ * After readiness, so the watchdog is never pointed at an unproven build. A failure is a miss,
+ * not a refusal: the site deploy has landed, and ship exits nonzero at the end.
  */
 
 announce("Deploy the watchdog Worker");
@@ -1091,12 +631,7 @@ let watchdogMiss = "";
       "the watchdog Worker did not deploy, so the fifteen-minute self-repair poll is " +
       "still running whatever was deployed before this run";
   } else {
-    /*
-     * THE VERSION ID IS READ, on the same rule the site deploy applies: a ship
-     * that cannot name what it shipped did not ship. A zero exit from wrangler
-     * with no version in the output is the shape that would let a no-op deploy
-     * report success.
-     */
+    /* No version ID in the output means the deploy is unproven, even on exit 0. */
     const watchdogVersion =
       (deployed.text.match(/Current Version ID:\s*([0-9a-f-]{8,})/i) ?? [])[1] ?? "";
     if (!watchdogVersion) {
@@ -1105,18 +640,7 @@ let watchdogMiss = "";
         "now on the cron";
     } else {
       console.log(`  watchdog version ${watchdogVersion}`);
-      /*
-       * THE TRIGGER IS READ BACK OUT OF WRANGLER'S OWN OUTPUT, because the
-       * config asking for a cron and the platform having registered one are two
-       * different facts, and only the second one fires. `check:config` owns the
-       * first and cannot see the second: it reads a file. This reads what
-       * wrangler says it did.
-       *
-       * A MISS RATHER THAN A REFUSAL, on this step's own rule. A Worker
-       * deployed without its schedule is a Worker that never runs, which is
-       * precisely the silent failure the whole arc exists to end, so it must be
-       * reported; it is still not worth abandoning a converged sync over.
-       */
+      /* Read back from wrangler: a configured cron is not a registered one. A miss, not a refusal. */
       if (!/schedule|cron|trigger/i.test(deployed.text)) {
         watchdogMiss =
           "the watchdog deployed but wrangler's output named no cron trigger, so the " +
@@ -1128,33 +652,7 @@ let watchdogMiss = "";
   if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
 }
 
-/*
- * ## THE EXTERNAL UPTIME MONITORS, POINTED AT WHAT THIS RUN DEPLOYED
- *
- * AFTER READINESS AND AFTER THE WATCHDOG, and the position carries the same
- * argument the watchdog step does: both bind an outside instrument to this
- * site, and neither may be pointed at a build this run has not proven. If the
- * readiness step refused, ship never reaches here and the monitors keep
- * watching the previous deploy, which is the correct behaviour rather than a
- * gap.
- *
- * **THIS IS THE STEP THAT MAKES THE CUTOVER ONE EDIT.** `SITE_ORIGIN` is the
- * one owner of the hostname (rule 17); `uptime-ensure` derives both monitor
- * URLs from it and PATCHes the live monitors to match. So the DNS cutover
- * changes one constant, and the next ship repoints the monitors without anyone
- * opening a dashboard. `check:uptime` is what refuses if that ever stops being
- * true.
- *
- * A MISS, NOT A REFUSAL, on the watchdog step's rule. The deploy STANDS: the
- * site is live and healthy by this point, and an UptimeRobot API failure is a
- * reason to tell somebody, never a reason to unmake a good deploy. It is
- * reported LOUD and ship exits nonzero at the end with it named beside any
- * other miss.
- *
- * IDEMPOTENT, so running it on every ship costs nothing when nothing moved:
- * measured 2026-09-07, a second consecutive run reports "0 change(s) applied"
- * and rewrites the manifest byte-identically.
- */
+/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss. */
 announce("Point the uptime monitors at this deploy");
 
 /** Set when uptime-ensure did not land. Read at the very end. */
@@ -1169,12 +667,7 @@ let uptimeMiss = "";
       "unproven is whether anything outside Cloudflare is watching it";
     console.log(`  MISSED: ${uptimeMiss}`);
   } else {
-    /*
-     * THE VERDICT IS READ, NEVER INFERRED FROM EXIT 0, which is the rule this
-     * file applies to every operator round trip. `uptime-ensure` prints one
-     * line per monitor and a change count; a run that somehow reconciled
-     * nothing would still exit 0, and that is the shape worth catching.
-     */
+    /* The change count is read, never inferred from exit 0. */
     const applied = ensured.text.match(/(\d+) change\(s\) applied/);
     if (!applied) {
       uptimeMiss =
@@ -1189,13 +682,7 @@ let uptimeMiss = "";
 
 /* ------------------------------------------------------- 6. gate, then sync */
 
-/*
- * BUILT HERE, EXPLICITLY, even though the gate tier's own build step already
- * ran one: the product is gitignored since the artifact arc, the sync below
- * reads it off disk, and "whatever the last run left behind" is not a
- * provenance. A ship window owns the tree, so this rebuild is byte-identical
- * to the tier's; it exists so the sync's input is the build this ship ran.
- */
+/* Rebuilt so the sync reads this ship's build, not whatever a previous run left. */
 announce("build:content, the local build product the sync reads");
 if (run("npm", ["run", "build:content"]).code !== 0) {
   refuse("the content build failed", "NOTHING WAS SYNCED.");
@@ -1218,15 +705,8 @@ let renderDriftMiss = "";
 const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
 if (sync.code !== 0) {
   /*
-   * TWO DIFFERENT NONZEROES, told apart by the report the sync prints.
-   *
-   * A sync that reported RENDER DRIFT finished every write and every
-   * verification, exited nonzero as an alarm, and printed the counts line;
-   * D1 is converged and the deploy must stand while the run still fails at
-   * the end, exactly like an index miss. A sync that failed for any other
-   * reason may have left D1 partially written and refuses here as it always
-   * has. The discriminator is the drift line's own count, not the exit code,
-   * because the exit code carries one bit and this is a two-fault channel.
+   * Render drift finishes every write and stands as a miss; any other nonzero refuses.
+   * Told apart by the drift line's count, since the exit code carries one bit.
    */
   const driftLine = sync.text.match(/sync:content drift: .*render-drift=(\d+)/);
   if (driftLine && Number(driftLine[1]) > 0) {
@@ -1234,28 +714,8 @@ if (sync.code !== 0) {
     const named = slugs ? slugs[1] : "unnamed slug(s)";
 
     /*
-     * DRIFT ON THE FIRST SYNC IS NOT YET A DEFECT. Ruling 30, vol 15.
-     *
-     * THE ORDERING ARTIFACT, which is what this usually is. The previously
-     * deployed Worker's content-drift poll front-runs the deploy by up to one
-     * poll interval: it pulls the new markdown, renders it with the OLD
-     * renderer and writes that hash to D1. The sync above then reads a D1 hash
-     * the old pipeline produced, compares it against the NEW build, and calls
-     * it drift. Proven byte-exact when it was first met, by rendering the
-     * flagged slug through the old pipeline and matching the flagged hash.
-     * Nothing is wrong: the write the sync just did is the repair.
-     *
-     * THE SECOND SYNC IS WHAT TELLS THE TWO APART, and it is the same
-     * read-back the three index repairs use rather than a new idea. The first
-     * sync converged every row to the build, so a second one reads zero UNLESS
-     * the converge write did not take, and that is a real defect: a partially
-     * applied write, or something else writing render_hash behind us. A report
-     * assembled from the first run's own counters cannot see either.
-     *
-     * So drift confirmed by a second run FAILS the ship, and drift that
-     * clears completes it. This used to report every first-run drift as "a
-     * pipeline defect to find", which cried wolf on two consecutive ships
-     * where the artifact was benign and had already been ruled benign.
+     * First-run drift is usually the old Worker's poll writing an old-renderer hash. A second
+     * sync reads zero unless the converge write did not take, so only confirmed drift fails.
      */
     console.log(`  render drift on ${named}: converged, confirming with a second sync`);
     const confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
@@ -1287,12 +747,7 @@ if (sync.code !== 0) {
   }
 }
 
-/*
- * The counts line is the proof, not the exit code. `search_docs` is the derived
- * table and the two FTS indexes are rebuilt from it; if they disagree the index
- * is silently stale, and `COUNT(*)` on either index reads THROUGH to the
- * content table and can never detect that. These are the docsize numbers.
- */
+/* The counts line is the proof. `COUNT(*)` on an FTS index reads through to its content table. */
 const counts = (sync.text.match(/search_docs=(\d+)\s+identity=(\d+)\s+prose=(\d+)/) ?? []).slice(1);
 if (counts.length !== 3) {
   refuse(
@@ -1312,44 +767,8 @@ if (!(docs === identity && identity === prose)) {
 /* ------------------------------------------------- 7. the Ask index, last */
 
 /*
- * THE ANSWER INDEX IS THE ONE DERIVED STORE `sync:content` DOES NOT REBUILD.
- *
- * D1 and both FTS indexes are rebuilt above. AI Search is not: the only things
- * that ever wrote it were `savePost`, for a post published through the editor,
- * and a human clicking sync-ask in the admin. So every post that landed by
- * COMMIT left the answer index behind, and this site's writing mostly lands by
- * commit.
- *
- * MEASURED 2026-08-23: the scheduled health check went red four polls running
- * at `expected 91, present 90`, and shipping nine post updates widened it to
- * `expected 99, present 90`, tracking search_docs growth exactly. Nothing was
- * broken; nothing was holding the step.
- *
- * ## WHY THIS RUNS AFTER THE DEPLOY AND FAILS THE RUN ANYWAY
- *
- * It cannot run before: it uploads what the DEPLOYED Worker serves, through
- * that Worker's own bindings. So by the time it can run, the deploy has landed
- * and rolling back on its account would be the wrong trade, because a deployed
- * site with a stale answer index is better than no deploy and the same stale
- * index.
- *
- * So the deploy STANDS, the record below still prints, and ship exits nonzero
- * at the very end. Both surfaces then carry the miss: this output, and the
- * scheduled health poll that will read the same drift fifteen minutes later.
- *
- * The operation is idempotent, so a failed run is safe to repeat: rerunning
- * ship, or calling sync_ask directly, writes the same keys again.
- *
- * ## A MISS IS NOT DECLARED ON THE FIRST READING, since 2026-08-24
- *
- * `syncAsk` reads the counts back immediately after its writes and AI Search is
- * eventually consistent, so the first reading can be early rather than wrong.
- * A non-converged write-back now opens a bounded read-only window against
- * `/api/health` before anything is called a miss. The window, the bound and the
- * reason it re-reads health rather than re-running `sync_ask` are all at the
- * poll itself; what matters here is that NOTHING BELOW CHANGED. A miss that
- * survives the window still exits nonzero, still after the deploy stands, still
- * with the record printed.
+ * `sync:content` does not rebuild AI Search. It uploads through the deployed Worker, so a miss
+ * leaves the deploy standing.
  */
 
 announce("Bring the Ask index into step");
@@ -1357,25 +776,12 @@ announce("Bring the Ask index into step");
 /** Set when the Ask index did not converge. Read at the very end. */
 let askMiss = "";
 
-/**
- * Set when convergence arrived during the poll window rather than on the
- * write-back read. It exists so the summary line below cannot report the
- * write-back's counts as if they were the converged ones: those numbers are
- * precisely the stale pair the window was opened to outlive.
- */
+/** True when convergence came during the poll window, so the write-back counts are not reported. */
 let askLateConverge = false;
 
 /**
- * ONE AUTHENTICATED OPERATOR CALL, and one statement of what a usable answer is.
- *
- * Shared by the Ask step and the media step since 2026-08-24. Both need the
- * same four refusals in the same order, and a second copy of them would be a
- * second answer to "did this operation prove anything", which is the question
- * ship exits nonzero on. Rule 17.
- *
- * Returns the report and a MISS STRING rather than throwing, because every one
- * of these failures happens AFTER the deploy has landed: the caller has to
- * record the miss and let the deploy stand, never abort.
+ * One authenticated operator call, shared by the Ask and media steps. Returns a miss string
+ * rather than throwing, because every failure here happens after the deploy has landed.
  *
  * @param {string} tool
  * @returns {Promise<{ report: any, miss: string }>}
@@ -1423,42 +829,9 @@ async function operatorSync(tool) {
 
   if (!askMiss && report.converged !== true) {
     /*
-     * THE CONVERGENCE WINDOW, ruled 2026-08-24 after a false alarm.
-     *
-     * `syncAsk` reads `expected` and `present` back IMMEDIATELY after its two
-     * writes, and AI Search is eventually consistent, so a drift reported there
-     * can be a moment behind rather than a fault. That is not a hypothesis:
-     * measured 2026-08-24, ship read drift 1 at 02:20:18Z, NO REMEDY WAS
-     * APPLIED, and the scheduled health check read ok 75 seconds later and
-     * stayed ok. The index converges on its own inside about a minute, which is
-     * upload visibility lag.
-     *
-     * So the miss is not declared on the first reading. It is declared after
-     * the index has been given a window to catch up.
-     *
-     * ## THE RE-READ IS READ-ONLY, AND THAT IS THE WHOLE DESIGN
-     *
-     * Polling by calling `sync_ask` again would re-upload the entire corpus,
-     * which REPAIRS the thing being measured. A run that then converged could
-     * not be distinguished from one that had self-healed, and that exact
-     * ambiguity is what the 2026-08-24 watch item recorded as unresolvable.
-     *
-     * `/api/health` runs `ask-index-drift`, which derives its verdict from the
-     * SAME `askIndexStatus()` that `syncAsk` derives `converged` from, and it
-     * writes nothing. `publicHealthBody` opts `expected` and `present` onto the
-     * wire by name for failing checks, so the counts are readable without a
-     * token. Convergence inside this window is therefore evidence of self-heal,
-     * not of a remedy this loop applied.
-     *
-     * ## THE BOUND
-     *
-     * At most ASK_POLL_ATTEMPTS iterations, AND no iteration begins after the
-     * deadline, so the loop cannot outlast the window by more than the single
-     * health request already in flight when the deadline passes. Health caps
-     * each of its own checks at three seconds. Two independent bounds rather
-     * than one, because a `while` on the clock alone would spin without limit
-     * if the clock were ever wrong, and a count alone would not honour the
-     * stated two minutes if a request hung.
+     * AI Search is eventually consistent, so drift is re-read before it is a miss. The re-read is
+     * `/api/health`, which writes nothing; `sync_ask` would repair what it measures. Bounded by
+     * count and deadline.
      */
     /** One read-only reading of the deployed ask-index-drift check. */
     const driftReading = async () => {
@@ -1525,40 +898,7 @@ async function operatorSync(tool) {
 
 /* --------------------------------------------- 8. the media index, likewise */
 
-/*
- * THE MEDIA INDEX IS THE THIRD DERIVED STORE, AND IT WAS THE ONE LEFT MANUAL.
- *
- * D1 and both FTS indexes are rebuilt by `sync:content`. The Ask index is
- * brought into step above. The media index was rebuilt by exactly one thing: a
- * person clicking a button in `/admin/media`. So every ship that added or
- * removed a static asset left the index describing the previous build, and the
- * standing repair was a click that waited weeks. `/fonts/OFL.txt` is the
- * measured instance: one public file with no row, red in `check:media --remote`
- * since the fonts landed.
- *
- * Ruled 2026-08-24 under the AUTOMATE directive. The button STAYS, as manual
- * repair; what changes is that the routine case no longer needs it.
- *
- * ## SAME PLACE IN THE ORDER, AND FOR THE SAME REASON
- *
- * After the deploy, because the rebuild runs inside the deployed Worker through
- * its own bindings: it reads the R2 buckets and the ASSETS binding of the build
- * that is actually serving. Running it before would index the previous build's
- * static assets. So, exactly like the Ask step, this cannot run early enough to
- * roll anything back, and a deployed site with a stale media index is better
- * than no deploy and the same stale index.
- *
- * ## NO POLL HERE, DELIBERATELY, AND IT IS NOT AN OVERSIGHT
- *
- * The Ask step waits out a two minute window because AI Search is a separate
- * eventually consistent service. This store is D1: `rebuildMediaIndex` awaits
- * every upsert and delete, and `mediaIndexStatus` reads back inside the SAME
- * Worker request, which reads its own writes. There is no interval in which a
- * correct rebuild reports drift, so a window would only delay a real failure.
- * The reason is written down because the absence of a poll beside a step that
- * has one looks like an omission, and the next reader deserves to know it was a
- * decision. The evidence is the first ship's own output.
- */
+/* After the deploy, since the rebuild reads the serving build. No poll: D1 reads its own writes. */
 
 announce("Bring the media index into step");
 
@@ -1601,34 +941,15 @@ let mediaMiss = "";
 /* ------------------------------- 8b. the check readiness deferred, asserted */
 
 /*
- * RULING 48, THE OTHER HALF. The readiness step reported `content-drift` and
- * did not gate on it, because the D1 sync is what converges that drift and a
- * step that refuses before its own repair is a deadlock. The assertion is here
- * instead, and moving it changes what a failure MEANS rather than weakening it:
- *
- *   - at readiness, a failing `content-drift` meant "the index is behind the
- *     repository", which is the ordinary state of a corpus that has just been
- *     committed and not yet synced, and is exactly what the next steps fix
- *   - here, after `sync:content` has run and reported its own drift table, it
- *     means THE SYNC RAN AND DID NOT CONVERGE, which is a defect
- *
- * A MISS, NOT A REFUSAL, on the same rule the Ask and media steps take: the
- * deploy has landed and the sync has already written, so there is nothing left
- * to protect by refusing, and abandoning the record would cost the reader the
- * one report that says what happened. The exit code at the bottom carries it.
+ * Deferred checks are asserted here, after their repair: refusing before the sync would
+ * deadlock. A failure here means the sync did not converge. A miss, not a refusal.
  */
 announce("The drift checks readiness deferred, asserted");
 
 /** Set when any deferred check is still failing after its repair step has run. */
 let deferredMiss = "";
 {
-  /*
-   * ONE READ FOR ALL THREE, not one per check. Each is asserted after ITS
-   * repair step, and this point is after all of them, so a single request
-   * satisfies every one. Three requests would also be three chances to trip
-   * the endpoint's per-IP limiter, which answers 429 and would read as a
-   * failure of the checks rather than of the reader.
-   */
+  /* One read for all: more requests risk the per-IP limiter's 429. */
   const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
   /** @type {number} */
   let status = 0;
@@ -1649,17 +970,8 @@ let deferredMiss = "";
 
   if (!deferredMiss) {
     /*
-     * Read with NO deferrals, so every row is the endpoint's own verdict. Only
-     * the deferred rows are consulted: the others were gated at readiness, and
-     * re-refusing them here would be a second opinion on a question already
-     * answered before anything was written.
-     *
-     * `fts-equality` IS THE CLOSEST CALL AND IS DELIBERATELY NOT HERE. The D1
-     * sync rebuilds the FTS index outright, so its repair arguably is a later
-     * ship step and the rule above would defer it. Ruling 56 names content,
-     * Ask and media, and deferring a fourth check changes what may gate a
-     * production write, which is a ruling rather than a session's call. Left
-     * gating and raised in the report.
+     * Only deferred rows are consulted; the rest were gated at readiness. `fts-equality` still
+     * gates at readiness: deferring another check needs a ruling.
      */
     const verdict = readinessVerdict(status, text, READINESS_PATH);
     const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
@@ -1678,26 +990,7 @@ console.log(`  version      ${version}`);
 console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
-/*
- * THE EXIT CODE IS LAST, AND IT IS NONZERO ON ANY MISS.
- *
- * The record above has already printed, because the deploy landed and saying so
- * is true. What did not happen is a derived index catching up, or the two
- * writers proving they render alike, and a pipeline that reported success on
- * either would be the same green-light-meaning-nothing these steps were added
- * to remove.
- *
- * ALL ARE REPORTED, never just the first. The faults are independent, and a
- * run that printed only the Ask miss would send somebody to re-run ship, watch
- * Ask converge, and never learn about the others. That is the N-1-of-N shape
- * FAILURES.md opens with.
- *
- * Nothing is rolled back. The index operations are idempotent and the drift
- * report's D1 side was already converged by the sync. A render-drift miss
- * reaching here has survived that converge AND a second sync, so it is the
- * defect rather than the ordering artifact, and its remedy is finding what
- * wrote the D1 hash rather than a re-run.
- */
+/* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
 if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || deferredMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",

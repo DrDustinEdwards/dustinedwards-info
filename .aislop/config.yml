@@ -62,6 +62,10 @@ rules:
   # a note about its own absence.
   ai-slop/todo-stub: warning
 
+  # ship's readiness poll logs a failed fetch and leaves `status` at 0, which resets the streak
+  # and makes the refusal below it fire. The handling is the reset; the log is the report.
+  ai-slop/swallowed-exception: warning
+
   # This repo's comments carry the measurements and the prohibitions, which is
   # what the whole design-sync arc exists to preserve. `aislop fix --safe`
   # deleted eight of them, including the one guarding a DELETE path. Never
