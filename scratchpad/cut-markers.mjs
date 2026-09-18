@@ -15,10 +15,15 @@ const labels = new Map();
 commentBlocks(src).forEach((b, id) => {
   if (!/^\/\*+\s*-{3}/.test(b.text)) return;
   // Strip the comment markers and the run of dashes on either side, keep the label verbatim.
+  // Strip runs of two or more, then a lone dash left at either end: one separator pads as
+  // `---- label -`, and a single trailing dash reads as a typo in the converted label.
   const label = b.text
     .replace(/^\/\*+/, "")
     .replace(/\*\/$/, "")
     .replace(/-{2,}/g, "")
+    .trim()
+    .replace(/^-\s*/, "")
+    .replace(/\s*-$/, "")
     .trim();
   if (label) labels.set(id, label);
 });

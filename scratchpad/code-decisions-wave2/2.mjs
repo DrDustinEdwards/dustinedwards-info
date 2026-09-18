@@ -10,21 +10,14 @@ export default {
     "the boundary, the two-sources design and the fail-closed rule; the CI aside and the restatement cut",
     `Gate over the security headers the Worker stamps on every response: npm run check:headers.
 
-OBSERVATION BOUNDARY: THIS GATE CANNOT SEE THE WIRE. It reads workers/app.ts and asserts what
-the source DECLARES and that both code paths apply it. A deploy that never happened, a
-platform feature that strips a header, a route that returns before the entry handler: all
-invisible here and all green. That is hard rule 7 for this file; the wire is verify-live's,
-which asserts every header by EXACT VALUE on a 200 and on the /admin 302. Neither replaces
-the other.
+BOUNDARY: IT CANNOT SEE THE WIRE. It reads workers/app.ts and asserts what the source
+DECLARES, so a deploy that never happened or a platform feature stripping a header is green
+here. That is hard rule 7 for this file, and the wire is verify-live's.
 
-TWO INDEPENDENT SOURCES ARGUE. The EXPECTED set is transcribed from the ratification; the
-ACTUAL set is parsed out of workers/app.ts. Nothing reads its expectation from the file it is
-checking. Changing a header therefore means editing this file in the same commit, which is
-the design rather than friction: two of these values are deliberately NOT the restrictive
-choice, and a one-sided edit is exactly what must not pass quietly.
-
-Pure: no network, no database, no bindings. FAILS CLOSED: an empty constant, a missing
-constant or a file that stops parsing are each a failure.`,
+TWO INDEPENDENT SOURCES ARGUE: the expected set is transcribed from the ratification, the
+actual is parsed out of the Worker, so changing a header means editing this file in the same
+commit. Two of these values are deliberately NOT the restrictive choice. FAILS CLOSED on an
+empty constant, a missing one, or a file that stops parsing.`,
   ],
   "scripts/check-headers.mjs#1": ["CONTRACT", "type annotation plus the not-read-from-source rule; two lines already"],
   "scripts/check-headers.mjs#3": [
@@ -35,10 +28,10 @@ names while explaining why they are what they are, so a parser reading it would 
 same-origin in the sentence saying same-origin is wrong.`,
   ],
   "scripts/check-headers.mjs#4": ["CONTRACT", "one line already; kept"],
-  "scripts/check-headers.mjs#5": ["CONTRACT", "section marker; kept byte-identical"],
-  "scripts/check-headers.mjs#7": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#5": ["CONTRACT", "section marker, rule padding cut", `fail closed first`],
+  "scripts/check-headers.mjs#7": ["CONTRACT", "section marker, rule padding cut", `both directions, name by name`],
   "scripts/check-headers.mjs#8": ["WHY", "one line already; kept"],
-  "scripts/check-headers.mjs#9": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#9": ["CONTRACT", "section marker, rule padding cut", `the two values that look tightenable`],
   "scripts/check-headers.mjs#10": [
     "WHY",
     "why these two get named assertions",
@@ -46,7 +39,7 @@ same-origin in the sentence saying same-origin is wrong.`,
 future session is most likely to "fix", and a failure that names the reason is worth more
 than a diff.`,
   ],
-  "scripts/check-headers.mjs#11": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#11": ["CONTRACT", "section marker, rule padding cut", `applied on BOTH branches`],
   "scripts/check-headers.mjs#12": [
     "WHY",
     "declaring and applying are different; the live example kept",
@@ -54,63 +47,52 @@ than a diff.`,
 workers/app.ts has a mutable exit and an immutable rebuild, and a helper called on only one
 means redirects ship bare, with /admin's 302 the live example.`,
   ],
-  "scripts/check-headers.mjs#13": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#13": ["CONTRACT", "section marker, rule padding cut", `the cache-control DEFAULT`],
   "scripts/check-headers.mjs#14": [
     "WHY",
     "the auth bypass and hard rule 8's cached silence; the dated audit goes to Capsid",
     `THIS ASSERTION GUARDS AN AUTH BYPASS. A response carrying no Cache-Control is CACHED under
-heuristic freshness rather than skipped, and the cache key does not include cookies, so the
-private, no-store default is the only thing between an authenticated /admin render and a
-shared entry served to anyone asking for that path. Those lines were once deletable with
-every gate staying green. The value is transcribed from the ruling, and BOTH EXITS are
-asserted for the same reason applySecurityHeaders is.`,
+heuristic freshness and the cache key does not include cookies, so the private, no-store
+default is the only thing between an authenticated /admin render and a shared entry served to
+anyone. BOTH EXITS, for the same reason applySecurityHeaders is.`,
   ],
   "scripts/check-headers.mjs#15": ["CONTRACT", "what the needle matches; two lines already"],
   "scripts/check-headers.mjs#16": ["WHY", "a guard that reads as protection; two lines already"],
-  "scripts/check-headers.mjs#17": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#17": ["CONTRACT", "section marker, rule padding cut", `the CSP (Phase B, ENFORCED)`],
   "scripts/check-headers.mjs#18": [
     "WHY",
     "the cheapest wrong fix and the strict-dynamic trap; the phase story cut",
-    `THE ASSERTION THAT MATTERS MOST IS THE ONE ABOUT unsafe-inline. When something breaks, the
-cheapest way to make it stop is to add it to script-src: that silences the report, keeps
-every page working, is invisible in review, and reduces the policy to decoration, because
-unsafe-inline is exactly what an injected script needs. Enforcement makes it likelier, not
-less: a wrong fix now unbreaks a page a reader is looking at.
-
-strict-dynamic makes browsers IGNORE unsafe-inline when both are present, so adding it looks
-harmless and is not: it is what the policy falls back to the moment strict-dynamic is dropped
-or unsupported.`,
+    `THE ASSERTION THAT MATTERS MOST IS THE ONE ABOUT unsafe-inline: adding it to script-src
+silences the report, keeps every page working, is invisible in review, and is exactly what an
+injected script needs. Enforcement makes that likelier, not less. strict-dynamic makes
+browsers IGNORE unsafe-inline when both are present, so adding it looks harmless and is what
+the policy falls back to the moment strict-dynamic is dropped.`,
   ],
   "scripts/check-headers.mjs#19": [
     "WHY",
     "call the builder rather than regex it, and the fixture-independence rule",
-    `THE POLICY IS CALLED, NOT PARSED. A regex can see that both branches EXIST and cannot see
-which one a request gets, so the strongest thing it supports is "a nonce appears somewhere in
-the function" rather than "the public policy has none", and those differ by the defect worth
-catching. The builder is IMPORTED, so there is no second copy to drift, and the nonce is a
-fixed string written here and never generator output, which is the fixture-independence
-discipline.`,
+    `THE POLICY IS CALLED, NOT PARSED: a regex sees that both branches exist and not which one a
+request gets, so the strongest thing it supports is "a nonce appears somewhere". The builder
+is IMPORTED, so no second copy can drift, and the nonce is a fixed string written here rather
+than generator output, which is fixture independence.`,
   ],
   "scripts/check-headers.mjs#22": [
     "WHY",
     "why names and not values, and why both branches; the expired Report-Only argument cut",
-    `The ratified directive NAMES, not all their values: pinning every value would make this a
-mirror of workers/csp.mjs, so a deliberate widening would fail here for no reason beyond
-having been made. Names are asserted so a directive cannot be quietly dropped, and the values
-carrying the policy have named assertions of their own. BOTH BRANCHES, because a directive
-dropped from one arm only is what a single-arm sweep reports as clean.`,
+    `The ratified directive NAMES, not their values: pinning every value would make this a mirror
+of workers/csp.mjs, failing on a deliberate widening for no reason beyond its having been
+made. BOTH BRANCHES, because a directive dropped from one arm only is what a single-arm sweep
+reports as clean.`,
   ],
-  "scripts/check-headers.mjs#23": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#23": ["CONTRACT", "section marker, rule padding cut", `the feeds get NO policy at all`],
   "scripts/check-headers.mjs#24": [
     "WHY",
     "the two-owners drift and why the types are read from the routes; the dated measurement to Capsid",
-    `EVERY FEED ROUTE'S DECLARED CONTENT-TYPE IS ONE isFeed() EXEMPTS. The exemption list and the
-routes are two owners of one fact and they had already drifted, serving a full CSP with a
-per-request nonce on a body stored for ten minutes. THE TYPES ARE READ OUT OF THE ROUTE
-FILES, never restated here, which is what makes this an argument between two sources rather
-than a mirror: a route declaring a different type moves the ACTUAL side and a shortened list
-moves the EXPECTED side. isFeed is IMPORTED and CALLED, because a regex over the list reads
-its spelling, not its answer.`,
+    `EVERY FEED ROUTE'S DECLARED CONTENT-TYPE IS ONE isFeed() EXEMPTS. The list and the routes
+are two owners of one fact and had already drifted, serving a per-request nonce on a body
+stored for ten minutes. THE TYPES ARE READ OUT OF THE ROUTE FILES, never restated here, which
+is what makes this an argument rather than a mirror. isFeed is IMPORTED and CALLED, because a
+regex over the list reads its spelling, not its answer.`,
   ],
   "scripts/check-headers.mjs#25": [
     "WHY",
@@ -126,16 +108,15 @@ and a glob would quietly shrink to whatever still matches.`,
 document type must still be policed, which is why the list is named types rather than a
 negation of text/html.`,
   ],
-  "scripts/check-headers.mjs#28": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#28": ["CONTRACT", "section marker, rule padding cut", `the style nonce is ADMIN ONLY`],
   "scripts/check-headers.mjs#29": [
     "WHY",
     "the silent widening and why both directions are asserted",
-    `THE PUBLIC BRANCH IS THE ASSERTION THAT MATTERS. Passing true everywhere would fix a
-violation report, read as a simplification, leave every comment describing a policy that no
-longer exists, and break nothing a reader could see. On the edge-cached public routes header
-and body are cached together, so one nonce is valid there for up to ten minutes; that
-exposure is accepted in writing for script-src and extending it to styles as a side effect is
-not. BOTH DIRECTIONS, because refusing the nonce publicly is equally satisfied by a build
+    `THE PUBLIC BRANCH IS THE ASSERTION THAT MATTERS: passing true everywhere would fix a
+violation report, read as a simplification, and break nothing a reader could see. Header and
+body are cached together on the public routes, so one nonce stays valid for the cache
+lifetime; that exposure is accepted for script-src and extending it to styles by side effect
+is not. BOTH DIRECTIONS, because refusing the nonce publicly is equally satisfied by a build
 where the editor is broken.`,
   ],
   "scripts/check-headers.mjs#30": [
@@ -161,7 +142,7 @@ blocked.`,
 losing the reports removes the only signal that the policy is refusing something a reader
 needed.`,
   ],
-  "scripts/check-headers.mjs#34": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#34": ["CONTRACT", "section marker, rule padding cut", `the nonce reaches every script`],
   "scripts/check-headers.mjs#35": [
     "WHY",
     "what a source-level check here is for",
@@ -179,35 +160,28 @@ page, and the enqueue one carries the hydration payload.`,
   "scripts/check-headers.mjs#37": [
     "WHY",
     "the counter-intuitive gating, the silent failure, and the stated exclusion; the deleted sibling cut",
-    `THE SPECULATION BLOCK, and there is exactly ONE. speculationrules IS gated by script-src
-while application/ld+json is NOT: both are non-executable data blocks, so this was settled by
-the browser rather than by argument, and it is asserted so nobody "consistently" removes it.
-Under an enforced policy an un-nonced speculationrules element is refused SILENTLY on every
-public page: the page renders identically and the enhancement is simply absent.
-
-NOT ASSERTED HERE: that the rules name the right paths. test/header-speculation.test.mjs owns
-the derivation and check:browser owns the payload, so this gate carries no second copy.`,
+    `THE SPECULATION BLOCK, and there is exactly ONE. speculationrules IS gated by script-src while
+application/ld+json is not, which the browser settled rather than argument, so it is asserted
+before somebody "consistently" removes the nonce: under an enforced policy an un-nonced
+element is refused SILENTLY and the page renders identically without the enhancement. That the
+rules name the right paths is test/header-speculation.test.mjs's.`,
   ],
   "scripts/check-headers.mjs#38": [
     "HISTORY",
     "which build renamed the component and that the gate followed; what is asserted never moved",
     null,
   ],
-  "scripts/check-headers.mjs#39": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#39": ["CONTRACT", "section marker, rule padding cut", `the draft preview route (feature G)`],
   "scripts/check-headers.mjs#40": [
     "WHY",
     "the copy-paste this is written for, and why an identifier is accepted as a value",
-    `THE ONE ROUTE WHOSE HEADERS ARE THE ACCESS CONTROL. /preview/:token serves an UNPUBLISHED
-post to a caller with no session, and the cookieless downgrade that keeps the public post
-route safe never fires for that request shape, so this route's Cache-Control is not a
-performance choice.
+    `THE ONE ROUTE WHOSE HEADERS ARE THE ACCESS CONTROL: /preview/:token serves an UNPUBLISHED post
+to a caller with no session, and the cookieless downgrade never fires for that request shape.
 
-The failure it is written for is a copy-paste: blog.$slug.tsx sits in the same directory with
-a headers() of the same shape setting the shared value, and reaching for the neighbour's
-version produces a route that renders perfectly, passes every other gate, and publishes
-drafts. The parse accepts an IDENTIFIER as a value as well as a string, deliberately:
-otherwise swapping in the shared constant would read as "not declared" rather than as the
-wrong value, and the failure would name the wrong problem.`,
+The failure it is written for is a copy-paste from blog.$slug.tsx next door, which produces a
+route that renders perfectly, passes every other gate, and publishes drafts. An IDENTIFIER is
+accepted as a value so that swapping in the shared constant fails as the wrong value rather
+than as "not declared".`,
   ],
   "scripts/check-headers.mjs#41": ["CONTRACT", "one line already; kept"],
   "scripts/check-headers.mjs#42": ["CONTRACT", "why both value shapes are captured; already short"],
@@ -219,19 +193,15 @@ wrong value, and the failure would name the wrong problem.`,
 swapped in but not the constant staying correct while a conditional elsewhere hands back the
 public value. The rule is that the identifier does not appear in this file AT ALL.`,
   ],
-  "scripts/check-headers.mjs#45": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#45": ["CONTRACT", "section marker, rule padding cut", `the analytics capture (feature F.1 + G)`],
   "scripts/check-headers.mjs#46": [
     "WHY",
     "a one-off live measurement is not a gate, and why the section lives in this file",
-    `A LIVE MEASUREMENT IS NOT A GATE. The capture's exclusions were proven by querying the live
-dataset after one deploy, and nothing re-asserted them since: deleting the /admin skip would
-have left every gate green while the operator's own page views flowed into the panel that
-exists to exclude them.
-
-This section lives here because this is the only gate that parses workers/app.ts, which is
-where the capture is. The name is a poor fit and a new gate was worse: it would duplicate
-this file's parsing setup to read the same source. SOURCE LEVEL ONLY; whether a row reaches
-the dataset is ae-probe's question.`,
+    `A LIVE MEASUREMENT IS NOT A GATE: the capture's exclusions were proven once against the live
+dataset, and deleting the /admin skip would have left every gate green while the operator's
+own page views flowed into the panel that exists to exclude them. This section lives here
+because this is the only gate that parses workers/app.ts. SOURCE LEVEL ONLY; whether a row
+reaches the dataset is ae-probe's question.`,
   ],
   "scripts/check-headers.mjs#47": [
     "WHY",
@@ -242,14 +212,11 @@ a failure saying WHICH exclusion went is worth more than one saying the function
   "scripts/check-headers.mjs#48": [
     "WHY",
     "the capability in the path, both slots, and why absence is asserted too",
-    `THE REDACTION IS AN ACCESS CONTROL, NOT A DATA CHOICE. /preview/<token> carries a capability
+    `THE REDACTION IS AN ACCESS CONTROL, NOT A DATA CHOICE: /preview/<token> carries a capability
 in its PATH, so writing url.pathname verbatim stores it in the dataset and renders it in full
-in the admin, defeating the drawer's truncation.
-
-BOTH SLOTS, separately: the path is written into blobs and into indexes, the sampling key, and
-redacting one leaves the token in the dataset. Asserted as the ABSENCE of the raw expression
-as well as the presence of the redacted one, because presence alone passes on a capture that
-computes the safe path and writes the raw one anyway.`,
+in the admin. BOTH SLOTS separately, blobs and the sampling key, since redacting one leaves
+the token behind; and the ABSENCE of the raw expression is asserted too, because presence
+alone passes on a capture that computes the safe path and writes the raw one anyway.`,
   ],
   "scripts/check-headers.mjs#49": [
     "NUMBER",
@@ -264,10 +231,9 @@ the discipline a sibling floor proved the value of when its arithmetic came out 
     "an SVG is a document, why the assertion outlives the CSP, and the boundary",
     `UPLOADED SVG IS SERVED AS AN ATTACHMENT. An SVG is a document rather than a picture: it can
 carry script, it is on the upload allowlist, and /media/* serves from the SITE'S OWN ORIGIN,
-so inline it is script running as the site. The CSP blocks it too, and this assertion is kept
-regardless because it does not depend on the policy: it survives a loosened directive and
-covers a client that ignores CSP. BOUNDARY: source only, so it cannot see R2 or a cache layer
-dropping the header on the way out.`,
+so inline it is script running as the site. Kept even though the CSP blocks it too, because it
+does not depend on the policy. Source only, so it cannot see a cache layer dropping the header
+on the way out.`,
   ],
   "scripts/check-headers.mjs#51": ["WHY", "scoped to the helper body; two lines already"],
   "scripts/check-headers.mjs#52": [
@@ -288,30 +254,22 @@ returning the object body is invisible to a check that only asserts the helper e
     "WHY",
     "the glob-widening hazard, why it is per block, and the stated exclusion; the dated measurements to Capsid",
     `ASSET CACHE RULES in public/_headers. The immutable year is scoped to /assets/*, whose
-filenames carry a content hash, so a year is safe by construction. THE DANGER IS THE GLOB
-WIDENING: a rule over everything would pin the favicon, the logo and the icon suite for a
-year at stable paths, and a browser holding a stale favicon has already looked like a failed
-deploy here.
+filenames carry a content hash. THE DANGER IS THE GLOB WIDENING: a rule over everything pins
+the favicon and the icon suite for a year at stable paths, and a stale favicon has already
+looked like a failed deploy here.
 
-The assertion is the PROPERTY, not "/assets/* is the only path": that proxy stopped being
-fair when markdown twins arrived as assets needing a short shared cache and a noindex, and it
-refused something its own reasoning permits. Read PER BLOCK, because a file-wide reading
-cannot tell which path a directive belongs to and would pass a year on the logo beside a short
-rule elsewhere. stale-while-revalidate is deliberately NOT bounded: the body is revalidated
-and replaced, which is the opposite of the un-revokable state this guards.
-
-BOUNDARY: this reads the tracked FILE and does not fetch an asset, so it cannot see Workers
-Assets failing to apply a rule it parsed.`,
+Asserted as the PROPERTY rather than "/assets/* is the only path", a proxy that refused the
+markdown twins their noindex, and read PER BLOCK, because a file-wide reading cannot tell
+which path a directive belongs to. stale-while-revalidate is deliberately NOT bounded: the
+body is revalidated and replaced. It reads the tracked FILE and never fetches an asset.`,
   ],
   "scripts/check-headers.mjs#55": [
     "CONTRACT",
     "the constant's meaning and the no-purge-door reason, cites hard rule 20; trimmed",
-    `The longest freshness an UNHASHED path may declare, in seconds.
-
-The hazard is a path whose bytes can change under a stable URL: once a browser has stored it
-as fresh, nothing on the server can recall it, and there is no purge door here (hard rule 20
-records why). An hour is short enough that a bad deploy is corrected within one. /assets/* is
-exempt because its URL changes whenever its bytes do.`,
+    `The longest freshness an UNHASHED path may declare, in seconds. Once a browser has stored
+such a path as fresh nothing on the server can recall it, and there is no purge door here
+(hard rule 20 records why), so this bounds how long a bad deploy can stick. /assets/* is
+exempt: its URL changes whenever its bytes do.`,
   ],
   "scripts/check-headers.mjs#56": ["CONTRACT", "the file's shape; one line already"],
   "scripts/check-headers.mjs#57": [
@@ -327,20 +285,17 @@ cannot answer "is anything unhashed pinned for a year" once the file has two pat
     `THE PROPERTY, per block. Both max-age and s-maxage are read, because s-maxage overrides
 max-age for the shared cache and a year there is the same un-revokable state at the edge.`,
   ],
-  "scripts/check-headers.mjs#61": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#61": ["CONTRACT", "section marker, rule padding cut", `the health endpoint's own headers`],
   "scripts/check-headers.mjs#62": [
     "WHY",
     "hard rule 8's cached silence and why the scope is structural; the commit reference cut",
-    `A HEALTH CHECK THAT CAN BE SERVED FROM CACHE IS NOT A HEALTH CHECK. A 200 carrying neither
-Cache-Control nor Expires is stored under heuristic freshness (hard rule 8), so the endpoint
-could report health measured two hours ago, identically whether the Worker was fine or on
-fire, which is the reassuring silence a monitor exists to break.
+    `A HEALTH CHECK SERVED FROM CACHE IS NOT A HEALTH CHECK: a 200 carrying no Cache-Control is
+stored under heuristic freshness (hard rule 8), so it could report health measured two hours
+ago, identically whether the Worker was fine or on fire.
 
-SCOPED STRUCTURALLY, NOT BY A WINDOW. "The file mentions no-store" passes on a comment, and a
-window around each new Response is the shape that reads the next function's compliance. So
-the property is structural: the route constructs a Response in EXACTLY ONE place, that place
-is inside healthJson, and healthJson applies the constant, so a second exit added later
-without the headers moves the count and fails.`,
+SCOPED STRUCTURALLY, not by a window: "the file mentions no-store" passes on a comment. The
+route constructs a Response in EXACTLY ONE place, inside healthJson, which applies the
+constant, so a second exit added later moves the count and fails.`,
   ],
   "scripts/check-headers.mjs#63": ["CONTRACT", "one line already; kept"],
   "scripts/check-headers.mjs#65": ["WHY", "why identifiers are captured as values; three lines already"],
@@ -362,21 +317,18 @@ the one construction site is built FROM the constant.`,
   "scripts/check-headers.mjs#69": [
     "WHY",
     "the shared cache entry across schemes, and why position; the dated measurement to Capsid",
-    `MEASURED ON THE WIRE, and it is why this section exists: plain http returned 200 with the full
-page, and the first plaintext request to a path already warmed over HTTPS came back a cache
-HIT carrying the SAME CSP nonce. The two schemes shared one entry, so the nonce the enforced
-policy relies on was handed out in the clear. Asserted on POSITION, not presence: a redirect
-running after the router has produced a response is not a redirect, and presence passes on
-exactly that.`,
+    `MEASURED ON THE WIRE: plain http returned 200 with the full page, and the first plaintext
+request to a path already warmed over HTTPS came back a cache HIT carrying the SAME CSP nonce,
+so the two schemes shared one entry and the nonce went out in the clear. Asserted on POSITION,
+not presence: a redirect running after the router has produced a response is not a redirect.`,
   ],
   "scripts/check-headers.mjs#70": [
     "WHY",
     "an assertion about position must know which body it reads; the re-scoping story to Capsid",
-    `SCOPED TO THE GATEWAY. An assertion about POSITION has to know which body it is reading: taking
-the first fetch handler in the file silently changed subject when the entrypoint split, and
-pointed at the renderer, which constructs the router and never redirects. The property as
-stated is stronger than the old one: the redirect must come before the LOOPBACK, so before
-anything could be answered from cache, where before it only meant before a render.`,
+    `SCOPED TO THE GATEWAY, because an assertion about POSITION has to know which body it reads:
+the first fetch handler silently changed subject when the entrypoint split and pointed at the
+renderer, which never redirects. The redirect must come before the LOOPBACK, so before
+anything could be answered from cache.`,
   ],
   "scripts/check-headers.mjs#71": [
     "WHY",
@@ -392,19 +344,16 @@ where it is skipped on every hit.`,
 the cache key, which is the defect this closes, so a cacheable redirect under a shared key
 would be served to HTTPS readers and send them to the URL they already requested.`,
   ],
-  "scripts/check-headers.mjs#73": ["CONTRACT", "section marker; kept byte-identical"],
+  "scripts/check-headers.mjs#73": ["CONTRACT", "section marker, rule padding cut", `every public HTML route sets the shared policy`],
   "scripts/check-headers.mjs#74": [
     "WHY",
     "the symptomless gap, why the routes are asserted and not the helper, and the stated exclusions",
-    `THE GAP THIS CLOSES EXISTED BECAUSE NOTHING ASSERTED IT: a public page exporting no headers()
-falls through to hard rule 8's uncached default and is the one page never edge-cached, every
-reader paying an origin hit for a body identical to everyone's. A missing export has no
-symptom a human meets.
+    `A public page exporting no headers() falls through to hard rule 8's uncached default and is
+the one page never edge-cached, with no symptom a human meets.
 
-Asserted on the ROUTE FILES rather than on the helper, because the helper being correct proves
-nothing about who calls it, and comment-stripped, because several of these files discuss
-headers() in prose. The Accept-negotiating routes are deliberately absent and have their own
-list; preview.$token is absent for the opposite reason and has its own section above.`,
+Asserted on the ROUTE FILES rather than the helper, because a correct helper proves nothing
+about who calls it, and comment-stripped, because several of these files discuss headers() in
+prose. The Accept-negotiating routes and preview.$token have their own lists.`,
   ],
   "scripts/check-headers.mjs#75": ["WHY", "why the About page belongs in this list; three lines already"],
   "scripts/check-headers.mjs#76": [
@@ -442,14 +391,12 @@ the one naming a real second representation.`,
     "WHY",
     "the silent-both-ends failure, why the pairing, and why the needle is not the value",
     `EVERY SHARED-CACHEABLE ROUTE ALSO SETS A CACHE TAG. A response that can be stored and cannot
-be purged is a page that stays wrong for ten minutes after the write meant to fix it, and the
-failure is SILENT at both ends: the write reports success, and a purge reports success for a
-tag matching nothing. The only place the omission is visible is here, before it ships.
+be purged stays wrong after the write meant to fix it, and it is SILENT at both ends: the
+write reports success and so does a purge of a tag matching nothing.
 
-IT IS THE PAIRING THAT IS ASSERTED. A route calling the helper passes by construction; the two
-routes building headers by hand are where a half goes missing, which is why this is checked
-FROM the same derived list rather than from a hand-kept set. The needle is the CALL or the
-header name, never the tag's VALUE, which hard rule 17 gives one owner.`,
+IT IS THE PAIRING THAT IS ASSERTED, from the same derived list, because the routes building
+headers by hand are where a half goes missing. The needle is the CALL or the header name,
+never the tag's VALUE, which hard rule 17 gives one owner.`,
   ],
   "scripts/check-headers.mjs#83": [
     "WHY",
@@ -462,24 +409,19 @@ that a floor arrived at by reading is not a floor.`,
   "scripts/check-headers.mjs#84": [
     "WHY",
     "closure is what makes the lists an owner, and the no-count-in-prose rule",
-    `CLOSURE, AND IT IS WHAT MAKES THESE LISTS AN OWNER RATHER THAN A SECOND COPY. The lists are
-checked FROM the tree: every route referencing the shared string must appear in one of them,
-so a new shared-cached page cannot ship unlisted.
-
-THIS IS WHAT LETS workers/app.ts STATE THE NONCE EXPOSURE WITHOUT A COUNT. That count existed
-in three copies across two files and all three were wrong at once; a number in prose beside a
-gate is a second copy of the gate, and hard rule 8 carries the same lesson. Comments stripped
-first, because one route NAMES the shared constant while explaining why it refuses it.`,
+    `CLOSURE, WHICH MAKES THESE LISTS AN OWNER RATHER THAN A SECOND COPY: every route referencing
+the shared string must appear in one of them, so a new shared-cached page cannot ship
+unlisted. It is also what lets workers/app.ts state the nonce exposure WITHOUT A COUNT, a
+number that once stood in three copies and was wrong in all three; hard rule 8 carries the
+same lesson. Comments stripped first, because one route NAMES the shared constant while
+explaining why it refuses it.`,
   ],
   "scripts/check-headers.mjs#85": [
     "NUMBER",
     "the floor is asserted below; five dated re-measurements and the CI story go to Capsid",
     `FLOOR RE-MEASURED BY RUNNING THIS GATE, never summed. A floor left behind while the count
-climbs is not a floor: this one was once 44 under the truth, which is two whole sections able
-to stop running while the count still cleared it, and hard rule 10 names that class. The
-arithmetic drifts silently and only running it says so.
-
-The tolerance belongs to scripts/check-floors.mjs, the gate that enforces it, not to a
-percentage quoted in prose here: prose about a gate ages, the gate does not.`,
+climbs is not a floor: this one was once far enough under the truth for two whole sections to
+stop running while it still cleared, and hard rule 10 names that class. The tolerance belongs
+to scripts/check-floors.mjs, the gate that enforces it, not to a percentage quoted here.`,
   ],
 };
