@@ -3,43 +3,22 @@
  *
  *   node scripts/health-repair.mjs --origin <origin> --body body.json
  *
- * Called by `.github/workflows/health.yml` when `/api/health` reports
- * unhealthy. Decides through `app/lib/health/repair.mjs`, performs the
- * repairs that decision allows, re-polls ONCE, and exits.
+ * Called by the health workflow when `/api/health` reports unhealthy. Decides through the shared
+ * decision module, performs the repairs that decision allows, re-polls ONCE, and exits.
  *
- * ## EXIT CODES ARE THE ALERT
+ * EXIT CODES ARE THE ALERT: 0 means something drifted, this repaired it and the re-poll came back
+ * healthy; 1 means a person is emailed. There is no third state.
  *
- * Exit 0 means the run may pass: something drifted, this repaired it, and the
- * re-poll came back healthy. Exit 1 means a person is emailed. There is no
- * third state, because a scheduled workflow has exactly two outcomes a human
- * ever sees.
+ * **`process.exitCode`, NEVER `process.exit()`**, measured: exiting immediately after a fetch
+ * terminated node with a Windows exception rather than with the code, because the exit raced the
+ * socket teardown, and an exit code nobody can explain is a bad thing to hand a monitor.
  *
- * **`process.exitCode`, NEVER `process.exit()`.** Measured 2026-08-24 while
- * driving this against a stub: calling `process.exit(1)` immediately after a
- * fetch terminated node with 0xC0000409 on Windows rather than with 1, because
- * the exit raced the HTTP socket teardown. The annotation had already printed,
- * so the run would still have failed and the cause would have been invisible;
- * an exit code nobody can explain is a bad thing to hand a monitor. Setting the
- * code and returning lets node drain and exit normally.
+ * ONE RE-POLL, NOT A LOOP. Both repairs derive their own converged verdict, so a successful call
+ * has ALREADY proved the index agrees; the re-poll confirms the endpoint agrees too. A loop would
+ * be a monitor arguing with itself. Ship polls because it reads counts back within milliseconds of
+ * an upload; this runs at least one scheduled interval later.
  *
- * ## ONE RE-POLL, NOT A LOOP
- *
- * Both repairs derive their own converged verdict before answering, so a
- * successful call has ALREADY proved the index agrees; the re-poll exists to
- * confirm the endpoint agrees too, and to catch anything else that broke while
- * this ran. A loop here would be a monitor arguing with itself: if one repair
- * through the front door did not fix it, the next thing to happen should be a
- * person reading the log, not a second write.
- *
- * That is a deliberate difference from `ship`'s Ask step, which DOES poll. Ship
- * polls because it read the counts back within milliseconds of the upload and
- * AI Search is eventually consistent. This runs at least one scheduled interval
- * after any such write, so there is no visibility lag left to wait out.
- *
- * ## THE TOKEN
- *
- * Read from OPERATOR_TOKEN in the environment, which the workflow sets from a
- * repository secret. It is never logged, never an argument, and its ABSENCE is
+ * THE TOKEN is read from the environment, never logged, never an argument, and its ABSENCE is
  * reported as a named configuration state rather than as a failure to repair.
  */
 
@@ -84,9 +63,8 @@ async function repair(/** @type {string} */ origin, /** @type {string} */ token,
     };
   }
 
-  // The server's own sentence and the 422 rule both live in the decision
-  // module, because the watchdog makes the identical call and the two copies of
-  // this had already drifted. Grounds on `refusalMiss`.
+  // The server's own sentence and the status rule both live in the decision module, because the
+  // watchdog makes the identical call and the two copies of this had already drifted.
   if (!response.ok) return refusalMiss(tool, response.status, payload);
 
   const report = payload && typeof payload === "object" ? (payload.data ?? payload) : null;
@@ -151,14 +129,9 @@ async function main() {
     misses.push(outcome.miss);
 
     /*
-     * A REFUSAL ABANDONS THE REST OF THE PLAN, and the ordering argument in
-     * `REPAIRABLE` is why. `sync_ask` reads `search_docs`, which `sync_posts`
-     * rewrites; that comment already says content must land before the Ask
-     * upload reads the store it feeds from. When the content repair REFUSED,
-     * the store is not merely stale, it is known-stale, and uploading it is a
-     * write made on a premise the previous call just denied. On 2026-09-09 the
-     * loop ran `sync_ask` anyway and reported two 422s where one had any
-     * meaning.
+     * A REFUSAL ABANDONS THE REST OF THE PLAN: the Ask upload reads the store the content repair
+     * rewrites, so when the content repair REFUSED the store is not merely stale, it is known-stale,
+     * and uploading it is a write made on a premise the previous call just denied.
      */
     if (outcome.unrepairable) {
       refused = true;
@@ -184,8 +157,8 @@ async function main() {
   }
 
   /*
-   * THE RE-POLL. The repair proved its own index; this proves the ENDPOINT is
-   * healthy, which is a wider claim and the one the workflow reports on.
+   * THE RE-POLL. The repair proved its own index; this proves the ENDPOINT is healthy, which is a
+   * wider claim and the one the workflow reports on.
    */
   let status = 0;
   let after = null;

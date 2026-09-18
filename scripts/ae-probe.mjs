@@ -1,45 +1,24 @@
 /**
  * Does a CACHED serve reach the Worker, and therefore Analytics Engine?
  *
- * The cockpit's traffic panel counts what Analytics Engine recorded. With
- * `cache.enabled` on, an edge HIT may never invoke the Worker, in which case
- * the panel is counting ORIGIN REQUESTS rather than reads, and it has to say
- * so. This script measures which it is, before any panel exists.
- *
  *   npm run ae-probe
  *
- * It needs a Cloudflare API token with Account, Account Analytics, Read, in
- * ANALYTICS_READ_TOKEN. It fails closed and prints a plain sentence if the
- * variable is absent. IT NEVER PRINTS THE TOKEN, any request header, or any
- * URL carrying a credential. The final block is numbers only and is safe to
- * paste anywhere.
+ * With the platform cache on, an edge HIT may never invoke the Worker, in which case the traffic
+ * panel is counting ORIGIN REQUESTS rather than reads and has to say so. It needs a read-only
+ * analytics token, fails closed without it, and NEVER PRINTS THE TOKEN, any request header, or any
+ * URL carrying a credential.
  *
- * METHOD. Three fetches, each followed by its own poll, so a point is
- * attributable to the fetch that caused it rather than to a batch:
+ * METHOD. Three fetches, each followed by its own poll, so a point is attributable to the fetch
+ * that caused it: a plain GET to warm the edge, a second expected to HIT, and one sent with the
+ * bypass header. The first exists because a cache-eligible fetch that MISSES reaches the origin by
+ * definition and proves nothing; only the second answers the question. THE BYPASS MECHANISM IS NOT
+ * INVENTED HERE, it is read from the live gate.
  *
- *   W  plain GET, warms the edge entry              expect MISS
- *   H  plain GET again, should come from the cache  expect HIT
- *   N  GET with `cache-control: no-cache`           expect a bypass
+ * EVERY COUNT IS SAMPLING WEIGHTED, the documented way to count events, because a raw count
+ * silently undercounts the moment sampling engages; the row count is carried as a diagnostic.
  *
- * W exists because a cache-eligible fetch that MISSES proves nothing about a
- * HIT: it reaches the origin by definition. Only H answers the question.
- *
- * THE BYPASS MECHANISM IS NOT INVENTED HERE. It is read from the live gate:
- * `scripts/verify-live.mjs:108` sends `cache-control: no-cache` on every
- * request, and the cache-eligible plain GET is that file's `warm` helper at
- * `scripts/verify-live.mjs:992` to `997`, which deliberately omits the header
- * because cache behaviour is its subject.
- *
- * EVERY COUNT IS SAMPLING WEIGHTED. Analytics Engine samples, and the
- * documented way to count events is `SUM(_sample_interval)`, not `COUNT()`.
- * A raw `COUNT()` silently undercounts the moment sampling engages, so the
- * weighted figure is the measurement and the row count is carried only as a
- * diagnostic that shows whether sampling is active at all.
- *
- * OBSERVATION BOUNDARY. `writeDataPoint` is fire and forget and
- * `workers/app.ts:286` swallows any throw, so a point that APPEARS is strong
- * evidence the Worker ran, while a point that does NOT appear is weaker
- * evidence that it did not: the write could have been dropped instead. The
+ * BOUNDARY: the write is fire and forget and a throw is swallowed, so a point that APPEARS is
+ * strong evidence the Worker ran while one that does NOT is weaker evidence that it did not. The
  * report states that ambiguity whenever a fetch produces no point.
  */
 
@@ -48,18 +27,11 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 
 /*
- * NEITHER OF THESE IS WRITTEN OUT HERE ANY MORE. 2026-08-28.
- *
- * The origin is imported from `app/lib/seo.ts`, which is the one owner: a
- * second copy is the one that goes stale at the DNS cutover and then probes a
- * host nobody is serving.
- *
- * The account id is read off the environment and refused if absent, on the
- * portfolio rule that account-scoped identifiers stay out of git. It is an
- * identifier rather than a credential, which is why it is a `var` in the
- * Worker's config and not a `wrangler secret`; that makes it fine to hold in an
- * environment variable and still not fine to commit. `check:config` refuses to
- * find the real value anywhere tracked.
+ * NEITHER OF THESE IS WRITTEN OUT HERE. The origin is imported from its one owner, a second copy
+ * being the one that goes stale at the DNS cutover and then probes a host nobody is serving. The
+ * account id is read off the environment and refused if absent, on the portfolio rule that
+ * account-scoped identifiers stay out of git: an identifier rather than a credential, which is why
+ * it is a config var and not a secret, and `check:config` refuses to find it anywhere tracked.
  */
 const ORIGIN = SITE_ORIGIN;
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -143,8 +115,7 @@ async function counts() {
 }
 
 /**
- * Polls until the weighted count settles: STABLE_READS consecutive equal
- * readings. Used for the baseline so the experiment does not start mid flight.
+ * Polls until the weighted count settles, so the experiment does not start mid flight.
  *
  * @returns {Promise<{ weighted: number, rows: number, waited: number }>}
  */

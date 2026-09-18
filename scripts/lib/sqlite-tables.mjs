@@ -1,34 +1,19 @@
 /**
  * Classifying `sqlite_master` rows into virtual, shadow and real tables.
  *
- * ONE ENUMERATOR RULE, TWO SOURCES. Extracted 2026-08-10 because three callers
- * were applying the same classification independently:
+ * ONE ENUMERATOR RULE, TWO SOURCES: three callers were applying the same classification
+ * independently over rows read from a live database and from migrations replayed into memory. The
+ * rules were already identical and the comments said so, but identical because two people wrote
+ * them the same way is the shape this repo keeps converting into one module with several readers.
+ * The classifier is source-agnostic: it takes rows, not a database.
  *
- *   check-backup.mjs      rows read from the LIVE database over wrangler
- *   check-invariants.mjs  rows read from the migrations replayed into :memory:
- *   check-invariants.mjs  section 7, the same, for the FTS delete scan
+ * VIRTUAL: the DDL says so, never a name list, because the set has grown twice and a hardcoded
+ * list is how the next one gets missed. SHADOW: the name is prefixed with a virtual table's name,
+ * the per-index set differing by fts5 version, so the prefix is the durable rule. INTERNAL: the
+ * reserved prefix SQLite keeps for its own bookkeeping.
  *
- * The rules were already identical and the comments in both files said so, but
- * "identical because two people wrote them the same way" is exactly the shape
- * this repo keeps converting into one module with several readers. The
- * classifier is source-agnostic: it takes rows, not a database.
- *
- * ## The rules, and why each is derived rather than named
- *
- * VIRTUAL: the DDL says `CREATE VIRTUAL TABLE`. Never a name list, because
- * `posts_fts`, `search_identity` and `search_prose` were one, then two, then
- * three, and a hardcoded list is how the next one gets missed.
- *
- * SHADOW: the name is prefixed with a virtual table's name and an underscore.
- * fts5 creates `_data`, `_idx`, `_content`, `_docsize` and `_config` per index,
- * and the set differs by fts5 version, so the prefix is the durable rule and a
- * suffix list is not.
- *
- * INTERNAL: `sqlite_%`, reserved by SQLite for its own bookkeeping.
- *
- * Platform bookkeeping (`_cf_KV`, `d1_migrations`, `_cf_METADATA`) is NOT
- * handled here. It is a property of where the rows came from, not of SQLite, so
- * it stays with the caller that reads a live D1.
+ * Platform bookkeeping is NOT handled here: it is a property of where the rows came from rather
+ * than of SQLite, so it stays with the caller that reads a live database.
  *
  * @param {{ name: string, sql: string | null }[]} rows
  * @returns {{ virtual: string[], shadow: string[], real: string[] }}
@@ -57,14 +42,10 @@ export function classifySqliteTables(rows) {
 }
 
 /**
- * Every table name an FTS index owns: the index itself plus its shadow tables.
- *
- * This is the set that must never be written to directly. `DELETE FROM` any of
- * them corrupts the index, and the repair is
- * `INSERT INTO <index>(<index>) VALUES('rebuild')`. Counting rows in one is
- * equally wrong in the other direction: `COUNT(*)` on an external-content index
- * reads THROUGH to the content table and can never detect drift, which is why
- * the health checks count `*_docsize` instead.
+ * Every table name an FTS index owns, which is the set that must never be written to directly:
+ * deleting from any of them corrupts the index and the repair is a rebuild. Counting rows in one
+ * is equally wrong in the other direction, a count on an external-content index reading THROUGH to
+ * the content table, which is why the health checks count the docsize shadow instead.
  *
  * @param {{ virtual: string[], shadow: string[] }} classified
  * @returns {string[]}

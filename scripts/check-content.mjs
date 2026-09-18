@@ -1,44 +1,18 @@
 /**
- * Gate for the content build and the committed artifacts under
- * `content/generated/`.
+ * Gate for the content build and the committed artifacts under `content/generated/`.
  *
- * OBSERVATION BOUNDARY: it renders and compares locally. It never renders a
- * page in a Worker, never queries D1, and cannot tell whether the rows the
- * sync writes match what it rendered; that comparison is ship's drift report
- * and the content-drift health check.
+ * BOUNDARY: it renders and compares locally, never in a Worker and never against D1, so whether
+ * the rows match what it rendered is ship's drift report's.
  *
- * FIVE subjects. The first three are the artifact arc's; the last two arrived
- * with math on 2026-09-06 and are 4 and 5 below.
+ *   1. The corpus render is valid and DETERMINISTIC, rendered twice in one process and
+ *      byte-compared, since nondeterminism surfaces later as false render drift.
+ *   1b. The About page on the same footing, its bytes going into the WORKER BUNDLE.
+ *   2. `template-refs.json`, byte-compared against a fresh scan.
+ *   3. `assets.json`, against a walk of `public/`, with the gitignore tripwire.
+ *   4. MATH OUTPUTS: one carries the rendered form and every other the TeX an author typed.
+ *   5. `katex.generated.css` and its faces, derived fresh and reconciled both ways.
  *
- *   1. THE CORPUS RENDER IS VALID AND DETERMINISTIC. posts.json stopped being
- *      committed (git holds markdown; D1 holds the only rendered copy), so
- *      there is no committed copy to byte-compare. What replaced the byte
- *      gate: the corpus is rendered TWICE in one process and the two outputs
- *      must be byte-identical, because a nondeterministic render is exactly
- *      what would surface later as false render-drift between the Worker and
- *      the Node build. A slug whose two renders differ is named. Rendering at
- *      all is also the validation half: a post the pipeline refuses fails
- *      here, offline, before any writer meets it.
- *   1b. THE ABOUT PAGE, on the corpus's footing: rendered twice and
- *      byte-compared, and the render is the validation. It is a build
- *      product, gitignored like `posts.json` and `stack.json`, but unlike
- *      those two its bytes go into the WORKER BUNDLE, because
- *      `app/routes/about.tsx` imports it statically. A nondeterministic
- *      render of it is therefore a deploy that differs from the one before
- *      it for no reason anybody wrote down.
- *   2. `template-refs.json`, byte-compared against a fresh scan. STILL
- *      COMMITTED, deliberately: it is a repo fact with no database owner.
- *   3. `assets.json`, byte-compared against a walk of `public/`, with the
- *      gitignore tripwire. Also still committed.
- *   4. MATH OUTPUTS. One output carries the rendered form and every other one
- *      carries the TeX an author typed, and that distinction lives in five
- *      modules with nothing else comparing them. Includes the scope control
- *      that keeps the whole section from passing over a corpus with no math in
- *      it, and the two independent derivations of `hasMath` made to argue.
- *   5. `katex.generated.css` AND ITS FACES, byte-compared against a fresh
- *      derivation from the installed katex package, faces reconciled both ways.
- *
- * This check fails closed: a generator that throws is a failure, never a pass.
+ * Fails closed: a generator that throws is a failure, never a pass.
  */
 
 import { readFile, readdir, stat } from "node:fs/promises";
@@ -49,10 +23,7 @@ import { createHash } from "node:crypto";
 import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
 import { TEMPLATE_REFS_PATH, scanTemplateRefs } from "./build-template-refs.mjs";
 import { ASSET_MANIFEST_PATH, PUBLIC_DIR, placeholderPaths, walkPublic } from "./build-assets.mjs";
-/* The one statement of what a stored placeholder IS, imported rather than
-   restated. That gate owns the assertion for the D1 column; this artifact has
-   to satisfy the same one, and a second copy here is how the two would come to
-   disagree about a defect they were both written for. */
+/* The one statement of what a stored placeholder IS, imported rather than restated. */
 import { placeholderProblems } from "./check-image-weight.mjs";
 import {
   KATEX_CSS_PATH,
@@ -65,10 +36,7 @@ import { mathToTex } from "../app/lib/rss-feed.mjs";
 import { recordsForPosts } from "../app/lib/search/records.mjs";
 
 /**
- * Names, not a count. A failure that says "3 file(s) missing" sends the reader
- * to run a command and compare two lists by eye; a failure that says which
- * files is already the answer. Capped, because a first run against a fresh
- * checkout could otherwise print sixty lines.
+ * Names, not a count: "3 file(s) missing" sends the reader to compare two lists by eye.
  *
  * @param {string[]} names
  */
@@ -103,14 +71,8 @@ function firstDifference(committed, fresh) {
 
 async function main() {
   /*
-   * TWICE, IN ONE PROCESS. Rendering once proves validity; rendering twice
-   * and comparing proves the render depends on the sources alone. Any clock,
-   * counter or iteration-order dependence shows up as a byte difference
-   * between two back-to-back runs, and that same dependence is what would
-   * later read as Worker-versus-Node render drift in ship's report with
-   * nothing at fault but this pipeline. One process on purpose: a module
-   * memo (the highlighter, the WASM engine) is shared, so a difference here
-   * is the render's own, not an environment's.
+   * TWICE, IN ONE PROCESS: once proves validity, twice proves the render depends on the sources
+   * alone. One process on purpose, so a shared memo makes any difference the render's own.
    */
   const first = await buildArtifact();
   const second = await buildArtifact();
@@ -165,34 +127,9 @@ async function main() {
 }
 
 /**
- * The About page renders, renders the same way twice, and says something.
- *
- * ## THE SAME CLAIMS THE CORPUS GETS, AND ONE MORE
- *
- * RENDERING AT ALL IS THE VALIDATION. `buildAbout` throws on missing
- * frontmatter, on an image (there is no resolver on this page), and on a link
- * the URL allowlist demoted. A page that cannot be built fails here, offline,
- * rather than shipping with a dead anchor or an empty title tag.
- *
- * TWICE, BYTE-COMPARED, for the corpus's reason and one of its own. The
- * general reason is that a clock, a counter or an iteration order in the
- * pipeline shows up as a difference between two back-to-back runs. The
- * specific one is that `content/generated/about.json` is imported STATICALLY
- * by `app/routes/about.tsx`, so its bytes sit inside the Worker bundle: a
- * nondeterministic render here makes two deploys of one commit differ, which
- * is the property blocking `npm run deploy` from a dirty tree exists to
- * protect.
- *
- * NOT EMPTY, and this is the extra claim. `renderBody` over an empty body
- * returns an empty string and throws nothing, so a truncated or mis-parsed
- * `content/about.md` produces a perfectly valid artifact describing a blank
- * page. That is the failure here that looks most like success.
- *
- * THE FLOOR IS DELIBERATELY LOW. It is a scope check against nothing at all,
- * not a word count: a page whose length a gate polices is a page nobody can
- * edit, and this one exists to be edited on taste.
- *
- * WHAT IT DOES NOT CHECK: whether a single sentence is true. Nothing can.
+ * The About page renders, renders the same way twice, and says something. RENDERING AT ALL IS THE
+ * VALIDATION, since `buildAbout` throws. TWICE AND BYTE-COMPARED, because `about.json` is
+ * imported statically into the Worker bundle. NOT EMPTY: a blank page renders a valid artifact.
  */
 async function checkAbout() {
   const first = await buildAbout();
@@ -229,34 +166,10 @@ async function checkAbout() {
 }
 
 /**
- * THE FOURTH SUBJECT: math, and what each output carries of it.
- *
- * The determinism pass above already covers KaTeX for free, because a
- * nondeterministic renderer would move the bytes between two runs. What it
- * cannot see is the thing the math arc actually decided, which is that ONE
- * output carries the rendered form and every other one carries the TeX an
- * author typed. That distinction lives in five different modules and nothing
- * else compares them.
- *
- * ## THE SCOPE CONTROL COMES FIRST, and it is the assertion that matters most
- *
- * Every claim below is of the form "no post's markdown carries KaTeX markup",
- * and a corpus with no math in it satisfies every one of them perfectly. That
- * is the clean-sweep-over-an-empty-scope shape this file already guards against
- * for `further_reading`. So the first thing asserted is that the corpus
- * contains at least one post WITH math and at least one WITHOUT: the fixture
- * `math-typesetting-fixture` provides the first and the other twelve the
- * second. Delete the fixture and this gate fails rather than going quietly
- * vacuous.
- *
- * ## TWO DERIVATIONS OF `hasMath`, MADE TO ARGUE
- *
- * `remarkMathValidate` sets the flag from the mdast, before anything is
- * rendered. `htmlHasMath` reads it back off the rendered html, and is what the
- * ROUTE uses to decide whether to link the stylesheet. They are computed at
- * different times from different artifacts by different code, and if they ever
- * disagree the page is either downloading 3 kB it does not need or rendering
- * math with no stylesheet. Comparing them is the only thing that can notice.
+ * THE FOURTH SUBJECT: math. ONE output carries the rendered form and every other the TeX an
+ * author typed. THE SCOPE CONTROL COMES FIRST: every claim below is satisfied by a corpus with
+ * no math, so one post WITH and one WITHOUT must exist. TWO DERIVATIONS OF `hasMath`, MADE TO
+ * ARGUE, one from the mdast and one off the rendered html, which is what the ROUTE uses.
  *
  * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
  *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
@@ -290,13 +203,7 @@ function checkMath(posts) {
       );
     }
 
-    /*
-     * NO ERROR BOX, EVER, on any post. This is the assertion that proves
-     * `remarkMathValidate` is doing its job rather than merely existing:
-     * rehype-katex's own failure path emits `class="katex-error"`, and the
-     * validator exists precisely so that path is unreachable. If this ever
-     * fires, an expression got past the validator and shipped a red box.
-     */
+    /* NO ERROR BOX, EVER: the validator exists so rehype-katex's `katex-error` path is unreachable. */
     if (post.html.includes("katex-error")) {
       problems.push(
         `${post.slug}: the rendered html carries a katex-error span. An expression ` +
@@ -306,11 +213,8 @@ function checkMath(posts) {
     }
 
     /*
-     * THE MARKDOWN SIDE, which is FOUR outputs at once and is why it is
-     * asserted on the record rather than per route: `posts.body` is what
-     * `/blog/:slug.md`, `llms-full.txt`, the JSON feed's `content_text` and the
-     * `Accept: text/markdown` representation all serve, unmodified. If the
-     * source held markup, all four would.
+     * THE MARKDOWN SIDE, four outputs at once: `posts.body` is what the twin, llms-full, the JSON
+     * feed and the Accept representation all serve unmodified.
      */
     if (post.markdown.includes("katex")) {
       problems.push(
@@ -325,10 +229,7 @@ function checkMath(posts) {
       );
     }
 
-    /* THE HTML SIDE. The one output that carries the rendered form, and it
-       carries BOTH trees, because htmlAndMathml is the ruled output mode and a
-       silent drop to html-only would take the MathML away from a screen reader
-       with nothing else noticing. */
+    /* THE HTML SIDE, carrying BOTH trees: a silent drop to html-only takes the MathML away. */
     if (astSaysMath) {
       if (!post.html.includes("<math")) {
         problems.push(
@@ -345,9 +246,7 @@ function checkMath(posts) {
       }
     }
 
-    /* THE FEED SIDE, asserted through the transform the feeds actually call.
-       `test/math-outputs.test.mjs` owns the item markup; this owns the claim
-       over the REAL corpus, which no fixture can make. */
+    /* THE FEED SIDE, through the transform the feeds call, over the REAL corpus. */
     const feedBody = mathToTex(post.html);
     if (feedBody.includes("katex")) {
       problems.push(
@@ -361,10 +260,8 @@ function checkMath(posts) {
   }
 
   /*
-   * THE SEARCH AND ASK SIDE. Both indexes are built by `recordsForPosts` from
-   * the MARKDOWN, so what they carry is the TeX source; this proves it over the
-   * corpus rather than by reading that module. A record carrying markup would
-   * put span soup into a search snippet and into the Ask context window.
+   * THE SEARCH AND ASK SIDE: both indexes are built from the MARKDOWN, so markup would be span
+   * soup in a snippet and in the Ask context.
    */
   const records = recordsForPosts(
     posts.map((post) => ({
@@ -413,17 +310,8 @@ function checkMath(posts) {
 }
 
 /**
- * The prose of a post, with every code fence and code span removed.
- *
- * REQUIRED, not tidiness. A post that DOCUMENTS the directive writes
- * `:swatch[#6B4FBB]` inside a fence, where it is literal text and renders no
- * chip. Matching the raw markdown would read that as a swatch that failed to
- * render and fail the build on a post that is correct, which is the
- * comment-satisfied-anchor class in hard rule 10 wearing a different syntax:
- * strip the region that cannot mean what you are looking for, then match.
- *
- * The swatch fixture carries exactly that case on purpose, so this stripping is
- * exercised by the corpus rather than only asserted here.
+ * REQUIRED, not tidiness: a post DOCUMENTING the directive writes it inside a fence, where it is
+ * literal text, so matching raw markdown fails a correct post. Hard rule 10's satisfied anchor.
  *
  * @param {string} markdown
  */
@@ -432,21 +320,9 @@ function prosePart(markdown) {
 }
 
 /**
- * THE FIFTH SUBJECT: swatches, and what each output carries of one.
- *
- * The claim, in one line: **the rendered chip exists in the HTML and NOWHERE
- * ELSE.** `posts.body` is served verbatim by `/blog/:slug.md`, `llms-full.txt`,
- * the JSON feed's `content_text` and the `Accept: text/markdown`
- * representation, and it is what `recordsForPosts` indexes for search and Ask.
- * All six of those carry the directive as the author typed it. If a chip's
- * markup ever reached `posts.body`, every one of them would ship a `<span>` in
- * place of a colour.
- *
- * TWO DERIVATIONS, MADE TO ARGUE, which is the shape `checkMath` uses: the
- * source side reads the markdown for the directive, the html side reads the
- * rendered output for the chip, and a disagreement in either direction is a
- * failure. One derivation checked against itself would pass on a pipeline that
- * had stopped running entirely.
+ * THE FIFTH SUBJECT: swatches. **The rendered chip exists in the HTML and NOWHERE ELSE**, since
+ * `posts.body` is served verbatim to six consumers. TWO DERIVATIONS, MADE TO ARGUE: one checked
+ * against itself passes on a pipeline that had stopped running.
  *
  * @param {Array<{ slug: string, markdown: string, html: string }>} posts
  */
@@ -485,9 +361,8 @@ function checkSwatches(posts) {
     }
 
     /*
-     * THE MARKDOWN SIDE, which is SIX outputs at once and is why it is asserted
-     * on the record rather than per route. If `posts.body` held chip markup,
-     * all six would.
+     * THE MARKDOWN SIDE, which is SIX outputs at once: if `posts.body` held chip markup, all six
+     * would.
      */
     if (post.markdown.includes("swatch-chip") || post.markdown.includes('class="swatch"')) {
       problems.push(
@@ -504,12 +379,7 @@ function checkSwatches(posts) {
       );
     }
 
-    /*
-     * THE CASE FOLD, asserted on the OUTPUT rather than on the validator. The
-     * renderer uppercases every hex so two spellings of one colour produce one
-     * page; this is what makes that a property of the artifact instead of a
-     * claim in a docstring.
-     */
+    /* THE CASE FOLD, on the OUTPUT rather than the validator, so it is a property of the artifact. */
     for (const match of post.html.matchAll(/--swatch:(#[0-9A-Fa-f]+)/g)) {
       chips += 1;
       if (match[1] !== match[1].toUpperCase()) {
@@ -521,12 +391,7 @@ function checkSwatches(posts) {
     }
   }
 
-  /*
-   * THE SEARCH AND ASK SIDE, through the same builder `checkMath` uses and for
-   * the same reason: both indexes are built from the MARKDOWN, so what they
-   * carry is the directive source. A record carrying chip markup would put span
-   * soup into a search snippet and into the Ask context window.
-   */
+  /* THE SEARCH AND ASK SIDE, same builder, same reason: chip markup is span soup in a snippet. */
   const records = recordsForPosts(
     posts.map((post) => ({
       slug: post.slug,
@@ -572,20 +437,9 @@ function checkSwatches(posts) {
 }
 
 /**
- * THE FIFTH GENERATED ARTIFACT: the math stylesheet and its font faces.
- *
- * Same contract as `template-refs.json` above, and it exists for a failure that
- * is invisible in every other direction. `app/styles/katex.generated.css` is
- * derived from the INSTALLED katex package, and the markup it styles is
- * produced by that same package at build time. Bump katex without running
- * `npm run build:katex` and the two go out of step: the renderer starts
- * emitting a class the committed stylesheet has no rule for, and the symptom is
- * an equation that is slightly wrong on a page nobody is looking at.
- *
- * Byte-compared against a fresh derivation, and the FACES are reconciled in
- * BOTH directions: a face the stylesheet names and the repo does not hold is a
- * 404 that falls back to a system font silently, and a face on disk the
- * stylesheet no longer names is a stale binary nobody will ever delete.
+ * THE FIFTH GENERATED ARTIFACT: the math stylesheet and its faces, derived from the INSTALLED
+ * katex, so a bump without a rebuild emits a class the stylesheet has no rule for. Faces
+ * reconciled BOTH ways: a missing one is a silent system font, a stale one a binary nobody deletes.
  */
 async function checkKatexArtifact() {
   /** @type {{ css: string, faces: string[], version: string }} */
@@ -630,11 +484,7 @@ async function checkKatexArtifact() {
     return;
   }
 
-  /*
-   * SCOPE, ASSERTED, before either direction is compared. A derivation that
-   * named zero faces would agree with an empty directory, and both would look
-   * like a clean reconciliation.
-   */
+  /* SCOPE, ASSERTED first: a derivation naming zero faces agrees with an empty directory. */
   if (derived.faces.length < 20) {
     console.error(
       `check:content failed. the math stylesheet names ${derived.faces.length} font face(s), ` +
@@ -689,25 +539,9 @@ async function checkKatexArtifact() {
 }
 
 /**
- * EVERY `/blog/` LINK IN `further_reading` NAMES A POST THAT EXISTS.
- *
- * The schema decides the SHAPE of a url and cannot decide its TARGET: nothing
- * in `frontmatterSchema` knows which slugs the corpus holds, so a link to a
- * post that was later deleted or renamed is valid frontmatter and a dead link
- * on a live page. Internal links only became expressible when the schema was
- * widened to accept a `/blog/` path, so this gate lands with the widening
- * rather than after the first dead link.
- *
- * A BUILD FAILURE rather than a warning, which is the point of the request: a
- * deleted post should stop the build, not ship. `check:content` runs in the
- * offline tier, so it fails before a deploy and before CI goes green.
- *
- * **THE EXAMINED COUNT IS PRINTED, and today it is zero.** No corpus post sets
- * `further_reading`, so a silent "ok" here would be the clean-sweep-over-an-
- * empty-scope shape in FAILURES.md: indistinguishable from a gate that checked
- * nothing because it was broken. The line says how many links it resolved, so
- * a reader can tell "none to check" from "all fine". The gate's real proof is
- * a planted dead link, not a green run over an empty corpus.
+ * EVERY `/blog/` LINK IN `further_reading` NAMES A POST THAT EXISTS: the schema decides a url's
+ * SHAPE and not its TARGET. A BUILD FAILURE rather than a warning, and **the examined count is
+ * printed**, because no corpus post sets the field.
  *
  * @param {Array<{ slug: string, furtherReading?: Array<{ title: string, url: string }> }>} posts
  */
@@ -720,9 +554,7 @@ function checkInternalFurtherReading(posts) {
   for (const post of posts) {
     for (const item of post.furtherReading ?? []) {
       const target = internalLinkSlug(item.url);
-      // External links are out of scope: nothing offline can say whether a
-      // third-party URL still resolves, and pretending otherwise would be a
-      // check that fails on somebody else's outage.
+      // External links are out of scope: a check that fails on somebody else's outage is not a gate.
       if (target === null) continue;
       examined += 1;
       if (!known.has(target)) dead.push(`${post.slug} -> ${item.url}`);
@@ -746,22 +578,9 @@ function checkInternalFurtherReading(posts) {
 }
 
 /**
- * THE SECOND GENERATED ARTIFACT, reconciled the same way and for a stronger
- * reason than the first.
- *
- * `template-refs.json` decides which files the media library calls "in
- * template", so a stale copy does not merely go out of date: it prints a
- * SENTENCE ABOUT EVIDENCE that no longer matches the evidence. A file whose
- * last reference was deleted would keep claiming the site places it, next to a
- * delete button that the claim discourages pressing. That is worse than no
- * claim at all.
- *
- * Byte-compared against a fresh scan, both directions, exactly as the posts
- * artifact is. **The scope numbers are asserted too, and separately**: a scan
- * that read zero files and one that found zero references print the same empty
- * `refs`, so the count of files read is what tells a broken walk from a
- * repository that genuinely cites nothing. That is this repo's most-repeated
- * defect class and the artifact carries the control for it.
+ * THE SECOND GENERATED ARTIFACT. A stale `template-refs.json` prints a SENTENCE ABOUT EVIDENCE
+ * that no longer matches it. **The scope numbers are asserted separately**, because a scan that
+ * read zero files and one that found zero references print the same empty `refs`.
  */
 async function checkTemplateRefs() {
   const fresh = `${JSON.stringify(await scanTemplateRefs(), null, 2)}
@@ -794,26 +613,9 @@ async function checkTemplateRefs() {
   }
 
   const parsed = JSON.parse(committed);
-  // SCOPE, ASSERTED. An empty `refs` from a broken walk and an empty `refs` from
-  // a repository that cites nothing are the same bytes; these are the numbers
-  // that discriminate. Floors rather than equalities, so adding a source file
-  // does not fail the gate, but losing the whole tree does.
-  //
-  // RE-MEASURED 2026-09-06 through this gate by running it: 233 files read, 59
-  // assets considered. Set to count minus check:floors' own tolerance,
-  // max(3, ceil(count * 0.05)), which is the sweep's rule applied by hand.
-  //
-  // BY HAND BECAUSE THIS GATE IS NOT IN THE SWEEP. These are bespoke scope
-  // floors rather than executed-count floors, so this file prints no
-  // `floor check:content:...` line and check:floors names it in the gates it
-  // deliberately does not read. Nothing re-measures them automatically; the
-  // trigger is touching this file, which is what happened here.
-  //
-  // The drift they had accumulated is exactly what the sweep exists to catch:
-  // the file floor was 168 against 183 when it was last set on 2026-08-24, and
-  // the tree had grown to 233 by today with the floor unmoved, so 65 source
-  // files could have stopped being walked and the assertion that exists to
-  // notice that would have reported clean.
+  // SCOPE, ASSERTED: an empty `refs` from a broken walk and one from a repository that cites
+  // nothing are the same bytes. Floors rather than equalities. SET BY HAND, because this gate is
+  // not in the sweep, so nothing re-measures them and the trigger is touching this file.
   if (!(parsed.filesRead >= 221)) {
     console.error(
       `check:content failed. the template scan read ${parsed.filesRead} source file(s), ` +
@@ -831,12 +633,8 @@ async function checkTemplateRefs() {
     return;
   }
   /*
-   * AND THE ONE CASE THE WHOLE FEATURE EXISTS FOR. The nine cohort photographs
-   * are referenced by `app/data/phage-hunters.ts` and by no post. If this
-   * assertion ever fails, the media page has silently gone back to calling them
-   * unattached, which is the exact falsehood the third state was built to end.
-   * Named explicitly rather than left to the byte comparison, because a byte
-   * comparison against a fresh scan passes happily when BOTH are wrong.
+   * AND THE ONE CASE THE FEATURE EXISTS FOR: the cohort photographs are referenced by a data
+   * module and no post. Named explicitly, because a byte comparison passes when BOTH sides are wrong.
    */
   const roster = Object.keys(parsed.refs).filter((k) => k.startsWith("/phage-hunters/"));
   if (roster.length < 9) {
@@ -857,41 +655,14 @@ async function checkTemplateRefs() {
 }
 
 /**
- * THE THIRD GENERATED ARTIFACT, and the one that was reconciled by nothing
- * offline until 2026-08-18.
- *
- * `assets.json` is the list of static files, written by `build:assets` from a
- * walk of `public/`. **A Worker cannot list its own static assets**: the ASSETS
- * binding has `fetch()` and nothing else, so the media rebuild running inside
- * the Worker discovers what exists by reading this file. A manifest missing a
- * file therefore means a file that is never indexed, never appears in
- * /admin/media, and is not missing from anything a reader can see. It is the
- * quietest possible failure.
- *
- * IT MOVED HERE FROM check:media, AND THE TIER IS THE ENTIRE POINT. The
- * comparison is a `readdir` and a JSON read with no network in it at all, and
- * it was the only offline-capable half of a gate tiered `network` because its
- * other four directions list R2 and query D1. So the check existed, was
- * correct, and ran only on `check:all --remote`. `public/_headers` was
- * committed in `f3256e8` and shipped in window 8 with 25 green gates.
- *
- * WHAT THIS SECTION CANNOT SEE, stated plainly because the tier makes it
- * tempting to assume otherwise: it compares the manifest to THE FILESYSTEM. It
- * does not know what rows exist in D1, so a manifest that matches `public/`
- * perfectly while the media index is months stale passes here without comment.
- * Manifest-to-D1 is `check:media`'s, it needs the network, and moving this half
- * out did not shrink that half by one assertion.
- *
- * Ordering note: this runs LAST, after both byte comparisons, because it is the
- * cheapest to fix and the least likely to be what someone is mid-way through
- * debugging.
+ * THE THIRD GENERATED ARTIFACT. **A Worker cannot list its own static assets**, so the media
+ * rebuild reads this file to discover what exists, and a missing entry is a file never indexed.
+ * WHAT IT CANNOT SEE: it compares the manifest to THE FILESYSTEM; manifest-to-D1 is check:media's.
  */
 async function checkAssetManifest() {
   const files = await walkPublic();
 
-  // FAILS CLOSED ON AN EMPTY WALK, the same discipline check:media applies to
-  // an empty R2 listing. A broken walk and an empty directory produce the same
-  // array, and every comparison below would pass vacuously against it.
+  // FAILS CLOSED ON AN EMPTY WALK: a broken walk and an empty directory produce the same array.
   if (files.length === 0) {
     console.error(
       `check:content failed. walked ${PUBLIC_DIR}/ and found 0 file(s), which cannot be right. ` +
@@ -907,10 +678,7 @@ async function checkAssetManifest() {
   let manifestPlaceholders;
   try {
     const parsed = JSON.parse(await readFile(ASSET_MANIFEST_PATH, "utf8"));
-    // `?? []` is deliberately absent. A manifest whose `paths` key is missing is
-    // a broken artifact, and defaulting it to an empty array would turn that
-    // into "every file is missing from the manifest", which is a true statement
-    // that names the wrong defect.
+    // `?? []` is deliberately absent: it turns a broken artifact into "every file is missing".
     if (!Array.isArray(parsed.paths)) throw new Error("no `paths` array");
     // Same rule for the second half: absent is broken, not empty.
     if (!parsed.placeholders || typeof parsed.placeholders !== "object") {
@@ -927,9 +695,7 @@ async function checkAssetManifest() {
     return;
   }
 
-  // Order matters as well as membership: `walkPublic()` sorts, so an unsorted
-  // manifest is a hand edit or a generator that stopped sorting, and either is
-  // worth failing on. Compared as JSON for that reason rather than as sets.
+  // Order as well as membership, compared as JSON: `walkPublic()` sorts, so unsorted is a hand edit.
   if (JSON.stringify(manifestPaths) !== JSON.stringify(files)) {
     const fileSet = new Set(files);
     const missing = files.filter((f) => !manifestPaths.includes(f));
@@ -963,28 +729,14 @@ async function checkAssetManifest() {
 }
 
 /**
- * THE PLACEHOLDER HALF OF THE MANIFEST, reconciled three ways.
+ * THE PLACEHOLDER HALF OF THE MANIFEST, reconciled three ways. A placeholder is baked into the
+ * HTML this gate byte-compares, so a stale one is a value both writers agree on.
  *
- * A placeholder is baked into the rendered HTML that this same gate byte
- * compares, so a stale one is not a cosmetic problem: it is a value both
- * writers agree on and neither can check, which is the shape finding B002 had.
+ *   1. MEMBERSHIP, both directions, by the same function `build:assets` uses.
+ *   2. THE SOURCE DIGEST, because membership cannot see a file EDITED IN PLACE.
+ *   3. THE STORED VALUE, through the SAME function check:image-weight uses on D1.
  *
- *   1. MEMBERSHIP, both directions. The set is derived from the walk by
- *      `placeholderPaths`, the same function `build:assets` uses, so an image
- *      added to `public/` without a rebuild is named, and an entry whose file
- *      is gone is named. A one-directional check would pass on either.
- *   2. THE SOURCE DIGEST. Membership cannot see a file EDITED IN PLACE, and a
- *      `public/` path is not content addressed, so that is the one way a static
- *      asset changes. The file is re-hashed here and compared against the
- *      digest the manifest recorded.
- *   3. THE STORED VALUE IS A LOSSY WEBP DATA URI, through the SAME function
- *      `check:image-weight` uses on the D1 column. One statement of what a
- *      placeholder is, two artifacts that must satisfy it.
- *
- * IT DOES NOT RE-ENCODE. That would compare this machine's sharp against the
- * one that wrote the manifest, and two platforms differing by a byte in a WebP
- * encoder would make the gate fail on Linux and pass on Windows. The digest
- * answers staleness without asserting anything about the encoder.
+ * IT DOES NOT RE-ENCODE: that compares this machine's sharp against the writer's.
  *
  * @param {string[]} files every path under public/, from the walk
  * @param {Record<string, { sha?: string, lqip?: string }>} placeholders
@@ -992,9 +744,7 @@ async function checkAssetManifest() {
 async function checkManifestPlaceholders(files, placeholders) {
   const wanted = placeholderPaths(files);
 
-  // FAILS CLOSED ON AN EMPTY EXPECTATION, the discipline this file applies to
-  // every other derived set: if the classifier stopped calling anything a
-  // content raster, every comparison below would agree with an empty manifest.
+  // FAILS CLOSED ON AN EMPTY EXPECTATION: a classifier naming nothing agrees with an empty manifest.
   if (wanted.length === 0) {
     console.error(
       `check:content failed. the walk found 0 content raster image(s) under ` +
@@ -1043,9 +793,7 @@ async function checkManifestPlaceholders(files, placeholders) {
     return;
   }
 
-  // The executed count, paired with the content check, so "0 problems" cannot
-  // mean "0 examined". `wanted.length` is floored above; this is what was
-  // actually hashed and decoded.
+  // The executed count, paired with the content check, so "0 problems" cannot mean "0 examined".
   if (verified !== wanted.length) {
     console.error(
       `check:content failed. ${verified} of ${wanted.length} placeholder(s) were verified.`,
@@ -1055,36 +803,16 @@ async function checkManifestPlaceholders(files, placeholders) {
 }
 
 /**
- * A path may not be BOTH gitignored and in the manifest.
- *
- * WHY THIS IS A DEFECT AND NOT A CURIOSITY. The manifest is committed, so it
- * describes what the repository contains. A gitignored file under `public/`
- * classifies fine, enters the manifest on whoever's machine holds it, and then
- * exists in no clone: the artifact has quietly started describing A DISK. Two
- * things make that live rather than theoretical here. `npm run deploy` builds
- * from the WORKING TREE, so the file ships from that one machine; and
- * `check:head` extracts a ref into a throwaway worktree, where the file is
- * absent and this same comparison would fail for a reason nobody could
- * reproduce.
- *
- * `.gitignore` carries `/public/phage-hunters/*.jpg`, the roster photo sources
- * whose committed form is the generated WebP. The trap is already written down;
- * nothing has walked into it yet. **This is a tripwire being armed, not a break
- * being fixed**, which is exactly why the scope assertion below matters more
- * than usual: an assertion that has never fired and cannot fire is
- * indistinguishable from one that is merely quiet.
- *
- * `git check-ignore` rather than parsing `.gitignore`: negations, directory
- * rules, precedence and nested ignore files are git's semantics, and a second
- * implementation of them would be wrong in ways this gate could not see.
+ * A path may not be BOTH gitignored and in the manifest: the manifest is committed, so a
+ * gitignored file enters it on one machine and exists in no clone, and the artifact has started
+ * describing A DISK. Two things make that live: `npm run deploy` builds from the WORKING TREE,
+ * and `check:head` extracts a ref into a worktree where the file is absent. `git check-ignore`
+ * rather than parsing `.gitignore`: a second implementation would be wrong invisibly.
  *
  * @param {string[]} manifestPaths site-absolute, as the manifest stores them
  */
 async function checkManifestIsRepoWide(manifestPaths) {
-  // SCOPE, ASSERTED FIRST. This whole check reports "nothing ignored" when the
-  // path list is empty, when git cannot answer, and when every path is clean.
-  // Only the third is a pass, so the other two are eliminated before the answer
-  // is read at all.
+  // SCOPE, ASSERTED FIRST: "nothing ignored" is also what an empty list and a silent git report.
   if (manifestPaths.length === 0) {
     console.error(
       "check:content failed. the gitignore tripwire was handed 0 path(s), so its clean " +
@@ -1100,10 +828,8 @@ async function checkManifestIsRepoWide(manifestPaths) {
     encoding: "utf8",
   });
 
-  // Exit 0 means at least one path IS ignored, 1 means none are, and anything
-  // else is git failing to answer. FAIL CLOSED on the third: an unreadable
-  // answer is not a clean one, and this is the branch that would otherwise turn
-  // a missing git into a silent pass forever.
+  // Exit 0 means at least one path IS ignored, 1 none, anything else git failing. FAIL CLOSED on
+  // the third, the branch that would turn a missing git into a silent pass forever.
   if (result.status !== 0 && result.status !== 1) {
     console.error(
       `check:content failed. git check-ignore could not answer (status ${result.status}). ` +

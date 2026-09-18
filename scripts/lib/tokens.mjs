@@ -1,17 +1,8 @@
 /**
- * Reads the ratified colour tokens back out of the stylesheet that ships.
- *
- * `app/app.css` is the single source of the palette. Anything that needs a
- * colour at BUILD time (the diagram renderer, and the gate over what it wrote)
- * resolves it from here rather than restating a hex, so a retuned token moves
- * the thing that uses it instead of quietly disagreeing with it. That is the
- * same discipline `check:contrast` is built on.
- *
- * `check:contrast` deliberately keeps its own copy of this parsing. It is the
- * gate whose entire design is that two independent sources argue, and it also
- * reads a third block to assert the two dark blocks agree, which nothing else
- * needs. Sharing a reader with it would give the palette one implementation to
- * be wrong in rather than two to disagree.
+ * Reads the ratified colour tokens back out of the stylesheet that ships, so anything needing a
+ * colour at BUILD time resolves it here rather than restating a hex. `check:contrast` deliberately
+ * keeps its own copy of this parsing: it is the gate whose design is that two independent sources
+ * argue, so sharing a reader would give the palette one implementation to be wrong in.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -21,86 +12,37 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /**
- * The stylesheet that declares the TOKENS. Still one file, deliberately.
- *
- * app.css was split on 2026-08-21 and the token block stayed here, because this
- * module and `check:contrast` both parse this path and moving the palette would
- * have been a gate change wearing a refactor's clothes.
+ * The stylesheet that declares the TOKENS. Still one file, deliberately: moving the palette would
+ * be a gate change wearing a refactor's clothes.
  */
 export const CSS_PATH = join(root, "app", "app.css");
 
 /**
- * THE ADMIN PLANE'S ENTRY, since the CSS split of 2026-08-23.
- *
- * `app.css` stopped being the whole site's stylesheet that day: the seven admin
- * parts moved to `app/admin.css` so a public reader stops downloading them.
- * Every gate that reasons about "the stylesheets" has to follow BOTH entries or
- * it silently narrows to the public plane, which is the identical failure the
- * comment on `stylesheetPaths` below records from the 2026-08-21 split.
- *
- * It happened again, and it FAILED AGAIN RATHER THAN PASSING QUIETLY:
- * `check:contrast`'s resolution scan dropped from 69 var() uses to 38 and
- * tripped its own floor. Two splits, two narrowings, two catches by the same
- * anti-vacuity assertion. That is the floor earning its place twice.
- *
- * NOT the token block. The tokens, the `@theme` block and the three theme
- * selectors all stay in `app.css`, which is why `tokenBlock` still reads
- * `CSS_PATH` alone and this constant is only ever used for the SWEEP.
+ * THE ADMIN PLANE'S ENTRY. One stylesheet stopped being the whole site's when the admin parts
+ * moved out, and every gate reasoning about "the stylesheets" has to follow BOTH entries or it
+ * silently narrows to the public plane. It happened again and FAILED AGAIN RATHER THAN PASSING
+ * QUIETLY: a resolution scan dropped by half and tripped its own floor.
  */
 export const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 
 /**
- * The module that declares the PUBLIC stylesheet set, and its order.
- *
- * `app/root.tsx` matches on every route, so its CSS imports are the sheets
- * every page loads and the order they load in. It became the source of that
- * order on 2026-08-27; before then the order lived in `@import` statements at
- * the bottom of app.css, which is a position CSS does not allow. See
- * `stylesheetPaths`.
+ * The module that declares the PUBLIC stylesheet set, and its order: it matches on every route,
+ * so its CSS imports are the sheets every page loads. Before it, the order lived in `@import`
+ * statements at the bottom of the entry sheet, which is a position CSS does not allow.
  */
 const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
 
 /**
  * EVERY source stylesheet, in CASCADE ORDER, derived from the entries' own imports.
  *
- * ## WHY THIS EXISTS
- *
- * app.css was ONE 9,269-line file until 2026-08-21 and is now an entry that
- * imports sixteen parts. Any gate that reasoned about "the stylesheet" by
- * reading that one path silently narrowed to the token block the moment the
- * split landed. That is not hypothetical: `check:contrast`'s resolution scan
- * dropped from 69 var() uses to 13, and `check:logo` found one of the mark's
- * two fill bindings. Both FAILED rather than passing quietly, which is the
- * anti-vacuity floors doing their job, and both are fixed by reading this.
- *
- * ## DERIVED, NOT RESTATED
- *
- * The order comes from parsing root.tsx's CSS imports and each CSS file's own
- * `@import` lines, so adding a part means editing the file that loads it and
- * nothing else. A hand-kept list here would be the mirror this repo keeps
- * paying for, and it would go stale in exactly the direction that hides CSS
- * from a gate. The only thing named by hand is the admin ENTRY, because nothing
- * in the CSS says which routes import it.
- *
- * ## THE PUBLIC ORDER MOVED OUT OF CSS, 2026-08-27, AND THIS FOLLOWS IT
- *
- * The nine public component sheets were `@import` statements at the BOTTOM of
- * app.css. CSS requires `@import` before every other rule and drops a late one;
- * they were surviving on Tailwind's processor hoisting them, so they became
- * JavaScript imports in `app/root.tsx` when Tailwind left the build. This
- * function read app.css's `@import` lines, so left alone it would have gone on
- * returning a list with all nine MISSING, which is the exact failure the
- * paragraph above records: `check:contrast`'s resolution scan and
- * `check:logo`'s fill bindings both read this. It derives from root.tsx now,
- * which is the file that decides the public cascade.
- *
- * ## IMPORTS COME BEFORE THE FILE THAT IMPORTS THEM
- *
- * The old code pushed an entry and THEN its imports, which matched a file whose
- * imports sat at the bottom. Nothing may sit at the bottom: `@import` is valid
- * only before other rules, which is what the hoisting had been hiding. So a
- * file's imports are expanded first, recursively, and then the file itself.
- * That is not a convention here, it is what the browser does.
+ * WHY THIS EXISTS: one stylesheet became an entry importing sixteen parts, and any gate reading
+ * that one path silently narrowed to the token block. DERIVED, NOT RESTATED: the order comes from
+ * the entry module's CSS imports and each file's own `@import` lines, so adding a part means
+ * editing the file that loads it. THE PUBLIC ORDER MOVED OUT OF CSS, and this follows it: those
+ * sheets were `@import` statements at the BOTTOM of the entry, and CSS requires `@import` before
+ * every other rule, so a late `@import` is dropped and they survived on a processor hoisting them.
+ * This function read those `@import` lines. IMPORTS COME BEFORE THE FILE THAT IMPORTS THEM,
+ * recursively, which is not a convention here but what the browser does.
  *
  * @returns {string[]} absolute paths, in cascade order
  */
@@ -123,14 +65,9 @@ export function stylesheetPaths() {
    * takes.
    */
   /**
-   * Every stylesheet a module names, in source order.
-   *
-   * BOTH IMPORT FORMS, and the second one is not decoration. A bare
-   * `import "./x.css"` puts the sheet in that module's bundle; an
-   * `import url from "./x.css?url"` hands back a hashed URL for something to
-   * fetch later, which is how the search palette's dialog CSS reaches a reader
-   * who actually opens it. A sheet reachable only through the second form is
-   * still the site's CSS and still has to be graded.
+   * Every stylesheet a module names, in source order. BOTH IMPORT FORMS: a bare import puts the
+   * sheet in that module's bundle and a `?url` import hands back a hashed URL, and a sheet reachable
+   * only through the second is still the site's CSS.
    *
    * @param {string} source @param {string} base
    */
@@ -153,28 +90,13 @@ export function stylesheetPaths() {
   for (const sheet of rootSheets) expand(sheet);
 
   /*
-   * THEN THE ROUTE-SCOPED SHEETS, since 2026-08-27.
-   *
-   * Public CSS stopped being one site-wide bundle that day: a route imports the
-   * sheets its own markup needs, so a reader of the home page no longer
-   * downloads the post typography or the search facets. That is the whole point
-   * of the split and it is also the third time this function could have been
-   * left reading a strict subset of the site's CSS. It would have missed nine
-   * sheets, silently, and `check:contrast` and `check:logo` both read it.
-   *
-   * ORDER BETWEEN ROUTES IS NOT MEANINGFUL and is not claimed to be: two routes
-   * never render at once, so there is no cascade between their sheets. Sorted
-   * by route filename purely so the list is stable run to run. Order WITHIN a
-   * route is its import order, which is a real cascade and is preserved. A
-   * sheet imported by several routes appears once.
+   * THEN THE ROUTE-SCOPED SHEETS, public CSS having stopped being one bundle when a route began
+   * importing the sheets its own markup needs. ORDER BETWEEN ROUTES IS NOT MEANINGFUL and is not
+   * claimed to be; they are sorted so the list is stable. Order WITHIN a route is a real cascade.
    */
   /*
-   * EVERY MODULE UNDER app/, not just app/routes. A stylesheet can be named by
-   * a component as easily as by a route: `search-trigger.tsx` is the only
-   * reference to the palette's dialog CSS, through a `?url` import, because
-   * that sheet is fetched when a reader opens the palette rather than shipped
-   * with the page. Scanning routes alone would have dropped it, which is this
-   * function's recurring failure for the third time in one day.
+   * EVERY MODULE UNDER the app directory, not just the routes: the one sheet fetched when a reader
+   * opens the palette is referenced by a component alone.
    */
   const routeDir = join(root, "app");
   /** @param {string} dir @returns {string[]} */
@@ -186,11 +108,8 @@ export function stylesheetPaths() {
     });
   const routeFiles = modulesUnder(routeDir).sort();
   /*
-   * The admin entry FIRST among the non-root sheets, so an admin page's own
-   * cascade is still root-then-admin, which is what it loads. The route loop
-   * below would otherwise reach it through admin.tsx in alphabetical order and
-   * interleave it with public route sheets. Named rather than left to that
-   * loop, so the set does not silently narrow if admin.tsx stops importing it.
+   * The admin entry FIRST among the non-root sheets, so an admin page's cascade is root-then-admin,
+   * which is what it loads. Named rather than left to the route loop, so the set cannot narrow.
    */
   expand(ADMIN_CSS_PATH);
 
@@ -230,17 +149,12 @@ export const THEME_SELECTORS = {
 };
 
 /**
- * Pulls the custom properties out of one rule block, located by the literal
- * text of its selector.
+ * Pulls the custom properties out of one rule block, located by its selector's literal text. Two
+ * traps, both already paid for once in `check:contrast`:
  *
- * Two traps, both already paid for once in `check:contrast`:
- *
- *   1. Comments are stripped FIRST. The token block's own comment spells out
- *      all three selectors, so searching the raw file finds the prose and then
- *      parses whichever block happens to follow it.
- *   2. CRLF is normalised FIRST. `app.css` is not pinned by `.gitattributes`
- *      and this repo runs `core.autocrlf=true`, so a fresh Windows clone gets
- *      CRLF and every multi-line selector match silently stops matching.
+ *   1. Comments are stripped FIRST: the token block's own comment spells out all three selectors.
+ *   2. CRLF is normalised FIRST: the file is not pinned by `.gitattributes` and this repo runs
+ *      autocrlf, so a fresh clone gets CRLF and every multi-line selector match stops matching.
  *
  * @param {string} label
  * @param {string} selector
@@ -268,12 +182,9 @@ export function tokenBlock(label, selector) {
 }
 
 /**
- * Resolves a token name map into a colour map for one theme.
- *
- * Fails closed twice over: on a token the stylesheet does not declare, and on a
- * declared token whose value is not a plain hex. A `var()` indirection would
- * resolve in a browser and be meaningless to a build-time renderer, so it has
- * to be an error rather than a string passed along.
+ * Fails closed twice over: on a token the stylesheet does not declare, and on one whose value is
+ * not a plain hex. A `var()` indirection resolves in a browser and is meaningless to a build-time
+ * renderer.
  *
  * @param {Record<string, string>} nameMap keys are arbitrary, values are token names
  * @param {Record<string, string>} block output of tokenBlock
@@ -297,10 +208,8 @@ export function resolveTokens(nameMap, block, label) {
 }
 
 /**
- * Normalises a hex colour for comparison. Lightning CSS rewrites `#ffffff` to
- * `#fff`, and mermaid writes some of its own output in the short form, so a
- * substring or literal comparison reports colours missing from output that
- * carries them. Measured once already in `check:contrast`.
+ * Normalises a hex for comparison: the CSS toolchain rewrites long form to short, so a literal
+ * comparison reports colours missing from output that carries them.
  *
  * @param {string} hex
  */

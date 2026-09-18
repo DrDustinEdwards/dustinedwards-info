@@ -1,38 +1,24 @@
 /**
- * The Worker's binding surface, derived from a wrangler config.
+ * The Worker's binding surface, derived from a wrangler config. ONE enumerator, imported by
+ * everything that needs to know what this Worker binds: two walkers of the same config would be
+ * the mirror `check:invariants` exists to prevent, failing by reporting a smaller surface.
  *
- * ONE enumerator, imported by everything that needs to know what this Worker
- * binds. It was inline in `check-config.mjs` and moved here when `build:stack`
- * became a second reader: two functions walking the same config would be the
- * exact mirror `check:invariants` exists to prevent, and a binding kind added to
- * one and not the other fails silently in the direction that matters, by
- * reporting a smaller surface rather than an error.
- *
- * `assets.directory` is deliberately not part of the surface: the Cloudflare
- * Vite plugin supplies it from the client build output, so only the binding is
- * ours to declare.
- *
- * Queue CONSUMERS are keyed by queue name rather than by a binding name, because
- * a consumer has no binding: it is a subscription, not a handle.
+ * `assets.directory` is deliberately not part of it, the Vite plugin supplying it. Queue
+ * CONSUMERS are keyed by queue name, a consumer being a subscription rather than a handle.
  */
 
 import { readFileSync } from "node:fs";
 
 /**
  * JSONC to JSON. Comments only; these configs have no trailing commas.
+ *
  * @param {string} path
  * @returns {any}
  */
 /*
- * WEAK ON PURPOSE. This is JSONC on its way to JSON.parse, so the shared
- * strong stripper in scripts/lib/strip-comments.mjs must NOT be used: its
- * line-comment rule eats a protocol-relative url ("//cdn.example.com/x"),
- * whose slashes follow a quote rather than a colon, and takes the rest of
- * the line with it. MEASURED 2026-08-23: the config stops parsing.
- *
- * Weak is SUFFICIENT here, which is the other half: JSON.parse throws on
- * any comment this fails to remove, so an under-strip cannot pass quietly.
- * test/strip-comments.test.mjs asserts both halves.
+ * WEAK ON PURPOSE, this being JSONC on its way to JSON.parse: the shared strong stripper's
+ * line-comment rule eats a protocol-relative url and takes the rest of the line with it. Weak is
+ * SUFFICIENT, because JSON.parse throws on any comment this fails to remove.
  */
 export function parseJsonc(path) {
   const raw = readFileSync(path, "utf8");
@@ -43,16 +29,9 @@ export function parseJsonc(path) {
 }
 
 /**
- * How each binding kind is read, keyed by the config key that declares it.
- *
- * ONE table, so `surfaceOf` and `unhandledBindingKinds` cannot disagree about
- * what is handled: the first iterates it, the second treats its keys as the
- * allowed set. A kind added to one and not the other is not expressible.
- *
- * The settings string per kind deliberately omits account-scoped IDENTIFIERS
- * (`database_id`, the KV `id`), because the tracked example carries placeholders
- * for those and comparing them would fail on every clone. Everything else is
- * compared, so a bucket renamed in one file and not the other is caught.
+ * How each binding kind is read, keyed by the config key that declares it. ONE table, so
+ * `surfaceOf` and `unhandledBindingKinds` cannot disagree about what is handled. The settings
+ * string omits account-scoped IDENTIFIERS, the tracked example carrying placeholders for those.
  *
  * @type {Record<string, (config: any, out: Map<string, string>) => void>}
  */
@@ -86,9 +65,8 @@ const READERS = {
   images: (config, out) => {
     if (config.images?.binding) out.set(`images:${config.images.binding}`, "");
   },
-  // The dataset NAME is compared, not omitted as account-scoped, because it is
-  // not an account-scoped id: it is the table the SQL API reads. Two files
-  // disagreeing about it would have the Worker writing where nothing queries.
+  // The dataset NAME is compared rather than omitted as account-scoped: it is the table the SQL
+  // API reads, and two files disagreeing would have the Worker writing where nothing queries.
   analytics_engine_datasets: (config, out) => {
     for (const ae of config.analytics_engine_datasets ?? []) {
       out.set(`analytics_engine:${ae.binding}`, `dataset=${ae.dataset}`);
@@ -97,9 +75,8 @@ const READERS = {
   assets: (config, out) => {
     if (config.assets?.binding) out.set(`assets:${config.assets.binding}`, "");
   },
-  // The watchdog Worker's only route to the site. The SERVICE NAME is compared
-  // rather than omitted as account-scoped: it names which Worker is called, and
-  // two files disagreeing about it would point the watchdog at nothing.
+  // The SERVICE NAME is compared rather than omitted: it names which Worker is called, and two
+  // files disagreeing would point the watchdog at nothing.
   services: (config, out) => {
     for (const service of config.services ?? []) {
       out.set(
@@ -109,18 +86,10 @@ const READERS = {
     }
   },
   /*
-   * Email Sending. KEYED BY `name`, NOT `binding`, which is the whole reason
-   * this entry has a comment: every other binding kind wrangler ships uses
-   * `binding`, and `send_email` uses `name`. That difference put it straight
-   * through `unhandledBindingKinds`' array arm, which only looked for
-   * `binding`, so it was a binding readable by NEITHER function: invisible to
-   * the comparison AND invisible to the detector meant to catch exactly that.
-   * The detector is widened below in the same commit.
-   *
-   * The RESTRICTIONS are part of the settings, not just the name. A binding
-   * pinned to one destination in the real config and unrestricted in the
-   * example describes a different blast radius, which is the kind of drift this
-   * gate exists to catch.
+   * Email Sending. KEYED BY `name`, NOT `binding`, which every other binding kind uses: that put
+   * it through the detector's array arm unread, so it was invisible to the comparison AND to the
+   * detector meant to catch exactly that. The RESTRICTIONS are settings, not just the name, since a
+   * binding pinned in one file and unrestricted in the other describes a different blast radius.
    */
   send_email: (config, out) => {
     for (const mail of config.send_email ?? []) {
@@ -149,8 +118,8 @@ const READERS = {
 };
 
 /**
- * Every binding the config declares, as `KIND:NAME`, mapped to the settings
- * that are not account-scoped identifiers.
+ * Every binding the config declares, as `KIND:NAME`, mapped to the settings that are not
+ * account-scoped identifiers.
  *
  * @param {any} config
  * @returns {Map<string, string>}
@@ -163,38 +132,19 @@ export function surfaceOf(config) {
 }
 
 /**
- * Config keys that DECLARE BINDINGS and that `surfaceOf` cannot read.
+ * Config keys that DECLARE BINDINGS and that `surfaceOf` cannot read. **The absence of this was
+ * a live hole**: a kind no reader knows about produces no rows on either side of every comparison,
+ * and a gate that compares two blind spots agrees with itself.
  *
- * **This exists because the absence of it was a live hole, found by planting the
- * exact thing it now catches.** `vectorize` was added to the tracked example and
- * both `check:config` and `check:stack` passed, because a kind no reader knows
- * about produces no rows on either side of every comparison. A gate that
- * compares two blind spots agrees with itself.
- *
- * Detection is STRUCTURAL rather than a list of Cloudflare's products, so a
- * binding type that does not exist yet is still caught. A wrangler binding
- * declaration is one of exactly three shapes:
+ * Detection is STRUCTURAL rather than a list of Cloudflare's products, so a binding type that does
+ * not exist yet is still caught. A declaration is one of exactly three shapes:
  *
  *   an object with a `binding`                     assets, images, browser
  *   an array of objects carrying `binding` or      d1, kv, r2, vectorize, ai,
  *     `name`                                         services, send_email
  *   an object with a `bindings` array              durable_objects, workflows
  *
- * **THE ARRAY ARM LOOKED FOR `binding` ALONE UNTIL 2026-08-29, AND THAT WAS A
- * LIVE HOLE OF EXACTLY THE SHAPE THIS FUNCTION EXISTS TO CLOSE.** `send_email`
- * keys its entries by `name` rather than `binding`, so it was readable by
- * neither `surfaceOf` nor this: absent from both sides of every comparison, and
- * absent from the report that is supposed to name what the comparison cannot
- * see. Found while adding the watchdog's mail binding, not by a plant. The
- * `bindings`-array arm below already accepted `name`, so the two arms simply
- * disagreed with each other.
- *
- * Widening it is safe against this repo's configs and was checked rather than
- * assumed: no other array-valued top-level key carries a `name`.
- *
- * `queues` matches none of these, which is correct: a consumer is a
- * subscription rather than a handle and has no `binding` at all. It is handled
- * explicitly above and so is never reported here.
+ * `queues` matches none of these, correctly: a consumer has no `binding` and is handled above.
  *
  * @param {any} config
  * @returns {string[]}

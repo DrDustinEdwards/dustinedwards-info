@@ -1,23 +1,14 @@
 /**
  * Gate for the query parser and rank fusion.
  *
- * OBSERVATION BOUNDARY: pure functions only, the parser and the fusion. It runs
- * no SQL, so it cannot see an index that is empty, drifted, or tokenising
- * differently from what the parser assumes.
- *
  *   npm run check:search
  *
- * Imports app/lib/search/query.mjs directly, so it exercises the parser the
- * Worker actually runs rather than a restatement of its rules. Pure functions
- * only: no database, no network, so it is safe to run anywhere and fast enough
- * to run on every build.
+ * BOUNDARY: pure functions only, the parser and the fusion. It runs no SQL, so it cannot see an
+ * index that is empty, drifted, or tokenising differently from what the parser assumes. It imports
+ * the parser the Worker actually runs rather than a restatement of its rules.
  *
- * EVERY RULE HAS A PAIRED NEGATIVE. A parser rule that has only ever been seen
- * matching has not been verified: a rule that fires on everything passes every
- * positive test there is. The negative case is what proves the rule has an
- * edge. The year rule is the clearest example, since a rule that turned any
- * four-digit number into a date filter would pass "2019 is a year" and would
- * silently make a search for port 8080 return nothing at all.
+ * EVERY RULE HAS A PAIRED NEGATIVE: a rule that has only ever been seen matching has not been
+ * verified, because a rule that fires on everything passes every positive test there is.
  */
 
 import {
@@ -57,7 +48,7 @@ function ok(label, condition) {
 // Fixed so the year ceiling cannot move under the gate as the clock advances.
 const OPTS = { minYear: 2000, maxYear: 2030 };
 
-// -- Rule 1: quoted phrases -------------------------------------------------
+// Rule 1: quoted phrases
 
 eq(
   "phrase: a quoted run becomes one phrase",
@@ -75,15 +66,14 @@ eq(
   parseQuery("content model", OPTS).phrases,
   [],
 );
-// NEGATIVE: an operator inside quotes stays literal text. This is why the
-// phrase rule has to run before the operator rule.
+// NEGATIVE: an operator inside quotes stays literal text, which is why the phrase rule runs first.
 eq(
   "phrase NEGATIVE: tag: inside quotes is not an operator",
   parseQuery('"tag:d1"', OPTS).tags,
   [],
 );
 
-// -- Rule 2: field operators -------------------------------------------------
+// Rule 2: field operators
 
 eq("operator: tag:", parseQuery("tag:d1 storage", OPTS).tags, ["d1"]);
 eq("operator: type:", parseQuery("type:post storage", OPTS).types, ["post"]);
@@ -108,7 +98,7 @@ eq(
   ["author:dustin"],
 );
 
-// -- Rule 3: bare year -------------------------------------------------------
+// Rule 3: bare year
 
 eq("year: a bare in-range year becomes a filter", parseQuery("2026 storage", OPTS).year, 2026);
 eq(
@@ -116,27 +106,26 @@ eq(
   parseQuery("2026 storage", OPTS).terms,
   ["storage"],
 );
-// NEGATIVE, and the one that matters most. A four-digit number outside the
-// corpus range is a search term. Without this the query `8080` would filter
-// every result away and return nothing, which reads as a broken site.
+// NEGATIVE, and the one that matters most: a four-digit number outside the corpus range is a
+// search term, and without this a query of one would filter every result away and read as a broken
+// site.
 eq("year NEGATIVE: 8080 is out of range and stays a term", parseQuery("8080", OPTS).year, null);
 eq("year NEGATIVE: 8080 survives as a term", parseQuery("8080", OPTS).terms, ["8080"]);
 eq("year NEGATIVE: 1999 is below the corpus range", parseQuery("1999", OPTS).year, null);
 // NEGATIVE: three and five digit numbers are not years.
 eq("year NEGATIVE: 202 is not a year", parseQuery("202", OPTS).year, null);
 eq("year NEGATIVE: 20260 is not a year", parseQuery("20260", OPTS).year, null);
-// NEGATIVE: ordering. tag:2026 is a tag, not a year, and only because the
-// operator rule consumed it first.
+// NEGATIVE: ordering. A tag that looks like a year is a tag, because the operator rule consumed it.
 eq("year NEGATIVE: tag:2026 is a tag", parseQuery("tag:2026", OPTS).tags, ["2026"]);
 eq("year NEGATIVE: tag:2026 sets no year", parseQuery("tag:2026", OPTS).year, null);
 
-// -- Empty and filter-only queries ------------------------------------------
+// Empty and filter-only queries
 
 ok("empty: a blank query is empty", parseQuery("", OPTS).isEmpty);
 ok("empty: a filter-only query has nothing to match", parseQuery("tag:d1", OPTS).isEmpty);
 ok("empty NEGATIVE: a query with a term is not empty", !parseQuery("d1", OPTS).isEmpty);
 
-// -- MATCH expression building ----------------------------------------------
+// MATCH expression building
 
 eq(
   "match: terms are ANDed",
@@ -177,11 +166,10 @@ eq(
   '"content" AND "mod"',
 );
 
-// -- Rank fusion -------------------------------------------------------------
+// Rank fusion
 
-// A document ranked second in BOTH lists beats one ranked first in only one.
-// That is the whole point of RRF and the reason the two indexes can disagree
-// without one of them dominating.
+// A document ranked second in BOTH lists beats one ranked first in only one, which is the point
+// of RRF and why the two indexes can disagree without one dominating.
 {
   const identity = [{ uid: "solo" }, { uid: "both" }];
   const prose = [{ uid: "other" }, { uid: "both" }];
@@ -210,13 +198,9 @@ eq(
   ok("fuse NEGATIVE: an empty list contributes nothing", fused.length === 1);
 }
 
-// -- Rule: the browse path, filters with nothing to match on -----------------
-//
-// Found live 2026-07-28. The parser was right and the query still returned
-// nothing: a bare year leaves no text, so toMatchExpression returns null and
-// the index path has nothing to run. These assertions pin the pair of facts a
-// caller has to act on, that there is no MATCH expression AND that there is
-// still a query to answer.
+// Rule: the browse path, filters with nothing to match on. A bare year leaves no text, so the
+// expression builder returns null and the index path has nothing to run: these pin the pair a
+// caller has to act on, that there is no MATCH expression AND that there is still a query.
 {
   const year = parseQuery("2026", OPTS);
   ok("browse: a bare year leaves no MATCH expression", toMatchExpression(year, false) === null);
@@ -253,7 +237,7 @@ eq(
   ok("browse NEGATIVE: an out-of-range number is text to match", toMatchExpression(port, false) !== null);
 }
 
-// -- Report ------------------------------------------------------------------
+// Report
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`  FAIL ${failure}`);
@@ -262,19 +246,11 @@ if (failures.length > 0) {
 }
 
 /*
- * EXECUTED-COUNT FLOOR, TIGHTENED 2026-08-14 from a bare literal 30.
- *
- * The old value was set to catch a run that did NOTHING, and it did that. What
- * it could not catch is the failure that actually happens, which is partial:
- * against a measured 48, a floor of 30 left 37 percent of this gate free to
- * stop running while the floor reported itself satisfied. Same lesson as
- * check:assertions moving 360 to 520 against 595, and verify-live's 90 against
- * 206.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 48.
- * Never summed. Floored at 45, roughly 6 percent: every assertion here is a
- * pure parser or fusion case over inline fixtures, so the count moves only when
- * a case is written.
+ * EXECUTED-COUNT FLOOR. The old value caught a run that did NOTHING and could not catch the
+ * failure that actually happens, which is partial: it left a third of this gate free to stop
+ * running while reporting itself satisfied. MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING
+ * it, never summed, and floored close, since every assertion is a pure case over inline fixtures
+ * and the count moves only when a case is written.
  */
 const MINIMUM_CHECKS = 45;
 const floorBreach = assertFloor("check:search", "checks", checks, MINIMUM_CHECKS);

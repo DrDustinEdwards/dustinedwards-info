@@ -3,67 +3,19 @@
  *
  *   npm run check:stack
  *
- * THE SUBJECT IS A BUILD PRODUCT, NOT A COMMIT (ruling 39a, 2026-09-08).
- * `content/generated/stack.json` is gitignored and written by `build:stack`,
- * which runs before the gates in `check-all.mjs`, in ship's build step and in
- * CI. This gate therefore asserts that a build HAPPENED and that what it
- * produced reconciles with its sources; it no longer asserts that a committed
- * copy equals a fresh derivation, because that compared a commit to a build
- * and made every dependency bump a two-file change no bot could complete.
+ * THE SUBJECT IS A BUILD PRODUCT, NOT A COMMIT: the artifact is gitignored and written before the
+ * gates, so this asserts that a build HAPPENED and reconciles with its sources. Comparing a
+ * committed copy against a fresh derivation made every dependency bump a two-file change no bot
+ * could complete.
  *
- * OBSERVATION BOUNDARY, and there are TWO limits, not one.
+ * BOUNDARY, TWO LIMITS. It cannot tell whether the PROSE is true: a note is reconciled against
+ * the binding it describes and nothing more. And **it reads the EXAMPLE config, which is not what
+ * is deployed**: only `check:config` binds the two, on one machine, and **CI CANNOT CLOSE THIS
+ * GAP**, a checkout bootstrapping the example into place.
  *
- * **First, it cannot tell whether the prose is TRUE.** A hand-written
- * `whyLoadBearing` is reconciled against the binding it describes, so the gate
- * knows the binding still exists and nothing more. Verifying the claim itself
- * is the evidence-anchor design in colophon-page.md and is a separate change.
- *
- * **Second, and easier to miss: this gate reads `wrangler.jsonc.example`, which
- * is not what is deployed.** The example is the tracked file, so it is the only
- * one a clone can read, and everything here is derived from it. The single
- * thing binding it to the Worker that actually runs is `check:config`, which
- * compares the example against the real `wrangler.jsonc`. That file is
- * gitignored, so `check:config` can only run where it exists, which is one
- * machine, **and CI CANNOT CLOSE THIS GAP.** That is measured, not assumed: a
- * checkout has no real config and `postinstall` bootstraps one by copying the
- * example, so real equals example by construction and the gate cannot pass.
- * It is in `CI_EXCLUDED`. A green `check:stack` therefore says the artifact
- * matches the example. It says the artifact matches PRODUCTION
- * only as far as someone remembered to run `check:config` on the machine that
- * holds the real config.
- *
- * That gap is real and it is recorded HERE, in the gate it is about, rather
- * than on the page. It used to be described as "the same accepted gap this
- * page lists under `notAdopted`", which stopped being true on 2026-09-11 when
- * the one entry under that status was deleted for being false about CI. A
- * cross-reference to a list is a claim that ages; a gate's own boundary note
- * is the place a boundary belongs.
- *
- * Pure: no network, no database, no bindings.
- *
- * ## Both directions, on every source
- *
- * A generated artifact only stays honest if the gate fails when EITHER side
- * moves. A binding in the config with no row is the obvious direction; a row
- * with no binding is the one that actually happens, because a resource gets
- * removed and the page keeps advertising it. The same holds for gates,
- * migrations and dependencies.
- *
- * The hand-written notes get the same treatment: a binding with no note fails,
- * and a note naming a binding that no longer exists fails. Without the second
- * direction the notes file becomes the place stale claims accumulate, which is
- * the exact rot the ruling was written against.
- *
- * ## It re-derives rather than trusting the artifact
- *
- * Every expectation is computed by calling `build-stack.mjs`'s own exported
- * derivations against the live sources. Nothing here restates a binding name, a
- * version, a migration or a gate, so a list that drifts moves one side of a
- * comparison and fails. `check:all` derives its gate list the same way and for
- * the same reason.
- *
- * FAILS CLOSED. An empty enumeration on any source is a failure, not a pass:
- * "0 differences" must never be reachable by examining nothing.
+ * BOTH DIRECTIONS, ON EVERY SOURCE: a row with no binding is the one that actually happens, a
+ * resource being removed while the page keeps advertising it. IT RE-DERIVES RATHER THAN TRUSTING
+ * THE ARTIFACT, calling the builder's own exported derivations. FAILS CLOSED.
  */
 
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -141,7 +93,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const config = parseJsonc(EXAMPLE_CONFIG);
 const notes = JSON.parse(readFileSync(NOTES_PATH, "utf8"));
 
-/* ------------------------------------------------------- fail closed first */
+/* fail closed first */
 
 const sourceBindings = [...surfaceOf(config).keys()];
 const sourceGates = gateNames(pkg);
@@ -157,10 +109,8 @@ ok(
 );
 
 /*
- * The blind spot, made loud. A binding KIND no reader understands produces no
- * rows on either side of every comparison below, so the artifact and the config
- * agree by both being empty. Found by planting `vectorize` in the example config
- * and watching this gate pass with 0 failures.
+ * The blind spot, made loud: a binding KIND no reader understands produces no rows on either side,
+ * so the artifact and the config agree by both being empty.
  */
 const unreadable = unhandledBindingKinds(config);
 ok(
@@ -190,7 +140,7 @@ ok(
   "stack.json carries no bindings",
 );
 
-/* ------------------------------------------------------- shape and freshness */
+/* shape and freshness */
 
 ok(
   "the artifact declares the shape this gate understands",
@@ -199,27 +149,11 @@ ok(
 );
 
 /*
- * FRESHNESS, WHICH REPLACED A COMPARISON THAT WAS ASKING THE WRONG QUESTION.
- *
- * Until ruling 39a this line read `JSON.stringify(buildStack()) ===
- * JSON.stringify(artifact)` and was described as the strongest assertion in the
- * file. It was comparing A COMMIT TO A BUILD, and that is the defect rather
- * than a strength: the only way to satisfy it was for a human to run
- * `build:stack` and commit the result in the same change as the package.json
- * edit that moved it. Renovate cannot run a build, so all three of its first
- * pin PRs (#19 to #21, 2026-09-07) arrived red here with nothing wrong in them.
- *
- * stack.json is now a gitignored build product, derived before the gates in
- * check-all, in ship's build step and in CI. So the question worth asking is no
- * longer "does the commit match a build" but "did a build actually happen",
- * and mtime against package.json is what answers it. package.json is the input
- * this gate exists to track: it carries the dependencies and the gate names,
- * and it is the file a dependency PR edits.
- *
- * The reconciles below still fail on a stale artifact, and they are not
- * redundant with this: they read the artifact's CONTENT, so they catch a
- * regeneration that ran and produced the wrong thing, where mtime only catches
- * one that did not run at all.
+ * FRESHNESS, WHICH REPLACED A COMPARISON THAT WAS ASKING THE WRONG QUESTION. It compared A COMMIT
+ * TO A BUILD, so the only way to satisfy it was a human running the build and committing the
+ * result in the same change, and a dependency bot cannot run a build. The question is now "did a
+ * build happen", which mtime answers. The reconciles below read the artifact's CONTENT, so they
+ * catch a regeneration that produced the wrong thing.
  */
 const stackMtime = statSync(STACK_PATH).mtimeMs;
 const pkgMtime = statSync(join(root, "package.json")).mtimeMs;
@@ -232,7 +166,7 @@ ok(
     `from one of them means the build step is missing rather than that you forgot.`,
 );
 
-/* --------------------------------------------------------- both directions */
+/* both directions */
 
 reconcile(
   "binding",
@@ -249,7 +183,7 @@ reconcile(
   ),
 );
 
-/* ------------------------------------ the hand-written half, both directions */
+/* the hand-written half, both directions */
 
 const notedIds = Object.keys(notes.bindings ?? {});
 reconcile("noted binding", sourceBindings, notedIds);
@@ -279,24 +213,10 @@ ok(
 );
 
 /*
- * `refused` and `accepted-gap` are DIFFERENT CLAIMS and the page states which.
- *
- * The list was originally called the refusals throughout, and CI was in it. It
- * is not a refusal: neither decisions.md nor decisions-vol-1.md carries a
- * ruling declining CI, and the record files it as a gap that has already cost
- * something. Calling it a refusal would have published a decision nobody made,
- * on the one page whose whole subject is what was decided.
- *
- * The status is closed rather than free text, because values a reader can rely
- * on are worth more than an open vocabulary that drifts into synonyms.
- *
- * ONE VALUE SINCE 2026-09-11, and this list is the SECOND owner of that
- * vocabulary rather than the first: `STATUS_LABEL` in
- * `app/lib/colophon-sections.mjs` is what the page renders through, and
- * `check:features` asserts in both directions that the labels and the statuses
- * in use are the same set. `accepted-gap` left both in the same commit with its
- * last member, the false "Continuous integration" entry. Adding the next
- * accepted gap means editing both, which is the point.
+ * A refusal and an accepted gap are DIFFERENT CLAIMS and the page states which: one entry was not
+ * a refusal, and calling it one would publish a decision nobody made, on the page whose subject is
+ * what was decided. The status is CLOSED rather than free text. This list is the SECOND owner of
+ * that vocabulary: `check:features` asserts both directions against the page's label map.
  */
 const STATUSES = ["refused"];
 const badStatus = (artifact.notAdopted ?? []).filter(
@@ -313,7 +233,7 @@ ok(
     .join("; ") + `. Allowed: ${STATUSES.join(", ")}.`,
 );
 
-/* ------------------------------------------------------- runtime facts */
+/* runtime facts */
 
 ok(
   "the compatibility date matches the config",
@@ -333,16 +253,9 @@ console.log(
 );
 
 /*
- * EXECUTED-COUNT FLOOR.
- *
- * This gate reconciles a GENERATED artifact against its sources, which is the
- * shape most able to pass by checking nothing: if the artifact parsed to an
- * empty roster, every loop below would iterate zero times and report green.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-08-14 by RUNNING it: 24.
- * Never summed. Floored at 22, slack of two: the count tracks the colophon's
- * declared bindings, gates, migrations and dependencies, so it grows with the
- * stack rather than wandering.
+ * EXECUTED-COUNT FLOOR. Reconciling a GENERATED artifact against its sources is the shape most
+ * able to pass by checking nothing: an artifact that parsed to an empty roster iterates zero
+ * times. MEASURED BY RUNNING IT, and it tracks the colophon's declared inventory.
  */
 const MINIMUM_CHECKS = 22;
 const floorBreach = assertFloor("check:stack", "checks", checks, MINIMUM_CHECKS);

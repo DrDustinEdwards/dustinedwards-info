@@ -1,47 +1,20 @@
 /**
  * Gate: the ACTIVE decisions volume has not passed its own stated freeze point.
  *
- * ## THE DEFECT, AND IT IS THE THIRD OF ITS SHAPE IN TWO DAYS
+ * THE DEFECT: every volume's header states its own limit, and one ran well past it for days,
+ * because the limit was a sentence inside the artifact it limited, enforced by whoever happened to
+ * read it. Third of that shape in two days, and the repair each time is an instrument.
  *
- * Every volume's header states its own limit, "Freeze at 20KB." Vol 17
- * respected it and froze at 20.6KB. Vol 18 ran to 36,667 bytes and stayed
- * there for four days before anybody noticed, because the limit was a sentence
- * inside the artifact it limited and enforced by whoever happened to read it.
+ * NETWORK TIER, AND IT CANNOT BE OTHERWISE: a decisions volume is a Capsid document, so there is
+ * no disk to read and a clean checkout cannot run this. A real limitation rather than a formality,
+ * since a volume can pass its freeze point between runs.
  *
- * The other two that week: the carried-token map's "build 4 must leave this
- * empty", which assumed a schedule that had stopped running; and
- * check:contrast's participation rule, satisfied by pairs asserted against
- * surfaces nothing paints. Same shape each time, and the repair each time is
- * an instrument rather than a better sentence.
+ * THE CREDENTIAL FAILS CLOSED rather than skipping: a gate that silently does not run is the thing
+ * the runner exists to prevent, and an unread volume is not a volume under its limit.
  *
- * ## NETWORK TIER, AND WHY IT CANNOT BE OTHERWISE
- *
- * A decisions volume is a Capsid document, not a repo file. There is no disk
- * to read, so this cannot run in `--ci` and a clean checkout cannot run it
- * either. That is a real limitation rather than a formality: this gate runs
- * when somebody runs the network tier, not on every push, so a volume can pass
- * its freeze point between runs. It still beats a sentence.
- *
- * ## THE CREDENTIAL FAILS CLOSED, on check:uptime's precedent
- *
- * `CAPSID_TOKEN` comes from the gitignored `.dev.vars`, like the UptimeRobot
- * key. Absent, this gate FAILS rather than skipping: a gate that silently does
- * not run is the thing the runner exists to prevent, and an unread volume is
- * not a volume under its limit.
- *
- * ## WHAT IS DELIBERATELY NOT HERE
- *
- * Nothing restates a limit. Hard rule 17: the number lives in the volume that
- * owns it and `parseFreezeLimit` reads it back. A volume that wants a different
- * limit says so in its own header and this follows without an edit.
- *
- * The ACTIVE volume is the highest-numbered one, never the title, and the
- * argument for that is measured rather than asserted; it lives beside the
- * classifier in lib/decisions-volumes.mjs. Proven both directions by
- * test/decisions-volume-freeze.test.mjs, including the direction that keeps
- * this usable: frozen volumes PASS, because vols 6 and 7 froze at 224KB and
- * 69KB before the rule existed and a gate that cannot go green is one somebody
- * deletes.
+ * NOTHING RESTATES A LIMIT, hard rule 17: the number lives in the volume that owns it. The ACTIVE
+ * volume is the highest-numbered one, never the title, and frozen volumes PASS, because two froze
+ * far over before the rule existed and a gate that cannot go green is one somebody deletes.
  */
 
 import { assertFloor } from "./lib/floor.mjs";
@@ -71,6 +44,7 @@ function ok(label, pass, detail) {
 
 /**
  * One JSON-RPC call against Capsid's MCP endpoint.
+ *
  * @param {string} token @param {string} name @param {Record<string, unknown>} args
  */
 async function callTool(token, name, args) {
@@ -91,9 +65,9 @@ async function callTool(token, name, args) {
   if (!res.ok) throw new Error(`${name} returned HTTP ${res.status}`);
   const text = await res.text();
   /*
-   * The endpoint may answer as SSE. Taking the LAST data: line rather than the
-   * first: a stream can carry progress frames ahead of the result, and reading
-   * the first would parse a notification as the answer.
+   * The endpoint may answer as SSE, and the LAST `data:` line is the one taken: a stream can carry
+   * progress frames ahead of the result, and reading the first would parse a notification as the
+   * answer.
    */
   const payload = text.includes("data:")
     ? text.split("\n").filter((l) => l.startsWith("data:")).pop()?.slice(5).trim()
@@ -108,10 +82,8 @@ async function main() {
   console.log("check:volumes\n");
 
   /*
-   * ENV FIRST, then .dev.vars. The env path is what lets this run somewhere
-   * that keeps the credential in a secret store rather than a file; the
-   * .dev.vars path is this machine. Either way it FAILS CLOSED when neither
-   * has it, which is the assertion below.
+   * ENV FIRST, then `.dev.vars`: the env path is what lets this run somewhere that keeps the
+   * credential in a secret store. Either way it FAILS CLOSED when neither has it.
    */
   const token = process.env.CAPSID_TOKEN || readDevVar("CAPSID_TOKEN");
   ok(
@@ -137,8 +109,8 @@ async function main() {
   const { volumes, active, staleTitles } = classifyVolumes(docs);
 
   /*
-   * SCOPE FIRST. A listing that returned nothing classifies to no active
-   * volume, and every assertion below would pass by examining it.
+   * SCOPE FIRST: a listing that returned nothing classifies to no active volume, and every
+   * assertion below would pass by examining it.
    */
   const floorBreach = assertFloor(
     "check:volumes",
@@ -168,9 +140,8 @@ async function main() {
   console.log("");
 
   /*
-   * A VOLUME THAT STATES NO LIMIT FAILS. Comparing against a missing number
-   * would be a condition that cannot be false, which is the class this gate
-   * was written in response to.
+   * A VOLUME THAT STATES NO LIMIT FAILS: comparing against a missing number would be a condition
+   * that cannot be false, which is the class this gate was written in response to.
    */
   ok(
     `${active.path} states its own freeze point`,
