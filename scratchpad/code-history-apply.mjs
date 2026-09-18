@@ -1,15 +1,22 @@
-// Ruling 115, wave 1 (job_2cec82881996). One script, all modes reading the
-// pristine files in scratchpad/code-history-before/ so every run starts from
-// the same bytes.
+// Ruling 115, one script per wave, every mode reading that wave's pristine files so
+// every run starts from the same bytes.
 //
-//   snapshot         copy the ten files to code-history-before/
+//   WAVE=2 node scratchpad/code-history-apply.mjs <mode>
+//
+//   snapshot         copy the wave's files into its before/ directory
 //   dump F A B       print blocks A..B of file F with ids, lines and context
 //   check [N...]     validate decision files (all, or the named chunk numbers)
-//   tags             write scratchpad/code-history-tags.tsv (commit 1)
-//   apply            rewrite the files and write code-history-2026-09-wave1.md
+//   tags             write the wave's tags TSV (commit 1)
+//   apply            rewrite the files and write the wave's history document
 //   prove            comment-stripped identity, preserved tokens, bytes
 //
-// Decisions live in scratchpad/code-decisions/*.mjs, each exporting
+// THE WAVE IS A PARAMETER RATHER THAN A COPY. Wave 2 is the same job over 93 more
+// files, and scripts/lib/strip-comments.mjs is the standing record of what a second
+// copy becomes: two readers of one rule that drift in strength, where the weaker one
+// does not fail, it passes for a reason nobody checks. Wave 1 keeps the unsuffixed
+// names it was committed with, so its proofs still reproduce from its own spellings.
+//
+// Decisions live in scratchpad/code-decisions<suffix>/*.mjs, each exporting
 // { "<file>#<id>": [tag, reason, replacement] }. A string replacement is the
 // new prose (lines joined by \n, no comment markers), null deletes the block,
 // and a missing third entry keeps it byte-identical.
@@ -18,12 +25,22 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { stripComments } from "../scripts/lib/strip-comments.mjs";
 import { commentBlocks } from "./code-blocks.mjs";
-import { CHUNKS, KEEP_SHARE, WAVE1 } from "./code-wave1.mjs";
+import * as wave1 from "./code-wave1.mjs";
+import * as wave2 from "./code-wave2.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..");
-const BEFORE = join(HERE, "code-history-before");
-const DECISIONS = join(HERE, "code-decisions");
+
+/** Which wave this run is about. Wave 1's names carry no suffix, so nothing of its moves. */
+const WAVE = process.env.WAVE === "2" ? 2 : 1;
+const FILES = WAVE === 2 ? wave2.WAVE2 : wave1.WAVE1;
+const CHUNKS = WAVE === 2 ? wave2.CHUNKS : wave1.CHUNKS;
+const KEEP_SHARE = WAVE === 2 ? wave2.KEEP_SHARE : wave1.KEEP_SHARE;
+const SUFFIX = WAVE === 1 ? "" : `-wave${WAVE}`;
+const BEFORE = join(HERE, `code-history-before${SUFFIX}`);
+const DECISIONS = join(HERE, `code-decisions${SUFFIX}`);
+const TAGS_TSV = join(HERE, WAVE === 1 ? "code-history-tags.tsv" : `code-history-tags-wave${WAVE}.tsv`);
+const HISTORY_MD = join(HERE, `code-history-2026-09-wave${WAVE}.md`);
 const flat = (s) => s.replace(/\//g, "__");
 const TAGS = ["WHY", "CONTRACT", "NUMBER", "HISTORY"];
 
@@ -51,7 +68,7 @@ function prose(text) {
 
 function loadBlocks() {
   const all = [];
-  for (const file of WAVE1) {
+  for (const file of FILES) {
     const src = readFileSync(join(BEFORE, flat(file)), "utf8");
     commentBlocks(src).forEach((b, id) => all.push({ ...b, file, id, key: `${file}#${id}`, src }));
   }
@@ -170,18 +187,18 @@ function codeOnly(src) {
  * multiset compares and carries the control. Adding a name here is how the weakening stays
  * visible, so never add one without the reason.
  */
-const REORDERED = new Set(["app/routes/admin.media._index.tsx"]);
+const REORDERED = new Set(WAVE === 1 ? ["app/routes/admin.media._index.tsx"] : []);
 
 const mode = process.argv[2];
 
 if (mode === "snapshot") {
   mkdirSync(BEFORE, { recursive: true });
-  for (const f of WAVE1) copyFileSync(join(REPO, f), join(BEFORE, flat(f)));
-  console.log(`snapshot: ${WAVE1.length} files into scratchpad/code-history-before/`);
+  for (const f of FILES) copyFileSync(join(REPO, f), join(BEFORE, flat(f)));
+  console.log(`snapshot: wave ${WAVE}, ${FILES.length} files into ${BEFORE}`);
   process.exit(0);
 }
 if (!existsSync(BEFORE)) {
-  console.error("no scratchpad/code-history-before/; run snapshot first");
+  console.error(`no ${BEFORE}; run snapshot first`);
   process.exit(2);
 }
 
@@ -189,8 +206,8 @@ const blocks = loadBlocks();
 
 if (mode === "dump") {
   const [file, from, to] = [process.argv[3], Number(process.argv[4]), Number(process.argv[5])];
-  if (!WAVE1.includes(file)) {
-    console.error(`not a wave 1 file: ${file}`);
+  if (!FILES.includes(file)) {
+    console.error(`not a wave ${WAVE} file: ${file}`);
     process.exit(2);
   }
   for (const b of blocks.filter((x) => x.file === file && x.id >= from && x.id <= to)) {
@@ -213,7 +230,9 @@ if (mode === "check") {
   for (const b of blocks) if (out[b.key]) problems.push(...validate(b, out[b.key]));
   const scopes = only.length ? only.map((n) => CHUNKS[n]) : null;
   if (scopes && scopes.some((s) => !s)) problems.push(`unknown chunk in ${only.join(" ")}`);
-  const inScope = (b) => !scopes || scopes.some((s) => s && b.file === s[0] && b.id >= s[1] && b.id <= s[2]);
+  /* A chunk is one [file, from, to] triple or a list of them; wave 2's chunks group small files. */
+  const spans = scopes?.flatMap((s) => (s && Array.isArray(s[0]) ? s : [s])) ?? null;
+  const inScope = (b) => !spans || spans.some((s) => s && b.file === s[0] && b.id >= s[1] && b.id <= s[2]);
   for (const k of Object.keys(out)) {
     const b = blocks.find((x) => x.key === k);
     if (b && !inScope(b)) problems.push(`${k}: outside chunk ${only.join(" ")}`);
@@ -263,7 +282,7 @@ if (mode === "tags") {
     const action = b.repl === undefined ? "keep" : b.repl === null ? "delete" : "rewrite";
     rows.push([b.file, b.line, Buffer.byteLength(b.text), b.tag, action, b.reason.replace(/[\t\n]/g, " ")].join("\t"));
   }
-  writeFileSync(join(HERE, "code-history-tags.tsv"), rows.join("\n") + "\n");
+  writeFileSync(TAGS_TSV, rows.join("\n") + "\n");
   const count = (t) => blocks.filter((b) => b.tag === t).length;
   const act = (a) =>
     blocks.filter((b) => (a === "keep" ? b.repl === undefined : a === "delete" ? b.repl === null : typeof b.repl === "string")).length;
@@ -276,7 +295,7 @@ if (mode === "tags") {
 
 if (mode === "apply") {
   const history = [
-    "# Code comment history, 2026-09, wave 1",
+    `# Code comment history, 2026-09, wave ${WAVE}`,
     "",
     "Extracted by job_2cec82881996 under ruling 115, from cdb4300. Every comment",
     "block the job deleted or shortened in the ten heaviest code files is here",
@@ -285,7 +304,7 @@ if (mode === "apply") {
     "measurements, dates and the story went.",
     "",
   ];
-  for (const file of WAVE1) {
+  for (const file of FILES) {
     let src = readFileSync(join(BEFORE, flat(file)), "utf8");
     const mine = blocks.filter((b) => b.file === file && b.repl !== undefined);
     for (const b of [...mine].sort((x, y) => y.start - x.start)) {
@@ -322,7 +341,7 @@ if (mode === "apply") {
       );
     }
   }
-  writeFileSync(join(HERE, "code-history-2026-09-wave1.md"), history.join("\n"));
+  writeFileSync(HISTORY_MD, history.join("\n"));
   const changed = blocks.filter((b) => b.repl !== undefined);
   console.log(
     `apply: ${changed.filter((b) => b.repl === null).length} deleted, ${changed.filter((b) => typeof b.repl === "string").length} rewritten; ` +
@@ -339,7 +358,7 @@ if (mode === "prove") {
   let tc = 0;
   let ta = 0;
   let tac = 0;
-  for (const file of WAVE1) {
+  for (const file of FILES) {
     const before = readFileSync(join(BEFORE, flat(file)), "utf8");
     const after = readFileSync(join(REPO, file), "utf8");
     const same = REORDERED.has(file)
@@ -380,7 +399,7 @@ if (mode === "prove") {
   console.log("| file | code only | control differs | citations | JSDoc heads | markers | bytes before | bytes after | comment before | comment after |");
   console.log("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   for (const r of rows) console.log(r);
-  console.log(`| **wave 1** | | | | | | ${tb} | ${ta} | ${((100 * tc) / tb).toFixed(1)}% | ${((100 * tac) / ta).toFixed(1)}% |`);
+  console.log(`| **wave ${WAVE}** | | | | | | ${tb} | ${ta} | ${((100 * tc) / tb).toFixed(1)}% | ${((100 * tac) / ta).toFixed(1)}% |`);
   console.log(`\ncomment bytes ${tc} -> ${tac}; prove: ${failures ? `${failures} FAILURES` : "all files pass"}`);
   process.exit(failures ? 1 : 0);
 }
