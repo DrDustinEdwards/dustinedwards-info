@@ -33,11 +33,14 @@ const WIDE = [String.fromCharCode(0x2013), String.fromCharCode(0x2014)];
 const heads = (t) => (t.match(JSDOC_HEAD) ?? []).map((h) => h.replace(/\s+/g, " ").trim()).sort().join("|");
 const cites = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort().join(",");
 
-const [chunk, editsPath] = process.argv.slice(2);
+// More than one table may be named, later ones overriding earlier: a fix for a refused entry
+// goes in its own file rather than being edited back into a table already written, which keeps
+// the first table readable as what was intended and the second as what the validator forced.
+const [chunk, ...editPaths] = process.argv.slice(2);
 const decPath = join("scratchpad/code-decisions-wave2", `${chunk}.mjs`);
 const abs = join(process.cwd(), decPath);
 const current = (await import(pathToFileURL(abs).href)).default;
-const edits = JSON.parse(readFileSync(editsPath, "utf8"));
+const edits = Object.assign({}, ...editPaths.map((p) => JSON.parse(readFileSync(p, "utf8"))));
 
 // The chunk's blocks, with the lead the apply script measures the column limit against.
 const spans = Array.isArray(CHUNKS[chunk][0]) ? CHUNKS[chunk] : [CHUNKS[chunk]];
