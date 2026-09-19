@@ -297,6 +297,72 @@ export default function PlaygroundUi() {
             )}
           </Spec>
 
+          {/*
+            BOTH FORMS OF ONE ACTION, because the rule that allows the first is
+            the one most easily read as a licence. An icon-only control is
+            allowed where the icon is universally understood: search, menu,
+            theme, close, delete. The icon is aria-hidden and the control
+            carries the name, which is what makes the two identical to a screen
+            reader and is the half a capture cannot record. So it is printed.
+          */}
+          <Spec
+            id="icon-only"
+            title="Icon-only and labelled, one action twice"
+            note="Allowed where the icon is universally understood. A primary action stays labelled, whatever icon it carries."
+          >
+            {() => (
+              <div className="pgui-row">
+                <State label="Icon only">
+                  <div>
+                    <button type="button" className="btn btn-icon" aria-label="Search">
+                      <Icon name="search" />
+                    </button>
+                    <code className="pgui-aname">aria-label=&quot;Search&quot;</code>
+                  </div>
+                </State>
+                <State label="Icon only, focus">
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-icon"
+                      aria-label="Search"
+                      data-demo="focus"
+                    >
+                      <Icon name="search" />
+                    </button>
+                    <code className="pgui-aname">aria-label=&quot;Search&quot;</code>
+                  </div>
+                </State>
+                <State label="Labelled, the same action">
+                  <div>
+                    <button type="button" className="btn">
+                      <Icon name="search" />
+                      Search
+                    </button>
+                    <code className="pgui-aname">named by its own text</code>
+                  </div>
+                </State>
+                <State label="Primary, never icon-only">
+                  <div>
+                    <button type="submit" className="btn btn-primary">
+                      <Icon name="search" />
+                      Search the site
+                    </button>
+                    <code className="pgui-aname">named by its own text</code>
+                  </div>
+                </State>
+              </div>
+            )}
+          </Spec>
+
+          <p className="pgui-note">
+            The header above carries the two icon-only controls this site actually ships, and
+            both take their name from an <code>aria-label</code> rather than from visually
+            hidden text: the search trigger, and the theme control&rsquo;s pair of buttons. The
+            name is printed under each specimen here because it is the entire reason the form is
+            allowed, and it is the one thing a screenshot of this page cannot hold.
+          </p>
+
           <Spec
             id="field"
             title="Text field"
@@ -1431,9 +1497,9 @@ export default function PlaygroundUi() {
         <section className="pgui-section" aria-labelledby="gaps-h">
           <h2 id="gaps-h">What is not on this page</h2>
           <p>
-            Four things the handoffs name and this page does not draw. They are listed here
-            rather than only in a report, because the page is the fixture and a gap nobody can
-            see is a gap that gets built twice.
+            Eight things named by a handoff or a ruling that this page does not draw. They are
+            listed here rather than only in a report, because the page is the fixture and a gap
+            nobody can see is a gap that gets built twice.
           </p>
           <ul>
             <li>
@@ -1450,6 +1516,37 @@ export default function PlaygroundUi() {
               <b>The publication entry.</b> The kit calls it a reference rather than a redraw. It
               ships on <a href="/publications">the publications page</a> with its microdata and
               its export links, and redrawing it here would make a second copy to drift.
+            </li>
+            <li>
+              <b>Five post components the 2026-09-13 rulings name.</b> The post status tag, the
+              assumed-audience line, the highlight box, the pull quote and the key-takeaways
+              block. None has a component, a stylesheet rule, a markdown directive or a
+              frontmatter field, and neither the Paper kit nor the post handoff specifies one:
+              the post handoff predates the rulings and still rules the progress bar out. They
+              are named here rather than drawn, because drawing them would be inventing a design
+              and calling it an inventory.
+            </li>
+            <li>
+              <b>The reading-progress bar</b>, which is the one component of the six that
+              already ships: <code>app/enhance/blog.ts</code> creates it, and it is styled in
+              <code>post-enhancements.css</code>. A specimen here costs the whole of that sheet,
+              because the bar is one rule of seventeen class families in it and a copy of the
+              rule would be a second owner free to drift. Measured: the import puts this route
+              at 10,689 brotli bytes of stylesheet against a 10,600 ceiling and 11,503 against
+              an 11,500 cold-load ceiling. Raising either is a hard rule 4 decision, so the bar
+              waits for one rather than taking it.
+            </li>
+            <li>
+              <b>A filled error alert.</b> Ruled allowed on 13 September, and the kit refuses it
+              for a reason that still holds: a tinted panel needs a measured surface pair per
+              state per theme, and the palette carries none. The three bordered variants are
+              above. The filled one arrives with its token, not before it.
+            </li>
+            <li>
+              <b>The header at five widths.</b> The header is a page singleton and its widths
+              are the capture widths, not copies in the page; the fixed bar those widths were
+              once about was deleted on 14 September with <code>--bar-h</code>. Rendering five
+              of it here would put five headers in one document and measure none of them.
             </li>
             <li>
               <b>The lamp on the search field.</b> The glass fill is legal on /search over paper
