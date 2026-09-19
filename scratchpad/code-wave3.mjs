@@ -209,5 +209,12 @@ export const CHUNKS = {
   ],
 };
 
-/** The share of comment bytes the wave aims to keep. Waves 1 and 2 both used this. */
-export const KEEP_SHARE = 0.19;
+/**
+ * The share of comment bytes this wave aims to keep, raised for wave 3 by the seat.
+ *
+ * These are runtime files and they carry the prohibitions and the boundary statements: what a
+ * path may never do, and what a check cannot see. Both classes stay whatever they cost, so the
+ * rate follows the classes rather than the classes following the rate. Wave 4 is .tsx, carries
+ * far fewer of either, and keeps the earlier target.
+ */
+export const KEEP_SHARE = 0.4;
