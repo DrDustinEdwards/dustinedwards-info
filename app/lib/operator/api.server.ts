@@ -242,7 +242,7 @@ async function listMentionsTool(
 ): Promise<ToolResult> {
   const status = typeof args.status === "string" ? args.status.trim() : "";
 
-  const rows = await listWebmentionsForAdmin(env as unknown as Env);
+  const rows = await listWebmentionsForAdmin(env);
 
   if (status) {
     /*
@@ -314,7 +314,7 @@ async function decideMentionTool(
     };
   }
 
-  const result = await decideMention(env as unknown as Env, id, decision, actor);
+  const result = await decideMention(env, id, decision, actor);
 
   /*
    * `changed: false` IS A REAL ANSWER AND NOT AN ERROR: the row may be one the write refuses for

@@ -201,7 +201,13 @@ async function repair(
   // `scripts/health-repair.mjs`, which makes the identical call. Grounds on `refusalMiss`.
   if (!response.ok) return refusalMiss(tool, response.status, payload);
 
-  const report = payload && typeof payload === "object" ? ((payload as any).data ?? payload) : null;
+  // The envelope is `{ data }` or the report itself, and every field is read through a
+  // typeof check below, so the shape is declared with unknown members rather than asserted true.
+  const report = (
+    payload && typeof payload === "object"
+      ? ((payload as { data?: unknown }).data ?? payload)
+      : null
+  ) as { converged?: unknown; expected?: unknown; present?: unknown } | null;
   if (!report || typeof report.converged !== "boolean") {
     return {
       miss: `${tool} answered without a converged verdict, so nothing was proven`,

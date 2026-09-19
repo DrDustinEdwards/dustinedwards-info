@@ -99,7 +99,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   //
   // `caches.default` is the Workers runtime's own cache; the DOM lib does not declare it, so the cast
   // narrows to the runtime that actually serves this.
-  const cache = (caches as unknown as { default: Cache }).default;
+  const cache = (caches as typeof caches & { default: Cache }).default;
   const keyUrl = new URL(request.url);
   keyUrl.searchParams.set("__enc", `webp${WEBP_QUALITY}`);
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });

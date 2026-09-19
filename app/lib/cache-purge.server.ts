@@ -41,7 +41,7 @@ async function purgeTags(tags: string[], why: string): Promise<boolean> {
    * not shipped it yet is the same shape. Checked rather than assumed, because
    * a TypeError here would propagate into a save.
    */
-  const purge = (cache as unknown as { purge?: (o: unknown) => Promise<PurgeResult> })?.purge;
+  const purge = (cache as typeof cache & { purge?: (o: unknown) => Promise<PurgeResult> })?.purge;
   if (typeof purge !== "function") {
     console.log(`[cache-purge] skipped (${why}): no purge API on this runtime, tags ${tags.join(",")}`);
     return false;
