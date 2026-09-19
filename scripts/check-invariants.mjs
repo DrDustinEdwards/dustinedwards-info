@@ -4139,24 +4139,10 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
    * Read the block above before adding a row.
    */
   const CARRIED = new Map([
-  ["--control-min-dense",    "scale: the control dimensions, beside --control-min"],
   ["--ease-enter",           "scale: the easing ramps"],
   ["--ease-exit",            "scale: the easing ramps"],
-  ["--ease-state",           "scale: the easing ramps"],
-  ["--line-w-thick",         "scale: the line widths"],
-  ["--motion-instant",       "scale: the motion durations"],
   ["--motion-page",          "scale: the motion durations"],
   ["--motion-panel",         "scale: the motion durations"],
-  ["--motion-state",         "scale: the motion durations"],
-  ["--radius-control",       "scale: the corner radius, the system's only one"],
-  ["--s-1",                  "scale: the space scale"],
-  ["--s-2",                  "scale: the space scale"],
-  ["--s-4",                  "scale: the space scale"],
-  ["--t-body-family",        "scale: the body type level"],
-  ["--t-body-leading",       "scale: the body type level"],
-  ["--t-body-size",          "scale: the body type level"],
-  ["--t-body-vars",          "scale: the body type level"],
-  ["--t-body-weight",        "scale: the body type level"],
   ["--t-caption-family",     "scale: the caption type level"],
   ["--t-caption-leading",    "scale: the caption type level"],
   ["--t-caption-size",       "scale: the caption type level"],
@@ -4180,30 +4166,17 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-h2-size",            "scale: the h2 type level"],
   ["--t-h2-vars",            "scale: the h2 type level"],
   ["--t-h2-weight",          "scale: the h2 type level"],
-  ["--t-h3-family",          "scale: the h3 type level"],
-  ["--t-h3-leading",         "scale: the h3 type level"],
-  ["--t-h3-size",            "scale: the h3 type level"],
   ["--t-h3-tracking",        "scale: the h3 type level"],
-  ["--t-h3-vars",            "scale: the h3 type level"],
-  ["--t-h3-weight",          "scale: the h3 type level"],
-  ["--t-label-family",       "scale: the label type level"],
-  ["--t-label-leading",      "scale: the label type level"],
-  ["--t-label-size",         "scale: the label type level"],
-  ["--t-label-vars",         "scale: the label type level"],
-  ["--t-label-weight",       "scale: the label type level"],
   ["--lamp-origin",          "component: the lamp on the glass controls, ruling 74"],
   ["--lamp-reach",           "component: the lamp on the glass controls, ruling 74"],
   ["--surface-catch",        "component: the lamp on the glass controls, ruling 74"],
   ["--lamp-chroma-on-paper", "component: the lamp on the paper glass surface, ruling 74"],
-  ["--error",                "component: the error alert, and a form field in its error state"],
   ["--error-fill",           "component: the error alert, and a form field in its error state"],
   ["--error-tint",           "component: the error alert, and a form field in its error state"],
   ["--on-error-fill",        "component: the error alert, and a form field in its error state"],
-  ["--warning",              "component: the warning alert"],
   ["--warning-fill",         "component: the warning alert"],
   ["--warning-tint",         "component: the warning alert"],
   ["--on-warning-fill",      "component: the warning alert"],
-  ["--success",              "component: the success alert"],
   ["--success-fill",         "component: the success alert"],
   ["--success-tint",         "component: the success alert"],
   ["--on-success-fill",      "component: the success alert"],
@@ -4222,10 +4195,6 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--fig-s3",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s4",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s5",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  ["--raised",               "component: the card and tile surface, one step off paper"],
-  ["--placeholder",          "component: a form field's placeholder"],
-  ["--line-strong",          "component: a control edge that identifies the control"],
-  ["--brand-pressed",        "component: the primary button, pressed"],
   ["--glass-fill-paper",     "component: the /search overlay glass, ruling 71"],
   ]);
   /* carried:end */
@@ -4284,7 +4253,10 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   );
 }
 
-const MINIMUM_CHECKS = wantsRemote ? 530 : 493;
+/* The offline floor is measured by running this gate. The remote branch needs
+   the live database, so its floor moves with the offline one rather than from a
+   measurement of its own. */
+const MINIMUM_CHECKS = wantsRemote ? 471 : 434;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
