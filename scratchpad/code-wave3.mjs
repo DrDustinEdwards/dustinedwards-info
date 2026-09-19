@@ -218,3 +218,12 @@ export const CHUNKS = {
  * far fewer of either, and keeps the earlier target.
  */
 export const KEEP_SHARE = 0.4;
+
+/**
+ * What this wave covers and where it was measured, for the history document's header.
+ *
+ * The header used to hardcode wave 2's sentence, so wave 3's document opened by saying it took
+ * files "under scripts/" when it takes workers/ and app/. A per-wave fact belongs with the wave.
+ */
+export const BASE = "fda6ef1";
+export const SCOPE = "the 88 files under workers/ and app/";
